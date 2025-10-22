@@ -50,7 +50,8 @@ Thumbs.db
 *.sqlite
 
 # Avatar source files and fix scripts (not needed in production)
-Avatars/
+# NOTE: Only exclude the root-level Avatars/ source folder, NOT static/assets/avatars/
+/Avatars/
 fix_*.py
 validate_avatar_references.py
 auto_fix_avatar_references.py
