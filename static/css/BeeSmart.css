@@ -645,6 +645,7 @@ lottie-player {
     height: 140px !important;
     margin: 0 auto 1.2rem auto !important;
     position: relative !important;
+    z-index: 15 !important;
     transform: translateY(0) scale(1) !important;
     display: flex !important;
     align-items: center !important;
