@@ -1848,6 +1848,13 @@ def test_page():
     """Test page to verify Flask is working"""
     return render_template("test_page.html")
 
+@app.route("/avatar-diagnostic")
+def avatar_diagnostic():
+    """Diagnostic page for troubleshooting avatar rendering issues"""
+    import time
+    timestamp = str(int(time.time()))
+    return render_template("avatar_diagnostic.html", timestamp=timestamp)
+
 @app.route("/minimal")
 def minimal_main():
     """Minimal version of main page for testing"""

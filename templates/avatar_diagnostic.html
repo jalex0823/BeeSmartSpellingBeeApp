@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Diagnostic - BeeSmart</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(180deg, #FFE082 0%, #FFB300 100%);
+            padding: 2rem;
+            color: #3b2b04;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        h1 { color: #FF8C00; margin-bottom: 0.5rem; }
+        .section { margin: 2rem 0; padding: 1rem; background: #FFF9E6; border-radius: 8px; }
+        .status { padding: 1rem; margin: 0.5rem 0; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+        .success { background: #D4EDDA; color: #155724; border: 1px solid #C3E6CB; }
+        .error { background: #F8D7DA; color: #721C24; border: 1px solid #F5C6CB; }
+        .info { background: #D1ECF1; color: #0C5460; border: 1px solid #BEE5EB; }
+        .warning { background: #FFF3CD; color: #856404; border: 1px solid #FFEEBA; }
+        button {
+            background: #FF8C00;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        button:hover { background: #FFB300; }
+        pre { background: #F4F4F4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐝 Avatar Diagnostic Tool</h1>
+        <p>Use this tool to diagnose avatar rendering issues after account changes.</p>
+        
+        <div class="section">
+            <h2>1. Current User Info</h2>
+            <button onclick="checkUser()">Check User Data</button>
+            <div id="userInfo"></div>
+        </div>
+        
+        <div class="section">
+            <h2>2. Avatar API Response</h2>
+            <button onclick="checkAvatarAPI()">Test Avatar API</button>
+            <div id="avatarAPI"></div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Avatar Files Check</h2>
+            <button onclick="checkFiles()">Verify Avatar Files</button>
+            <div id="filesCheck"></div>
+        </div>
+        
+        <div class="section">
+            <h2>4. Browser Console Logs</h2>
+            <p class="info">Open browser DevTools (F12) and check Console tab for errors</p>
+            <button onclick="testConsole()">Log Test Message</button>
+        </div>
+        
+        <div class="section">
+            <h2>5. Test 3D Loading</h2>
+            <button onclick="test3DLoad()">Load 3D Avatar</button>
+            <div id="3dContainer" style="width: 300px; height: 300px; background: #F0F0F0; margin: 1rem 0; border-radius: 8px;"></div>
+            <div id="3dStatus"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="{{ url_for('static', filename='js/OBJLoader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/MTLLoader.js') }}"></script>
+    
+    <script>
+        async function checkUser() {
+            const div = document.getElementById('userInfo');
+            div.innerHTML = '<div class="info">Loading...</div>';
+            
+            try {
+                const response = await fetch('/api/profile/me');
+                const data = await response.json();
+                
+                div.innerHTML = `
+                    <div class="success">✅ User data loaded</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function checkAvatarAPI() {
+            const div = document.getElementById('avatarAPI');
+            div.innerHTML = '<div class="info">Loading...</div>';
+            
+            try {
+                const response = await fetch('/api/users/me/avatar');
+                const data = await response.json();
+                
+                div.innerHTML = `
+                    <div class="success">✅ Avatar API Response</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                // Store for next test
+                window.avatarData = data;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function checkFiles() {
+            const div = document.getElementById('filesCheck');
+            
+            if (!window.avatarData || !window.avatarData.avatar) {
+                div.innerHTML = '<div class="warning">⚠️ Run Avatar API test first</div>';
+                return;
+            }
+            
+            div.innerHTML = '<div class="info">Checking files...</div>';
+            
+            const avatar = window.avatarData.avatar;
+            const urls = avatar.urls || {};
+            const filesToCheck = [
+                { name: 'OBJ Model', url: urls.model_obj },
+                { name: 'MTL Material', url: urls.model_mtl },
+                { name: 'Texture', url: urls.texture },
+                { name: 'Thumbnail', url: urls.thumbnail }
+            ];
+            
+            let html = '<div class="info">File Checks:</div>';
+            
+            for (const file of filesToCheck) {
+                if (!file.url) {
+                    html += `<div class="warning">⚠️ ${file.name}: No URL provided</div>`;
+                    continue;
+                }
+                
+                try {
+                    const response = await fetch(file.url, { method: 'HEAD' });
+                    if (response.ok) {
+                        html += `<div class="success">✅ ${file.name}: ${file.url}</div>`;
+                    } else {
+                        html += `<div class="error">❌ ${file.name}: ${file.url} (HTTP ${response.status})</div>`;
+                    }
+                } catch (error) {
+                    html += `<div class="error">❌ ${file.name}: ${file.url} (${error.message})</div>`;
+                }
+            }
+            
+            div.innerHTML = html;
+        }
+        
+        function testConsole() {
+            console.log('🐝 BeeSmart Avatar Diagnostic Test');
+            console.log('Timestamp:', new Date().toISOString());
+            console.log('User Agent:', navigator.userAgent);
+            console.log('Avatar Data:', window.avatarData);
+            alert('Check browser console (F12) for diagnostic logs');
+        }
+        
+        async function test3DLoad() {
+            const container = document.getElementById('3dContainer');
+            const statusDiv = document.getElementById('3dStatus');
+            
+            if (!window.avatarData || !window.avatarData.avatar) {
+                statusDiv.innerHTML = '<div class="warning">⚠️ Run Avatar API test first</div>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div class="info">Loading 3D model...</div>';
+            container.innerHTML = '';
+            
+            try {
+                const avatar = window.avatarData.avatar;
+                const urls = avatar.urls || {};
+                
+                // Setup Three.js scene
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+                camera.position.z = 5;
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(300, 300);
+                container.appendChild(renderer.domElement);
+                
+                // Lights
+                const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambient);
+                const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+                directional.position.set(5, 5, 5);
+                scene.add(directional);
+                
+                // Load model
+                const mtlLoader = new THREE.MTLLoader();
+                const objLoader = new THREE.OBJLoader();
+                
+                statusDiv.innerHTML = '<div class="info">Loading MTL material...</div>';
+                
+                mtlLoader.load(
+                    urls.model_mtl,
+                    (materials) => {
+                        statusDiv.innerHTML = '<div class="info">Loading OBJ model...</div>';
+                        materials.preload();
+                        objLoader.setMaterials(materials);
+                        
+                        objLoader.load(
+                            urls.model_obj,
+                            (object) => {
+                                // Center and scale
+                                const box = new THREE.Box3().setFromObject(object);
+                                const center = box.getCenter(new THREE.Vector3());
+                                const size = box.getSize(new THREE.Vector3());
+                                const maxDim = Math.max(size.x, size.y, size.z);
+                                const scale = 3 / maxDim;
+                                
+                                object.scale.set(scale, scale, scale);
+                                object.position.sub(center.multiplyScalar(scale));
+                                
+                                scene.add(object);
+                                
+                                statusDiv.innerHTML = '<div class="success">✅ 3D Model Loaded Successfully!</div>';
+                                
+                                // Animate
+                                function animate() {
+                                    requestAnimationFrame(animate);
+                                    object.rotation.y += 0.01;
+                                    renderer.render(scene, camera);
+                                }
+                                animate();
+                            },
+                            undefined,
+                            (error) => {
+                                statusDiv.innerHTML = `<div class="error">❌ OBJ Load Error: ${error.message || error}</div>`;
+                                console.error('OBJ Error:', error);
+                            }
+                        );
+                    },
+                    undefined,
+                    (error) => {
+                        statusDiv.innerHTML = `<div class="error">❌ MTL Load Error: ${error.message || error}</div>`;
+                        console.error('MTL Error:', error);
+                    }
+                );
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                console.error('3D Load Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
