@@ -45,24 +45,13 @@ class UserAvatarLoader {
         this.loadAvatarCatalog();
         
         // DEPRECATED - Old hardcoded map (kept for fallback only) - UPDATED TO NEW PATHS
+        // Only includes working avatars with verified files
         this._oldAvatarMap = {
-            'albee': {
-                obj: '/static/assets/avatars/al-bee/AlBee.obj',
-                mtl: '/static/assets/avatars/al-bee/AlBee.mtl',
-                texture: '/static/assets/avatars/al-bee/AlBee.png',
-                thumbnail: '/static/assets/avatars/al-bee/AlBee!.png'
-            },
             'astro-bee': {
                 obj: '/static/assets/avatars/astro-bee/AstroBee.obj',
                 mtl: '/static/assets/avatars/astro-bee/AstroBee.mtl',
                 texture: '/static/assets/avatars/astro-bee/AstroBee.png',
                 thumbnail: '/static/assets/avatars/astro-bee/AstroBee!.png'
-            },
-            'anxious-bee': {
-                obj: '/static/assets/avatars/anxious-bee/AnxiousBee.obj',
-                mtl: '/static/assets/avatars/anxious-bee/AnxiousBee.mtl',
-                texture: '/static/assets/avatars/anxious-bee/AnxiousBee.png',
-                thumbnail: '/static/assets/avatars/anxious-bee/AnxiousBee!.png'
             },
             'biker-bee': {
                 obj: '/static/assets/avatars/biker-bee/BikerBee.obj',
@@ -130,18 +119,6 @@ class UserAvatarLoader {
                 texture: '/static/assets/avatars/mascot-bee/MascotBee.png',
                 thumbnail: '/static/assets/avatars/mascot-bee/MascotBee!.png'
             },
-            'monster-bee': {
-                obj: '/static/assets/avatars/monster-bee/MonsterBee.obj',
-                mtl: '/static/assets/avatars/monster-bee/MonsterBee.mtl',
-                texture: '/static/assets/avatars/monster-bee/MonsterBee.png',
-                thumbnail: '/static/assets/avatars/monster-bee/MonsterBee!.png'
-            },
-            'professor-bee': {
-                obj: '/static/assets/avatars/professor-bee/ProfessorBee.obj',
-                mtl: '/static/assets/avatars/professor-bee/ProfessorBee.mtl',
-                texture: '/static/assets/avatars/professor-bee/ProfessorBee.png',
-                thumbnail: '/static/assets/avatars/professor-bee/ProfessorBee!.png'
-            },
             'queen-bee': {
                 obj: '/static/assets/avatars/queen-bee/QueenBee.obj',
                 mtl: '/static/assets/avatars/queen-bee/QueenBee.mtl',
@@ -154,12 +131,6 @@ class UserAvatarLoader {
                 texture: '/static/assets/avatars/robo-bee/RoboBee.png',
                 thumbnail: '/static/assets/avatars/robo-bee/RoboBee!.png'
             },
-            'rocker-bee': {
-                obj: '/static/assets/avatars/rocker-bee/RockerBee.obj',
-                mtl: '/static/assets/avatars/rocker-bee/RockerBee.mtl',
-                texture: '/static/assets/avatars/rocker-bee/RockerBee.png',
-                thumbnail: '/static/assets/avatars/rocker-bee/RockerBee!.png'
-            },
             'seabea': {
                 obj: '/static/assets/avatars/seabea/Seabea.obj',
                 mtl: '/static/assets/avatars/seabea/Seabea.mtl',
@@ -171,24 +142,6 @@ class UserAvatarLoader {
                 mtl: '/static/assets/avatars/superbee/Superbee.mtl',
                 texture: '/static/assets/avatars/superbee/Superbee.png',
                 thumbnail: '/static/assets/avatars/superbee/Superbee!.png'
-            },
-            'vamp-bee': {
-                obj: '/static/assets/avatars/vamp-bee/VampBee.obj',
-                mtl: '/static/assets/avatars/vamp-bee/VampBee.mtl',
-                texture: '/static/assets/avatars/vamp-bee/VampBee.png',
-                thumbnail: '/static/assets/avatars/vamp-bee/VampBee!.png'
-            },
-            'ware-bee': {
-                obj: '/static/assets/avatars/ware-bee/WareBee.obj',
-                mtl: '/static/assets/avatars/ware-bee/WareBee.mtl',
-                texture: '/static/assets/avatars/ware-bee/WareBee.png',
-                thumbnail: '/static/assets/avatars/ware-bee/WareBee!.png'
-            },
-            'zom-bee': {
-                obj: '/static/assets/avatars/zom-bee/ZomBee.obj',
-                mtl: '/static/assets/avatars/zom-bee/ZomBee.mtl',
-                texture: '/static/assets/avatars/zom-bee/ZomBee.png',
-                thumbnail: '/static/assets/avatars/zom-bee/ZomBee!.png'
             }
         };
         

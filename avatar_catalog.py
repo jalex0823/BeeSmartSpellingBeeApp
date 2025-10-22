@@ -13,39 +13,19 @@ import os
 from datetime import datetime
 from typing import Dict
 
-# Avatar Catalog: 18 Bee Types (mapped from actual 3D Avatar Files)
+# Avatar Catalog: 15 Working Bee Types
 # Each entry includes folder name and specific file names for obj/mtl/texture
 AVATAR_CATALOG = [
     {
-        "id": "al-bee",
-        "name": "Al Bee",
-        "folder": "al-bee",
-        "obj_file": "AlBee.obj",
-        "mtl_file": "AlBee.mtl",
-        "texture_file": "AlBee.png",
-        "description": "AI-powered bee with cutting-edge technology!",
+        "id": "astro-bee",
+        "name": "Astro Bee",
+        "folder": "astro-bee",
+        "obj_file": "AstroBee.obj",
+        "mtl_file": "AstroBee.mtl",
+        "texture_file": "AstroBee.png",
+        "description": "Space explorer! Ready for intergalactic spelling adventures.",
         "variants": ["default"],
-        "category": "tech",
-        "theme": {
-            "primary_color": "#00C9FF",
-            "secondary_color": "#92FE9D", 
-            "accent_color": "#00D4FF",
-            "personality": ["intelligent", "analytical", "futuristic"],
-            "ui_style": "tech",
-            "animation_style": "digital",
-            "description_keywords": ["AI-powered", "smart", "technology"]
-        }
-    },
-    {
-        "id": "anxious-bee",
-        "name": "Anxious Bee",
-        "folder": "anxious-bee",
-        "obj_file": "AnxiousBee.obj",
-        "mtl_file": "AnxiousBee.mtl",
-        "texture_file": "AnxiousBee.png",
-        "description": "A bit nervous, but always trying their best!",
-        "variants": ["default"],
-        "category": "emotion"
+        "category": "adventure"
     },
     {
         "id": "biker-bee",
@@ -92,6 +72,17 @@ AVATAR_CATALOG = [
         "category": "classic"
     },
     {
+        "id": "detective-bee",
+        "name": "Detective Bee",
+        "folder": "detective-bee",
+        "obj_file": "DetectiveBee.obj",
+        "mtl_file": "DetectiveBee.mtl",
+        "texture_file": "DetectiveBee.png",
+        "description": "Solving word mysteries one clue at a time!",
+        "variants": ["default"],
+        "category": "profession"
+    },
+    {
         "id": "diva-bee",
         "name": "Diva Bee",
         "folder": "diva-bee",
@@ -125,6 +116,17 @@ AVATAR_CATALOG = [
         "category": "adventure"
     },
     {
+        "id": "franken-bee",
+        "name": "Franken Bee",
+        "folder": "franken-bee",
+        "obj_file": "Frankenbee.obj",
+        "mtl_file": "Frankenbee.mtl",
+        "texture_file": "Frankenbee.png",
+        "description": "Spooky but friendly! Perfect for Halloween spelling.",
+        "variants": ["default"],
+        "category": "fantasy"
+    },
+    {
         "id": "knight-bee",
         "name": "Knight Bee",
         "folder": "knight-bee",
@@ -136,44 +138,11 @@ AVATAR_CATALOG = [
         "category": "fantasy"
     },
     {
-        "id": "mascot-bee",
-        "name": "Mascot Bee",
-        "folder": "mascot-bee",
-        "obj_file": "MascotBee.obj",
-        "mtl_file": "MascotBee.mtl",
-        "texture_file": "MascotBee.png",
-        "description": "The official BeeSmart mascot - cheerful and energetic!",
-        "variants": ["default"],
-        "category": "classic"
-    },
-    {
-        "id": "monster-bee",
-        "name": "Monster Bee",
-        "folder": "monster-bee",
-        "obj_file": "MonsterBee.obj",
-        "mtl_file": "MonsterBee.mtl",
-        "texture_file": "MonsterBee.png",
-        "description": "A little spooky, but friendly! Perfect for Halloween.",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "professor-bee",
-        "name": "Professor Bee",
-        "folder": "professor-bee",
-        "obj_file": "ProfessorBee.obj",
-        "mtl_file": "ProfessorBee.mtl",
-        "texture_file": "ProfessorBee.png",
-        "description": "Wise and knowledgeable! Master of education.",
-        "variants": ["default"],
-        "category": "profession"
-    },
-    {
         "id": "queen-bee",
         "name": "Queen Bee",
         "folder": "queen-bee",
         "obj_file": "QueenBee.obj",
-        "mtl_file": "QueenBee.mtl",  # WARNING: Missing in source - may need fallback
+        "mtl_file": "QueenBee.mtl",
         "texture_file": "QueenBee.png",
         "description": "Royal and majestic! Leader with grace.",
         "variants": ["default"],
@@ -189,17 +158,6 @@ AVATAR_CATALOG = [
         "description": "Futuristic and tech-savvy! Buzzbot to the rescue.",
         "variants": ["default"],
         "category": "tech"
-    },
-    {
-        "id": "rocker-bee",
-        "name": "Rocker Bee",
-        "folder": "rocker-bee",
-        "obj_file": "RockerBee.obj",
-        "mtl_file": "RockerBee.mtl",
-        "texture_file": "RockerBee.png",
-        "description": "Rock out with style - musical and energetic!",
-        "variants": ["default"],
-        "category": "entertainment"
     },
     {
         "id": "seabea",
@@ -220,72 +178,6 @@ AVATAR_CATALOG = [
         "mtl_file": "Superbee.mtl",
         "texture_file": "Superbee.png",
         "description": "Saving the day with bee powers! Cape included.",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "astro-bee",
-        "name": "Astro Bee",
-        "folder": "astro-bee",
-        "obj_file": "AstroBee.obj",
-        "mtl_file": "AstroBee.mtl",
-        "texture_file": "AstroBee.png",
-        "description": "Space explorer! Ready for intergalactic spelling adventures.",
-        "variants": ["default"],
-        "category": "adventure"
-    },
-    {
-        "id": "detective-bee",
-        "name": "Detective Bee",
-        "folder": "detective-bee",
-        "obj_file": "DetectiveBee.obj",
-        "mtl_file": "DetectiveBee.mtl",
-        "texture_file": "DetectiveBee.png",
-        "description": "Solving word mysteries one clue at a time!",
-        "variants": ["default"],
-        "category": "profession"
-    },
-    {
-        "id": "franken-bee",
-        "name": "Franken Bee",
-        "folder": "franken-bee",
-        "obj_file": "Frankenbee.obj",
-        "mtl_file": "Frankenbee.mtl",
-        "texture_file": "Frankenbee.png",
-        "description": "Spooky but friendly! Perfect for Halloween spelling.",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "vamp-bee",
-        "name": "Vamp Bee",
-        "folder": "vamp-bee",
-        "obj_file": "VampBee.obj",
-        "mtl_file": "VampBee.mtl",
-        "texture_file": "VampBee.png",
-        "description": "Count on this bee for spelling at night!",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "ware-bee",
-        "name": "Ware Bee",
-        "folder": "ware-bee",
-        "obj_file": "WareBee.obj",
-        "mtl_file": "WareBee.mtl",
-        "texture_file": "WareBee.png",
-        "description": "Howling good at spelling! Full moon power.",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "zom-bee",
-        "name": "Zom Bee",
-        "folder": "zom-bee",
-        "obj_file": "ZomBee.obj",
-        "mtl_file": "ZomBee.mtl",
-        "texture_file": "ZomBee.png",
-        "description": "Undead but unstoppable at spelling!",
         "variants": ["default"],
         "category": "fantasy"
     }
