@@ -56,9 +56,16 @@ fix_*.py
 validate_avatar_references.py
 auto_fix_avatar_references.py
 validation_results.txt
+check_avatar_*.py
+count_catalog_avatars.py
 *.sqlite3
 beesmart.db
 instance/
+
+# Old/duplicate avatar locations (not needed - avatars are in static/assets/avatars/)
+static/3DFiles/
+static/Avatars/
+static/images/avatars/
 
 # Flask-Session server-side session storage
 
