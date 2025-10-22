@@ -254,6 +254,19 @@ function updatePreview() {
                 mtlFilenameWithCache,
                 (materials) => {
                     materials.preload();
+                    
+                    // Ensure all materials use proper color space and texture settings
+                    Object.values(materials.materials).forEach(mat => {
+                        if (mat.map) {
+                            mat.map.colorSpace = THREE.SRGBColorSpace;
+                            mat.map.needsUpdate = true;
+                        }
+                        mat.transparent = true;
+                        mat.depthWrite = true;
+                        mat.alphaTest = 0.1;
+                        mat.side = THREE.FrontSide;
+                    });
+                    
                     loadProgress.mtl = 100;
                     updateProgress();
                     
@@ -265,6 +278,39 @@ function updatePreview() {
                         (object) => {
                             loadProgress.obj = 100;
                             updateProgress();
+                    
+                    // Self-healing: Load texture and force-apply to any mesh without a map
+                    const textureUrl = selectedAvatar.urls.texture;
+                    const textureLoader = new THREE.TextureLoader();
+                    textureLoader.load(textureUrl, (texture) => {
+                        texture.colorSpace = THREE.SRGBColorSpace;
+                        texture.needsUpdate = true;
+                        
+                        // Traverse all meshes and ensure they have the texture
+                        object.traverse((node) => {
+                            if (node.isMesh) {
+                                const materials = Array.isArray(node.material) ? node.material : [node.material];
+                                materials.forEach(mat => {
+                                    if (!mat.map) {
+                                        // Mesh has no texture - apply it now (self-heal)
+                                        console.log('Self-healing: Applying texture to mesh without map');
+                                        mat.map = texture;
+                                        mat.needsUpdate = true;
+                                    } else if (mat.map && !mat.map.colorSpace) {
+                                        // Mesh has texture but wrong color space
+                                        mat.map.colorSpace = THREE.SRGBColorSpace;
+                                        mat.map.needsUpdate = true;
+                                    }
+                                    mat.transparent = true;
+                                    mat.alphaTest = 0.1;
+                                });
+                                node.castShadow = false;
+                                node.receiveShadow = false;
+                            }
+                        });
+                    }, undefined, (err) => {
+                        console.warn('Texture load failed, continuing without self-heal:', err);
+                    });
                     
                     // Clear loading indicator and show 3D model
                     preview.innerHTML = '';
