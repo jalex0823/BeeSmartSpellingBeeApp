@@ -75,6 +75,7 @@ test_speed_round.py
 
 # Backup files
 *.backup_*
+backups/
 
 # Documentation with large PDFs
 Documentation/
