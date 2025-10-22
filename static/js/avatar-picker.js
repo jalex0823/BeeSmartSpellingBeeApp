@@ -44,22 +44,31 @@ function renderAvatarGrid(avatarsToRender) {
     
     grid.innerHTML = '';
     
-    console.log(`🎨 Rendering ${avatarsToRender.length} avatar cards...`);
+    console.log(`🎨 Rendering ${avatarsToRender.length} avatar cards with 3D thumbnails...`);
     
-    const bust = Date.now();
     avatarsToRender.forEach(avatar => {
         const card = document.createElement('div');
         card.className = 'avatar-option';
         card.dataset.avatarId = avatar.id;
 
-        // Prefer catalog thumbnail; fallback to static path used in registration
-        const thumbnailUrl = avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png?t=${bust}`;
-        console.log(`🖼️ Avatar ${avatar.id}: ${thumbnailUrl}`);
+        // Create 3D thumbnail container
+        const thumbContainer = document.createElement('div');
+        thumbContainer.className = 'avatar-3d-thumbnail';
+        thumbContainer.style.width = '100%';
+        thumbContainer.style.height = '120px';
+        thumbContainer.style.position = 'relative';
+        thumbContainer.style.overflow = 'hidden';
+        thumbContainer.style.borderRadius = '8px';
+        thumbContainer.style.background = 'linear-gradient(135deg, #FFE8CC 0%, #FFD700 100%)';
 
-        card.innerHTML = `
-            <img src="${thumbnailUrl}" alt="${avatar.name}" onerror="this.src='/static/assets/avatars/fallback.png'; console.error('Failed to load: ${thumbnailUrl}');">
-            <div class="avatar-name" data-avatar-id="${avatar.id}" title="Click for details">${avatar.name}</div>
-        `;
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'avatar-name';
+        nameDiv.dataset.avatarId = avatar.id;
+        nameDiv.title = 'Click for details';
+        nameDiv.textContent = avatar.name;
+
+        card.appendChild(thumbContainer);
+        card.appendChild(nameDiv);
 
         // Card click selects avatar
         card.addEventListener('click', (e) => {
@@ -70,16 +79,125 @@ function renderAvatarGrid(avatarsToRender) {
         });
         
         // Name click opens description popup
-        const nameEl = card.querySelector('.avatar-name');
-        nameEl.addEventListener('click', (e) => {
+        nameDiv.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent card selection
             showAvatarDescriptionPopup(avatar);
         });
         
         grid.appendChild(card);
+
+        // Render 3D model in thumbnail (async)
+        render3DThumbnail(thumbContainer, avatar).catch(err => {
+            console.warn(`Failed to render 3D thumbnail for ${avatar.id}:`, err);
+            // Fallback to static image on error
+            thumbContainer.innerHTML = `<img src="${avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`}" 
+                                            alt="${avatar.name}" 
+                                            style="width:100%;height:100%;object-fit:contain;">`;
+        });
     });
     
     console.log(`✅ Rendered ${avatarsToRender.length} avatar cards to grid`);
+}
+
+// Render a 3D avatar model in a small thumbnail canvas
+async function render3DThumbnail(container, avatar) {
+    if (!avatar.urls || !avatar.urls.model_obj) {
+        throw new Error('No 3D model URLs available');
+    }
+
+    // Create mini scene
+    const scene = new THREE.Scene();
+    scene.background = null; // Transparent
+    
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.set(0, 0, 4);
+    
+    const renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        preserveDrawingBuffer: true
+    });
+    const size = 120;
+    renderer.setSize(size, size);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+    
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
+    // Load model
+    const basePath = avatar.urls.model_obj.substring(0, avatar.urls.model_obj.lastIndexOf('/') + 1);
+    const mtlFilename = avatar.urls.model_mtl.substring(avatar.urls.model_mtl.lastIndexOf('/') + 1);
+    const objFilename = avatar.urls.model_obj.substring(avatar.urls.model_obj.lastIndexOf('/') + 1);
+
+    return new Promise((resolve, reject) => {
+        const mtlLoader = new THREE.MTLLoader();
+        mtlLoader.setPath(basePath);
+        if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
+
+        mtlLoader.load(mtlFilename, (materials) => {
+            materials.preload();
+
+            // Apply texture settings
+            Object.values(materials.materials).forEach(mat => {
+                if (mat.map) {
+                    mat.map.colorSpace = THREE.SRGBColorSpace;
+                    mat.map.needsUpdate = true;
+                }
+                mat.transparent = true;
+                mat.alphaTest = 0.1;
+            });
+
+            const objLoader = new THREE.OBJLoader();
+            objLoader.setMaterials(materials);
+            objLoader.setPath(basePath);
+            
+            objLoader.load(objFilename, (object) => {
+                // Self-heal: apply texture to any mesh without map
+                if (avatar.urls.texture) {
+                    const textureLoader = new THREE.TextureLoader();
+                    textureLoader.load(avatar.urls.texture, (texture) => {
+                        texture.colorSpace = THREE.SRGBColorSpace;
+                        object.traverse(node => {
+                            if (node.isMesh) {
+                                const mats = Array.isArray(node.material) ? node.material : [node.material];
+                                mats.forEach(mat => {
+                                    if (!mat.map) {
+                                        mat.map = texture;
+                                        mat.needsUpdate = true;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
+                // Center and scale
+                const box = new THREE.Box3().setFromObject(object);
+                const size = box.getSize(new THREE.Vector3()).length();
+                const center = box.getCenter(new THREE.Vector3());
+                object.position.sub(center);
+                object.scale.setScalar(2.0 / size);
+                scene.add(object);
+
+                // Animate
+                let rotation = 0;
+                const animate = () => {
+                    rotation += 0.01;
+                    object.rotation.y = rotation;
+                    renderer.render(scene, camera);
+                    requestAnimationFrame(animate);
+                };
+                animate();
+
+                resolve();
+            }, undefined, reject);
+        }, undefined, reject);
+    });
 }
 
 function selectAvatar(avatar) {
