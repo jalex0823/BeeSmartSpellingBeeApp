@@ -1,0 +1,896 @@
+/* =========================================================
+   BeeSmart.css — Bumble Bee Themed Spelling Bee Interface
+   Every rule leans into the playful hive mood requested.
+   ========================================================= */
+
+/* CSS Variables for consistent theming across all pages */
+:root {
+  --hive-background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFCA28 70%, #FFB300 100%);
+  --bg-primary: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFCA28 70%, #FFB300 100%);
+  --text-primary: #3b2b04;
+  --dark-brown: #3b2b04;
+  --cream-white: #FFFEF7;
+  --hive-card: rgba(255, 254, 247, 0.95);
+  
+  /* Additional upload page variables */
+  --dark-amber: #B8860B;
+  --honey-gold: #FFD700;
+  --amber-glow: #FFC107;
+  --secondary-color: #FFD54F;
+  --accent-color: #FFB300;
+  --border-radius: 12px;
+  --honey-shadow: rgba(255, 193, 7, 0.3);
+  --honey-shadow-hover: rgba(255, 193, 7, 0.5);
+  --transition: all 0.3s ease;
+  --cream-hover: rgba(255, 248, 220, 0.8);
+  --honey-light: rgba(255, 215, 0, 0.1);
+  --honey-gradient: linear-gradient(90deg, #FFB300 0%, #FFD54F 100%);
+  --shadow: 0 4px 12px rgba(255, 193, 7, 0.25);
+}
+
+/* 1. Background & Environment */
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFCA28 70%, #FFB300 100%);
+  color: #3b2b04;
+  /* Universal font stack for consistent mobile rendering */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 25px 18px, rgba(255, 213, 79, 0.32) 0, rgba(255, 213, 79, 0.32) 9px, transparent 10px),
+    radial-gradient(circle at 5px 6px, rgba(255, 213, 79, 0.2) 0, rgba(255, 213, 79, 0.2) 6px, transparent 7px),
+    radial-gradient(circle at 45px 6px, rgba(255, 213, 79, 0.2) 0, rgba(255, 213, 79, 0.2) 6px, transparent 7px);
+  background-size: 70px 60px;
+  opacity: 0.12;
+  animation: slowPan 28s linear infinite;
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), transparent 55%),
+              radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.18), transparent 60%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: shimmer 12s ease-in-out infinite;
+}
+@keyframes slowPan {
+  from { background-position: 0 0; }
+  to { background-position: 200px 200px; }
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.35; }
+}
+
+main,
+.quiz-shell {
+  position: relative;
+  z-index: 1;
+}
+
+/* 2. Input & Buttons (Honey Glow Effects) */
+.bee-input {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.bee-input::before,
+.bee-input::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  width: 16px;
+  height: 26px;
+  border-radius: 50% 50% 65% 65%;
+  background: linear-gradient(180deg, #FFECB3 0%, #FFC107 60%, rgba(255, 193, 7, 0));
+  animation: honeyDrip 3.6s ease-in-out infinite;
+  transform-origin: top center;
+  pointer-events: none;
+}
+.bee-input::before { left: 18px; animation-delay: 0.3s; }
+.bee-input::after { right: 18px; animation-delay: 1.5s; }
+
+.bee-input input[type="text"] {
+  border: 3px solid #FFC107;
+  border-radius: 14px;
+  box-shadow: 0 0 0 rgba(255, 193, 7, 0.0);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  padding: 16px 20px;
+  font-size: 1.25rem;
+  /* Allow inputs to align naturally inside layout containers */
+  text-align: left;
+  background-color: rgba(255, 255, 255, 0.93);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23FFE082'/%3E%3Cpath d='M7 16h18' stroke='%23F57F17' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M9 12c3-4 11-4 14 0' stroke='%23F57F17' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M9 20c3 4 11 4 14 0' stroke='%23F57F17' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cellipse cx='12' cy='10' rx='3' ry='2' fill='%23FFF59D'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center right 20px;
+  background-size: 28px 28px;
+  color: #332300;
+}
+
+/* Make sure inputs don't exceed their parent's width */
+.avatar-picker-container .bee-input input[type="text"],
+.avatar-picker-container input[type="text"] {
+  max-width: 100%;
+}
+.bee-input input[type="text"]:focus {
+  outline: none;
+  box-shadow: 0 0 18px rgba(255, 235, 59, 0.6);
+  transform: translateY(-2px);
+}
+.bee-input input[type="text"]::placeholder {
+  color: #d9a931;
+  opacity: 0.85;
+}
+
+@keyframes honeyDrip {
+  0% { transform: translateY(0) scaleY(0.8); opacity: 0.9; }
+  65% { transform: translateY(18px) scaleY(1.08); opacity: 0.3; }
+  100% { transform: translateY(28px) scaleY(0.6); opacity: 0; }
+}
+
+button,
+.quiz-button {
+  border: none;
+  border-radius: 28px;
+  color: #2b2100;
+  font-weight: 600;
+  padding: 13px 30px;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  font-size: 1.1rem;
+  position: relative;
+  overflow: hidden;
+  min-width: 160px; /* Ensure uniform button width */
+  text-align: center;
+}
+button::after,
+.quiz-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+button:hover,
+.quiz-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 14px rgba(255, 235, 59, 0.45);
+}
+button:hover::after,
+.quiz-button:hover::after {
+  opacity: 1;
+}
+button:active,
+.quiz-button:active {
+  transform: scale(0.97);
+}
+
+.btn-submit,
+button.submit {
+  background: linear-gradient(90deg, #FFB300 0%, #FFD54F 100%);
+}
+
+.btn-skip,
+button.skip {
+  background: linear-gradient(90deg, #81D4FA 0%, #4FC3F7 100%);
+}
+
+.btn-speak,
+button.speak {
+  background: linear-gradient(90deg, #8BC34A 0%, #C5E1A5 100%);
+}
+
+.bee-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bee-icon svg,
+.bee-icon img {
+  width: 24px;
+  height: 24px;
+  animation: beeBuzz 0.4s infinite;
+}
+
+@keyframes beeBuzz {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(3px, -3px) rotate(-6deg); }
+}
+
+/* 3. Animated Bee Mascot */
+.bee-mascot {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 140px;
+  height: 140px;
+  z-index: 4;
+  pointer-events: none;
+}
+.bee-mascot lottie-player,
+.bee-mascot img {
+  width: 100%;
+  height: 100%;
+}
+.bee-mascot.is-happy { animation: mascotLoop 1.6s ease-in-out; }
+.bee-mascot.is-sad { animation: mascotSad 0.9s ease-in-out; }
+.bee-mascot.is-speaking { animation: mascotBuzz 0.6s ease-in-out infinite; }
+
+@keyframes mascotLoop {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-14px) scale(1.06); }
+  60% { transform: translateY(4px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes mascotSad {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-6px); }
+  60% { transform: translateX(6px); }
+}
+@keyframes mascotBuzz {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(4deg); }
+}
+
+/* 4. Micro Animations & Ambient Elements */
+.floating-bee {
+  position: fixed;
+  width: 48px;
+  height: 32px;
+  top: 15vh;
+  left: -12vw;
+  background: linear-gradient(90deg, #ffd54f 0%, #ffd54f 33%, #ffb300 33%, #ffb300 66%, #ffd54f 66%, #ffd54f 100%);
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.35);
+  animation: beeDrift 18s linear infinite;
+  opacity: 0.88;
+  z-index: 0;
+}
+.floating-bee::before,
+.floating-bee::after {
+  content: '';
+  position: absolute;
+  top: -18px;
+  width: 24px;
+  height: 30px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  box-shadow: 0 6px 12px rgba(173, 216, 230, 0.4);
+  animation: wingFlapSoft 1.6s ease-in-out infinite;
+}
+.floating-bee::before {
+  left: -6px;
+}
+.floating-bee::after {
+  right: -6px;
+  animation-delay: 0.25s;
+}
+.floating-bee:nth-of-type(2) {
+  top: 55vh;
+  animation-duration: 22s;
+  animation-delay: 4s;
+}
+.floating-bee:nth-of-type(3) {
+  top: 35vh;
+  animation-duration: 26s;
+  animation-delay: 8s;
+}
+
+@keyframes beeDrift {
+  0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.8; }
+  50% { transform: translateX(120vw) translateY(-6vh) rotate(8deg); opacity: 0.9; }
+  90% { opacity: 0.1; }
+  100% { transform: translateX(140vw) translateY(4vh) rotate(-6deg); opacity: 0; }
+}
+
+@keyframes wingFlapSoft {
+  0%, 100% { transform: rotate(-14deg) scale(1); opacity: 0.85; }
+  50% { transform: rotate(16deg) scale(1.08); opacity: 1; }
+}
+
+.sparkle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  animation: sparklePop 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes sparklePop {
+  0% { transform: scale(0.4); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* 5. Sound Hooks (class toggled via JS) */
+.plays-sound-success { box-shadow: 0 0 22px rgba(255, 235, 59, 0.65); }
+.plays-sound-error { box-shadow: 0 0 15px rgba(255, 82, 82, 0.5); }
+
+/* 6. Visual Feedback (Learning Reinforcement) */
+.quiz-feedback.correct .bee-input input[type="text"] {
+  animation: goldPulse 0.8s ease;
+  box-shadow: 0 0 22px rgba(255, 235, 59, 0.75);
+}
+.quiz-feedback.incorrect .bee-input input[type="text"] {
+  animation: hiveShake 0.45s ease;
+  border-color: #FF7043;
+}
+
+@keyframes goldPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes hiveShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+.phonetic-reveal {
+  margin-top: 10px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  color: #795548;
+  box-shadow: 0 4px 12px rgba(121, 85, 72, 0.25);
+  animation: honeyReveal 0.5s ease;
+}
+
+@keyframes honeyReveal {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* 7. Honey Jar Progress */
+.honey-jar {
+  position: fixed;
+  left: 28px;
+  bottom: 28px;
+  width: 80px;
+  height: 110px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.05) 70%);
+  border: 4px solid rgba(150, 110, 20, 0.65);
+  border-radius: 20px 20px 30px 30px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+  overflow: hidden;
+  z-index: 3;
+}
+.honey-jar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 10px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, #FFCC80 0%, #FB8C00 100%);
+}
+.honey-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  background: linear-gradient(180deg, #FFEB3B 0%, #FFC107 65%, #FFB300 100%);
+  transition: height 0.5s ease;
+}
+.honey-fill::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 12%;
+  width: 76%;
+  height: 20px;
+  background: radial-gradient(circle, rgba(255, 235, 59, 0.75) 0%, rgba(255, 235, 59, 0) 70%);
+  opacity: 0.8;
+}
+
+/* 8. Cursor Trail (attach elements via JS) */
+.cursor-trail {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  animation: trailFade 0.5s forwards;
+}
+
+@keyframes trailFade {
+  from { transform: scale(0.4); opacity: 0.8; }
+  to { transform: scale(1.8); opacity: 0; }
+}
+
+/* 9. Layout Helpers */
+.quiz-card {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 20px;
+  padding: 24px clamp(20px, 4vw, 32px);
+  box-shadow: 0 12px 25px rgba(255, 193, 7, 0.25);
+  border: 2px solid rgba(255, 193, 7, 0.35);
+  max-width: 580px;
+  margin: 0 auto;
+}
+.quiz-card h1,
+.quiz-card h2 {
+  color: #6d4c00;
+  text-shadow: 0 4px 12px rgba(255, 213, 79, 0.45);
+}
+.quiz-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.honey-droplet {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle at 50% 20%, #FFE082 0%, #FFC107 60%, #FFB300 100%);
+  border-radius: 50% 50% 60% 60%;
+  animation: honeyDropPulse 2.8s ease infinite;
+}
+
+@keyframes honeyDropPulse {
+  0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 0.75; }
+  50% { transform: translate(-50%, 6px) scale(1.08); opacity: 1; }
+}
+
+/* 10. Lottie Player Tuning */
+lottie-player {
+  filter: drop-shadow(0 10px 22px rgba(255, 193, 7, 0.45));
+}
+
+/* Mobile Responsiveness - Forms and Scrolling */
+@media screen and (max-width: 768px) {
+  /* Ensure body allows proper scrolling */
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+    -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+    position: relative;
+  }
+  
+  /* iOS Safari specific fixes */
+  html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Form containers should be scrollable */
+  form, .form-container, .modal-content, .card, .quiz-card {
+    max-height: calc(100vh - 120px); /* Leave space for header/nav */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 80px; /* Extra space for submit buttons */
+    position: relative;
+  }
+  
+  /* iOS and Android viewport fixes */
+  .main-container, .page-wrapper {
+    min-height: 100vh;
+    min-height: -webkit-fill-available; /* iOS Safari fix */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Specific form styles */
+  #registerForm, #loginForm, #uploadForm, #speedRoundForm, #editUserForm {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 80px;
+  }
+  
+  /* Submit buttons should be sticky at bottom on mobile */
+  form button[type="submit"], 
+  form .btn-primary, 
+  form .action-btn,
+  .btn-start-speed-round {
+    position: sticky;
+    bottom: 20px;
+    z-index: 100;
+    width: 100%;
+    margin-top: 20px;
+    background: var(--honey-gold) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  /* Modal dialogs and subforms - Universal scrollability */
+  .modal, .popup-overlay, #beePromptModal, #savedListsModal, #randomPlayModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+  
+  .modal-content, .popup-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 5vh auto;
+    padding-bottom: 60px;
+    box-sizing: border-box;
+  }
+
+  /* Ensure all dynamically created modals have scroll support */
+  [id$="Modal"], [class*="modal"], [class*="popup"], [class*="subform"] {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Content containers within modals */
+  [id$="Modal"] > div, .modal-content > div, .popup-content > div {
+    max-height: calc(90vh - 4rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+
+  /* Textarea and large input fields in subforms */
+  textarea, input[type="text"][rows], .large-input {
+    max-height: 40vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    resize: vertical;
+  }
+  
+  /* Card containers */
+  .card-container, .quiz-container, .upload-container {
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 40px;
+  }
+  
+  /* Input fields should be properly sized */
+  input[type="text"], input[type="email"], input[type="password"], 
+  input[type="file"], textarea, select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    -webkit-appearance: none; /* Remove iOS styling */
+    appearance: none; /* Standard property */
+    border-radius: 8px;
+  }
+  
+  /* iOS specific input fixes */
+  input, textarea, select {
+    -webkit-user-select: text;
+    user-select: text; /* Standard property */
+    -webkit-touch-callout: default;
+  }
+  
+  /* Prevent horizontal overflow */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Navigation and header adjustments */
+  .nav, .header, .menu {
+    position: relative; /* Don't use fixed positioning on mobile */
+    width: 100%;
+  }
+  
+  /* Android Chrome address bar compensation */
+  .full-height {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  /* Touch-friendly button sizes */
+  button, .btn, .action-btn {
+    min-height: 44px; /* iOS minimum touch target */
+    min-width: 44px;
+    touch-action: manipulation; /* Prevent double-tap zoom */
+  }
+  
+  /* Smooth scrolling for all scrollable elements */
+  .scrollable, form, .modal-content, .card, [id$="Modal"], [class*="subform"] {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Enhanced scrollability for form containers */
+  .form-container, .upload-container, .quiz-container, .admin-container {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    padding-bottom: 2rem;
+  }
+
+  /* Subform specific scrolling improvements */
+  .subform-content, .modal-body, .popup-body {
+    max-height: calc(80vh - 6rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    padding-right: 8px; /* Account for scrollbar */
+  }
+  
+  /* Mobile Avatar Positioning - Enhanced for Better Display */
+  #mascotBee3D {
+    width: 140px !important;
+    height: 140px !important;
+    margin: 0 auto 1.2rem auto !important;
+    position: relative !important;
+    transform: translateY(0) scale(1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: visible !important;
+  }
+  
+  /* Mobile hover/touch effects */
+  #mascotBee3D:active {
+    transform: translateY(2px) scale(0.95) !important;
+    box-shadow: none !important;
+  }
+  
+  #mascotBee3D.avatar-loaded {
+    animation: mobileAvatarPulse 3s ease-in-out infinite !important;
+  }
+  
+  @keyframes mobileAvatarPulse {
+    0%, 100% { 
+      transform: translateY(0) scale(1); 
+      box-shadow: none;
+    }
+    50% { 
+      transform: translateY(-3px) scale(1.02); 
+      box-shadow: none;
+    }
+  }
+  
+  /* Avatar loading states for mobile */
+  #mascotBee3D.avatar-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(255, 193, 7, 0.3);
+    border-top: 3px solid #FFB300;
+    border-radius: 50%;
+    animation: avatarSpin 1s linear infinite;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+  
+  /* Avatar error state */
+  #mascotBee3D.avatar-error {
+    border: 2px dashed rgba(255, 99, 71, 0.6) !important;
+    background: rgba(255, 99, 71, 0.1) !important;
+  }
+  
+  #mascotBee3D.avatar-error::after {
+    content: '⚠️';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    z-index: 2;
+  }
+  
+  /* Hide loading spinner when avatar is loaded or error */
+  #mascotBee3D.avatar-loaded::before,
+  #mascotBee3D.avatar-error::before {
+    display: none;
+  }
+  
+  /* Avatar loaded state - subtle glow */
+  #mascotBee3D.avatar-loaded {
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
+  }
+  
+  /* 2D Fallback SmartyBee styles */
+  #mascotBee3D .smarty-bee-2d {
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  #mascotBee3D .smarty-bee-2d:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 20px rgba(255, 179, 0, 0.5);
+  }
+  
+  #mascotBee3D .smarty-bee-2d:active {
+    transform: scale(0.95);
+  }
+  
+  @keyframes avatarSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  
+  @keyframes smartyBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+}
+
+/* Tablet styles */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  form, .form-container {
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Tablet Avatar Positioning - Enhanced */
+  #mascotBee3D {
+    width: 200px !important;
+    height: 200px !important;
+    margin: 0 auto 1.8rem auto !important;
+    box-shadow: none !important;
+  }
+  
+  #mascotBee3D:hover {
+    transform: translateY(-5px) scale(1.08) !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Desktop Avatar Positioning - Enhanced with Animation */
+@media screen and (min-width: 1025px) {
+  #mascotBee3D {
+    width: 280px !important;
+    height: 280px !important;
+    margin: 0 auto 2.5rem auto !important;
+    position: relative !important;
+    transform: translateY(-10px) scale(1) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+  }
+  
+  #mascotBee3D:hover {
+    transform: translateY(-18px) scale(1.12) !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  
+  /* Add idle animation for desktop */
+  #mascotBee3D.avatar-loaded {
+    animation: avatarIdleFloat 4s ease-in-out infinite !important;
+  }
+  
+  @keyframes avatarIdleFloat {
+    0%, 100% { transform: translateY(-10px) scale(1) rotate(0deg); }
+    25% { transform: translateY(-15px) scale(1.02) rotate(1deg); }
+    50% { transform: translateY(-18px) scale(1.03) rotate(0deg); }
+    75% { transform: translateY(-12px) scale(1.01) rotate(-1deg); }
+  }
+
+/* Additional scrollability enhancements for all screen sizes */
+@media screen and (max-height: 600px) {
+  /* For short screens, prioritize scrolling */
+  .modal-content, [id$="Modal"] > div {
+    max-height: 80vh !important;
+  }
+  
+  .subform-content, .modal-body {
+    max-height: 60vh !important;
+  }
+  
+  textarea {
+    max-height: 25vh !important;
+  }
+}
+
+@media screen and (min-height: 900px) {
+  /* For tall screens, allow more content */
+  .modal-content, [id$="Modal"] > div {
+    max-height: 85vh !important;
+  }
+  
+  .subform-content, .modal-body {
+    max-height: 75vh !important;
+  }
+  
+  textarea {
+    max-height: 50vh !important;
+  }
+}
+
+/* Specific improvements for BeePrompt modal (Type Your Spelling Words) */
+#beePromptModal textarea, #beePromptInput[rows] {
+  max-height: 40vh !important;
+  min-height: 120px !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth !important;
+  resize: vertical !important;
+}
+
+/* Saved Lists modal scrollability */
+#savedListsModal .savedListsContainer, #savedListsContainer {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-right: 8px !important;
+}
+
+/* Random Play modal scrollability */
+#randomPlayModal {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Ensure all forms and containers in subforms scroll properly */
+.subform textarea, .popup textarea, .modal textarea {
+  max-height: 35vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+  
+  /* Desktop loading indicator */
+  #mascotBee3D.avatar-loading::before {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 193, 7, 0.3);
+    border-top: 4px solid #FFB300;
+  }
+  
+  /* Desktop error indicator */
+  #mascotBee3D.avatar-error::after {
+    font-size: 32px;
+  }
+}
+
+/* Utility Classes */
+.hidden { display: none !important; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - BeeSmart Spelling{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-center { min-height: 92vh; display:flex; align-items:center; justify-content:center; padding: 1.25rem; }
+  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow:hidden; box-shadow: 0 18px 45px rgba(255,170,200,0.28); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 520px; width:100%; }
+  .content-card::before { content:''; position:absolute; inset:0; left:-100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 8s ease-in-out infinite; z-index:1; pointer-events:none; }
+  @keyframes cardFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
+  @keyframes shimmer { 0%{ left:-100% } 50%{ left:100% } 100%{ left:100% } }
+  .card-header{ text-align:center; padding: 1.5rem 2rem 0.75rem; }
+  .card-header h1{ margin:0; font-size:1.75rem; }
+  .card-sub{ color:#7F8C8D; margin-top:0.35rem; }
+  .card-body{ position:relative; z-index:2; padding: 1.25rem 1.75rem 1.75rem; }
+  .form-group{ margin: 0.9rem 0; }
+  label{ display:block; font-weight:600; margin-bottom: 0.35rem; }
+  input{ width:100%; padding: 0.75rem 0.9rem; border:2px solid #E0E0E0; border-radius:10px; transition: box-shadow .2s ease, border-color .2s ease; background:#fff; }
+  input:focus{ outline:none; border-color:#FF9AA2; box-shadow: 0 0 0 3px rgba(255,170,200,0.25); }
+  .remember-row{ display:flex; align-items:center; justify-content:center; margin: 0.5rem 0 1rem; font-size:0.9rem; color:#5A6C7D }
+  .remember-row label{ display:flex; align-items:center; gap: 0.5rem; }
+  .remember-row input[type="checkbox"]{ width: 18px; height: 18px; accent-color: #FFB300; }
+  .btn-primary{ width:100%; padding: 1rem; background: linear-gradient(135deg, #FFB300, #FFD54F); color:#3b2b04; border:0; border-radius:14px; font-weight:700; cursor:pointer; transition: transform .2s ease, box-shadow .2s ease; box-shadow: 0 8px 20px rgba(255,179,0,.35); margin-top: 0.5rem; }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255,179,0,.45); }
+  .btn-primary:disabled{ opacity:.65; cursor:not-allowed; transform:none }
+  .divider{ text-align:center; color:#7F8C8D; margin: 1.25rem 0; }
+  .btn-guest{ display:inline-block; width:100%; text-align:center; padding: 0.9rem 1rem; border-radius:12px; background:#FFF3CD; color:#7A5B00; text-decoration:none; border:1px solid #FFE08A; font-weight:700 }
+  .signup{ text-align:center; margin-top: 1rem; color:#7F8C8D }
+  .signup a{ color:#FF69B4; text-decoration:none; font-weight:700 }
+  .signup a:hover{ text-decoration: underline }
+  .alert{ padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1rem; border: 1px solid transparent; display:none }
+  .alert-success{ background:#EAF7EA; color:#205522; border-color:#CDEBCC }
+  .alert-error{ background:#FCE8E8; color:#7A1D1D; border-color:#F4CACA }
+  .help-row{ text-align:center; margin: 0.5rem 0 0.75rem; font-size:0.9rem }
+  .help-row a{ color:#FF69B4; font-weight:700; text-decoration:none }
+  .help-row a:hover{ text-decoration:underline }
+  .forgot-panel{ display:none; margin: 0.75rem 0 0.25rem; padding: 0.85rem; border:1px dashed #FFD1DC; border-radius:10px; background:rgba(255,240,246,0.6) }
+  .forgot-actions{ display:flex; gap:0.5rem; margin-top:0.6rem }
+  .btn-secondary{ padding: 0.7rem 1rem; border-radius:10px; border:1px solid #FFD08A; background:#FFF5DD; color:#6a4e00; font-weight:700; cursor:pointer }
+  .btn-secondary[disabled]{ opacity:.6; cursor:not-allowed }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-center">
+  <section class="content-card" aria-label="Sign in to BeeSmart">
+    <div class="card-header">
+      <h1>Welcome Back</h1>
+      <div class="card-sub">Sign in to continue your spelling practice</div>
+    </div>
+    <div class="card-body">
+      <div id="errorAlert" class="alert alert-error"></div>
+      {% if show_reset_banner %}
+        <div id="successAlert" class="alert alert-success">Your password was updated. You can sign in now.</div>
+      {% else %}
+        <div id="successAlert" class="alert alert-success"></div>
+      {% endif %}
+
+      <form id="loginForm" method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Your username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password">
+        </div>
+        <div class="remember-row">
+          <label for="remember"><input type="checkbox" id="remember" name="remember"> Remember me</label>
+        </div>
+        <div class="help-row">
+          <a href="#" id="forgotLink" aria-expanded="false">Forgot password?</a>
+        </div>
+        <div id="forgotPanel" class="forgot-panel" aria-hidden="true">
+          <label for="resetIdentifier">Enter your email or username</label>
+          <input type="text" id="resetIdentifier" placeholder="Email or username" autocomplete="username email">
+          <div class="forgot-actions">
+            <button type="button" id="sendResetBtn" class="btn-secondary">Send reset link</button>
+            <button type="button" id="cancelResetBtn" class="btn-secondary" style="background:#fff">Cancel</button>
+          </div>
+        </div>
+        <button type="submit" id="loginBtn" class="btn-primary">Sign In</button>
+      </form>
+
+      <div class="divider">or</div>
+      <a class="btn-guest" href="{{ url_for('home') }}">Play as Guest</a>
+      <div class="signup">New to the hive? <a href="{{ url_for('register') }}">Create an account</a></div>
+      
+      <!-- Instructional Information -->
+      <div style="
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFFBF0 100%);
+        border: 2px solid #FFD700;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        color: #5A2C15;
+        line-height: 1.6;
+      ">
+        <div style="font-weight: 700; margin-bottom: 0.5rem; color: #FF8C00; font-size: 1rem;">
+          🐝 Why Create an Account?
+        </div>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+          <li><strong>Track Your Progress</strong> - Save your points and watch them grow! 🍯</li>
+          <li><strong>Earn Badges</strong> - Unlock achievements as you practice! 🏆</li>
+          <li><strong>Level Up</strong> - Progress from Busy Bee to Queen Bee! 👑</li>
+          <li><strong>View History</strong> - See all your past quizzes and improvements! 📊</li>
+          <li><strong>Battle Mode</strong> - Challenge friends and compete! ⚔️</li>
+        </ul>
+        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #FFD700; font-size: 0.85rem; color: #8B4513;">
+          <strong>Guest Mode:</strong> You can play without an account, but your progress won't be saved. Perfect for trying out the app!
+        </div>
+      </div>
+    </div>
+  </section>
+  
+</div>
+
+<script>
+const loginForm = document.getElementById('loginForm');
+const loginBtn = document.getElementById('loginBtn');
+const errorAlert = document.getElementById('errorAlert');
+const successAlert = document.getElementById('successAlert');
+const forgotLink = document.getElementById('forgotLink');
+const forgotPanel = document.getElementById('forgotPanel');
+const sendResetBtn = document.getElementById('sendResetBtn');
+const cancelResetBtn = document.getElementById('cancelResetBtn');
+const resetIdentifier = document.getElementById('resetIdentifier');
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorAlert.style.display = 'none';
+  successAlert.style.display = 'none';
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Signing in...';
+
+  const payload = {
+    username: document.getElementById('username').value,
+    password: document.getElementById('password').value,
+    remember: document.getElementById('remember').checked
+  };
+
+  try {
+    const resp = await fetch(loginForm.action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.success) {
+      successAlert.textContent = data.message || 'Welcome back!';
+      successAlert.style.display = 'block';
+      setTimeout(() => {
+        window.location.href = data.redirect || '{{ url_for("home") }}';
+      }, 800);
+    } else {
+      errorAlert.textContent = data.error || data.message || 'Invalid username or password.';
+      errorAlert.style.display = 'block';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Sign In';
+    }
+  } catch (err) {
+    errorAlert.textContent = 'Network error. Please try again.';
+    errorAlert.style.display = 'block';
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Sign In';
+  }
+});
+
+// If reset success banner is shown from server-side session, clear it after a moment
+document.addEventListener('DOMContentLoaded', ()=>{
+  const bannerEl = document.getElementById('successAlert');
+  if (bannerEl && bannerEl.textContent && bannerEl.textContent.trim().length > 0){
+    setTimeout(()=>{
+      bannerEl.style.display = 'none';
+    }, 4000);
+  }
+});
+
+// Forgot password toggle
+function toggleForgotPanel(show){
+  const willShow = typeof show === 'boolean' ? show : (forgotPanel.style.display === 'none' || forgotPanel.style.display === '');
+  forgotPanel.style.display = willShow ? 'block' : 'none';
+  forgotPanel.setAttribute('aria-hidden', (!willShow).toString());
+  forgotLink.setAttribute('aria-expanded', willShow.toString());
+  if (willShow) {
+    resetIdentifier.focus();
+  }
+}
+
+forgotLink.addEventListener('click', (e)=>{
+  e.preventDefault();
+  toggleForgotPanel();
+});
+
+cancelResetBtn.addEventListener('click', ()=> toggleForgotPanel(false));
+
+sendResetBtn.addEventListener('click', async ()=>{
+  const identifier = (resetIdentifier.value || '').trim();
+  errorAlert.style.display = 'none';
+  successAlert.style.display = 'none';
+  if (!identifier) {
+    errorAlert.textContent = 'Please enter your email or username.';
+    errorAlert.style.display = 'block';
+    return;
+  }
+  sendResetBtn.disabled = true;
+  sendResetBtn.textContent = 'Sending...';
+  try{
+    const resp = await fetch('/api/auth/forgot-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ identifier })
+    });
+    // Always show generic success to prevent account enumeration
+    successAlert.textContent = 'If an account exists for that email or username, we\'ll send reset instructions.';
+    successAlert.style.display = 'block';
+    toggleForgotPanel(false);
+    resetIdentifier.value = '';
+  }catch(_e){
+    // Even on network error, avoid revealing existence; provide gentle retry
+    successAlert.textContent = 'If an account exists for that email or username, we\'ll send reset instructions.';
+    successAlert.style.display = 'block';
+    toggleForgotPanel(false);
+  } finally {
+    sendResetBtn.disabled = false;
+    sendResetBtn.textContent = 'Send reset link';
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar API Test</title>
+</head>
+<body>
+    <h1>Avatar API Test</h1>
+    <div id="status">Loading...</div>
+    <div id="output"></div>
+    
+    <script>
+    async function testAPI() {
+        try {
+            console.log('Fetching /api/avatars...');
+            const response = await fetch('/api/avatars');
+            const data = await response.json();
+            
+            document.getElementById('status').innerHTML = 'API Response: ' + data.status;
+            document.getElementById('output').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            
+            console.log('API Data:', data);
+            
+            // Test if thumbnails exist
+            if (data.avatars && data.avatars.length > 0) {
+                const firstAvatar = data.avatars[0];
+                console.log('First avatar:', firstAvatar);
+                console.log('Has thumbnail property?', !!firstAvatar.thumbnail);
+            }
+        } catch (error) {
+            document.getElementById('status').innerHTML = 'Error: ' + error.message;
+            console.error('API Error:', error);
+        }
+    }
+    
+    testAPI();
+    </script>
+</body>
+</html>

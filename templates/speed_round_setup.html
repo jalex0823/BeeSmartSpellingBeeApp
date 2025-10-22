@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Speed Round Setup - BeeSmart Spelling</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive;
+            padding: 1rem;
+        }
+
+        .setup-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 2.5rem 2rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgba(255, 193, 7, 0.6);
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .setup-header h1 {
+            font-size: 2.5rem;
+            color: #FF4500;
+            margin: 0 0 0.5rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .setup-header p {
+            color: #666;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .config-section {
+            margin-bottom: 2rem;
+            background: rgba(255, 250, 205, 0.5);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .config-section label {
+            display: block;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #FF4500;
+            margin-bottom: 0.75rem;
+        }
+
+        .config-section select {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid rgba(255, 140, 0, 0.4);
+            border-radius: 12px;
+            background: white;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .config-section select:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border: 2px solid rgba(255, 140, 0, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-option:hover {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .radio-option input[type="radio"] {
+            width: 24px;
+            height: 24px;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            flex: 1;
+            font-size: 1.1rem;
+            color: #333;
+            cursor: pointer;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .radio-option.selected {
+            border-color: #FF4500;
+            background: rgba(255, 69, 0, 0.1);
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.2);
+        }
+
+        .preview-section {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            border: 3px solid #FF8C00;
+        }
+
+        .preview-section h3 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+        }
+
+        .preview-section p {
+            color: white;
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .preview-section strong {
+            color: #2B1B00;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        .btn-start-speed-round {
+            width: 100%;
+            padding: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-start-speed-round:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.6);
+        }
+
+        .btn-start-speed-round:active {
+            transform: translateY(0);
+        }
+
+        .btn-back {
+            display: block;
+            margin: 0 auto 1.5rem auto;
+            padding: 0.75rem 1.5rem;
+            background: rgba(128, 128, 128, 0.2);
+            color: #666;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+            max-width: 200px;
+        }
+
+        .btn-back:hover {
+            background: rgba(128, 128, 128, 0.3);
+            transform: scale(1.05);
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .difficulty-easy { background: #90EE90; color: #006400; }
+        .difficulty-medium { background: #FFD700; color: #8B4500; }
+        .difficulty-hard { background: #FFA500; color: #8B0000; }
+        .difficulty-expert { background: #FF4500; color: white; }
+
+        /* ⚡ SPEED ROUND INTRODUCTION MODAL ⚡ */
+        .speed-intro-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .speed-intro-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
+            border: 5px solid #FFD700;
+            border-radius: 30px;
+            padding: 2.5rem;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(255, 215, 0, 0.3);
+            animation: slideInScale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .speed-intro-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .speed-intro-header h2 {
+            font-size: 2.5rem;
+            color: #FF4500;
+            margin: 0 0 0.5rem 0;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .speed-intro-header p {
+            font-size: 1.2rem;
+            color: #FF8C00;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .speed-intro-rules {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 3px solid rgba(255, 140, 0, 0.3);
+        }
+        
+        .speed-intro-rules h3 {
+            font-size: 1.5rem;
+            color: #FF4500;
+            margin: 0 0 1rem 0;
+            text-align: center;
+        }
+        
+        .speed-rule {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .speed-rule-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .speed-rule-text {
+            font-size: 1rem;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .speed-rule-text strong {
+            color: #FF4500;
+        }
+        
+        .speed-intro-warning {
+            background: rgba(255, 69, 0, 0.1);
+            border: 2px solid #FF4500;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .speed-intro-warning p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #FF4500;
+            font-weight: 700;
+        }
+        
+        .speed-intro-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-intro {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-intro-start {
+            background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
+            color: white;
+        }
+        
+        .btn-intro-start:hover {
+            background: linear-gradient(135deg, #45A049 0%, #3D8B40 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-intro-cancel {
+            background: linear-gradient(135deg, #E0E0E0 0%, #CCCCCC 100%);
+            color: #666;
+        }
+        
+        .btn-intro-cancel:hover {
+            background: linear-gradient(135deg, #CCCCCC 0%, #B8B8B8 100%);
+            transform: translateY(-2px);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInScale {
+            from {
+                transform: translate(-50%, -60%) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @media (max-width: 768px) {
+            .setup-header h1 {
+                font-size: 2rem;
+            }
+
+            .config-section {
+                padding: 1rem;
+            }
+
+            .btn-start-speed-round {
+                font-size: 1.3rem;
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ⚡ SPEED ROUND INTRODUCTION MODAL ⚡ -->
+    <div id="speedIntroModal" class="speed-intro-modal">
+        <div class="speed-intro-content">
+            <div class="speed-intro-header">
+                <h2>⚡ Speed Round Challenge ⚡</h2>
+                <p>Are you ready to race against the clock?</p>
+            </div>
+            
+            <div class="speed-intro-rules">
+                <h3>📋 How It Works:</h3>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">📢</span>
+                    <div class="speed-rule-text">
+                        <strong>Word Announcement:</strong> Each word will be announced clearly before the timer starts, so you know what to spell!
+                    </div>
+                </div>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">⏱️</span>
+                    <div class="speed-rule-text">
+                        <strong>Beat the Clock:</strong> Type the correct spelling before time runs out. Speed matters!
+                    </div>
+                </div>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">⚡</span>
+                    <div class="speed-rule-text">
+                        <strong>Speed Bonus:</strong> Answer faster to earn bonus points! Quick thinking = more honey points!
+                    </div>
+                </div>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">🔥</span>
+                    <div class="speed-rule-text">
+                        <strong>Streak Power:</strong> Get multiple words right in a row for streak multipliers and explosive bonus points!
+                    </div>
+                </div>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">📊</span>
+                    <div class="speed-rule-text">
+                        <strong>Grade Impact:</strong> Your speed round scores count toward your overall grade and GPA. Every point matters!
+                    </div>
+                </div>
+                
+                <div class="speed-rule">
+                    <span class="speed-rule-icon">🎯</span>
+                    <div class="speed-rule-text">
+                        <strong>No Pausing:</strong> Once started, the challenge runs continuously. Stay focused and spell fast!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="speed-intro-warning">
+                <p>⚠️ Make sure you're ready - the clock starts immediately after each word is announced! ⚠️</p>
+            </div>
+            
+            <div class="speed-intro-buttons">
+                <button type="button" class="btn-intro btn-intro-start" onclick="proceedToSpeedRound()">
+                    🚀 Let's Go!
+                </button>
+                <button type="button" class="btn-intro btn-intro-cancel" onclick="closeSpeedIntro()">
+                    ← Back to Setup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="setup-container">
+        <a href="{{ url_for('home') }}" class="btn-back">⬅️ Back to Menu</a>
+
+        <div class="setup-header">
+            <h1>⚡ Speed Round Setup ⚡</h1>
+            <p>Configure your challenge and race against time!</p>
+        </div>
+
+        <form id="speedRoundForm">
+            <!-- Timer Selection -->
+            <div class="config-section">
+                <label>⏱️ Time Per Word:</label>
+                <select id="timerMode" name="time_per_word">
+                    <option value="20">🐌 Beginner - 20 seconds</option>
+                    <option value="15" selected>🐝 Standard - 15 seconds</option>
+                    <option value="10">⚡ Advanced - 10 seconds</option>
+                    <option value="7">🔥 Expert - 7 seconds</option>
+                </select>
+            </div>
+
+            <!-- Difficulty Selection -->
+            <div class="config-section">
+                <label>📚 Word Difficulty:</label>
+                <select id="difficulty" name="difficulty">
+                    <option value="grade_1_2">🟢 Grade 1-2 (CVC, sight words)</option>
+                    <option value="grade_3_4" selected>🔵 Grade 3-4 (Blends, patterns)</option>
+                    <option value="grade_5_6">🟡 Grade 5-6 (Multisyllabic)</option>
+                    <option value="middle_school">🟠 Middle School (Academic vocab)</option>
+                    <option value="high_school">🔴 High School (Advanced, SAT)</option>
+                </select>
+            </div>
+
+            <!-- Word Count -->
+            <div class="config-section">
+                <label>🎯 Number of Words:</label>
+                <select id="wordCount" name="word_count">
+                    <option value="10">Quick Burst - 10 words</option>
+                    <option value="20" selected>Sprint - 20 words</option>
+                    <option value="30">Marathon - 30 words</option>
+                    <option value="50">Ultra - 50 words</option>
+                </select>
+            </div>
+
+            <!-- Word Source -->
+            <div class="config-section">
+                <label>📝 Word Source:</label>
+                <div class="radio-group">
+                    <div class="radio-option selected" data-source="auto">
+                        <input type="radio" id="source_auto" name="word_source" value="auto" checked>
+                        <label for="source_auto">🤖 Auto-Generate (AI picks by difficulty)</label>
+                    </div>
+                    <div class="radio-option" data-source="uploaded" id="uploadedWordListOption">
+                        <input type="radio" id="source_uploaded" name="word_source" value="uploaded">
+                        <label for="source_uploaded">📂 My Uploaded Word List <span id="wordCountBadge" style="display:none; margin-left: 8px; padding: 2px 8px; background: #4CAF50; color: white; border-radius: 12px; font-size: 0.85rem; font-weight: 700;"></span></label>
+                    </div>
+                    <div class="radio-option" data-source="mixed">
+                        <input type="radio" id="source_mixed" name="word_source" value="mixed">
+                        <label for="source_mixed">🎲 Mixed Challenge (Random from all)</label>
+                    </div>
+                </div>
+                <!-- Hidden file input for upload -->
+                <input type="file" id="fileUploadInput" accept=".txt,.csv,.doc,.docx,.pdf,.jpg,.jpeg,.png" style="display: none;">
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-section">
+                <h3>📊 Challenge Preview:</h3>
+                <p>📚 Difficulty: <strong id="previewDifficulty">Grade 3-4</strong></p>
+                <p>⏱️ Time: <strong id="previewTime">15 seconds</strong> per word</p>
+                <p>🎯 Words: <strong id="previewCount">20 words</strong></p>
+                <p>💰 Base Points: <strong id="previewPoints">10 pts/word × 1.5x multiplier</strong></p>
+                <p>⚡ Possible Bonus: <strong>Speed + Streak bonuses!</strong></p>
+            </div>
+
+            <button type="submit" class="btn-start-speed-round">
+                🚀 Start Speed Round!
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Check if user already has uploaded words and show count
+        async function checkExistingWordList() {
+            try {
+                const response = await fetch('/api/wordbank');
+                const data = await response.json();
+                if (data && data.words && data.words.length > 0) {
+                    const badge = document.getElementById('wordCountBadge');
+                    if (badge) {
+                        badge.textContent = `${data.words.length} words`;
+                        badge.style.display = 'inline';
+                    }
+                }
+            } catch (error) {
+                console.log('No existing word list found');
+            }
+        }
+        
+        // Check on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkExistingWordList();
+        });
+        
+        // Radio button selection visual feedback
+        document.querySelectorAll('.radio-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const radio = this.querySelector('input[type="radio"]');
+                const source = this.getAttribute('data-source');
+                
+                // Special handling for uploaded word list - trigger file browser
+                if (source === 'uploaded') {
+                    // Check if they already have words uploaded
+                    fetch('/api/wordbank')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!data || !data.words || data.words.length === 0) {
+                                // No words yet, open file browser
+                                const fileInput = document.getElementById('fileUploadInput');
+                                if (fileInput) {
+                                    fileInput.click();
+                                }
+                            } else {
+                                // They have words, just select this option
+                                radio.checked = true;
+                            }
+                        })
+                        .catch(() => {
+                            // Error checking, open file browser
+                            const fileInput = document.getElementById('fileUploadInput');
+                            if (fileInput) {
+                                fileInput.click();
+                            }
+                        });
+                } else {
+                    radio.checked = true;
+                }
+                
+                // Remove selected class from all options
+                document.querySelectorAll('.radio-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                
+                // Add selected class to clicked option
+                this.classList.add('selected');
+                updatePreview();
+            });
+        });
+        
+        // Handle file upload
+        const fileUploadInput = document.getElementById('fileUploadInput');
+        if (fileUploadInput) {
+            fileUploadInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                console.log('📁 File selected for upload:', file.name);
+                
+                // Show loading indicator
+                const uploadOption = document.getElementById('uploadedWordListOption');
+                if (uploadOption) {
+                    uploadOption.style.opacity = '0.6';
+                    uploadOption.style.pointerEvents = 'none';
+                }
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.status === 'success') {
+                        console.log('✅ Upload successful:', result);
+                        
+                        // Show success popup with word count
+                        const wordCount = result.word_count || result.count || 0;
+                        alert(`✅ Success!\n\n${wordCount} words uploaded and ready for Speed Round!\n\nClick "Start Speed Round" when ready.`);
+                        
+                        // Update badge
+                        const badge = document.getElementById('wordCountBadge');
+                        if (badge) {
+                            badge.textContent = `${wordCount} words`;
+                            badge.style.display = 'inline';
+                        }
+                        
+                        // Auto-select the uploaded option
+                        const radio = document.getElementById('source_uploaded');
+                        if (radio) {
+                            radio.checked = true;
+                            uploadOption.classList.add('selected');
+                            document.querySelectorAll('.radio-option').forEach(opt => {
+                                if (opt !== uploadOption) opt.classList.remove('selected');
+                            });
+                        }
+                    } else {
+                        throw new Error(result.message || 'Upload failed');
+                    }
+                } catch (error) {
+                    console.error('❌ Upload error:', error);
+                    alert(`❌ Upload failed: ${error.message}\n\nPlease try again or select a different word source.`);
+                } finally {
+                    // Restore UI
+                    if (uploadOption) {
+                        uploadOption.style.opacity = '1';
+                        uploadOption.style.pointerEvents = 'auto';
+                    }
+                    // Clear file input
+                    fileUploadInput.value = '';
+                }
+            });
+        }
+
+        // Update preview when form changes
+        const timerSelect = document.getElementById('timerMode');
+        const difficultySelect = document.getElementById('difficulty');
+        const wordCountSelect = document.getElementById('wordCount');
+
+        [timerSelect, difficultySelect, wordCountSelect].forEach(select => {
+            select.addEventListener('change', updatePreview);
+        });
+
+        function updatePreview() {
+            const time = timerSelect.value;
+            const difficulty = difficultySelect.options[difficultySelect.selectedIndex].text;
+            const wordCount = wordCountSelect.value;
+            
+            // Difficulty multipliers
+            const multipliers = {
+                'grade_1_2': 1.0,
+                'grade_3_4': 1.5,
+                'grade_5_6': 2.0,
+                'middle_school': 2.5,
+                'high_school': 3.0
+            };
+            
+            const multiplier = multipliers[difficultySelect.value] || 1.5;
+            
+            document.getElementById('previewDifficulty').textContent = difficulty.split(' (')[0];
+            document.getElementById('previewTime').textContent = `${time} seconds`;
+            document.getElementById('previewCount').textContent = `${wordCount} words`;
+            document.getElementById('previewPoints').textContent = `10 pts/word × ${multiplier}x multiplier`;
+        }
+
+        // Form submission - show introduction modal first
+        document.getElementById('speedRoundForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const wordSource = document.querySelector('input[name="word_source"]:checked').value;
+            
+            // Check if user selected "uploaded" word source
+            if (wordSource === 'uploaded') {
+                // Check if user has uploaded words
+                try {
+                    const checkResponse = await fetch('/api/wordbank');
+                    const checkData = await checkResponse.json();
+                    
+                    if (!checkData || !checkData.words || checkData.words.length === 0) {
+                        // No word list - redirect to upload page like main menu does
+                        alert('📝 Please upload a word list first!\n\nYou\'ll be redirected to the Upload page.');
+                        window.location.href = '/?mode=text';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error checking word list:', error);
+                    alert('📝 Please upload a word list first!\n\nYou\'ll be redirected to the home page.');
+                    window.location.href = '/';
+                    return;
+                }
+            }
+            
+            // Show introduction modal instead of starting immediately
+            document.getElementById('speedIntroModal').style.display = 'block';
+        });
+        
+        // Close intro modal
+        function closeSpeedIntro() {
+            document.getElementById('speedIntroModal').style.display = 'none';
+        }
+        
+        // Proceed with speed round after reading instructions
+        async function proceedToSpeedRound() {
+            const wordSource = document.querySelector('input[name="word_source"]:checked').value;
+            
+            const formData = {
+                time_per_word: parseInt(timerSelect.value),
+                difficulty: difficultySelect.value,
+                word_count: parseInt(wordCountSelect.value),
+                word_source: wordSource
+            };
+            
+            console.log('🚀 Starting speed round with config:', formData);
+            
+            try {
+                const response = await fetch('/api/speed-round/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // Redirect to speed round quiz
+                    window.location.href = '/speed-round/quiz';
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to start speed round'));
+                    closeSpeedIntro();
+                }
+            } catch (error) {
+                console.error('Error starting speed round:', error);
+                alert('Failed to start speed round. Please try again.');
+                closeSpeedIntro();
+            }
+        }
+
+        // Initialize preview
+        updatePreview();
+    </script>
+</body>
+</html>

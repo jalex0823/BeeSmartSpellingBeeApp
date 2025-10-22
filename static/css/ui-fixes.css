@@ -1,0 +1,310 @@
+/* =========================================================
+   BeeSmart UI Fixes - Avatar, Admin Panel, and Data Display
+   Addresses Battle of the Bees UI issues from screenshots
+   ========================================================= */
+
+/* 1. AVATAR VISIBILITY AND Z-INDEX FIXES */
+/* Fix avatar container overflow and positioning issues */
+#adminAvatar3D, 
+[id*="Avatar3D"], 
+.avatar-container,
+.my-avatar-container {
+    /* Remove overflow hidden that clips avatars */
+    overflow: visible !important;
+    
+    /* Ensure proper z-index layering */
+    position: relative;
+    z-index: 10;
+    
+    /* Center avatar properly */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Add slight top offset to prevent clipping */
+    margin-top: 10px;
+    margin-bottom: 1rem;
+}
+
+/* Avatar circle styling improvements */
+.avatar-circle,
+.avatar-display {
+    /* Ensure avatars appear above backgrounds */
+    position: relative;
+    z-index: 15;
+    
+    /* Proper centering */
+    display: block;
+    margin: 0 auto;
+    
+    /* Remove any clipping */
+    overflow: visible;
+    
+    /* Ensure visibility across devices */
+    min-width: 120px;
+    min-height: 120px;
+    max-width: 200px;
+    max-height: 200px;
+}
+
+/* Avatar loading states with proper visibility */
+.avatar-loading,
+.avatar-loaded,
+.avatar-error {
+    z-index: 20;
+    position: relative;
+}
+
+/* 2. ADMIN DASHBOARD LAYOUT FIXES */
+/* Fix Quick Actions panel positioning and spacing */
+.quick-actions-panel,
+.admin-quick-actions {
+    /* Add proper spacing below header */
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+}
+
+/* Center card titles horizontally and vertically */
+.section-title,
+.card-title,
+h2[style*="text-align: center"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 3rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Improve Quick Actions button layout */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+/* 3. GUEST ACCOUNT FILTERING STYLES */
+/* Hide guest accounts in admin views */
+.user-row[data-is-guest="true"],
+.student-entry[data-is-guest="true"],
+.leaderboard-entry[data-is-guest="true"],
+tr[data-is-guest="true"] {
+    display: none !important;
+}
+
+/* Guest indicator for debugging (hidden by default) */
+.guest-indicator {
+    display: none;
+    background: #fee;
+    color: #c53030;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+/* Show guest indicators only in debug mode */
+body[data-debug="true"] .guest-indicator {
+    display: inline-block;
+}
+
+/* 4. NUMBER FORMATTING IMPROVEMENTS */
+/* Ensure proper spacing for formatted numbers */
+.formatted-number,
+.score-display,
+.honey-points,
+.total-points {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.025em;
+}
+
+/* Large number displays with proper spacing */
+.large-score {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 5. RESPONSIVE AVATAR FIXES */
+/* Mobile avatar adjustments */
+@media (max-width: 768px) {
+    #adminAvatar3D, 
+    [id*="Avatar3D"] {
+        width: 150px;
+        height: 150px;
+        margin-top: 5px;
+    }
+    
+    .avatar-circle {
+        min-width: 100px;
+        min-height: 100px;
+        max-width: 150px;
+        max-height: 150px;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #adminAvatar3D, 
+    [id*="Avatar3D"] {
+        width: 180px;
+        height: 180px;
+    }
+}
+
+/* 6. CARD BACKGROUND Z-INDEX FIXES */
+/* Ensure cards don't overlap avatars */
+.card,
+.admin-card,
+.dashboard-card,
+[style*="background: white"] {
+    position: relative;
+    z-index: 1;
+}
+
+/* Avatar containers must be higher than cards */
+.avatar-section,
+.my-avatar-section {
+    position: relative;
+    z-index: 5;
+}
+
+/* 7. THREE.JS / UNITY CANVAS FIXES */
+/* Ensure 3D canvases have proper layering */
+canvas[data-engine="three"],
+canvas[data-engine="unity"],
+#three-canvas,
+#unity-canvas {
+    position: relative;
+    z-index: 12;
+    pointer-events: auto;
+}
+
+/* 8. ADMIN PANEL SPECIFIC FIXES */
+/* Fix admin dashboard grid layout */
+.admin-grid-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    align-items: start; /* Prevent stretching */
+}
+
+/* Quick Actions title spacing */
+.quick-actions-title {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    padding-top: 0.5rem; /* Add space below header */
+}
+
+/* Avatar panel specific styling */
+.avatar-panel {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 2;
+}
+
+/* Change Avatar button improvements */
+.change-avatar-btn {
+    display: block;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 1rem;
+}
+
+.change-avatar-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255, 107, 0, 0.3);
+}
+
+/* 9. DATA TABLE IMPROVEMENTS */
+/* Better table formatting for admin views */
+.admin-table,
+.student-table,
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.admin-table th,
+.student-table th,
+.leaderboard-table th {
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.admin-table td,
+.student-table td,
+.leaderboard-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+/* 10. ACCESSIBILITY IMPROVEMENTS */
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .avatar-circle,
+    #adminAvatar3D {
+        border: 2px solid #000;
+    }
+    
+    .formatted-number,
+    .score-display {
+        font-weight: 700;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .change-avatar-btn:hover {
+        transform: none;
+    }
+    
+    canvas[data-engine="three"],
+    canvas[data-engine="unity"] {
+        animation: none;
+    }
+}
+
+/* 11. DEBUG UTILITIES (hidden by default) */
+.debug-avatar-bounds {
+    display: none;
+    border: 2px dashed red;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+}
+
+body[data-debug="true"] .debug-avatar-bounds {
+    display: block;
+}
+
+/* 12. PRINT STYLES */
+@media print {
+    .avatar-circle,
+    #adminAvatar3D,
+    canvas {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .change-avatar-btn {
+        background: #4a5568;
+        color: white;
+    }
+}

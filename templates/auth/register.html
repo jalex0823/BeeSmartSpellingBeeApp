@@ -1,0 +1,810 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account - BeeSmart Spelling{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-center { min-height: 92vh; display:flex; align-items:center; justify-content:center; padding: 1.25rem; }
+  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow:hidden; box-shadow: 0 18px 45px rgba(255,170,200,0.28); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 560px; width:100%; }
+  .content-card::before { content:''; position:absolute; inset:0; left:-100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 8s ease-in-out infinite; z-index:1; pointer-events:none; }
+  @keyframes cardFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
+  @keyframes shimmer { 0%{ left:-100% } 50%{ left:100% } 100%{ left:100% } }
+  .card-header{ text-align:center; padding: 1.5rem 2rem 0.75rem; }
+  .card-header h1{ margin:0; font-size:1.75rem; }
+  .card-sub{ color:#7F8C8D; margin-top:0.35rem; }
+  .card-body{ position:relative; z-index:2; padding: 1.25rem 1.75rem 1.75rem; max-height: 85vh; overflow: auto; }
+  @media (max-height: 700px){ .card-body{ max-height: 75vh; } }
+  .form-group{ margin: 0.9rem 0; }
+  label{ display:block; font-weight:600; margin-bottom: 0.35rem; }
+  input, select{ width:100%; padding: 0.75rem 0.9rem; border:2px solid #E0E0E0; border-radius:10px; transition: box-shadow .2s ease, border-color .2s ease; background:#fff; }
+  input:focus, select:focus{ outline:none; border-color:#FF9AA2; box-shadow: 0 0 0 3px rgba(255,170,200,0.25); }
+  .help-text{ font-size: 0.8rem; color:#7F8C8D; margin-top: 0.35rem; }
+  .password-strength{ margin-top:0.5rem; height:4px; background:#ECF0F1; border-radius:2px; overflow:hidden; }
+  .password-strength-bar{ height:100%; width:0%; transition: all .3s ease; border-radius:2px; }
+  .strength-weak{ background:#E74C3C; width:33%; }
+  .strength-medium{ background:#F39C12; width:66%; }
+  .strength-strong{ background:#27AE60; width:100%; }
+  .password-strength-text{ font-size:0.75rem; margin-top:0.25rem; font-weight:500; }
+  .strength-weak-text{ color:#E74C3C }
+  .strength-medium-text{ color:#F39C12 }
+  .strength-strong-text{ color:#27AE60 }
+  .teacher-info-box{ background:#FFF9E6; border:1px solid #FFD700; border-radius:8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.85rem; color:#2C3E50 }
+  .teacher-info-box strong{ color:#FFA500; display:block; margin-bottom:0.25rem }
+  .btn-primary{ width:100%; padding: 1rem; background: linear-gradient(135deg, #FFB300, #FFD54F); color:#3b2b04; border:0; border-radius:14px; font-weight:700; cursor:pointer; transition: transform .2s ease, box-shadow .2s ease; box-shadow: 0 8px 20px rgba(255,179,0,.35); margin-top: 0.75rem; }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255,179,0,.45); }
+  .btn-primary:disabled{ opacity:.65; cursor:not-allowed; transform:none }
+  .signin-link{ text-align:center; padding: 1rem 1.5rem 1.5rem; color:#7F8C8D }
+  .signin-link a{ color:#FF69B4; text-decoration:none; font-weight:700 }
+  .signin-link a:hover{ text-decoration: underline }
+  .required{ color:#E74C3C }
+  .optional{ color:#95A5A6; font-weight:400; font-size:0.85rem; margin-left:4px }
+  .alert{ padding: 0.875rem 1rem; border-radius: 10px; margin-bottom: 1rem; border: 1px solid transparent; display:none }
+  .alert-success{ 
+    background: linear-gradient(135deg, #4CAF50, #81C784);
+    color: white;
+    border: 3px solid #2E7D32;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px rgba(76, 175, 80, 0.4);
+    animation: successPulse 0.6s ease-in-out, slideDown 0.4s ease-out;
+  }
+  .alert-error{ background:#FCE8E8; color:#7A1D1D; border-color:#F4CACA }
+  
+  @keyframes successPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  
+  @keyframes slideDown {
+    0% { opacity: 0; transform: translateY(-20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Success Confetti */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: #FFD700;
+    position: absolute;
+    animation: confettiFall 3s linear;
+  }
+  
+  @keyframes confettiFall {
+    0% { top: -10%; opacity: 1; }
+    100% { top: 100%; opacity: 0; transform: rotate(360deg); }
+  }
+  .spinner{ display:none; width:16px; height:16px; border:2px solid #fff; border-top-color: transparent; border-radius:50%; animation:spin .6s linear infinite; margin-left:8px; vertical-align:middle }
+  /* Centered checkbox row (for future consent/remember rows) */
+  .consent-row{ display:flex; align-items:center; justify-content:center; margin: 0.5rem 0 1rem; font-size:0.9rem; color:#5A6C7D }
+  .consent-row label{ display:flex; align-items:center; gap: 0.5rem; }
+  .consent-row input[type="checkbox"]{ width: 18px; height: 18px; accent-color: #FFB300; }
+  
+  /* Avatar Selection Styles - Enhanced for Better Visibility */
+  .avatar-selection-container{ margin-top: 0.75rem; }
+  .avatar-grid{ 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+    gap: 1rem; 
+    margin-bottom: 0.75rem; 
+    padding: 0.5rem;
+  }
+  .avatar-option{ 
+    position: relative; 
+    cursor: pointer; 
+    border: 3px solid transparent; 
+    border-radius: 16px; 
+    padding: 0.75rem; 
+    background: linear-gradient(135deg, #FFF9E6, #FFFBF0); 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    overflow: hidden;
+    aspect-ratio: 1; /* Force square shape */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.15);
+  }
+  .avatar-option:hover{ 
+    transform: translateY(-5px) scale(1.03); 
+    box-shadow: 0 8px 25px rgba(255, 179, 0, 0.4); 
+    border-color: #FFD700; 
+    background: linear-gradient(135deg, #FFFAF0, #FFF6E6);
+  }
+  .avatar-option.selected{ 
+    border-color: #FFB300; 
+    background: linear-gradient(135deg, #FFE082, #FFD54F); 
+    box-shadow: 0 10px 30px rgba(255, 179, 0, 0.5); 
+    transform: scale(1.08); 
+  }
+  .avatar-option.selected::after{ 
+    content: '✓'; 
+    position: absolute; 
+    top: 8px; 
+    right: 8px; 
+    background: #27AE60; 
+    color: white; 
+    width: 24px; 
+    height: 24px; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 0.9rem; 
+    font-weight: bold; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .avatar-option img{ 
+    width: 100px; 
+    height: 100px; 
+    object-fit: contain; /* Maintain aspect ratio */
+    border-radius: 12px; 
+    display: block; 
+    margin-bottom: 0.5rem;
+  }
+  .avatar-name{ 
+    text-align: center; 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+    color: #5d4100; 
+    margin-top: 0.5rem; 
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    width: 100%;
+    min-height: 2.6rem; /* Reserve space for 2 lines */
+  }
+  .avatar-help-text{ font-size: 0.8rem; color: #7F8C8D; text-align: center; margin-top: 0.5rem; font-style: italic; }
+  
+  @media (max-width: 500px) {
+    .avatar-grid{ 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 0.75rem; 
+      padding: 0.25rem;
+    }
+    .avatar-option{ 
+      padding: 0.5rem; 
+      min-height: 120px;
+    }
+    .avatar-option img{ 
+      width: 80px; 
+      height: 80px; 
+    }
+    .avatar-name{ 
+      font-size: 0.75rem; 
+      min-height: 2.4rem;
+    }
+    .avatar-name{ font-size: 0.65rem; }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-center">
+  <!-- Back to Main Menu Button -->
+  <a href="/" class="btn-back-to-menu" id="backToMenuBtn" style="position: fixed; top: 20px; left: 20px; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #9E9E9E, #757575); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1000; display: flex; align-items: center; gap: 0.5rem;">
+    <span>←</span>
+    <span>Back to Main Menu</span>
+  </a>
+  
+  <section class="content-card" aria-label="Create your BeeSmart account">
+    <div class="card-header">
+      <h1>Join the Hive</h1>
+      <div class="card-sub">Create your account to start practicing</div>
+    </div>
+    <div class="card-body">
+      <div id="alert-container"></div>
+
+      <form id="registerForm" method="POST" action="{{ url_for('register') }}">
+        <!-- CSRF removed (not configured in app) -->
+        <div class="form-group">
+          <label for="username">Username <span class="required">*</span></label>
+          <input type="text" id="username" name="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" placeholder="Choose a username" autocomplete="username">
+          <div class="help-text">3-20 characters (letters, numbers, and underscore only)</div>
+        </div>
+
+        <div class="form-group">
+          <label for="display_name">Display Name <span class="required">*</span></label>
+          <input type="text" id="display_name" name="display_name" required maxlength="50" placeholder="First name or nickname" autocomplete="name">
+          <div class="help-text">This is how your name will appear in the game</div>
+        </div>
+
+        <div class="form-group">
+          <label for="role">I am a... <span class="required">*</span></label>
+          <select id="role" name="role" required>
+            <option value="student" selected>Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="parent">Parent</option>
+          </select>
+          <div class="help-text">Teachers and parents will receive a unique key to share with students</div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="optional">(optional)</span></label>
+          <input type="email" id="email" name="email" placeholder="your.email@example.com" autocomplete="email">
+          <div class="help-text">Needed for password recovery</div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password <span class="required">*</span></label>
+          <input type="password" id="password" name="password" required minlength="6" placeholder="Create a strong password" autocomplete="new-password">
+          <div class="help-text">At least 6 characters - make it secure!</div>
+          <div class="password-strength"><div class="password-strength-bar" id="strengthBar"></div></div>
+          <div class="password-strength-text" id="strengthText"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="grade">Grade Level <span class="optional">(optional)</span></label>
+          <select id="grade" name="grade">
+            <option value="">Select your grade</option>
+            <option value="K">Kindergarten</option>
+            <option value="1">1st Grade</option>
+            <option value="2">2nd Grade</option>
+            <option value="3">3rd Grade</option>
+            <option value="4">4th Grade</option>
+            <option value="5">5th Grade</option>
+            <option value="6">6th Grade</option>
+            <option value="7">7th Grade</option>
+            <option value="8">8th Grade</option>
+            <option value="9">9th Grade</option>
+            <option value="10">10th Grade</option>
+            <option value="11">11th Grade</option>
+            <option value="12">12th Grade</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="teacher_key">Parent/Teacher Key <span class="optional">(optional)</span></label>
+          <input type="text" id="teacher_key" name="teacher_key" placeholder="BEE-2025-SMITH-XXXX" maxlength="50" style="text-transform: uppercase;">
+          <div class="teacher-info-box">
+            <strong>📚 Got a Parent or Teacher Key?</strong> 
+            If your parent or teacher gave you a special code (like <code>BEE-2025-BIG-P7TC</code>), enter it here! 
+            This will link your account so they can track your progress on their dashboard. 🎯
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Choose Your Bee Avatar 🐝 <span class="required">*</span></label>
+          <div class="avatar-selection-container">
+            <div class="avatar-grid" id="avatarGrid"></div>
+            <input type="hidden" id="selected_avatar" name="avatar_id" value="cool-bee">
+            <div class="avatar-help-text">Click on a bee to select your avatar! Your chosen bee will appear on the main menu with animations!</div>
+          </div>
+          <script>
+            // Dynamically load avatars so names match PNG labels
+            (async function loadAvatars() {
+              try {
+                const res = await fetch('/api/avatars');
+                const data = await res.json();
+                if (!data || data.status !== 'success') return;
+                const grid = document.getElementById('avatarGrid');
+                grid.innerHTML = '';
+                const avatars = data.avatars;
+                const bust = Date.now();
+                for (const a of avatars) {
+                  // Construct DOM
+                  const div = document.createElement('div');
+                  div.className = 'avatar-option';
+                  div.dataset.avatarId = a.id;
+                  div.innerHTML = `
+                    <img src="/static/assets/avatars/${a.id}/thumbnail.png?t=${bust}" alt="${a.name}" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <div class="avatar-name">${a.name}</div>
+                  `;
+                  grid.appendChild(div);
+                }
+                // Selection behavior
+                grid.addEventListener('click', (e) => {
+                  const card = e.target.closest('.avatar-option');
+                  if (!card) return;
+                  grid.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+                  card.classList.add('selected');
+                  document.getElementById('selected_avatar').value = card.dataset.avatarId;
+                });
+                // Default select cool-bee
+                const def = grid.querySelector('[data-avatar-id="cool-bee"]');
+                if (def) {
+                  def.classList.add('selected');
+                  document.getElementById('selected_avatar').value = 'cool-bee';
+                }
+              } catch (err) {
+                console.error('Failed to load avatars', err);
+              }
+            })();
+          </script>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Create Account <span class="spinner"></span></button>
+      </form>
+
+      <div class="signin-link">Already have an account? <a href="{{ url_for('login') }}">Sign in here</a></div>
+      
+      <!-- Instructional Information -->
+      <div style="
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFFBF0 100%);
+        border: 2px solid #FFD700;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        color: #5A2C15;
+        line-height: 1.6;
+      ">
+        <div style="font-weight: 700; margin-bottom: 0.5rem; color: #FF8C00; font-size: 1rem;">
+          🍯 What You'll Get:
+        </div>
+        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+          <li><strong>Honey Points System</strong> - Earn points for speed, accuracy, and streaks! 🍯</li>
+          <li><strong>7 Achievement Badges</strong> - From Perfect Spelling Bee to Speed Demon! 🏆</li>
+          <li><strong>Level Progression</strong> - Rise from Busy Bee (0 pts) to Queen Bee (10,000+ pts)! 👑</li>
+          <li><strong>Report Card</strong> - Track your progress with detailed statistics! 📊</li>
+          <li><strong>Battle of the Bees</strong> - Compete with friends in spelling challenges! ⚔️</li>
+        </ul>
+        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #FFD700;">
+          <div style="font-size: 0.85rem; color: #8B4513; margin-bottom: 0.5rem;">
+            <strong>🔒 Privacy & Safety:</strong>
+          </div>
+          <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.85rem; color: #8B4513;">
+            <li>Email is optional (only needed for password recovery)</li>
+            <li>Your data is secure and never shared</li>
+            <li>Kid-safe content with automated filtering</li>
+            <li>Guest mode available if you prefer not to register</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Password strength checker
+const passwordInput = document.getElementById('password');
+const strengthBar = document.getElementById('strengthBar');
+const strengthText = document.getElementById('strengthText');
+
+passwordInput.addEventListener('input', function() {
+    const password = this.value;
+    let strength = 0;
+    
+    if (password.length >= 6) strength++;
+    if (password.length >= 10) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    
+    strengthBar.className = 'password-strength-bar';
+    strengthText.className = 'password-strength-text';
+    
+    if (password.length === 0) {
+        strengthBar.classList.remove('strength-weak', 'strength-medium', 'strength-strong');
+        strengthText.textContent = '';
+    } else if (strength <= 2) {
+        strengthBar.classList.add('strength-weak');
+        strengthText.classList.add('strength-weak-text');
+        strengthText.textContent = 'Weak password';
+    } else if (strength <= 3) {
+        strengthBar.classList.add('strength-medium');
+        strengthText.classList.add('strength-medium-text');
+        strengthText.textContent = 'Medium password';
+    } else {
+        strengthBar.classList.add('strength-strong');
+        strengthText.classList.add('strength-strong-text');
+        strengthText.textContent = 'Strong password!';
+    }
+});
+
+// Avatar selection handler
+const avatarOptions = document.querySelectorAll('.avatar-option');
+const selectedAvatarInput = document.getElementById('selected_avatar');
+
+// Set cool-bee as default selected
+document.querySelector('[data-avatar-id="cool-bee"]')?.classList.add('selected');
+
+avatarOptions.forEach(option => {
+    option.addEventListener('click', function() {
+        // Remove selected class from all options
+        avatarOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        // Add selected class to clicked option
+        this.classList.add('selected');
+        
+        // Update hidden input value with avatar ID
+        selectedAvatarInput.value = this.dataset.avatarId;
+        
+        console.log('🐝 Avatar selected:', this.dataset.avatarId);
+    });
+});
+
+// Role-based field visibility
+const roleSelect = document.getElementById('role');
+const teacherKeyGroup = document.getElementById('teacher_key').closest('.form-group');
+
+function updateFieldsBasedOnRole() {
+    const role = roleSelect.value;
+    if (role === 'student') {
+        teacherKeyGroup.style.display = 'block';
+    } else {
+        teacherKeyGroup.style.display = 'none';
+    }
+}
+
+roleSelect.addEventListener('change', updateFieldsBasedOnRole);
+updateFieldsBasedOnRole(); // Initialize on page load
+
+// Form submission with AJAX
+const registerForm = document.getElementById('registerForm');
+const submitBtn = document.getElementById('submitBtn');
+const alertContainer = document.getElementById('alert-container');
+
+registerForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    console.log('🐝 Registration form submitted');
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+    
+    // Get form values manually to ensure proper JSON encoding
+    const formPayload = {
+        username: document.getElementById('username').value.trim(),
+        display_name: document.getElementById('display_name').value.trim(),
+        role: document.getElementById('role').value,
+        password: document.getElementById('password').value,
+        email: document.getElementById('email').value.trim(),
+        grade_level: document.getElementById('grade').value,
+        teacher_key: document.getElementById('teacher_key').value.trim(),
+        avatar_id: document.getElementById('selected_avatar').value  // Fixed: was 'avatar', should be 'avatar_id'
+    };
+    
+    console.log('📝 Form data:', { ...formPayload, password: '***' });
+    console.log('🐝 Selected avatar:', formPayload.avatar_id);
+    
+    try {
+        const response = await fetch(registerForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formPayload)
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('📦 Response data:', data);
+        
+        if (data.success) {
+            showAlert('success', data.message || '🎉 Account created successfully! Welcome to BeeSmart! 🐝');
+            createConfetti();
+            playSuccessSound();
+            
+            // Show teacher/parent key modal if generated
+            if (data.show_key_modal && data.teacher_key) {
+                setTimeout(() => {
+                    showKeyModal(data.teacher_key, formPayload.role);
+                }, 1000);
+            } else {
+                setTimeout(() => {
+                    window.location.href = data.redirect || '{{ url_for("home") }}';
+                }, 2500);
+            }
+        } else {
+            showAlert('error', data.error || data.message || 'Registration failed. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        }
+    } catch (error) {
+        console.error('❌ Registration error:', error);
+        showAlert('error', 'Network error occurred. Please check your connection and try again.');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+    }
+});
+
+function showKeyModal(key, role) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease-in-out;
+    `;
+    
+    const roleText = role === 'teacher' ? 'Teacher' : 'Parent';
+    const recipientText = role === 'teacher' ? 'students' : 'children';
+    
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #FFE082 0%, #FFD54F 100%);
+            padding: 2.5rem;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: slideUp 0.4s ease-out;
+        ">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+            <h2 style="margin: 0 0 1rem 0; color: #2C3E50; font-size: 1.75rem;">
+                Your ${roleText} Key is Ready!
+            </h2>
+            <p style="color: #5A2C15; margin-bottom: 1.5rem; line-height: 1.6;">
+                Share this special key with your ${recipientText} so they can join your hive!
+            </p>
+            <div style="
+                background: white;
+                padding: 1.5rem;
+                border-radius: 12px;
+                border: 3px dashed #FFB300;
+                margin-bottom: 1.5rem;
+            ">
+                <div style="font-size: 0.875rem; color: #7F8C8D; margin-bottom: 0.5rem; font-weight: 600;">
+                    YOUR ${roleText.toUpperCase()} KEY
+                </div>
+                <div id="keyDisplay" style="
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    color: #2C3E50;
+                    font-family: 'Courier New', monospace;
+                    letter-spacing: 2px;
+                    margin-bottom: 1rem;
+                ">${key}</div>
+                <button onclick="copyKey('${key}')" style="
+                    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+                ">
+                    📋 Copy Key
+                </button>
+            </div>
+            <p style="color: #8B4513; font-size: 0.875rem; margin-bottom: 1.5rem;">
+                💡 Keep this key safe! Your ${recipientText} will need it to connect to your account.
+            </p>
+            <button onclick="closeKeyModal()" style="
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                padding: 1rem 2rem;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 1rem;
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            ">
+                Continue to Dashboard
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Store redirect URL for later
+    window._keyModalRedirect = '{{ url_for("teacher_dashboard") }}';
+}
+
+function copyKey(key) {
+    navigator.clipboard.writeText(key).then(() => {
+        const copyBtn = event.target;
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✓ Copied!';
+        copyBtn.style.background = 'linear-gradient(135deg, #27AE60, #2ECC71)';
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.style.background = 'linear-gradient(135deg, #4CAF50, #66BB6A)';
+        }, 2000);
+    });
+}
+
+function closeKeyModal() {
+    const modal = document.querySelector('[style*="position: fixed"]');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+            window.location.href = window._keyModalRedirect || '{{ url_for("home") }}';
+        }, 300);
+    }
+}
+
+function showAlert(type, message) {
+    alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    const alert = alertContainer.querySelector('.alert');
+    alert.style.display = 'block';
+    
+    // Auto-hide after 5 seconds for non-success messages
+    if (type !== 'success') {
+        setTimeout(() => {
+            alert.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// Confetti celebration effect
+function createConfetti() {
+    const colors = ['#FFD700', '#FF69B4', '#4CAF50', '#2196F3', '#FF8C00', '#9C27B0'];
+    const confettiCount = 50;
+    
+    for (let i = 0; i < confettiCount; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            document.body.appendChild(confetti);
+            
+            // Remove after animation
+            setTimeout(() => confetti.remove(), 3000);
+        }, i * 30);
+    }
+}
+
+// Play success sound (using Web Audio API)
+function playSuccessSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Play success chord: C-E-G
+        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+        
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+        console.log('Audio not supported, skipping sound effect');
+    }
+}
+
+// Auto-uppercase teacher key
+const teacherKeyInput = document.getElementById('teacher_key');
+teacherKeyInput.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+
+// 🔙 REGISTRATION CANCEL/EXIT FUNCTIONALITY 🔙
+let formIsPristine = true;
+let formInitialValues = {};
+
+// Track initial form state
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('registerForm');
+    if (form) {
+        // Capture initial form values
+        const formData = new FormData(form);
+        for (let [key, value] of formData.entries()) {
+            formInitialValues[key] = value;
+        }
+        
+        // Track form changes
+        form.addEventListener('input', () => {
+            checkFormChanged();
+        });
+        
+        form.addEventListener('change', () => {
+            checkFormChanged();
+        });
+    }
+    
+    // ESC key handler
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancelRegistration();
+        }
+    });
+    
+    // Back to Menu button handler
+    const backBtn = document.getElementById('backToMenuBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+            if (!formIsPristine) {
+                e.preventDefault();
+                handleCancelRegistration();
+            }
+            // If form is pristine, allow normal navigation
+        });
+    }
+});
+
+function checkFormChanged() {
+    const form = document.getElementById('registerForm');
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    let hasChanges = false;
+    
+    for (let [key, value] of formData.entries()) {
+        const initialValue = formInitialValues[key] || '';
+        if (value !== initialValue && value.trim() !== '') {
+            hasChanges = true;
+            break;
+        }
+    }
+    
+    // Also check text inputs directly for any non-empty values
+    const inputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], select');
+    inputs.forEach(input => {
+        if (input.value && input.value.trim().length > 0) {
+            hasChanges = true;
+        }
+    });
+    
+    formIsPristine = !hasChanges;
+}
+
+function handleCancelRegistration() {
+    if (formIsPristine) {
+        // No changes, just go back
+        window.location.href = '/';
+        return;
+    }
+    
+    // Show confirmation dialog
+    const userConfirmed = confirm(
+        '⚠️ Are you sure you want to leave?\n\n' +
+        'You have unsaved changes in the registration form.\n' +
+        'All entered information will be lost.\n\n' +
+        'Click OK to return to Main Menu, or Cancel to continue registering.'
+    );
+    
+    if (userConfirmed) {
+        window.location.href = '/';
+    }
+}
+
+// Hover effect for back button
+document.addEventListener('DOMContentLoaded', () => {
+    const backBtn = document.getElementById('backToMenuBtn');
+    if (backBtn) {
+        backBtn.addEventListener('mouseenter', () => {
+            backBtn.style.transform = 'translateX(-5px)';
+            backBtn.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+        });
+        backBtn.addEventListener('mouseleave', () => {
+            backBtn.style.transform = 'translateX(0)';
+            backBtn.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+        });
+    }
+});
+</script>
+{% endblock %}

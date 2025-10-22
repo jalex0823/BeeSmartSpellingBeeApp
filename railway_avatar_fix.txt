@@ -1,0 +1,72 @@
+# RAILWAY AVATAR GENERATION FIX
+# Add this code to your AjaSpellBApp.py to resolve Railway avatar issues
+
+import os
+import logging
+from functools import wraps
+
+# Railway-safe logging  
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def railway_safe(func):
+    """Make avatar functions safe for Railway deployment"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Railway avatar error in {func.__name__}: {e}")
+            return None
+    return wrapper
+
+@railway_safe
+def get_avatars_safe():
+    """Railway-safe avatar loading"""
+    try:
+        from avatar_catalog import get_avatar_catalog
+        return get_avatar_catalog()
+    except:
+        # Fallback avatar list
+        return [{"id": "cool-bee", "name": "Cool Bee", "category": "classic"}]
+
+# REPLACE YOUR /api/avatars ROUTE WITH THIS:
+@app.route("/api/avatars", methods=["GET"])
+def api_avatars_railway_safe():
+    """Railway-safe avatar API"""
+    try:
+        avatars = get_avatars_safe() or []
+        return jsonify({
+            'status': 'success',
+            'avatars': avatars,
+            'total': len(avatars),
+            'railway_environment': bool(os.getenv('RAILWAY_ENVIRONMENT'))
+        })
+    except Exception as e:
+        logger.error(f"Avatar API error: {e}")
+        return jsonify({
+            'status': 'error', 
+            'message': 'Avatar system temporarily unavailable',
+            'fallback_active': True
+        }), 500
+
+# ADD THIS HEALTH CHECK ENDPOINT:
+@app.route("/api/avatar-health")
+def avatar_health():
+    """Check avatar system health on Railway"""
+    health = {
+        'timestamp': datetime.utcnow().isoformat(),
+        'environment': os.getenv('RAILWAY_ENVIRONMENT', 'local'),
+        'avatar_system': 'unknown'
+    }
+    
+    try:
+        avatars = get_avatars_safe()
+        health['avatar_count'] = len(avatars) if avatars else 0
+        health['avatar_system'] = 'operational' if avatars else 'degraded'
+    except Exception as e:
+        health['avatar_system'] = 'failed'
+        health['error'] = str(e)
+    
+    return jsonify(health)

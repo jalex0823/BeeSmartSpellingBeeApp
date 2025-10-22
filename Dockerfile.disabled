@@ -1,0 +1,5 @@
+# Dockerfile temporarily disabled to use Procfile/Nixpacks on Railway
+# Rename back to "Dockerfile" to re-enable Docker-based deployments.
+
+# Previous content retained in git history; this placeholder prevents Railway
+# from using the Dockerfile path so we can return to the last-known-good Procfile flow.

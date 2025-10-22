@@ -1,0 +1,24 @@
+# Railway ignore file - exclude test and debug files
+Dockerfile
+Dockerfile.*
+test_*.py
+debug_*.py
+*_test.py
+comprehensive_test.py
+minimal_test.py
+quick_test.py
+demo_test.py
+session_test.py
+full_app_test.py
+simple_test_app.py
+simple_upload_test.py
+railway_diagnostic.py
+push_to_github.*
+commit_changes.sh
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.vscode/
+.env
+*.log

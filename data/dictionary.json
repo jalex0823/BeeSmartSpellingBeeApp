@@ -1,0 +1,583 @@
+{
+  "_metadata": {
+    "version": "1.6",
+    "created": "2025-10-13",
+    "description": "BeeSmart dictionary cache - API fetched definitions only"
+  },
+  "words": {
+    "test": {
+      "definition": "A challenge, trial",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/test/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:39:55.902092"
+    },
+    "cat": {
+      "definition": "An animal of the family Felidae",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/kat/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:39:56.299978"
+    },
+    "dog": {
+      "definition": "A mammal, Canis familiaris or Canis lupus familiaris, that has been domesticated for thousands of years, of highly variable appearance due to human breeding",
+      "example": "The _____ barked all night long.",
+      "phonetic": "/dɑɡ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:39:56.816197"
+    },
+    "butterfly": {
+      "definition": "A flying insect of the order Lepidoptera, distinguished from moths by their diurnal activity and generally brighter colouring",
+      "example": "The student worked very _____ on the project",
+      "phonetic": "/ˈbʌtə(ɹ)flaɪ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:39:57.437293"
+    },
+    "rainbow": {
+      "definition": "A multicoloured arch in the sky, produced by prismatic refraction of light within droplets of rain in the air",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈɹeɪnbəʊ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:53:40.004455"
+    },
+    "adventure": {
+      "definition": "The encountering of risks; a bold undertaking, in which dangers are likely to be encountered, and the issue is staked upon unforeseen events; a daring feat",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ædˈvɛnt͡ʃɚ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:53:40.389368"
+    },
+    "example": {
+      "definition": "Something that is representative of all such things in a group",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/əɡˈzæmpl̩/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-13T21:53:40.913159"
+    },
+    "verdict": {
+      "definition": "A decision on an issue of fact in a civil or criminal case or an inquest",
+      "example": "The jury returned a “not guilty” _____.",
+      "phonetic": "/ˈvɝ.dɪkt/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:11.160120"
+    },
+    "imitation": {
+      "definition": "The act of imitating",
+      "example": "The _____ was announced at the school assembly",
+      "phonetic": "/ɪmɪˈteɪʃən/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:11.531029"
+    },
+    "preamble": {
+      "definition": "A short preliminary statement or remark, especially an explanatory introduction to a document or statute",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈpɹɪiˌæmbl̩/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:12.012239"
+    },
+    "commotion": {
+      "definition": "A state of turbulent motion",
+      "example": "The _____ was announced at the school assembly",
+      "phonetic": "/kəˈməʊ.ʃən/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:12.780774"
+    },
+    "steeple": {
+      "definition": "A tall tower, often on a church, normally topped with a spire",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈstiːpəl/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:13.032691"
+    },
+    "suspicious": {
+      "definition": "Arousing suspicion",
+      "example": "His _____ behaviour brought him to the attention of the police.",
+      "phonetic": "/səˈspɪ.ʃəs/",
+      "pos": "adjective",
+      "source": "api",
+      "created": "2025-10-14T11:53:13.762192"
+    },
+    "fugitive": {
+      "definition": "A person who flees or escapes and travels secretly from place to place, and sometimes using disguises and aliases to conceal his/her identity, as to avoid law authorities in order to avoid an arrest or prosecution; or to avoid some other unwanted situation",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈfjuːd͡ʒɪtɪv/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:14.142837"
+    },
+    "nomad": {
+      "definition": "A member of a society or class who herd animals from pasture to pasture with no fixed home",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈnəʊmæd/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:14.582950"
+    },
+    "berlin": {
+      "definition": "Spelling word with 6 letters",
+      "example": "Can you spell the word _____ correctly?",
+      "source": "generic_fallback",
+      "created": "2025-10-14T11:53:15.048961"
+    },
+    "bracken": {
+      "definition": "Any of several coarse ferns, of the genus Pteridium, that form dense thickets; often poisonous to livestock",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈbɹækən/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:15.674638"
+    },
+    "rakish": {
+      "definition": "Dashingly, carelessly, or sportingly unconventional or stylish; jaunty; characterized by a devil-may-care unconventionality; having a somewhat disreputable quality or appearance",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈɹeɪkɪʃ/",
+      "pos": "adjective",
+      "source": "api",
+      "created": "2025-10-14T11:53:16.038616"
+    },
+    "gusto": {
+      "definition": "Enthusiasm; enjoyment, vigor",
+      "example": "He sang with more _____ than talent.",
+      "phonetic": "/ˈɡʌstəʊ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:16.601060"
+    },
+    "jeered": {
+      "definition": "(jeer at) To utter sarcastic or mocking comments; to speak with mockery or derision; to use taunting language",
+      "example": "Yesterday, she _____ her homework carefully",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:17.312260"
+    },
+    "galore": {
+      "definition": "An abundance; plenty",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ɡəˈloː/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:17.810365"
+    },
+    "eccentric": {
+      "definition": "One who does not behave like others",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ɪkˈsɛntɹɪk/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:18.093649"
+    },
+    "hippies": {
+      "definition": "(1950s casual word) A teenager who imitated the beatniks",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈhɪpiz/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:18.663704"
+    },
+    "pistachio": {
+      "definition": "A deciduous tree (Pistacia vera) grown in parts of Asia for its drupaceous fruit",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/pɪsˈtæʃi.əʊ/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:19.238908"
+    },
+    "garbled": {
+      "definition": "To pick out such parts (of a text) as may serve a purpose; to mutilate; to pervert",
+      "example": "Yesterday, she _____ her homework carefully",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:19.853082"
+    },
+    "miniature": {
+      "definition": "Greatly diminished size or form; reduced scale",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈmɪn(ɪ)ətʃə(ɹ)/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:20.145725"
+    },
+    "plausible": {
+      "definition": "Seemingly or apparently valid, likely, or acceptable; conceivably true or likely",
+      "example": "a _____ excuse",
+      "phonetic": "/ˈplɔːz.ə.bəl/",
+      "pos": "adjective",
+      "source": "api",
+      "created": "2025-10-14T11:53:20.717120"
+    },
+    "oblivion": {
+      "definition": "The state of forgetting completely, of being oblivious, unconscious, unaware, as when sleeping, drunk, or dead",
+      "example": "He regularly drank himself into _____.",
+      "phonetic": "/əˈblɪvɪən/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:21.136250"
+    },
+    "spectators": {
+      "definition": "One who watches an event; especially, one held outdoors",
+      "example": "The cheering _____ watched the fireworks.",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:21.744973"
+    },
+    "parchment": {
+      "definition": "Material, made from the polished skin of a calf, sheep, goat or other animal, used like paper for writing",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈpɑːtʃmənt/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:22.116372"
+    },
+    "heron": {
+      "definition": "A long-legged, long-necked wading bird of the family Ardeidae",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈhɛɹən/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:22.617829"
+    },
+    "billowed": {
+      "definition": "To surge or roll in billows",
+      "example": "Yesterday, she _____ her homework carefully",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:23.226585"
+    },
+    "lunacy": {
+      "definition": "(of a person or group of people) The state of being mad, insanity",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈljuː.nə.si/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:23.622812"
+    },
+    "noggin": {
+      "definition": "A small mug, cup or ladle",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈnɒɡɪn/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:24.383508"
+    },
+    "hypnosis": {
+      "definition": "A trancelike state, artificially induced, in which a person has a heightened suggestibility, and in which suppressed memories may be experienced",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/hɪpˈnoʊsɪs/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:24.786981"
+    },
+    "toiletries": {
+      "definition": "Any item used for personal hygiene or grooming",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:25.145982"
+    },
+    "winsome": {
+      "definition": "Charming, engaging, winning; inspiring approval and trust, especially if in an innocent manner",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈwɪn.s(ə)m/",
+      "pos": "adjective",
+      "source": "api",
+      "created": "2025-10-14T11:53:25.935629"
+    },
+    "emporium": {
+      "definition": "A city or region which is a major trading centre; also, a place within a city for commerce and trading; a marketplace",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ɛmˈpɔː.ɹi.əm/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:26.467829"
+    },
+    "savant": {
+      "definition": "A person of learning, especially one who is versed in literature or science",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈsæv.ənt/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:26.868871"
+    },
+    "samosas": {
+      "definition": "A snack, of Indian origin, consisting of a deep-fried triangular turnover filled with vegetables (especially potatoes) or meat",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:27.372539"
+    },
+    "mosque": {
+      "definition": "A place of worship for Muslims, often having at least one minaret; a masjid",
+      "example": "There's a _____ near where I live.",
+      "phonetic": "/mɒsk/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:27.853635"
+    },
+    "encourages": {
+      "definition": "To mentally support; to motivate, give courage, hope or spirit",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:28.388334"
+    },
+    "receptionist": {
+      "definition": "An employee (such as a secretary) who works in reception (receiving visitors and/or calls) for a person or business, especially an office",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ɹɪˈsɛpʃənɪst/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:28.868434"
+    },
+    "reprimanding": {
+      "definition": "To reprove in a or official way",
+      "example": "The children are _____ at the playground",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:29.354337"
+    },
+    "immigrants": {
+      "definition": "A non-native person who comes to a country from another country in order to permanently settle there",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:29.867501"
+    },
+    "lanyards": {
+      "definition": "A short rope used for fastening rigging",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:30.356088"
+    },
+    "ramshackle": {
+      "definition": "To ransack",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈɹæmˌʃæk.əl/",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:30.714564"
+    },
+    "dissolving": {
+      "definition": "To terminate a union of multiple members actively, as by disbanding",
+      "example": "The children are _____ at the playground",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:31.317125"
+    },
+    "skewer": {
+      "definition": "A long pin, normally made of metal or wood, used to secure food during cooking",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈskjuːə/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:31.732234"
+    },
+    "conjure": {
+      "definition": "The practice of magic; hoodoo; conjuration",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/kənˈd͡ʒʊə(ɹ)/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:32.302229"
+    },
+    "neon": {
+      "definition": "The chemical element (symbol Ne) with an atomic number of 10. The lightest of the noble gases, it is a colourless, odorless inert gas",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈni.ɒn/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:33.005346"
+    },
+    "rotunda": {
+      "definition": "A round building, usually small, often with a dome",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ɹə(ʊ)ˈtʌndə/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:33.504655"
+    },
+    "gleaned": {
+      "definition": "To collect (grain, grapes, etc.) left behind after the main harvest or gathering",
+      "example": "Yesterday, she _____ her homework carefully",
+      "phonetic": "/ɡliːnd/",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:33.813147"
+    },
+    "prattling": {
+      "definition": "To speak incessantly and in a childish manner; to babble",
+      "example": "The children are _____ at the playground",
+      "phonetic": "",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-14T11:53:34.356514"
+    },
+    "atrium": {
+      "definition": "A central room or space in ancient Roman homes, open to the sky in the middle; a similar space in other buildings",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈeɪ.tɹi.əm/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:34.873076"
+    },
+    "almanac": {
+      "definition": "A book or table listing nautical, astronomical, astrological or other events for the year; sometimes, but not essentially, containing historical and statistical information",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "[ˈæl-]",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:35.262125"
+    },
+    "campaign": {
+      "definition": "A series of operations undertaken to achieve a set goal",
+      "example": "The company is targeting children in their latest advertising _____.",
+      "phonetic": "/kæmˈpeɪn/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T11:53:35.823743"
+    },
+    "goal": {
+      "definition": "A result that one is attempting to achieve",
+      "example": "My lifelong _____ is to get into a Hollywood movie.",
+      "phonetic": "/ɡɒʊl/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T12:45:54.110819"
+    },
+    "apple": {
+      "definition": "A common, round fruit produced by the tree Malus domestica, cultivated in temperate climates",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈæp.əl/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T12:55:58.623055"
+    },
+    "banana": {
+      "definition": "An elongated curved tropical fruit that grows in bunches and has a creamy flesh and a smooth skin",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/bəˈnɑːnə/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-14T12:55:59.165238"
+    },
+    "man": {
+      "definition": "Spelling word with 3 letters",
+      "example": "Can you spell the word _____ correctly?",
+      "source": "generic_fallback",
+      "created": "2025-10-15T17:48:54.274872"
+    },
+    "fossil": {
+      "definition": "Spelling word with 6 letters",
+      "example": "Can you spell the word _____ correctly?",
+      "source": "generic_fallback",
+      "created": "2025-10-15T17:49:04.675741"
+    },
+    "elephant": {
+      "definition": "Spelling word with 8 letters",
+      "example": "Can you spell the word _____ correctly?",
+      "source": "generic_fallback",
+      "created": "2025-10-15T19:17:53.766836"
+    },
+    "admire": {
+      "definition": "Practice spelling this 6-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:42:22.215984"
+    },
+    "brisk": {
+      "definition": "(often with \"up\") To make or become lively; to enliven; to animate",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/bɹɪsk/",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-10-16T15:42:22.553396"
+    },
+    "curious": {
+      "definition": "Practice spelling this 7-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:42:32.995274"
+    },
+    "dazzle": {
+      "definition": "Practice spelling this 6-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:42:43.300709"
+    },
+    "eager": {
+      "definition": "Practice spelling this 5-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:42:53.601514"
+    },
+    "fragile": {
+      "definition": "Easily broken or destroyed, and thus often of subtle or intricate structure",
+      "example": "He is a very _____ person and gets easily depressed.",
+      "phonetic": "/ˈfɹædʒaɪl/",
+      "pos": "adjective",
+      "source": "api",
+      "created": "2025-10-16T15:42:53.903819"
+    },
+    "glimpse": {
+      "definition": "Practice spelling this 7-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:43:04.386198"
+    },
+    "humble": {
+      "definition": "Practice spelling this 6-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:43:14.642500"
+    },
+    "mingle": {
+      "definition": "Practice spelling this 6-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:43:24.993852"
+    },
+    "timid": {
+      "definition": "Practice spelling this 5-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-10-16T15:43:35.295334"
+    }
+  },
+  "stats": {
+    "total_words": 73,
+    "api_calls": 0,
+    "cache_hits": 0
+  },
+  "last_updated": "2025-10-16T15:43:35.296103"
+}

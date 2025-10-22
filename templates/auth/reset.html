@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Reset Password{% endblock %}
+
+{% block content %}
+<div class="content-card" style="max-width: 520px; margin: 40px auto; padding: 24px">
+  <h2 style="margin-top:0">Reset your password</h2>
+  <p>Enter a new password below. For your safety, we won't say if the link is valid or not.</p>
+
+  <div id="resetForm">
+    <input type="hidden" id="token" value="{{ token|default('') }}" />
+    <div class="form-group">
+      <label for="password">New password</label>
+      <input id="password" type="password" class="form-control" placeholder="At least 8 characters" autocomplete="new-password" />
+    </div>
+    <div class="form-group">
+      <label for="confirm">Confirm new password</label>
+      <input id="confirm" type="password" class="form-control" placeholder="Repeat new password" autocomplete="new-password" />
+    </div>
+    <div class="form-actions" style="display:flex; gap:12px; justify-content:flex-end; margin-top:12px">
+      <button id="submitBtn" class="btn btn-primary">Update password</button>
+      <a href="{{ url_for('login') }}" class="btn btn-secondary">Back to login</a>
+    </div>
+  </div>
+
+  <div id="message" style="display:none; margin-top:12px"></div>
+</div>
+
+<script>
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('message');
+  btn?.addEventListener('click', async () => {
+    const token = document.getElementById('token')?.value?.trim();
+    const pw = document.getElementById('password')?.value || '';
+    const pw2 = document.getElementById('confirm')?.value || '';
+
+    msg.style.display = 'none';
+    msg.textContent = '';
+
+    if (!pw || pw.length < 8) {
+      msg.textContent = 'Please enter a password with at least 8 characters.';
+      msg.style.display = 'block';
+      return;
+    }
+    if (pw !== pw2) {
+      msg.textContent = 'Passwords do not match.';
+      msg.style.display = 'block';
+      return;
+    }
+
+    try {
+  const res = await fetch("{{ url_for('reset_password_page') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password: pw })
+      });
+      const data = await res.json();
+      msg.textContent = data?.message || 'Your password has been updated (if the link was valid).';
+      msg.style.display = 'block';
+    } catch (e) {
+      msg.textContent = 'Something went wrong. Please try again later.';
+      msg.style.display = 'block';
+    }
+  });
+</script>
+{% endblock %}

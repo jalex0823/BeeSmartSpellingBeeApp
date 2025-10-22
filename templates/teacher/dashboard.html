@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - BeeSmart Spelling</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .teacher-key-section {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .teacher-key-label {
+            color: #5A2C15;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .teacher-key-value {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .key-display {
+            background: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #5A2C15;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn {
+            padding: 0.8rem 1.5rem;
+            background: #5A2C15;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #3d1e0f;
+            transform: scale(1.05);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .section-title {
+            color: #333;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-bar {
+            padding: 0.8rem 1.2rem;
+            border: 2px solid #E0E0E0;
+            border-radius: 10px;
+            font-size: 1rem;
+            width: 300px;
+            max-width: 100%;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .students-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+        }
+
+        .students-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        .students-table thead th:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+        }
+
+        .students-table thead th:first-child {
+            border-radius: 10px 0 0 0;
+        }
+
+        .students-table thead th:last-child {
+            border-radius: 0 10px 0 0;
+        }
+
+        .students-table tbody tr {
+            background: #f9f9f9;
+            transition: background 0.2s ease;
+        }
+
+        .students-table tbody tr:hover {
+            background: #f0f0f0;
+        }
+
+        .students-table tbody tr:nth-child(even) {
+            background: #ffffff;
+        }
+
+        .students-table tbody tr:nth-child(even):hover {
+            background: #f0f0f0;
+        }
+
+        .students-table tbody td {
+            padding: 1rem;
+            color: #333;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-inactive {
+            background: #9E9E9E;
+            color: white;
+        }
+
+        .accuracy-bar {
+            width: 100px;
+            height: 8px;
+            background: #E0E0E0;
+            border-radius: 4px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        .accuracy-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .accuracy-excellent { background: #4CAF50; }
+        .accuracy-good { background: #8BC34A; }
+        .accuracy-fair { background: #FFC107; }
+        .accuracy-poor { background: #FF9800; }
+        .accuracy-fail { background: #F44336; }
+
+        .view-btn {
+            padding: 0.5rem 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .view-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #5A2C15;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #F44336 0%, #d32f2f 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+
+        .empty-state .icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        .sort-arrow {
+            font-size: 0.8em;
+            margin-left: 0.3rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .students-table {
+                font-size: 0.85rem;
+            }
+
+            .students-table thead th,
+            .students-table tbody td {
+                padding: 0.8rem 0.5rem;
+            }
+
+            .search-bar {
+                width: 100%;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .teacher-key-section {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .teacher-key-value {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>👨‍🏫 Teacher Dashboard</h1>
+            <p class="subtitle">Welcome, {{ current_user.display_name }}!</p>
+
+            <!-- Teacher Key Section -->
+            <div class="teacher-key-section">
+                <div class="teacher-key-label">
+                    🔑 Your Teacher Key (share with students):
+                </div>
+                <div class="teacher-key-value">
+                    <div class="key-display" id="teacherKey">{{ current_user.teacher_key }}</div>
+                    <button class="copy-btn" onclick="copyTeacherKey()">📋 Copy</button>
+                    <button class="copy-btn" style="background:#8B5CF6" onclick="generateTeacherKey()">🔁 Generate / Rotate</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">{{ students|length }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-value">{{ class_stats.total_quizzes|format_number }}</div>
+                <div class="stat-label">Total Quizzes</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">{{ "%.0f"|format(class_stats.avg_accuracy) }}%</div>
+                <div class="stat-label">Class Accuracy</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">{{ class_stats.total_points|format_number }}</div>
+                <div class="stat-label">Total Points</div>
+            </div>
+        </div>
+
+        <!-- Students Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">📋 My Students</h2>
+                <input 
+                    type="text" 
+                    class="search-bar" 
+                    placeholder="🔍 Search students..." 
+                    id="searchInput"
+                    onkeyup="filterStudents()"
+                />
+            </div>
+
+            {% if students %}
+                <table class="students-table" id="studentsTable">
+                    <thead>
+                        <tr>
+                            <th>Avatar</th>
+                            <th onclick="sortTable(1)">Name <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(2)">Grade <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(3)">Quizzes <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(4)">Accuracy <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(5)">Points <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(6)">Last Active <span class="sort-arrow">⬍</span></th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td>
+                                {% if student.avatar_thumb_url %}
+                                    <img src="{{ student.avatar_thumb_url }}" alt="avatar" style="width:36px;height:36px;border-radius:8px;border:1px solid #eee;object-fit:cover;">
+                                {% else %}
+                                    <div style="width:36px;height:36px;border-radius:8px;background:#f2f2f2;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:.8rem;">🐝</div>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ student.display_name }}</strong></td>
+                            <td>{{ student.grade_level or 'N/A' }}</td>
+                            <td>{{ student.total_quizzes_completed|format_number or 0 }}</td>
+                            <td>
+                                {% set accuracy = student.avg_accuracy or 0 %}
+                                <div class="accuracy-bar">
+                                    <div class="accuracy-fill 
+                                        {% if accuracy >= 90 %}accuracy-excellent
+                                        {% elif accuracy >= 80 %}accuracy-good
+                                        {% elif accuracy >= 70 %}accuracy-fair
+                                        {% elif accuracy >= 60 %}accuracy-poor
+                                        {% else %}accuracy-fail{% endif %}"
+                                        style="width: {{ accuracy }}%;">
+                                    </div>
+                                </div>
+                                <span>{{ "%.0f"|format(accuracy) }}%</span>
+                            </td>
+                            <td><strong>{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
+                            <td>
+                                {% if student.last_login %}
+                                    {{ student.last_login.strftime('%b %d') }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if student.last_login and (now - student.last_login).days < 7 %}
+                                    <span class="status-badge status-active">Active</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/teacher/student/{{ student.id }}" class="view-btn">View Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <div class="icon">👥</div>
+                    <h3>No Students Yet</h3>
+                    <p>Share your Teacher Key with students so they can link their accounts!</p>
+                    <p style="font-size: 0.9rem; color: #999; margin-top: 1rem;">
+                        Students enter your key during registration to automatically join your class.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="/" class="btn btn-primary">🏠 Back to Home</a>
+            <a class="btn btn-secondary" href="/teacher/export/class.csv">� Export Class CSV</a>
+            <a class="btn btn-secondary" href="/teacher/export/class.pdf" style="background:#ffb300;color:#4a2b00">🧾 Export Class PDF</a>
+            <a href="/auth/logout" class="btn btn-danger">🚪 Sign Out</a>
+        </div>
+    </div>
+
+    <script>
+        // Copy teacher key to clipboard
+        function copyTeacherKey() {
+            const keyText = document.getElementById('teacherKey').textContent;
+            navigator.clipboard.writeText(keyText).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#4CAF50';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#5A2C15';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        // Generate/Rotate teacher key via API
+        async function generateTeacherKey(){
+            try{
+                const resp = await fetch('/api/teacher/key', { method:'POST', headers:{'Content-Type':'application/json'} });
+                const data = await resp.json();
+                if(data && data.success){
+                    const keyEl = document.getElementById('teacherKey');
+                    keyEl.textContent = data.teacher_key || '';
+                    // flash animation
+                    keyEl.style.outline = '3px solid #8B5CF6';
+                    setTimeout(()=> keyEl.style.outline = 'none', 800);
+                } else {
+                    alert(data.error || 'Could not generate key');
+                }
+            }catch(e){
+                alert('Network error while generating key');
+            }
+        }
+
+        // Search/filter students
+        function filterStudents() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('studentsTable');
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < rows.length; i++) {
+                // Column 0 is avatar; column 1 is Name
+                const nameCell = rows[i].getElementsByTagName('td')[1];
+                if (nameCell) {
+                    const name = nameCell.textContent || nameCell.innerText;
+                    if (name.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        // Sort table columns
+        let sortDirection = {};
+        function sortTable(columnIndex) {
+            const table = document.getElementById('studentsTable');
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            // Initialize sort direction for this column
+            if (sortDirection[columnIndex] === undefined) {
+                sortDirection[columnIndex] = true; // ascending
+            } else {
+                sortDirection[columnIndex] = !sortDirection[columnIndex];
+            }
+            
+            const ascending = sortDirection[columnIndex];
+            
+            rows.sort((a, b) => {
+                let aValue = a.getElementsByTagName('td')[columnIndex].textContent.trim();
+                let bValue = b.getElementsByTagName('td')[columnIndex].textContent.trim();
+                
+                // Handle numeric values
+                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return ascending ? aNum - bNum : bNum - aNum;
+                }
+                
+                // Handle text values
+                return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            });
+            
+            // Re-append rows in sorted order
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update sort arrows
+            const headers = table.getElementsByTagName('th');
+            for (let i = 0; i < headers.length; i++) {
+                const arrow = headers[i].querySelector('.sort-arrow');
+                if (arrow) {
+                    if (i === columnIndex) {
+                        arrow.textContent = ascending ? '▲' : '▼';
+                    } else {
+                        arrow.textContent = '⬍';
+                    }
+                }
+            }
+        }
+
+        // Export buttons use direct links now; keep function for backward compatibility
+        function exportClassReport() {
+            window.location.href = '/teacher/export/class.csv';
+        }
+
+        // Add smooth animations on page load
+        window.addEventListener('load', () => {
+            const cards = document.querySelectorAll('.stat-card, .content-section');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

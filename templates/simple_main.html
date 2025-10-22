@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeSmart Spelling App - Simple Version</title>
+    <link rel="icon" type="image/png" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--hive-background);
+            color: var(--dark-brown);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+        
+        /* Logo Section */
+        .logo-section-header {
+            background: var(--cream-white);
+            padding: 2rem 0;
+            text-align: center;
+        }
+        
+        .logo-section-header img {
+            width: 150px;
+            height: auto;
+            max-width: 200px;
+        }
+
+        /* Main Content Card */
+        .main-content-card {
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
+            background: var(--hive-card);
+            border-radius: 20px;
+            box-shadow: var(--hive-shadow);
+            overflow: hidden;
+            border: 2px solid var(--honey-border);
+        }
+
+        /* Card Header */
+        .card-header {
+            background: var(--honey-gradient);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .card-header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .card-header p {
+            font-size: 1rem;
+            opacity: 0.95;
+            margin: 0;
+        }
+
+        /* Menu Options */
+        .menu-options {
+            padding: 2rem 1.5rem 1.5rem 1.5rem;
+        }
+
+        .menu-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 2px solid var(--honey-border);
+            border-radius: 20px;
+            background: var(--cream-white);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            min-height: 120px;
+        }
+
+        .menu-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .menu-option:hover {
+            border-color: var(--honey-gold);
+            background: var(--cream-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--honey-shadow);
+        }
+
+        .menu-option.active {
+            border-color: var(--amber-glow);
+            background: var(--honey-tint);
+            box-shadow: 0 4px 15px var(--honey-shadow-hover);
+        }
+
+        .option-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .option-content h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-amber);
+            margin-bottom: 0.5rem;
+        }
+
+        .option-content p {
+            color: var(--dark-brown);
+            font-size: 0.9rem;
+            margin: 0;
+            line-height: 1.4;
+            opacity: 0.8;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--honey-tint);
+            border-top: 1px solid var(--honey-border);
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .action-btn.primary {
+            background: var(--honey-gradient);
+            color: var(--dark-brown);
+            box-shadow: 0 4px 15px var(--honey-shadow);
+        }
+
+        .action-btn.primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--honey-shadow-hover);
+        }
+
+        .action-btn.primary:disabled {
+            background: var(--light-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .action-btn.secondary {
+            background: var(--honey-tint);
+            color: var(--dark-amber);
+            border: 2px solid var(--honey-border);
+        }
+
+        .action-btn.secondary:hover {
+            background: var(--honey-light);
+            border-color: var(--honey-gold);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content-card {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .card-header {
+                padding: 2rem 1.5rem;
+            }
+            
+            .card-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card-header h2 {
+                font-size: 1.4rem;
+            }
+            
+            .menu-option {
+                padding: 1.2rem;
+            }
+            
+            .option-icon {
+                font-size: 2.5rem;
+                margin-right: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Logo Section -->
+    <section class="logo-section-header">
+    <img src="/static/BeeSmartLogoTransparent.png" alt="BeeSmart Logo" />
+    </section>
+
+    <!-- Main Content Card -->
+    <div class="main-content-card">
+        <!-- Header Section -->
+        <section class="card-header">
+            <h1> Choose Your Spelling Adventure!</h1>
+            <p>Select how you want to create your word list</p>
+        </section>
+
+        <!-- Unified Menu Options -->
+        <section class="menu-options">
+            <!-- Upload Text File -->
+            <div class="menu-option" onclick="selectOption('text')">
+                <div class="option-icon">📄</div>
+                <div class="option-content">
+                    <h3>Upload Text File</h3>
+                    <p>Plain text, CSV, comma/space separated, Word docs</p>
+                </div>
+            </div>
+
+            <!-- Upload Image -->
+            <div class="menu-option" onclick="selectOption('image')">
+                <div class="option-icon">📷</div>
+                <div class="option-content">
+                    <h3>Upload Image</h3>
+                    <p>Extract words from photos</p>
+                </div>
+            </div>
+
+            <!-- Dictionary Search -->
+            <div class="menu-option" onclick="selectOption('dictionary')">
+                <div class="option-icon">🔍</div>
+                <div class="option-content">
+                    <h3>Dictionary Search</h3>
+                    <p>Look up word definitions</p>
+                </div>
+            </div>
+
+            <!-- Saved Word Lists -->
+            <div class="menu-option" onclick="selectOption('saved')">
+                <div class="option-icon">📚</div>
+                <div class="option-content">
+                    <h3>Saved Word Lists</h3>
+                    <p>Use previously uploaded lists</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <section class="action-buttons">
+            <button type="button" class="action-btn secondary" onclick="clearAll()">
+                🗑️ Clear All
+            </button>
+            <button type="button" class="action-btn primary" id="startQuizBtn" disabled>
+                🚀 Start Quiz
+            </button>
+        </section>
+    </div>
+
+    <script>
+        function selectOption(type) {
+            // Remove active from all options
+            document.querySelectorAll('.menu-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            
+            // Add active to clicked option
+            event.currentTarget.classList.add('active');
+            
+            // Handle the selection
+            switch(type) {
+                case 'text':
+                    alert('Text upload selected - this would show the text upload interface');
+                    break;
+                case 'image':
+                    alert('Image upload selected - this would show the image upload interface');
+                    break;
+                case 'dictionary':
+                    alert('Dictionary search selected - this would show the dictionary interface');
+                    break;
+                case 'saved':
+                    alert('Saved lists selected - this would redirect to saved lists');
+                    break;
+            }
+        }
+        
+        function clearAll() {
+            const confirmed = confirm(
+                'Clear all words and progress?\n\n' +
+                'This will remove:\n' +
+                '• All uploaded word lists\n' +
+                '• Quiz progress\n' +
+                '• Analytics data\n\n' +
+                'Continue?'
+            );
+            
+            if (confirmed) {
+                fetch('/api/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        confirmed: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ok) {
+                        alert('✨ All data cleared! Ready for new words!');
+                        // Reset UI
+                        const startBtn = document.getElementById('startQuizBtn');
+                        if (startBtn) {
+                            startBtn.disabled = true;
+                            startBtn.innerHTML = '🚀 Start Quiz';
+                        }
+                        // Clear file inputs
+                        document.querySelectorAll('input[type="file"]').forEach(input => {
+                            input.value = '';
+                        });
+                        // Reload page to ensure clean state
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        alert('❌ Error: ' + (data.error || 'Failed to clear data'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Clear error:', error);
+                    alert('❌ Failed to clear data. Please try again.');
+                });
+            }
+        }
+        
+        // Simple check for existing words
+        fetch('/api/word-count')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count > 0) {
+                    document.getElementById('startQuizBtn').disabled = false;
+                    document.getElementById('startQuizBtn').innerHTML = `🚀 Start Quiz (${data.count} words)`;
+                }
+            })
+            .catch(error => {
+                console.log('Could not check word count:', error);
+            });
+    </script>
+</body>
+</html>

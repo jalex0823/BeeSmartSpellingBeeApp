@@ -1,0 +1,1495 @@
+{% extends "base.html" %}
+
+{% block title %}BeeSmart Speed Round - Race Against Time!{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+<style>
+    body {
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 50%, #FFDAB9 100%);
+        overflow-x: hidden;
+    }
+
+    /* Voice Visualizer with Bee Theme (parity with main quiz) */
+    .voice-visualizer {
+        background: linear-gradient(135deg, #FFB300 0%, #FF8F00 50%, #E65100 100%);
+        border-radius: 20px;
+        padding: 1.2rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(255, 152, 0, 0.3);
+        border: 2px solid rgba(255, 193, 7, 0.4);
+        min-height: 90px;
+    }
+
+    .voice-visualizer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 60%);
+        pointer-events: none;
+    }
+
+    .voice-status {
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2B1B00;
+        margin-bottom: 1rem;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+
+    .voice-waves {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        height: 80px;
+        margin-bottom: 0.8rem;
+    }
+
+    .voice-wave {
+        width: 8px;
+        height: 16px;
+        background: linear-gradient(to top, #FF6B00, #FFD700);
+        border-radius: 4px;
+        opacity: 0.7;
+    }
+
+    .voice-visualizer.speaking .voice-wave {
+        animation: waveAnimation 0.6s ease-in-out infinite;
+        background: linear-gradient(to top, #FF6B00, #FFD700) !important;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    }
+
+    .voice-visualizer.word-pulse .voice-wave {
+        animation: wordPulseAnimation 0.15s ease-out;
+    }
+
+    .voice-visualizer.pausing .voice-wave {
+        animation: pauseAnimation 0.4s ease-in-out;
+        opacity: 0.4;
+    }
+
+    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-delay: 0.2s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-delay: 0.1s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-delay: 0s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-delay: 0.1s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-delay: 0.2s; }
+    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-delay: 0.3s; }
+
+    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-name: waveAnimationShort; }
+    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-name: waveAnimationMedium; }
+    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-name: waveAnimationTall; }
+    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-name: waveAnimationTallest; }
+    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-name: waveAnimationTall; }
+    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-name: waveAnimationMedium; }
+    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-name: waveAnimationShort; }
+
+    @keyframes waveAnimation {
+        0%, 100% { height: 20px; opacity: 0.8; transform: scaleY(1); }
+        50% { height: 55px; opacity: 1; transform: scaleY(1.2); }
+    }
+    @keyframes waveAnimationShort {
+        0%, 100% { height: 16px; opacity: 0.7; transform: scaleY(1); }
+        50% { height: 38px; opacity: 0.95; transform: scaleY(1.1); }
+    }
+    @keyframes waveAnimationMedium {
+        0%, 100% { height: 18px; opacity: 0.75; transform: scaleY(1); }
+        50% { height: 48px; opacity: 1; transform: scaleY(1.15); }
+    }
+    @keyframes waveAnimationTall {
+        0%, 100% { height: 20px; opacity: 0.8; transform: scaleY(1); }
+        50% { height: 58px; opacity: 1; transform: scaleY(1.2); }
+    }
+    @keyframes waveAnimationTallest {
+        0%, 100% { height: 22px; opacity: 0.85; transform: scaleY(1); }
+        50% { height: 65px; opacity: 1; transform: scaleY(1.25); }
+    }
+    @keyframes wordPulseAnimation {
+        0% { transform: scaleY(1); }
+        50% { transform: scaleY(1.4); }
+        100% { transform: scaleY(1); }
+    }
+    @keyframes pauseAnimation {
+        0%, 100% { transform: scaleY(0.8); opacity: 0.4; }
+        50% { transform: scaleY(1); opacity: 0.6; }
+    }
+
+    .speed-quiz-container {
+        max-width: 550px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
+        text-align: center;
+    }
+
+    /* Header with stats */
+    .speed-header {
+        background: linear-gradient(135deg, #FFFFFF 0%, #FFF9E6 100%);
+        border-radius: 24px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 12px 30px rgba(255, 140, 0, 0.25);
+        border: 3px solid #FFD700;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .speed-header::before {
+        content: '⚡';
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        font-size: 100px;
+        opacity: 0.08;
+        transform: rotate(-15deg);
+    }
+
+    .speed-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #FF6B00;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .stat-box {
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+        border: 2px solid #FFD700;
+        border-radius: 16px;
+        padding: 0.75rem 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .stat-box.highlight {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        transform: scale(1.1);
+        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.5);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #8B6914;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #FF6B00;
+    }
+
+    .stat-box.highlight .stat-label,
+    .stat-box.highlight .stat-value {
+        color: #FFFFFF;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Circular Timer */
+    .timer-container {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin: 1.5rem auto;
+    }
+
+    .timer-svg {
+        transform: rotate(-90deg);
+        filter: drop-shadow(0 8px 20px rgba(255, 107, 0, 0.4));
+    }
+
+    .timer-circle-bg {
+        fill: none;
+        stroke: #FFE8CC;
+        stroke-width: 12;
+    }
+
+    .timer-circle {
+        fill: none;
+        stroke: url(#timerGradient);
+        stroke-width: 12;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.1s linear;
+    }
+
+    .timer-circle.warning {
+        stroke: url(#warningGradient);
+        animation: pulse 0.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .timer-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3rem;
+        font-weight: 800;
+        color: #FF6B00;
+        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+        line-height: 1;
+    }
+
+    .timer-text.warning {
+        color: #FF4444;
+        animation: shake 0.5s ease-in-out infinite;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+        25% { transform: translate(-50%, -50%) rotate(-3deg); }
+        75% { transform: translate(-50%, -50%) rotate(3deg); }
+    }
+
+    .timer-label {
+        position: absolute;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #8B6914;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Quiz Content */
+    .quiz-card {
+        background: #FFFFFF;
+        border-radius: 24px;
+        padding: 2rem 1.5rem;
+        box-shadow: 0 15px 40px rgba(255, 140, 0, 0.3);
+        border: 3px solid #FFD700;
+        margin-bottom: 1.5rem;
+    }
+
+    .word-prompt {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #5d4100;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Input Section */
+    .input-section {
+        margin-top: 1.5rem;
+    }
+
+    .spell-input {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-align: center;
+        border: 3px solid #FFD700;
+        border-radius: 16px;
+        background: #FFF9E6;
+        color: #FF6B00;
+        transition: all 0.2s;
+        margin-bottom: 1rem;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .spell-input:focus {
+        outline: none;
+        border-color: #FF6B00;
+        box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.2);
+        background: #FFFFFF;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-speed {
+        padding: 0.9rem 1.8rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border: 3px solid #2e7d32;
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-pronounce {
+        background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
+        color: white;
+        border: 3px solid #FF6B00;
+    }
+
+    .btn-pronounce:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255, 165, 0, 0.4);
+    }
+
+    .btn-hint {
+        background: linear-gradient(135deg, #4aa3ff 0%, #1e88e5 100%);
+        color: white;
+        border: 3px solid #1565c0;
+    }
+
+    .btn-hint:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(30, 136, 229, 0.4);
+    }
+
+    .btn-skip {
+        background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
+        color: white;
+        border: 3px solid #616161;
+    }
+
+    .btn-skip:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(158, 158, 158, 0.4);
+    }
+
+    /* Feedback Messages */
+    .feedback-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        background: rgba(255, 255, 255, 0.98);
+        padding: 2rem 3rem;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        text-align: center;
+        border: 4px solid;
+        animation: feedbackPop 0.5s ease forwards;
+    }
+
+    .feedback-message.correct {
+        border-color: #4CAF50;
+    }
+
+    .feedback-message.incorrect {
+        border-color: #FF4444;
+    }
+
+    .feedback-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: bounce 0.6s ease;
+    }
+
+    .feedback-text {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .feedback-subtext {
+        font-size: 1rem;
+        font-weight: 600;
+        opacity: 0.8;
+    }
+
+    @keyframes feedbackPop {
+        0% { transform: translate(-50%, -50%) scale(0); }
+        50% { transform: translate(-50%, -50%) scale(1.1); }
+        100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+
+    /* Loading State */
+    .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 249, 230, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .loading-bee {
+        font-size: 5rem;
+        animation: fly 2s ease-in-out infinite;
+    }
+
+    @keyframes fly {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-30px) rotate(-10deg); }
+        75% { transform: translateY(-30px) rotate(10deg); }
+    }
+
+    .loading-text {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #FF6B00;
+        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 480px) {
+        .speed-quiz-container {
+            padding: 1rem 0.75rem;
+        }
+
+        .speed-title {
+            font-size: 1.4rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+        }
+
+        .timer-container {
+            width: 140px;
+            height: 140px;
+        }
+
+        .timer-text {
+            font-size: 2.5rem;
+        }
+
+        .spell-input {
+            font-size: 1.2rem;
+            padding: 0.8rem 1rem;
+        }
+
+        .btn-speed {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn-submit {
+            min-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ⚠️ ERROR BOUNDARY ⚠️ -->
+<div id="errorBoundary" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: linear-gradient(135deg, #FF6B6B 0%, #FF4444 100%); border-radius: 30px; padding: 3rem; max-width: 600px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 5px solid #FF0000;">
+        <div style="font-size: 5rem; margin-bottom: 1rem;">⚠️</div>
+        <h2 id="errorTitle" style="color: white; font-size: 2rem; margin-bottom: 1rem;">Error</h2>
+        <p id="errorMessage" style="color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 2rem; line-height: 1.6;"></p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button id="errorRetryBtn" onclick="retrySpeedRound()" style="display: none; padding: 1rem 2rem; font-size: 1.2rem; background: linear-gradient(135deg, #4CAF50, #45A049); color: white; border: none; border-radius: 15px; cursor: pointer; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                🔄 Try Again
+            </button>
+            <button onclick="window.location.href='/speed-round/setup'" style="padding: 1rem 2rem; font-size: 1.2rem; background: linear-gradient(135deg, #FFB300, #FFA500); color: #2B1B00; border: none; border-radius: 15px; cursor: pointer; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                ← Back to Setup
+            </button>
+            <button onclick="window.location.href='/'" style="padding: 1rem 2rem; font-size: 1.2rem; background: linear-gradient(135deg, #9E9E9E, #757575); color: white; border: none; border-radius: 15px; cursor: pointer; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                🏠 Main Menu
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="speed-quiz-container">
+    <!-- Header with Stats -->
+    <div class="speed-header">
+        <div class="speed-title">
+            <span>⚡</span>
+            <span>Speed Round</span>
+            <span>⚡</span>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-box" id="progressBox">
+                <div class="stat-label">Progress</div>
+                <div class="stat-value" id="progressStat">0/0</div>
+            </div>
+            <div class="stat-box" id="streakBox">
+                <div class="stat-label">🔥 Streak</div>
+                <div class="stat-value" id="streakStat">0</div>
+            </div>
+            <div class="stat-box" id="pointsBox">
+                <div class="stat-label">💰 Points</div>
+                <div class="stat-value" id="pointsStat">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Circular Timer -->
+    <div class="timer-container">
+        <svg class="timer-svg" width="180" height="180" viewBox="0 0 180 180">
+            <defs>
+                <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FF6B00;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="warningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF6B00;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FF4444;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <circle class="timer-circle-bg" cx="90" cy="90" r="80"></circle>
+            <circle id="timerCircle" class="timer-circle" cx="90" cy="90" r="80"></circle>
+        </svg>
+        <div id="timerText" class="timer-text">0</div>
+        <div class="timer-label">SECONDS</div>
+    </div>
+
+    <!-- Quiz Card -->
+    <div class="quiz-card">
+        <!-- Voice Visualizer -->
+        <div class="voice-visualizer" id="voiceVisualizer">
+            <div class="voice-status" id="voiceStatus">🐝 Ready</div>
+            <div class="voice-waves">
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+            </div>
+            <div class="microphone-icon">🎤</div>
+        </div>
+
+        <div class="word-prompt" id="wordPrompt">
+            🐝 Listen carefully and spell the word! 🐝
+        </div>
+
+        <div class="input-section">
+            <input 
+                type="text" 
+                id="spellInput" 
+                class="spell-input" 
+                placeholder="Type your answer..." 
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+            />
+
+            <div class="action-buttons">
+                <button class="btn-speed btn-submit" id="submitBtn">
+                    <span>✓</span>
+                    <span>Submit Answer</span>
+                </button>
+            </div>
+
+            <div class="action-buttons" style="margin-top: 0.75rem;">
+                <button class="btn-speed btn-pronounce" id="pronounceBtn">
+                    <span>🔊</span>
+                    <span>Pronounce</span>
+                </button>
+                <button class="btn-speed btn-hint" id="hintBtn">
+                    <span>💡</span>
+                    <span>Hint</span>
+                </button>
+                <button class="btn-speed btn-skip" id="skipBtn">
+                    <span>⏭</span>
+                    <span>Skip</span>
+                </button>
+                <button class="btn-speed" onclick="window.location.href='/'" style="background: linear-gradient(135deg, #9E9E9E, #757575);">
+                    <span>🏠</span>
+                    <span>Menu</span>
+                </button>
+            </div>
+
+            <div id="hintArea" style="display:none; margin-top:0.75rem; font-weight:700; color:#1e3a8a;">
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-bee">🐝</div>
+    <div class="loading-text">Loading Speed Round...</div>
+</div>
+
+<script>
+// Speed Round Quiz State
+let currentWord = null;
+let timeRemaining = 0;
+let maxTime = 0;
+let timerInterval = null;
+let wordStartTime = null;
+let totalWords = 0;
+let currentIndex = 0;
+let currentStreak = 0;
+let totalPoints = 0;
+let currentHint = '';
+let currentSentence = '';
+let cachedVoice = null; // cache selected voice for consistency
+let speechSynthesisInitialized = false; // iOS speech initialization flag
+let wordsUntilNameAnnouncement = 0; // Track sporadic name announcements (0 = announce now)
+
+// Mask target word in text to prevent cheating
+function maskTargetWord(text, targetWord) {
+    if (!text || !targetWord) return text;
+    
+    // Create regex that matches the word with word boundaries (case-insensitive)
+    // Escape special regex characters in the target word
+    const escapedWord = targetWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+    
+    // Replace with underscores (5 underscores as placeholder)
+    return text.replace(regex, '_____');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // iOS Speech Synthesis Fix: Force initialization with user interaction
+    initializeSpeechSynthesisForIOS();
+    
+    // Announce Speed Round intro first
+    announceSpeedRoundIntro();
+});
+
+// iOS requires speechSynthesis to be triggered by user interaction
+function initializeSpeechSynthesisForIOS() {
+    if (!('speechSynthesis' in window)) return;
+    
+    // Pre-load voices for iOS
+    if (speechSynthesis.getVoices().length === 0) {
+        speechSynthesis.addEventListener('voiceschanged', () => {
+            speechSynthesisInitialized = true;
+            console.log('🎙️ iOS voices loaded:', speechSynthesis.getVoices().length);
+        }, { once: true });
+    } else {
+        speechSynthesisInitialized = true;
+    }
+    
+    // Force iOS to initialize by creating and immediately canceling an utterance
+    const testUtterance = new SpeechSynthesisUtterance('');
+    testUtterance.volume = 0;
+    speechSynthesis.speak(testUtterance);
+    speechSynthesis.cancel();
+    
+    console.log('🍎 iOS Speech Synthesis initialized');
+}
+
+function announceSpeedRoundIntro() {
+    const visualizer = document.getElementById('voiceVisualizer');
+    const status = document.getElementById('voiceStatus');
+    
+    if (!('speechSynthesis' in window)) {
+        // If no speech support, just start the round
+        setTimeout(() => {
+            loadNextWord();
+            setupEventListeners();
+        }, 1000);
+        return;
+    }
+
+    const intro = "Welcome to the Speed Round! Get ready for an exciting challenge. " +
+                  "You'll have limited time to spell each word correctly. " +
+                  "Listen carefully, type fast, and earn bonus points for quick answers! " +
+                  "Your Speed Round begins... now!";
+    
+    // iOS Fix: Cancel any existing speech with delay
+    speechSynthesis.cancel();
+    
+    // iOS Fix: Add 100ms delay after cancel
+    setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(intro);
+        utterance.pitch = 1.35;
+        utterance.rate = 0.95;
+        utterance.volume = 0.9;
+        
+        // Select voice (use US English)
+        const voices = speechSynthesis.getVoices();
+        const voice = voices.find(v => 
+            v.lang.includes('en-US') && 
+            v.name.toLowerCase().includes('female')
+        ) || voices.find(v => v.lang.includes('en-US')) || 
+            voices.find(v => v.lang.startsWith('en'));
+        
+        if (voice) {
+            utterance.voice = voice;
+            cachedVoice = voice; // Cache for subsequent calls
+        }
+        
+        status.textContent = '🎙️ Welcome to Speed Round!';
+        
+        utterance.onstart = () => {
+            visualizer.classList.add('speaking');
+        };
+        
+        utterance.onend = () => {
+            visualizer.classList.remove('speaking');
+            status.textContent = '🐝 Ready';
+            // Start the actual quiz after intro
+            setTimeout(() => {
+                loadNextWord();
+                setupEventListeners();
+            }, 500);
+        };
+        
+        utterance.onerror = () => {
+            visualizer.classList.remove('speaking');
+            // Start anyway if there's an error
+            loadNextWord();
+            setupEventListeners();
+        };
+        
+        speechSynthesis.speak(utterance);
+        
+        // iOS fallback - reload voices if empty
+        if (speechSynthesis.getVoices().length === 0) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                const voices = speechSynthesis.getVoices();
+                const voice = voices.find(v => v.lang.startsWith('en'));
+                if (voice) utterance.voice = voice;
+            }, { once: true });
+        }
+    }, 100); // iOS Fix: 100ms delay
+}
+
+function setupEventListeners() {
+    // Submit button
+    document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+    
+    // Pronounce button
+    document.getElementById('pronounceBtn').addEventListener('click', pronounceWord);
+    // Hint button
+    document.getElementById('hintBtn').addEventListener('click', showHint);
+    
+    // Skip button
+    document.getElementById('skipBtn').addEventListener('click', () => submitAnswer(true));
+    
+    // Enter key to submit
+    document.getElementById('spellInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            submitAnswer();
+        }
+    });
+}
+
+async function loadNextWord() {
+    try {
+        // Stop any existing timer
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        const response = await fetch('/api/speed-round/next');
+        
+        // Guard: Check response is valid
+        if (!response || !response.ok) {
+            throw new Error('Failed to fetch next word from server');
+        }
+        
+        const data = await response.json();
+        
+        // Guard: Validate data structure
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid data received from server');
+        }
+
+        if (data.complete) {
+            // Round is complete
+            completeRound();
+            return;
+        }
+
+        if (data.error) {
+            showErrorBoundary('Speed Round Error', data.error || 'Unknown error occurred');
+            return;
+        }
+
+        // Guard: Validate word data exists
+        if (!data.word || typeof data.word !== 'string' || data.word.trim().length === 0) {
+            throw new Error('Invalid word data received');
+        }
+        
+        // Guard: Validate required fields
+        if (typeof data.time_per_word !== 'number' || data.time_per_word <= 0) {
+            throw new Error('Invalid timer configuration');
+        }
+
+        // Update current word state
+        currentWord = data.word;
+        timeRemaining = data.time_per_word;
+        maxTime = data.time_per_word;
+        currentIndex = data.current_index || 0;
+        totalWords = data.total_words || 1;
+        currentStreak = data.current_streak || 0;
+        totalPoints = data.total_points || 0;
+
+        console.log('📝 Word loaded:', currentWord, '| Time:', timeRemaining, 'seconds | Progress:', currentIndex, '/', totalWords);
+
+        // Update UI
+        updateStats();
+        clearInput();
+        
+        // Lock input until countdown finishes
+        const spellInput = document.getElementById('spellInput');
+        const submitBtn = document.getElementById('submitBtn');
+        if (spellInput) {
+            spellInput.disabled = true;
+            spellInput.placeholder = "Wait for countdown...";
+        }
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        
+        const wordPrompt = document.getElementById('wordPrompt');
+        if (wordPrompt) {
+            // Mask the target word in the definition to prevent cheating
+            const maskedDefinition = maskTargetWord(data.definition || '🐝 Listen carefully and spell the word! 🐝', data.word);
+            wordPrompt.textContent = maskedDefinition;
+        }
+        
+        // Mask target word in hint and sentence to prevent cheating
+        currentHint = maskTargetWord(data.hint || '', data.word);
+        currentSentence = maskTargetWord(data.sentence || '', data.word);
+        
+        // Hide any previous hint
+        const hintArea = document.getElementById('hintArea');
+        if (hintArea) {
+            hintArea.style.display = 'none';
+            hintArea.textContent = '';
+        }
+        
+        // Announce word context, then auto-pronounce
+        announceWord(currentIndex, totalWords);
+
+        // Start timer
+        wordStartTime = Date.now();
+        startTimer();
+
+    } catch (error) {
+        console.error('❌ Error loading next word:', error);
+        showErrorBoundary(
+            'Speed Round content failed to load',
+            'We couldn\'t load the next word. This might be a temporary issue.',
+            true // Show retry button
+        );
+    }
+}
+
+function showHint() {
+    const hintArea = document.getElementById('hintArea');
+    let text = '';
+    if (currentHint && currentHint.trim().length > 0) {
+        text = `Hint: ${currentHint}`;
+    } else if (currentSentence && currentSentence.trim().length > 0) {
+        text = currentSentence;
+    } else {
+        text = 'No hint available for this word yet. Try listening again.';
+    }
+    hintArea.textContent = text;
+    hintArea.style.display = 'block';
+}
+
+function startTimer() {
+    try {
+        // Guard: Validate timer elements exist
+        const circle = document.getElementById('timerCircle');
+        const timerText = document.getElementById('timerText');
+        
+        if (!circle || !timerText) {
+            console.error('❌ Timer elements not found in DOM');
+            return;
+        }
+        
+        // Guard: Validate timer values BEFORE starting
+        if (typeof timeRemaining !== 'number' || timeRemaining <= 0) {
+            console.error('❌ Invalid timeRemaining value:', timeRemaining);
+            timeRemaining = 15; // Fallback to 15 seconds
+        }
+        
+        if (typeof maxTime !== 'number' || maxTime <= 0) {
+            console.error('❌ Invalid maxTime value:', maxTime);
+            maxTime = timeRemaining;
+        }
+        
+        // Log timer start for debugging
+        console.log('⏱️ Starting timer - timeRemaining:', timeRemaining, 'maxTime:', maxTime);
+        
+        const circumference = 2 * Math.PI * 80;
+        
+        circle.style.strokeDasharray = circumference;
+        circle.style.strokeDashoffset = 0;
+
+        // Clear any existing timer interval
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+
+        timerInterval = setInterval(() => {
+            timeRemaining -= 0.1;
+
+            if (timeRemaining <= 0) {
+                console.log('⏱️ Timer expired - auto-submitting');
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timeRemaining = 0;
+                // Auto-submit as incorrect when time runs out
+                submitAnswer(true);
+                return;
+            }
+
+            // Update timer display
+            const seconds = Math.ceil(timeRemaining);
+            if (timerText) {
+                timerText.textContent = seconds;
+            }
+
+            // Update circle progress
+            const progress = timeRemaining / maxTime;
+            const offset = circumference * (1 - progress);
+            if (circle) {
+                circle.style.strokeDashoffset = offset;
+            }
+
+            // Warning state at 30% time remaining
+            if (progress <= 0.3) {
+                if (circle) circle.classList.add('warning');
+                if (timerText) timerText.classList.add('warning');
+            } else {
+                if (circle) circle.classList.remove('warning');
+                if (timerText) timerText.classList.remove('warning');
+            }
+
+        }, 100);
+    } catch (error) {
+        console.error('❌ Error starting timer:', error);
+        showErrorBoundary('Timer Error', 'Failed to start countdown timer. Please try again.');
+    }
+}
+
+function updateStats() {
+    document.getElementById('progressStat').textContent = `${currentIndex}/${totalWords}`;
+    document.getElementById('streakStat').textContent = currentStreak;
+    document.getElementById('pointsStat').textContent = totalPoints;
+}
+
+function clearInput() {
+    document.getElementById('spellInput').value = '';
+    document.getElementById('spellInput').focus();
+}
+
+function announceWord(wordIndex, totalWords) {
+    const visualizer = document.getElementById('voiceVisualizer');
+    const status = document.getElementById('voiceStatus');
+    
+    if (!('speechSynthesis' in window)) {
+        // If no speech support, just pronounce the word
+        setTimeout(pronounceWord, 100);
+        return;
+    }
+
+    // Decide whether to announce with name (sporadic usage)
+    const shouldAnnounceName = wordsUntilNameAnnouncement <= 0;
+    
+    // Create announcement text (with or without name)
+    let announcement;
+    if (shouldAnnounceName) {
+        // Include name in announcement (every 3-5 words)
+        if (wordIndex === 1) {
+            announcement = "Your first word is...";
+        } else if (wordIndex === totalWords) {
+            announcement = "Your final word is...";
+        } else {
+            announcement = "Your next word is...";
+        }
+        // Reset counter to 3-5 words
+        wordsUntilNameAnnouncement = Math.floor(Math.random() * 3) + 3;
+    } else {
+        // Skip name, just use simple transition
+        announcement = "Next...";
+        wordsUntilNameAnnouncement--;
+    }
+    
+    // iOS Fix: Cancel with delay
+    speechSynthesis.cancel();
+    
+    setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(announcement);
+        utterance.pitch = 1.35;
+        utterance.rate = 0.92;
+        utterance.volume = 0.9;
+        
+        // Use cached voice or select new one (US English)
+        if (cachedVoice) {
+            utterance.voice = cachedVoice;
+        } else {
+            const voices = speechSynthesis.getVoices();
+            const voice = voices.find(v => 
+                v.lang === 'en-US' && 
+                v.name.toLowerCase().includes('female')
+            ) || voices.find(v => 
+                v.lang === 'en-US' &&
+                (v.name.includes('Samantha') || v.name.includes('Victoria') ||
+                 v.name.includes('Zira') || v.name.includes('Joanna') ||
+                 v.name.includes('Ava') || v.name.includes('Allison'))
+            ) || voices.find(v => v.lang.startsWith('en-US')) || 
+                voices.find(v => v.lang.startsWith('en'));
+            
+            if (voice) {
+                utterance.voice = voice;
+                cachedVoice = voice; // Cache it
+            }
+        }
+        
+        status.textContent = '🎙️ Announcing...';
+        
+        utterance.onstart = () => {
+            visualizer.classList.add('speaking');
+        };
+        
+        utterance.onend = () => {
+            visualizer.classList.remove('speaking');
+            status.textContent = '🐝 Ready';
+            // Add 500ms pause between announcement and word pronunciation
+            setTimeout(() => {
+                pronounceWord();
+            }, 500);
+        };
+        
+        utterance.onerror = () => {
+            visualizer.classList.remove('speaking');
+            // Pronounce anyway if there's an error (with same pause)
+            setTimeout(() => {
+                pronounceWord();
+            }, 500);
+        };
+        
+        speechSynthesis.speak(utterance);
+        
+        // iOS fallback - reload voices if empty
+        if (speechSynthesis.getVoices().length === 0) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                const voices = speechSynthesis.getVoices();
+                const voice = voices.find(v => v.lang.startsWith('en'));
+                if (voice) utterance.voice = voice;
+            }, { once: true });
+        }
+    }, 100); // iOS Fix: 100ms delay
+}
+
+// Pronounce word with visual feedback
+function pronounceWord() {
+    if (!('speechSynthesis' in window)) {
+        visualizer.classList.remove('speaking');
+        // Pronounce anyway if there's an error
+        pronounceWord();
+    };
+    
+    speechSynthesis.speak(utterance);
+    
+    // iOS fallback
+    if (speechSynthesis.getVoices().length === 0) {
+        speechSynthesis.addEventListener('voiceschanged', () => {
+            const voices = speechSynthesis.getVoices();
+            const voice = voices.find(v => v.lang.startsWith('en'));
+            if (voice) utterance.voice = voice;
+        }, { once: true });
+    }
+}
+
+function pronounceWord() {
+    if (!currentWord) return;
+
+    const visualizer = document.getElementById('voiceVisualizer');
+    const status = document.getElementById('voiceStatus');
+    const word = typeof currentWord === 'string' ? currentWord : (currentWord.word || '');
+
+    if (!('speechSynthesis' in window)) {
+        status.textContent = '🔇 Speech not supported';
+        return;
+    }
+
+    // iOS Fix: Cancel with delay
+    speechSynthesis.cancel();
+
+    setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.pitch = 1.35;
+        utterance.rate = 0.92;
+        utterance.volume = 0.9;
+        utterance.text = word;
+
+        // Select US English female voice for American pronunciation
+        if (!cachedVoice) {
+            const voices = speechSynthesis.getVoices();
+            cachedVoice = voices.find(voice =>
+                voice.lang === 'en-US' &&
+                voice.name.toLowerCase().includes('female')
+            ) || voices.find(voice =>
+                voice.lang === 'en-US' &&
+                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
+                 voice.name.includes('Zira') || voice.name.includes('Joanna') ||
+                 voice.name.includes('Ava') || voice.name.includes('Allison'))
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en-US')
+            ) || voices.find(voice =>
+                voice.lang.startsWith('en') &&
+                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
+                 voice.name.includes('Zira') || voice.name.includes('Ava'))
+            );
+        }
+
+        if (cachedVoice) {
+            utterance.voice = cachedVoice;
+            status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
+        } else {
+            status.textContent = '🎙️ Speaking';
+        }
+
+        // Visualizer state
+        utterance.onstart = () => {
+            visualizer.classList.add('speaking');
+            status.textContent = status.textContent || '🎙️ Speaking';
+        };
+        utterance.onend = () => {
+            visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+            status.textContent = '🐝 Ready';
+            
+            // Unlock input after word is pronounced
+            const spellInput = document.getElementById('spellInput');
+            const submitBtn = document.getElementById('submitBtn');
+            if (spellInput) {
+                spellInput.disabled = false;
+                spellInput.placeholder = "Type your answer...";
+                spellInput.focus(); // Auto-focus for faster typing
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        };
+        utterance.onerror = () => {
+            visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+            status.textContent = '⚠️ Voice error';
+            
+            // Unlock input even on error (fair play)
+            const spellInput = document.getElementById('spellInput');
+            const submitBtn = document.getElementById('submitBtn');
+            if (spellInput) {
+                spellInput.disabled = false;
+                spellInput.placeholder = "Type your answer...";
+                spellInput.focus();
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        };
+
+        // Natural pauses and word pulses with 150ms word spacing
+        utterance.onboundary = (event) => {
+            if (event.name === 'word' || event.charLength > 0) {
+                // Word boundary - add micro-pause
+                visualizer.classList.remove('speaking');
+                visualizer.classList.add('pausing', 'word-pulse');
+                
+                // Resume speaking after 150ms pause (natural word spacing)
+                setTimeout(() => {
+                    visualizer.classList.remove('pausing', 'word-pulse');
+                    visualizer.classList.add('speaking');
+                }, 150);
+            }
+            
+            // Sentence boundaries - longer pause
+            const char = (utterance.text || '').charAt(event.charIndex);
+            if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                visualizer.classList.remove('speaking');
+                visualizer.classList.add('pausing');
+                setTimeout(() => {
+                    visualizer.classList.remove('pausing');
+                    visualizer.classList.add('speaking');
+                }, 400);
+            }
+        };
+
+        speechSynthesis.speak(utterance);
+        
+        // iOS fallback - reload voices if empty
+        if (speechSynthesis.getVoices().length === 0) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                const voices = speechSynthesis.getVoices();
+                const voice = voices.find(v => v.lang.startsWith('en'));
+                if (voice && !utterance.voice) {
+                    utterance.voice = voice;
+                    cachedVoice = voice;
+                }
+            }, { once: true });
+        }
+    }, 100); // iOS Fix: 100ms delay
+}
+
+async function submitAnswer(isSkip = false) {
+    const userInput = document.getElementById('spellInput').value.trim();
+    
+    if (!userInput && !isSkip) {
+        alert('Please enter your answer!');
+        return;
+    }
+
+    // Stop timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    const elapsedTime = Date.now() - wordStartTime;
+
+    try {
+        const response = await fetch('/api/speed-round/answer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_input: userInput || '',
+                elapsed_ms: elapsedTime,
+                skipped: isSkip
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        // Show feedback
+        showFeedback(data.is_correct, data.points_earned, data.correct_spelling);
+
+        // Update stats from response
+        currentStreak = data.current_streak;
+        totalPoints = data.total_points;
+        updateStats();
+
+        // Highlight streak if it increased
+        if (data.is_correct && currentStreak > 0) {
+            highlightStat('streakBox');
+        }
+
+        // Highlight points if earned
+        if (data.points_earned > 0) {
+            highlightStat('pointsBox');
+        }
+
+        // Load next word after delay
+        setTimeout(() => {
+            if (data.complete) {
+                completeRound();
+            } else {
+                loadNextWord();
+            }
+        }, 1500);
+
+    } catch (error) {
+        console.error('Error submitting answer:', error);
+        alert('Failed to submit answer. Please try again.');
+    }
+}
+
+function showFeedback(isCorrect, points, correctSpelling) {
+    const feedback = document.createElement('div');
+    feedback.className = `feedback-message ${isCorrect ? 'correct' : 'incorrect'}`;
+    
+    const icon = isCorrect ? '✓' : '✗';
+    const text = isCorrect ? 'Correct!' : 'Incorrect';
+    const color = isCorrect ? '#4CAF50' : '#FF4444';
+    
+    let subtext = isCorrect ? `+${points} points!` : `Correct spelling: ${correctSpelling}`;
+    
+    feedback.innerHTML = `
+        <div class="feedback-icon" style="color: ${color};">${icon}</div>
+        <div class="feedback-text" style="color: ${color};">${text}</div>
+        <div class="feedback-subtext" style="color: ${color};">${subtext}</div>
+    `;
+    
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+        feedback.style.animation = 'feedbackPop 0.3s ease reverse';
+        setTimeout(() => feedback.remove(), 300);
+    }, 1200);
+}
+
+function highlightStat(boxId) {
+    const box = document.getElementById(boxId);
+    box.classList.add('highlight');
+    setTimeout(() => box.classList.remove('highlight'), 1000);
+}
+
+async function completeRound() {
+    // Show loading
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    try {
+        const response = await fetch('/api/speed-round/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+            window.location.href = '/speed-round/setup';
+            return;
+        }
+
+        // Redirect to results page
+        window.location.href = '/speed-round/results';
+
+    } catch (error) {
+        console.error('Error completing round:', error);
+        alert('Failed to complete round. Redirecting to setup...');
+        window.location.href = '/speed-round/setup';
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    // Cancel any ongoing speech
+    if (speechSynthesis) {
+        speechSynthesis.cancel();
+    }
+});
+
+// ⚠️ ERROR BOUNDARY HELPERS ⚠️
+function showErrorBoundary(title, message, showRetry) {
+    // Set default value if not provided
+    if (typeof showRetry === 'undefined') {
+        showRetry = false;
+    }
+    
+    const errorBoundary = document.getElementById('errorBoundary');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorRetryBtn = document.getElementById('errorRetryBtn');
+    
+    if (!errorBoundary) {
+        console.error('❌ Error boundary element not found');
+        alert(title + ': ' + message);
+        return;
+    }
+    
+    if (errorTitle) errorTitle.textContent = title;
+    if (errorMessage) errorMessage.textContent = message;
+    if (errorRetryBtn) errorRetryBtn.style.display = showRetry ? 'inline-block' : 'none';
+    
+    errorBoundary.style.display = 'flex';
+    
+    // Stop timer if running
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    
+    // Cancel speech
+    if (speechSynthesis) {
+        speechSynthesis.cancel();
+    }
+}
+
+function retrySpeedRound() {
+    const errorBoundary = document.getElementById('errorBoundary');
+    if (errorBoundary) {
+        errorBoundary.style.display = 'none';
+    }
+    
+    // Reset state
+    currentWord = null;
+    timeRemaining = 0;
+    
+    // Try to reload
+    try {
+        loadNextWord();
+    } catch (error) {
+        console.error('❌ Retry failed:', error);
+        showErrorBoundary(
+            'Retry Failed',
+            'Still unable to load Speed Round. Please check your connection and try again from setup.',
+            false
+        );
+    }
+}
+
+// Global error handler for uncaught errors
+window.addEventListener('error', (event) => {
+    console.error('❌ Global error caught:', event.error);
+    if (event.error && event.error.message && event.error.message.includes('avatar')) {
+        // Avatar loading errors are non-critical, just log them
+        console.warn('⚠️ Avatar loading issue (non-critical):', event.error);
+        event.preventDefault(); // Prevent default error handling
+        return;
+    }
+    // For other errors, show error boundary
+    showErrorBoundary(
+        'Unexpected Error',
+        'Something went wrong. Please try reloading or return to setup.',
+        true
+    );
+});
+</script>
+{% endblock %}

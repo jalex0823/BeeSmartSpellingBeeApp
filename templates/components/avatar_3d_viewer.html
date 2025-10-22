@@ -1,0 +1,304 @@
+<!-- 3D OBJ Model Viewer Component for Bee Avatars -->
+<!-- Uses Three.js to load and display .obj files with textures -->
+
+<div id="avatar-3d-viewer" class="avatar-3d-container">
+    <canvas id="avatar-canvas"></canvas>
+    <div class="viewer-controls">
+        <button class="control-btn" id="rotateBtn" title="Auto-rotate">
+            <span>🔄</span>
+        </button>
+        <button class="control-btn" id="zoomInBtn" title="Zoom in">
+            <span>🔍+</span>
+        </button>
+        <button class="control-btn" id="zoomOutBtn" title="Zoom out">
+            <span>🔍-</span>
+        </button>
+    </div>
+    <div class="loading-indicator" id="loadingIndicator">
+        <div class="bee-spinner">🐝</div>
+        <p>Loading avatar...</p>
+    </div>
+</div>
+
+<style>
+.avatar-3d-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#avatar-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.viewer-controls {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #FFD700;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.control-btn:hover {
+    background: #FFD700;
+    transform: scale(1.1);
+}
+
+.control-btn.active {
+    background: #FFA500;
+    border-color: #FF6B00;
+}
+
+.loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.loading-indicator.hidden {
+    display: none;
+}
+
+.bee-spinner {
+    font-size: 3rem;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-indicator p {
+    color: #8B6914;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+</style>
+
+<!-- Three.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+class Avatar3DViewer {
+    constructor(containerId, canvasId) {
+        this.container = document.getElementById(containerId);
+        this.canvas = document.getElementById(canvasId);
+        this.loadingIndicator = document.getElementById('loadingIndicator');
+        
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.controls = null;
+        this.currentModel = null;
+        this.autoRotate = true;
+        
+        this.init();
+    }
+    
+    init() {
+        // Scene setup
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0xFFF9E6);
+        
+        // Camera setup
+        this.camera = new THREE.PerspectiveCamera(
+            45,
+            this.container.clientWidth / this.container.clientHeight,
+            0.1,
+            1000
+        );
+        this.camera.position.set(0, 0, 10);
+        
+        // Renderer setup
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            antialias: true,
+            alpha: true
+        });
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        this.scene.add(directionalLight);
+        
+        const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        backLight.position.set(-5, 3, -5);
+        this.scene.add(backLight);
+        
+        // Controls
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
+        this.controls.autoRotate = this.autoRotate;
+        this.controls.autoRotateSpeed = 2.0;
+        
+        // Handle window resize
+        window.addEventListener('resize', () => this.onWindowResize());
+        
+        // Setup control buttons
+        this.setupControls();
+        
+        // Start animation loop
+        this.animate();
+    }
+    
+    setupControls() {
+        document.getElementById('rotateBtn').addEventListener('click', () => {
+            this.autoRotate = !this.autoRotate;
+            this.controls.autoRotate = this.autoRotate;
+            document.getElementById('rotateBtn').classList.toggle('active', this.autoRotate);
+        });
+        
+        document.getElementById('zoomInBtn').addEventListener('click', () => {
+            this.camera.position.multiplyScalar(0.9);
+        });
+        
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            this.camera.position.multiplyScalar(1.1);
+        });
+    }
+    
+    loadAvatar(objUrl, mtlUrl, textureUrl, avatarName = null) {
+        this.showLoading(true);
+        this.avatarName = avatarName;
+        
+        // Remove existing model
+        if (this.currentModel) {
+            this.scene.remove(this.currentModel);
+            this.currentModel = null;
+        }
+        
+        const mtlLoader = new THREE.MTLLoader();
+        
+        // Set the path for textures
+        const basePath = objUrl.substring(0, objUrl.lastIndexOf('/') + 1);
+        mtlLoader.setPath(basePath);
+        
+        mtlLoader.load(
+            mtlUrl,
+            (materials) => {
+                materials.preload();
+                
+                const objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                
+                objLoader.load(
+                    objUrl,
+                    (object) => {
+                        this.currentModel = object;
+                        
+                        // Center and scale the model
+                        const box = new THREE.Box3().setFromObject(object);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 5 / maxDim;
+                        
+                        object.scale.multiplyScalar(scale);
+                        object.position.sub(center.multiplyScalar(scale));
+                        
+                        this.scene.add(object);
+                        this.showLoading(false);
+                    },
+                    (progress) => {
+                        const percent = (progress.loaded / progress.total) * 100;
+                        console.log(`Loading: ${percent.toFixed(0)}%`);
+                    },
+                    (error) => {
+                        console.error('Error loading OBJ:', error);
+                        this.showError(this.avatarName);
+                    }
+                );
+            },
+            undefined,
+            (error) => {
+                console.error('Error loading MTL:', error);
+                this.showError(this.avatarName);
+            }
+        );
+    }
+    
+    showLoading(show) {
+        this.loadingIndicator.classList.toggle('hidden', !show);
+    }
+    
+    showError(avatarName = null) {
+        this.showLoading(false);
+        const displayName = avatarName || '3D Model';
+        this.loadingIndicator.innerHTML = `
+            <div style="color: #FF6B00; text-align: center; padding: 1rem;">
+                <div style="font-size: 4rem; margin-bottom: 0.5rem;">🐝</div>
+                <p style="font-size: 1.2rem; font-weight: 700; color: #8B6914; margin-bottom: 0.5rem;">${displayName}</p>
+                <p style="font-size: 0.9rem; color: #999;">3D preview unavailable</p>
+            </div>
+        `;
+        this.loadingIndicator.classList.remove('hidden');
+    }
+    
+    onWindowResize() {
+        this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    }
+    
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+// Initialize viewer when DOM is ready
+let viewer3D = null;
+
+function init3DViewer() {
+    if (!viewer3D) {
+        viewer3D = new Avatar3DViewer('avatar-3d-viewer', 'avatar-canvas');
+    }
+    return viewer3D;
+}
+
+// Function to load a specific avatar
+function load3DAvatar(avatarId, avatarName = null) {
+    const viewer = init3DViewer();
+    
+    const basePath = `/static/assets/avatars/${avatarId}`;
+    const objUrl = `${basePath}/model.obj`;
+    const mtlUrl = `${basePath}/model.mtl`;
+    const textureUrl = `${basePath}/texture.png`;
+    
+    viewer.loadAvatar(objUrl, mtlUrl, textureUrl, avatarName);
+}
+</script>

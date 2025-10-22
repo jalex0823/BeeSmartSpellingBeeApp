@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        body {
+            background: var(--hive-background);
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            color: var(--dark-brown);
+        }
+        .test-card {
+            max-width: 600px;
+            margin: 2rem auto;
+            background: var(--cream-white);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--hive-shadow);
+            text-align: center;
+        }
+        h1 {
+            color: var(--dark-amber);
+            margin-bottom: 1rem;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+            margin: 1rem 0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🧪 Debug Test Page</h1>
+        <p>This is a simple test to see if basic HTML and CSS are working.</p>
+    <img src="/static/BeeSmartLogoTransparent.png" alt="BeeSmart Logo" class="logo" />
+        <p>If you can see this page with pink background and the logo, the server is working.</p>
+        <p>Current time: {{ timestamp or 'No timestamp' }}</p>
+        <button onclick="alert('JavaScript is working!')">Test JavaScript</button>
+    </div>
+</body>
+</html>

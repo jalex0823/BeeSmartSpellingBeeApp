@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Speed Round Results - BeeSmart{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+<style>
+    body {
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 50%, #FFDAB9 100%);
+    }
+
+    /* Avatar Container - Centered and Locked */
+    .avatar-container {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 1.5rem auto;
+        position: relative;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #userAvatar3D {
+        width: 100%;
+        height: 100%;
+    }
+
+    .results-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .results-card {
+        background: #FFFFFF;
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 15px 40px rgba(255, 140, 0, 0.3);
+        border: 3px solid #FFD700;
+        margin-bottom: 1.5rem;
+    }
+
+    .results-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #FF6B00;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+    }
+
+    .results-subtitle {
+        font-size: 1.2rem;
+        color: #8B6914;
+        margin-bottom: 2rem;
+        font-weight: 600;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .stat-item {
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+        border: 2px solid #FFD700;
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #FF6B00;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #8B6914;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+
+    .btn-action {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #FFD700 0%, #FF6B00 100%);
+        color: white;
+        border: 3px solid #FF6B00;
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #A8E6CF 0%, #88D8B0 100%);
+        color: #2C5F2D;
+        border: 3px solid #77DD77;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    @media (max-width: 480px) {
+        .stat-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .results-title {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    <!-- User Avatar Display - Centered and Locked -->
+    <div class="avatar-container">
+        <div id="userAvatar3D"></div>
+    </div>
+
+    <div class="results-card">
+        <div class="results-title">🏆 Round Complete! 🏆</div>
+        <div class="results-subtitle">Amazing work, word wizard!</div>
+
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">{{ results.total_points }}</div>
+                <div class="stat-label">Points Earned</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">{{ results.accuracy }}%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-icon">✓</div>
+                <div class="stat-value">{{ results.words_correct }}/{{ results.words_attempted }}</div>
+                <div class="stat-label">Words Correct</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-value">{{ results.longest_streak }}</div>
+                <div class="stat-label">Longest Streak</div>
+            </div>
+
+            {% if results.fastest_time %}
+            <div class="stat-item">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value">{{ results.fastest_time }}s</div>
+                <div class="stat-label">Fastest Word</div>
+            </div>
+            {% endif %}
+
+            <div class="stat-item">
+                <div class="stat-icon">⏱</div>
+                <div class="stat-value">{{ results.total_time }}s</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+        </div>
+
+        {% if results.incorrect_words and results.incorrect_words|length > 0 %}
+        <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-radius: 16px; border: 2px solid #FFB74D;">
+            <h3 style="color: #E65100; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800;">
+                📝 Words to Practice
+            </h3>
+            <div style="display: grid; gap: 0.75rem; text-align: left;">
+                {% for item in results.incorrect_words %}
+                <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #FFB74D; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
+                            ✓ {{ item.word }}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #757575; margin-top: 0.25rem;">
+                            {% if item.user_answer %}
+                            Your answer: <span style="color: #D32F2F; font-weight: 600;">{{ item.user_answer }}</span>
+                            {% else %}
+                            (Skipped or no answer)
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button onclick="pronounceWord('{{ item.word }}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                        🔊 Hear It
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="action-buttons">
+            <a href="{{ url_for('speed_round_setup') }}" class="btn-action btn-primary">
+                <span>🔄 Play Again</span>
+            </a>
+            <a href="{{ url_for('home') }}" class="btn-action btn-secondary">
+                <span>🏠 Main Menu</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Pronounce word function for review
+function pronounceWord(word) {
+    if (!('speechSynthesis' in window)) {
+        alert('Speech synthesis not supported in your browser');
+        return;
+    }
+    
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+    
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(word);
+    
+    // Use en-US voice
+    const voices = speechSynthesis.getVoices();
+    const enUSVoice = voices.find(v => v.lang === 'en-US') || voices[0];
+    if (enUSVoice) {
+        utterance.voice = enUSVoice;
+    }
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;  // Slightly slower for clarity
+    utterance.pitch = 1.0;
+    
+    // Speak
+    speechSynthesis.speak(utterance);
+}
+
+// Load voices on page load (needed for some browsers)
+if ('speechSynthesis' in window) {
+    speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+        speechSynthesis.getVoices();
+    };
+}
+</script>
+
+<!-- Three.js for 3D Avatar -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="{{ url_for('static', filename='js/OBJLoader.js') }}?v={{ timestamp }}"></script>
+<script src="{{ url_for('static', filename='js/MTLLoader.js') }}?v={{ timestamp }}"></script>
+<script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+
+<script>
+// Load user avatar on results page
+document.addEventListener('DOMContentLoaded', async () => {
+    const container = document.getElementById('userAvatar3D');
+    if (!container) {
+        console.warn('Avatar container not found');
+        return;
+    }
+
+    try {
+        const loader = new UserAvatarLoader();
+        await loader.init();
+        
+        // Load avatar into container with centered position
+        await loader.loadIntoContainer(container, {
+            cameraDistance: 3.5,
+            cameraY: 0.5,
+            modelY: -0.8,
+            autoRotate: true,
+            rotationSpeed: 0.005
+        });
+        
+        console.log('✅ Avatar loaded on results page');
+    } catch (error) {
+        console.error('❌ Failed to load avatar:', error);
+        // Hide container on error
+        container.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+name: Avatar Assets Consistency
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  asset-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install requests
+
+      - name: Run avatar asset test (against provided URL)
+        if: ${{ secrets.AVATAR_TEST_BASE_URL != '' }}
+        env:
+          BASE: ${{ secrets.AVATAR_TEST_BASE_URL }}
+        run: |
+          echo "Testing against: $BASE"
+          python test_avatar_assets.py --base "$BASE"
+
+      - name: Skip test (no AVATAR_TEST_BASE_URL)
+        if: ${{ secrets.AVATAR_TEST_BASE_URL == '' }}
+        run: |
+          echo "No AVATAR_TEST_BASE_URL secret configured; skipping avatar asset check."

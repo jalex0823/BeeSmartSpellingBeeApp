@@ -1,0 +1,936 @@
+{% extends "base.html" %}
+
+{% block title %}BeeSmart Spelling App - Choose Your Adventure{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Logo Section - Header */
+    .logo-section-header {
+        background: var(--honey-light);
+        padding: 2rem 0 1rem 0;
+        text-align: center;
+        border-bottom: 1px solid var(--honey-border);
+    }
+    
+    .logo-section-header img {
+        width: 180px;
+        height: auto;
+        max-width: 280px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px var(--honey-shadow);
+        transition: all 0.3s ease;
+    }
+    
+    .logo-section-header img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 25px var(--honey-shadow-hover);
+    }
+
+    /* Main Content Card */
+    .main-content-card {
+        max-width: 700px;
+        margin: 2rem auto;
+        background: var(--hive-card);
+        border-radius: 20px;
+        box-shadow: var(--hive-shadow);
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+        border: 2px solid var(--honey-border);
+    }
+
+    /* Card Header */
+    .card-header {
+        background: var(--honey-gradient);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        color: var(--dark-brown);
+        position: relative;
+    }
+
+    .card-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="20">🐝</text></svg>') repeat;
+        opacity: 0.1;
+        animation: floatBees 20s linear infinite;
+    }
+
+    @keyframes floatBees {
+        0% { transform: translateX(0) translateY(0); }
+        100% { transform: translateX(-100px) translateY(-100px); }
+    }
+
+    .card-header h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.1);
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header h2 {
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Menu Options */
+    .menu-options {
+        padding: 1.5rem;
+    }
+
+    .menu-option {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 2px solid var(--honey-border);
+        border-radius: 15px;
+        background: var(--cream-white);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .menu-option:last-child {
+        margin-bottom: 0;
+    }
+
+    .menu-option:hover {
+        border-color: var(--honey-gold);
+        background: var(--cream-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px var(--honey-shadow);
+    }
+
+    .menu-option.active {
+        border-color: var(--amber-glow);
+        background: var(--honey-tint);
+        box-shadow: 0 4px 15px var(--honey-shadow-hover);
+    }
+
+    .option-icon {
+        font-size: 3rem;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+        filter: drop-shadow(2px 2px 4px var(--honey-shadow));
+    }
+
+    .option-content h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--dark-amber);
+        margin-bottom: 0.25rem;
+    }
+
+    .option-content p {
+        color: var(--dark-brown);
+        font-size: 0.95rem;
+        margin: 0;
+        opacity: 0.8;
+    }
+
+    /* Dynamic Content Area */
+    .dynamic-content {
+        padding: 0 1.5rem;
+        min-height: 100px;
+        display: none;
+    }
+
+    .dynamic-content.active {
+        display: block;
+        padding-bottom: 1.5rem;
+    }
+
+    /* Upload Areas */
+    .upload-interface {
+        background: var(--honey-tint);
+        border: 2px dashed var(--honey-gold);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .upload-interface.dragover {
+        background: var(--honey-light);
+        border-color: var(--amber-glow);
+        transform: scale(1.02);
+    }
+
+    .upload-interface h4 {
+        color: var(--dark-amber);
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .upload-interface p {
+        color: var(--dark-brown);
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: var(--honey-tint);
+        border-top: 1px solid var(--honey-border);
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 15px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .action-btn.primary {
+        background: var(--honey-gradient);
+        color: var(--dark-brown);
+        box-shadow: 0 4px 15px var(--honey-shadow);
+    }
+
+    .action-btn.primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--honey-shadow-hover);
+    }
+
+    .action-btn.primary:disabled {
+        background: var(--light-gray);
+        cursor: not-allowed;
+        opacity: 0.6;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .action-btn.secondary {
+        background: var(--honey-tint);
+        color: var(--dark-amber);
+        border: 2px solid var(--honey-border);
+    }
+
+    .action-btn.secondary:hover {
+        background: var(--honey-light);
+        border-color: var(--honey-gold);
+        transform: translateY(-2px);
+    }
+
+    /* Hidden Inputs */
+    .hidden-input {
+        display: none;
+    }
+
+    /* Progress Indicators */
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--honey-light);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--honey-gradient);
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+
+    /* Status Messages */
+    .status-message {
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        margin: 1rem 0;
+        display: none;
+    }
+
+    .status-message.success {
+        background: rgba(76, 175, 80, 0.1);
+        color: #4CAF50;
+        border: 1px solid #4CAF50;
+    }
+
+    .status-message.error {
+        background: rgba(244, 67, 54, 0.1);
+        color: #F44336;
+        border: 1px solid #F44336;
+    }
+
+    .status-message.info {
+        background: rgba(33, 150, 243, 0.1);
+        color: #2196F3;
+        border: 1px solid #2196F3;
+    }
+
+    /* Word Count Badge */
+    .word-count-badge {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: var(--dark-amber);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+    }
+
+    /* Floating animation for logo */
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .logo-section-header img {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+        .logo-section-header img {
+            animation: none;
+        }
+        .card-header::before {
+            animation: none;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .main-content-card {
+            margin: 1rem;
+            border-radius: 15px;
+        }
+        
+        .card-header {
+            padding: 2rem 1.5rem;
+        }
+        
+        .card-header h1 {
+            font-size: 1.8rem;
+        }
+        
+        .card-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .menu-option {
+            padding: 1.2rem;
+        }
+        
+        .option-icon {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Logo Section - Outside main container for white background -->
+<section class="logo-section-header">
+    <img src="/static/BeeSmartLogoTransparent.png" alt="BeeSmart Logo" />
+</section>
+
+<!-- Main Content Card -->
+<div class="main-content-card">
+    <!-- Header Section -->
+    <section class="card-header">
+        <h1>🌟 Aja's Magical Spelling Bee ✨</h1>
+        <h2>🎯 Choose Your Spelling Adventure!</h2>
+        <p>Select how you want to create your word list:</p>
+    </section>
+
+    <!-- Unified Menu Options -->
+    <section class="menu-options">
+        <!-- Upload Text File -->
+        <div class="menu-option" id="uploadTextOption">
+            <div class="option-icon">📄</div>
+            <div class="option-content">
+                <h3>Upload Text File</h3>
+                <p>Plain text, CSV, comma/space separated, Word docs</p>
+            </div>
+        </div>
+
+        <!-- Upload Image -->
+        <div class="menu-option" id="uploadImageOption">
+            <div class="option-icon">📷</div>
+            <div class="option-content">
+                <h3>Upload Image</h3>
+                <p>Extract words from photos</p>
+            </div>
+        </div>
+
+        <!-- Dictionary Search -->
+        <div class="menu-option" id="dictionaryOption">
+            <div class="option-icon">🔍</div>
+            <div class="option-content">
+                <h3>Dictionary Search</h3>
+                <p>Look up word definitions</p>
+            </div>
+        </div>
+
+        <!-- Saved Word Lists -->
+        <div class="menu-option" id="savedListsOption">
+            <div class="option-icon">📚</div>
+            <div class="option-content">
+                <h3>Saved Word Lists</h3>
+                <p>Use previously uploaded lists</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dynamic Content Area -->
+    <section class="dynamic-content" id="dynamicContent">
+        <!-- This area will show upload interfaces, progress, etc. -->
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="action-buttons">
+        <button type="button" class="action-btn secondary" id="clearBtn">
+            🗑️ Clear All
+        </button>
+        <button type="button" class="action-btn primary" id="startQuizBtn" disabled>
+            🚀 Start Quiz
+        </button>
+    </section>
+</div>
+
+<!-- Hidden Upload Forms -->
+<input type="file" id="fileInput" class="hidden-input" accept=".txt,.csv,.docx,.pdf" multiple>
+<input type="file" id="imageInput" class="hidden-input" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class UnifiedSpellingApp {
+    constructor() {
+        this.wordCount = 0;
+        this.isQuizReady = false;
+        this.currentMode = null;
+        this.initializeEventListeners();
+        this.checkExistingWords();
+    }
+    
+    initializeEventListeners() {
+        // Menu option clicks
+        document.getElementById('uploadTextOption').addEventListener('click', () => {
+            this.setActiveMode('text');
+        });
+        
+        document.getElementById('uploadImageOption').addEventListener('click', () => {
+            this.setActiveMode('image');
+        });
+        
+        document.getElementById('dictionaryOption').addEventListener('click', () => {
+            this.setActiveMode('dictionary');
+        });
+        
+        document.getElementById('savedListsOption').addEventListener('click', () => {
+            this.setActiveMode('saved');
+        });
+        
+        // Action buttons
+        document.getElementById('startQuizBtn').addEventListener('click', () => {
+            if (this.isQuizReady) {
+                this.startQuiz();
+            }
+        });
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            this.clearAll();
+        });
+        
+        // File inputs
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            this.handleFileUpload(e.target.files);
+        });
+        
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+            this.handleImageUpload(e.target.files);
+        });
+    }
+    
+    setActiveMode(mode) {
+        // Clear previous active states
+        document.querySelectorAll('.menu-option').forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        // Set new active state
+        const activeOption = document.getElementById(`${mode}Option`) || 
+                           document.getElementById(`${mode}ListsOption`);
+        if (activeOption) {
+            activeOption.classList.add('active');
+        }
+        
+        this.currentMode = mode;
+        this.showDynamicContent(mode);
+    }
+    
+    showDynamicContent(mode) {
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.className = 'dynamic-content active';
+        
+        let content = '';
+        
+        switch (mode) {
+            case 'text':
+                content = this.getTextUploadContent();
+                break;
+            case 'image':
+                content = this.getImageUploadContent();
+                break;
+            case 'dictionary':
+                content = this.getDictionaryContent();
+                break;
+            case 'saved':
+                content = this.getSavedListsContent();
+                break;
+        }
+        
+        dynamicContent.innerHTML = content;
+        this.attachDynamicEventListeners(mode);
+    }
+    
+    getTextUploadContent() {
+        return `
+            <div class="upload-interface" id="textUploadArea">
+                <h4>📄 Upload Text Files or Paste Content</h4>
+                <p>Drag and drop files here, click to browse, or paste your word list below</p>
+                <button type="button" class="action-btn primary" onclick="document.getElementById('fileInput').click()">
+                    📁 Choose Files
+                </button>
+                <div style="margin: 1rem 0;">
+                    <textarea placeholder="Or paste your words here (comma, space, or line separated)..." 
+                             rows="4" style="width: 100%; padding: 1rem; border-radius: 8px; border: 2px solid rgba(255,105,180,0.3);"
+                             id="pasteArea"></textarea>
+                </div>
+                <button type="button" class="action-btn secondary" onclick="window.app.processPastedText()">
+                    ✨ Process Pasted Text
+                </button>
+                <div class="progress-bar" id="textProgress" style="display: none;">
+                    <div class="progress-fill" id="textProgressFill"></div>
+                </div>
+                <div class="status-message" id="textStatus"></div>
+            </div>
+        `;
+    }
+    
+    getImageUploadContent() {
+        return `
+            <div class="upload-interface" id="imageUploadArea">
+                <h4>📷 Upload Images for OCR Processing</h4>
+                <p>Drag and drop images here or click to browse</p>
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                    Supports: JPG, PNG, WebP, PDF (first page)
+                </p>
+                <button type="button" class="action-btn primary" onclick="document.getElementById('imageInput').click()">
+                    📸 Choose Images
+                </button>
+                <div class="progress-bar" id="imageProgress" style="display: none;">
+                    <div class="progress-fill" id="imageProgressFill"></div>
+                </div>
+                <div class="status-message" id="imageStatus"></div>
+            </div>
+        `;
+    }
+    
+    getDictionaryContent() {
+        return `
+            <div class="upload-interface">
+                <h4>🔍 Dictionary Word Lookup</h4>
+                <p>Search for word definitions and build your vocabulary</p>
+                <div style="display: flex; gap: 1rem; margin: 1rem 0;">
+                    <input type="text" placeholder="Enter a word to look up..." 
+                           style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 2px solid rgba(255,105,180,0.3);"
+                           id="dictionaryInput">
+                    <button type="button" class="action-btn primary" onclick="window.app.lookupWord()">
+                        🔍 Search
+                    </button>
+                </div>
+                <div class="status-message" id="dictionaryStatus"></div>
+                <div id="dictionaryResults"></div>
+            </div>
+        `;
+    }
+    
+    getSavedListsContent() {
+        return `
+            <div class="upload-interface">
+                <h4>📚 Saved Word Lists</h4>
+                <p>Access your previously uploaded word lists</p>
+                <button type="button" class="action-btn primary" onclick="window.location.href='/magical-quiz'">
+                    📖 View Saved Lists
+                </button>
+                <div class="status-message" id="savedStatus"></div>
+            </div>
+        `;
+    }
+    
+    attachDynamicEventListeners(mode) {
+        if (mode === 'text') {
+            const uploadArea = document.getElementById('textUploadArea');
+            this.setupDragAndDrop(uploadArea, 'file');
+        } else if (mode === 'image') {
+            const uploadArea = document.getElementById('imageUploadArea');
+            this.setupDragAndDrop(uploadArea, 'image');
+        }
+    }
+    
+    setupDragAndDrop(element, type) {
+        element.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            element.classList.add('dragover');
+        });
+        
+        element.addEventListener('dragleave', () => {
+            element.classList.remove('dragover');
+        });
+        
+        element.addEventListener('drop', (e) => {
+            e.preventDefault();
+            element.classList.remove('dragover');
+            
+            if (type === 'file') {
+                this.handleFileUpload(e.dataTransfer.files);
+            } else if (type === 'image') {
+                this.handleImageUpload(e.dataTransfer.files);
+            }
+        });
+    }
+    
+    async processPastedText() {
+        const pasteArea = document.getElementById('pasteArea');
+        const text = pasteArea.value.trim();
+        
+        if (!text) {
+            this.showStatus('textStatus', 'Please paste some text first!', 'error');
+            return;
+        }
+        
+        this.showProgress('textProgress');
+        
+        try {
+            const response = await fetch('/api/upload-text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+            
+            const result = await response.json();
+            
+            if (result.ok) {
+                this.showStatus('textStatus', `✅ Success! Added ${result.count} words to your list.`, 'success');
+                this.updateWordCount(result.count);
+                pasteArea.value = '';
+            } else {
+                this.showStatus('textStatus', `❌ Error: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showStatus('textStatus', `❌ Failed to process text: ${error.message}`, 'error');
+        } finally {
+            this.hideProgress('textProgress');
+        }
+    }
+    
+    async handleFileUpload(files) {
+        if (!files || files.length === 0) return;
+        
+        this.showProgress('textProgress');
+        
+        for (let file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    this.showStatus('textStatus', 
+                        `✅ ${file.name}: Added ${result.count} words!`, 'success');
+                    this.updateWordCount(result.count);
+                } else {
+                    this.showStatus('textStatus', 
+                        `❌ ${file.name}: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                this.showStatus('textStatus', 
+                    `❌ ${file.name}: Upload failed`, 'error');
+            }
+        }
+        
+        this.hideProgress('textProgress');
+    }
+    
+    async handleImageUpload(files) {
+        if (!files || files.length === 0) return;
+        
+        this.showProgress('imageProgress');
+        
+        for (let file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    this.showStatus('imageStatus', 
+                        `✅ ${file.name}: Extracted ${result.count} words!`, 'success');
+                    this.updateWordCount(result.count);
+                } else {
+                    this.showStatus('imageStatus', 
+                        `❌ ${file.name}: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                this.showStatus('imageStatus', 
+                    `❌ ${file.name}: OCR processing failed`, 'error');
+            }
+        }
+        
+        this.hideProgress('imageProgress');
+    }
+    
+    async lookupWord() {
+        const input = document.getElementById('dictionaryInput');
+        const word = input.value.trim();
+        
+        if (!word) {
+            this.showStatus('dictionaryStatus', 'Please enter a word to look up!', 'error');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/dictionary-lookup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: word })
+            });
+            
+            const result = await response.json();
+            
+            if (result.definition) {
+                const resultsDiv = document.getElementById('dictionaryResults');
+                resultsDiv.innerHTML = `
+                    <div style="background: rgba(255,105,180,0.05); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <h5 style="color: var(--accent-color); margin-bottom: 0.5rem;">${result.word}</h5>
+                        <p style="margin-bottom: 0.5rem;"><strong>Definition:</strong> ${result.definition}</p>
+                        ${result.example ? `<p><strong>Example:</strong> ${result.example}</p>` : ''}
+                    </div>
+                `;
+                this.showStatus('dictionaryStatus', '✅ Definition found!', 'success');
+            } else {
+                this.showStatus('dictionaryStatus', `❌ No definition found for "${word}"`, 'error');
+            }
+        } catch (error) {
+            this.showStatus('dictionaryStatus', '❌ Dictionary lookup failed', 'error');
+        }
+    }
+    
+    async checkExistingWords() {
+        try {
+            const response = await fetch('/api/word-count');
+            const result = await response.json();
+            
+            if (result.count > 0) {
+                this.updateWordCount(result.count);
+            }
+        } catch (error) {
+            console.log('Could not check existing words:', error);
+        }
+    }
+    
+    updateWordCount(count) {
+        this.wordCount = count;
+        this.isQuizReady = count > 0;
+        
+        const startBtn = document.getElementById('startQuizBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        if (this.isQuizReady) {
+            startBtn.disabled = false;
+            startBtn.innerHTML = `🚀 Start Quiz (${count} words)`;
+            clearBtn.style.display = 'block';
+            
+            // Add word count badge to active card
+            this.addWordCountBadge(count);
+            
+            BeeSmart.showSuccess(`Word bank updated! ${count} words ready for practice.`);
+        } else {
+            startBtn.disabled = true;
+            startBtn.innerHTML = '🚀 Start Quiz';
+        }
+    }
+    
+    addWordCountBadge(count) {
+        // Remove existing badges
+        document.querySelectorAll('.word-count-badge').forEach(badge => badge.remove());
+        
+        // Add badge to main card header
+        const header = document.querySelector('.card-header');
+        const badge = document.createElement('div');
+        badge.className = 'word-count-badge';
+        badge.textContent = `${count} words`;
+        header.appendChild(badge);
+    }
+    
+    showProgress(elementId) {
+        const progress = document.getElementById(elementId);
+        if (progress) {
+            progress.style.display = 'block';
+            progress.querySelector('.progress-fill').style.width = '100%';
+        }
+    }
+    
+    hideProgress(elementId) {
+        const progress = document.getElementById(elementId);
+        if (progress) {
+            progress.style.display = 'none';
+            progress.querySelector('.progress-fill').style.width = '0%';
+        }
+    }
+    
+    showStatus(elementId, message, type) {
+        const status = document.getElementById(elementId);
+        if (status) {
+            status.textContent = message;
+            status.className = `status-message ${type}`;
+            status.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+    }
+    
+    async startQuiz() {
+        try {
+            const response = await fetch('/api/reset', { method: 'POST' });
+            if (response.ok) {
+                window.location.href = '/quiz';
+            } else {
+                BeeSmart.showError('Failed to start quiz. Please try again.');
+            }
+        } catch (error) {
+            BeeSmart.showError('Failed to start quiz. Please try again.');
+        }
+    }
+    
+    async clearAll() {
+        const confirmed = confirm(
+            '🧹 Ready to start completely fresh?\n\n' +
+            '⚠️ This will permanently clear:\n' +
+            '• All word lists\n' +
+            '• Quiz progress and scores\n' +
+            '• Analytics data\n\n' +
+            'Are you sure you want to continue?'
+        );
+        
+        if (confirmed) {
+            try {
+                const response = await fetch('/api/clear', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        confirmed: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    this.updateWordCount(0);
+                    document.querySelectorAll('.word-count-badge').forEach(badge => badge.remove());
+                    BeeSmart.showSuccess('✨ All data cleared! Ready for new words! 🌟');
+                    
+                    // Clear dynamic content
+                    const dynamicContent = document.getElementById('dynamicContent');
+                    if (dynamicContent) {
+                        dynamicContent.className = 'dynamic-content';
+                        dynamicContent.innerHTML = '';
+                    }
+                    
+                    // Clear active states
+                    document.querySelectorAll('.menu-option').forEach(option => {
+                        option.classList.remove('active');
+                    });
+                    
+                    // Reset UI elements
+                    const startQuizBtn = document.getElementById('startQuizBtn');
+                    if (startQuizBtn) {
+                        startQuizBtn.disabled = true;
+                    }
+                    
+                    // Clear any file inputs
+                    document.querySelectorAll('input[type="file"]').forEach(input => {
+                        input.value = '';
+                    });
+                    
+                    // Clear text areas
+                    document.querySelectorAll('textarea').forEach(textarea => {
+                        textarea.value = '';
+                    });
+                    
+                    this.currentMode = null;
+                } else {
+                    BeeSmart.showError('❌ Error: ' + (data.error || data.message || 'Failed to clear data'));
+                }
+            } catch (error) {
+                console.error('Clear error:', error);
+                BeeSmart.showError('❌ Failed to clear data. Please try again.');
+            }
+        }
+    }
+}
+
+// Initialize the app when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.app = new UnifiedSpellingApp();
+});
+</script>
+{% endblock %}

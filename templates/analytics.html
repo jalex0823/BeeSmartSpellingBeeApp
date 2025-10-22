@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - BeeSmart</title>
+    <link rel="icon" type="image/png" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--hive-background);
+            color: var(--dark-brown);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--hive-card);
+            border-radius: 30px;
+            padding: 3rem;
+            box-shadow: var(--hive-shadow);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 3px solid var(--honey-border);
+        }
+        
+        h1 {
+            color: var(--dark-amber);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: var(--honey-gradient);
+            color: var(--dark-brown);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: var(--hive-shadow);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--honey-tint);
+            border-radius: 20px;
+        }
+        
+        .section h2 {
+            color: var(--dark-amber);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .heatmap-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .heatmap-item:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .heatmap-item.level-0 { border-left: 5px solid #4CAF50; }
+        .heatmap-item.level-1 { border-left: 5px solid #8BC34A; }
+        .heatmap-item.level-2 { border-left: 5px solid #CDDC39; }
+        .heatmap-item.level-3 { border-left: 5px solid #FFC107; }
+        .heatmap-item.level-4 { border-left: 5px solid #FF9800; }
+        .heatmap-item.level-5 { border-left: 5px solid #FF5722; }
+        .heatmap-item.level-6 { border-left: 5px solid #F44336; }
+        
+        .heatmap-word {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #2C3E50;
+        }
+        
+        .heatmap-stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .heatmap-accuracy {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        
+        .heatmap-item.level-0 .heatmap-accuracy { color: #4CAF50; }
+        .heatmap-item.level-1 .heatmap-accuracy { color: #8BC34A; }
+        .heatmap-item.level-2 .heatmap-accuracy { color: #CDDC39; }
+        .heatmap-item.level-3 .heatmap-accuracy { color: #FFC107; }
+        .heatmap-item.level-4 .heatmap-accuracy { color: #FF9800; }
+        .heatmap-item.level-5 .heatmap-accuracy { color: #FF5722; }
+        .heatmap-item.level-6 .heatmap-accuracy { color: #F44336; }
+        
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 100;
+            margin-bottom: 0.5rem;
+        }
+        
+        .heatmap-item:hover .tooltip {
+            opacity: 1;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 5px;
+        }
+        
+        .word-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+        
+        .word-table th {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .word-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .word-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .accuracy-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .accuracy-high { background: #4CAF50; color: white; }
+        .accuracy-medium { background: #FFC107; color: white; }
+        .accuracy-low { background: #F44336; color: white; }
+        
+        .export-btn, .back-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            transition: transform 0.2s;
+            border: none;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        
+        .export-btn:hover, .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .heatmap-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Analytics Dashboard</h1>
+            <p class="subtitle">Track your spelling progress and identify areas for improvement</p>
+        </div>
+
+        <div id="content">
+            <!-- Content will be dynamically loaded -->
+            <div class="empty-state">
+                <div class="empty-state-icon">⏳</div>
+                <h2>Loading analytics...</h2>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="export-btn" id="exportBtn" style="display: none;" onclick="exportAnalytics()">
+                💾 Export Analytics (CSV)
+            </button>
+            <a href="/magical_quiz" class="back-btn">🏠 Back to Quiz</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/analytics');
+                if (!response.ok) {
+                    throw new Error('Failed to load analytics');
+                }
+                
+                const data = await response.json();
+                displayAnalytics(data);
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h2>No Analytics Data</h2>
+                        <p>Start practicing to see your statistics!</p>
+                        <p style="margin-top: 1rem;"><a href="/" class="back-btn">Go to Main Menu</a></p>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayAnalytics(data) {
+            if (data.total_attempts === 0) {
+                document.getElementById('content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎯</div>
+                        <h2>No Quiz Activity Yet</h2>
+                        <p>Complete some quiz questions to see your analytics!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('exportBtn').style.display = 'inline-block';
+            
+            const html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${data.total_attempts}</div>
+                        <div class="stat-label">Total Attempts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.total_correct}</div>
+                        <div class="stat-label">Correct Answers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.total_incorrect}</div>
+                        <div class="stat-label">Incorrect Answers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.overall_accuracy}%</div>
+                        <div class="stat-label">Overall Accuracy</div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>🔥 Top 10 Most Challenging Words</h2>
+                    <p style="color: #666; margin-bottom: 1rem;">These words need more practice!</p>
+                    <div class="heatmap-container">
+                        ${generateHeatmap(data.top_missed)}
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #4CAF50;"></div>
+                            <span>90-100% (Excellent)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #CDDC39;"></div>
+                            <span>70-89% (Good)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FFC107;"></div>
+                            <span>50-69% (Fair)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #FF5722;"></div>
+                            <span>0-49% (Needs Practice)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>📝 Detailed Word Statistics</h2>
+                    <table class="word-table">
+                        <thead>
+                            <tr>
+                                <th>Word</th>
+                                <th>Attempts</th>
+                                <th>Correct</th>
+                                <th>Incorrect</th>
+                                <th>Accuracy</th>
+                                <th>First Try</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${generateTableRows(data.words)}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function generateHeatmap(words) {
+            return words.map(word => {
+                const level = getHeatLevel(word.accuracy);
+                return `
+                    <div class="heatmap-item level-${level}">
+                        <div class="tooltip">
+                            ${word.correct} correct out of ${word.attempts} attempts
+                        </div>
+                        <div class="heatmap-word">${word.word}</div>
+                        <div class="heatmap-stats">
+                            ✅ ${word.correct} | ❌ ${word.incorrect}
+                        </div>
+                        <div class="heatmap-accuracy">${word.accuracy}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function getHeatLevel(accuracy) {
+            if (accuracy >= 90) return 0;
+            if (accuracy >= 80) return 1;
+            if (accuracy >= 70) return 2;
+            if (accuracy >= 60) return 3;
+            if (accuracy >= 50) return 4;
+            if (accuracy >= 30) return 5;
+            return 6;
+        }
+        
+        function generateTableRows(words) {
+            // Sort by accuracy (ascending) and then by incorrect count (descending)
+            const sorted = [...words].sort((a, b) => {
+                if (a.accuracy !== b.accuracy) {
+                    return a.accuracy - b.accuracy;
+                }
+                return b.incorrect - a.incorrect;
+            });
+            
+            return sorted.map(word => {
+                const accuracyClass = word.accuracy >= 70 ? 'accuracy-high' : 
+                                      word.accuracy >= 50 ? 'accuracy-medium' : 'accuracy-low';
+                const firstTry = word.first_attempt_correct ? '✅' : '❌';
+                
+                return `
+                    <tr>
+                        <td><strong>${word.word}</strong></td>
+                        <td>${word.attempts}</td>
+                        <td>${word.correct}</td>
+                        <td>${word.incorrect}</td>
+                        <td><span class="accuracy-badge ${accuracyClass}">${word.accuracy}%</span></td>
+                        <td>${firstTry}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        async function exportAnalytics() {
+            try {
+                const response = await fetch('/api/analytics');
+                if (!response.ok) throw new Error('Failed to fetch analytics');
+                
+                const data = await response.json();
+                
+                // Generate CSV
+                let csv = 'Word,Attempts,Correct,Incorrect,Accuracy (%),First Attempt Correct\n';
+                data.words.forEach(word => {
+                    const firstTry = word.first_attempt_correct ? 'Yes' : 'No';
+                    csv += `"${word.word}",${word.attempts},${word.correct},${word.incorrect},${word.accuracy},${firstTry}\n`;
+                });
+                
+                csv += `\nOverall Statistics\n`;
+                csv += `Total Attempts,${data.total_attempts}\n`;
+                csv += `Total Correct,${data.total_correct}\n`;
+                csv += `Total Incorrect,${data.total_incorrect}\n`;
+                csv += `Overall Accuracy (%),${data.overall_accuracy}\n`;
+                
+                // Download file
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `beesmart-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                alert('✅ Analytics exported successfully!');
+            } catch (error) {
+                alert('❌ Export failed: ' + error.message);
+            }
+        }
+        
+        // Load analytics on page load
+        loadAnalytics();
+    </script>
+</body>
+</html>

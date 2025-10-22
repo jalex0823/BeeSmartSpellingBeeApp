@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - BeeSmart Spelling{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); text-align: center; flex: 1;">
+            <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👑 Admin Dashboard</h1>
+            <p style="margin: 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
+        </div>
+        <button onclick="window.location.reload()" class="copy-btn" style="background: #4CAF50; margin-left: 1rem; height: fit-content; padding: 0.75rem 1.5rem; font-size: 1rem;" title="Refresh to see latest stats">
+            🔄 Refresh Data
+        </button>
+    </div>
+
+    <!-- System Statistics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div onclick="scrollToStudents()" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">My Students/Family</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #FF6B00;" class="formatted-number">{{ stats.my_students_count | format_number }}</div>
+            <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 Click to view</div>
+        </div>
+        <a href="/admin/users" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Users</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea;" class="formatted-number">{{ stats.total_users | format_number }}</div>
+            <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 Manage users</div>
+        </a>
+        <a href="/admin/users?role=student" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Students</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #48bb78;" class="formatted-number">{{ stats.total_students | format_number }}</div>
+            <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 View students</div>
+        </a>
+        <a href="/admin/users?role=teacher" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Teachers</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #ed8936;" class="formatted-number">{{ stats.total_teachers | format_number }}</div>
+            <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 View teachers</div>
+        </a>
+        <a href="/admin/battle-bees" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(255, 165, 0, 0.5)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(255, 165, 0, 0.3)';">
+            <div style="font-size: 0.875rem; color: white; margin-bottom: 0.5rem;">⚔️ Battle Bee Matches</div>
+            <div style="font-size: 2rem; font-weight: 700; color: white;">{{ battle_stats.total_battles | format_number }}</div>
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); margin-top: 0.5rem;">👇 View all battles</div>
+        </a>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Completed Quizzes</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #9f7aea;" class="formatted-number">{{ stats.total_quizzes | format_number }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Words Attempted</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #f56565;" class="formatted-number">{{ stats.total_words_attempted | format_number }}</div>
+        </div>
+    </div>
+    
+    <!-- Battle Bee Statistics Section -->
+    <div style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(255, 165, 0, 0.3);">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.75rem; color: white; text-align: center;">⚔️ Battle of the Bees Statistics</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Battles</div>
+                <div style="font-size: 2.5rem; font-weight: 700; color: #FF6B00;">{{ battle_stats.total_battles | format_number }}</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Active Battles</div>
+                <div style="font-size: 2.5rem; font-weight: 700; color: #48bb78;">{{ battle_stats.active_battles | format_number }}</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Completed Battles</div>
+                <div style="font-size: 2.5rem; font-weight: 700; color: #667eea;">{{ battle_stats.completed_battles | format_number }}</div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Battle Players</div>
+                <div style="font-size: 2.5rem; font-weight: 700; color: #9f7aea;">{{ battle_stats.total_battle_participants | format_number }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Leaderboard Section -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; display: flex; align-items: center;">
+            <span style="font-size: 2rem; margin-right: 0.5rem;">🏆</span>
+            Global Leaderboard - Top 10 Players
+        </h2>
+        
+        {% if leaderboard %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; width: 60px;">Rank</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Player</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">🍯 Honey Points</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Battles Played</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Battles Won</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Win Rate</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in leaderboard %}
+                    <tr style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                        <td style="padding: 1rem; text-align: center;">
+                            {% if player.rank == 1 %}
+                                <span style="font-size: 2rem;">🥇</span>
+                            {% elif player.rank == 2 %}
+                                <span style="font-size: 2rem;">🥈</span>
+                            {% elif player.rank == 3 %}
+                                <span style="font-size: 2rem;">🥉</span>
+                            {% else %}
+                                <span style="font-size: 1.25rem; font-weight: 700; color: #718096;">#{{ player.rank }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                {% if player.avatar_id %}
+                                <img src="/static/assets/avatars/{{ player.avatar_id }}/thumbnail.png" 
+                                     alt="{{ player.display_name }}'s avatar"
+                                     style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #FFD700; object-fit: cover;">
+                                {% else %}
+                                <div style="width: 48px; height: 48px; border-radius: 50%; background: #FFD700; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                    🐝
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div style="font-weight: 600; color: #2d3748;">{{ player.display_name }}</div>
+                                    <div style="font-size: 0.75rem; color: #718096;">@{{ player.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="font-size: 1.25rem; font-weight: 700; color: #FFD700;" class="honey-points">{{ player.honey_points | format_number }}</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #667eea;">
+                            {{ player.total_battles_played | format_number }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #48bb78;">
+                            {{ player.total_battles_won | format_number }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="font-weight: 600; color: {% if player.win_rate >= 70 %}#48bb78{% elif player.win_rate >= 50 %}#ed8936{% else %}#f56565{% endif %};">
+                                {{ player.win_rate | format_percentage }}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #9f7aea;">
+                            {{ player.level }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #718096;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
+            <p style="font-size: 1.125rem; margin: 0;">No battle statistics yet!</p>
+            <p style="font-size: 0.875rem; margin: 0.5rem 0 0 0;">Players will appear here once they start competing in Battle of the Bees.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+    function scrollToStudents() {
+        const studentsSection = document.querySelector('h2');
+        if (studentsSection) {
+            studentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+    </script>
+
+    <!-- My Students/Family Section -->
+    {% if my_students %}
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.5rem;">👨‍👩‍👧‍👦 My Students/Family</h2>
+            <div style="background: #FFF9E6; padding: 0.5rem 1rem; border-radius: 8px; border: 2px solid #FFD700;">
+                <span style="font-size: 0.875rem; color: #8B6914; font-weight: 600;">Admin Key: {{ admin_key }}</span>
+            </div>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Name</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Role</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Quizzes</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Words Practiced</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Correct</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;" title="Per-session average across completed quizzes">Accuracy</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;" title="GPA is the average grade across completed quizzes">Grade (GPA)</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;" title="Longest run of correct answers in any quiz">Best Streak</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;" title="Lifetime points earned across all quizzes">Total Points</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Last Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in my_students %}
+                    <tr style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 600; color: #2d3748;">{{ student.display_name }}</div>
+                            <div style="font-size: 0.75rem; color: #718096;">{{ student.email or student.username }}</div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span style="background: {% if student.role == 'student' %}#e6f7ff{% elif student.role == 'teacher' %}#fff4e6{% else %}#f0f0f0{% endif %}; color: {% if student.role == 'student' %}#0066cc{% elif student.role == 'teacher' %}#ff6b00{% else %}#666{% endif %}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                                {{ student.role.upper() }}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #9f7aea;">{{ student.quiz_count|format_number }}</td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #667eea;">{{ student.words_practiced|format_number }}</td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #48bb78;">{{ student.correct_count|format_number }}</td>
+                        <td style="padding: 1rem; text-align: center;" title="Per-session average across completed quizzes">
+                            <span style="font-weight: 600; color: {% if student.accuracy >= 80 %}#48bb78{% elif student.accuracy >= 60 %}#ed8936{% else %}#f56565{% endif %};">
+                                {{ student.accuracy }}%
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">
+                            <span>{{ student.cumulative_gpa|gpa_to_grade }}</span>
+                            <span style="opacity: 0.8;">({{ "%.2f"|format(student.cumulative_gpa|float) if student.cumulative_gpa is not none else "0.00" }})</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">{{ student.best_streak or 0 }}</td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">{{ student.total_lifetime_points|format_number if student.total_lifetime_points is not none else '0' }}</td>
+                        <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">
+                            {{ student.last_active.strftime('%b %d, %Y') if student.last_active else 'Never' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #f7fafc; border-radius: 8px; border-left: 4px solid #FF6B00;">
+            <p style="margin: 0; color: #4a5568; font-size: 0.875rem;">
+                💡 <strong>Tip:</strong> Share your admin key (<strong>{{ admin_key }}</strong>) with students or family members during registration to track their progress here.
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">👨‍👩‍👧‍👦</div>
+        <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem; color: #4a5568;">No Students Yet</h2>
+        <p style="margin: 0 0 1.5rem 0; color: #718096;">Share your admin key with students or family members to see their stats here.</p>
+        <div style="background: #FFF9E6; padding: 1rem; border-radius: 8px; border: 2px solid #FFD700; display: inline-block;">
+            <div style="font-size: 0.875rem; color: #8B6914; margin-bottom: 0.5rem;">Your Admin Key:</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #FF6B00; font-family: monospace;">{{ admin_key }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions & Avatar -->
+    <div class="admin-grid-layout">
+        <!-- Quick Actions -->
+        <div class="quick-actions-panel admin-card" style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h2 class="quick-actions-title section-title">Quick Actions</h2>
+            <div class="quick-actions-grid">
+                <a href="/" style="display: block; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 600; transition: transform 0.2s;">
+                    🏠 Go to Home
+                </a>
+                <a href="/auth/logout" style="display: block; padding: 1rem; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 600; transition: transform 0.2s;">
+                    🚪 Logout
+                </a>
+            </div>
+        </div>
+        
+        <!-- My Avatar Panel -->
+        <div class="avatar-panel my-avatar-section">
+            <h2 class="section-title">My Avatar</h2>
+            
+            <!-- 3D Avatar Display -->
+            <div id="adminAvatar3D" class="avatar-container" style="width: 200px; height: 200px; margin: 0 auto 1rem auto; border-radius: 12px; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%); display: flex; align-items: center; justify-content: center;">
+                <div class="avatar-loading" style="text-align: center; color: #8B6914;">
+                    <div style="font-size: 3rem;">🐝</div>
+                    <div style="font-size: 0.875rem; margin-top: 0.5rem;">Loading...</div>
+                </div>
+            </div>
+            
+            <!-- Change Avatar Button -->
+            <a href="/test/avatar-picker" class="change-avatar-btn">
+                ✨ Change Avatar
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Info -->
+    <div style="background: #fffbeb; border: 2px solid #fbbf24; padding: 1.5rem; border-radius: 12px;">
+        <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Admin Access</h3>
+        <p style="margin: 0; color: #78350f; line-height: 1.6;">
+            You have full administrative access to BeeSmart Spelling. You can view all system statistics, manage users, and monitor platform activity.
+        </p>
+    </div>
+</div>
+
+<style>
+a:hover {
+    transform: translateY(-2px);
+}
+</style>
+
+<script>
+// Load user's 3D avatar from their account
+document.addEventListener('DOMContentLoaded', async function() {
+    const avatarContainer = document.getElementById('adminAvatar3D');
+    
+    try {
+        // Initialize avatar loader
+        if (typeof window.userAvatarLoader !== 'undefined') {
+            await window.userAvatarLoader.init();
+            
+            // Get user's avatar from their account
+            const avatarOptions = window.userAvatarLoader.getAvatarOptions({
+                width: 200,
+                height: 200,
+                autoRotate: true,
+                enableInteraction: true
+            });
+            
+            // Clear loading indicator
+            avatarContainer.innerHTML = '';
+            
+            // Load 3D avatar
+            if (typeof SmartyBee3D !== 'undefined') {
+                const avatar3D = new SmartyBee3D('adminAvatar3D', avatarOptions);
+                console.log('✅ Admin avatar loaded from account');
+            } else {
+                // Fallback to 2D bee
+                avatarContainer.innerHTML = '<div style="font-size: 4rem; text-align: center;">🐝</div>';
+            }
+        } else {
+            // Fallback if avatar loader not available
+            avatarContainer.innerHTML = '<div style="font-size: 4rem; text-align: center;">🐝</div>';
+        }
+    } catch (error) {
+        console.warn('Error loading admin avatar:', error);
+        avatarContainer.innerHTML = '<div style="font-size: 4rem; text-align: center;">🐝</div>';
+    }
+});
+</script>
+{% endblock %}

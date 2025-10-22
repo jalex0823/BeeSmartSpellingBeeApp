@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - BeeSmart Spelling</title>
+    <link rel="icon" type="image/png" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="apple-touch-icon" href="/static/BeeSmartLogoTransparent.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
+            background: linear-gradient(135deg, #FFD700 0%, #FF8C00 50%, #FFD700 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Animated background bees */
+        .floating-bee {
+            position: fixed;
+            font-size: 2rem;
+            animation: float 8s ease-in-out infinite;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-30px) translateX(20px); }
+            50% { transform: translateY(0) translateX(40px); }
+            75% { transform: translateY(30px) translateX(20px); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
+            border-radius: 25px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            border: 4px solid rgba(255, 215, 0, 0.4);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #5A2C15;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            color: #8B4513;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #5A2C15;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: #8B4513;
+            font-weight: 600;
+        }
+
+        .stat-sublabel {
+            font-size: 0.9rem;
+            color: #A0826D;
+            margin-top: 0.3rem;
+            font-weight: 500;
+        }
+
+        .stat-highlight {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border: 3px solid #FF8C00;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-highlight::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .stat-highlight .stat-icon {
+            font-size: 3.5rem;
+        }
+
+        .stat-highlight .stat-value {
+            color: #5A2C15;
+            font-size: 3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-highlight .stat-label {
+            color: #5A2C15;
+            font-size: 1.2rem;
+        }
+
+        .stat-highlight .stat-sublabel {
+            color: #5A2C15;
+            font-weight: 600;
+        }
+
+        .grade-display {
+            font-family: 'Georgia', serif;
+            letter-spacing: 2px;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 3px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .section-title {
+            color: #5A2C15;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quiz-history-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.5rem;
+        }
+
+        .quiz-history-table thead th {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #5A2C15;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .quiz-history-table thead th:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+
+        .quiz-history-table thead th:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+
+        .quiz-history-table tbody tr {
+            background: #FFF9E6;
+            transition: background 0.2s ease;
+        }
+
+        .quiz-history-table tbody tr:hover {
+            background: #FFE5B4;
+        }
+
+        .quiz-history-table tbody td {
+            padding: 1rem;
+            color: #5A2C15;
+            font-size: 0.95rem;
+        }
+
+        .quiz-history-table tbody tr td:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+
+        .quiz-history-table tbody tr td:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+
+        .grade-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .grade-a, .grade-aplus, .grade-aminus { background: #4CAF50; color: white; }
+        .grade-b, .grade-bplus, .grade-bminus { background: #8BC34A; color: white; }
+        .grade-c, .grade-cplus, .grade-cminus { background: #FFC107; color: #5A2C15; }
+        .grade-d, .grade-dplus, .grade-dminus { background: #FF9800; color: white; }
+        .grade-f { background: #F44336; color: white; }
+        .grade-na { background: #9E9E9E; color: white; }
+
+        .word-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .word-card {
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .word-card:hover {
+            transform: scale(1.05);
+            border-color: #FFD700;
+        }
+
+        .word-card .word {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #5A2C15;
+            margin-bottom: 0.5rem;
+        }
+
+        .word-card .stats {
+            font-size: 0.85rem;
+            color: #8B4513;
+        }
+
+        .mastery-bar {
+            width: 100%;
+            height: 8px;
+            background: #E0E0E0;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .mastery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FF6B6B 0%, #4CAF50 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #5A2C15;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #8B4513;
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* 🏆 Badge Showcase Styles */
+        .badge-showcase {
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
+            border: 4px solid rgba(255, 215, 0, 0.5);
+        }
+
+        .badge-count {
+            font-size: 1rem;
+            color: #FF8C00;
+            font-weight: 600;
+        }
+
+        /* Recent Badges */
+        .recent-badges-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px dashed rgba(255, 215, 0, 0.3);
+        }
+
+        .recent-badges-list {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .recent-badge-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: white;
+            padding: 0.8rem 1.2rem;
+            border-radius: 12px;
+            min-width: 220px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .badge-icon-small {
+            font-size: 2rem;
+        }
+
+        .badge-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .badge-mini-name {
+            font-weight: 700;
+            color: #5A2C15;
+            font-size: 0.95rem;
+        }
+
+        .badge-mini-points {
+            font-size: 0.85rem;
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .badge-mini-date {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        /* Badge Grid */
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .badge-display-card {
+            background: white;
+            border-radius: 18px;
+            padding: 1.8rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+            border: 3px solid transparent;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge-display-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .badge-display-card:hover::before {
+            opacity: 1;
+        }
+
+        .badge-display-card:hover {
+            transform: translateY(-12px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Rarity-based styling */
+        .badge-common {
+            border-color: #CD7F32;
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
+        }
+
+        .badge-common:hover {
+            border-color: #CD7F32;
+            box-shadow: 0 15px 40px rgba(205, 127, 50, 0.3);
+        }
+
+        .badge-rare {
+            border-color: #C0C0C0;
+            background: linear-gradient(135deg, #F8F8F8 0%, #E8E8E8 100%);
+        }
+
+        .badge-rare:hover {
+            border-color: #A0A0A0;
+            box-shadow: 0 15px 40px rgba(192, 192, 192, 0.4);
+        }
+
+        .badge-epic {
+            border-color: #FFD700;
+            background: linear-gradient(135deg, #FFFACD 0%, #FFE4B5 100%);
+        }
+
+        .badge-epic:hover {
+            border-color: #FFA500;
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.5);
+        }
+
+        .badge-legendary {
+            border: 3px solid transparent;
+            background: linear-gradient(135deg, #FFE5E5 0%, #E5D4FF 50%, #E5F4FF 100%);
+            animation: legendaryGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes legendaryGlow {
+            0%, 100% {
+                box-shadow: 0 5px 20px rgba(255, 105, 180, 0.3);
+                border-color: #FF69B4;
+            }
+            33% {
+                box-shadow: 0 5px 20px rgba(138, 43, 226, 0.3);
+                border-color: #8A2BE2;
+            }
+            66% {
+                box-shadow: 0 5px 20px rgba(30, 144, 255, 0.3);
+                border-color: #1E90FF;
+            }
+        }
+
+        .badge-legendary:hover {
+            transform: translateY(-12px) scale(1.08);
+            box-shadow: 0 20px 50px rgba(138, 43, 226, 0.5);
+        }
+
+        /* Badge Elements */
+        .badge-rarity-label {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #8B4513;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-icon-large {
+            font-size: 4.5rem;
+            margin-bottom: 0.8rem;
+            animation: badgePulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { 
+                transform: scale(1); 
+            }
+            50% { 
+                transform: scale(1.12); 
+            }
+        }
+
+        .badge-display-card:hover .badge-icon-large {
+            animation: badgeSpin 0.6s ease-in-out;
+        }
+
+        @keyframes badgeSpin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .badge-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #5A2C15;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .badge-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .earn-count {
+            font-weight: 600;
+            color: #8B4513;
+        }
+
+        .points-total {
+            color: #4CAF50;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .badge-date {
+            font-size: 0.75rem;
+            color: #999;
+            line-height: 1.4;
+        }
+
+        /* Responsive Breakpoints */
+        @media (min-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1023px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 1.5rem;
+            }
+
+            .stat-icon {
+                font-size: 2.5rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .stat-highlight .stat-icon {
+                font-size: 3rem;
+            }
+
+            .stat-highlight .stat-value {
+                font-size: 2.5rem;
+            }
+
+            .quiz-history-table {
+                font-size: 0.85rem;
+            }
+
+            .quiz-history-table thead th,
+            .quiz-history-table tbody td {
+                padding: 0.8rem 0.5rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .badge-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 1rem;
+            }
+
+            .badge-display-card {
+                padding: 1.5rem 1rem;
+            }
+
+            .badge-icon-large {
+                font-size: 3.5rem;
+            }
+
+            .badge-name {
+                font-size: 1.1rem;
+            }
+
+            .recent-badges-list {
+                flex-direction: column;
+            }
+
+            .recent-badge-item {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating background bees -->
+    <div class="floating-bee" style="top: 10%; left: 5%; animation-delay: 0s;">🐝</div>
+    <div class="floating-bee" style="top: 20%; right: 10%; animation-delay: 2s;">🐝</div>
+    <div class="floating-bee" style="bottom: 15%; left: 15%; animation-delay: 4s;">🐝</div>
+    <div class="floating-bee" style="bottom: 25%; right: 5%; animation-delay: 6s;">🐝</div>
+
+    <div class="container">
+        <!-- Header with Avatar -->
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                <!-- User Avatar: 3D viewer when selected, image fallback otherwise -->
+                <div style="display:flex; align-items:center; justify-content:center;">
+                    <!-- 3D Viewer Wrapper (hidden by default until a user-selected avatar exists) -->
+                    <div id="userAvatar3DWrapper" style="display:none; width: 280px; max-width: 100%;">
+                        {% include 'components/avatar_3d_viewer.html' %}
+                    </div>
+
+                    <!-- Static thumbnail fallback (shown if no avatar selected) -->
+                    <div id="userAvatarContainer" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.2); overflow: hidden;">
+                        <img id="userAvatarImg" src="/static/assets/avatars/fallback.png" alt="Your Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                </div>
+                
+                <!-- Welcome Text -->
+                <div style="text-align: left;">
+                    <h1>🐝 Welcome, {{ current_user.display_name }}!</h1>
+                    <p class="subtitle">Keep buzzing towards spelling mastery! 🏆</p>
+                    <a href="/test/avatar-picker" style="display: inline-block; margin-top: 0.5rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">
+                        Change Avatar
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid - Reorganized for clarity -->
+        <div class="stats-grid">
+            <!-- Row 1: Points, Quizzes, and Cumulative Grade (prominent) -->
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">{{ current_user.total_lifetime_points or 0 }}</div>
+                <div class="stat-label">Total Points</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-value">{{ current_user.total_quizzes_completed or 0 }}</div>
+                <div class="stat-label">Quizzes Completed</div>
+            </div>
+
+            <div class="stat-card stat-highlight">
+                <div class="stat-icon">🎓</div>
+                <div class="stat-value grade-display">{{ current_user.cumulative_gpa|gpa_to_grade }}</div>
+                <div class="stat-label">Cumulative Grade</div>
+                <div class="stat-sublabel">GPA: {{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
+            </div>
+
+            <!-- Row 2: GPA, Accuracy, and Best Streak -->
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
+                <div class="stat-label">GPA (0-4.0)</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value">{{ "%.1f"|format(current_user.average_accuracy|float) if current_user.average_accuracy else "0.0" }}%</div>
+                <div class="stat-label">Average Accuracy</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-value">{{ current_user.best_streak or 0 }}</div>
+                <div class="stat-label">Best Streak</div>
+            </div>
+        </div>
+
+        <!-- 🏆 BADGE SHOWCASE SECTION -->
+        <div class="content-section badge-showcase">
+            <div class="section-title">
+                🏆 Badge Collection 
+                {% if total_badges > 0 %}
+                <span class="badge-count">({{ total_badges }} earned • +{{ total_badge_points }} 🍯 bonus)</span>
+                {% endif %}
+            </div>
+            
+            {% if badge_collection %}
+            <!-- Recent Badges -->
+            {% if recent_badges %}
+            <div class="recent-badges-section">
+                <h3 style="color: #8B4513; font-size: 1.1rem; margin-bottom: 1rem;">⭐ Recently Earned</h3>
+                <div class="recent-badges-list">
+                    {% for badge in recent_badges %}
+                    <div class="recent-badge-item">
+                        <span class="badge-icon-small">{{ badge.icon }}</span>
+                        <div class="badge-info">
+                            <span class="badge-mini-name">{{ badge.name }}</span>
+                            <span class="badge-mini-points">+{{ badge.points }} 🍯</span>
+                        </div>
+                        <span class="badge-mini-date">{{ badge.earned_date.strftime('%b %d') }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Badge Grid -->
+            <div class="badge-grid">
+                {% for badge_type, stats in badge_collection.items() %}
+                <div class="badge-display-card badge-{{ stats.rarity }}" data-badge="{{ badge_type }}" title="{{ stats.description }}">
+                    <div class="badge-rarity-label">{{ stats.rarity }}</div>
+                    <div class="badge-icon-large">{{ stats.icon }}</div>
+                    <div class="badge-name">{{ stats.name }}</div>
+                    <div class="badge-stats">
+                        <span class="earn-count">
+                            {% if stats.count == 1 %}Earned Once
+                            {% elif stats.count < 5 %}Earned {{ stats.count }}x
+                            {% else %}Earned {{ stats.count }}x! 🔥{% endif %}
+                        </span>
+                        <span class="points-total">+{{ stats.total_points }} 🍯</span>
+                    </div>
+                    <div class="badge-date">
+                        First: {{ stats.first_earned.strftime('%b %d, %Y') }}
+                        {% if stats.count > 1 %}
+                        <br>Latest: {{ stats.latest_earned.strftime('%b %d, %Y') }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">🏆</div>
+                <p>No badges yet! Complete quizzes to unlock achievements!</p>
+                <p style="font-size: 1rem; color: #999; margin-top: 0.5rem;">
+                    Earn your first badge by completing a quiz with 100% accuracy!
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Words to Practice -->
+        <div class="content-section">
+            <h2 class="section-title">💪 Words to Practice</h2>
+            {% if struggling_words %}
+                <div class="word-list">
+                    {% for word_mastery in struggling_words %}
+                    <div class="word-card">
+                        <div class="word">{{ word_mastery.word }}</div>
+                        <div class="stats">
+                            {{ word_mastery.correct_count }} / {{ word_mastery.attempt_count }} correct
+                        </div>
+                        <div class="mastery-bar">
+                            <div class="mastery-fill" style="width: {{ word_mastery.success_rate }}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="icon">🌟</div>
+                    <p>No struggling words - you're a spelling champion!</p>
+                    <p style="font-size: 1rem; color: #999;">Keep practicing to maintain your mastery.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="/" class="btn btn-primary">🏠 Back to Main Menu</a>
+            <a href="/" class="btn btn-primary">🚀 Start New Quiz</a>
+            <a href="/auth/logout" class="btn btn-secondary">🚪 Sign Out</a>
+        </div>
+    </div>
+
+    <script>
+        // Load user's avatar; if they have selected one, show 3D viewer, else show thumbnail
+        fetch('/api/users/me/avatar')
+            .then(response => response.json())
+            .then(data => {
+                const hasAvatar = data && data.status === 'success' && data.avatar && data.avatar.urls && data.use_mascot === false;
+                const imgWrap = document.getElementById('userAvatarContainer');
+                const imgEl = document.getElementById('userAvatarImg');
+                const viewerWrap = document.getElementById('userAvatar3DWrapper');
+
+                if (hasAvatar) {
+                    // Show 3D viewer and load the selected avatar
+                    if (viewerWrap) viewerWrap.style.display = 'block';
+                    if (imgWrap) imgWrap.style.display = 'none';
+                    try {
+                        if (typeof load3DAvatar === 'function') {
+                            // Pass avatar name to the 3D loader
+                            const avatarName = data.avatar.name || data.avatar.avatar_id || 'Your Avatar';
+                            load3DAvatar(data.avatar.avatar_id, avatarName);
+                        } else {
+                            console.warn('3D viewer not available; falling back to image.');
+                            if (imgEl && data.avatar.urls.thumbnail) {
+                                imgEl.src = data.avatar.urls.thumbnail;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to init 3D avatar, using image fallback:', e);
+                        if (viewerWrap) viewerWrap.style.display = 'none';
+                        if (imgWrap) imgWrap.style.display = 'block';
+                        if (imgEl && data.avatar.urls.thumbnail) {
+                            imgEl.src = data.avatar.urls.thumbnail;
+                        }
+                    }
+                } else {
+                    // No selected avatar yet → show mascot thumbnail or user avatar thumbnail if provided
+                    if (viewerWrap) viewerWrap.style.display = 'none';
+                    if (imgWrap) imgWrap.style.display = 'block';
+                    if (imgEl && data && data.avatar && data.avatar.urls && data.avatar.urls.thumbnail) {
+                        imgEl.src = data.avatar.urls.thumbnail;
+                    }
+                    if (imgEl) {
+                        imgEl.onerror = function() { this.src = '/static/assets/avatars/fallback.png'; };
+                    }
+                }
+            })
+            .catch(error => {
+                console.warn('Could not load user avatar:', error);
+            });
+        
+        // Add smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Add animation when elements come into view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.stat-card, .content-section').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

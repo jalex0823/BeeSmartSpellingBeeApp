@@ -1,0 +1,407 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeSmart Help & Guide</title>
+    <link rel="icon" type="image/png" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+            padding: 2rem;
+            line-height: 1.8;
+            color: #5A2C15;
+        }
+        
+        .help-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #FF6B00;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #8B6914;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .website-url {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #FF6B00;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: #FF6B00;
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px solid #FFD700;
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: #FFA500;
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .help-section {
+            margin-bottom: 2rem;
+        }
+        
+        .step-list {
+            background: #FFF9E6;
+            border-left: 4px solid #FFD700;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .step-list ol {
+            margin-left: 1.5rem;
+        }
+        
+        .step-list li {
+            margin-bottom: 0.75rem;
+        }
+        
+        .tip-box {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            border-left: 4px solid #4CAF50;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .tip-box strong {
+            color: #2E7D32;
+        }
+        
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .avatar-preview {
+            text-align: center;
+            padding: 0.5rem;
+            background: #FFF9E6;
+            border-radius: 8px;
+            border: 2px solid #FFD700;
+        }
+        
+        .avatar-preview img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+        
+        .avatar-preview span {
+            display: block;
+            font-size: 0.7rem;
+            color: #8B6914;
+            margin-top: 0.25rem;
+        }
+        
+        .back-button {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 700;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+    </style>
+</head>
+<body>
+    <div class="help-container">
+        <h1>🐝 BeeSmart Spelling Bee Help Guide</h1>
+        <p class="subtitle">Everything you need to know to buzz through spelling success!</p>
+        <div class="website-url">🌐 beesmartspelling.app</div>
+        
+        <!-- REGISTRATION SECTION -->
+        <div class="help-section">
+            <h2>📝 Getting Started: Registration</h2>
+            
+            <h3>Creating Your Account</h3>
+            <div class="step-list">
+                <ol>
+                    <li><strong>Visit the App:</strong> Go to <code>beesmartspelling.app</code> and click "Register"</li>
+                    <li><strong>Choose Your Role:</strong>
+                        <ul>
+                            <li><strong>Student:</strong> Practice spelling and track your progress</li>
+                            <li><strong>Teacher:</strong> Manage students and monitor their performance</li>
+                            <li><strong>Parent:</strong> Track your children's spelling progress</li>
+                        </ul>
+                    </li>
+                    <li><strong>Enter Your Information:</strong>
+                        <ul>
+                            <li>Full name (first and last)</li>
+                            <li>Email address (required for login)</li>
+                            <li>Password (keep it secure!)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Choose Your Bee Avatar:</strong> Pick from 16 unique 3D bee characters! (See below)</li>
+                    <li><strong>Submit:</strong> Click "Create Account" and start spelling!</li>
+                </ol>
+            </div>
+            
+            <h3>🎨 Choosing Your Avatar</h3>
+            <p>During registration, you'll select a personal bee avatar that represents you. Your avatar will appear on the main menu with animated behavior!</p>
+            
+            <div class="tip-box">
+                <strong>💡 Pro Tip:</strong> You can change your avatar anytime from your dashboard by clicking "Change Avatar"
+            </div>
+            
+            <h3>Available Avatars</h3>
+            <p>Choose from 16 unique bee characters across 9 categories:</p>
+            
+            <div class="avatar-grid">
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/cool-bee/thumbnail.png" alt="Cool Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Cool Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/explorer-bee/thumbnail.png" alt="Explorer Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Explorer Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/rockstar-bee/thumbnail.png" alt="Rockstar Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Rockstar Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/doctor-bee/thumbnail.png" alt="Doctor Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Doctor Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/scientist-bee/thumbnail.png" alt="Scientist Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Scientist Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/professor-bee/thumbnail.png" alt="Professor Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Professor Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/superhero-bee/thumbnail.png" alt="Superhero Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Superhero Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/knight-bee/thumbnail.png" alt="Knight Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Knight Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/robot-bee/thumbnail.png" alt="Robot Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Robot Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/bee-diva/thumbnail.png" alt="Bee Diva" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Bee Diva</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/queen-bee/thumbnail.png" alt="Queen Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Queen Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/majesty-bee/thumbnail.png" alt="Majesty Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Majesty Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/sea-bee/thumbnail.png" alt="Sea Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Sea Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/biker-bee/thumbnail.png" alt="Biker Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Biker Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/killer-bee/thumbnail.png" alt="Killer Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Killer Bee</span>
+                </div>
+                <div class="avatar-preview">
+                    <img src="/static/assets/avatars/anxious-bee/thumbnail.png" alt="Anxious Bee" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <span>Anxious Bee</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LOGIN SECTION -->
+        <div class="help-section">
+            <h2>🔐 Logging In</h2>
+            
+            <h3>Access Your Account</h3>
+            <div class="step-list">
+                <ol>
+                    <li><strong>Click "Login"</strong> from the main menu</li>
+                    <li><strong>Enter Your Credentials:</strong>
+                        <ul>
+                            <li>Email address you registered with</li>
+                            <li>Your password</li>
+                        </ul>
+                    </li>
+                    <li><strong>Click "Sign In"</strong> to access your personalized dashboard</li>
+                    <li><strong>See Your Avatar:</strong> Your chosen bee avatar will appear on the main menu with animations!</li>
+                </ol>
+            </div>
+            
+            <div class="tip-box">
+                <strong>🔒 Security Tip:</strong> Your password is encrypted and stored securely. Never share your login credentials with anyone!
+            </div>
+            
+            <h3>Forgot Password?</h3>
+            <p>If you forget your password, contact your teacher or administrator for assistance with password reset.</p>
+        </div>
+        
+        <!-- AVATAR SECTION -->
+        <div class="help-section">
+            <h2>🎭 Managing Your Avatar</h2>
+            
+            <h3>Where Your Avatar Appears</h3>
+            <ul>
+                <li><strong>Main Menu:</strong> Your 3D avatar replaces the default mascot with bobbing and rotating animations</li>
+                <li><strong>Dashboard:</strong> Shows as a circular thumbnail next to your name</li>
+                <li><strong>Profile:</strong> Displayed in your personal information section</li>
+            </ul>
+            
+            <h3>Changing Your Avatar</h3>
+            <div class="step-list">
+                <ol>
+                    <li><strong>Go to Your Dashboard:</strong> Login and click on your profile</li>
+                    <li><strong>Click "Change Avatar"</strong> button</li>
+                    <li><strong>Browse Categories:</strong> Filter by Classic, Adventure, Profession, Fantasy, Royal, Tech, Action, Emotion, or Entertainment</li>
+                    <li><strong>Search:</strong> Use the search bar to find specific bee types</li>
+                    <li><strong>Preview in 3D:</strong> Click any avatar to see it in full 3D with interactive controls</li>
+                    <li><strong>Save:</strong> Click "Use This Avatar" to update your profile</li>
+                </ol>
+            </div>
+            
+            <h3>Avatar Controls (3D Viewer)</h3>
+            <ul>
+                <li><strong>🔄 Auto-Rotate:</strong> Toggle automatic spinning on/off</li>
+                <li><strong>🔍+ Zoom In:</strong> Get a closer look at your bee</li>
+                <li><strong>🔍- Zoom Out:</strong> See the full view</li>
+                <li><strong>Mouse Drag:</strong> Rotate the avatar manually</li>
+            </ul>
+            
+            <div class="tip-box">
+                <strong>👨‍👩‍👧‍👦 Parental Controls:</strong> Teachers and parents can lock student avatars to prevent changes during class time.
+            </div>
+        </div>
+        
+        <!-- QUIZ FEATURES -->
+        <div class="help-section">
+            <h2>📚 Using the Quiz Features</h2>
+            
+            <h3>Starting a Quiz</h3>
+            <p>From the main menu, you have three options:</p>
+            <ul>
+                <li><strong>Upload Word List:</strong> Use CSV, TXT, DOCX, or PDF files</li>
+                <li><strong>OCR Upload:</strong> Take a photo of a word list and let AI extract the words</li>
+                <li><strong>Start Quiz:</strong> Begin with the default word list</li>
+            </ul>
+            
+            <h3>Quiz Modes</h3>
+            <ul>
+                <li><strong>Practice Mode:</strong> Learn at your own pace</li>
+                <li><strong>Speed Round:</strong> Race against the clock for bonus points</li>
+                <li><strong>Battle of the Bees:</strong> Compete with other students</li>
+            </ul>
+            
+            <h3>Input Methods</h3>
+            <ul>
+                <li><strong>Keyboard:</strong> Type your answer and press Enter</li>
+                <li><strong>Voice:</strong> Click the microphone and speak your spelling</li>
+            </ul>
+        </div>
+        
+        <!-- ACHIEVEMENTS -->
+        <div class="help-section">
+            <h2>🏆 Badges & Achievements</h2>
+            
+            <p>Earn badges by completing quizzes and reaching milestones:</p>
+            <ul>
+                <li><strong>Perfect Score:</strong> Get 100% accuracy</li>
+                <li><strong>Speed Demon:</strong> Complete speed rounds quickly</li>
+                <li><strong>Streak Master:</strong> Maintain long correct answer streaks</li>
+                <li><strong>Honey Collector:</strong> Earn honey points</li>
+                <li><strong>Grade Master:</strong> Achieve A+ grades</li>
+            </ul>
+            
+            <p>View all your badges on your dashboard!</p>
+        </div>
+        
+        <!-- TROUBLESHOOTING -->
+        <div class="help-section">
+            <h2>🔧 Troubleshooting</h2>
+            
+            <h3>Avatar Not Loading?</h3>
+            <ul>
+                <li>Check your internet connection</li>
+                <li>Refresh the page (F5 or Ctrl+R)</li>
+                <li>Clear browser cache and try again</li>
+                <li>Make sure you're logged in</li>
+            </ul>
+            
+            <h3>Voice Input Not Working?</h3>
+            <ul>
+                <li>Allow microphone permission in your browser</li>
+                <li>Check your microphone is connected and working</li>
+                <li>Try using keyboard input instead</li>
+            </ul>
+            
+            <h3>Can't Login?</h3>
+            <ul>
+                <li>Double-check your email and password</li>
+                <li>Make sure Caps Lock is off</li>
+                <li>Contact your teacher for password reset</li>
+            </ul>
+        </div>
+        
+        <!-- CONTACT -->
+        <div class="help-section">
+            <h2>📞 Need More Help?</h2>
+            <p>Contact your teacher or school administrator for additional support.</p>
+            <p><strong>Website:</strong> <code>beesmartspelling.app</code></p>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="/" class="back-button">🏠 Back to Main Menu</a>
+        </div>
+    </div>
+</body>
+</html>

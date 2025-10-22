@@ -1,0 +1,5 @@
+cat - A small furry animal that meows
+dog - Man's best friend that barks
+sun - The bright star in our sky
+moon - Earth's natural satellite
+tree - A tall plant with leaves and branches

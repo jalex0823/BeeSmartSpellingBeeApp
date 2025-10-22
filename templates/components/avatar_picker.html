@@ -1,0 +1,635 @@
+<!-- Avatar Picker Component -->
+<!-- Include this in registration.html and settings/profile page -->
+
+<div class="avatar-picker-container">
+    <h3>Choose Your Bee Avatar</h3>
+    <p class="avatar-subtitle">Select the bee that represents you best!</p>
+    
+    <!-- Category Filters -->
+    <div class="avatar-categories">
+        <button class="category-btn active" data-category="all">All Bees</button>
+        <button class="category-btn" data-category="classic">Classic</button>
+        <button class="category-btn" data-category="adventure">Adventure</button>
+        <button class="category-btn" data-category="profession">Profession</button>
+        <button class="category-btn" data-category="sports">Sports</button>
+        <button class="category-btn" data-category="arts">Arts</button>
+        <button class="category-btn" data-category="entertainment">Entertainment</button>
+        <button class="category-btn" data-category="fantasy">Fantasy</button>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="avatar-search">
+        <input type="text" id="avatarSearch" placeholder="Search bees..." autocomplete="off">
+        <span class="search-icon">🔍</span>
+    </div>
+    
+    <!-- Avatar Grid (registration-style thumbnails) -->
+    <div class="avatar-grid" id="avatarGrid">
+        <!-- Will be populated via JavaScript -->
+    </div>
+    
+    <!-- Selected Avatar Preview -->
+    <div class="avatar-preview-panel">
+        <h4>Preview</h4>
+        <div class="avatar-preview-3d" id="avatarPreview">
+            <div class="placeholder-avatar">
+                <p>Select an avatar to preview</p>
+                <span class="bee-icon">🐝</span>
+            </div>
+            <!-- 3D Viewer will be inserted here -->
+        </div>
+        
+        <!-- Avatar Info -->
+        <div class="avatar-info" id="avatarInfo" style="display: none;">
+            <h5 id="avatarName"></h5>
+            <p id="avatarDescription"></p>
+            <p style="font-size: 0.75rem; color: #999; margin-top: 0.5rem; font-style: italic;">
+                💡 Drag to rotate • Shift+Drag to move
+            </p>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="avatar-actions">
+            <button class="btn-back-menu" id="backToMenuBtn" onclick="window.location.href='/'">
+                ← Back to Main Menu
+            </button>
+            <button class="btn-select-avatar" id="selectAvatarBtn" disabled>
+                Use This Avatar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Avatar Loading Overlay (for smooth transitions) -->
+    <div class="avatar-loading-overlay" id="avatarLoadingOverlay" style="display: none;">
+        <div class="avatar-loading-content">
+            <div class="honey-pot-loader">
+                <div class="honey-pot-fill" id="avatarLoadProgress"></div>
+            </div>
+            <p class="loading-text" id="avatarLoadingText">🐝 Preparing your new bee...</p>
+            <p class="loading-subtext">Loading 3D model and textures</p>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Avatar Loading Overlay */
+.avatar-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 140, 0, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.avatar-loading-content {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+}
+
+.honey-pot-loader {
+    width: 200px;
+    height: 40px;
+    background: #FFE8CC;
+    border: 3px solid #FF6B00;
+    border-radius: 20px;
+    overflow: hidden;
+    margin: 1rem auto;
+    position: relative;
+}
+
+.honey-pot-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+    border-radius: 18px;
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.loading-text {
+    font-size: 1.5rem;
+    color: #8B4513;
+    font-weight: bold;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.loading-subtext {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.avatar-picker-container {
+    /* Make the picker fluid so it fits inside whatever parent/card it's rendered within */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 2rem auto;
+    padding: 1.5rem; /* slightly reduced padding to align with smaller cards */
+    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(255, 140, 0, 0.15);
+}
+
+.avatar-picker-container h3 {
+    text-align: center;
+    color: #FF6B00;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.avatar-subtitle {
+    text-align: center;
+    color: #8B6914;
+    margin-bottom: 1.5rem;
+}
+
+/* Category Filters */
+.avatar-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.category-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid #FFD700;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    color: #8B6914;
+}
+
+.category-btn:hover {
+    background: #FFE8CC;
+    transform: translateY(-2px);
+}
+
+.category-btn.active {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+}
+
+/* Search Bar */
+.avatar-search {
+    position: relative;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.avatar-search input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box; /* ensure padding and border are included in width */
+    padding: 0.75rem 3rem 0.75rem 1rem;
+    border: 2px solid #FFD700;
+    border-radius: 12px;
+    font-size: 1rem;
+    max-width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+}
+
+/* Avatar Grid - Enhanced for Better Thumbnail Display */
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+    max-height: 400px;  /* Reduced from 600px to show preview better */
+    overflow-y: auto;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Scrollbar styling for avatar grid */
+.avatar-grid::-webkit-scrollbar {
+    width: 12px;
+}
+
+.avatar-grid::-webkit-scrollbar-track {
+    background: #FFE8CC;
+    border-radius: 10px;
+}
+
+.avatar-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border-radius: 10px;
+    border: 2px solid #FFE8CC;
+}
+
+.avatar-grid::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
+}
+
+.avatar-option{
+    position: relative;
+    padding: 0.75rem;
+    background: #fff;
+    border: 3px solid #FFE082;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.15);
+}
+.avatar-option:hover{
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 179, 0, 0.4);
+    border-color: #FFD700;
+    background: linear-gradient(135deg, #FFFAF0, #FFF6E6);
+}
+.avatar-option.selected{
+    border-color: #FFB300;
+    background: linear-gradient(135deg, #FFE082, #FFD54F);
+    box-shadow: 0 10px 30px rgba(255, 179, 0, 0.5);
+    transform: scale(1.08);
+}
+.avatar-option.selected::after{
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #27AE60;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.avatar-option img{
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.avatar-card-name, .avatar-name{
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #8B6914;
+    margin-top: 0.5rem;
+    word-wrap: break-word;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    width: 100%;
+    min-height: 2.4rem; /* Reserve space for 2 lines */
+    text-align: center;
+    cursor: pointer;  /* Show it's clickable */
+    transition: color 0.2s ease;
+}
+
+.avatar-card-name:hover, .avatar-name:hover {
+    color: #FF6B00;  /* Orange highlight on hover */
+    text-decoration: underline;
+}
+
+/* Avatar Description Popup */
+#avatarDescriptionPopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10001;
+    pointer-events: none;
+}
+
+.avatar-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: all;
+}
+
+.avatar-popup-overlay.show {
+    opacity: 1;
+}
+
+.avatar-popup-content {
+    background: white;
+    border-radius: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(255, 140, 0, 0.3);
+    position: relative;
+    animation: popupSlideIn 0.3s ease;
+}
+
+@keyframes popupSlideIn {
+    from {
+        transform: translateY(-50px) scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.avatar-popup-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: rgba(255, 107, 0, 0.1);
+    color: #FF6B00;
+    font-size: 28px;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.avatar-popup-close:hover {
+    background: #FF6B00;
+    color: white;
+    transform: rotate(90deg);
+}
+
+.avatar-popup-header {
+    text-align: center;
+    padding: 2rem 2rem 1rem 2rem;
+    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    border-radius: 24px 24px 0 0;
+}
+
+.avatar-popup-image {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+    background: white;
+    padding: 0.5rem;
+    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.2);
+}
+
+.avatar-popup-header h3 {
+    color: #FF6B00;
+    font-size: 1.8rem;
+    margin: 0.5rem 0;
+}
+
+.avatar-popup-category {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.3);
+}
+
+.avatar-popup-body {
+    padding: 2rem;
+}
+
+.avatar-popup-description {
+    color: #8B6914;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.avatar-popup-actions {
+    text-align: center;
+}
+
+.btn-select-this-avatar {
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+}
+
+.btn-select-this-avatar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 165, 0, 0.5);
+}
+
+
+/* Preview Panel */
+.avatar-preview-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;              /* Lower z-index for preview panel */
+}
+
+.avatar-preview-3d {
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;              /* Ensure preview stays behind buttons */
+}
+
+.placeholder-avatar {
+    position: absolute;      /* Position it in the container */
+    z-index: 1;              /* Behind any loaded 3D models */
+    text-align: center;
+    color: #8B6914;
+    pointer-events: none;    /* Allow clicks to pass through */
+}
+
+.placeholder-avatar .bee-icon {
+    font-size: 4rem;
+    display: block;
+    margin-top: 1rem;
+}
+
+/* Avatar Info */
+.avatar-info {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #FFF9E6;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.avatar-info h5 {
+    color: #FF6B00;
+    margin-bottom: 0.5rem;
+}
+
+.avatar-info p {
+    color: #8B6914;
+    font-size: 0.9rem;
+}
+
+/* Action Buttons */
+.avatar-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 10;             /* Higher z-index to stay above preview */
+}
+
+.btn-back-menu {
+    flex: 1;
+    min-width: 180px;
+    padding: 1rem;
+    background: linear-gradient(135deg, #A8E6CF 0%, #7BC8A4 100%);
+    border: 2px solid #5FA777;
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10;             /* Ensure button stays clickable above preview */
+}
+
+.btn-back-menu:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(127, 200, 164, 0.4);
+    background: linear-gradient(135deg, #7BC8A4 0%, #5FA777 100%);
+}
+
+.btn-select-avatar {
+    flex: 2;
+    min-width: 200px;
+    padding: 1rem;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-select-avatar:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
+}
+
+.btn-select-avatar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive - Enhanced for Better Mobile Display */
+@media (max-width: 768px) {
+    .avatar-grid { 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 0.75rem; 
+        padding: 0.75rem;
+    }
+    .avatar-option { 
+        padding: 0.5rem; 
+        min-height: 140px;
+    }
+    .avatar-option img { 
+        width: 90px; 
+        height: 90px; 
+    }
+    .avatar-card-name, .avatar-name {
+        font-size: 0.8rem;
+        min-height: 2.2rem;
+    }
+    .avatar-preview-3d { height: 200px; }
+    .avatar-actions { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+    .avatar-grid { 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 0.5rem;
+    }
+    .avatar-option { 
+        min-height: 120px;
+        padding: 0.4rem;
+    }
+    .avatar-option img { 
+        width: 75px; 
+        height: 75px; 
+    }
+    .avatar-card-name, .avatar-name {
+        font-size: 0.75rem;
+    }
+    .btn-back-menu, .btn-select-avatar { 
+        width: 100%; 
+        min-width: 100%; 
+    }
+}
+</style>
+
+<!-- Avatar Picker JavaScript is loaded from /static/js/avatar-picker.js -->

@@ -1,0 +1,262 @@
+{
+  "battle_code": "BATTLE650",
+  "battle_name": "Spelling Champions",
+  "creator_name": "Mrs. Johnson",
+  "created_at": 1760671735.807331,
+  "expires_at": 1760758135.807331,
+  "word_list": [
+    {
+      "word": "verdict",
+      "sentence": "The _____ was announced at the end of the trial.",
+      "hint": ""
+    },
+    {
+      "word": "imitation",
+      "sentence": "The toy was an _____ of the real car.",
+      "hint": ""
+    },
+    {
+      "word": "preamble",
+      "sentence": "The _____ explained the rules of the club.",
+      "hint": ""
+    },
+    {
+      "word": "commotion",
+      "sentence": "There was a _____ in the hallway during lunch.",
+      "hint": ""
+    },
+    {
+      "word": "steeple",
+      "sentence": "The _____ could be seen from miles away.",
+      "hint": ""
+    },
+    {
+      "word": "suspicious",
+      "sentence": "He looked _____ when hiding the paper behind his back.",
+      "hint": ""
+    },
+    {
+      "word": "fugitive",
+      "sentence": "The police searched for the _____ all day.",
+      "hint": ""
+    },
+    {
+      "word": "nomad",
+      "sentence": "The _____ traveled across the desert with their animals.",
+      "hint": ""
+    },
+    {
+      "word": "Berlin",
+      "sentence": "We saw pictures of _____ in our geography book.",
+      "hint": ""
+    },
+    {
+      "word": "bracken",
+      "sentence": "The rabbit hid in the _____ near the trees.",
+      "hint": ""
+    },
+    {
+      "word": "rakish",
+      "sentence": "He wore his hat at a _____ angle.",
+      "hint": ""
+    },
+    {
+      "word": "gusto",
+      "sentence": "Definition: Great enjoyment or enthusiasm in doing something.. Fill in the blank: The word is _____.",
+      "hint": ""
+    },
+    {
+      "word": "Example: She sang the song with great _____ and made everyone smile.",
+      "sentence": "Definition: . Fill in the blank: The word is _____.",
+      "hint": ""
+    },
+    {
+      "word": "jeered",
+      "sentence": "The crowd _____ at the losing team.",
+      "hint": ""
+    },
+    {
+      "word": "galore",
+      "sentence": "There were cupcakes _____ at the party.",
+      "hint": ""
+    },
+    {
+      "word": "eccentric",
+      "sentence": "Her _____ outfits made everyone smile.",
+      "hint": ""
+    },
+    {
+      "word": "hippies",
+      "sentence": "The _____ danced at the festival.",
+      "hint": ""
+    },
+    {
+      "word": "pistachio",
+      "sentence": "She ate a handful of _____ before dinner.",
+      "hint": ""
+    },
+    {
+      "word": "garbled",
+      "sentence": "The phone call was _____ because of bad reception.",
+      "hint": ""
+    },
+    {
+      "word": "miniature",
+      "sentence": "The dollhouse had _____ chairs and tables.",
+      "hint": ""
+    },
+    {
+      "word": "plausible",
+      "sentence": "His story sounded _____ but was still hard to believe.",
+      "hint": ""
+    },
+    {
+      "word": "oblivion",
+      "sentence": "The old castle fell into _____ after many years.",
+      "hint": ""
+    },
+    {
+      "word": "spectators",
+      "sentence": "The _____ cheered for their favorite team.",
+      "hint": ""
+    },
+    {
+      "word": "parchment",
+      "sentence": "The old map was drawn on yellowed _____.",
+      "hint": ""
+    },
+    {
+      "word": "heron",
+      "sentence": "The _____ stood still by the pond.",
+      "hint": ""
+    },
+    {
+      "word": "billowed",
+      "sentence": "The flag _____ in the strong wind.",
+      "hint": ""
+    },
+    {
+      "word": "lunacy",
+      "sentence": "It was pure _____ to go swimming in that storm.",
+      "hint": ""
+    },
+    {
+      "word": "noggin",
+      "sentence": "He bumped his _____ on the low door frame.",
+      "hint": ""
+    },
+    {
+      "word": "hypnosis",
+      "sentence": "The magician used _____ to calm the crowd.",
+      "hint": ""
+    },
+    {
+      "word": "toiletries",
+      "sentence": "She packed her _____ in a small bag for the trip.",
+      "hint": ""
+    },
+    {
+      "word": "winsome",
+      "sentence": "The puppy’s _____ face made everyone smile.",
+      "hint": ""
+    },
+    {
+      "word": "emporium",
+      "sentence": "We bought souvenirs from the gift _____ downtown.",
+      "hint": ""
+    },
+    {
+      "word": "savant",
+      "sentence": "The math _____ could solve hard problems quickly.",
+      "hint": ""
+    },
+    {
+      "word": "samosas",
+      "sentence": "We ate hot _____ with spicy sauce.",
+      "hint": ""
+    },
+    {
+      "word": "mosque",
+      "sentence": "The _____ had a tall tower and beautiful designs.",
+      "hint": ""
+    },
+    {
+      "word": "encourages",
+      "sentence": "Mom _____ me to always do my best.",
+      "hint": ""
+    },
+    {
+      "word": "receptionist",
+      "sentence": "The _____ welcomed guests to the office.",
+      "hint": ""
+    },
+    {
+      "word": "reprimanding",
+      "sentence": "The teacher was _____ the students for being too loud.",
+      "hint": ""
+    },
+    {
+      "word": "immigrants",
+      "sentence": "Many _____ come to start a better life.",
+      "hint": ""
+    },
+    {
+      "word": "lanyards",
+      "sentence": "We wore our _____ at the school event.",
+      "hint": ""
+    },
+    {
+      "word": "ramshackle",
+      "sentence": "The _____ house looked like it might collapse.",
+      "hint": ""
+    },
+    {
+      "word": "dissolving",
+      "sentence": "The sugar is _____ in the hot tea.",
+      "hint": ""
+    },
+    {
+      "word": "skewer",
+      "sentence": "Dad grilled vegetables on a wooden _____.",
+      "hint": ""
+    },
+    {
+      "word": "conjure",
+      "sentence": "The magician could _____ a rabbit from his hat.",
+      "hint": ""
+    },
+    {
+      "word": "neon",
+      "sentence": "The _____ signs lit up the city street.",
+      "hint": ""
+    },
+    {
+      "word": "rotunda",
+      "sentence": "The museum’s _____ was filled with paintings.",
+      "hint": ""
+    },
+    {
+      "word": "gleaned",
+      "sentence": "She _____ ideas for her story from old books.",
+      "hint": ""
+    },
+    {
+      "word": "prattling",
+      "sentence": "The children were _____ happily after recess.",
+      "hint": ""
+    },
+    {
+      "word": "atrium",
+      "sentence": "Sunlight filled the _____ of the hotel.",
+      "hint": ""
+    },
+    {
+      "word": "almanac",
+      "sentence": "Grandpa checked the _____ to see when to plant crops.",
+      "hint": ""
+    }
+  ],
+  "shuffle_seed": 4520,
+  "players": {},
+  "status": "active"
+}

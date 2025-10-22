@@ -1,0 +1,79 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database files
+*.db
+*.sqlite
+
+# Avatar source files and fix scripts (not needed in production)
+Avatars/
+fix_*.py
+validate_avatar_references.py
+auto_fix_avatar_references.py
+validation_results.txt
+*.sqlite3
+beesmart.db
+instance/
+
+# Flask-Session server-side session storage
+
+# Flask-Session server-side session storage
+flask_session/
+.flask_session/
+
+# Test files
+test_speed_round.py
+
+# Large 3D asset files (EXCEPT avatars - they're needed!)
+# *.obj  - COMMENTED OUT - We need avatar OBJ files!
+# *.mtl  - COMMENTED OUT - We need avatar MTL files!
+
+# Backup files
+*.backup_*
+
+# Documentation with large PDFs
+Documentation/

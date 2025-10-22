@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - BeeSmart Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👥 User Management</h1>
+                <p style="margin: 0; opacity: 0.9;">Manage all users in the system</p>
+            </div>
+            <a href="/admin/dashboard" style="background: rgba(255,255,255,0.2); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s;">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter/Search Bar -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Search</label>
+                <input type="text" id="searchInput" placeholder="Name, email, username..." style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Role Filter</label>
+                <select id="roleFilter" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
+                    <option value="">All Roles</option>
+                    <option value="student">Students</option>
+                    <option value="teacher">Teachers</option>
+                    <option value="parent">Parents</option>
+                    <option value="admin">Admins</option>
+                    <option value="guest">Guests</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Sort By</label>
+                <select id="sortBy" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
+                    <option value="created_desc">Newest First</option>
+                    <option value="created_asc">Oldest First</option>
+                    <option value="name_asc">Name A-Z</option>
+                    <option value="name_desc">Name Z-A</option>
+                    <option value="activity_desc">Most Active</option>
+                </select>
+            </div>
+            <div>
+                <button id="refreshBtn" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div id="bulkActionsBar" style="display: none; background: #FFF9E6; border: 2px solid #FFD700; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span id="selectedCount" style="font-weight: 700; color: #8B6914;">0 users selected</span>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button onclick="bulkEditRole()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+                    ✏️ Change Role
+                </button>
+                <button onclick="bulkExport()" style="padding: 0.5rem 1rem; background: #48bb78; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+                    📥 Export
+                </button>
+                <button onclick="bulkDelete()" style="padding: 0.5rem 1rem; background: #f56565; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+                    🗑️ Delete
+                </button>
+                <button onclick="clearSelection()" style="padding: 0.5rem 1rem; background: #e2e8f0; color: #4a5568; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+                    ✖️ Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="overflow-x: auto;">
+            <table id="usersTable" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1rem; text-align: left;">
+                            <input type="checkbox" id="selectAll" style="width: 18px; height: 18px; cursor: pointer;">
+                        </th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">User</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Role</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Stats</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Points</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Teacher Key</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Created</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Last Active</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Will be populated by JavaScript -->
+                    <tr>
+                        <td colspan="9" style="padding: 3rem; text-align: center; color: #718096;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                            Loading users...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0;">✏️ Edit User</h2>
+            <button onclick="closeEditModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #718096;">×</button>
+        </div>
+        
+        <form id="editUserForm">
+            <input type="hidden" id="editUserId">
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Display Name</label>
+                <input type="text" id="editDisplayName" required style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Email</label>
+                <input type="email" id="editEmail" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Role</label>
+                <select id="editRole" required style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="parent">Parent</option>
+                    <option value="admin">Admin</option>
+                    <option value="guest">Guest</option>
+                </select>
+            </div>
+            
+            <!-- Teacher Key Field (for teachers/parents/admins only) -->
+            <div id="teacherKeySection" style="margin-bottom: 1.5rem; display: none;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">
+                    Teacher/Parent Key
+                    <span style="font-weight: 400; color: #718096; font-size: 0.875rem;">(For tracking students)</span>
+                </label>
+                <input type="text" id="editTeacherKey" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;" placeholder="Leave blank to auto-generate">
+                <div style="margin-top: 0.5rem; padding: 0.75rem; background: #FFF9E6; border-radius: 6px; border-left: 3px solid #FFD700;">
+                    <p style="margin: 0; font-size: 0.75rem; color: #8B6914;">
+                        💡 Your unique key that students/family use to link to your account<br>
+                        💡 Leave blank to auto-generate a new key<br>
+                        💡 Students will enter this key during registration
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Linked Teacher Display (for students only) -->
+            <div id="linkedTeacherSection" style="margin-bottom: 1.5rem; display: none;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">
+                    Linked Teacher/Parent
+                </label>
+                <div id="linkedTeacherInfo" style="padding: 0.75rem; background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px;">
+                    <p style="margin: 0; color: #718096; font-size: 0.875rem;">Not linked to any teacher/parent</p>
+                </div>
+                <div style="margin-top: 0.5rem; padding: 0.75rem; background: #EBF8FF; border-radius: 6px; border-left: 3px solid #4299E1;">
+                    <p style="margin: 0; font-size: 0.75rem; color: #2C5282;">
+                        ℹ️ Students are linked through the TeacherStudent relationship table<br>
+                        ℹ️ To change the link, the student needs to re-register with a different teacher key
+                    </p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" onclick="closeEditModal()" style="padding: 0.75rem 1.5rem; background: #e2e8f0; color: #4a5568; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="submit" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    💾 Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let allUsers = [];
+let selectedUsers = new Set();
+
+// Load users on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadUsers();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    document.getElementById('searchInput').addEventListener('input', filterUsers);
+    document.getElementById('roleFilter').addEventListener('change', filterUsers);
+    document.getElementById('sortBy').addEventListener('change', filterUsers);
+    document.getElementById('refreshBtn').addEventListener('click', loadUsers);
+    document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
+    document.getElementById('editUserForm').addEventListener('submit', saveUserChanges);
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            allUsers = data.users;
+            renderUsers(allUsers);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showError('Failed to load users');
+    }
+}
+
+function renderUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="padding: 3rem; text-align: center; color: #718096;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">😕</div>
+                    No users found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => `
+        <tr style="border-bottom: 1px solid #e2e8f0;" data-user-id="${user.id}">
+            <td style="padding: 1rem;">
+                <input type="checkbox" class="user-checkbox" value="${user.id}" onchange="updateSelection()" style="width: 18px; height: 18px; cursor: pointer;">
+            </td>
+            <td style="padding: 1rem;">
+                <div style="font-weight: 600; color: #2d3748;">${user.display_name || user.username}</div>
+                <div style="font-size: 0.75rem; color: #718096;">${user.email || user.username}</div>
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+                <span style="background: ${getRoleColor(user.role).bg}; color: ${getRoleColor(user.role).text}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                    ${user.role.toUpperCase()}
+                </span>
+            </td>
+            <td style="padding: 1rem; text-align: center; font-size: 0.875rem;">
+                <div style="color: #9f7aea; font-weight: 600;">${user.total_quizzes || 0} quizzes</div>
+                <div style="color: #718096; font-size: 0.75rem;">${user.average_accuracy || 0}% accuracy</div>
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+                <div style="font-weight: 700; color: #FFD700;">${user.total_lifetime_points || 0}</div>
+            </td>
+            <td style="padding: 1rem; text-align: center; font-size: 0.75rem; color: #718096;">
+                ${user.teacher_key || '-'}
+            </td>
+            <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">
+                ${formatDate(user.created_at)}
+            </td>
+            <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">
+                ${user.last_login ? formatDate(user.last_login) : 'Never'}
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <button onclick="editUser(${user.id})" style="padding: 0.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="Edit">
+                        ✏️
+                    </button>
+                    <button onclick="viewUserDetails(${user.id})" style="padding: 0.5rem; background: #48bb78; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="View Details">
+                        👁️
+                    </button>
+                    <button onclick="deleteUser(${user.id}, '${user.display_name || user.username}')" style="padding: 0.5rem; background: #f56565; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="Delete">
+                        🗑️
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const roleFilter = document.getElementById('roleFilter').value;
+    const sortBy = document.getElementById('sortBy').value;
+    
+    let filtered = allUsers.filter(user => {
+        const matchesSearch = !searchTerm || 
+            (user.display_name || '').toLowerCase().includes(searchTerm) ||
+            (user.username || '').toLowerCase().includes(searchTerm) ||
+            (user.email || '').toLowerCase().includes(searchTerm);
+        
+        const matchesRole = !roleFilter || user.role === roleFilter;
+        
+        return matchesSearch && matchesRole;
+    });
+    
+    // Sort
+    filtered.sort((a, b) => {
+        switch(sortBy) {
+            case 'created_desc':
+                return new Date(b.created_at) - new Date(a.created_at);
+            case 'created_asc':
+                return new Date(a.created_at) - new Date(b.created_at);
+            case 'name_asc':
+                return (a.display_name || a.username).localeCompare(b.display_name || b.username);
+            case 'name_desc':
+                return (b.display_name || b.username).localeCompare(a.display_name || a.username);
+            case 'activity_desc':
+                return new Date(b.last_login || 0) - new Date(a.last_login || 0);
+            default:
+                return 0;
+        }
+    });
+    
+    renderUsers(filtered);
+}
+
+function toggleSelectAll(e) {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = e.target.checked;
+        if (e.target.checked) {
+            selectedUsers.add(parseInt(cb.value));
+        } else {
+            selectedUsers.delete(parseInt(cb.value));
+        }
+    });
+    updateSelectionUI();
+}
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    selectedUsers.clear();
+    checkboxes.forEach(cb => {
+        if (cb.checked) {
+            selectedUsers.add(parseInt(cb.value));
+        }
+    });
+    updateSelectionUI();
+}
+
+function updateSelectionUI() {
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectAll = document.getElementById('selectAll');
+    
+    if (selectedUsers.size > 0) {
+        bulkActionsBar.style.display = 'block';
+        selectedCount.textContent = `${selectedUsers.size} user${selectedUsers.size > 1 ? 's' : ''} selected`;
+    } else {
+        bulkActionsBar.style.display = 'none';
+    }
+    
+    const totalCheckboxes = document.querySelectorAll('.user-checkbox').length;
+    selectAll.checked = selectedUsers.size === totalCheckboxes && totalCheckboxes > 0;
+}
+
+function clearSelection() {
+    selectedUsers.clear();
+    document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    updateSelectionUI();
+}
+
+function editUser(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editDisplayName').value = user.display_name || user.username;
+    document.getElementById('editEmail').value = user.email || '';
+    document.getElementById('editRole').value = user.role;
+    
+    // Show/hide sections based on role
+    const teacherKeySection = document.getElementById('teacherKeySection');
+    const linkedTeacherSection = document.getElementById('linkedTeacherSection');
+    const linkedTeacherInfo = document.getElementById('linkedTeacherInfo');
+    
+    if (user.role === 'student') {
+        // For students, show linked teacher info (read-only)
+        teacherKeySection.style.display = 'none';
+        linkedTeacherSection.style.display = 'block';
+        
+        if (user.linked_teacher) {
+            linkedTeacherInfo.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        ${user.linked_teacher.display_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p style="margin: 0; font-weight: 600; color: #2d3748;">${user.linked_teacher.display_name}</p>
+                        <p style="margin: 0; font-size: 0.875rem; color: #718096;">@${user.linked_teacher.username}</p>
+                        <p style="margin: 0; font-size: 0.75rem; color: #4299E1; font-family: monospace;">🔑 ${user.linked_teacher.teacher_key}</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            linkedTeacherInfo.innerHTML = `
+                <p style="margin: 0; color: #718096; font-size: 0.875rem;">❌ Not linked to any teacher/parent</p>
+            `;
+        }
+    } else {
+        // For teachers/parents/admins, show teacher key field (editable)
+        teacherKeySection.style.display = 'block';
+        linkedTeacherSection.style.display = 'none';
+        document.getElementById('editTeacherKey').value = user.teacher_key || '';
+    }
+    
+    document.getElementById('editUserModal').style.display = 'flex';
+    
+    // Add role change listener to toggle sections
+    document.getElementById('editRole').addEventListener('change', function() {
+        const newRole = this.value;
+        if (newRole === 'student') {
+            teacherKeySection.style.display = 'none';
+            linkedTeacherSection.style.display = 'block';
+        } else {
+            teacherKeySection.style.display = 'block';
+            linkedTeacherSection.style.display = 'none';
+        }
+    });
+}
+
+function closeEditModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+}
+
+async function saveUserChanges(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('editUserId').value;
+    const role = document.getElementById('editRole').value;
+    
+    const updates = {
+        display_name: document.getElementById('editDisplayName').value,
+        email: document.getElementById('editEmail').value,
+        role: role
+    };
+    
+    // Only include teacher_key for non-student roles
+    if (role !== 'student') {
+        updates.teacher_key = document.getElementById('editTeacherKey').value;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess('User updated successfully');
+            closeEditModal();
+            loadUsers();
+        } else {
+            showError(data.message || 'Failed to update user');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showError('Failed to update user');
+    }
+}
+
+async function deleteUser(userId, userName) {
+    if (!confirm(`Are you sure you want to delete ${userName}?\n\nThis action cannot be undone and will delete:\n• User account\n• All quiz sessions\n• All achievements\n• All progress data`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess('User deleted successfully');
+            loadUsers();
+        } else {
+            showError(data.message || 'Failed to delete user');
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        showError('Failed to delete user');
+    }
+}
+
+async function bulkDelete() {
+    if (selectedUsers.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedUsers.size} user(s)?\n\nThis action cannot be undone!`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/users/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers) })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess(`Deleted ${data.deleted_count} user(s)`);
+            clearSelection();
+            loadUsers();
+        } else {
+            showError(data.message || 'Failed to delete users');
+        }
+    } catch (error) {
+        console.error('Error bulk deleting:', error);
+        showError('Failed to delete users');
+    }
+}
+
+async function bulkEditRole() {
+    if (selectedUsers.size === 0) return;
+    
+    const newRole = prompt(`Change role for ${selectedUsers.size} user(s) to:\n\nEnter: student, teacher, parent, admin, or guest`);
+    if (!newRole || !['student', 'teacher', 'parent', 'admin', 'guest'].includes(newRole.toLowerCase())) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/users/bulk-update-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_ids: Array.from(selectedUsers),
+                role: newRole.toLowerCase()
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showSuccess(`Updated ${data.updated_count} user(s)`);
+            clearSelection();
+            loadUsers();
+        } else {
+            showError(data.message || 'Failed to update roles');
+        }
+    } catch (error) {
+        console.error('Error bulk updating:', error);
+        showError('Failed to update roles');
+    }
+}
+
+async function bulkExport() {
+    if (selectedUsers.size === 0) return;
+    
+    try {
+        const response = await fetch('/api/admin/users/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers) })
+        });
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        
+        showSuccess('Export downloaded');
+    } catch (error) {
+        console.error('Error exporting:', error);
+        showError('Failed to export users');
+    }
+}
+
+function viewUserDetails(userId) {
+    window.location.href = `/admin/users/${userId}`;
+}
+
+function getRoleColor(role) {
+    const colors = {
+        student: { bg: '#e6f7ff', text: '#0066cc' },
+        teacher: { bg: '#fff4e6', text: '#ff6b00' },
+        parent: { bg: '#f0f9ff', text: '#0369a1' },
+        admin: { bg: '#f3e8ff', text: '#7c3aed' },
+        guest: { bg: '#f0f0f0', text: '#666' }
+    };
+    return colors[role] || colors.guest;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function showSuccess(message) {
+    alert('✅ ' + message);
+}
+
+function showError(message) {
+    alert('❌ ' + message);
+}
+</script>
+
+{% endblock %}

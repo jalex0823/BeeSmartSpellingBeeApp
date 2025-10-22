@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}BeeSmart Test Page{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h2>🧪 BeeSmart Test Page</h2>
+    <p>This page is used to test Flask functionality and API endpoints.</p>
+    
+    <div style="background: var(--honey-light); padding: 2rem; border-radius: 15px; box-shadow: var(--hive-shadow); margin: 2rem 0;">
+        <h3>✅ Flask Status</h3>
+        <p>If you can see this page, Flask is working correctly!</p>
+        <ul>
+            <li>✅ Templates loading</li>
+            <li>✅ CSS styling applied</li>
+            <li>✅ JavaScript enabled</li>
+            <li>✅ Fairy animation system loaded</li>
+        </ul>
+    </div>
+    
+    <div style="background: var(--honey-light); padding: 2rem; border-radius: 15px; box-shadow: var(--hive-shadow); margin: 2rem 0;">
+        <h3>🧪 API Test</h3>
+        <button onclick="testAPI()" style="background: var(--honey-gold); border: none; padding: 0.75rem 1.5rem; border-radius: 15px; cursor: pointer; font-weight: 600; color: var(--dark-brown);">
+            Test Wordbook API
+        </button>
+        <div id="apiResult" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; display: none;"></div>
+    </div>
+    
+    <div style="background: var(--honey-light); padding: 2rem; border-radius: 15px; box-shadow: var(--hive-shadow); margin: 2rem 0;">
+        <h3>🔧 Debug Information</h3>
+        <button onclick="getDebugInfo()" style="background: var(--secondary-color); border: none; padding: 0.75rem 1.5rem; border-radius: var(--border-radius); cursor: pointer; font-weight: 600;">
+            Get Session Debug Info
+        </button>
+        <div id="debugResult" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; display: none;"></div>
+    </div>
+    
+    <div style="text-align: center; margin: 2rem 0;">
+        <a href="/" style="background: var(--accent-color); color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: var(--border-radius); font-weight: 600;">
+            ← Back to Main Menu
+        </a>
+    </div>
+</div>
+
+<script>
+async function testAPI() {
+    const resultDiv = document.getElementById('apiResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '⏳ Testing API...';
+    
+    try {
+        const response = await fetch('/api/wordbank');
+        const data = await response.json();
+        
+        if (response.ok) {
+            resultDiv.innerHTML = `
+                <strong>✅ API Test Successful</strong><br>
+                Word count: ${data.words.length}<br>
+                <pre style="background: white; padding: 1rem; border-radius: 4px; margin-top: 0.5rem; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+            BeeSmart.showSuccess('API test completed successfully!');
+        } else {
+            resultDiv.innerHTML = `<strong>❌ API Error:</strong> ${data.error || 'Unknown error'}`;
+            BeeSmart.showError('API test failed');
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<strong>❌ Connection Error:</strong> ${error.message}`;
+        BeeSmart.showError('Failed to connect to API');
+    }
+}
+
+async function getDebugInfo() {
+    const resultDiv = document.getElementById('debugResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '⏳ Getting debug information...';
+    
+    try {
+        const response = await fetch('/api/session_debug');
+        const data = await response.json();
+        
+        if (response.ok) {
+            resultDiv.innerHTML = `
+                <strong>🔧 Debug Information</strong><br>
+                <pre style="background: white; padding: 1rem; border-radius: 4px; margin-top: 0.5rem; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            `;
+        } else {
+            resultDiv.innerHTML = `<strong>❌ Debug Error:</strong> Failed to get debug info`;
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<strong>❌ Connection Error:</strong> ${error.message}`;
+    }
+}
+</script>
+{% endblock %}

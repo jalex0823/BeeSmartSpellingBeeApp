@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ student.display_name }} - Profile Details</title>
+  <style>
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f6f7fb;margin:0;padding:2rem;color:#2c3e50}
+    .container{max-width:1100px;margin:0 auto}
+    .header{display:flex;gap:1.25rem;align-items:center;background:#fff;border-radius:16px;padding:1.25rem 1.5rem;box-shadow:0 8px 24px rgba(0,0,0,0.08);margin-bottom:1.25rem}
+    .avatar{width:76px;height:76px;border-radius:12px;background:#fafafa;border:1px solid #eee;object-fit:cover}
+    .title h1{margin:0;font-size:1.6rem}
+    .title p{margin:0.2rem 0 0;color:#667}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+    .card{background:#fff;border-radius:14px;padding:1rem 1.1rem;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    .card h3{margin:.2rem 0 1rem;font-size:1.05rem}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+    .stat{background:#f9fafc;border:1px solid #eef;border-radius:12px;padding:.75rem;text-align:center}
+    .stat .val{font-size:1.3rem;font-weight:700}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.6rem;border-bottom:1px solid #eee;font-size:.95rem}
+    th{background:#fafbfd;text-align:left}
+    .back{display:inline-block;margin:0 0 1rem;background:#ffd24d;color:#5a3b00;border:none;border-radius:10px;padding:.6rem 1rem;text-decoration:none;font-weight:600}
+    .badge{display:inline-block;background:#fffbec;border:1px solid #ffe08a;border-radius:10px;padding:.2rem .5rem;margin:.15rem 0;font-size:.85rem}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  </style>
+  <link rel="preload" as="image" href="{{ (avatar.urls.thumbnail if avatar and avatar.urls) or (avatar.thumbnail_url if avatar) or url_for('static', filename='assets/avatars/cool-bee/thumbnail.png') }}">
+  
+  <script>
+    // Optional: future export hook
+    function exportStudent(){ alert('Export coming soon'); }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.6rem">
+      <a class="back" href="{{ url_for('teacher_dashboard') }}">⬅ Back to Dashboard</a>
+      <a class="back" href="{{ url_for('export_student_pdf', student_id=student.id) }}" style="background:#ffaf38">🧾 Export PDF</a>
+    </div>
+    <div class="header">
+      <img class="avatar" alt="Avatar" src="{{ (avatar.urls.thumbnail if avatar and avatar.urls) or (avatar.thumbnail_url if avatar) or url_for('static', filename='assets/avatars/cool-bee/thumbnail.png') }}">
+      <div class="title">
+        <h1>{{ student.display_name }}</h1>
+        <p>Grade: {{ student.grade_level or 'N/A' }} • Points: {{ student.total_lifetime_points or 0 }} • Best Streak: {{ student.best_streak or 0 }}</p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Overview</h3>
+        <div class="stats">
+          <div class="stat"><div class="val">{{ total_quizzes|format_number }}</div><div>Quizzes</div></div>
+          <div class="stat"><div class="val">{{ '%.0f'|format(avg_accuracy) }}%</div><div>Avg Accuracy</div></div>
+          <div class="stat"><div class="val">{{ student.cumulative_gpa or 0 }}</div><div>GPA</div></div>
+        </div>
+        <div style="margin-top:1rem">
+          <div><strong>Avatar:</strong> {{ avatar.name if avatar else student.avatar_id }}</div>
+          <div style="margin-top:.35rem"><strong>Best Grade:</strong> {{ student.best_grade or '—' }}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Struggling Words (last 60 days)</h3>
+        {% if struggling_words %}
+          <table>
+            <thead><tr><th>Word</th><th>Misses</th></tr></thead>
+            <tbody>
+            {% for row in struggling_words %}
+              <tr><td>{{ row.word }}</td><td>{{ row.misses|format_number }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No struggling words found. 🐝</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Recent Quiz Sessions</h3>
+        {% if recent_sessions %}
+          <table>
+            <thead><tr><th>Date</th><th>Accuracy</th><th>Grade</th><th>Points</th></tr></thead>
+            <tbody>
+              {% for s in recent_sessions %}
+                <tr>
+                  <td>{{ (s.session_end or s.session_start).strftime('%b %d, %Y') }}</td>
+                  <td>{{ '%.0f'|format(s.accuracy_percentage or 0) }}%</td>
+                  <td>{{ s.grade or '—' }}</td>
+                  <td>{{ s.total_points|format_number or 0 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No completed sessions yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Speed Round Scores</h3>
+        {% if recent_speed %}
+          <table>
+            <thead><tr><th>Date</th><th>Score</th><th>Correct</th><th>Accuracy</th></tr></thead>
+            <tbody>
+              {% for r in recent_speed %}
+                <tr>
+                  <td>{{ r.completed_at.strftime('%b %d, %Y') }}</td>
+                  <td>{{ r.honey_points_earned|format_number }}</td>
+                  <td>{{ r.words_correct|format_number }}/{{ r.words_attempted|format_number }}</td>
+                  <td>{{ '%.0f'|format(r.accuracy_percentage) }}%</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No speed round scores yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card" style="grid-column:1 / -1">
+        <h3>Recent Achievements</h3>
+        {% if recent_achievements %}
+          {% for a in recent_achievements %}
+            <span class="badge">{{ a.achievement_name or a.achievement_type }} • {{ a.earned_date.strftime('%b %d') }}</span>
+          {% endfor %}
+        {% else %}
+          <p>No achievements yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

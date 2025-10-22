@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ {{ battle_name }} - Battle of the Bees</title>
+    <link rel="icon" type="image/png" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="apple-touch-icon" href="/static/BeeSmartLogoTransparent.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
+            min-height: 100vh;
+        }
+
+        .leaderboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF4500 0%, #DC143C 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 69, 0, 0.4);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .battle-info {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .leaderboard-table {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #FF6347 0%, #FF4500 100%);
+            color: white;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 80px 1fr 120px 120px 120px 150px;
+            gap: 1rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .player-row {
+            padding: 1.25rem 1.5rem;
+            display: grid;
+            grid-template-columns: 80px 1fr 120px 120px 120px 150px;
+            gap: 1rem;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .player-row:hover {
+            background: rgba(255, 140, 0, 0.05);
+            transform: translateX(5px);
+        }
+
+        .player-row.rank-1 {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border-left: 5px solid #FFD700;
+        }
+
+        .player-row.rank-2 {
+            background: linear-gradient(90deg, rgba(192, 192, 192, 0.2) 0%, rgba(192, 192, 192, 0.05) 100%);
+            border-left: 5px solid #C0C0C0;
+        }
+
+        .player-row.rank-3 {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.2) 0%, rgba(205, 127, 50, 0.05) 100%);
+            border-left: 5px solid #CD7F32;
+        }
+
+        .rank-badge {
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .rank-1 .rank-badge { color: #FFD700; }
+        .rank-2 .rank-badge { color: #C0C0C0; }
+        .rank-3 .rank-badge { color: #CD7F32; }
+
+        .player-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FF4500;
+        }
+
+        .accuracy {
+            font-size: 1.1rem;
+            color: #4CAF50;
+        }
+
+        .progress-bar-container {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            height: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .status-completed {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-active {
+            background: #FF9800;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-joined {
+            background: rgba(128, 128, 128, 0.2);
+            color: #666;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #FF4500 0%, #DC143C 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 69, 0, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(128, 128, 128, 0.2);
+            color: #555;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(128, 128, 128, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+
+        .empty-state h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: #FF4500;
+        }
+
+        .trophy-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .table-header, .player-row {
+                grid-template-columns: 60px 1fr 80px;
+                font-size: 0.9rem;
+            }
+
+            .table-header .hide-mobile, .player-row .hide-mobile {
+                display: none;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .battle-info {
+                font-size: 0.95rem;
+            }
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 69, 0, 0.9);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚔️ {{ battle_name }}</h1>
+            <p style="font-size: 1.2rem; margin: 0.5rem 0;">Battle Code: <strong>{{ battle_code }}</strong></p>
+            <div class="battle-info">
+                <div class="info-box">
+                    👨‍🏫 Created by: <strong>{{ creator_name }}</strong>
+                </div>
+                <div class="info-box">
+                    📚 <strong>{{ word_count }}</strong> Words
+                </div>
+                <div class="info-box">
+                    ⏰ <strong id="timeRemaining">{{ hours_remaining }}h {{ minutes_remaining }}m</strong> remaining
+                </div>
+                <div class="info-box">
+                    👥 <strong id="playerCount">0</strong> Players
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="leaderboard-table">
+            <div class="table-header">
+                <div>Rank</div>
+                <div>Player Name</div>
+                <div>Score</div>
+                <div class="hide-mobile">Accuracy</div>
+                <div class="hide-mobile">Progress</div>
+                <div>Status</div>
+            </div>
+            <div id="leaderboardBody">
+                <div class="loading">
+                    🐝 Loading battle data...
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="/" class="btn btn-secondary">🏠 Back to Menu</a>
+            <button onclick="refreshLeaderboard()" class="btn btn-primary">🔄 Refresh Now</button>
+            <button onclick="exportResults()" class="btn btn-primary">📊 Export Results (CSV)</button>
+        </div>
+    </div>
+
+    <script>
+        const BATTLE_CODE = "{{ battle_code }}";
+        let refreshInterval;
+        let lastUpdateTime = 0;
+
+        // Load leaderboard on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshLeaderboard();
+            
+            // Auto-refresh every 5 seconds
+            refreshInterval = setInterval(refreshLeaderboard, 5000);
+        });
+
+        async function refreshLeaderboard() {
+            try {
+                const response = await fetch(`/api/battles/${BATTLE_CODE}/leaderboard`);
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    showError(data.message);
+                    return;
+                }
+
+                const leaderboard = data.leaderboard || [];
+                const playerCount = data.player_count || 0;
+
+                // Update player count
+                document.getElementById('playerCount').textContent = playerCount;
+
+                // Render leaderboard
+                renderLeaderboard(leaderboard);
+
+                // Update last update time
+                lastUpdateTime = Date.now();
+
+            } catch (error) {
+                console.error('Error refreshing leaderboard:', error);
+                showError('Failed to load leaderboard. Please refresh the page.');
+            }
+        }
+
+        function renderLeaderboard(leaderboard) {
+            const container = document.getElementById('leaderboardBody');
+
+            if (leaderboard.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="trophy-icon">🏆</div>
+                        <h2>No Players Yet</h2>
+                        <p>Waiting for students to join the battle...</p>
+                        <p style="margin-top: 1rem; color: #FF4500; font-weight: 700;">
+                            Share the code: <strong>{{ battle_code }}</strong>
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = leaderboard.map((player, index) => {
+                const rank = index + 1;
+                const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                
+                // Determine status
+                let statusClass = 'status-joined';
+                let statusText = '👋 Joined';
+                
+                if (player.completed) {
+                    statusClass = 'status-completed';
+                    statusText = '✅ Done';
+                } else if (player.correct_count > 0 || player.incorrect_count > 0) {
+                    statusClass = 'status-active';
+                    statusText = '🏃 Active';
+                }
+
+                // Calculate progress percentage
+                const totalWords = {{ word_count }};
+                const answered = player.correct_count + player.incorrect_count;
+                const progressPercent = (answered / totalWords * 100).toFixed(0);
+
+                return `
+                    <div class="player-row ${rankClass}">
+                        <div class="rank-badge">${getRankEmoji(rank)}</div>
+                        <div class="player-name">${escapeHtml(player.name)}</div>
+                        <div class="score">${player.score}</div>
+                        <div class="accuracy hide-mobile">${player.accuracy}%</div>
+                        <div class="hide-mobile">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" style="width: ${progressPercent}%;">
+                                    ${player.progress}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getRankEmoji(rank) {
+            switch(rank) {
+                case 1: return '🥇';
+                case 2: return '🥈';
+                case 3: return '🥉';
+                default: return `#${rank}`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('leaderboardBody');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h2>❌ Error</h2>
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            `;
+        }
+
+        function exportResults() {
+            // Download CSV file
+            window.location.href = `/api/battles/${BATTLE_CODE}/export`;
+        }
+
+        // Clean up interval when leaving page
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

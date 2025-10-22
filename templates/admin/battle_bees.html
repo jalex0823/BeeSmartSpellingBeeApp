@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Battle of the Bees Admin - BeeSmart Spelling{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 2rem auto; padding: 0 1rem;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(255, 140, 0, 0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 style="margin: 0 0 0.5rem 0; font-size: 2.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    ⚔️ Battle of the Bees
+                </h1>
+                <p style="margin: 0; opacity: 0.95; font-size: 1.1rem;">Complete Battle Statistics & Management</p>
+            </div>
+            <a href="/admin/dashboard" style="background: rgba(255,255,255,0.2); color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Overview -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Battles</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #FF6B00;">{{ battle_stats.total_battles }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Active Battles</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #48bb78;">{{ battle_stats.active_battles }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Completed Battles</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #667eea;">{{ battle_stats.completed_battles }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Battle Players</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #9f7aea;">{{ battle_stats.total_participants }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">🍯 Total Honey Earned</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #FFD700;">{{ battle_stats.total_honey_earned }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Avg Battle Score</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #ed8936;">{{ battle_stats.avg_battle_score }}</div>
+        </div>
+    </div>
+
+    <!-- Active Battle Codes -->
+    {% if active_battle_codes %}
+    <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); padding: 2rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);">
+        <h2 style="margin: 0 0 1rem 0; color: white; font-size: 1.5rem;">🔑 Active Battle Codes ({{ active_battle_codes|length }})</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+            {% for battle in active_battle_codes %}
+            <div style="background: rgba(255,255,255,0.95); padding: 1rem; border-radius: 8px;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: #FF6B00; font-family: monospace; margin-bottom: 0.5rem;">
+                    {{ battle.battle_code }}
+                </div>
+                <div style="font-size: 0.875rem; color: #666;">
+                    <div><strong>Creator:</strong> {{ battle.player1_name }}</div>
+                    <div><strong>Created:</strong> {{ battle.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+                    {% if battle.player2_name %}
+                    <div style="color: #48bb78; font-weight: 600;">✓ Player 2 Joined: {{ battle.player2_name }}</div>
+                    {% else %}
+                    <div style="color: #ed8936;">⏳ Waiting for Player 2...</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Battle Leaderboard -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.75rem; display: flex; align-items: center; gap: 0.5rem;">
+            🏆 Battle Leaderboard - Top 20
+        </h2>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Rank</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Player</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">🍯 Honey</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Played</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Won</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Lost</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Win Rate</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in leaderboard %}
+                    <tr style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                        <td style="padding: 1rem; text-align: center;">
+                            {% if player.rank == 1 %}
+                                <span style="font-size: 2rem;">🥇</span>
+                            {% elif player.rank == 2 %}
+                                <span style="font-size: 2rem;">🥈</span>
+                            {% elif player.rank == 3 %}
+                                <span style="font-size: 2rem;">🥉</span>
+                            {% else %}
+                                <span style="font-size: 1.1rem; font-weight: 700; color: #718096;">#{{ player.rank }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                {% if player.avatar_id %}
+                                <img src="/static/assets/avatars/{{ player.avatar_id }}/thumbnail.png" 
+                                     alt="{{ player.display_name }}"
+                                     style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #FFD700;">
+                                {% else %}
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #FFD700; display: flex; align-items: center; justify-content: center;">
+                                    🐝
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div style="font-weight: 600; color: #2d3748;">{{ player.display_name }}</div>
+                                    <div style="font-size: 0.75rem; color: #718096;">@{{ player.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-size: 1.25rem; font-weight: 700; color: #FFD700;">
+                            {{ player.honey_points }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #667eea;">
+                            {{ player.total_battles_played }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #48bb78;">
+                            {{ player.total_battles_won }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #f56565;">
+                            {{ player.total_battles_played - player.total_battles_won }}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="font-weight: 700; color: {% if player.win_rate >= 70 %}#48bb78{% elif player.win_rate >= 50 %}#ed8936{% else %}#f56565{% endif %};">
+                                {{ player.win_rate }}%
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 700; font-size: 0.875rem;">
+                                {{ player.current_level }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Battles Table -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.75rem;">⚔️ All Battles ({{ battles|length }})</h2>
+        
+        {% if battles %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Battle Code</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Status</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Player 1</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Score</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Player 2</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Score</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Winner</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for battle in battles %}
+                    <tr style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                        <td style="padding: 0.75rem;">
+                            <span style="font-family: monospace; font-weight: 700; color: #FF6B00;">{{ battle.battle_code }}</span>
+                        </td>
+                        <td style="padding: 0.75rem;">
+                            {% if battle.status == 'active' %}
+                                <span style="background: #48bb78; color: white; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">ACTIVE</span>
+                            {% elif battle.status == 'completed' %}
+                                <span style="background: #667eea; color: white; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">COMPLETED</span>
+                            {% else %}
+                                <span style="background: #a0aec0; color: white; padding: 0.25rem 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.75rem;">{{ battle.status.upper() }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; font-weight: 600; color: #2d3748;">{{ battle.player1_name }}</td>
+                        <td style="padding: 0.75rem; text-align: center; font-weight: 700; color: #667eea; font-size: 1.1rem;">
+                            {{ battle.player1_score }}
+                        </td>
+                        <td style="padding: 0.75rem; font-weight: 600; color: #2d3748;">
+                            {{ battle.player2_name if battle.player2_name else '⏳ Waiting...' }}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: center; font-weight: 700; color: #667eea; font-size: 1.1rem;">
+                            {{ battle.player2_score if battle.player2_score else '-' }}
+                        </td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            {% if battle.winner_id %}
+                                {% set winner = battle.player1_name if battle.winner_id == battle.player1_id else battle.player2_name %}
+                                <span style="color: #48bb78; font-weight: 700; font-size: 1rem;">🏆 {{ winner }}</span>
+                            {% else %}
+                                <span style="color: #a0aec0;">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.75rem; color: #718096;">
+                            {{ battle.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #a0aec0;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">⚔️</div>
+            <p style="font-size: 1.25rem; margin: 0;">No battles yet!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Battle Participants -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.75rem;">👥 All Battle Participants ({{ battle_participants|length }})</h2>
+        
+        {% if battle_participants %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+            {% for participant in battle_participants %}
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; border-left: 4px solid #FFD700;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    {% if participant.avatar_id %}
+                    <img src="/static/assets/avatars/{{ participant.avatar_id }}/thumbnail.png" 
+                         alt="{{ participant.display_name }}"
+                         style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #FFD700;">
+                    {% else %}
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #FFD700; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        🐝
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 700; color: #2d3748;">{{ participant.display_name }}</div>
+                        <div style="font-size: 0.75rem; color: #718096;">@{{ participant.username }}</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.875rem;">
+                    <div>
+                        <div style="color: #718096;">🍯 Honey</div>
+                        <div style="font-weight: 700; color: #FFD700; font-size: 1.1rem;">{{ participant.honey_points }}</div>
+                    </div>
+                    <div>
+                        <div style="color: #718096;">Level</div>
+                        <div style="font-weight: 700; color: #667eea; font-size: 1.1rem;">{{ participant.current_level }}</div>
+                    </div>
+                    <div>
+                        <div style="color: #718096;">Played</div>
+                        <div style="font-weight: 700; color: #4a5568;">{{ participant.total_battles_played }}</div>
+                    </div>
+                    <div>
+                        <div style="color: #718096;">Won</div>
+                        <div style="font-weight: 700; color: #48bb78;">{{ participant.total_battles_won }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #a0aec0;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">👥</div>
+            <p style="font-size: 1.25rem; margin: 0;">No battle participants yet!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        table {
+            font-size: 0.75rem;
+        }
+        th, td {
+            padding: 0.5rem !important;
+        }
+    }
+</style>
+{% endblock %}

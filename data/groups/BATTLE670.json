@@ -1,0 +1,77 @@
+{
+  "battle_code": "BATTLE670",
+  "battle_name": "Mr. Jeff",
+  "creator_name": "tome",
+  "created_at": 1760670583.251352,
+  "expires_at": 1760756983.251352,
+  "word_list": [
+    {
+      "word": "yawn",
+      "sentence": "A yawn is the action of yawning.. He did three big _____, then stood up to go upstairs to bed.",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "seat",
+      "sentence": "To seat is to help someone sit down.. Follow me. I will _____ you near the stage.",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "bask",
+      "sentence": "If a person basks, they lie down and be exposed to warmth.. Fill in the blank: Can you spell _____ correctly?",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "main",
+      "sentence": "A main is a large pipe or wire that carries gas, water, electricity, etc.. A break in a water _____ has closed the road.",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "jon",
+      "sentence": "Jon is a male given name.. Fill in the blank: Can you spell _____ correctly?",
+      "hint": "This is a level 1 word with 3 letters."
+    },
+    {
+      "word": "sole",
+      "sentence": "The bottom of a foot.. Fill in the blank: Can you spell _____ correctly?",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "hail",
+      "sentence": "If you hail something, you say it is very good.. Fill in the blank: Can you spell _____ correctly?",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "lung",
+      "sentence": "Your lungs are part of your body that is inside your chest. Your lungs allow you to breathe.. Smoking for many years had damaged his _____.",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "bilk",
+      "sentence": "If you bilk a person, you obtain someone's money in an unfair way or by cheating.. Fill in the blank: Can you spell _____ correctly?",
+      "hint": "This is a level 1 word with 4 letters."
+    },
+    {
+      "word": "tune",
+      "sentence": "If you tune a musical instrument you make it so it will play the right notes.. You _____ it by making the strings tighter or looser.",
+      "hint": "This is a level 1 word with 4 letters."
+    }
+  ],
+  "shuffle_seed": 5017,
+  "players": {
+    "jeff_9ae0d5fb": {
+      "player_id": "jeff_9ae0d5fb",
+      "name": "jeff",
+      "joined_at": 1760670613.906788,
+      "current_word_index": 0,
+      "correct_count": 0,
+      "incorrect_count": 0,
+      "total_time_ms": 0,
+      "score": 0,
+      "streak": 0,
+      "max_streak": 0,
+      "completed": false,
+      "answers": []
+    }
+  },
+  "status": "active"
+}

@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle {{ battle_code }} - BeeSmart Battles</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
+    
+    <!-- Socket.IO for real-time communication -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    
+    <style>
+        .battle-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .battle-header {
+            background: linear-gradient(135deg, #ff8f00, #ff6b35);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .battle-code {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .battle-info {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .battle-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .battle-main {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        
+        .battle-sidebar {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            height: fit-content;
+        }
+        
+        .join-controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .join-battle-btn {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .join-battle-btn:hover {
+            background: linear-gradient(135deg, #388e3c, #2e7d32);
+            transform: translateY(-2px);
+        }
+        
+        .join-battle-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .battle-status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            display: inline-block;
+        }
+        
+        .status-waiting {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .status-in_progress {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .status-ended {
+            background-color: #9e9e9e;
+            color: white;
+        }
+        
+        .leaderboard {
+            margin-bottom: 30px;
+        }
+        
+        .leaderboard h3 {
+            margin-bottom: 15px;
+            color: #ff6b35;
+        }
+        
+        .player-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .player-item {
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-item.current-user {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-color: #ff8f00;
+            font-weight: bold;
+        }
+        
+        .player-name {
+            flex: 1;
+        }
+        
+        .player-stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .battle-activity {
+            margin-top: 30px;
+        }
+        
+        .battle-activity h3 {
+            margin-bottom: 15px;
+            color: #ff6b35;
+        }
+        
+        .activity-feed {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #ff8f00;
+            font-size: 0.9rem;
+        }
+        
+        .activity-time {
+            color: #666;
+            font-size: 0.8rem;
+        }
+        
+        .quiz-interface {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .current-word {
+            font-size: 2rem;
+            color: #ff6b35;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .word-definition {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .answer-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px 20px;
+            font-size: 1.3rem;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            border-color: #ff8f00;
+        }
+        
+        .submit-answer-btn {
+            background: linear-gradient(135deg, #ff8f00, #ff6b35);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-answer-btn:hover {
+            background: linear-gradient(135deg, #ff6b35, #ff5722);
+            transform: translateY(-1px);
+        }
+        
+        .battle-waiting {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .battle-waiting h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #ff6b35;
+        }
+        
+        .waiting-animation {
+            font-size: 3rem;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .newbee-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .newbee-notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .battle-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .battle-container {
+                padding: 10px;
+            }
+            
+            .battle-code {
+                font-size: 2rem;
+            }
+            
+            .current-word {
+                font-size: 1.5rem;
+            }
+            
+            .answer-input {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="battle-container">
+        <!-- Battle Header -->
+        <div class="battle-header">
+            <div class="battle-code">🐝 Battle {{ battle_code }} 🐝</div>
+            <div class="battle-info" id="battleInfo">
+                Loading battle information...
+            </div>
+        </div>
+        
+        <div class="battle-layout">
+            <!-- Main Battle Area -->
+            <div class="battle-main">
+                <!-- Join Controls (shown when not in battle) -->
+                <div id="joinControls" class="join-controls" style="display: none;">
+                    <h3>Ready to join the battle?</h3>
+                    <p>Enter your display name and join the spelling showdown!</p>
+                    <input type="text" id="playerNameInput" placeholder="Your display name" 
+                           style="padding: 10px; margin: 10px; border-radius: 5px; border: 2px solid #ddd; width: 200px;">
+                    <br>
+                    <button id="joinBattleBtn" class="join-battle-btn" onclick="joinBattle()">
+                        🚀 Join Battle!
+                    </button>
+                </div>
+                
+                <!-- Waiting Area -->
+                <div id="waitingArea" class="battle-waiting" style="display: none;">
+                    <div class="waiting-animation">🐝</div>
+                    <h3>Waiting for Battle to Start</h3>
+                    <p>More bees are joining the hive...</p>
+                    <div id="waitingInfo"></div>
+                </div>
+                
+                <!-- Quiz Interface (shown during active battle) -->
+                <div id="quizInterface" style="display: none;">
+                    <div class="current-word" id="currentWord">WORD</div>
+                    <div class="word-definition" id="wordDefinition">
+                        Definition will appear here...
+                    </div>
+                    
+                    <input type="text" id="answerInput" class="answer-input" 
+                           placeholder="Type your answer..." autocomplete="off">
+                    <br>
+                    <button id="submitAnswerBtn" class="submit-answer-btn" onclick="submitAnswer()">
+                        ✅ Submit Answer
+                    </button>
+                    
+                    <div id="answerFeedback" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;"></div>
+                </div>
+                
+                <!-- Battle Ended -->
+                <div id="battleEnded" class="battle-waiting" style="display: none;">
+                    <h3>🏆 Battle Complete!</h3>
+                    <p>Check the leaderboard to see how you did!</p>
+                    <button onclick="window.location.href='/battles'" 
+                            style="padding: 10px 20px; background: #ff8f00; color: white; 
+                                   border: none; border-radius: 5px; cursor: pointer; margin-top: 15px;">
+                        🔄 Back to Battles
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="battle-sidebar">
+                <!-- Battle Status -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="battleStatus" class="battle-status status-waiting">
+                        ⏳ Loading...
+                    </div>
+                </div>
+                
+                <!-- Leaderboard -->
+                <div class="leaderboard">
+                    <h3>🏆 Leaderboard</h3>
+                    <ul id="playerList" class="player-list">
+                        <li class="player-item">
+                            <div class="player-name">Loading players...</div>
+                            <div class="player-stats">-</div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Battle Activity -->
+                <div class="battle-activity">
+                    <h3>📊 Battle Activity</h3>
+                    <div id="activityFeed" class="activity-feed">
+                        <div class="activity-item">
+                            Battle starting soon...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NewBee Notification -->
+    <div id="newbeeNotification" class="newbee-notification">
+        <div id="newbeeMessage"></div>
+    </div>
+
+    <script>
+        // Battle data
+        const battleCode = '{{ battle_code }}';
+        let socket;
+        let battleData = null;
+        let currentUser = null;
+        let isInBattle = false;
+        
+        // Initialize Socket.IO and battle
+        function initializeBattle() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                console.log('🐝 Connected to battle system!');
+                socket.emit('join_battle_room', { code: battleCode });
+                loadBattleData();
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('📡 Disconnected from battle system');
+            });
+            
+            // Listen for battle updates
+            socket.on('battle:new_player', function(data) {
+                showNewBeeNotification(data.name + ' joined the battle!');
+                loadBattleData(); // Refresh data
+            });
+            
+            socket.on('battle:status_change', function(data) {
+                if (data.code === battleCode) {
+                    updateBattleStatus(data.status);
+                }
+            });
+            
+            socket.on('battle_status_update', function(data) {
+                if (data.code === battleCode) {
+                    updateLeaderboard(data.leaderboard);
+                }
+            });
+        }
+        
+        // Load battle data
+        async function loadBattleData() {
+            try {
+                const response = await fetch(`/api/battles/${battleCode}`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    battleData = data.battle;
+                    updateBattleDisplay();
+                } else {
+                    showError('Battle not found: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error loading battle:', error);
+                showError('Failed to load battle data');
+            }
+        }
+        
+        // Update battle display
+        function updateBattleDisplay() {
+            if (!battleData) return;
+            
+            // Update header info
+            document.getElementById('battleInfo').innerHTML = `
+                👥 ${battleData.current_players}/${battleData.max_players} players 
+                | 🕒 Started ${formatTimeAgo(battleData.created_at)}
+            `;
+            
+            // Update status
+            updateBattleStatus(battleData.status);
+            
+            // Show appropriate interface
+            showAppropriateInterface();
+            
+            // Update leaderboard
+            updateLeaderboard(battleData.leaderboard || []);
+        }
+        
+        // Show appropriate interface based on battle state
+        function showAppropriateInterface() {
+            // Hide all interfaces
+            document.getElementById('joinControls').style.display = 'none';
+            document.getElementById('waitingArea').style.display = 'none';
+            document.getElementById('quizInterface').style.display = 'none';
+            document.getElementById('battleEnded').style.display = 'none';
+            
+            if (!isInBattle && battleData.status === 'waiting') {
+                document.getElementById('joinControls').style.display = 'block';
+            } else if (isInBattle && battleData.status === 'waiting') {
+                document.getElementById('waitingArea').style.display = 'block';
+                document.getElementById('waitingInfo').textContent = 
+                    `Waiting for more players... (${battleData.current_players}/${battleData.max_players})`;
+            } else if (battleData.status === 'in_progress') {
+                document.getElementById('quizInterface').style.display = 'block';
+            } else if (battleData.status === 'ended') {
+                document.getElementById('battleEnded').style.display = 'block';
+            }
+        }
+        
+        // Join battle
+        async function joinBattle() {
+            const playerName = document.getElementById('playerNameInput').value.trim();
+            if (!playerName) {
+                alert('Please enter your display name!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/battles/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: battleCode,
+                        display_name: playerName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    isInBattle = true;
+                    currentUser = data.player;
+                    addActivity(`You joined the battle as ${playerName}!`);
+                    showAppropriateInterface();
+                    loadBattleData(); // Refresh to get updated player count
+                } else {
+                    alert('Failed to join battle: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error joining battle:', error);
+                alert('Failed to join battle - please try again');
+            }
+        }
+        
+        // Submit answer (placeholder - would integrate with actual quiz system)
+        function submitAnswer() {
+            const answer = document.getElementById('answerInput').value.trim();
+            if (!answer) return;
+            
+            // This would integrate with the actual quiz system
+            console.log('Answer submitted:', answer);
+            
+            // Clear input
+            document.getElementById('answerInput').value = '';
+            
+            // Show feedback (placeholder)
+            const feedback = document.getElementById('answerFeedback');
+            feedback.textContent = 'Answer submitted! ✅';
+            feedback.style.color = '#4caf50';
+            
+            setTimeout(() => {
+                feedback.textContent = '';
+            }, 2000);
+            
+            addActivity(`You answered: ${answer}`);
+        }
+        
+        // Update battle status
+        function updateBattleStatus(status) {
+            const statusElement = document.getElementById('battleStatus');
+            statusElement.className = `battle-status status-${status}`;
+            
+            const statusMap = {
+                'waiting': '⏳ Waiting for Players',
+                'in_progress': '🔥 Battle in Progress',
+                'ended': '✅ Battle Ended'
+            };
+            
+            statusElement.textContent = statusMap[status] || status;
+        }
+        
+        // Update leaderboard
+        function updateLeaderboard(players) {
+            const playerList = document.getElementById('playerList');
+            
+            if (!players || players.length === 0) {
+                playerList.innerHTML = '<li class="player-item"><div class="player-name">No players yet</div></li>';
+                return;
+            }
+            
+            const playersHTML = players.map((player, index) => `
+                <li class="player-item ${player.is_current_user ? 'current-user' : ''}">
+                    <div class="player-name">
+                        ${index + 1}. ${player.name || player.display_name}
+                        ${index === 0 ? ' 👑' : ''}
+                    </div>
+                    <div class="player-stats">
+                        ${player.points || 0} pts
+                    </div>
+                </li>
+            `).join('');
+            
+            playerList.innerHTML = playersHTML;
+        }
+        
+        // Add activity to feed
+        function addActivity(message) {
+            const feed = document.getElementById('activityFeed');
+            const time = new Date().toLocaleTimeString();
+            
+            const activityItem = document.createElement('div');
+            activityItem.className = 'activity-item';
+            activityItem.innerHTML = `
+                <div>${message}</div>
+                <div class="activity-time">${time}</div>
+            `;
+            
+            feed.insertBefore(activityItem, feed.firstChild);
+            
+            // Keep only last 10 items
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+        
+        // Show NewBee notification
+        function showNewBeeNotification(message) {
+            const notification = document.getElementById('newbeeNotification');
+            const messageEl = document.getElementById('newbeeMessage');
+            
+            messageEl.textContent = '🐝 ' + message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Format time ago
+        function formatTimeAgo(dateString) {
+            const now = new Date();
+            const date = new Date(dateString);
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+            return `${Math.floor(diffMins / 1440)}d ago`;
+        }
+        
+        // Show error
+        function showError(message) {
+            document.querySelector('.battle-main').innerHTML = `
+                <div style="text-align: center; padding: 60px; color: #666;">
+                    <h3>⚠️ ${message}</h3>
+                    <button onclick="window.location.href='/battles'" 
+                            style="padding: 10px 20px; background: #ff8f00; color: white; 
+                                   border: none; border-radius: 5px; cursor: pointer; margin-top: 15px;">
+                        🔄 Back to Battles
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBattle();
+            
+            // Allow Enter key to submit answer
+            document.getElementById('answerInput')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitAnswer();
+                }
+            });
+            
+            // Auto-refresh battle data every 30 seconds
+            setInterval(loadBattleData, 30000);
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (socket) {
+                socket.emit('leave_battle_room', { code: battleCode });
+                socket.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

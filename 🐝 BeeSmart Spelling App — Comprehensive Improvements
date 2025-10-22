@@ -1,0 +1,415 @@
+🐝 BeeSmart Spelling App — Comprehensive Improvement Checklist
+0) Release Framing
+
+ Version tag: v1.4 → v1.5 scope defined and changelog drafted (P0)
+
+ Branching: create feature branches per section (e.g., feature/menu-upload, feature/dictionary-builder, etc.) (P0)
+
+1) Main Menu & Navigation
+
+ Opening Menu with 3 options (Upload Word List, Upload Image, Start Quiz) (P0)
+DoD: Menu renders cleanly; Start Quiz disabled until valid input loaded; tooltips on each option.
+
+ Remove rocking bees & flowers from header (P0)
+DoD: No bee/flower DOM nodes/assets; no console warnings about missing assets.
+
+ Fairy animation with dust trail (P1)
+DoD: Fairy sprite/path animation + GPU particle trail (fade ~1.5s); respects reduced-motion setting.
+
+ Start Quiz validation (P0)
+DoD: Cannot proceed unless at least one: parsed text list, parsed file list, or OCR list exists; error banner if user clicks prematurely.
+
+2) Word Ingestion (Text / Files)
+
+ Paste & Plain Text Upload (.txt, raw textarea) (P0)
+DoD: Accepts newline, comma-, or space-separated; trims punctuation; de-dupes case-insensitively.
+
+ CSV Upload (.csv) (P0)
+DoD: Detects delimiter (,/;/\t), header/no-header; chooses column by selector; preview table before confirm.
+
+ DOCX Upload (.docx) (P1)
+DoD: Extracts paragraphs; filters non-word content; supports simple bullets and numbered lists.
+
+ Robust parser (P0)
+DoD: Shared sanitizer: remove numerals/indices, strip non-alpha except hyphen/apostrophe, enforce a–z only mode toggle.
+
+3) Image → Words (OCR)
+
+ Image upload (.jpg/.png/.webp/.pdf[1p]) (P0)
+DoD: Validates size; shows preview; warns on low DPI.
+
+ OCR extraction (Tesseract/EasyOCR) (P0)
+DoD: Batch detect words (A–Z); ignores headers/footers; confidence threshold; user review list → approve.
+
+ Post-OCR cleanup (P0)
+DoD: Deduplicate; spell-check suggestion for weird tokens; allow manual edit before saving.
+
+4) Dictionary Creation & Enrichment
+
+ Local cache data/dictionary.json (P0)
+DoD: Schema { word: { definition, example, phonetic, pos?, ipa? } }; persisted; readable; migration safe.
+
+ API lookup (Free Dictionary API or pluggable) (P0)
+DoD: For missing words only; retry/backoff; circuit-breaker on repeated errors; respectful rate limiting.
+
+ Kid-friendly normalization (P0)
+DoD: Single-sentence definitions when possible; examples scrub word → “_____”; fallback templates provided.
+
+ Phonetics (P0)
+DoD: Use API phonetic if present; fallback heuristic syllable splitter; later: plug g2p_en for higher quality.
+
+ Batch builder (P0)
+DoD: build_dictionary(words[]) returns enriched entries; progress bar + error summary UI.
+
+5) Quiz Engine & UX
+
+ Formatted quiz lines: word|definition|Example: The _____ ... (P0)
+DoD: Generated from dictionary; order preserved; exportable/previewable.
+
+ Misspelling feedback → Show phonetics (P0)
+DoD: On incorrect answer: show phonetic string (and optional TTS); allow “Try again” then reveal correct spelling.
+
+ Disable “Listen for Answer” (P0)
+DoD: Mic button removed; code path stubbed with feature flag; no permission prompts.
+
+ Scoring logic (P1)
+DoD: Configurable attempts; partial credit on second try; per-round stats.
+
+6) Audio/TTS (optional now, prep for later)
+
+ Word pronunciation (TTS) (P2)
+DoD: Uses Web Speech API or cloud TTS; voice selection menu; rate/pitch sliders; offline fallback text display.
+
+ Audio cues (P2)
+DoD: Correct/incorrect subtle sounds; respect “mute” and reduced-motion/accessibility preferences.
+
+7) Accessibility & Internationalization
+
+ A11y: keyboard nav, focus order, ARIA labels (P0)
+DoD: All actionable elements tabbable; visible focus; menu/alerts have ARIA roles; meets WCAG AA contrast.
+
+ Reduced motion support (P0)
+DoD: Prefers-reduced-motion disables particle trail intensity & long animations.
+
+ Locale scaffolding (P2)
+DoD: Strings moved to i18n file; date/number formatting ready; English default.
+
+8) Data Model & Persistence
+
+ Session state (P0)
+DoD: Current word list, progress, score persisted (localStorage/IndexedDB); resume session.
+
+ Export/Import (P1)
+DoD: Export enriched set as CSV/JSON; re-import supported; includes definitions & examples.
+
+9) Error Handling & Messaging
+
+ Unified toast/banner system (P0)
+DoD: Success, warning, error variants; deduplication; auto-dismiss w/ hover pause.
+
+ Per-stage validation (P0)
+DoD: Clear guidance: why a step fails and how to fix (e.g., “Need at least 5 words,” “Image too low-res,” etc.).
+
+ Offline mode cues (P1)
+DoD: If API unreachable, proceed with cached words; show “Some definitions pending—will fill as available.”
+
+10) Performance
+
+ Lazy load OCR & TTS libs (P1)
+DoD: Initial bundle stays small; load-on-demand; spinner & cancellable loads.
+
+ Debounce parsing (P1)
+DoD: Large paste doesn’t freeze UI; parse in worker for >2k tokens.
+
+ Image downscale (P1)
+DoD: Pre-OCR downscale to sensible max dimension to improve speed.
+
+11) Security & Privacy
+
+ No PII collection by default (P0)
+DoD: Local-only by default; if cloud used, explicit opt-in + notice.
+
+ Content safety for kids (P0)
+DoD: Filter out adult definitions if API returns unsuitable content; fallback to neutral wording.
+
+ CSP & dependency audit (P1)
+DoD: Basic CSP headers; audit third-party libs; pin versions.
+
+12) Analytics (teacher/parent-friendly)
+
+ Local analytics (P2)
+DoD: Aggregate: attempts per word, accuracy %, tricky words list; export as CSV.
+
+ Heatmap of misses (P2)
+DoD: Surface the top 10 hardest words per session.
+
+13) QA & Testing
+
+ Unit tests (P0)
+DoD: Parsers, dictionary builder, phonetic fallback covered; ≥80% for core utilities.
+
+ Integration tests (P1)
+DoD: Upload → dictionary build → quiz flow; OCR path happy-case.
+
+ UX test scripts (P1)
+DoD: Manual QA checklist for all major flows, including accessibility checks.
+
+ Sample fixtures (P0)
+DoD: Include sample: words.txt, words.csv, list.docx, sheet.jpg (clear 300 DPI) for repeatable tests.
+
+14) DevOps / Build & Deploy
+
+ Environment config (P0)
+DoD: .env template; API base URL; feature flags (ENABLE_MIC, ENABLE_TTS, ENABLE_OCR).
+
+ CI pipeline (P0)
+DoD: Lint + test on PR; build artifact; status badge.
+
+ Railway deploy (P0)
+DoD: Dockerfile; healthcheck; logs; environment secrets (if any).
+
+ Versioned releases (P1)
+DoD: GitHub Releases with notes & downloadable sample sets.
+
+15) UI Polish & Content
+
+ Modern theme pass (P1)
+DoD: Consistent spacing, rounded corners, subtle shadows; scalable to tablet/desktop; dark mode compatible.
+
+ Help/Onboarding (P1)
+DoD: One-page “How to upload,” “How OCR works,” “Privacy,” “Tips for better recognition.”
+
+ Empty states (P0)
+DoD: Friendly guidance when no words loaded or OCR returns nothing.
+
+16) Stretch Goals
+
+ PWA support (installable) (P2)
+DoD: Service worker cache for dictionary and app shell; offline quiz for cached sets.
+
+ Teacher mode (P3)
+DoD: Create/share sets; print worksheet with blanks.
+
+ User profiles (local) (P3)
+DoD: Multiple learners with separate progress.
+
+Acceptance Criteria Cheat-Sheet (Core P0)
+
+Start Quiz disabled until valid list exists.
+
+Word ingestion works for paste + .txt + .csv; docx optional (P1).
+
+Image→OCR pipeline returns clean list with review step.
+
+Dictionary cache auto-builds missing entries via API and saves to dictionary.json.
+
+Quiz uses format word|definition|Example: The _____ ....
+
+On misspell, phonetic string is shown; mic feature removed from UI.
+
+Bees/flowers gone; fairy trail present or gracefully reduced if “reduced motion” is on.
+
+Unit tests pass; CI green; Railway deploy succeeds.
+
+🗓️ BeeSmart Feature Roadmap
+Phase 1: Core Learning Engine (MVP)
+
+Goal: Make the app fully functional for studying and testing words.
+Focus: Speech, spelling validation, and UI polish.
+
+✅ Checklist
+
+ Upload word list (.txt, .csv, .docx, .pdf, or image OCR)
+
+ Dictionary lookup (definition, example sentence, phonetic spelling)
+
+ Audio pronunciation (with replay button)
+
+ Spelling input via keyboard or microphone
+
+ Animated feedback (Bee flying in, “Buzz” says the word)
+
+ Scoreboard tracking (Correct / Missed counts)
+
+ Session save & resume
+
+ Bug-free quiz logic (“Choose an option before starting” check)
+
+🎨 Visuals
+
+ Replace “rocking bees and flowers” with smoother BeeSmart theme
+
+ Fairy animation sprinkling dust when transitioning between screens
+
+ Soft background honeycomb gradient
+
+Phase 2: Motivation & Rewards
+
+Goal: Keep kids engaged and excited to spell.
+
+🍯 Gamified Rewards
+
+ Earn “Honey Points” for each correct answer
+
+ Combo streak bonuses (e.g., “Sweet! 5 correct in a row!”)
+
+ Build a Bee Hive that fills up as they score points
+
+ Unlock badges (e.g., Worker Bee → Scout Bee → Queen Bee)
+
+🎵 Audio / Visual Feedback
+
+ Add applause or gentle buzz sound for correct answers
+
+ Bee performs a happy dance animation
+
+ Wrong answers trigger phonetic correction by “Buzz the Bee”
+
+Phase 3: Personalization
+
+Goal: Let kids feel ownership of their learning experience.
+
+🐝 Avatar & Themes
+
+ Bee Avatar Builder (choose glasses, colors, and wings)
+
+ Custom backgrounds: “Garden Hive,” “Galaxy Hive,” “School Hive”
+
+ Unlock accessories with Honey Points
+
+🗣️ Voice Customization
+
+ Choose narrator: “Teacher Bee,” “Buzz the Bee,” or “Fairy Bee”
+
+ Adjust speech speed slider
+
+ Optional text-to-speech of definitions
+
+Phase 4: Learning Expansion
+
+Goal: Add more structured learning tools & variety.
+
+📚 Smart Dictionary
+
+ Tap icons for definition (📘), pronunciation (🔊), example sentence (✏️)
+
+ Highlight phonetic breakdown for missed words
+
+🎯 Practice & Challenge Modes
+
+ Practice Mode: hints + multiple tries
+
+ Quiz Mode: timer + scoring
+
+ Word Categories: Animals, Science, Geography, etc.
+
+Phase 5: Progress Tracking & Parental Tools
+
+Goal: Help parents and teachers monitor progress.
+
+📊 Reports & Stats
+
+ Daily / Weekly word performance summary
+
+ Exportable results (PDF or email)
+
+ Track frequently missed words
+
+👨‍👩‍👧 Family / Classroom Features
+
+ Family leaderboard (private)
+
+ Multiple profiles (e.g., Aja, John, Mia)
+
+ Parent mode with PIN lock
+
+Phase 6: Engagement & Community
+
+Goal: Build habits and fun routines around spelling.
+
+🏆 Challenges
+
+ Daily “Bee Challenge” (e.g., spell 10 words for 50 honey points)
+
+ Achievement badges for consistency (“Buzz Champion – 7-day streak!”)
+
+🌐 Optional Online Mode
+
+ Word of the Day (auto-fetched from dictionary API)
+
+ Cloud save (for cross-device use)
+
+ School or classroom tournament support
+
+ Perfect! I've created a comprehensive implementation plan for both:
+
+✅ Complete Help Section - Covering EVERY feature:
+
+Getting started guide
+Word list uploads (all formats + OCR)
+Quiz features (all buttons explained)
+Countdown timer (all states)
+Battle mode
+Points & achievements system
+Family profiles
+Parent mode with PIN
+Progress reports
+Tips & tricks
+Troubleshooting
+FAQ
+Keyboard shortcuts
+✅ Points & Progress Tracking System:
+
+Smart point calculation (base + bonuses)
+Achievement badges
+SQLite database schema
+Daily/weekly reports
+PDF export
+Missed words tracking
+Family leaderboard
+Parent dashboard with PIN lock
+Multiple user profiles
+🎯 My Thoughts on Your Plan:
+EXCELLENT IDEAS! Here's what I love:
+
+✅ Points System - Great for motivation!
+Kid-friendly: No negative points, only rewards
+Multi-factor: Speed + accuracy + streaks = fair scoring
+Achievements: Unlockable badges keep it fun
+Levels: Progressive ranks (Busy Bee → Queen/King Bee)
+✅ Progress Reports - Perfect for parents/teachers!
+Daily snapshots: Quick "how did practice go today?"
+Weekly analysis: Trends, strengths, weaknesses
+Missed words tracker: Targeted practice lists
+Export options: PDF for teachers, CSV for analysis
+✅ Family Features - Smart multi-user approach!
+Profiles: Each child's own progress
+Private leaderboard: Healthy sibling competition
+PIN-protected parent mode: Kids can't mess with settings
+Teacher mode: Battle mode already perfect for classroom
+🚀 Recommended Implementation Order:
+PHASE 1 (This week): Complete Help Page
+
+Zero backend work needed
+Immediate value for users
+Documents current + planned features
+PHASE 2 (Next week): Points System MVP
+
+Backend: SQLite database
+Frontend: Points display in quiz
+Simple session tracking
+PHASE 3: Profiles & Authentication
+
+Profile selection screen
+Basic PIN lock for parent mode
+Individual progress tracking
+PHASE 4: Reports & Analytics
+
+Daily/weekly summaries
+Export functionality
+Parent dashboard
+PHASE 5: Polish & Advanced Features
+
+Family leaderboard
+Achievement badges
+Email reports

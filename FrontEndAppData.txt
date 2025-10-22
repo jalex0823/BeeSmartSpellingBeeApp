@@ -1,0 +1,359 @@
+1) Frontend “safety blanker” (immediate)
+Even when we start getting real examples, some sources include the word itself in the sentence. Add this small helper so the quiz always hides the word if it appears:
+
+In quiz.html, near the top of your <script>, add:
+
+function hideTargetWord(text, word) {
+  if (!text || !word) return text || '';
+  const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`\\b${esc}\\b`, 'gi'), '_____');
+}
+Then, in both places you set the definition (inside loadNextWordWithIntro() and loadNextWord()), wrap the chosen text:
+
+// after you pick sentence/hint/definition into `chosen`
+const chosen =
+  data.sentence || (data.hint ? `Hint: ${data.hint}` : data.definition);
+
+defBox.textContent = hideTargetWord(chosen, data.word);
+This guarantees the quiz never leaks the word—even if a definition/sentence contains it.
+
+2) Backend: why you’re getting the fallback, and how to fix it properly
+Your app shows “⚠️ Dictionary API not available” at startup, so DICT_LOOKUP() falls back to a placeholder.
+
+get_word_info() detects the placeholder and switches to generate_smart_fallback(), which creates the generic text you’re seeing.  
+
+Two options
+Option A — wire up a real dictionary
+Provide a working dictionary_api module (or swap in your own implementation) so DICT_LOOKUP(word) returns:
+
+{"definition": "...", "example": "...", "phonetic": "..."}
+Once that’s present, the backend will cache and use real definitions automatically (no UI changes needed).  
+
+Option B — improve the fallback (quick band-aid)
+If you don’t have an API yet, make the fallback more educational. Edit generate_smart_fallback() to return a slightly richer “definition” and an example that still keeps the blank. (File: AjaSpellBApp.py.) 
+
+3) (Nice to have) Backend auto-blanker
+Even when an API is available, some examples include the word. Add this sanitization so the server always replaces the word with blanks before sending it:
+
+In AjaSpellBApp.py, put this helper:
+
+def _blank_word(text, word):
+    if not text or not word:
+        return text or ""
+    return re.sub(rf"\b{re.escape(word)}\b", "_____", text, flags=re.IGNORECASE)
+Use it in get_word_info() right before returning:
+
+definition = api_result.get("definition", "")
+example = api_result.get("example", "")
+example = _blank_word(example, word)  # <-- ensure the word is hidden
+
+return f"{definition}. Fill in the blank: {example}"
+And (belt-and-suspenders) in /api/next right before building the JSON:
+
+sentence = _blank_word((word_rec.get("sentence") or "").strip(), word_rec.get("word",""))
+Now both backend and frontend will hide the target word, and once a real dictionary is connected you’ll see true definitions with a proper fill-in-the-blank sentence.
+
+If you want, I can drop in a minimal dictionary_api example (e.g., using a free source) that matches your current interface so you get real definitions right away.
+
+You said:
+yes
+ChatGPT said:
+Perfect ✅
+Here’s a drop-in dictionary_api.py module you can place in the same folder as AjaSpellBApp.py.
+It uses the free DictionaryAPI.dev endpoint — no key required — and it returns data in the same shape your Flask app expects.
+
+📄 dictionary_api.py
+"""
+dictionary_api.py
+Simple free dictionary lookup helper for AjaSpellBApp
+------------------------------------------------------
+Uses https://api.dictionaryapi.dev/api/v2/entries/en/<word>
+to retrieve definition, example sentence, and phonetic text.
+"""
+
+import requests
+
+BASE_URL = "https://api.dictionaryapi.dev/api/v2/entries/en"
+
+def lookup_word(word: str):
+    """Return {definition, example, phonetic} for a given word.
+       Provides safe fallback if nothing is found."""
+    if not word:
+        return {
+            "definition": "No word provided.",
+            "example": "Please spell _____.",
+            "phonetic": ""
+        }
+
+    try:
+        url = f"{BASE_URL}/{word.lower()}"
+        resp = requests.get(url, timeout=6)
+        if resp.status_code != 200:
+            return {
+                "definition": f"Definition not found for '{word}'.",
+                "example": f"Practice spelling the word _____.",
+                "phonetic": ""
+            }
+
+        data = resp.json()
+        if not data or not isinstance(data, list):
+            return {
+                "definition": f"No entry found for '{word}'.",
+                "example": f"Please spell the word _____.",
+                "phonetic": ""
+            }
+
+        entry = data[0]
+        meaning_data = entry.get("meanings", [{}])[0]
+        definitions = meaning_data.get("definitions", [{}])
+        first_def = definitions[0]
+
+        definition = first_def.get("definition", f"Practice spelling the word '{word}'.")
+        example = first_def.get("example") or f"Try spelling _____."
+        phonetic = ""
+
+        # Sometimes phonetics is an array of objects
+        if "phonetic" in entry:
+            phonetic = entry.get("phonetic", "")
+        elif "phonetics" in entry and entry["phonetics"]:
+            phonetic_entry = entry["phonetics"][0]
+            phonetic = phonetic_entry.get("text") or phonetic_entry.get("phonetic", "")
+
+        # Clean example to ensure word isn’t revealed
+        import re
+        example = re.sub(rf"\b{re.escape(word)}\b", "_____", example, flags=re.IGNORECASE)
+
+        return {
+            "definition": definition,
+            "example": example,
+            "phonetic": phonetic or ""
+        }
+
+    except Exception as e:
+        return {
+            "definition": f"Error retrieving definition for '{word}': {e}",
+            "example": f"Spell _____.",
+            "phonetic": ""
+        }
+⚙️ How to install and enable it
+Save that file as
+dictionary_api.py
+in the same directory as your AjaSpellBApp.py.
+
+Ensure requests is installed:
+
+pip install requests
+Restart your Flask app.
+You should now see this in the startup log:
+
+✅ Dictionary API loaded successfully
+Re-upload your word list or run:
+
+POST /api/build_dictionary
+to fetch and cache definitions for all words.
+
+🧠 What it gives you
+For each word:
+
+{
+  "definition": "The final decision made by a judge or jury.",
+  "example": "The _____ was announced at the end of the trial.",
+  "phonetic": "/ˈvɜː.dɪkt/"
+}
+This will automatically populate your quiz sentences and definitions — no more “Practice spelling this 6-letter word” placeholders 🎉
+
+
+1. Smarty Bee / Smartie Bee (Male & Female)
+
+Theme: Glasses, bowtie or headband, holding a tiny book or pencil.
+
+Unlock Idea: Earned after completing 10 spelling quizzes or scoring 90%+ on a quiz.
+
+Personality: Loves learning and gives encouragement like “Buzz-tastic spelling!”
+
+2. Busy Bee
+
+Theme: Carrying a clipboard or stack of papers, maybe a mini backpack.
+
+Unlock Idea: After completing a streak of 5 quizzes in a row.
+
+Personality: Fast-moving, animated wings, always multitasking.
+
+3. Cool Bee
+
+Theme: Sunglasses, laid-back expression, headphones or skate shoes.
+
+Unlock Idea: Earned for perfect accuracy or finishing quizzes under a time limit.
+
+Personality: Chill, confident — says things like “That’s how we spell it, dude!”
+
+4. Queen Bee / King Bee
+
+Theme: Crown or royal cape, regal posture.
+
+Unlock Idea: Master all words in a level or earn a “Queen/King of the Hive” badge.
+
+Personality: Wise, elegant voice tone — rewards player achievements.
+
+5. Baby Bee
+
+Theme: Tiny bee with oversized wings or pacifier.
+
+Unlock Idea: Default starting avatar or “beginner” mode.
+
+Personality: Cute, curious, learning to buzz and spell!
+
+6. Professor Bee
+
+Theme: Graduation cap, chalkboard, pointer stick.
+
+Unlock Idea: Unlock after teaching others (quiz-sharing mode or completing dictionary challenges).
+
+Personality: Offers mini lessons or random word tips.
+
+7. Rockstar Bee
+
+Theme: Electric guitar, lightning glasses, flashy sparkles.
+
+Unlock Idea: Perfect streak of 10 quizzes or time-based challenges.
+
+Personality: Energetic, playful sound effects (“Let’s rock those words!”).
+
+8. Explorer Bee
+
+Theme: Safari hat, map, tiny magnifying glass.
+
+Unlock Idea: Explore new word categories (science, geography, etc.).
+
+Personality: Curious, loves discovering new words.
+
+9. Nurse Bee / Doctor Bee
+
+Theme: Stethoscope, nurse cap, medical satchel.
+
+Unlock Idea: For helping others in multiplayer or group spelling challenges.
+
+Personality: Gentle and encouraging — “Let’s fix that word together!”
+
+10. Super Bee
+
+Theme: Cape, mask, and hero pose.
+
+Unlock Idea: Reward for 100% mastery of a word list.
+
+Personality: Enthusiastic — “Another word saved from confusion!”
+
+💡 Optional Visual Touches:
+
+Each bee could evolve as users progress — Baby Bee → Smarty Bee → Super Bee.
+
+Add gender toggles (different eye shapes, lashes, bow/headband) rather than duplicating all models.
+
+Could tie voice lines or music styles to each bee (Smarty Bee = classical, Cool Bee = hip-hop, Explorer Bee = adventure flute).
+
+🐝 Battle Bee Concepts
+
+1. Classic Battle Bee
+
+Armor plating on chest and arms (metallic honeycomb texture)
+
+Helmet with antenna guards
+
+Tiny shield and spear made from a pencil and ruler
+
+Confident grin and action pose (mid-flight)
+
+2. Cyber Battle Bee
+
+Futuristic robotic look — glowing blue eyes, circuit lines on wings
+
+Energy stinger or plasma lance
+
+Jetpack thrusters instead of normal wings
+
+Neon blue or green highlights
+
+3. Gladiator Battle Bee
+
+Roman-style helmet with feather crest
+
+Wooden shield with honeycomb emblem
+
+Small sword or honey dipper mace
+
+Fierce but still kid-friendly expression
+
+4. Superhero Battle Bee
+
+Cape, chest emblem shaped like a “B”
+
+Gloves and boots like a comic hero
+
+Power stance with glowing stinger
+
+
+*To Enable Real Email Sending:**
+1. Create `.env` file with SMTP settings:
+   ```env
+   MAIL_SERVER=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USE_TLS=true
+   MAIL_USERNAME=your-email@gmail.com
+   MAIL_PASSWORD=your-app-password
+
+
+   ### Manual Password Reset (If Needed)
+```python
+from AjaSpellBApp import app, db
+from models import User
+from werkzeug.security import generate_password_hash
+
+with app.app_context():
+    user = User.query.filter_by(username='admin').first()
+    user.password_hash = generate_password_hash('newpassword')
+    db.session.commit()
+    print("✅ Password reset!")
+
+
+ID: 21
+Username: BigDaddy
+Email: bigdaddy@beesmart.app
+Role: admin
+Status: Active ✅
+Created: 2025-10-18
+
+
+Fill in the server details based on your selection:
+
+IMAP (Recommended)
+
+Incoming server: imap.hostinger.com
+
+Port: 993
+
+Encryption: SSL/TLS
+
+Outgoing server (SMTP): smtp.hostinger.com
+
+Port: 465
+
+Encryption: SSL/TLS
+
+POP (Alternative) 
+
+Incoming server: pop.hostinger.com
+
+Port: 995
+
+Encryption: SSL/TLS
+
+Outgoing server (SMTP): smtp.hostinger.com
+
+Port: 465
+
+Encryption: SSL/TLS
+
+Use your full email address as the username: jeff@beesmartspelling.app, and the password: Disneychannel911! 
+
+My Teacher Key:
+BEE-2025-BIG-P7TC

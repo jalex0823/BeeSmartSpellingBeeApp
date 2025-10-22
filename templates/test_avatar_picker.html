@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Picker Test - BeeSmart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFEAA7 100%);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #FF6B00;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #8B6914;
+            font-size: 1.1rem;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-info h2 {
+            color: #FF6B00;
+            margin-top: 0;
+        }
+        
+        .test-info ul {
+            color: #8B6914;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐝 Avatar Picker Test Page 🐝</h1>
+            <p>Testing the new 3D Avatar Selection System</p>
+        </div>
+        
+        <div class="test-info">
+            <h2>Test Features:</h2>
+            <ul>
+                <li>✅ 16 Bee Avatars with thumbnails</li>
+                <li>✅ Category filtering (8 categories)</li>
+                <li>✅ Real-time search functionality</li>
+                <li>✅ 3D model viewer with Three.js (OBJ + MTL + textures)</li>
+                <li>✅ Auto-rotate, zoom, and camera controls</li>
+                <li>✅ Avatar info display</li>
+                <li>✅ Save avatar to user profile</li>
+            </ul>
+        </div>
+        
+        <!-- Include Avatar Picker Component -->
+        {% include 'components/avatar_picker.html' %}
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            {% if current_user.is_authenticated %}
+                {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('admin_dashboard') }}" style="color: #FF6B00; text-decoration: none; font-weight: bold;">
+                        ← Back to Dashboard
+                    </a>
+                {% elif current_user.role == 'teacher' %}
+                    <a href="{{ url_for('teacher_dashboard') }}" style="color: #FF6B00; text-decoration: none; font-weight: bold;">
+                        ← Back to Dashboard
+                    </a>
+                {% elif current_user.role == 'parent' %}
+                    <a href="{{ url_for('parent_dashboard') }}" style="color: #FF6B00; text-decoration: none; font-weight: bold;">
+                        ← Back to Dashboard
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('student_dashboard') }}" style="color: #FF6B00; text-decoration: none; font-weight: bold;">
+                        ← Back to Dashboard
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('home') }}" style="color: #FF6B00; text-decoration: none; font-weight: bold;">
+                    ← Back to Home
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Load THREE.js and loaders first -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    
+    <!-- Stub functions for standalone page (these exist in unified_menu.html) -->
+    <script>
+        // Stub for showBeeAlert - simple alert fallback
+        function showBeeAlert(options) {
+            alert(options.message || options.title || 'Alert');
+            return Promise.resolve();
+        }
+        
+        // Stub for showAvatarSystemDetails - not needed on test page
+        function showAvatarSystemDetails() {
+            console.log('Avatar system details not available on test page');
+        }
+    </script>
+    
+    <!-- Load Avatar Picker JavaScript -->
+    <script src="{{ url_for('static', filename='js/avatar-picker.js') }}"></script>
+</body>
+</html>

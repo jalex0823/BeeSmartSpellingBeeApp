@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}User Details - {{ target_user.display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ timestamp }}">
+
+<div class="admin-container">
+    <!-- Header -->
+    <div class="admin-header">
+        <div>
+            <h1>👤 User Details</h1>
+            <p>Viewing profile for {{ target_user.display_name }}</p>
+        </div>
+        <button onclick="window.location.href='/admin/users'" class="btn-back">
+            ← Back to Users
+        </button>
+    </div>
+
+    <!-- User Info Card -->
+    <div class="detail-card">
+        <h2>📋 User Information</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Username:</span>
+                <span class="detail-value">{{ target_user.username }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Display Name:</span>
+                <span class="detail-value">{{ target_user.display_name }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">{{ target_user.email or 'Not provided' }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Role:</span>
+                <span class="role-badge role-{{ target_user.role }}">{{ target_user.role|upper }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Avatar:</span>
+                <span class="detail-value">{{ target_user.avatar_id or 'cool-bee' }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Teacher Key:</span>
+                <span class="detail-value">{{ target_user.teacher_key or '-' }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Created:</span>
+                <span class="detail-value">{{ target_user.created_at.strftime('%b %d, %Y') if target_user.created_at else 'Unknown' }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Last Active:</span>
+                <span class="detail-value">{{ target_user.last_active.strftime('%b %d, %Y %I:%M %p') if target_user.last_active else 'Never' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="detail-card">
+        <h2>📊 Statistics</h2>
+        {% if stats %}
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.quizzes_completed }}</div>
+                <div class="stat-label">Quizzes Completed</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.words_attempted }}</div>
+                <div class="stat-label">Words Attempted</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.words_correct }}</div>
+                <div class="stat-label">Words Correct</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ "%.1f"|format(stats.accuracy) }}%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.current_streak }}</div>
+                <div class="stat-label">Current Streak</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.longest_streak }}</div>
+                <div class="stat-label">Longest Streak</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.honey_points }}</div>
+                <div class="stat-label">🍯 Honey Points</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">{{ stats.level }}</div>
+                <div class="stat-label">Level</div>
+            </div>
+        </div>
+        {% else %}
+        <p class="no-data">No statistics available yet</p>
+        {% endif %}
+    </div>
+
+    <!-- Battle Participation -->
+    <div class="detail-card">
+        <h2>⚔️ Battle Bee Participation</h2>
+        {% if battle_participations %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Battle Code</th>
+                        <th>Player Name</th>
+                        <th>Score</th>
+                        <th>Rank</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for participation in battle_participations %}
+                    <tr>
+                        <td>{{ participation.battle_code }}</td>
+                        <td>{{ participation.player_name }}</td>
+                        <td>{{ participation.score }}</td>
+                        <td>
+                            {% if participation.final_rank %}
+                                🏆 #{{ participation.final_rank }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ participation.status }}">
+                                {{ participation.status }}
+                            </span>
+                        </td>
+                        <td>{{ participation.joined_at.strftime('%b %d, %I:%M %p') if participation.joined_at else 'Unknown' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-data">No battle participation yet</p>
+        {% endif %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button onclick="editUser()" class="btn-action btn-edit">
+            ✏️ Edit User
+        </button>
+        <button onclick="resetPassword()" class="btn-action btn-warning">
+            🔑 Reset Password
+        </button>
+        {% if target_user.role != 'admin' %}
+        <button onclick="deleteUser()" class="btn-action btn-danger">
+            🗑️ Delete User
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.detail-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.detail-card h2 {
+    color: #6366f1;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.detail-value {
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.role-admin {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.role-teacher {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.role-student {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.role-guest {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    color: white;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stat-box {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0369a1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status-completed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-left {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.btn-action {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-edit {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.btn-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.no-data {
+    text-align: center;
+    color: #94a3b8;
+    padding: 2rem;
+    font-style: italic;
+}
+
+.btn-back {
+    background: linear-gradient(135deg, #A8E6CF 0%, #7BC8A4 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(127, 200, 164, 0.3);
+}
+</style>
+
+<script>
+function editUser() {
+    alert('Edit user functionality coming soon!');
+}
+
+function resetPassword() {
+    if (confirm('Send password reset email to {{ target_user.email or target_user.username }}?')) {
+        alert('Password reset email sent! (Feature coming soon)');
+    }
+}
+
+function deleteUser() {
+    if (confirm('Are you sure you want to delete user "{{ target_user.display_name }}"? This action cannot be undone!')) {
+        fetch('/api/admin/users/{{ target_user.id }}', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok) {
+                alert('User deleted successfully');
+                window.location.href = '/admin/users';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Failed to delete user');
+            console.error(error);
+        });
+    }
+}
+</script>
+{% endblock %}

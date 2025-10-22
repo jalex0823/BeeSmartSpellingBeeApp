@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to BeeSmart</title>
+  <meta name="color-scheme" content="light">
+  <style>
+    /* Basic email-safe styles */
+    body { margin:0; padding:0; background:#faf7ef; color:#1f2937; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 16px; }
+    .hero { background: linear-gradient(135deg, #FFD54F, #FFB300); border: 1px solid #f0c35a; border-radius: 16px 16px 0 0; padding: 20px 24px; color:#4a2b00; text-align:center; }
+    .hero-title { font-size: 22px; font-weight: 800; margin: 6px 0 2px; }
+    .hero-sub { font-size: 14px; opacity: 0.9; }
+    .card { background:#ffffff; border: 1px solid #eee2bc; border-top: none; border-radius: 0 0 16px 16px; padding: 24px; }
+    .greet { margin:0 0 12px; font-size:16px; }
+    .p { margin:8px 0; line-height:1.55; }
+    .box { background:#fff9e6; border:1px solid #ffe08a; border-radius:12px; padding:12px 14px; margin: 14px 0; }
+    .box-title { font-weight:700; margin-bottom:6px; color:#5a3b00; }
+    .key { font-family: 'Courier New', monospace; font-weight: 800; color:#5a3b00; font-size:15px; }
+    .list { margin: 8px 0 0 18px; padding:0; }
+    .list li { margin: 4px 0; }
+    .btn { display:inline-block; background:#ffb300; color:#4a2b00; text-decoration:none; font-weight:700; padding:10px 16px; border-radius:10px; border:1px solid #f0c35a; margin-top:12px; }
+    .divider { height:1px; background: repeating-linear-gradient(90deg, #ffe08a 0 12px, transparent 12px 18px); margin:18px 0; }
+    .footer { font-size: 12px; color:#6b7280; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <img alt="BeeSmart" src="{{ logo_url or (base ~ '/static/BeeSmartLogoTransparent.png') }}" style="height:52px;margin:4px auto 6px; display:block;"/>
+      <div class="hero-title">Welcome to BeeSmart</div>
+      <div class="hero-sub">Buzzing into better spelling</div>
+    </div>
+    <div class="card">
+      <p class="greet">Hello {{ username }},</p>
+      <p class="p">Thank you for registering for BeeSmart! We're excited to help you practice and track spelling progress.</p>
+
+      {% if role in ['teacher','parent'] and teacher_key %}
+        <div class="box">
+          <div class="box-title">Your {{ role|capitalize }} Key</div>
+          <div class="key">{{ teacher_key }}</div>
+          <div class="p" style="margin:8px 0 0; color:#5a3b00">Keep this key private. Share it only with learners you manage to link their accounts to your dashboard. You can rotate your key from your dashboard any time.</div>
+        </div>
+      {% endif %}
+
+      <div class="divider"></div>
+
+      <p class="p"><strong>Tips</strong></p>
+      <ul class="list">
+        <li>Teachers/Parents: Use your dashboard to see linked learners and export class or individual reports.</li>
+        <li>Students: Start a quiz or speed round and watch your bee come to life!</li>
+      </ul>
+
+      {% set base = 'https://beesmartspellingbee.up.railway.app' %}
+      {% if role in ['teacher','parent'] %}
+        <a class="btn" href="{{ base }}/teacher/dashboard" target="_blank">Open Your Dashboard</a>
+      {% else %}
+        <a class="btn" href="{{ base }}/auth/dashboard" target="_blank">Go to My Dashboard</a>
+      {% endif %}
+
+      <p class="footer">— BeeSmart Team</p>
+    </div>
+  </div>
+</body>
+</html>

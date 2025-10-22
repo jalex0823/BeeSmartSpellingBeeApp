@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+
+{% block title %}BeeSmart Spelling App - Choose Your Adventure{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Fallback styles in case CSS variables don't load */
+    body {
+        background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFCA28 70%, #FFB300 100%) !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 100vh !important;
+    }
+    
+    /* Logo Section - Header */
+    .logo-section-header {
+        background: var(--cream-white, #FFFEF7);
+        padding: 2rem 0 1rem 0;
+        text-align: center;
+        border-bottom: 1px solid var(--honey-border, rgba(255, 215, 0, 0.3));
+    }
+    
+    .logo-section-header img {
+        width: 180px;
+        height: auto;
+        max-width: 280px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px var(--honey-shadow, rgba(255, 193, 7, 0.3));
+        transition: all 0.3s ease;
+    }
+    
+    .logo-section-header img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 25px var(--honey-shadow-hover, rgba(255, 193, 7, 0.4));
+    }
+
+    /* Main Content Card */
+    .main-content-card {
+        max-width: 700px;
+        margin: 2rem auto;
+        background: var(--hive-card, rgba(255, 254, 247, 0.95));
+        border-radius: 20px;
+        box-shadow: var(--hive-shadow, 0 12px 40px rgba(255, 193, 7, 0.3));
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+        border: 2px solid var(--honey-border, rgba(255, 215, 0, 0.3));
+    }
+
+    /* Card Header */
+    .card-header {
+        background: var(--honey-gradient);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        color: var(--dark-brown);
+        position: relative;
+    }
+
+    .card-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="20">✨</text></svg>') repeat;
+        opacity: 0.1;
+        animation: sparkleBackground 20s linear infinite;
+    }
+
+    @keyframes sparkleBackground {
+        0% { transform: translateX(0) translateY(0); }
+        100% { transform: translateX(-100px) translateY(-100px); }
+    }
+
+    .card-header h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header h2 {
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Menu Options */
+    .menu-options {
+        padding: 1.5rem;
+    }
+
+    .menu-option {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 2px solid var(--honey-border);
+        border-radius: 15px;
+        background: var(--cream-white);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .menu-option:last-child {
+        margin-bottom: 0;
+    }
+
+    .menu-option:hover {
+        border-color: var(--honey-gold);
+        background: var(--cream-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px var(--honey-shadow);
+    }
+
+    .menu-option.active {
+        border-color: var(--amber-glow);
+        background: var(--honey-tint);
+        box-shadow: 0 4px 15px var(--honey-shadow-hover);
+    }
+
+    .option-icon {
+        font-size: 3rem;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+        filter: drop-shadow(2px 2px 4px var(--honey-shadow));
+    }
+
+    .option-content h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--dark-amber);
+        margin-bottom: 0.25rem;
+    }
+
+    .option-content p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* Dynamic Content Area */
+    .dynamic-content {
+        padding: 0 1.5rem;
+        min-height: 100px;
+        display: none;
+    }
+
+    .dynamic-content.active {
+        display: block;
+        padding-bottom: 1.5rem;
+    }
+
+    /* Upload Areas */
+    .upload-interface {
+        background: var(--honey-tint);
+        border: 2px dashed var(--honey-gold);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .upload-interface.dragover {
+        background: var(--honey-light);
+        border-color: var(--amber-glow);
+        transform: scale(1.02);
+    }
+
+    .upload-interface h4 {
+        color: var(--accent-color);
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .upload-interface p {
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: var(--honey-tint);
+        border-top: 1px solid var(--honey-border);
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 15px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .action-btn.primary {
+        background: var(--honey-gradient);
+        color: var(--dark-brown);
+        box-shadow: 0 4px 15px var(--honey-shadow);
+    }
+
+    .action-btn.primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--honey-shadow-hover);
+    }
+
+    .action-btn.primary:disabled {
+        background: var(--light-gray);
+        cursor: not-allowed;
+        opacity: 0.6;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .action-btn.secondary {
+        background: var(--honey-tint);
+        color: var(--dark-amber);
+        border: 2px solid var(--honey-border);
+    }
+
+    .action-btn.secondary:hover {
+        background: var(--honey-light);
+        border-color: var(--honey-gold);
+        transform: translateY(-2px);
+    }
+
+    /* Hidden Inputs */
+    .hidden-input {
+        display: none;
+    }
+
+    /* Progress Indicators */
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--honey-light);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--honey-gradient);
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+
+    /* Status Messages */
+    .status-message {
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        margin: 1rem 0;
+        display: none;
+    }
+
+    .status-message.success {
+        background: rgba(76, 175, 80, 0.1);
+        color: #4CAF50;
+        border: 1px solid #4CAF50;
+    }
+
+    .status-message.error {
+        background: rgba(244, 67, 54, 0.1);
+        color: #F44336;
+        border: 1px solid #F44336;
+    }
+
+    .status-message.info {
+        background: rgba(33, 150, 243, 0.1);
+        color: #2196F3;
+        border: 1px solid #2196F3;
+    }
+
+    /* Word Count Badge */
+    .word-count-badge {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: var(--accent-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Floating animation for logo */
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .logo-section-header img {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+        .logo-section-header img {
+            animation: none;
+        }
+        .card-header::before {
+            animation: none;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .main-content-card {
+            margin: 1rem;
+            border-radius: 15px;
+        }
+        
+        .card-header {
+            padding: 2rem 1.5rem;
+        }
+        
+        .card-header h1 {
+            font-size: 1.8rem;
+        }
+        
+        .card-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .menu-option {
+            padding: 1.2rem;
+        }
+        
+        .option-icon {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Logo Section - Outside main container for white background -->
+<section class="logo-section-header">
+    <img src="/static/BeeSmartLogoTransparent.png" alt="BeeSmart Logo" />
+</section>
+
+<!-- Main Content Card -->
+<div class="main-content-card">
+    <!-- Header Section -->
+    <section class="card-header">
+        <h1>� Aja's Magical Spelling Bee ✨</h1>
+        <h2>�🎯 Choose Your Spelling Adventure!</h2>
+        <p>Select how you want to create your word list:</p>
+    </section>
+
+    <!-- Unified Menu Options -->
+    <section class="menu-options">
+        <!-- Upload Text File -->
+        <div class="menu-option" id="uploadTextOption">
+            <div class="option-icon">📄</div>
+            <div class="option-content">
+                <h3>Upload Text File</h3>
+                <p>Plain text, CSV, comma/space separated, Word docs</p>
+            </div>
+        </div>
+
+        <!-- Upload Image -->
+        <div class="menu-option" id="uploadImageOption">
+            <div class="option-icon">📷</div>
+            <div class="option-content">
+                <h3>Upload Image</h3>
+                <p>Extract words from photos</p>
+            </div>
+        </div>
+
+        <!-- Dictionary Search -->
+        <div class="menu-option" id="dictionaryOption">
+            <div class="option-icon">�</div>
+            <div class="option-content">
+                <h3>Dictionary Search</h3>
+                <p>Look up word definitions</p>
+            </div>
+        </div>
+
+        <!-- Saved Word Lists -->
+        <div class="menu-option" id="savedListsOption">
+            <div class="option-icon">📚</div>
+            <div class="option-content">
+                <h3>Saved Word Lists</h3>
+                <p>Use previously uploaded lists</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dynamic Content Area -->
+    <section class="dynamic-content" id="dynamicContent">
+        <!-- This area will show upload interfaces, progress, etc. -->
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="action-buttons">
+        <button type="button" class="action-btn secondary" id="clearBtn">
+            🗑️ Clear All
+        </button>
+        <button type="button" class="action-btn primary" id="startQuizBtn" disabled>
+            🚀 Start Quiz
+        </button>
+    </section>
+</div>
+
+<!-- Hidden Upload Forms -->
+<input type="file" id="fileInput" class="hidden-input" accept=".txt,.csv,.docx,.pdf" multiple>
+<input type="file" id="imageInput" class="hidden-input" accept=".jpg,.jpeg,.png,.webp,.pdf" multiple>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class SpellingAppManager {
+    constructor() {
+        this.wordCount = 0;
+        this.isQuizReady = false;
+        this.initializeEventListeners();
+        this.checkExistingWords();
+    }
+    
+    initializeEventListeners() {
+        // File upload
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        
+        fileInput.addEventListener('change', (e) => this.handleFileUpload(e.target.files));
+        
+        // Drag and drop for files
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            this.handleFileUpload(e.dataTransfer.files);
+        });
+        
+        // Image upload
+        const imageInput = document.getElementById('imageInput');
+        const imageUploadArea = document.getElementById('imageUploadArea');
+        
+        imageInput.addEventListener('change', (e) => this.handleImageUpload(e.target.files));
+        
+        // Drag and drop for images
+        imageUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.add('dragover');
+        });
+        
+        imageUploadArea.addEventListener('dragleave', () => {
+            imageUploadArea.classList.remove('dragover');
+        });
+        
+        imageUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.remove('dragover');
+            this.handleImageUpload(e.dataTransfer.files);
+        });
+        
+        // Start Quiz button
+        document.getElementById('startQuizButton').addEventListener('click', () => {
+            if (this.isQuizReady) {
+                this.startQuiz();
+            }
+        });
+        
+        // Add sparkle effects to cards
+        this.addSparkleEffects();
+    }
+    
+    addSparkleEffects() {
+        const cards = document.querySelectorAll('.menu-card');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                this.createSparkles(card);
+            });
+        });
+    }
+    
+    createSparkles(element) {
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = Math.random() * 100 + '%';
+                sparkle.style.top = Math.random() * 100 + '%';
+                sparkle.style.width = sparkle.style.height = Math.random() * 6 + 2 + 'px';
+                element.appendChild(sparkle);
+                
+                setTimeout(() => sparkle.remove(), 2000);
+            }, i * 100);
+        }
+    }
+    
+    async checkExistingWords() {
+        try {
+            const response = await fetch('/api/wordbank');
+            if (response.ok) {
+                const data = await response.json();
+                this.updateWordCount(data.words.length);
+            }
+        } catch (error) {
+            console.log('No existing words found');
+        }
+    }
+    
+    async handleFileUpload(files) {
+        if (!files || files.length === 0) return;
+        
+        this.showProgress('progressContainer', 'Uploading files...');
+        
+        for (let file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showStatus('statusMessage', `✅ Successfully uploaded ${file.name}: ${result.count} words`, 'success');
+                    this.updateWordCount(result.count);
+                } else {
+                    const error = await response.json();
+                    this.showStatus('statusMessage', `❌ Error uploading ${file.name}: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                this.showStatus('statusMessage', `❌ Failed to upload ${file.name}: ${error.message}`, 'error');
+            }
+        }
+        
+        this.hideProgress('progressContainer');
+    }
+    
+    async handleImageUpload(files) {
+        if (!files || files.length === 0) return;
+        
+        this.showProgress('imageProgressContainer', 'Processing images with OCR...');
+        
+        for (let file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showStatus('imageStatusMessage', `✅ ${result.message} Preview: ${result.words_preview.join(', ')}`, 'success');
+                    this.updateWordCount(result.count);
+                } else {
+                    const error = await response.json();
+                    this.showStatus('imageStatusMessage', `❌ Error processing ${file.name}: ${error.message || error.error}`, 'error');
+                }
+            } catch (error) {
+                this.showStatus('imageStatusMessage', `❌ Failed to process ${file.name}: ${error.message}`, 'error');
+            }
+        }
+        
+        this.hideProgress('imageProgressContainer');
+    }
+    
+    async startQuiz() {
+        try {
+            // Reset quiz state
+            await fetch('/api/reset', { method: 'POST' });
+            
+            // Redirect to quiz page (will be created)
+            window.location.href = '/quiz';
+        } catch (error) {
+            BeeSmart.showError('Failed to start quiz. Please try again.');
+        }
+    }
+    
+    updateWordCount(count) {
+        this.wordCount = count;
+        const wordCountElement = document.getElementById('wordCount');
+        const startQuizButton = document.getElementById('startQuizButton');
+        const quizCard = document.getElementById('quizCard');
+        
+        if (count > 0) {
+            this.isQuizReady = true;
+            wordCountElement.textContent = `${count} words`;
+            wordCountElement.style.display = 'block';
+            startQuizButton.textContent = `Start Quiz (${count} words)`;
+            startQuizButton.disabled = false;
+            quizCard.classList.remove('disabled');
+            BeeSmart.showSuccess(`Word bank updated! ${count} words ready for practice.`);
+        } else {
+            this.isQuizReady = false;
+            wordCountElement.style.display = 'none';
+            startQuizButton.textContent = 'Upload Words First';
+            startQuizButton.disabled = true;
+            quizCard.classList.add('disabled');
+        }
+    }
+    
+    showProgress(containerId, message) {
+        const container = document.getElementById(containerId);
+        container.style.display = 'block';
+        
+        // Animate progress bar
+        const progressFill = container.querySelector('.progress-fill');
+        progressFill.style.width = '100%';
+    }
+    
+    hideProgress(containerId) {
+        const container = document.getElementById(containerId);
+        container.style.display = 'none';
+        
+        // Reset progress bar
+        const progressFill = container.querySelector('.progress-fill');
+        progressFill.style.width = '0%';
+    }
+    
+    showStatus(elementId, message, type) {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.className = `status-message ${type}`;
+        element.style.display = 'block';
+        
+        // Auto-hide after 5 seconds for success messages
+        if (type === 'success') {
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+    }
+}
+
+// Dictionary search function
+function showDictionarySearch() {
+    const word = prompt('Enter a word to look up:');
+    if (!word) return;
+    
+    fetch('/api/dictionary-lookup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ word: word })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.definition) {
+            alert(`${data.word}:\n\n${data.definition}`);
+        } else {
+            alert(`Sorry, couldn't find a definition for "${data.word}"`);
+        }
+    })
+    .catch(error => {
+        alert('Error looking up word. Please try again.');
+        console.error('Dictionary lookup error:', error);
+    });
+}
+
+// Initialize the app when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.spellingApp = new SpellingAppManager();
+});
+</script>
+{% endblock %}

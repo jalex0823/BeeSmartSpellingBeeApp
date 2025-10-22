@@ -1,0 +1,15 @@
+Hello {{ username }},
+
+Thank you for registering for BeeSmart! We're excited to help you practice and track spelling progress.
+
+{% if role in ['teacher','parent'] and teacher_key %}
+Your {{ role|capitalize }} Key: {{ teacher_key }}
+
+Keep this key private. Share it only with learners you manage to link their accounts to your dashboard. You can rotate your key from your dashboard any time.
+
+{% endif %}
+Tips:
+- Teachers/Parents: Use your dashboard to see linked learners and export class or individual reports.
+- Students: Start a quiz or speed round and watch your bee come to life!
+
+— BeeSmart Team
