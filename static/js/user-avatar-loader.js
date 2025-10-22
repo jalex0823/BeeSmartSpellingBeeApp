@@ -295,15 +295,24 @@ class UserAvatarLoader {
         };
 
         try {
-            // Count total avatars
-            const avatarKeys = Object.keys(this.avatarMap);
-            preloadResults.totalAvatars = avatarKeys.length;
+            // Get unique avatars only (deduplicate by obj file path to exclude aliases)
+            const seenPaths = new Set();
+            const uniqueAvatars = [];
             
-            console.log(`📋 Found ${preloadResults.totalAvatars} avatars to validate`);
+            for (const [key, data] of Object.entries(this.avatarMap)) {
+                const objPath = data.obj;
+                if (!seenPaths.has(objPath)) {
+                    seenPaths.add(objPath);
+                    uniqueAvatars.push({ key, data });
+                }
+            }
             
-            // Validate each avatar's files
-            for (const avatarKey of avatarKeys) {
-                const avatarData = this.avatarMap[avatarKey];
+            preloadResults.totalAvatars = uniqueAvatars.length;
+            
+            console.log(`📋 Found ${preloadResults.totalAvatars} unique avatars to validate (${Object.keys(this.avatarMap).length} total including aliases)`);
+            
+            // Validate each unique avatar's files
+            for (const { key: avatarKey, data: avatarData } of uniqueAvatars) {
                 console.log(`🔍 Validating ${avatarKey}...`);
                 
                 try {
