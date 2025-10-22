@@ -847,6 +847,38 @@ lottie-player {
   resize: vertical !important;
 }
 
+/* Custom scrollbar styling for textarea - Bee theme */
+#beePromptModal textarea::-webkit-scrollbar,
+#beePromptInput[rows]::-webkit-scrollbar {
+  width: 12px !important;
+}
+
+#beePromptModal textarea::-webkit-scrollbar-track,
+#beePromptInput[rows]::-webkit-scrollbar-track {
+  background: rgba(255, 193, 7, 0.1) !important;
+  border-radius: 6px !important;
+  border: 2px solid rgba(255, 179, 0, 0.2) !important;
+}
+
+#beePromptModal textarea::-webkit-scrollbar-thumb,
+#beePromptInput[rows]::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FFD54F 0%, #FFB300 100%) !important;
+  border-radius: 6px !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+#beePromptModal textarea::-webkit-scrollbar-thumb:hover,
+#beePromptInput[rows]::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FFCA28 0%, #FF9800 100%) !important;
+}
+
+/* Firefox scrollbar styling */
+#beePromptModal textarea,
+#beePromptInput[rows] {
+  scrollbar-width: auto !important;
+  scrollbar-color: #FFB300 rgba(255, 193, 7, 0.1) !important;
+}
+
 /* Saved Lists modal scrollability */
 #savedListsModal .savedListsContainer, #savedListsContainer {
   max-height: 300px !important;
