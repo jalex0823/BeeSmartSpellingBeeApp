@@ -394,6 +394,60 @@ def get_avatar_info(avatar_id, variant='default'):
     mtl_file = avatar.get('mtl_file', 'model.mtl')
     texture_file = avatar.get('texture_file', 'texture.png')
     
+    # Get thumbnail filename from catalog folder name (e.g., al-bee -> AlBee!.png)
+    # Convert folder name to proper case for thumbnail
+    folder = avatar.get('folder', avatar_id)
+    if folder == 'al-bee':
+        thumbnail_file = 'AlBee!.png'
+    elif folder == 'anxious-bee':
+        thumbnail_file = 'AnxiousBee!.png'
+    elif folder == 'astro-bee':
+        thumbnail_file = 'AstroBee!.png'
+    elif folder == 'biker-bee':
+        thumbnail_file = 'BikerBee!.png'
+    elif folder == 'brother-bee':
+        thumbnail_file = 'BrotherBee!.png'
+    elif folder == 'builder-bee':
+        thumbnail_file = 'BuilderBee!.png'
+    elif folder == 'cool-bee':
+        thumbnail_file = 'CoolBee!.png'
+    elif folder == 'detective-bee':
+        thumbnail_file = 'DetectiveBee!.png'
+    elif folder == 'diva-bee':
+        thumbnail_file = 'DivaBee!.png'
+    elif folder == 'doctor-bee':
+        thumbnail_file = 'DoctorBee!.png'
+    elif folder == 'explorer-bee':
+        thumbnail_file = 'ExplorerBee!.png'
+    elif folder == 'franken-bee':
+        thumbnail_file = 'Frankenbee!.png'
+    elif folder == 'knight-bee':
+        thumbnail_file = 'KnightBee!.png'
+    elif folder == 'mascot-bee':
+        thumbnail_file = 'MascotBee!.png'
+    elif folder == 'monster-bee':
+        thumbnail_file = 'MonsterBee!.png'
+    elif folder == 'professor-bee':
+        thumbnail_file = 'ProfessorBee!.png'
+    elif folder == 'queen-bee':
+        thumbnail_file = 'QueenBee!.png'
+    elif folder == 'robo-bee':
+        thumbnail_file = 'RoboBee!.png'
+    elif folder == 'rocker-bee':
+        thumbnail_file = 'RockerBee!.png'
+    elif folder == 'seabea':
+        thumbnail_file = 'Seabea!.png'
+    elif folder == 'superbee':
+        thumbnail_file = 'Superbee!.png'
+    elif folder == 'vamp-bee':
+        thumbnail_file = 'VampBee!.png'
+    elif folder == 'ware-bee':
+        thumbnail_file = 'WareBee!.png'
+    elif folder == 'zom-bee':
+        thumbnail_file = 'ZomBee!.png'
+    else:
+        thumbnail_file = 'thumbnail.png'  # fallback
+    
     # Build asset URLs
     base_path = f"/static/assets/avatars/{avatar_id}"
     
@@ -410,8 +464,8 @@ def get_avatar_info(avatar_id, variant='default'):
         'description': avatar['description'],
         'variant': variant,
         'category': avatar['category'],
-        'thumbnail_url': f"{base_path}/thumbnail.png",
-        'preview_url': f"{base_path}/preview.png",  # Higher quality preview
+        'thumbnail_url': f"{base_path}/{thumbnail_file}",
+        'preview_url': f"{base_path}/{thumbnail_file}",  # Use same as thumbnail
         'model_obj_url': f"{base_path}/{obj_file}",  # Now uses specific filename (e.g., ProfessorBee.obj)
         'model_mtl_url': f"{base_path}/{mtl_file}",  # Now uses specific filename (e.g., ProfessorBee.mtl)
         'texture_url': f"{base_path}/{texture_file}",  # Now uses specific filename (e.g., ProfessorBee.png)
