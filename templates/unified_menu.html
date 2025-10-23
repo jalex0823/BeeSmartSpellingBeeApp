@@ -8100,9 +8100,9 @@
                         const scene = new THREE.Scene();
                         const camera = new THREE.PerspectiveCamera(45, 260 / 280, 0.1, 1000);
                         
-                        // Optimized camera positioning to show full model including antenna
-                        camera.position.set(0, 1.5, 4.0);  // Moved back and up
-                        camera.lookAt(new THREE.Vector3(0, 1.0, 0));
+                        // Optimized camera positioning to show complete model from antenna to feet
+                        camera.position.set(0, 1.8, 5.5);  // Further back and higher up
+                        camera.lookAt(new THREE.Vector3(0, 0.5, 0));  // Look at lower center point
                         
                         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                         renderer.setSize(260, 280);  // Match stage container size
