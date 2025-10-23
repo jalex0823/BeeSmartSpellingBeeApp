@@ -7613,7 +7613,7 @@ def api_get_my_avatar():
         # Check if user has explicitly selected an avatar
         use_mascot = not user.has_selected_avatar()
         
-        # If user hasn't selected an avatar, return MascotBee instead of default cool-bee
+        # If user hasn't selected an avatar, return MascotBee as default
         if use_mascot:
             return jsonify({
                 'status': 'success',
