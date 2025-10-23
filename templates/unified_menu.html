@@ -314,13 +314,16 @@
         #mascot-stage {
             position: fixed !important;
             left: 50% !important;
-            top: 20px !important;              /* High up to show full avatar including antenna */
+            top: 170px !important;             /* Position below welcome and avatar badge */
             transform: translateX(-50%) !important;
             width: 260px !important;           /* Wider stage for full model */
             height: 280px !important;          /* Taller stage to prevent top clipping */
             pointer-events: none !important;   /* Clicks pass through to content below */
             z-index: 150 !important;           /* Above everything */
             overflow: visible !important;      /* Critical - don't clip */
+            margin: 0 !important;              /* No margin to interfere */
+            padding: 0 !important;             /* No padding to interfere */
+            box-sizing: border-box !important; /* Consistent box model */
         }
         
         /* 3D Mascot container - UPDATED to match quiz.html working version */
@@ -331,11 +334,13 @@
             width: 100% !important;
             height: 100% !important;
             margin: 0 !important;
+            padding: 0 !important;
             display: block;
             filter: drop-shadow(0 10px 30px rgba(255, 193, 7, 0.45));
             transition: transform 0.3s ease, filter 0.3s ease;
             overflow: visible !important;      /* Don't clip the 3D model */
             pointer-events: auto !important;   /* Avatar itself can be clicked */
+            box-sizing: border-box !important; /* Consistent box model */
         }
         
         /* Three.js canvas styling for proper layering */
@@ -1041,9 +1046,47 @@
             
             /* Mobile avatar stage - smaller but still visible */
             #mascot-stage {
-                top: 15px !important;
+                position: fixed !important;    /* Ensure avatar doesn't scroll on mobile */
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                top: 140px !important;         /* Position below mobile welcome and badge */
                 width: 220px !important;
                 height: 240px !important;
+                z-index: 150 !important;
+                pointer-events: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                overflow: visible !important;
+            }
+            
+            #mascotBee3D {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* Mobile positioning for welcome message and avatar badge */
+            #usernameBadge {
+                top: 15px !important;
+                font-size: 1.4rem !important;
+                padding: 1rem 1.5rem !important;
+                max-width: 350px !important;
+            }
+            
+            #avatarNameBadge {
+                top: 100px !important;
+                font-size: 0.85rem !important;
+            }
+            
+            #mascotCaption {
+                top: 390px !important;
+                font-size: 12px !important;
             }
             
             #mascotBee3D {
@@ -1509,53 +1552,77 @@
         <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
     </div>
     
+    <!-- Welcome Message and Avatar Badge - Positioned near avatar -->
+    {% if current_user.is_authenticated %}
+    <div id="usernameBadge" style="
+        position: fixed;
+        left: 50%;
+        top: 20px;
+        transform: translateX(-50%);
+        z-index: 140;
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        color: #5A2C15; 
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+        text-align: center;
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B8 50%, #FFF5D6 100%);
+        border: 4px solid #FFB347;
+        border-radius: 30px;
+        padding: 1.2rem 2rem;
+        box-shadow: 0 8px 20px rgba(255, 179, 71, 0.3);
+        max-width: 450px;
+        pointer-events: auto;
+    ">
+        🐝 Welcome, {{ current_user.display_name or 'Big Daddy' }}!
+    </div>
+    {% endif %}
+    
+    <!-- Avatar Name Badge (shows which avatar is loaded) -->
+    <div id="avatarNameBadge" style="
+        position: fixed;
+        left: 50%;
+        top: 120px;
+        transform: translateX(-50%);
+        z-index: 140;
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        background: #FF8C00;
+        color: white;
+        font-weight: 700;
+        font-size: 0.95rem;
+        border-radius: 20px;
+        box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+        text-align: center;
+        pointer-events: auto;
+    ">
+        <span id="avatarNameText">Loading...</span>
+    </div>
+    
+    <!-- Interactive Caption under mascot -->
+    <div id="mascotCaption" style="
+        position: fixed;
+        left: 50%;
+        top: 460px;
+        transform: translateX(-50%);
+        z-index: 140;
+        font-size: 14px;
+        color: #FF6B00;
+        font-weight: 600;
+        text-align: center;
+        animation: gentlePulse 2s ease-in-out infinite;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        pointer-events: auto;
+    " onclick="playMascotShow()">
+        ✨ Click on me to see what I do! ✨
+    </div>
+    
     <!-- Main container -->
     <div class="main-container">
         <!-- Single unified card with logo and menu -->
         <div class="content-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
-                <!-- Username Welcome Badge (above avatar) -->
-                {% if current_user.is_authenticated %}
-                <div id="usernameBadge" style="
-                    font-size: 1.5rem; 
-                    font-weight: 800; 
-                    color: #5A2C15; 
-                    margin-bottom: 1rem;
-                    margin-top: 0.5rem;
-                    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-                    text-align: center;
-                    background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
-                    border: 3px solid rgba(255, 215, 0, 0.6);
-                    border-radius: 20px;
-                    padding: 1rem 1.5rem;
-                    box-shadow: 0 6px 15px rgba(210, 105, 30, 0.25);
-                    max-width: 450px;
-                    margin-left: auto;
-                    margin-right: auto;
-                    position: relative;
-                    z-index: 1;
-                ">
-                    Welcome, {{ current_user.display_name or 'Friend' }}!
-                </div>
-                {% endif %}
-                
-                <!-- Avatar Name Badge (shows which avatar is loaded) -->
-                <div id="avatarNameBadge" style="
-                    display: inline-block;
-                    margin: 0 auto 1rem;
-                    padding: 0.5rem 1.5rem;
-                    background: #FF8C00;
-                    color: white;
-                    font-weight: 700;
-                    font-size: 0.95rem;
-                    border-radius: 20px;
-                    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
-                    text-align: center;
-                ">
-                    <span id="avatarNameText">Loading...</span>
-                </div>
-                
                 <!-- 3D Avatar moved to mascot-stage above content-card to prevent clipping -->
                 
                 <!-- Avatar System Status Badge (PERMANENTLY HIDDEN) -->
