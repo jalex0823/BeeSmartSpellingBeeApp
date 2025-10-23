@@ -301,13 +301,13 @@
             min-height: 300px;        /* Ensure enough vertical space */
         }
         
-        /* 3D Mascot container - permanently centered with flexbox */
+        /* 3D Mascot container - positioned below username badge */
         #mascotBee3D {
             width: 250px;
             height: 250px;
-            margin: -20px auto 0.5rem auto; /* Negative margin pulls it up into the padding space */
+            margin: 0.5rem auto 0.5rem auto; /* Small margin top for spacing from username */
             position: relative;
-            transform: translateY(-30px); /* Moved from -10px to -30px for more upward movement */
+            transform: translateY(0px); /* Reset translation since badge is above now */
             transition: transform 0.3s ease;
             display: flex;
             align-items: center;
@@ -328,7 +328,7 @@
         }
         
         #mascotBee3D:hover {
-            transform: translateY(-35px) scale(1.05); /* Adjusted hover to match new position */
+            transform: translateY(-5px) scale(1.05); /* Subtle hover lift */
         }
         
         @keyframes gentlePulse {
@@ -344,7 +344,13 @@
         
         #mascotCaption {
             position: relative;
-            z-index: 5;              /* Below avatar (15) to prevent overlap */
+            z-index: 5;              /* Below avatar (150) to prevent overlap */
+        }
+
+        /* Username badge above avatar */
+        #usernameBadge {
+            position: relative;
+            z-index: 5;              /* Below avatar (150) but visible */
         }
 
         /* Ensure avatar name/status badge stays behind the 3D avatar */
@@ -1475,6 +1481,28 @@
         <div class="content-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
+                <!-- Username Display Badge (above avatar) -->
+                {% if current_user.is_authenticated %}
+                <div id="usernameBadge" style="
+                    font-size: 1.4rem; 
+                    font-weight: 700; 
+                    color: #5A2C15; 
+                    margin-bottom: 1rem;
+                    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+                    text-align: center;
+                    background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
+                    border: 2px solid rgba(255, 215, 0, 0.5);
+                    border-radius: 20px;
+                    padding: 0.8rem 1.5rem;
+                    box-shadow: 0 4px 12px rgba(210, 105, 30, 0.15);
+                    max-width: 400px;
+                    margin-left: auto;
+                    margin-right: auto;
+                ">
+                    🐝 Welcome, {{ current_user.display_name or 'Friend' }}!
+                </div>
+                {% endif %}
+                
                 <!-- 3D Avatar Display:
                      - Guest users: Always show MascotBee 
                      - Authenticated users: Show their selected profile avatar 
