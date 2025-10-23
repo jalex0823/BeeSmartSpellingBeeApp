@@ -44,14 +44,14 @@ function renderAvatarGrid(avatarsToRender) {
     
     grid.innerHTML = '';
     
-    console.log(`🎨 Rendering ${avatarsToRender.length} avatar cards with 3D thumbnails...`);
+    console.log(`🎨 Rendering ${avatarsToRender.length} avatar cards with 3D OBJ thumbnails...`);
     
     avatarsToRender.forEach(avatar => {
         const card = document.createElement('div');
         card.className = 'avatar-option';
         card.dataset.avatarId = avatar.id;
 
-        // Create 3D thumbnail container
+        // Create 3D thumbnail container (render OBJ as thumbnail)
         const thumbContainer = document.createElement('div');
         thumbContainer.className = 'avatar-3d-thumbnail';
         thumbContainer.style.width = '100%';
@@ -61,23 +61,31 @@ function renderAvatarGrid(avatarsToRender) {
         thumbContainer.style.borderRadius = '8px';
         thumbContainer.style.background = 'linear-gradient(135deg, #FFE8CC 0%, #FFD700 100%)';
 
+        // Extract display name from PNG filename (remove ! and .png)
+        // e.g., "AlBee!.png" → "AlBee"
+        let displayName = avatar.name;
+        if (avatar.urls?.thumbnail) {
+            const pngFilename = avatar.urls.thumbnail.split('/').pop();
+            displayName = pngFilename.replace('!.png', '').replace('.png', '');
+        }
+
+        // Create name div (appears below thumbnail)
         const nameDiv = document.createElement('div');
         nameDiv.className = 'avatar-name';
         nameDiv.dataset.avatarId = avatar.id;
         nameDiv.title = 'Click for details';
-        nameDiv.textContent = avatar.name;
+        nameDiv.textContent = displayName;
 
         card.appendChild(thumbContainer);
         card.appendChild(nameDiv);
 
-        // Card click selects avatar
+        // Card click selects avatar (unless clicking the name)
         card.addEventListener('click', (e) => {
-            // Don't select if clicking on the name (name opens popup instead)
             if (!e.target.classList.contains('avatar-name')) {
                 selectAvatar(avatar);
             }
         });
-        
+
         // Name click opens description popup
         nameDiv.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent card selection
@@ -86,20 +94,21 @@ function renderAvatarGrid(avatarsToRender) {
         
         grid.appendChild(card);
 
-        // Render 3D model in thumbnail (async)
+        // Render 3D OBJ model in thumbnail (async)
         render3DThumbnail(thumbContainer, avatar).catch(err => {
             console.warn(`Failed to render 3D thumbnail for ${avatar.id}:`, err);
-            // Fallback to static image on error
-            thumbContainer.innerHTML = `<img src="${avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`}" 
-                                            alt="${avatar.name}" 
+            // Fallback to PNG image on error
+            const thumbnailUrl = avatar.urls?.thumbnail || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
+            thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
+                                            alt="${displayName}" 
                                             style="width:100%;height:100%;object-fit:contain;">`;
         });
     });
     
-    console.log(`✅ Rendered ${avatarsToRender.length} avatar cards to grid`);
+    console.log(`✅ Rendered ${avatarsToRender.length} avatar cards with 3D OBJ thumbnails`);
 }
 
-// Render a 3D avatar model in a small thumbnail canvas
+// Render a 3D avatar model in a small, consistent-size thumbnail canvas
 async function render3DThumbnail(container, avatar) {
     if (!avatar.urls || !avatar.urls.model_obj) {
         throw new Error('No 3D model URLs available');
@@ -109,16 +118,17 @@ async function render3DThumbnail(container, avatar) {
     const scene = new THREE.Scene();
     scene.background = null; // Transparent
     
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-    camera.position.set(0, 0, 4);
+    const fov = 45;
+    const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 1000);
+    camera.position.set(0, 0, 3);
     
     const renderer = new THREE.WebGLRenderer({ 
         antialias: true, 
         alpha: true,
         preserveDrawingBuffer: true
     });
-    const size = 120;
-    renderer.setSize(size, size);
+    const sizePx = 140; // enforce uniform thumbnail size
+    renderer.setSize(sizePx, sizePx);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
     
@@ -176,12 +186,16 @@ async function render3DThumbnail(container, avatar) {
                     });
                 }
 
-                // Center and scale
+                // Center and scale uniformly so all thumbnails appear same visual size
                 const box = new THREE.Box3().setFromObject(object);
-                const size = box.getSize(new THREE.Vector3()).length();
+                const sizeVec = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
                 const center = box.getCenter(new THREE.Vector3());
                 object.position.sub(center);
-                object.scale.setScalar(2.0 / size);
+                // Scale to target normalized dimension (fills ~80% of frame)
+                const target = 1.6; // tune fill factor
+                const scale = target / maxDim;
+                object.scale.setScalar(scale);
                 scene.add(object);
 
                 // Animate
