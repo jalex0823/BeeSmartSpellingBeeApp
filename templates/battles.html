@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Battle of the Bees - Live Spelling Battles | BeeSmart</title>
     
+    <!-- Favicon for all platforms -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
+    
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
@@ -160,6 +169,25 @@
             transform: translateY(-2px);
         }
         
+        .back-home-btn {
+            background: linear-gradient(135deg, #ff8f00, #f57c00);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
+            transition: all 0.3s;
+        }
+        
+        .back-home-btn:hover {
+            background: linear-gradient(135deg, #f57c00, #e65100);
+            transform: translateY(-2px);
+        }
+        
         .newbee-alert {
             position: fixed;
             top: 20px;
@@ -197,6 +225,109 @@
             font-size: 1.2rem;
             color: #666;
         }
+        
+        /* Kid-friendly modal styles */
+        .battle-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .battle-modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #fff9e6, #ffe8b3);
+            border: 4px solid #ff8f00;
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalBounce 0.5s ease;
+            text-align: center;
+        }
+        
+        @keyframes modalBounce {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .modal-content h2 {
+            color: #ff6b35;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .modal-content p {
+            color: #555;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 3px solid #ff8f00;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .modal-btn {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-start {
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            color: white;
+        }
+        
+        .modal-btn-start:hover {
+            background: linear-gradient(135deg, #388e3c, #4caf50);
+            transform: translateY(-2px);
+        }
+        
+        .modal-btn-cancel {
+            background: linear-gradient(135deg, #757575, #9e9e9e);
+            color: white;
+        }
+        
+        .modal-btn-cancel:hover {
+            background: linear-gradient(135deg, #616161, #757575);
+            transform: translateY(-2px);
+        }
+        
+        .loading {
         
         .loading::after {
             content: "...";
@@ -255,6 +386,9 @@
         <div class="battle-header">
             <h1>🐝 Battle of the Bees 🐝</h1>
             <p>Live multiplayer spelling battles - join the hive!</p>
+            <button class="back-home-btn" onclick="window.location.href='/'">
+                🏠 Back to Home
+            </button>
         </div>
         
         <!-- Stats Overview -->
@@ -287,6 +421,29 @@
         <div id="newbeeAlert" class="newbee-alert">
             <button class="close-btn" onclick="closeNewBeeAlert()">&times;</button>
             <div id="newbeeMessage"></div>
+        </div>
+    </div>
+
+    <!-- Kid-Friendly Battle Name Modal -->
+    <div id="battleModal" class="battle-modal">
+        <div class="modal-content">
+            <h2>🐝 Let's Start a Bee Battle! 🐝</h2>
+            <p>Give your battle a fun name so your friends can find it!</p>
+            <input 
+                type="text" 
+                id="battleNameInput" 
+                class="modal-input" 
+                placeholder="Example: Super Spelling Squad"
+                maxlength="50"
+            >
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-start" onclick="confirmBattleCreation()">
+                    🚀 Start Battle!
+                </button>
+                <button class="modal-btn modal-btn-cancel" onclick="closeBattleModal()">
+                    ✖️ Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -393,8 +550,35 @@
             container.innerHTML = `<div class="battles-grid">${battlesHTML}</div>`;
         }
         
-        // Create new battle
-        async function createNewBattle() {
+        // Create new battle - show modal
+        function createNewBattle() {
+            const modal = document.getElementById('battleModal');
+            const input = document.getElementById('battleNameInput');
+            modal.classList.add('show');
+            input.value = '';
+            input.focus();
+            
+            // Allow Enter key to submit
+            input.onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    confirmBattleCreation();
+                }
+            };
+        }
+        
+        // Close modal
+        function closeBattleModal() {
+            const modal = document.getElementById('battleModal');
+            modal.classList.remove('show');
+        }
+        
+        // Confirm and create battle
+        async function confirmBattleCreation() {
+            const input = document.getElementById('battleNameInput');
+            const battleName = input.value.trim() || 'Anonymous Battle';
+            
+            closeBattleModal();
+            
             try {
                 const response = await fetch('/api/battles/create', {
                     method: 'POST',
@@ -402,7 +586,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        name: prompt('Battle name (optional):') || 'Anonymous Battle',
+                        name: battleName,
                         max_players: 10
                     })
                 });
