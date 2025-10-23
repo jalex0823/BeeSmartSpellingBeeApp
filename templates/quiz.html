@@ -2240,11 +2240,11 @@
     <div class="quiz-card" id="quizCard">
         <!-- Logo at top center -->
         <div class="quiz-logo">
-            <!-- 3D Mascot (renamed to mascotBee3D) -->
-            <div id="mascotBee3D" class="mascot-3d-container"></div>
-            
-            <!-- Text-only logo -->
+            <!-- Text-only logo - MOVED TO TOP -->
             <img src="{{ url_for('static', filename='BeeSmartTitle.png') }}" alt="BeeSmart Spelling Bee">
+            
+            <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
+            <div id="mascotBee3D" class="mascot-3d-container"></div>
             
             <!-- Kid-Safe Content Badge -->
             <div class="kid-safe-badge-quiz" title="All words are automatically filtered for age-appropriate content">
