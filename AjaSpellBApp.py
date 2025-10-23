@@ -7178,23 +7178,31 @@ def api_get_avatars():
     try:
         from models import Avatar
         
-        # Check if Avatar table exists, if not, auto-migrate
+        # Check if Avatar table exists and is populated
         try:
             # Test query to check if table exists
-            Avatar.query.limit(1).all()
+            avatar_count = Avatar.query.count()
+            
+            # If table is empty, populate it from filesystem
+            if avatar_count == 0:
+                print("📦 Avatar table is empty, populating from filesystem...")
+                from migrate_avatars_to_db import populate_avatars_from_filesystem
+                # We're already in app context since this is a route handler
+                populated_count = populate_avatars_from_filesystem()
+                print(f"✅ Populated {populated_count} avatars from filesystem")
+                
         except Exception as table_error:
             print(f"⚠️ Avatar table doesn't exist, creating now: {table_error}")
             # Create all tables (safe operation - won't affect existing tables)
             db.create_all()
             print("✅ Database tables created")
             
-            # Check if we need to populate avatars
-            avatar_count = Avatar.query.count()
-            if avatar_count == 0:
-                print("📦 Populating avatar database from filesystem...")
-                from migrate_avatars_to_db import populate_avatars_from_filesystem
-                populate_avatars_from_filesystem()
-                print(f"✅ Populated {Avatar.query.count()} avatars")
+            # Populate avatars
+            print("📦 Populating avatar database from filesystem...")
+            from migrate_avatars_to_db import populate_avatars_from_filesystem
+            # We're already in app context since this is a route handler
+            populated_count = populate_avatars_from_filesystem()
+            print(f"✅ Populated {populated_count} avatars")
         
         # Check if filtering by category or search
         category = request.args.get('category')

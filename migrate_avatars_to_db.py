@@ -17,14 +17,20 @@ def populate_avatars_from_filesystem():
     Returns: number of avatars populated
     """
     try:
+        import os
+        import glob
+        
         # Check if avatars already exist
         existing_count = Avatar.query.count()
         if existing_count > 0:
             print(f"ℹ️  {existing_count} avatars already exist, skipping population")
             return existing_count
         
+        print(f"📋 Starting avatar population from {len(AVATAR_CATALOG)} entries in AVATAR_CATALOG")
+        
         # Migrate each avatar from AVATAR_CATALOG
         success_count = 0
+        error_count = 0
         
         for idx, avatar_data in enumerate(AVATAR_CATALOG):
             try:
@@ -39,11 +45,15 @@ def populate_avatars_from_filesystem():
                 category = avatar_data.get('category', 'classic')
                 
                 # Find thumbnail PNG file (look for any .png in folder)
-                import os
-                import glob
                 avatar_folder_path = os.path.join('static', 'assets', 'avatars', folder)
-                png_files = glob.glob(os.path.join(avatar_folder_path, '*.png'))
-                thumbnail_file = os.path.basename(png_files[0]) if png_files else 'thumbnail.png'
+                
+                # Check if folder exists
+                if not os.path.exists(avatar_folder_path):
+                    print(f"⚠️  Folder not found: {avatar_folder_path}, using default thumbnail")
+                    thumbnail_file = 'thumbnail.png'
+                else:
+                    png_files = glob.glob(os.path.join(avatar_folder_path, '*.png'))
+                    thumbnail_file = os.path.basename(png_files[0]) if png_files else 'thumbnail.png'
                 
                 # Create Avatar model instance
                 avatar = Avatar(
@@ -65,17 +75,27 @@ def populate_avatars_from_filesystem():
                 
                 db.session.add(avatar)
                 success_count += 1
+                print(f"  ✓ Added: {name} ({slug})")
                 
             except Exception as e:
-                print(f"❌ Error migrating {avatar_data.get('id', 'unknown')}: {e}")
+                error_count += 1
+                print(f"  ✗ Error migrating {avatar_data.get('id', 'unknown')}: {e}")
         
         # Commit all at once
-        db.session.commit()
-        print(f"✅ Populated {success_count} avatars from filesystem")
+        if success_count > 0:
+            db.session.commit()
+            print(f"✅ Successfully populated {success_count} avatars from filesystem")
+            if error_count > 0:
+                print(f"⚠️  {error_count} avatars had errors")
+        else:
+            print(f"❌ No avatars were added")
+            
         return success_count
         
     except Exception as e:
+        import traceback
         print(f"❌ Population failed: {e}")
+        print(traceback.format_exc())
         db.session.rollback()
         return 0
 

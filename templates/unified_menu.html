@@ -1475,6 +1475,31 @@
         <div class="content-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
+                <!-- Username Welcome Badge (above avatar) -->
+                {% if current_user.is_authenticated %}
+                <div id="usernameBadge" style="
+                    font-size: 1.5rem; 
+                    font-weight: 800; 
+                    color: #5A2C15; 
+                    margin-bottom: 1.5rem;
+                    margin-top: 0.5rem;
+                    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+                    text-align: center;
+                    background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
+                    border: 3px solid rgba(255, 215, 0, 0.6);
+                    border-radius: 20px;
+                    padding: 1rem 1.5rem;
+                    box-shadow: 0 6px 15px rgba(210, 105, 30, 0.25);
+                    max-width: 450px;
+                    margin-left: auto;
+                    margin-right: auto;
+                    position: relative;
+                    z-index: 1;
+                ">
+                    🐝 Welcome, {{ current_user.display_name or 'Friend' }}!
+                </div>
+                {% endif %}
+                
                 <!-- 3D Avatar Display:
                      - Guest users: Always show MascotBee 
                      - Authenticated users: Show their selected profile avatar 
@@ -1554,41 +1579,8 @@
                 </div>
             </section>
 
-            <!-- Bee Quote Banner with Personalized Welcome -->
+            <!-- Bee Quote Banner -->
             <section class="menu-container" style="padding-top: 0.5rem; padding-bottom: 0.5rem;">
-                {% if current_user.is_authenticated %}
-                <!-- Personalized Welcome for Logged In Users -->
-                <div style="
-                    background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
-                    border: 3px solid rgba(255, 215, 0, 0.5);
-                    border-radius: 20px;
-                    padding: 1.2rem 2rem;
-                    text-align: center;
-                    box-shadow: 0 8px 25px rgba(210, 105, 30, 0.2);
-                    margin-bottom: 1rem;
-                    animation: quoteFadeIn 0.8s ease;
-                ">
-                    <div style="
-                        font-size: 1.5rem;
-                        font-weight: 800;
-                        color: #5A2C15;
-                        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-                        line-height: 1.4;
-                    ">
-                        🐝 Welcome back, {{ current_user.display_name or 'Friend' }}!
-                    </div>
-                    <div style="
-                        font-size: 0.9rem;
-                        color: #8B4513;
-                        margin-top: 0.5rem;
-                        font-weight: 500;
-                    ">
-                        Ready to practice some spelling? 🎯
-                    </div>
-                </div>
-                {% endif %}
-                
-                <!-- Bee Quote of the Day -->
                 <div id="beeQuoteBanner" style="
                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                     border: 3px solid rgba(255, 215, 0, 0.8);
