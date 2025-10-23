@@ -7490,12 +7490,12 @@
                 // Store preload results for later use
                 window.avatarPreloadResults = preloadResults;
                 
-                // Update the visual status badge
-                setTimeout(() => {
-                    if (typeof updateAvatarSystemStatus === 'function') {
-                        updateAvatarSystemStatus();
-                    }
-                }, 100);
+                // Update the visual status badge - DISABLED to keep UI clean
+                // setTimeout(() => {
+                //     if (typeof updateAvatarSystemStatus === 'function') {
+                //         updateAvatarSystemStatus();
+                //     }
+                // }, 100);
                 
             } catch (preloadError) {
                 console.error('❌ Avatar preload failed:', preloadError);
