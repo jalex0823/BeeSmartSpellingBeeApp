@@ -8098,28 +8098,32 @@
                     try {
                         // Create Three.js scene for user avatar
                         const scene = new THREE.Scene();
-                        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+                        const camera = new THREE.PerspectiveCamera(45, 260 / 280, 0.1, 1000);
                         
-                        // Enhanced camera positioning for optimal avatar visibility
-                        camera.position.set(0, 1.2, 3.2);
-                        camera.lookAt(new THREE.Vector3(0, 0.8, 0));
+                        // Optimized camera positioning to show full model including antenna
+                        camera.position.set(0, 1.5, 4.0);  // Moved back and up
+                        camera.lookAt(new THREE.Vector3(0, 1.0, 0));
                         
                         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                        renderer.setSize(250, 250);
+                        renderer.setSize(260, 280);  // Match stage container size
                         renderer.setClearColor(0x000000, 0); // Fully transparent background
                         
-                        // Configure container and canvas for proper layering
-                        container.style.position = 'relative';
+                        // Configure container - use absolute within fixed stage
+                        container.style.position = 'absolute';
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.width = '100%';
+                        container.style.height = '100%';
                         container.style.zIndex = '10';
                         container.style.overflow = 'visible';
                         
-                        // Configure the canvas element
+                        // Configure the canvas element - center within container
                         const canvas = renderer.domElement;
                         canvas.style.position = 'absolute';
-                        canvas.style.top = '0';
+                        canvas.style.top = '50%';
                         canvas.style.left = '50%';
-                        canvas.style.transform = 'translateX(-50%)';
-                        canvas.style.pointerEvents = 'none'; // Allow clicks through to UI
+                        canvas.style.transform = 'translate(-50%, -50%)';
+                        canvas.style.pointerEvents = 'auto'; // Allow clicks on avatar
                         canvas.style.zIndex = '10';
                         
                         container.appendChild(canvas);
