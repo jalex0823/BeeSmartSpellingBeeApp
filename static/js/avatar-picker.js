@@ -94,18 +94,14 @@ function renderAvatarGrid(avatarsToRender) {
         
         grid.appendChild(card);
 
-        // Render 3D OBJ model in thumbnail (async)
-        render3DThumbnail(thumbContainer, avatar).catch(err => {
-            console.warn(`Failed to render 3D thumbnail for ${avatar.id}:`, err);
-            // Fallback to PNG image on error
-            const thumbnailUrl = avatar.urls?.thumbnail || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
-            thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
-                                            alt="${displayName}" 
-                                            style="width:100%;height:100%;object-fit:contain;">`;
-        });
+        // Use 2D PNG thumbnail (simple and fast)
+        const thumbnailUrl = avatar.urls?.thumbnail || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
+        thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
+                                        alt="${displayName}" 
+                                        style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
     });
     
-    console.log(`✅ Rendered ${avatarsToRender.length} avatar cards with 3D OBJ thumbnails`);
+    console.log(`✅ Rendered ${avatarsToRender.length} avatar cards with 2D thumbnails`);
 }
 
 // Render a 3D avatar model in a small, consistent-size thumbnail canvas
