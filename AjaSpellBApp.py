@@ -35,6 +35,7 @@ from models import WordList, WordListItem
 from models import PasswordResetToken
 from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
+from models import Avatar, BattleSession
 
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
@@ -1146,27 +1147,33 @@ def get_leaderboard_no_guests(limit=10):
     """
     Get leaderboard excluding guest users - includes avatar information
     """
-    from models import Avatar
-    
-    # Get users with their avatar data
-    users = filter_non_guest_users(
-        User.query.filter(
-            User.role.in_(['student', 'teacher', 'parent', 'admin'])
-        )
-    ).order_by(
-        User.total_lifetime_points.desc(),
-        User.total_quizzes_completed.desc(),
-        User.created_at.asc()
-    ).limit(limit).all()
-    
-    # Enrich each user with their avatar object for easier template access
-    for user in users:
-        if user.avatar_id:
-            user.avatar_obj = Avatar.query.filter_by(slug=user.avatar_id).first()
-        else:
-            user.avatar_obj = None
-    
-    return users
+    try:
+        # Get users with their avatar data
+        users = filter_non_guest_users(
+            User.query.filter(
+                User.role.in_(['student', 'teacher', 'parent', 'admin'])
+            )
+        ).order_by(
+            User.total_lifetime_points.desc(),
+            User.total_quizzes_completed.desc(),
+            User.created_at.asc()
+        ).limit(limit).all()
+        
+        # Enrich each user with their avatar object for easier template access
+        for user in users:
+            try:
+                if user.avatar_id:
+                    user.avatar_obj = Avatar.query.filter_by(slug=user.avatar_id).first()
+                else:
+                    user.avatar_obj = None
+            except Exception as e:
+                print(f"Error loading avatar for user {user.id}: {e}")
+                user.avatar_obj = None
+        
+        return users
+    except Exception as e:
+        print(f"Error in get_leaderboard_no_guests: {e}")
+        return []
 
 # --- Helpers -----------------------------------------------------------------
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]", re.IGNORECASE)
@@ -6276,7 +6283,6 @@ def admin_dashboard():
     
     # Battle Bee Statistics - Query actual battle sessions
     try:
-        from models import BattleSession
         total_battles = BattleSession.query.count()
         active_battles = BattleSession.query.filter(
             BattleSession.status.in_(['waiting', 'in_progress'])
@@ -6289,7 +6295,11 @@ def admin_dashboard():
         completed_battles = 0
     
     # Get top 10 players on the leaderboard (exclude guests)
-    leaderboard = get_leaderboard_no_guests(10)
+    try:
+        leaderboard = get_leaderboard_no_guests(10)
+    except Exception as e:
+        print(f"Error loading leaderboard: {e}")
+        leaderboard = []
     
     # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
     for idx, player in enumerate(leaderboard, start=1):
