@@ -255,7 +255,7 @@
             animation: cardFloat 6s ease-in-out infinite;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(10px);
-            padding-top: 280px;      /* Space for fixed avatar (180px top + 200px height = ~380px, some overlap) */
+            padding-top: 240px;      /* Adjusted for avatar at top: 100px (less overlap needed) */
             margin-top: 2rem;        /* Push down from top of viewport */
         }
         
@@ -313,7 +313,7 @@
         /* 3D Mascot container - UPDATED to match quiz.html working version */
         #mascotBee3D {
             position: fixed !important;         /* Fixed position - won't move */
-            top: 180px !important;              /* Fixed distance from top */
+            top: 100px !important;              /* Moved up from 180px to prevent clipping */
             left: 50% !important;               /* Center horizontally */
             transform: translateX(-50%) !important; /* Offset by half width */
             width: 200px !important;            /* Much larger than quiz (110px) */
@@ -1029,7 +1029,7 @@
             
             #mascotBee3D {
                 position: fixed !important;     /* Fixed position on mobile too */
-                top: 150px !important;          /* Slightly higher on mobile */
+                top: 80px !important;           /* Moved up from 150px to prevent clipping */
                 left: 50% !important;
                 transform: translateX(-50%) !important;
                 width: 180px !important;        /* Large on mobile too */
