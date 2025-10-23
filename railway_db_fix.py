@@ -74,13 +74,13 @@ BROKEN_AVATARS_FIX = {
         'texture_file': 'Buzzbot_Bee_1022222436.png'
     },
     'seabea': {
-        'obj_file': 'SeaBea.obj',
-        'mtl_file': 'SeaBea.mtl',
+        'obj_file': 'Seabea.obj',
+        'mtl_file': 'Seabea.mtl',
         'texture_file': 'SeaBee_1019002514.png'
     },
     'superbee': {
-        'obj_file': 'SuperBee.obj',
-        'mtl_file': 'SuperBee.mtl',
+        'obj_file': 'Superbee.obj',
+        'mtl_file': 'Superbee.mtl',
         'texture_file': 'Super_Bee_Hero_1018233012.png'
     }
 }
