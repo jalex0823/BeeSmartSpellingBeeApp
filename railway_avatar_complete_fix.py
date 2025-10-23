@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """
 Complete avatar database fix for Railway deployment
-Fixes both OBJ/MTL filenames AND thumbnail filenames
+- Deletes 15 broken avatars (files don't exist)
+- Fixes filenames for 9 working avatars
 """
 from AjaSpellBApp import app, db
-from models import Avatar
+from models import Avatar, User
 
-# Complete mapping for all 24 avatars
+# List of broken avatars to DELETE (files don't exist)
+BROKEN_AVATARS = [
+    'astro-bee', 'biker-bee', 'brother-bee', 'builder-bee', 'cool-bee',
+    'detective-bee', 'diva-bee', 'doctor-bee', 'explorer-bee', 'franken-bee',
+    'knight-bee', 'queen-bee', 'robo-bee', 'seabea', 'superbee'
+]
+
+# Complete mapping for the 9 WORKING avatars
 AVATAR_FIXES = {
     'al-bee': {
         'obj_file': 'AlBee.obj',
@@ -19,72 +27,6 @@ AVATAR_FIXES = {
         'mtl_file': 'AnxiousBee.mtl',
         'texture_file': 'AnxiousBee.png',
         'thumbnail_file': 'AnxiousBee!.png'
-    },
-    'astro-bee': {
-        'obj_file': 'AstroBee.obj',
-        'mtl_file': 'AstroBee.mtl',
-        'texture_file': 'SpaceBee_Explorer_1021171329.png',
-        'thumbnail_file': 'AstroBee!.png'
-    },
-    'biker-bee': {
-        'obj_file': 'BikerBee.obj',
-        'mtl_file': 'BikerBee.mtl',
-        'texture_file': 'Motorcycle_Buzz_Bee_1018234507.png',
-        'thumbnail_file': 'BikerBee!.png'
-    },
-    'brother-bee': {
-        'obj_file': 'BrotherBee.obj',
-        'mtl_file': 'BrotherBee.mtl',
-        'texture_file': 'Buzz_Hero_1022221450.png',
-        'thumbnail_file': 'BrotherBee!.png'
-    },
-    'builder-bee': {
-        'obj_file': 'BuilderBee.obj',
-        'mtl_file': 'BuilderBee.mtl',
-        'texture_file': 'Builder_Bee_1022223231.png',
-        'thumbnail_file': 'BuilderBee!.png'
-    },
-    'cool-bee': {
-        'obj_file': 'CoolBee.obj',
-        'mtl_file': 'CoolBee.mtl',
-        'texture_file': 'Cool_Bee_1022222744.png',
-        'thumbnail_file': 'CoolBee!.png'
-    },
-    'detective-bee': {
-        'obj_file': 'DetectiveBee.obj',
-        'mtl_file': 'DetectiveBee.mtl',
-        'texture_file': 'Detective_Bee_1022222906.png',
-        'thumbnail_file': 'DetectiveBee!.png'
-    },
-    'diva-bee': {
-        'obj_file': 'DivaBee.obj',
-        'mtl_file': 'DivaBee.mtl',
-        'texture_file': 'Bee_Diva_1018233351.png',
-        'thumbnail_file': 'DivaBee!.png'
-    },
-    'doctor-bee': {
-        'obj_file': 'DoctorBee.obj',
-        'mtl_file': 'DoctorBee.mtl',
-        'texture_file': 'Bee_Doctor_1018225148.png',
-        'thumbnail_file': 'DoctorBee!.png'
-    },
-    'explorer-bee': {
-        'obj_file': 'ExplorerBee.obj',
-        'mtl_file': 'ExplorerBee.mtl',
-        'texture_file': 'Explorer_Bee_1022223832.png',
-        'thumbnail_file': 'ExplorerBee!.png'
-    },
-    'franken-bee': {
-        'obj_file': 'FrankenBee.obj',
-        'mtl_file': 'FrankenBee.mtl',
-        'texture_file': 'Frankenbee_1021161641.png',
-        'thumbnail_file': 'Frankenbee!.png'
-    },
-    'knight-bee': {
-        'obj_file': 'KnightBee.obj',
-        'mtl_file': 'KnightBee.mtl',
-        'texture_file': 'Bee_Knight_1018184515.png',
-        'thumbnail_file': 'KnightBee!.png'
     },
     'mascot-bee': {
         'obj_file': 'MascotBee.obj',
@@ -104,35 +46,11 @@ AVATAR_FIXES = {
         'texture_file': 'ProfessorBee.png',
         'thumbnail_file': 'ProfessorBee!.png'
     },
-    'queen-bee': {
-        'obj_file': 'QueenBee.obj',
-        'mtl_file': 'QueenBee.mtl',
-        'texture_file': 'Queen_Bee_Majesty_1022222156.png',
-        'thumbnail_file': 'QueenBee!.png'
-    },
-    'robo-bee': {
-        'obj_file': 'RoboBee.obj',
-        'mtl_file': 'RoboBee.mtl',
-        'texture_file': 'Buzzbot_Bee_1022222436.png',
-        'thumbnail_file': 'RoboBee!.png'
-    },
     'rocker-bee': {
         'obj_file': 'RockerBee.obj',
         'mtl_file': 'RockerBee.mtl',
         'texture_file': 'RockerBee.png',
         'thumbnail_file': 'RockerBee!.png'
-    },
-    'seabea': {
-        'obj_file': 'Seabea.obj',
-        'mtl_file': 'Seabea.mtl',
-        'texture_file': 'SeaBee_1019002514.png',
-        'thumbnail_file': 'Seabea!.png'
-    },
-    'superbee': {
-        'obj_file': 'Superbee.obj',
-        'mtl_file': 'Superbee.mtl',
-        'texture_file': 'Super_Bee_Hero_1018233012.png',
-        'thumbnail_file': 'Superbee!.png'
     },
     'vamp-bee': {
         'obj_file': 'VampBee.obj',
@@ -154,10 +72,45 @@ AVATAR_FIXES = {
     }
 }
 
+def delete_broken_avatars():
+    """Delete avatars with broken/missing files from database"""
+    with app.app_context():
+        print("🗑️  Deleting broken avatars from database...")
+        print("=" * 60)
+        
+        deleted_count = 0
+        for slug in BROKEN_AVATARS:
+            avatar = Avatar.query.filter_by(slug=slug).first()
+            
+            if avatar:
+                avatar_id = avatar.id
+                avatar_name = avatar.name
+                
+                # Update users who have this avatar (set to NULL)
+                users_updated = User.query.filter_by(avatar_id=avatar_id).update({'avatar_id': None})
+                
+                # Delete the avatar
+                db.session.delete(avatar)
+                
+                print(f"🗑️  Deleted: {avatar_name} ({slug})")
+                if users_updated > 0:
+                    print(f"   Updated {users_updated} user(s) to default avatar")
+                
+                deleted_count += 1
+            else:
+                print(f"⚠️  Avatar not found (already deleted): {slug}")
+        
+        # Commit deletions
+        db.session.commit()
+        
+        print("=" * 60)
+        print(f"✅ Deleted {deleted_count} broken avatars")
+        print("=" * 60)
+
 def fix_avatars():
     """Fix all avatar file references in database"""
     with app.app_context():
-        print("🔧 Starting complete avatar database fix...")
+        print("🔧 Fixing avatar file references in database...")
         print("=" * 60)
         
         updated_count = 0
@@ -190,4 +143,6 @@ def fix_avatars():
         print("=" * 60)
 
 if __name__ == '__main__':
+    # First delete broken avatars, then fix the remaining ones
+    delete_broken_avatars()
     fix_avatars()
