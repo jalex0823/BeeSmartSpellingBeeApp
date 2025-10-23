@@ -1481,7 +1481,7 @@
                     font-size: 1.5rem; 
                     font-weight: 800; 
                     color: #5A2C15; 
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 1rem;
                     margin-top: 0.5rem;
                     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
                     text-align: center;
@@ -1499,6 +1499,22 @@
                     🐝 Welcome, {{ current_user.display_name or 'Friend' }}!
                 </div>
                 {% endif %}
+                
+                <!-- Avatar Name Badge (shows which avatar is loaded) -->
+                <div id="avatarNameBadge" style="
+                    display: inline-block;
+                    margin: 0 auto 1rem;
+                    padding: 0.5rem 1.5rem;
+                    background: #FF8C00;
+                    color: white;
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                    border-radius: 20px;
+                    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+                    text-align: center;
+                ">
+                    <span id="avatarNameText">Loading...</span>
+                </div>
                 
                 <!-- 3D Avatar Display:
                      - Guest users: Always show MascotBee 
@@ -1548,7 +1564,7 @@
                     color: #FF6B00;
                     font-weight: 600;
                     margin-top: 8px;
-                    margin-bottom: 10px;
+                    margin-bottom: 1.5rem;
                     text-align: center;
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;
@@ -1558,7 +1574,7 @@
                 </div>
                 
                 <!-- Text-only logo -->
-                <img src="/static/BeeSmartTitle.png" alt="BeeSmart Logo" />
+                <img src="/static/BeeSmartTitle.png" alt="BeeSmart Logo" style="margin-bottom: 1rem;" />
                 
                 <!-- Website URL Badge -->
                 <div style="margin-top: 12px; font-size: 16px; font-weight: 600; color: #FF6B00; font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;">
@@ -7512,6 +7528,14 @@
                             await initUserAvatar3D(window.userAvatarLoader.userAvatar);
                             avatarLoadSuccess = true;
                             console.log('✅ Custom avatar loaded successfully:', window.userAvatarLoader.userAvatar.avatar_id);
+                            
+                            // Update avatar name badge
+                            const avatarNameBadge = document.getElementById('avatarNameText');
+                            if (avatarNameBadge && window.userAvatarLoader.userAvatar) {
+                                const avatarName = window.userAvatarLoader.userAvatar.name || 
+                                                 window.userAvatarLoader.getAvatarDisplayName();
+                                avatarNameBadge.textContent = avatarName;
+                            }
                         } catch (avatarError) {
                             console.error('❌ Custom avatar failed to load:', avatarError);
                             
@@ -7567,6 +7591,12 @@
                         console.log('👋 Using MascotBee (no custom avatar detected)');
                         await initDefaultMascot();
                         avatarLoadSuccess = true;
+                        
+                        // Update avatar name badge for default mascot
+                        const avatarNameBadge = document.getElementById('avatarNameText');
+                        if (avatarNameBadge) {
+                            avatarNameBadge.textContent = 'Mascot Bee';
+                        }
                     }
                     
                     if (avatarLoadSuccess) {
