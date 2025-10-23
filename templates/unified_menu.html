@@ -1522,19 +1522,8 @@
                      - Profile avatars are assigned during registration -->
                 <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
                 
-                <!-- Avatar System Status Badge (shows preload results) -->
-                <div id="avatarSystemStatus" style="
-                    display: none;
-                    margin: 8px auto 10px;
-                    padding: 4px 8px;
-                    background: rgba(0, 0, 0, 0.1);
-                    border-radius: 12px;
-                    font-size: 10px;
-                    font-weight: 500;
-                    text-align: center;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                " onclick="showAvatarInfoModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAvatarInfoModal();}" tabindex="0" role="button" aria-label="Learn about your avatar" title="Click to learn about your avatar">
+                <!-- Avatar System Status Badge (PERMANENTLY HIDDEN) -->
+                <div id="avatarSystemStatus" style="display: none !important;">
                     <span id="avatarStatusText">Checking...</span>
                 </div>
                 
