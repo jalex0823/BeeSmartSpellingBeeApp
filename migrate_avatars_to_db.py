@@ -44,16 +44,16 @@ def populate_avatars_from_filesystem():
                 description = avatar_data.get('description', '')
                 category = avatar_data.get('category', 'classic')
                 
-                # Find thumbnail PNG file (look for any .png in folder)
-                avatar_folder_path = os.path.join('static', 'assets', 'avatars', folder)
-                
-                # Check if folder exists
-                if not os.path.exists(avatar_folder_path):
-                    print(f"⚠️  Folder not found: {avatar_folder_path}, using default thumbnail")
-                    thumbnail_file = 'thumbnail.png'
+                # Use get_avatar_info to get the correct thumbnail filename
+                # This uses the hardcoded mapping in avatar_catalog.py which knows the correct !.png files
+                from avatar_catalog import get_avatar_info
+                avatar_info = get_avatar_info(slug)
+                thumbnail_url = avatar_info.get('thumbnail_url', '')
+                # Extract just the filename from the URL (e.g., /static/assets/avatars/queen-bee/QueenBee!.png -> QueenBee!.png)
+                if thumbnail_url:
+                    thumbnail_file = thumbnail_url.split('/')[-1]
                 else:
-                    png_files = glob.glob(os.path.join(avatar_folder_path, '*.png'))
-                    thumbnail_file = os.path.basename(png_files[0]) if png_files else 'thumbnail.png'
+                    thumbnail_file = 'thumbnail.png'
                 
                 # Create Avatar model instance
                 avatar = Avatar(

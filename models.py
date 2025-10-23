@@ -119,7 +119,7 @@ class User(UserMixin, db.Model):
                 'urls': {
                     'model_obj': '/static/assets/avatars/cool-bee/CoolBee.obj',
                     'model_mtl': '/static/assets/avatars/cool-bee/CoolBee.mtl',
-                    'texture': '/static/assets/avatars/cool-bee/CoolBee.png',
+                    'texture': '/static/assets/avatars/cool-bee/Cool_Bee_1022222744.png',
                     'thumbnail': '/static/assets/avatars/cool-bee/CoolBee!.png',
                     'preview': '/static/assets/avatars/cool-bee/CoolBee!.png',
                 }
@@ -138,7 +138,7 @@ class User(UserMixin, db.Model):
             'model_obj_url': f"{base_path}/{avatar.obj_file}",
             'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
             'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-            'fallback_url': "/static/assets/avatars/fallback.png"
+            'fallback_url': "/static/assets/avatars/mascot-bee/MascotBee!.png"
         }
         
         # Build URLs dict for backward compatibility
