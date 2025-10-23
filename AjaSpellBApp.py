@@ -565,12 +565,14 @@ print("🔧 Initializing database...")
 db.init_app(app)
 print("✅ Database initialized")
 
-# Initialize Socket.IO for Battle of the Bees (temporarily disabled until Flask-SocketIO is installed)
-print("🔧 Socket.IO temporarily disabled - battles will work without real-time updates")
-# TODO: Uncomment once Flask-SocketIO is properly installed
-# from app_socketio import socketio
-# socketio.init_app(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
-print("⚠️ Socket.IO not initialized - battles will use polling instead")
+# Initialize Socket.IO for Battle of the Bees
+try:
+    from app_socketio import socketio
+    socketio.init_app(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+    print("✅ Socket.IO initialized for Battle of the Bees")
+except Exception as e:
+    print(f"⚠️ Socket.IO initialization failed: {e}")
+    print("⚠️ Battles will work without real-time updates")
 
 # --- Safety net: ensure DB tables exist in deployed environments (e.g., Railway) ---
 def _ensure_db_initialized() -> None:
@@ -1142,9 +1144,12 @@ def get_students_no_guests():
 
 def get_leaderboard_no_guests(limit=10):
     """
-    Get leaderboard excluding guest users
+    Get leaderboard excluding guest users - includes avatar information
     """
-    return filter_non_guest_users(
+    from models import Avatar
+    
+    # Get users with their avatar data
+    users = filter_non_guest_users(
         User.query.filter(
             User.role.in_(['student', 'teacher', 'parent', 'admin'])
         )
@@ -1153,6 +1158,15 @@ def get_leaderboard_no_guests(limit=10):
         User.total_quizzes_completed.desc(),
         User.created_at.asc()
     ).limit(limit).all()
+    
+    # Enrich each user with their avatar object for easier template access
+    for user in users:
+        if user.avatar_id:
+            user.avatar_obj = Avatar.query.filter_by(slug=user.avatar_id).first()
+        else:
+            user.avatar_obj = None
+    
+    return users
 
 # --- Helpers -----------------------------------------------------------------
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]", re.IGNORECASE)
@@ -6260,10 +6274,19 @@ def admin_dashboard():
         'my_students_count': len(my_students)
     }
     
-    # Battle Bee Statistics (placeholder - Battle models not yet implemented)
-    total_battles = 0
-    active_battles = 0
-    completed_battles = 0
+    # Battle Bee Statistics - Query actual battle sessions
+    try:
+        from models import BattleSession
+        total_battles = BattleSession.query.count()
+        active_battles = BattleSession.query.filter(
+            BattleSession.status.in_(['waiting', 'in_progress'])
+        ).count()
+        completed_battles = BattleSession.query.filter_by(status='completed').count()
+    except Exception as e:
+        print(f"Error loading battle stats: {e}")
+        total_battles = 0
+        active_battles = 0
+        completed_battles = 0
     
     # Get top 10 players on the leaderboard (exclude guests)
     leaderboard = get_leaderboard_no_guests(10)
@@ -7783,6 +7806,11 @@ print("=" * 60)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Starting development server on port {port} (Socket.IO disabled temporarily)...")
-    # TODO: Use socketio.run() once Flask-SocketIO is properly installed
-    app.run(host="0.0.0.0", port=port, debug=True)  # Standard Flask for now
+    print(f"🚀 Starting development server on port {port} with Socket.IO support...")
+    try:
+        from app_socketio import socketio
+        socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
+    except Exception as e:
+        print(f"⚠️ Failed to start with Socket.IO: {e}")
+        print("🔄 Falling back to standard Flask server...")
+        app.run(host="0.0.0.0", port=port, debug=True)
