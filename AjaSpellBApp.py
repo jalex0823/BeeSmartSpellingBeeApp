@@ -7546,10 +7546,10 @@ def api_get_my_avatar():
                     'variant': 'default',
                     'name': 'MascotBee',
                     'urls': {
-                        'model_obj': '/static/models/MascotBee_1019174653_texture.obj',
-                        'model_mtl': '/static/models/MascotBee_1019174653_texture.mtl',
-                        'texture': '/static/models/MascotBee_1019174653_texture.png',
-                        'thumbnail': '/static/BeeSmartBee.png'
+                        'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
+                        'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
+                        'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
+                        'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                     }
                 },
                 'use_mascot': True
@@ -7567,10 +7567,10 @@ def api_get_my_avatar():
                     'variant': 'default',
                     'name': 'MascotBee',
                     'urls': {
-                        'model_obj': '/static/models/MascotBee_1019174653_texture.obj',
-                        'model_mtl': '/static/models/MascotBee_1019174653_texture.mtl',
-                        'texture': '/static/models/MascotBee_1019174653_texture.png',
-                        'thumbnail': '/static/BeeSmartBee.png'
+                        'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
+                        'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
+                        'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
+                        'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                     }
                 },
                 'use_mascot': True
@@ -7594,10 +7594,10 @@ def api_get_my_avatar():
                 'variant': 'default',
                 'name': 'MascotBee',
                 'urls': {
-                    'model_obj': '/static/models/MascotBee_1019174653_texture.obj',
-                    'model_mtl': '/static/models/MascotBee_1019174653_texture.mtl',
-                    'texture': '/static/models/MascotBee_1019174653_texture.png',
-                    'thumbnail': '/static/BeeSmartBee.png'
+                    'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
+                    'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
+                    'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
+                    'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                 }
             },
             'use_mascot': True
