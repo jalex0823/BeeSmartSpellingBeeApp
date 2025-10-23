@@ -1,1 +1,1 @@
-web: sh -c 'exec gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 600 --graceful-timeout 30 --workers 1 --threads 4 --worker-class gthread --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app'
+web: sh -c 'python railway_db_fix.py && python fix_avatar_thumbnails.py && exec gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 600 --graceful-timeout 30 --workers 1 --threads 4 --worker-class gthread --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app'
