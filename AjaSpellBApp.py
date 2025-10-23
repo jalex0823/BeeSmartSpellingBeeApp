@@ -3815,17 +3815,27 @@ def api_next():
         order = state["order"]
 
     if idx >= len(order):
-        # finished
-        return jsonify({
-            "done": True,
-            "summary": {
-                "total": len(order),
-                "correct": state["correct"],
-                "incorrect": state["incorrect"],
-                "streak": state["streak"],
-                "history": state["history"]
-            }
-        })
+        # SAFETY CHECK: Don't show completion if no questions were answered
+        if state["correct"] == 0 and state["incorrect"] == 0:
+            print(f"WARNING /api/next: Quiz appears complete but no questions answered! Resetting.")
+            print(f"WARNING /api/next: idx={idx}, len(order)={len(order)}, correct={state['correct']}, incorrect={state['incorrect']}")
+            init_quiz_state()
+            state = get_quiz_state()
+            idx = state["idx"]
+            order = state["order"]
+            # Fall through to return first question
+        else:
+            # finished
+            return jsonify({
+                "done": True,
+                "summary": {
+                    "total": len(order),
+                    "correct": state["correct"],
+                    "incorrect": state["incorrect"],
+                    "streak": state["streak"],
+                    "history": state["history"]
+                }
+            })
 
     word_rec = wb[order[idx]]
     word = word_rec.get("word", "")
@@ -7166,51 +7176,61 @@ def speed_round_results():
 def api_get_avatars():
     """Get the complete avatar catalog with optional filtering, plus canonical asset URLs"""
     try:
-        from avatar_catalog import (
-            get_avatar_catalog,
-            get_avatars_by_category,
-            search_avatars,
-            get_avatar_info,
-        )
-
+        from models import Avatar
+        
         # Check if filtering by category or search
         category = request.args.get('category')
         search_query = request.args.get('search')
 
+        # Query database for avatars
+        query = Avatar.query.filter_by(is_active=True)
+        
+        if category:
+            query = query.filter_by(category=category)
+        
         if search_query:
-            avatars = search_avatars(search_query)
-        elif category:
-            by_category = get_avatars_by_category()
-            avatars = by_category.get(category, [])
-        else:
-            avatars = get_avatar_catalog()
+            search_pattern = f"%{search_query}%"
+            query = query.filter(
+                db.or_(
+                    Avatar.name.ilike(search_pattern),
+                    Avatar.description.ilike(search_pattern),
+                    Avatar.slug.ilike(search_pattern)
+                )
+            )
+        
+        avatars = query.order_by(Avatar.sort_order, Avatar.name).all()
 
         # Enrich each avatar with thumbnail/preview and canonical 3D asset URLs
         enriched_avatars = []
         for avatar in avatars:
-            avatar_id = avatar['id']
-            # Base copy from catalog
-            enriched = avatar.copy()
-
-            # Compute canonical URLs using catalog helper for consistency across UI and tests
-            info = get_avatar_info(avatar_id)
-
-            # Backfill display name/description/category from authoritative info if present
-            enriched['name'] = info.get('name', enriched.get('name'))
-            enriched['description'] = info.get('description', enriched.get('description'))
-            enriched['category'] = info.get('category', enriched.get('category'))
-
-            # Legacy flat fields for thumbnails (kept for backward compatibility)
-            enriched['thumbnail'] = info.get('thumbnail_url') or f"/static/assets/avatars/{avatar_id}/thumbnail.png"
-            enriched['preview'] = info.get('preview_url') or f"/static/assets/avatars/{avatar_id}/preview.png"
-
-            # Canonical URLs bundle expected by front-end picker and validation scripts
-            enriched['urls'] = {
-                'model_obj': info.get('model_obj_url'),
-                'model_mtl': info.get('model_mtl_url'),
-                'texture': info.get('texture_url'),
-                'thumbnail': info.get('thumbnail_url'),
-                'preview': info.get('preview_url'),
+            avatar_id = avatar.slug
+            base_path = f"/static/assets/avatars/{avatar.folder_path}"
+            
+            # Build enriched avatar dict with all URLs
+            enriched = {
+                'id': avatar_id,
+                'name': avatar.name,
+                'description': avatar.description,
+                'category': avatar.category,
+                'folder': avatar.folder_path,
+                
+                # Legacy flat fields for thumbnails (kept for backward compatibility)
+                'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
+                'preview': f"{base_path}/{avatar.thumbnail_file}",
+                
+                # Canonical URLs bundle expected by front-end picker and validation scripts
+                'urls': {
+                    'model_obj': f"{base_path}/{avatar.obj_file}",
+                    'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+                    'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+                    'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
+                    'preview': f"{base_path}/{avatar.thumbnail_file}",
+                },
+                
+                # Additional metadata
+                'unlock_level': avatar.unlock_level,
+                'points_required': avatar.points_required,
+                'is_premium': avatar.is_premium,
             }
 
             enriched_avatars.append(enriched)
@@ -7285,19 +7305,35 @@ def speed_round_health_railway():
 def api_get_avatar(avatar_id):
     """Get information for a specific avatar"""
     try:
-        from avatar_catalog import get_avatar_info, validate_avatar
+        from models import Avatar
         
-        # Validate avatar exists
-        is_valid, reason = validate_avatar(avatar_id)
-        if not is_valid:
+        # Query database for avatar
+        avatar = Avatar.get_by_slug(avatar_id)
+        
+        if not avatar:
             return jsonify({
                 'status': 'error',
-                'message': f'Avatar not found: {avatar_id}',
-                'reason': reason
+                'message': f'Avatar not found: {avatar_id}'
             }), 404
         
-        # Get avatar information
-        avatar_info = get_avatar_info(avatar_id)
+        # Build avatar info dict with all URLs
+        base_path = f"/static/assets/avatars/{avatar.folder_path}"
+        avatar_info = {
+            'id': avatar.slug,
+            'name': avatar.name,
+            'description': avatar.description,
+            'variant': 'default',
+            'category': avatar.category,
+            'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
+            'preview_url': f"{base_path}/{avatar.thumbnail_file}",
+            'model_obj_url': f"{base_path}/{avatar.obj_file}",
+            'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+            'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+            'fallback_url': "/static/assets/avatars/fallback.png",
+            'unlock_level': avatar.unlock_level,
+            'points_required': avatar.points_required,
+            'is_premium': avatar.is_premium
+        }
         
         return jsonify({
             'status': 'success',
@@ -7316,9 +7352,30 @@ def api_get_avatar(avatar_id):
 def api_get_avatar_categories():
     """Get avatars grouped by category"""
     try:
-        from avatar_catalog import get_avatars_by_category
+        from models import Avatar
         
-        categories = get_avatars_by_category()
+        # Query all active avatars
+        avatars = Avatar.query.filter_by(is_active=True).order_by(Avatar.sort_order, Avatar.name).all()
+        
+        # Group by category
+        categories = {}
+        for avatar in avatars:
+            cat = avatar.category
+            if cat not in categories:
+                categories[cat] = []
+            
+            base_path = f"/static/assets/avatars/{avatar.folder_path}"
+            categories[cat].append({
+                'id': avatar.slug,
+                'name': avatar.name,
+                'description': avatar.description,
+                'category': avatar.category,
+                'folder': avatar.folder_path,
+                'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
+                'unlock_level': avatar.unlock_level,
+                'points_required': avatar.points_required,
+                'is_premium': avatar.is_premium
+            })
         
         return jsonify({
             'status': 'success',

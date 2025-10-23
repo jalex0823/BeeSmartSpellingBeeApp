@@ -78,11 +78,10 @@ class User(UserMixin, db.Model):
         if self.avatar_locked:
             return False, "Avatar changes are locked by parental controls"
         
-        # Validate avatar exists in catalog
-        from avatar_catalog import AVATAR_CATALOG
-        valid_avatars = [a['id'] for a in AVATAR_CATALOG]
+        # Validate avatar exists in database
+        avatar = Avatar.get_by_slug(avatar_id)
         
-        if avatar_id not in valid_avatars:
+        if not avatar:
             return False, f"Invalid avatar ID: {avatar_id}"
         
         # All our avatars use 'default' variant
@@ -104,10 +103,45 @@ class User(UserMixin, db.Model):
     
     def get_avatar_data(self):
         """Get complete avatar data for rendering (with stable `urls` shape)"""
-        from avatar_catalog import get_avatar_info
+        # Query database for avatar
+        avatar = Avatar.get_by_slug(self.avatar_id)
         
-        info = get_avatar_info(self.avatar_id, self.avatar_variant)
+        # Fallback to cool-bee if avatar not found
+        if not avatar:
+            avatar = Avatar.get_by_slug('cool-bee')
         
+        if not avatar:
+            # Ultimate fallback
+            return {
+                'id': 'cool-bee',
+                'name': 'Cool Bee',
+                'variant': 'default',
+                'urls': {
+                    'model_obj': '/static/assets/avatars/cool-bee/CoolBee.obj',
+                    'model_mtl': '/static/assets/avatars/cool-bee/CoolBee.mtl',
+                    'texture': '/static/assets/avatars/cool-bee/CoolBee.png',
+                    'thumbnail': '/static/assets/avatars/cool-bee/CoolBee!.png',
+                    'preview': '/static/assets/avatars/cool-bee/CoolBee!.png',
+                }
+            }
+        
+        # Build avatar info from database
+        base_path = f"/static/assets/avatars/{avatar.folder_path}"
+        info = {
+            'id': avatar.slug,
+            'name': avatar.name,
+            'description': avatar.description,
+            'variant': self.avatar_variant,
+            'category': avatar.category,
+            'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
+            'preview_url': f"{base_path}/{avatar.thumbnail_file}",
+            'model_obj_url': f"{base_path}/{avatar.obj_file}",
+            'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+            'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+            'fallback_url': "/static/assets/avatars/fallback.png"
+        }
+        
+        # Build URLs dict for backward compatibility
         urls = {
             'thumbnail': info.get('thumbnail_url'),
             'preview': info.get('preview_url'),
@@ -119,7 +153,7 @@ class User(UserMixin, db.Model):
         
         # Back-compat top-level fields some templates/tools may still reference
         return {
-            'avatar_id': self.avatar_id or 'classic-bee',
+            'avatar_id': self.avatar_id or 'cool-bee',
             'variant': (self.avatar_variant or 'default'),
             'name': info.get('name'),
             'thumbnail_url': urls['thumbnail'],
@@ -784,3 +818,68 @@ class BattlePlayer(db.Model):
     def is_active(self):
         """Check if player is still in battle"""
         return self.left_at is None
+
+
+class Avatar(db.Model):
+    """3D Avatar catalog with file associations and metadata"""
+    __tablename__ = 'avatars'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(50), unique=True, nullable=False, index=True)  # e.g., 'cool-bee', 'explorer-bee'
+    name = db.Column(db.String(100), nullable=False)  # Display name: "Cool Bee", "Explorer Bee"
+    description = db.Column(db.Text)  # Kid-friendly description
+    category = db.Column(db.String(50), default='classic', index=True)  # classic, adventure, sports, etc.
+    
+    # File paths (relative to static/assets/avatars/)
+    folder_path = db.Column(db.String(200), nullable=False)  # e.g., 'cool-bee'
+    obj_file = db.Column(db.String(200), nullable=False)  # e.g., 'cool-bee.obj'
+    mtl_file = db.Column(db.String(200))  # e.g., 'cool-bee.mtl'
+    texture_file = db.Column(db.String(200))  # e.g., 'cool-bee-texture.png'
+    thumbnail_file = db.Column(db.String(200))  # e.g., 'cool-bee-thumb.png'
+    
+    # Metadata
+    unlock_level = db.Column(db.Integer, default=1)  # Minimum level to unlock (1 = always available)
+    points_required = db.Column(db.Integer, default=0)  # Points needed to unlock
+    is_premium = db.Column(db.Boolean, default=False)  # Premium/paid avatars
+    sort_order = db.Column(db.Integer, default=0)  # Display order in picker
+    is_active = db.Column(db.Boolean, default=True)  # Can be selected by users
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship (users who have selected this avatar)
+    users = db.relationship('User', backref='avatar', lazy='dynamic',
+                           primaryjoin='Avatar.slug == foreign(User.avatar_id)')
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'id': self.slug,  # Keep 'id' as slug for backward compatibility with frontend
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'folder': self.folder_path,
+            'obj_file': self.obj_file,
+            'mtl_file': self.mtl_file,
+            'texture_file': self.texture_file,
+            'thumbnail_file': self.thumbnail_file,
+            'unlock_level': self.unlock_level,
+            'points_required': self.points_required,
+            'is_premium': self.is_premium,
+            'is_active': self.is_active
+        }
+    
+    @staticmethod
+    def get_by_slug(slug):
+        """Get avatar by slug (e.g., 'cool-bee')"""
+        return Avatar.query.filter_by(slug=slug, is_active=True).first()
+    
+    @staticmethod
+    def get_all_active(category=None):
+        """Get all active avatars, optionally filtered by category"""
+        query = Avatar.query.filter_by(is_active=True)
+        if category:
+            query = query.filter_by(category=category)
+        return query.order_by(Avatar.sort_order, Avatar.name).all()
+    
+    def __repr__(self):
+        return f'<Avatar {self.slug} - {self.name}>'

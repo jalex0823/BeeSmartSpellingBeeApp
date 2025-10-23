@@ -311,7 +311,7 @@
             align-items: center;
             justify-content: center;
             /* Avatar visibility fixes */
-            z-index: 100;              /* Keep well above name plate and tiles */
+            z-index: 150 !important;   /* Above everything including leaderboard */
             overflow: visible;        /* Prevent clipping */
         }
         
@@ -322,7 +322,7 @@
             left: 50% !important;
             transform: translate(-50%, -50%) !important;
             pointer-events: none;     /* Allow clicks through to UI */
-            z-index: 100 !important;   /* Ensure visibility above all cards */
+            z-index: 150 !important;   /* Match parent z-index */
         }
         
         #mascotBee3D:hover {

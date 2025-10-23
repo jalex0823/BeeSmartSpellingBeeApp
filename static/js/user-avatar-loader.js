@@ -7,9 +7,10 @@
 class UserAvatarLoader {
     constructor() {
         this.userAvatar = null;
-        // Avatar data loaded from API
+        // Avatar data loaded from API on-demand
         this.avatarMap = {};
         this.avatarDataLoaded = false;
+        this.dbConnectionVerified = false;
         // Known aliases to improve resilience against spacing/case/underscore differences
         this._aliasMap = {
             'albee': 'al-bee',
@@ -41,8 +42,8 @@ class UserAvatarLoader {
             'zombee': 'zom-bee'
         };
         
-        // Load avatar catalog from API on initialization
-        this.loadAvatarCatalog();
+        // Quick DB connection check instead of loading all avatars
+        this.verifyDatabaseConnection();
         
         // DEPRECATED - Old hardcoded map (kept for fallback only) - UPDATED TO NEW PATHS
         // Only includes working avatars with verified files
@@ -158,18 +159,47 @@ class UserAvatarLoader {
     }
 
     /**
-     * Load avatar catalog from API endpoint
+     * Quick database connection verification (lightweight check)
+     * Only verifies that the database is accessible, doesn't load all avatar data
+     */
+    async verifyDatabaseConnection() {
+        try {
+            console.log('🔍 Verifying avatar database connection...');
+            const response = await fetch('/api/avatars?category=classic');
+            if (response.ok) {
+                this.dbConnectionVerified = true;
+                console.log('✅ Avatar database connection verified');
+            } else {
+                console.warn('⚠️ Database connection check failed, will use fallback');
+                this.dbConnectionVerified = false;
+            }
+        } catch (error) {
+            console.warn('⚠️ Database connection check failed:', error);
+            this.dbConnectionVerified = false;
+        }
+    }
+
+    /**
+     * Load avatar catalog from API (lazy loading - only when needed)
+     * This is now called on-demand when getAvatarAssets() needs data
      */
     async loadAvatarCatalog() {
+        // Skip if already loaded
+        if (this.avatarDataLoaded) {
+            console.log('✅ Avatar catalog already loaded');
+            return;
+        }
+        
         try {
-            console.log('📡 Loading avatar catalog from API...');
+            console.log('📡 Loading avatar catalog from database API...');
             const response = await fetch('/api/avatars');
             if (!response.ok) {
                 throw new Error(`API returned ${response.status}`);
             }
             
-            const avatars = await response.json();
-            console.log(`✅ Loaded ${avatars.length} avatars from API`);
+            const data = await response.json();
+            const avatars = data.avatars || [];
+            console.log(`✅ Loaded ${avatars.length} avatars from database`);
             
             // Convert API response to avatarMap format
             avatars.forEach(avatar => {
@@ -237,6 +267,12 @@ class UserAvatarLoader {
      */
     async preloadAvatarSystem() {
         console.log('🔄 Starting avatar system preload validation...');
+        
+        // Lazy load avatar catalog if not already loaded
+        if (!this.avatarDataLoaded) {
+            console.log('📡 Avatar catalog not loaded yet, loading now...');
+            await this.loadAvatarCatalog();
+        }
         
         const preloadResults = {
             totalAvatars: 0,
