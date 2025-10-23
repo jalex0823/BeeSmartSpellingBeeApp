@@ -251,12 +251,13 @@
             box-shadow: 0 18px 45px rgba(255, 170, 200, 0.32);
             border: 3px solid rgba(255, 220, 238, 0.65);
             position: relative;
-            z-index: 5;              /* Below avatar (z-index: 150) */
+            z-index: 5;              /* Below avatar stage (z-index: 150) */
             animation: cardFloat 6s ease-in-out infinite;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(10px);
-            padding-top: 240px;      /* Adjusted for avatar at top: 100px (less overlap needed) */
+            padding-top: 320px;      /* Space for avatar stage (20px top + 280px height + overlap) */
             margin-top: 2rem;        /* Push down from top of viewport */
+            isolation: isolate;      /* Create stacking context */
         }
         
         @keyframes cardFloat {
@@ -298,46 +299,57 @@
         .logo-section {
             background: transparent;
             text-align: center;
-            padding: 3rem 2rem 0.75rem 2rem; /* Increased top padding to give avatar more room */
+            padding: 3rem 2rem 0.75rem 2rem;
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Changed from center to flex-start */
-            /* Avatar container fixes */
-            overflow: visible;        /* Prevent clipping of 3D avatar */
-            z-index: 30;              /* Ensure the avatar/name area sits above following sections */
-            min-height: 300px;        /* Ensure enough vertical space */
+            justify-content: flex-start;
+            overflow: visible !important;  /* CRITICAL: Don't clip avatar */
+            z-index: 30;
+            min-height: 300px;
+        }
+        
+        /* 3D Mascot Stage - Separate container to prevent clipping */
+        #mascot-stage {
+            position: fixed !important;
+            left: 50% !important;
+            top: 20px !important;              /* High up to show full avatar including antenna */
+            transform: translateX(-50%) !important;
+            width: 260px !important;           /* Wider stage for full model */
+            height: 280px !important;          /* Taller stage to prevent top clipping */
+            pointer-events: none !important;   /* Clicks pass through to content below */
+            z-index: 150 !important;           /* Above everything */
+            overflow: visible !important;      /* Critical - don't clip */
         }
         
         /* 3D Mascot container - UPDATED to match quiz.html working version */
         #mascotBee3D {
-            position: fixed !important;         /* Fixed position - won't move */
-            top: 100px !important;              /* Moved up from 180px to prevent clipping */
-            left: 50% !important;               /* Center horizontally */
-            transform: translateX(-50%) !important; /* Offset by half width */
-            width: 200px !important;            /* Much larger than quiz (110px) */
-            height: 200px !important;
-            margin: 0 !important;               /* Remove margin for fixed positioning */
-            display: block;                     /* Ensure block-level centering */
+            position: absolute !important;     /* Positioned within stage */
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            display: block;
             filter: drop-shadow(0 10px 30px rgba(255, 193, 7, 0.45));
             transition: transform 0.3s ease, filter 0.3s ease;
-            z-index: 150 !important;
-            overflow: visible !important;       /* Don't clip the 3D model */
+            overflow: visible !important;      /* Don't clip the 3D model */
+            pointer-events: auto !important;   /* Avatar itself can be clicked */
         }
         
         /* Three.js canvas styling for proper layering */
         #mascotBee3D canvas {
             position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            pointer-events: none;
-            z-index: 150 !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: transparent !important;
         }
         
         #mascotBee3D:hover {
-            transform: translateX(-50%) scale(1.08) !important; /* Maintain centering on hover */
+            transform: scale(1.08) !important;
         }
         
         @keyframes gentlePulse {
@@ -1027,22 +1039,26 @@
                 align-items: center;
             }
             
+            /* Mobile avatar stage - smaller but still visible */
+            #mascot-stage {
+                top: 15px !important;
+                width: 220px !important;
+                height: 240px !important;
+            }
+            
             #mascotBee3D {
-                position: fixed !important;     /* Fixed position on mobile too */
-                top: 80px !important;           /* Moved up from 150px to prevent clipping */
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: 180px !important;        /* Large on mobile too */
-                height: 180px !important;
-                margin: 0 !important;           /* No margin for fixed positioning */
-                display: block;
-                z-index: 150 !important;
-                overflow: visible !important;
+                /* Positioned within stage - no need to override */
             }
             
             #mascotBee3D:hover {
-                transform: translateX(-50%) scale(1.08) !important;
+                transform: scale(1.08) !important;
             }
+            
+            .content-card {
+                padding-top: 280px;  /* Adjust for smaller mobile stage */
+            }
+            
+            .logo-section {
                 overflow: visible;
             }
             
@@ -1484,6 +1500,15 @@
     <div class="magic-background"></div>
     <div class="fairy-container"></div>
     
+    <!-- 3D Avatar Stage - Positioned above everything to prevent clipping -->
+    <div id="mascot-stage">
+        <!-- 3D Avatar Display:
+             - Guest users: Always show MascotBee 
+             - Authenticated users: Show their selected profile avatar 
+             - Profile avatars are assigned during registration -->
+        <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+    </div>
+    
     <!-- Main container -->
     <div class="main-container">
         <!-- Single unified card with logo and menu -->
@@ -1531,11 +1556,7 @@
                     <span id="avatarNameText">Loading...</span>
                 </div>
                 
-                <!-- 3D Avatar Display:
-                     - Guest users: Always show MascotBee 
-                     - Authenticated users: Show their selected profile avatar 
-                     - Profile avatars are assigned during registration -->
-                <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+                <!-- 3D Avatar moved to mascot-stage above content-card to prevent clipping -->
                 
                 <!-- Avatar System Status Badge (PERMANENTLY HIDDEN) -->
                 <div id="avatarSystemStatus" style="display: none !important;">
