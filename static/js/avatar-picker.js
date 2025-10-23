@@ -663,7 +663,7 @@ async function preload3DAvatarAssets(avatarId, variant) {
 }
 
 function capitalizeId(id) {
-    // Convert kebab-case to PascalCase for filename fallback (e.g., seabea -> Seabea, astro-bee -> AstroBee)
+    // Convert kebab-case to PascalCase for filename fallback (e.g., anxious-bee -> AnxiousBee, al-bee -> AlBee)
     return id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
 }
 

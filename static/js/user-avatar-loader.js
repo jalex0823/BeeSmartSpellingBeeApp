@@ -12,31 +12,14 @@ class UserAvatarLoader {
         this.avatarDataLoaded = false;
         this.dbConnectionVerified = false;
         // Known aliases to improve resilience against spacing/case/underscore differences
+        // Only includes the 9 working avatars
         this._aliasMap = {
             'albee': 'al-bee',
-            'astrobee': 'astro-bee',
             'anxiousbee': 'anxious-bee',
-            'bikerbee': 'biker-bee',
-            'brotherbee': 'brother-bee',
-            'builderbee': 'builder-bee',
-            'coolbee': 'cool-bee',
-            'detective bee': 'detective-bee',
-            'detectivebee': 'detective-bee',
-            'divabee': 'diva-bee',
-            'doctorbee': 'doctor-bee',
-            'explorerbee': 'explorer-bee',
-            'frankenbee': 'franken-bee',
-            'knightbee': 'knight-bee',
             'mascotbee': 'mascot-bee',
             'monsterbee': 'monster-bee',
             'professorbee': 'professor-bee',
-            'queenbee': 'queen-bee',
-            'robobee': 'robo-bee',
             'rockerbee': 'rocker-bee',
-            'seabee': 'seabea',
-            'sea-bee': 'seabea',
-            'super bee': 'superbee',
-            'super-bee': 'superbee',
             'vampbee': 'vamp-bee',
             'warebee': 'ware-bee',
             'zombee': 'zom-bee'
@@ -46,73 +29,19 @@ class UserAvatarLoader {
         this.verifyDatabaseConnection();
         
         // DEPRECATED - Old hardcoded map (kept for fallback only) - UPDATED TO NEW PATHS
-        // Only includes working avatars with verified files
+        // Only includes the 9 working avatars with verified files
         this._oldAvatarMap = {
-            'astro-bee': {
-                obj: '/static/assets/avatars/astro-bee/AstroBee.obj',
-                mtl: '/static/assets/avatars/astro-bee/AstroBee.mtl',
-                texture: '/static/assets/avatars/astro-bee/AstroBee.png',
-                thumbnail: '/static/assets/avatars/astro-bee/AstroBee!.png'
+            'al-bee': {
+                obj: '/static/assets/avatars/al-bee/AlBee.obj',
+                mtl: '/static/assets/avatars/al-bee/AlBee.mtl',
+                texture: '/static/assets/avatars/al-bee/AlBee.png',
+                thumbnail: '/static/assets/avatars/al-bee/AlBee!.png'
             },
-            'biker-bee': {
-                obj: '/static/assets/avatars/biker-bee/BikerBee.obj',
-                mtl: '/static/assets/avatars/biker-bee/BikerBee.mtl',
-                texture: '/static/assets/avatars/biker-bee/BikerBee.png',
-                thumbnail: '/static/assets/avatars/biker-bee/BikerBee!.png'
-            },
-            'brother-bee': {
-                obj: '/static/assets/avatars/brother-bee/BrotherBee.obj',
-                mtl: '/static/assets/avatars/brother-bee/BrotherBee.mtl',
-                texture: '/static/assets/avatars/brother-bee/BrotherBee.png',
-                thumbnail: '/static/assets/avatars/brother-bee/BrotherBee!.png'
-            },
-            'builder-bee': {
-                obj: '/static/assets/avatars/builder-bee/BuilderBee.obj',
-                mtl: '/static/assets/avatars/builder-bee/BuilderBee.mtl',
-                texture: '/static/assets/avatars/builder-bee/BuilderBee.png',
-                thumbnail: '/static/assets/avatars/builder-bee/BuilderBee!.png'
-            },
-            'cool-bee': {
-                obj: '/static/assets/avatars/cool-bee/CoolBee.obj',
-                mtl: '/static/assets/avatars/cool-bee/CoolBee.mtl',
-                texture: '/static/assets/avatars/cool-bee/CoolBee.png',
-                thumbnail: '/static/assets/avatars/cool-bee/CoolBee!.png'
-            },
-            'detective-bee': {
-                obj: '/static/assets/avatars/detective-bee/DetectiveBee.obj',
-                mtl: '/static/assets/avatars/detective-bee/DetectiveBee.mtl',
-                texture: '/static/assets/avatars/detective-bee/DetectiveBee.png',
-                thumbnail: '/static/assets/avatars/detective-bee/DetectiveBee!.png'
-            },
-            'diva-bee': {
-                obj: '/static/assets/avatars/diva-bee/DivaBee.obj',
-                mtl: '/static/assets/avatars/diva-bee/DivaBee.mtl',
-                texture: '/static/assets/avatars/diva-bee/DivaBee.png',
-                thumbnail: '/static/assets/avatars/diva-bee/DivaBee!.png'
-            },
-            'doctor-bee': {
-                obj: '/static/assets/avatars/doctor-bee/DoctorBee.obj',
-                mtl: '/static/assets/avatars/doctor-bee/DoctorBee.mtl',
-                texture: '/static/assets/avatars/doctor-bee/DoctorBee.png',
-                thumbnail: '/static/assets/avatars/doctor-bee/DoctorBee!.png'
-            },
-            'explorer-bee': {
-                obj: '/static/assets/avatars/explorer-bee/ExplorerBee.obj',
-                mtl: '/static/assets/avatars/explorer-bee/ExplorerBee.mtl',
-                texture: '/static/assets/avatars/explorer-bee/ExplorerBee.png',
-                thumbnail: '/static/assets/avatars/explorer-bee/ExplorerBee!.png'
-            },
-            'frankenbee': {
-                obj: '/static/assets/avatars/franken-bee/Frankenbee.obj',
-                mtl: '/static/assets/avatars/franken-bee/Frankenbee.mtl',
-                texture: '/static/assets/avatars/franken-bee/Frankenbee.png',
-                thumbnail: '/static/assets/avatars/franken-bee/Frankenbee!.png'
-            },
-            'knight-bee': {
-                obj: '/static/assets/avatars/knight-bee/KnightBee.obj',
-                mtl: '/static/assets/avatars/knight-bee/KnightBee.mtl',
-                texture: '/static/assets/avatars/knight-bee/KnightBee.png',
-                thumbnail: '/static/assets/avatars/knight-bee/KnightBee!.png'
+            'anxious-bee': {
+                obj: '/static/assets/avatars/anxious-bee/AnxiousBee.obj',
+                mtl: '/static/assets/avatars/anxious-bee/AnxiousBee.mtl',
+                texture: '/static/assets/avatars/anxious-bee/AnxiousBee.png',
+                thumbnail: '/static/assets/avatars/anxious-bee/AnxiousBee!.png'
             },
             'mascot-bee': {
                 obj: '/static/assets/avatars/mascot-bee/MascotBee.obj',
@@ -120,29 +49,41 @@ class UserAvatarLoader {
                 texture: '/static/assets/avatars/mascot-bee/MascotBee.png',
                 thumbnail: '/static/assets/avatars/mascot-bee/MascotBee!.png'
             },
-            'queen-bee': {
-                obj: '/static/assets/avatars/queen-bee/QueenBee.obj',
-                mtl: '/static/assets/avatars/queen-bee/QueenBee.mtl',
-                texture: '/static/assets/avatars/queen-bee/QueenBee.png',
-                thumbnail: '/static/assets/avatars/queen-bee/QueenBee!.png'
+            'monster-bee': {
+                obj: '/static/assets/avatars/monster-bee/MonsterBee.obj',
+                mtl: '/static/assets/avatars/monster-bee/MonsterBee.mtl',
+                texture: '/static/assets/avatars/monster-bee/MonsterBee.png',
+                thumbnail: '/static/assets/avatars/monster-bee/MonsterBee!.png'
             },
-            'robo-bee': {
-                obj: '/static/assets/avatars/robo-bee/RoboBee.obj',
-                mtl: '/static/assets/avatars/robo-bee/RoboBee.mtl',
-                texture: '/static/assets/avatars/robo-bee/RoboBee.png',
-                thumbnail: '/static/assets/avatars/robo-bee/RoboBee!.png'
+            'professor-bee': {
+                obj: '/static/assets/avatars/professor-bee/ProfessorBee.obj',
+                mtl: '/static/assets/avatars/professor-bee/ProfessorBee.mtl',
+                texture: '/static/assets/avatars/professor-bee/ProfessorBee.png',
+                thumbnail: '/static/assets/avatars/professor-bee/ProfessorBee!.png'
             },
-            'seabea': {
-                obj: '/static/assets/avatars/seabea/Seabea.obj',
-                mtl: '/static/assets/avatars/seabea/Seabea.mtl',
-                texture: '/static/assets/avatars/seabea/Seabea.png',
-                thumbnail: '/static/assets/avatars/seabea/Seabea!.png'
+            'rocker-bee': {
+                obj: '/static/assets/avatars/rocker-bee/RockerBee.obj',
+                mtl: '/static/assets/avatars/rocker-bee/RockerBee.mtl',
+                texture: '/static/assets/avatars/rocker-bee/RockerBee.png',
+                thumbnail: '/static/assets/avatars/rocker-bee/RockerBee!.png'
             },
-            'superbee': {
-                obj: '/static/assets/avatars/superbee/Superbee.obj',
-                mtl: '/static/assets/avatars/superbee/Superbee.mtl',
-                texture: '/static/assets/avatars/superbee/Superbee.png',
-                thumbnail: '/static/assets/avatars/superbee/Superbee!.png'
+            'vamp-bee': {
+                obj: '/static/assets/avatars/vamp-bee/VampBee.obj',
+                mtl: '/static/assets/avatars/vamp-bee/VampBee.mtl',
+                texture: '/static/assets/avatars/vamp-bee/VampBee.png',
+                thumbnail: '/static/assets/avatars/vamp-bee/VampBee!.png'
+            },
+            'ware-bee': {
+                obj: '/static/assets/avatars/ware-bee/WareBee.obj',
+                mtl: '/static/assets/avatars/ware-bee/WareBee.mtl',
+                texture: '/static/assets/avatars/ware-bee/WareBee.png',
+                thumbnail: '/static/assets/avatars/ware-bee/WareBee!.png'
+            },
+            'zom-bee': {
+                obj: '/static/assets/avatars/zom-bee/ZomBee.obj',
+                mtl: '/static/assets/avatars/zom-bee/ZomBee.mtl',
+                texture: '/static/assets/avatars/zom-bee/ZomBee.png',
+                thumbnail: '/static/assets/avatars/zom-bee/ZomBee!.png'
             }
         };
         
@@ -227,7 +168,7 @@ class UserAvatarLoader {
 
     /**
      * Normalize an avatar identifier: trim, lowercase, replace spaces/underscores with hyphens,
-     * and apply known alias corrections (e.g., detectivebee -> detective-bee, seabee -> seabea).
+     * and apply known alias corrections (e.g., albee -> al-bee, anxiousbee -> anxious-bee).
      */
     _normalizeId(idLike) {
         if (!idLike) return 'mascot-bee';
@@ -480,27 +421,12 @@ class UserAvatarLoader {
     getAvatarDisplayName() {
         const id = this.getAvatarId();
         const mapping = {
-            'albee': 'AlBee',
+            'al-bee': 'AlBee',
             'anxious-bee': 'Anxious Bee',
-            'astro-bee': 'Astro Bee',
-            'biker-bee': 'Biker Bee',
-            'brother-bee': 'Brother Bee',
-            'builder-bee': 'Builder Bee',
-            'cool-bee': 'Cool Bee',
-            'detective-bee': 'Detective Bee',
-            'diva-bee': 'Diva Bee',
-            'doctor-bee': 'Doctor Bee',
-            'explorer-bee': 'Explorer Bee',
-            'frankenbee': 'FrankenBee',
-            'knight-bee': 'Knight Bee',
             'mascot-bee': 'Mascot Bee',
             'monster-bee': 'Monster Bee',
             'professor-bee': 'Professor Bee',
-            'queen-bee': 'Queen Bee',
-            'robo-bee': 'Robo Bee',
             'rocker-bee': 'Rocker Bee',
-            'seabea': 'Seabea',
-            'superbee': 'SuperBee',
             'vamp-bee': 'Vamp Bee',
             'ware-bee': 'Ware Bee',
             'zom-bee': 'Zom Bee'
