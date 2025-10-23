@@ -7178,6 +7178,24 @@ def api_get_avatars():
     try:
         from models import Avatar
         
+        # Check if Avatar table exists, if not, auto-migrate
+        try:
+            # Test query to check if table exists
+            Avatar.query.limit(1).all()
+        except Exception as table_error:
+            print(f"⚠️ Avatar table doesn't exist, creating now: {table_error}")
+            # Create all tables (safe operation - won't affect existing tables)
+            db.create_all()
+            print("✅ Database tables created")
+            
+            # Check if we need to populate avatars
+            avatar_count = Avatar.query.count()
+            if avatar_count == 0:
+                print("📦 Populating avatar database from filesystem...")
+                from migrate_avatars_to_db import populate_avatars_from_filesystem
+                populate_avatars_from_filesystem()
+                print(f"✅ Populated {Avatar.query.count()} avatars")
+        
         # Check if filtering by category or search
         category = request.args.get('category')
         search_query = request.args.get('search')
@@ -7242,10 +7260,13 @@ def api_get_avatars():
         })
 
     except Exception as e:
+        import traceback
         print(f"❌ Error fetching avatars: {e}")
+        print(traceback.format_exc())
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'trace': traceback.format_exc()
         }), 500
 
 @app.route("/api/speed-round/health")

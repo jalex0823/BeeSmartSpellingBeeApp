@@ -10,6 +10,76 @@ from avatar_catalog import AVATAR_CATALOG
 from datetime import datetime
 
 
+def populate_avatars_from_filesystem():
+    """
+    Populate avatars table from AVATAR_CATALOG
+    Safe to call multiple times - skips if avatars already exist
+    Returns: number of avatars populated
+    """
+    try:
+        # Check if avatars already exist
+        existing_count = Avatar.query.count()
+        if existing_count > 0:
+            print(f"ℹ️  {existing_count} avatars already exist, skipping population")
+            return existing_count
+        
+        # Migrate each avatar from AVATAR_CATALOG
+        success_count = 0
+        
+        for idx, avatar_data in enumerate(AVATAR_CATALOG):
+            try:
+                # Extract data from catalog
+                slug = avatar_data['id']
+                name = avatar_data['name']
+                folder = avatar_data['folder']
+                obj_file = avatar_data['obj_file']
+                mtl_file = avatar_data.get('mtl_file', '')
+                texture_file = avatar_data.get('texture_file', '')
+                description = avatar_data.get('description', '')
+                category = avatar_data.get('category', 'classic')
+                
+                # Find thumbnail PNG file (look for any .png in folder)
+                import os
+                import glob
+                avatar_folder_path = os.path.join('static', 'assets', 'avatars', folder)
+                png_files = glob.glob(os.path.join(avatar_folder_path, '*.png'))
+                thumbnail_file = os.path.basename(png_files[0]) if png_files else 'thumbnail.png'
+                
+                # Create Avatar model instance
+                avatar = Avatar(
+                    slug=slug,
+                    name=name,
+                    description=description,
+                    category=category,
+                    folder_path=folder,
+                    obj_file=obj_file,
+                    mtl_file=mtl_file,
+                    texture_file=texture_file,
+                    thumbnail_file=thumbnail_file,
+                    sort_order=idx,
+                    unlock_level=0,
+                    points_required=0,
+                    is_premium=False,
+                    is_active=True
+                )
+                
+                db.session.add(avatar)
+                success_count += 1
+                
+            except Exception as e:
+                print(f"❌ Error migrating {avatar_data.get('id', 'unknown')}: {e}")
+        
+        # Commit all at once
+        db.session.commit()
+        print(f"✅ Populated {success_count} avatars from filesystem")
+        return success_count
+        
+    except Exception as e:
+        print(f"❌ Population failed: {e}")
+        db.session.rollback()
+        return 0
+
+
 def migrate_avatars():
     """Migrate AVATAR_CATALOG to database avatars table"""
     
