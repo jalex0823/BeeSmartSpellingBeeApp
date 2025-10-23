@@ -1,0 +1,375 @@
+{
+  "passed": 40,
+  "failed": 4,
+  "warnings": 2,
+  "checks": [
+    {
+      "category": "Files",
+      "name": "AjaSpellBApp.py",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.676084"
+    },
+    {
+      "category": "Files",
+      "name": "models.py",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.676445"
+    },
+    {
+      "category": "Files",
+      "name": "requirements.txt",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.676779"
+    },
+    {
+      "category": "Files",
+      "name": "Procfile",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.677173"
+    },
+    {
+      "category": "Files",
+      "name": "railway.toml",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.677710"
+    },
+    {
+      "category": "Files",
+      "name": "migrate_avatars_to_db.py",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.677970"
+    },
+    {
+      "category": "Files",
+      "name": "avatar_catalog.py",
+      "status": "pass",
+      "message": "Exists",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.678208"
+    },
+    {
+      "category": "Directories",
+      "name": "static",
+      "status": "pass",
+      "message": "Exists with 341 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.687231"
+    },
+    {
+      "category": "Directories",
+      "name": "static/js",
+      "status": "pass",
+      "message": "Exists with 5 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.687636"
+    },
+    {
+      "category": "Directories",
+      "name": "static/css",
+      "status": "pass",
+      "message": "Exists with 2 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.687911"
+    },
+    {
+      "category": "Directories",
+      "name": "static/assets/avatars",
+      "status": "pass",
+      "message": "Exists with 120 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.692216"
+    },
+    {
+      "category": "Directories",
+      "name": "templates",
+      "status": "pass",
+      "message": "Exists with 47 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.693403"
+    },
+    {
+      "category": "Directories",
+      "name": "templates/auth",
+      "status": "pass",
+      "message": "Exists with 4 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.693669"
+    },
+    {
+      "category": "Directories",
+      "name": "templates/components",
+      "status": "pass",
+      "message": "Exists with 2 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.694157"
+    },
+    {
+      "category": "Directories",
+      "name": "data",
+      "status": "pass",
+      "message": "Exists with 7 files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.694622"
+    },
+    {
+      "category": "Dependencies",
+      "name": "flask",
+      "status": "pass",
+      "message": "Installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.801600"
+    },
+    {
+      "category": "Dependencies",
+      "name": "sqlalchemy",
+      "status": "pass",
+      "message": "Installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.969988"
+    },
+    {
+      "category": "Dependencies",
+      "name": "gunicorn",
+      "status": "pass",
+      "message": "Installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.973201"
+    },
+    {
+      "category": "Dependencies",
+      "name": "python-dotenv",
+      "status": "fail",
+      "message": "Not installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.973670"
+    },
+    {
+      "category": "Dependencies",
+      "name": "flask_login",
+      "status": "pass",
+      "message": "Installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.979640"
+    },
+    {
+      "category": "Dependencies",
+      "name": "werkzeug",
+      "status": "pass",
+      "message": "Installed",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:19.979738"
+    },
+    {
+      "category": "Models",
+      "name": "User",
+      "status": "pass",
+      "message": "Defined with table: users",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.061710"
+    },
+    {
+      "category": "Models",
+      "name": "QuizSession",
+      "status": "pass",
+      "message": "Defined with table: quiz_sessions",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.061851"
+    },
+    {
+      "category": "Models",
+      "name": "WordMastery",
+      "status": "pass",
+      "message": "Defined with table: word_mastery",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.061919"
+    },
+    {
+      "category": "Models",
+      "name": "Achievement",
+      "status": "pass",
+      "message": "Defined with table: achievements",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.061979"
+    },
+    {
+      "category": "Models",
+      "name": "Avatar",
+      "status": "pass",
+      "message": "Defined with table: avatars",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.062060"
+    },
+    {
+      "category": "Database",
+      "name": "Connection",
+      "status": "pass",
+      "message": "Connected successfully",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.584042"
+    },
+    {
+      "category": "Database",
+      "name": "Users Table",
+      "status": "pass",
+      "message": "20 users in database",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.609613"
+    },
+    {
+      "category": "Database",
+      "name": "Avatars Table",
+      "status": "pass",
+      "message": "24 avatars in database",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.612126"
+    },
+    {
+      "category": "Avatars",
+      "name": "Folders",
+      "status": "pass",
+      "message": "Found 24 avatar folders",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.613956"
+    },
+    {
+      "category": "Avatars",
+      "name": "Asset Completeness",
+      "status": "pass",
+      "message": "All 24 avatars have required files",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.619882"
+    },
+    {
+      "category": "Static JS",
+      "name": "avatar-picker.js",
+      "status": "pass",
+      "message": "33,061 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.620682"
+    },
+    {
+      "category": "Static JS",
+      "name": "user-avatar-loader.js",
+      "status": "pass",
+      "message": "34,625 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621121"
+    },
+    {
+      "category": "Static JS",
+      "name": "three.min.js",
+      "status": "fail",
+      "message": "Missing",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621188"
+    },
+    {
+      "category": "Static JS",
+      "name": "OBJLoader.js",
+      "status": "fail",
+      "message": "Missing",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621231"
+    },
+    {
+      "category": "Static JS",
+      "name": "MTLLoader.js",
+      "status": "fail",
+      "message": "Missing",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621265"
+    },
+    {
+      "category": "Static CSS",
+      "name": "BeeSmart.css",
+      "status": "pass",
+      "message": "26,538 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621632"
+    },
+    {
+      "category": "Templates",
+      "name": "unified_menu.html",
+      "status": "pass",
+      "message": "430,504 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.621988"
+    },
+    {
+      "category": "Templates",
+      "name": "quiz.html",
+      "status": "pass",
+      "message": "222,675 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.622362"
+    },
+    {
+      "category": "Templates",
+      "name": "test_avatar_picker.html",
+      "status": "pass",
+      "message": "4,847 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.622665"
+    },
+    {
+      "category": "Templates",
+      "name": "student_dashboard.html",
+      "status": "pass",
+      "message": "31,890 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.622907"
+    },
+    {
+      "category": "Templates",
+      "name": "avatar_picker.html",
+      "status": "pass",
+      "message": "16,252 bytes",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:20.623185"
+    },
+    {
+      "category": "API",
+      "name": "Local Server",
+      "status": "warning",
+      "message": "Server not running (start with: python AjaSpellBApp.py)",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:24.743494"
+    },
+    {
+      "category": "Railway",
+      "name": "Health",
+      "status": "pass",
+      "message": "Server online: {'status': 'ok', 'version': '1.6'}",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:25.256408"
+    },
+    {
+      "category": "Railway",
+      "name": "Avatar API",
+      "status": "warning",
+      "message": "Status: 500",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:25.852803"
+    },
+    {
+      "category": "Railway",
+      "name": "Main Page",
+      "status": "pass",
+      "message": "Homepage accessible (409603 bytes)",
+      "details": null,
+      "timestamp": "2025-10-23T06:30:26.681058"
+    }
+  ]
+}
