@@ -12,6 +12,10 @@ import numpy as np
 import trimesh
 import pyrender
 from PIL import Image
+import os
+
+# Try to use pyglet platform on Windows which is more reliable
+os.environ['PYOPENGL_PLATFORM'] = 'pyglet'
 
 # ========================= USER SETTINGS =========================
 # Source parent with one or many Meshy export folders (unzipped)
@@ -227,49 +231,201 @@ def patch_mtl(mtl_path: Path, images: List[Path], primary_img: Optional[Path]):
 def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
     """Render OBJ to a transparent PNG using pyrender OffscreenRenderer."""
     try:
+        print(f"🔍 Loading mesh: {obj_path}")
         mesh = trimesh.load_mesh(str(obj_path), process=False)
+        
+        # Debug mesh loading
         if isinstance(mesh, trimesh.Scene):
+            print(f"   Scene loaded with {len(mesh.geometry)} geometries")
             mesh = trimesh.util.concatenate(mesh.dump())
+        
+        print(f"   Mesh bounds: {mesh.bounds}")
+        print(f"   Mesh extents: {mesh.extents}")
+        print(f"   Vertex count: {len(mesh.vertices)}")
+        print(f"   Face count: {len(mesh.faces)}")
+        
+        # Check if mesh is empty or degenerate
+        if len(mesh.vertices) == 0:
+            print("⚠️ Mesh has no vertices!")
+            return
+        if len(mesh.faces) == 0:
+            print("⚠️ Mesh has no faces!")
+            return
 
         scene = pyrender.Scene(
             bg_color=BACKGROUND_COLOR,
             ambient_light=[0.35, 0.35, 0.35]
         )
-        mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=True)
-        scene.add(mesh_node)
+        
+        # Try to create mesh node with error handling
+        try:
+            mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=True)
+            scene.add(mesh_node)
+            print("   ✅ Mesh added to scene")
+        except Exception as mesh_err:
+            print(f"   ⚠️ Failed to create mesh node: {mesh_err}")
+            # Try without smoothing
+            mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=False)
+            scene.add(mesh_node)
+            print("   ✅ Mesh added to scene (without smoothing)")
 
-        # Camera placement
+        # Camera placement with more debugging
         bounds = mesh.bounds
         center = bounds.mean(axis=0)
         extents = mesh.extents
         radius = np.linalg.norm(extents) * 0.5
         distance = max(0.1, radius * CAMERA_DISTANCE_MULT)
+        
+        print(f"   Camera center: {center}")
+        print(f"   Camera distance: {distance}")
+        print(f"   Mesh radius: {radius}")
 
         cam = pyrender.PerspectiveCamera(yfov=np.pi / 4.0)
         cam_pose = np.eye(4)
         cam_pose[:3, 3] = center + np.array([0.0, 0.0, distance])
-        forward = (center - cam_pose[:3, 3]); forward /= (np.linalg.norm(forward) + 1e-7)
+        
+        # Simplified camera orientation - just look at center from positive Z
+        forward = (center - cam_pose[:3, 3])
+        forward_norm = np.linalg.norm(forward)
+        if forward_norm > 1e-7:
+            forward /= forward_norm
+        else:
+            forward = np.array([0.0, 0.0, -1.0])
+            
         up = np.array([0.0, 1.0, 0.0])
-        right = np.cross(up, forward); right /= (np.linalg.norm(right) + 1e-7)
-        up = np.cross(forward, right); up /= (np.linalg.norm(up) + 1e-7)
+        right = np.cross(up, forward)
+        right_norm = np.linalg.norm(right)
+        if right_norm > 1e-7:
+            right /= right_norm
+        else:
+            right = np.array([1.0, 0.0, 0.0])
+            
+        up = np.cross(forward, right)
+        up_norm = np.linalg.norm(up)
+        if up_norm > 1e-7:
+            up /= up_norm
+            
         cam_pose[:3, :3] = np.vstack([right, up, forward]).T
         scene.add(cam, pose=cam_pose)
+        print("   ✅ Camera added to scene")
 
+        # Add stronger lighting
         key = pyrender.DirectionalLight(color=np.ones(3), intensity=LIGHT_INTENSITY)
         fill = pyrender.DirectionalLight(color=np.ones(3), intensity=LIGHT_INTENSITY * 0.6)
         scene.add(key, pose=cam_pose)
-        fill_pose = np.array(cam_pose); fill_pose[:3, 3] = center + np.array([distance, distance, distance])
+        
+        # Position fill light differently
+        fill_pose = np.eye(4)
+        fill_pose[:3, 3] = center + np.array([distance * 0.5, distance * 0.5, distance * 0.5])
         scene.add(fill, pose=fill_pose)
+        print("   ✅ Lights added to scene")
 
-        r = pyrender.OffscreenRenderer(*RENDER_SIZE)
-        color, _ = r.render(scene)
-        r.delete()
+        # Try different renderer flags
+        try:
+            r = pyrender.OffscreenRenderer(*RENDER_SIZE)
+            print(f"   ✅ Renderer created: {RENDER_SIZE}")
+            
+            color, depth = r.render(scene)
+            print(f"   Rendered color shape: {color.shape}, dtype: {color.dtype}")
+            print(f"   Color range: min={color.min()}, max={color.max()}")
+            
+            # Check if we actually rendered anything
+            if color.max() == 0:
+                print("   ⚠️ Rendered image is completely black!")
+                # Try with a white background for debugging
+                scene.bg_color = [1.0, 1.0, 1.0, 1.0]
+                color, depth = r.render(scene)
+                print(f"   White background render - Color range: min={color.min()}, max={color.max()}")
+                scene.bg_color = BACKGROUND_COLOR  # Restore transparent background
+                
+            r.delete()
 
-        img = Image.fromarray(color).convert("RGBA")
-        img.save(thumb_path)
-        print(f"📸 Thumbnail: {thumb_path}")
+            # Convert and save with more debugging
+            img = Image.fromarray(color)
+            print(f"   PIL Image mode: {img.mode}, size: {img.size}")
+            
+            if img.mode != "RGBA":
+                img = img.convert("RGBA")
+                print(f"   Converted to RGBA")
+            
+            # Save with debugging
+            img.save(thumb_path)
+            file_size = thumb_path.stat().st_size if thumb_path.exists() else 0
+            print(f"📸 Thumbnail saved: {thumb_path} ({file_size} bytes)")
+            
+        except Exception as render_err:
+            print(f"   ⚠️ Rendering failed: {render_err}")
+            raise
+            
     except Exception as e:
         print(f"⚠️ Thumbnail render failed for {obj_path.name}: {e}")
+        import traceback
+        traceback.print_exc()
+
+def test_rendering_simple():
+    """Test rendering with a simple generated mesh to verify the pipeline works."""
+    platforms_to_try = [
+        ('pyglet', 'Standard Pyglet'),
+        ('win32', 'Windows Native'),
+        (None, 'Default Platform')
+    ]
+    
+    for platform, platform_name in platforms_to_try:
+        try:
+            print(f"🧪 Testing rendering with {platform_name}...")
+            
+            if platform:
+                os.environ['PYOPENGL_PLATFORM'] = platform
+            elif 'PYOPENGL_PLATFORM' in os.environ:
+                del os.environ['PYOPENGL_PLATFORM']
+            
+            # Create a simple test mesh (cube)
+            box = trimesh.creation.box(extents=[1, 1, 1])
+            
+            scene = pyrender.Scene(
+                bg_color=[0, 0, 0, 0],  # Transparent
+                ambient_light=[0.4, 0.4, 0.4]
+            )
+            
+            mesh_node = pyrender.Mesh.from_trimesh(box, smooth=False)
+            scene.add(mesh_node)
+            
+            # Simple camera setup
+            cam = pyrender.PerspectiveCamera(yfov=np.pi / 4.0)
+            cam_pose = np.eye(4)
+            cam_pose[:3, 3] = [0, 0, 3]  # Move camera back 3 units
+            scene.add(cam, pose=cam_pose)
+            
+            # Add light
+            light = pyrender.DirectionalLight(color=np.ones(3), intensity=3.0)
+            scene.add(light, pose=cam_pose)
+            
+            # Render
+            r = pyrender.OffscreenRenderer(640, 640)
+            color, depth = r.render(scene)
+            r.delete()
+            
+            # Save test image
+            test_path = Path("test_render.png")
+            img = Image.fromarray(color).convert("RGBA")
+            img.save(test_path)
+            
+            print(f"✅ Test render saved to: {test_path}")
+            print(f"   Image stats: {color.shape}, min={color.min()}, max={color.max()}")
+            
+            # Verify the image isn't blank
+            if color.max() > 0:
+                print(f"✅ {platform_name} works! Continuing with this platform.")
+                return True
+            else:
+                print(f"⚠️ {platform_name} produced blank image, trying next...")
+                
+        except Exception as e:
+            print(f"❌ {platform_name} failed: {e}")
+            continue
+    
+    print("❌ All platforms failed. Install Mesa or check graphics drivers.")
+    return False
 
 # ---------------------- Overrides / Naming -----------------------
 
@@ -339,6 +495,14 @@ def iter_source_folders(root: Path, recursive: bool) -> List[Path]:
     return [p for p in root.rglob("*") if p.is_dir()]
 
 def main():
+    # Test rendering first
+    print("🔧 Testing rendering setup...")
+    if not test_rendering_simple():
+        print("❌ Cannot establish working OpenGL context for rendering.")
+        print("💡 Try installing: pip install PyOpenGL-accelerate")
+        print("💡 Or try updating your graphics drivers.")
+        return
+    
     in_root = Path(INPUT_ROOT).resolve()
     out_root = Path(OUTPUT_ROOT).resolve()
     if not in_root.exists():

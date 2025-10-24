@@ -284,115 +284,60 @@
             100% { left: 100%; }
         }
         
-        /* ANTI-CLIP: Ensure containers do not clip the avatar */
-        .main-card, .page-card, .container-card, .logo-section {
-            position: relative;
-            overflow: visible !important;
-        }
-        
         /* Logo section at top of card */
         .logo-section {
             background: transparent;
             text-align: center;
-            padding: 1rem 2rem 0.75rem 2rem; /* reduced bottom padding to tighten spacing */
+            padding: 1rem 2rem 3rem 2rem; /* increased bottom padding for avatar clearance */
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             /* Avatar container fixes */
-            overflow: visible !important;        /* Prevent clipping of 3D avatar */
+            overflow: visible;        /* Prevent clipping of 3D avatar */
             z-index: 30;              /* Ensure the avatar/name area sits above following sections */
+            /* Perfect centering alignment to match main menu column */
+            max-width: 420px;
+            margin: 0 auto;
         }
         
         /* 3D Mascot container - permanently centered with flexbox */
         #mascotBee3D {
-            width: 200px;
-            height: 200px;
-            margin: 0;
+            width: 160px;
+            height: 260px;
+            margin: 0 auto 1.2rem auto;
             position: relative;
-            transform: translateY(0);
+            transform: translateY(-20px);  /* Move avatar up in container */
             transition: transform 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             /* Avatar visibility fixes */
             z-index: 100;              /* Keep well above name plate and tiles */
-            overflow: visible !important;        /* Prevent clipping */
-            max-height: none !important;
-            height: auto !important;
-            clip-path: none !important;
-            -webkit-mask-image: none !important;
-            mask-image: none !important;
+            overflow: visible;        /* Prevent clipping */
         }
         
         /* Three.js canvas styling for proper layering */
         #mascotBee3D canvas {
+            /* Force the WebGL canvas to actually render at full container size */
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -50%) !important;
+            transform: translate(-50%, -40%) !important;
             pointer-events: none;     /* Allow clicks through to UI */
             z-index: 100 !important;   /* Ensure visibility above all cards */
-            object-fit: contain !important;
         }
         
         #mascotBee3D:hover {
-            transform: translateY(-15px) scale(1.05);
+            transform: translateY(-35px) scale(1.05);  /* Maintain relative positioning on hover */
         }
         
-        /* Bee click FX: pop + glow */
-        .bee-pop {
-            animation: beePop 900ms ease-out;
-        }
-        .bee-glow {
-            animation: beeGlowPulse 1200ms ease-in-out;
-            filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9))
-                    drop-shadow(0 0 22px rgba(255, 165, 0, 0.55));
-        }
-        @keyframes beePop {
-            0%   { transform: translateY(0) scale(1) rotate(0deg); }
-            30%  { transform: translateY(-6px) scale(1.08) rotate(-3deg); }
-            60%  { transform: translateY(-2px) scale(1.04) rotate(2deg); }
-            100% { transform: translateY(0) scale(1) rotate(0deg); }
-        }
-        @keyframes beeGlowPulse {
-            0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6)); }
-            50%      { filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1)); }
-        }
-
-        /* Burst sparkles emitted from the bee on click */
-        .bee-burst {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 8px; height: 8px;
-            background: radial-gradient(circle, #FFD700, transparent 60%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            animation: beeBurst 900ms ease-out forwards;
-            z-index: 120;
-        }
-        .bee-burst.pink  { background: radial-gradient(circle, #FF7AC3, transparent 60%); }
-        .bee-burst.blue  { background: radial-gradient(circle, #7EC8FF, transparent 60%); }
-        .bee-burst.orange{ background: radial-gradient(circle, #FFA500, transparent 60%); }
-        @keyframes beeBurst {
-            from { opacity: 1; transform: translate(-50%, -50%) scale(0.6); }
-            to   { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2); }
-        }
-
-        /* Caption click feedback */
-        .caption-highlight { animation: captionPulse 650ms ease-out; }
-        @keyframes captionPulse {
-            0% { transform: scale(1); color: #FF6B00; }
-            50% { transform: scale(1.12); color: #FFB347; }
-            100% { transform: scale(1); color: #FF6B00; }
-        }
-
-        /* Temporarily re-enable background decor when FX are active */
-        .fx-enabled .magic-background,
-        .fx-enabled .fairy-container { display: block !important; }
-
         @keyframes gentlePulse {
             0%, 100% {
                 opacity: 0.8;
@@ -1078,19 +1023,25 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                /* Perfect centering alignment on mobile */
+                max-width: 380px;
+                margin: 0 auto;
             }
             
             #mascotBee3D {
-                width: 140px;
-                height: 140px;
+                width: 160px;
+                height: 260px;
                 margin: 0 auto 1.2rem auto;
-                transform: translateY(0);
+                transform: translateY(-20px);  /* Move avatar up on mobile too */
                 position: relative;
                 left: 0;
                 right: 0;
                 /* Maintain avatar visibility on mobile */
                 z-index: 15;
                 overflow: visible;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .logo-section img {
@@ -1526,6 +1477,55 @@
                 opacity: 0.6;
             }
         }
+
+        /* 1. Pull the whole main card up and let content sit closer to the top */
+        .main-card,
+        .page-card,
+        .container-card,
+        .content-card {
+            margin-top: 0 !important;
+            padding-top: 0.5rem !important;
+            overflow: visible !important;
+        }
+
+        /* 2. Lift the entire logo/bee section upward inside the card */
+        .logo-section {
+            margin-top: -0.5rem !important;   /* was positive or none */
+            padding-top: 0 !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* 3. Nudge just the bee upward inside its own container */
+        #mascotBee3D {
+            transform: translateY(-10px);     /* lift the bee closer to the top */
+            width: 180px;
+            height: 260px;
+            margin: 0 auto 0.5rem auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            overflow: visible;
+        }
+
+        /* keep canvas filling the space and centered */
+        #mascotBee3D canvas {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -40%) !important;
+            pointer-events: none;
+            z-index: 100 !important;
+        }
     </style>
     
     <div class="magic-background"></div>
@@ -1537,91 +1537,83 @@
         <div class="content-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
-                <!-- Unified Avatar Stage: All 5 elements together -->
-                <div style="
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 18px;
-                    padding: 10px;
-                    padding-top: 30px;
+                <!-- 3D Avatar Display:
+                     - Guest users: Always show MascotBee 
+                     - Authenticated users: Show their selected profile avatar 
+                     - Profile avatars are assigned during registration -->
+                <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+                
+                <!-- Dynamic Welcome Badge positioned below avatar -->
+                <div class="welcome-pill" style="
+                    position: relative;
+                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+                    color: #5A2C15;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    display: inline-block;
+                    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+                    border: 2px solid rgba(255, 255, 255, 0.9);
+                    margin: 0.5rem auto 1rem auto;
+                    white-space: nowrap;
                 ">
-                    <!-- 1. Welcome Header (swapped with name badge) -->
-                    <div style="
-                        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 100%);
-                        border: 3px solid #FFA500;
-                        border-radius: 20px;
-                        padding: 12px 20px;
-                        box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
-                        margin-top: 18px;
-                    ">
-                        <div style="
-                            font-size: 24px;
-                            font-weight: bold;
-                            color: #5A2C15;
-                            text-align: center;
-                            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', cursive, sans-serif;
-                        ">
-                            🐝 <span id="welcomeMessage">Welcome, NewBee!</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Mid stack: Avatar + Caption (centered between Welcome and Logo) -->
-                    <div id="heroMidStack" style="
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 16px;
-                        margin-top: auto;
-                        margin-bottom: auto;
-                    ">
-                        <!-- 2. 3D Avatar Display -->
-                        <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
-
-                        <!-- Avatar System Status Badge (HIDDEN - kept for diagnostics only) -->
-                        <div id="avatarSystemStatus" style="display: none !important;"></div>
-
-                        <!-- Avatar Refresh Button (HIDDEN - kept for emergency fallback only) -->
-                        <button id="avatarRefreshBtn" style="display: none !important;"></button>
-
-                        <!-- 3. Interactive Caption -->
-                        <div id="mascotCaption" style="
-                            font-size: 14px;
-                            color: #FF6B00;
-                            font-weight: 600;
-                            text-align: center;
-                            animation: gentlePulse 2s ease-in-out infinite;
-                            cursor: pointer;
-                            transition: all 0.3s ease;
-                        " onclick="playMascotCaptionCombo()">
-                            ✨ Click on me to see what I do! ✨
-                        </div>
-                    </div>
-                    
-                    <!-- 4. Avatar Name Badge (swapped with welcome) -->
-                    <div id="avatarNameBadge" style="
-                        background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
-                        border: 2px solid #FF5722;
-                        border-radius: 15px;
-                        padding: 8px 16px;
-                        box-shadow: 0 3px 8px rgba(255, 87, 34, 0.3);
-                        display: none;
-                        margin-bottom: 28px;
-                    ">
-                        <div style="
-                            font-size: 16px;
-                            font-weight: 600;
-                            color: white;
-                            text-align: center;
-                            font-family: 'Segoe UI', sans-serif;
-                        ">
-                            <span id="avatarNameDisplay"></span>
-                        </div>
-                    </div>
-                    
-                    <!-- 5. BeeSmart Logo -->
-                    <img src="/static/BeeSmartTitle.png" alt="BeeSmart Logo" style="margin-top: 24px;" />
+                    👋 Welcome {% if session.get('user_id') %}{{ session.get('username', 'User') }}{% else %}NewBee{% endif %}
                 </div>
+                
+                <!-- Avatar System Status Badge (shows preload results) -->
+                <div id="avatarSystemStatus" style="
+                    display: none;
+                    margin: 8px auto 10px;
+                    padding: 4px 8px;
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 500;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onclick="showAvatarInfoModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAvatarInfoModal();}" tabindex="0" role="button" aria-label="Learn about your avatar" title="Click to learn about your avatar">
+                    <span id="avatarStatusText">Checking...</span>
+                </div>
+                
+                <!-- Avatar Refresh Button (hidden by default, shows if avatar fails) -->
+                <button id="avatarRefreshBtn" style="
+                    display: none;
+                    margin: 10px auto;
+                    padding: 8px 16px;
+                    background: linear-gradient(135deg, #FFD700, #FFA500);
+                    border: none;
+                    border-radius: 8px;
+                    color: #5A2C15;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 13px;
+                    box-shadow: 0 4px 8px rgba(255, 165, 0, 0.3);
+                    transition: all 0.3s ease;
+                " onclick="refreshAvatar()" 
+                   onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 12px rgba(255, 165, 0, 0.4)'" 
+                   onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 8px rgba(255, 165, 0, 0.3)'">
+                    🔄 Reload Avatar
+                </button>
+                
+                <!-- Interactive Caption under mascot -->
+                <div id="mascotCaption" style="
+                    font-size: 14px;
+                    color: #FF6B00;
+                    font-weight: 600;
+                    margin-top: 8px;
+                    margin-bottom: 10px;
+                    text-align: center;
+                    animation: gentlePulse 2s ease-in-out infinite;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onclick="playMascotShow()">
+                    ✨ Click on me to see what I do! ✨
+                </div>
+                
+                <!-- Text-only logo -->
+                <img src="/static/BeeSmartTitle.png" alt="BeeSmart Logo" />
                 
                 <!-- Website URL Badge -->
                 <div style="margin-top: 12px; font-size: 16px; font-weight: 600; color: #FF6B00; font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;">
@@ -7586,9 +7578,6 @@
                             await initUserAvatar3D(window.userAvatarLoader.userAvatar);
                             avatarLoadSuccess = true;
                             console.log('✅ Custom avatar loaded successfully:', window.userAvatarLoader.userAvatar.avatar_id);
-                            
-                            // Update user info display with avatar name
-                            updateUserInfoDisplay();
                         } catch (avatarError) {
                             console.error('❌ Custom avatar failed to load:', avatarError);
                             
@@ -7644,9 +7633,6 @@
                         console.log('👋 Using MascotBee (no custom avatar detected)');
                         await initDefaultMascot();
                         avatarLoadSuccess = true;
-                        
-                        // Update user info display
-                        updateUserInfoDisplay();
                     }
                     
                     if (avatarLoadSuccess) {
@@ -8543,16 +8529,6 @@
             if (!mascot) return;
             
             console.log('🎪 Starting mascot show!');
-
-            // Themed FX: enable background decor briefly and pop/glow the bee
-            document.body.classList.add('fx-enabled');
-            setTimeout(() => document.body.classList.remove('fx-enabled'), 1600);
-            mascot.classList.add('bee-pop', 'bee-glow');
-            if (typeof createBeeBursts === 'function') {
-                createBeeBursts(mascot, 14);
-            }
-            setTimeout(() => mascot.classList.remove('bee-pop'), 900);
-            setTimeout(() => mascot.classList.remove('bee-glow'), 1400);
             
             // Hide caption during show
             if (caption) {
@@ -8593,34 +8569,6 @@
                     caption.style.opacity = '0.8';
                 }
             }, 3000);
-        }
-
-        // Deterministic combo when clicking the caption: bounce then spin
-        function playMascotCaptionCombo() {
-            const mascot = document.getElementById('mascotBee3D');
-            const caption = document.getElementById('mascotCaption');
-            if (!mascot) return;
-
-            // Theme FX
-            document.body.classList.add('fx-enabled');
-            setTimeout(() => document.body.classList.remove('fx-enabled'), 1600);
-            mascot.classList.add('bee-pop', 'bee-glow');
-            if (typeof createBeeBursts === 'function') createBeeBursts(mascot, 14);
-            setTimeout(() => mascot.classList.remove('bee-pop'), 900);
-            setTimeout(() => mascot.classList.remove('bee-glow'), 1400);
-
-            // Caption pulse feedback
-            if (caption) {
-                caption.classList.add('caption-highlight');
-                setTimeout(() => caption.classList.remove('caption-highlight'), 700);
-            }
-
-            // Play bounce then spin
-            performBounce(mascot);
-            setTimeout(() => performSpin(mascot), 1000);
-
-            // Optional sound
-            try { playMascotSound('bounce'); setTimeout(() => playMascotSound('spin'), 800); } catch (e) {}
         }
         
         // Animation: Spinning mascot
@@ -8713,23 +8661,6 @@
                     }
                 }, 1500);
             }
-        }
-
-        // Create short-lived burst sparkles tightly around mascot
-        function createBeeBursts(container, count = 12) {
-            try {
-                for (let i = 0; i < count; i++) {
-                    const s = document.createElement('span');
-                    const colors = ['pink', 'blue', 'orange'];
-                    s.className = 'bee-burst ' + colors[i % colors.length];
-                    const angle = (i / count) * Math.PI * 2;
-                    const radius = 80 + Math.random() * 40;
-                    s.style.setProperty('--dx', Math.cos(angle) * radius + 'px');
-                    s.style.setProperty('--dy', Math.sin(angle) * radius + 'px');
-                    container.appendChild(s);
-                    setTimeout(() => s.remove(), 950);
-                }
-            } catch (e) { console.warn('bee bursts error', e); }
         }
         
         // Play sound effects for mascot animations
@@ -9067,65 +8998,6 @@
             }
         }
 
-        // Update User Info Display (Welcome message and Avatar name)
-        async function updateUserInfoDisplay() {
-            try {
-                // Fetch user info and avatar info in parallel
-                const [userResponse, avatarResponse] = await Promise.all([
-                    fetch('/api/users/me'),
-                    fetch('/api/users/me/avatar')
-                ]);
-                
-                const userData = await userResponse.json();
-                const avatarData = await avatarResponse.json();
-                
-                // Update welcome message with user's name
-                const welcomeMsg = document.getElementById('welcomeMessage');
-                if (welcomeMsg && userData.status === 'success') {
-                    const displayName = userData.user.display_name || 'NewBee';
-                    welcomeMsg.textContent = `Welcome, ${displayName}!`;
-                    console.log('✅ Welcome message updated:', displayName);
-                }
-                
-                // Update avatar name badge
-                const avatarNameBadge = document.getElementById('avatarNameBadge');
-                const avatarNameDisplay = document.getElementById('avatarNameDisplay');
-                
-                if (avatarData.status === 'success' && avatarData.avatar) {
-                    const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Bee Avatar';
-                    
-                    if (avatarNameDisplay) {
-                        avatarNameDisplay.textContent = avatarName;
-                    }
-                    
-                    // Show the badge
-                    if (avatarNameBadge) {
-                        avatarNameBadge.style.display = 'block';
-                    }
-                    
-                    console.log('✅ Avatar name display updated:', avatarName);
-                } else {
-                    // Hide badge if no avatar
-                    if (avatarNameBadge) {
-                        avatarNameBadge.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('❌ Error updating user info display:', error);
-                // Set defaults on error
-                const welcomeMsg = document.getElementById('welcomeMessage');
-                if (welcomeMsg) {
-                    welcomeMsg.textContent = 'Welcome, NewBee!';
-                }
-                
-                // Hide badge on error
-                const avatarNameBadge = document.getElementById('avatarNameBadge');
-                if (avatarNameBadge) {
-                    avatarNameBadge.style.display = 'none';
-                }
-            }
-        }
-
         // Avatar System Status Management
         function updateAvatarSystemStatus() {
             const statusBadge = document.getElementById('avatarSystemStatus');
@@ -9201,9 +9073,6 @@
 
         // Update status after avatar preload completes
         document.addEventListener('DOMContentLoaded', () => {
-            // Update user info display
-            updateUserInfoDisplay();
-            
             // Wait a bit for preload to complete, then update status
             setTimeout(updateAvatarSystemStatus, 2000);
             

@@ -116,6 +116,10 @@ class SmartyBee3D {
         });
         this.renderer.setSize(this.options.width, this.options.height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // Make canvas transparent to pointer events so parent div's onclick works
+        this.renderer.domElement.style.pointerEvents = 'none';
+        
         this.container.appendChild(this.renderer.domElement);
     }
 
@@ -215,19 +219,37 @@ class SmartyBee3D {
                         objLoader.load(
                             objFilenameWithCache,
                             (object) => {
-                                // Center and scale the model
+                                // IMPROVED: Better centering and camera positioning to prevent cropping
                                 const box = new THREE.Box3().setFromObject(object);
                                 const center = box.getCenter(new THREE.Vector3());
                                 const size = box.getSize(new THREE.Vector3());
                                 
                                 const maxDim = Math.max(size.x, size.y, size.z);
-                                const scale = 3 / maxDim;
+                                const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
+                                const scale = (3 * scaleMultiplier) / maxDim;
                                 object.scale.set(scale, scale, scale);
                                 
-                                object.position.sub(center.multiplyScalar(scale));
+                                // Center the model properly at origin
+                                object.position.x = -center.x * scale;
+                                object.position.y = -center.y * scale;
+                                object.position.z = -center.z * scale;
 
                                 this.bee = object;
                                 this.scene.add(object);
+                                
+                                // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
+                                object.position.y += 0.35;
+                                
+                                // Pull camera back further and position slightly higher to show full model
+                                const maxScaledDim = maxDim * scale;
+                                this.camera.position.z = maxScaledDim * 1.8; // Pull back more
+                                this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
+                                this.camera.lookAt(0, 0, 0); // Look at center
+                                this.camera.updateProjectionMatrix();
+                                
+                                if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
+                                    this.renderer.setScissorTest(false);
+                                }
                                 
                                 console.log('✅ Mascot Bee 3D model loaded successfully with textures!');
                                 window.mascotBeeLoaded = true;
@@ -259,18 +281,37 @@ class SmartyBee3D {
                         objLoader.load(
                             objFilename,
                             (object) => {
+                                // IMPROVED: Better centering and camera positioning to prevent cropping
                                 const box = new THREE.Box3().setFromObject(object);
                                 const center = box.getCenter(new THREE.Vector3());
                                 const size = box.getSize(new THREE.Vector3());
                                 
                                 const maxDim = Math.max(size.x, size.y, size.z);
-                                const scale = 3 / maxDim;
+                                const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
+                                const scale = (3 * scaleMultiplier) / maxDim;
                                 object.scale.set(scale, scale, scale);
                                 
-                                object.position.sub(center.multiplyScalar(scale));
+                                // Center the model properly at origin
+                                object.position.x = -center.x * scale;
+                                object.position.y = -center.y * scale;
+                                object.position.z = -center.z * scale;
 
                                 this.bee = object;
                                 this.scene.add(object);
+                                
+                                // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
+                                object.position.y += 0.35;
+                                
+                                // Pull camera back further and position slightly higher to show full model
+                                const maxScaledDim = maxDim * scale;
+                                this.camera.position.z = maxScaledDim * 1.8; // Pull back more
+                                this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
+                                this.camera.lookAt(0, 0, 0); // Look at center
+                                this.camera.updateProjectionMatrix();
+                                
+                                if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
+                                    this.renderer.setScissorTest(false);
+                                }
                                 
                                 console.log('⚠️ Mascot loaded but texture failed');
                                 window.mascotBeeLoaded = true;
@@ -338,13 +379,27 @@ class SmartyBee3D {
                         const size = box.getSize(new THREE.Vector3());
                         
                         const maxDim = Math.max(size.x, size.y, size.z);
-                        const scale = 3 / maxDim;
+                        const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
+                        const scale = (3 * scaleMultiplier) / maxDim;
                         object.scale.set(scale, scale, scale);
                         
                         object.position.sub(center.multiplyScalar(scale));
 
                         this.bee = object;
                         this.scene.add(object);
+                        
+                        // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
+                        object.position.y += 0.35;
+                        
+                        // Slight upward camera bias for safety in fallback path
+                        try {
+                            const boxSize = Math.max(size.x, size.y, size.z) * scale;
+                            this.camera.position.y += 0.07 * boxSize;
+                            this.camera.updateProjectionMatrix();
+                            if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
+                                this.renderer.setScissorTest(false);
+                            }
+                        } catch (e) { /* no-op */ }
                         
                         console.log('✅ Mascot Bee 3D model loaded (fallback mode without MTL)');
                         window.mascotBeeLoaded = true;
@@ -396,6 +451,10 @@ class SmartyBee3D {
             const bee = new THREE.Mesh(geom, mat);
             bee.position.set(0, 1, 0);
             this.scene.add(bee);
+            
+            // AVATAR CLIPPING FIX: Move fallback bee up to show bottom
+            bee.position.y += 0.35;
+            
             this.bee = bee;
             console.warn('Fallback 3D bee added (OBJ not available).');
         } catch (e) {
@@ -425,7 +484,7 @@ class SmartyBee3D {
                     break;
             }
 
-            // Auto-rotate if enabled
+            // Auto-rotate if enabled - rotate around Y-axis to show all sides
             if (this.options.autoRotate && !this.isHovering) {
                 this.bee.rotation.y += 0.005;
             }
@@ -455,13 +514,14 @@ class SmartyBee3D {
         const duration = 2; // 2 seconds
         const progress = (this.animationTime % duration) / duration;
         
-        // Spinning celebration
-        this.bee.rotation.y += 0.1;
+        // Single smooth 360-degree rotation (0 to 2π radians)
+        this.bee.rotation.y = progress * Math.PI * 2;
         this.bee.position.y = Math.sin(progress * Math.PI * 4) * 0.3;
         this.bee.scale.setScalar(1 + Math.sin(progress * Math.PI * 2) * 0.1);
         
         // Return to idle after duration
         if (progress > 0.95) {
+            this.bee.rotation.y = 0; // Reset to starting position
             this.playAnimation('idle');
         }
     }

@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
     
-    <!-- Socket.IO for real-time communication -->
+    <!-- Socket.IO (optional). Page will work without it. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     
     <style>
@@ -454,7 +454,8 @@
         
         // Initialize Socket.IO connection
         function initializeSocket() {
-            socket = io();
+            if (!window.io) { console.log('Socket.IO library missing; using REST polling only.'); return; }
+            try { socket = io(); } catch (e) { console.log('Socket init failed; falling back to REST polling.', e); return; }
             
             socket.on('connect', function() {
                 console.log('🐝 Connected to Battle System!');
@@ -606,8 +607,28 @@
         }
         
         // Join existing battle
-        function joinBattle(code) {
-            window.location.href = `/battle/${code}`;
+        async function joinBattle(code) {
+            try {
+                const name = prompt('Enter your name to join the battle:') || '';
+                if (!name.trim()) {
+                    return;
+                }
+                const res = await fetch('/api/battles/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ battle_code: code, player_name: name.trim() })
+                });
+                const data = await res.json();
+                if (data && data.status === 'success') {
+                    // Proceed to quiz using the loaded battle word list
+                    window.location.href = '/quiz';
+                } else {
+                    alert(data && data.message ? data.message : 'Failed to join battle');
+                }
+            } catch (e) {
+                console.error('Join battle error:', e);
+                alert('Failed to join battle');
+            }
         }
         
         // Show NewBee alert
@@ -668,11 +689,11 @@
         
         // Show error message
         function showError(message) {
-            document.getElementById('battlesContainer').innerHTML = `
-                <div class="no-battles">
-                    <h3>⚠️ ${message}</h3>
-                    <button onclick="loadBattles()" style="margin-top: 10px; padding: 10px 20px; 
-                            background: #ff8f00; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            const container = document.getElementById('battlesContainer');
+            container.innerHTML = `
+                <div class="no-battles" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+                    <h3 style="margin:0;">⚠️ ${message}</h3>
+                    <button onclick="loadBattles()" style="padding: 10px 20px; background: #ff8f00; color: white; border: none; border-radius: 8px; cursor: pointer;">
                         🔄 Retry
                     </button>
                 </div>
@@ -681,7 +702,9 @@
         
         // Initialize everything when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeSocket();
+            if (window.io) { initializeSocket(); }
+            // Always do an immediate REST load
+            loadBattles();
             
             // Refresh battles every 30 seconds as backup
             setInterval(loadBattles, 30000);

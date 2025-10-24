@@ -2468,13 +2468,17 @@ def api_create_battle():
     try:
         # Handle both JSON and FormData
         if request.is_json:
-            data = request.get_json()
+            data = request.get_json() or {}
         else:
             data = request.form.to_dict()
-        
-        battle_name = data.get("battle_name", "").strip()
-        creator_name = data.get("creator_name", "").strip()
+
+        # Support both legacy and new frontend payloads
+        # New frontend (battles.html) sends: { name, max_players }
+        # Legacy API expects: { battle_name, creator_name, use_current_words, word_list }
+        battle_name = (data.get("battle_name") or data.get("name") or "").strip()
+        creator_name = (data.get("creator_name") or session.get("battle_creator_name") or "").strip()
         use_current_words = data.get("use_current_words", False)
+        max_players = int(data.get("max_players", 50))
         
         # Validation
         if not battle_name:
@@ -2484,10 +2488,14 @@ def api_create_battle():
             }), 400
         
         if not creator_name:
-            return jsonify({
-                "status": "error",
-                "message": "Creator name is required"
-            }), 400
+            # Try to infer from logged-in user or fallback to generic host
+            try:
+                if current_user.is_authenticated:
+                    creator_name = current_user.display_name or "Host"
+                else:
+                    creator_name = "Host"
+            except Exception:
+                creator_name = "Host"
         
         # Get word list
         word_list = None
@@ -2528,7 +2536,8 @@ def api_create_battle():
             "word_list": word_list,
             "shuffle_seed": random.randint(1000, 9999),  # For synchronized shuffle
             "players": {},  # Will be populated as players join
-            "status": "active"
+            "status": "active",
+            "max_players": max_players
         }
         
         # Save battle
@@ -2540,13 +2549,30 @@ def api_create_battle():
         
         print(f"⚔️ Battle created: {battle_code} - {battle_name} by {creator_name}")
         
+        # Return both legacy and new-frontend friendly shapes
         return jsonify({
             "status": "success",
             "battle_code": battle_code,
             "battle_name": battle_name,
             "word_count": len(word_list),
             "expires_at": battle_data["expires_at"],
-            "message": f"⚔️ Battle of the Bees created! Code: {battle_code}"
+            "message": f"⚔️ Battle of the Bees created! Code: {battle_code}",
+            # New frontend expects ok + battle with .code
+            "ok": True,
+            "battle": {
+                "code": battle_code,
+                "status": "waiting",  # map 'active' -> 'waiting' for UI
+                "is_public": True,
+                "allow_guests": True,
+                "current_players": 0,
+                "max_players": max_players,
+                "grade_range": "",
+                "mode": "standard",
+                "wordset": "Session Words",
+                "created_at": datetime.fromtimestamp(battle_data["created_at"]).isoformat(),
+                "started_at": None,
+                "player_names": []
+            }
         })
     
     except Exception as e:
@@ -2750,6 +2776,53 @@ def api_battle_leaderboard(battle_code):
             "status": "error",
             "message": f"Failed to get leaderboard: {str(e)}"
         }), 500
+
+@app.route("/api/battles/live", methods=["GET"])
+def api_battles_live():
+    """Lightweight battles listing for Battles page without DB/Socket.IO.
+    Returns shape expected by templates/battles.html: { ok, battles: [...], stats: {...} }
+    """
+    try:
+        # Use file-backed battles list; tolerate missing directory by returning empty
+        battles = get_all_active_battles()  # file-backed active battles
+        mapped = []
+        total_players = 0
+        for b in battles:
+            players_dict = b.get("players", {}) or {}
+            player_names = [p.get("name") for p in players_dict.values() if isinstance(p, dict)]
+            current_players = len(players_dict)
+            total_players += current_players
+            created_ts = b.get("created_at") or time.time()
+            # Map status to UI-friendly values
+            status = b.get("status", "active")
+            if status == "active":
+                status = "waiting"
+            mapped.append({
+                "id": b.get("battle_code"),
+                "code": b.get("battle_code"),
+                "status": status,
+                "is_public": True,
+                "allow_guests": True,
+                "current_players": current_players,
+                "max_players": int(b.get("max_players", 50)),
+                "grade_range": "",
+                "mode": "standard",
+                "wordset": "Session Words",
+                "created_at": datetime.fromtimestamp(created_ts).isoformat(),
+                "started_at": None,
+                "player_names": player_names
+            })
+
+        stats = {
+            "active_battles": len(mapped),
+            "total_players": total_players,
+            "battles_waiting": sum(1 for m in mapped if m.get("status") in ("waiting",))
+        }
+
+        return jsonify({"ok": True, "battles": mapped, "stats": stats})
+    except Exception as e:
+        print(f"❌ Failed to list live battles: {e}")
+        return jsonify({"ok": False, "error": "Failed to load battles"}), 500
 
 @app.route("/api/battles/<battle_code>/progress", methods=["POST"])
 def api_battle_progress(battle_code):

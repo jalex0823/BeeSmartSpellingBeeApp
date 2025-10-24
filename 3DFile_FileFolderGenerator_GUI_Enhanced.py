@@ -25,13 +25,15 @@ except ImportError:
 
 try:
     import trimesh
-    import pyrender
     from PIL import Image
-    if NUMPY_AVAILABLE:
+    
+    # PyRender is problematic with Python 3.13, so we'll skip it for now
+    pyrender = None
+    
+    if NUMPY_AVAILABLE and trimesh is not None and Image is not None:
         RENDERING_AVAILABLE = True
     else:
         trimesh = None
-        pyrender = None
         Image = None
 except ImportError:
     trimesh = None
@@ -943,110 +945,352 @@ pip install "pyglet<2" """
         mtl_path.write_text("\n".join(out), encoding="utf-8")
 
     def render_thumbnail_black_bg(self, obj_path: Path, thumb_path: Path):
-        """Render OBJ to a PNG with transparent background using pyrender OffscreenRenderer."""
-        if not RENDERING_AVAILABLE or trimesh is None or pyrender is None or Image is None or np is None:
+        """Render OBJ to a PNG with transparent background using trimesh."""
+        if not RENDERING_AVAILABLE or trimesh is None or Image is None or np is None:
             self.message_queue.put(f"  ⚠️ Thumbnail generation skipped - dependencies not available")
             return
             
+        # Use trimesh rendering (pyrender has compatibility issues with Python 3.13)
+        self.render_thumbnail_trimesh_fallback(obj_path, thumb_path)
+    
+    def render_thumbnail_trimesh_fallback(self, obj_path: Path, thumb_path: Path):
+        """Generate thumbnail by taking a 'screenshot' of the 3D model using matplotlib."""
         try:
-            # Load mesh with better processing
-            mesh = trimesh.load_mesh(str(obj_path), process=True)  # Enable processing for better results
+            # Load mesh
+            mesh = trimesh.load_mesh(str(obj_path), process=True)
             if isinstance(mesh, trimesh.Scene):
                 mesh = trimesh.util.concatenate(mesh.dump())
 
-            # Ensure mesh is valid
             if mesh.is_empty:
                 self.message_queue.put(f"  ⚠️ Empty mesh: {obj_path.name}")
                 return
 
-            # Create scene with transparent background
-            scene = pyrender.Scene(
-                bg_color=self.BACKGROUND_COLOR,  # Transparent background
-                ambient_light=[0.8, 0.8, 0.8]   # Bright ambient to see the model
-            )
-            
-            # Add mesh with material for better rendering
-            mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=True)
-            scene.add(mesh_node)
+            # Try trimesh's PNG export first (fastest if it works)
+            try:
+                png_data = mesh.export(file_type='png', resolution=self.RENDER_SIZE)
+                if png_data:
+                    with open(thumb_path, 'wb') as f:
+                        f.write(png_data)
+                    self.message_queue.put(f"  📸 Trimesh thumbnail created: {thumb_path.name}")
+                    return
+            except Exception as e:
+                self.message_queue.put(f"  ⚠️ PNG export failed, trying 3D screenshot method: {e}")
 
-            # Enhanced camera placement
+            # Method 2: Create a 3D screenshot using matplotlib
+            try:
+                import matplotlib.pyplot as plt
+                from mpl_toolkits.mplot3d import Axes3D
+                import matplotlib
+                matplotlib.use('Agg')  # Use non-interactive backend
+                
+                # Get mesh info first for debugging
+                self.message_queue.put(f"  📊 Mesh info: {len(mesh.vertices)} vertices, bounds: {mesh.bounds}")
+                
+                # Create figure with larger size for better detail
+                fig = plt.figure(figsize=(10, 10), facecolor='none', dpi=80)
+                ax = fig.add_subplot(111, projection='3d')
+                ax.set_facecolor('none')
+                
+                # Get vertices and faces
+                vertices = mesh.vertices
+                faces = mesh.faces if hasattr(mesh, 'faces') and len(mesh.faces) > 0 else None
+                
+                # Calculate bounds and scaling
+                bounds = mesh.bounds
+                center = bounds.mean(axis=0)
+                extents = mesh.extents
+                max_extent = np.max(extents)
+                
+                self.message_queue.put(f"  📏 Center: {center}, Extents: {extents}, Max extent: {max_extent}")
+                
+                if max_extent == 0:
+                    self.message_queue.put(f"  ⚠️ Zero extent mesh, using default scaling")
+                    max_extent = 1.0
+                
+                if faces is not None and len(faces) > 0:
+                    # Draw faces as triangular mesh
+                    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+                    
+                    # Limit number of faces for performance but ensure we get some
+                    max_faces = min(2000, len(faces))
+                    face_subset = faces[:max_faces]
+                    
+                    # Create triangles
+                    triangles = vertices[face_subset]
+                    
+                    # Create collection with more visible colors
+                    poly3d = Poly3DCollection(triangles, alpha=0.8, 
+                                            facecolor='lightsteelblue', 
+                                            edgecolor='navy', 
+                                            linewidth=0.8)
+                    ax.add_collection3d(poly3d)
+                    
+                    self.message_queue.put(f"  📸 Rendering {max_faces} faces with mesh visualization...")
+                else:
+                    # Fallback: draw as point cloud with larger points
+                    max_points = min(10000, len(vertices))
+                    point_subset = vertices[:max_points]
+                    
+                    ax.scatter(point_subset[:, 0], point_subset[:, 1], point_subset[:, 2], 
+                              c='darkblue', s=20, alpha=0.8, marker='o')
+                    
+                    self.message_queue.put(f"  📸 Rendering {max_points} points as point cloud...")
+                
+                # Set proper bounds with some padding
+                padding = max_extent * 0.1  # 10% padding
+                ax.set_xlim(center[0] - max_extent/2 - padding, center[0] + max_extent/2 + padding)
+                ax.set_ylim(center[1] - max_extent/2 - padding, center[1] + max_extent/2 + padding)
+                ax.set_zlim(center[2] - max_extent/2 - padding, center[2] + max_extent/2 + padding)
+                
+                # Force equal aspect ratio
+                ax.set_box_aspect([1,1,1])
+                
+                # Set multiple viewing angles and save the best one
+                viewing_angles = [
+                    (20, 45),   # Default isometric
+                    (30, 60),   # Higher angle
+                    (15, 30),   # Lower angle
+                    (45, 135),  # Opposite side
+                ]
+                
+                for elev, azim in viewing_angles:
+                    ax.view_init(elev=elev, azim=azim)
+                    
+                    # Remove axes, grid, and background
+                    ax.set_axis_off()
+                    ax.grid(False)
+                    
+                    # Save with high quality and tight bounds
+                    plt.savefig(thumb_path, format='PNG', transparent=True, 
+                               bbox_inches='tight', pad_inches=0.1, dpi=120, 
+                               facecolor='none', edgecolor='none')
+                    
+                    # Check if file was created and has reasonable size
+                    if thumb_path.exists() and thumb_path.stat().st_size > 1000:
+                        break
+                
+                plt.close(fig)
+                
+                self.message_queue.put(f"  📸 3D matplotlib thumbnail created: {thumb_path.name}")
+                return
+                
+            except Exception as e:
+                self.message_queue.put(f"  ⚠️ 3D screenshot failed: {e}")
+
+            # Method 3: Direct OBJ parsing and visualization
+            try:
+                self.create_direct_obj_thumbnail(obj_path, thumb_path)
+                return
+            except Exception as e:
+                self.message_queue.put(f"  ⚠️ Direct OBJ parsing failed: {e}")
+
+            # Method 4: Simple 2D projection fallback
+            self.create_simple_2d_thumbnail(mesh, thumb_path, obj_path)
+                
+        except Exception as e:
+            self.message_queue.put(f"  ⚠️ All thumbnail methods failed for {obj_path.name}: {e}")
+    
+    def create_direct_obj_thumbnail(self, obj_path: Path, thumb_path: Path):
+        """Parse OBJ file directly and create a solid thumbnail visualization."""
+        vertices = []
+        faces = []
+        
+        # Parse OBJ file manually
+        try:
+            with open(obj_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('v '):  # Vertex
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            vertices.append([float(parts[1]), float(parts[2]), float(parts[3])])
+                    elif line.startswith('f '):  # Face
+                        parts = line.split()
+                        # Handle different face formats (v, v/vt, v/vt/vn)
+                        face_indices = []
+                        for part in parts[1:]:
+                            # Get just the vertex index (before any slashes)
+                            vertex_idx = int(part.split('/')[0]) - 1  # OBJ is 1-indexed
+                            face_indices.append(vertex_idx)
+                        if len(face_indices) >= 3:
+                            faces.append(face_indices[:3])  # Use first 3 vertices for triangle
+            
+            if not vertices:
+                self.message_queue.put(f"  ⚠️ No vertices found in OBJ file")
+                return
+                
+            vertices = np.array(vertices)
+            self.message_queue.put(f"  📊 Parsed OBJ: {len(vertices)} vertices, {len(faces)} faces")
+            
+            # Create matplotlib visualization
+            import matplotlib.pyplot as plt
+            from mpl_toolkits.mplot3d import Axes3D
+            import matplotlib
+            matplotlib.use('Agg')
+            
+            fig = plt.figure(figsize=(12, 12), facecolor='white', dpi=100)
+            ax = fig.add_subplot(111, projection='3d')
+            ax.set_facecolor('white')
+            
+            # Calculate bounds
+            min_coords = np.min(vertices, axis=0)
+            max_coords = np.max(vertices, axis=0)
+            center = (min_coords + max_coords) / 2
+            extents = max_coords - min_coords
+            max_extent = np.max(extents)
+            
+            if max_extent == 0:
+                max_extent = 1.0
+                
+            self.message_queue.put(f"  📏 Model bounds: {min_coords} to {max_coords}")
+            
+            if faces and len(faces) > 0:
+                # Draw filled faces
+                from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+                
+                # Create triangles from faces
+                triangles = []
+                valid_faces = 0
+                for face in faces[:min(3000, len(faces))]:  # Limit for performance
+                    try:
+                        if len(face) >= 3 and all(0 <= idx < len(vertices) for idx in face):
+                            triangle = vertices[face[:3]]
+                            triangles.append(triangle)
+                            valid_faces += 1
+                    except (IndexError, ValueError):
+                        continue
+                
+                if triangles:
+                    # Create solid mesh with better colors
+                    poly3d = Poly3DCollection(triangles, alpha=0.9, 
+                                            facecolor='lightcoral', 
+                                            edgecolor='darkred', 
+                                            linewidth=0.3)
+                    ax.add_collection3d(poly3d)
+                    self.message_queue.put(f"  🎨 Drew {valid_faces} solid faces")
+                else:
+                    # Fall back to wireframe if faces failed
+                    self.draw_wireframe_obj(ax, vertices, faces)
+            else:
+                # No faces, draw as enhanced point cloud
+                colors = ['red', 'blue', 'green', 'orange', 'purple']
+                color = colors[hash(str(obj_path)) % len(colors)]
+                ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], 
+                          c=color, s=30, alpha=0.8, marker='o')
+                self.message_queue.put(f"  🎨 Drew {len(vertices)} points as enhanced point cloud")
+            
+            # Set proper view
+            padding = max_extent * 0.15
+            ax.set_xlim(center[0] - max_extent/2 - padding, center[0] + max_extent/2 + padding)
+            ax.set_ylim(center[1] - max_extent/2 - padding, center[1] + max_extent/2 + padding) 
+            ax.set_zlim(center[2] - max_extent/2 - padding, center[2] + max_extent/2 + padding)
+            
+            # Set equal aspect ratio
+            ax.set_box_aspect([1,1,1])
+            
+            # Good viewing angle
+            ax.view_init(elev=25, azim=45)
+            
+            # Clean appearance
+            ax.set_axis_off()
+            ax.grid(False)
+            
+            # Save with white background (easier to see)
+            plt.savefig(thumb_path, format='PNG', bbox_inches='tight', 
+                       pad_inches=0.1, dpi=150, facecolor='white')
+            plt.close(fig)
+            
+            self.message_queue.put(f"  📸 Direct OBJ thumbnail created: {thumb_path.name}")
+            
+        except Exception as e:
+            self.message_queue.put(f"  ⚠️ Direct OBJ parsing error: {e}")
+            raise
+    
+    def draw_wireframe_obj(self, ax, vertices, faces):
+        """Draw wireframe from faces."""
+        try:
+            for face in faces[:min(1000, len(faces))]:
+                if len(face) >= 3:
+                    # Draw triangle edges
+                    for i in range(len(face)):
+                        j = (i + 1) % len(face)
+                        if 0 <= face[i] < len(vertices) and 0 <= face[j] < len(vertices):
+                            v1, v2 = vertices[face[i]], vertices[face[j]]
+                            ax.plot([v1[0], v2[0]], [v1[1], v2[1]], [v1[2], v2[2]], 
+                                   'b-', linewidth=0.5, alpha=0.7)
+            self.message_queue.put(f"  🎨 Drew wireframe visualization")
+        except Exception as e:
+            self.message_queue.put(f"  ⚠️ Wireframe drawing failed: {e}")
+
+    def create_simple_2d_thumbnail(self, mesh, thumb_path: Path, obj_path: Path):
+        """Create a simple 2D wireframe thumbnail as final fallback."""
+        try:
             bounds = mesh.bounds
             center = bounds.mean(axis=0)
             extents = mesh.extents
-            radius = np.linalg.norm(extents) * 0.5
-            distance = max(0.1, radius * self.CAMERA_DISTANCE_MULT)
-
-            # Create camera with better field of view
-            cam = pyrender.PerspectiveCamera(yfov=np.pi / 3.5)  # Slightly wider FOV
-            cam_pose = np.eye(4)
+            max_extent = np.max(extents)
             
-            # Position camera at slight angle for better 3D view
-            angle_offset = np.pi / 6  # 30 degrees
-            cam_pos = center + np.array([
-                distance * np.sin(angle_offset), 
-                distance * 0.3,  # Slightly above
-                distance * np.cos(angle_offset)
+            if max_extent == 0:
+                self.message_queue.put(f"  ⚠️ Mesh has zero extent: {obj_path.name}")
+                return
+            
+            from PIL import ImageDraw
+            img = Image.new('RGBA', self.RENDER_SIZE, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+            
+            # Project vertices to 2D (isometric-style projection)
+            vertices_3d = mesh.vertices - center
+            
+            # Simple isometric projection: x' = x - z*0.5, y' = y + z*0.3
+            vertices_2d = np.column_stack([
+                vertices_3d[:, 0] - vertices_3d[:, 2] * 0.5,
+                vertices_3d[:, 1] + vertices_3d[:, 2] * 0.3
             ])
-            cam_pose[:3, 3] = cam_pos
             
-            # Look at center
-            forward = (center - cam_pos)
-            forward /= (np.linalg.norm(forward) + 1e-7)
-            up = np.array([0.0, 1.0, 0.0])
-            right = np.cross(up, forward)
-            right /= (np.linalg.norm(right) + 1e-7)
-            up = np.cross(forward, right)
-            up /= (np.linalg.norm(up) + 1e-7)
-            cam_pose[:3, :3] = np.vstack([right, up, forward]).T
-            scene.add(cam, pose=cam_pose)
-
-            # Enhanced lighting setup - much brighter
-            key_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY)
-            fill_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.5)
-            rim_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.7)
+            # Scale and center
+            vertices_2d = vertices_2d / max_extent * min(self.RENDER_SIZE) * 0.4
+            vertices_2d += np.array(self.RENDER_SIZE) / 2
             
-            # Key light from camera position
-            scene.add(key_light, pose=cam_pose)
+            # Draw edges or faces
+            success = False
             
-            # Fill light from opposite side
-            fill_pose = np.array(cam_pose)
-            fill_pose[:3, 3] = center + np.array([-distance, distance * 0.5, distance])
-            scene.add(fill_light, pose=fill_pose)
+            # Try to draw faces as filled polygons
+            if hasattr(mesh, 'faces') and len(mesh.faces) > 0:
+                face_count = 0
+                for face in mesh.faces[:min(200, len(mesh.faces))]:
+                    if len(face) >= 3:
+                        try:
+                            triangle_2d = vertices_2d[face[:3]]
+                            points = [(int(p[0]), int(p[1])) for p in triangle_2d]
+                            
+                            # Check if all points are within bounds
+                            if all(0 <= p[0] < self.RENDER_SIZE[0] and 0 <= p[1] < self.RENDER_SIZE[1] 
+                                  for p in points):
+                                draw.polygon(points, fill=(100, 150, 255, 100), outline=(255, 255, 255, 200))
+                                face_count += 1
+                        except (IndexError, ValueError):
+                            continue
+                
+                if face_count > 0:
+                    success = True
+                    self.message_queue.put(f"  📸 2D projection with {face_count} faces created: {thumb_path.name}")
             
-            # Rim light for definition
-            rim_pose = np.array(cam_pose)
-            rim_pose[:3, 3] = center + np.array([distance, -distance * 0.2, -distance])
-            scene.add(rim_light, pose=rim_pose)
-
-            # Render with higher quality using RGBA flags
-            r = pyrender.OffscreenRenderer(*self.RENDER_SIZE)
-            color, depth = r.render(scene, flags=pyrender.RenderFlags.RGBA)
-            r.delete()
-
-            # Color is already RGBA from the renderer
-            # Create image from the RGBA array
-            img = Image.fromarray(color, mode='RGBA')
+            # Fallback: draw as points
+            if not success:
+                point_count = 0
+                for vertex in vertices_2d[:min(2000, len(vertices_2d))]:
+                    p = tuple(vertex.astype(int))
+                    if 0 <= p[0] < self.RENDER_SIZE[0] and 0 <= p[1] < self.RENDER_SIZE[1]:
+                        draw.ellipse([p[0]-2, p[1]-2, p[0]+2, p[1]+2], fill=(255, 255, 255, 255))
+                        point_count += 1
+                
+                if point_count > 0:
+                    self.message_queue.put(f"  📸 2D point cloud with {point_count} points created: {thumb_path.name}")
             
-            # Convert to numpy array for alpha manipulation
-            data = np.array(img)
-            
-            # Create alpha mask based on depth - background becomes transparent
-            # Depth of 0 means background (no object), so invert the logic
-            alpha_mask = np.where(depth > 0, 255, 0).astype(np.uint8)
-            
-            # Apply alpha mask to the alpha channel
-            data[:, :, 3] = alpha_mask
-            
-            # Create final transparent image
-            final_img = Image.fromarray(data, mode='RGBA')
-            
-            # Save with PNG to preserve transparency
-            final_img.save(thumb_path, 'PNG', optimize=True)
-            
-            self.message_queue.put(f"  📸 Transparent thumbnail created: {thumb_path.name}")
+            img.save(thumb_path, 'PNG', optimize=True)
             
         except Exception as e:
-            self.message_queue.put(f"  ⚠️ Thumbnail render failed for {obj_path.name}: {e}")
+            self.message_queue.put(f"  ⚠️ 2D fallback thumbnail failed for {obj_path.name}: {e}")
 
     def load_overrides_file(self, in_root: Path) -> Dict[str, str]:
         """Load override mappings from JSON or CSV files."""

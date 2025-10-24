@@ -1,5 +1,0 @@
-cat|The cat sat on the mat|animal
-dog|The dog barked loudly|pet
-book|I read a good book|object
-tree|The tall tree swayed|plant
-house|We live in a big house|building
