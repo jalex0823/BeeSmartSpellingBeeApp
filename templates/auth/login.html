@@ -38,12 +38,16 @@
   .forgot-actions{ display:flex; gap:0.5rem; margin-top:0.6rem }
   .btn-secondary{ padding: 0.7rem 1rem; border-radius:10px; border:1px solid #FFD08A; background:#FFF5DD; color:#6a4e00; font-weight:700; cursor:pointer }
   .btn-secondary[disabled]{ opacity:.6; cursor:not-allowed }
+  /* Back to main menu link */
+  .back-link{ position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:999px; background:#FFF5DD; border:1px solid #FFE08A; color:#7A5B00; text-decoration:none; font-weight:700; box-shadow:0 4px 10px rgba(255, 200, 80, .18); z-index:2 }
+  .back-link:hover{ background:#FFF0C2 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-center">
   <section class="content-card" aria-label="Sign in to BeeSmart">
+    <a href="{{ url_for('home') }}" class="back-link" aria-label="Back to main menu">⟵ Back to Main Menu</a>
     <div class="card-header">
       <h1>Welcome Back</h1>
       <div class="card-sub">Sign in to continue your spelling practice</div>
