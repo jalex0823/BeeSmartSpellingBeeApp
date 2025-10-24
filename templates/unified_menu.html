@@ -1566,27 +1566,36 @@
                         </div>
                     </div>
                     
-                    <!-- 2. 3D Avatar Display -->
-                    <div id="mascotBee3D" style="cursor: pointer; margin-top: 96px;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
-                    
-                    <!-- Avatar System Status Badge (HIDDEN - kept for diagnostics only) -->
-                    <div id="avatarSystemStatus" style="display: none !important;"></div>
-                    
-                    <!-- Avatar Refresh Button (HIDDEN - kept for emergency fallback only) -->
-                    <button id="avatarRefreshBtn" style="display: none !important;"></button>
-                    
-                    <!-- 3. Interactive Caption -->
-                    <div id="mascotCaption" style="
-                        font-size: 14px;
-                        color: #FF6B00;
-                        font-weight: 600;
-                        text-align: center;
-                        animation: gentlePulse 2s ease-in-out infinite;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        margin-top: 78px;
-                    " onclick="playMascotCaptionCombo()">
-                        ✨ Click on me to see what I do! ✨
+                    <!-- Mid stack: Avatar + Caption (centered between Welcome and Logo) -->
+                    <div id="heroMidStack" style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 16px;
+                        margin-top: auto;
+                        margin-bottom: auto;
+                    ">
+                        <!-- 2. 3D Avatar Display -->
+                        <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+
+                        <!-- Avatar System Status Badge (HIDDEN - kept for diagnostics only) -->
+                        <div id="avatarSystemStatus" style="display: none !important;"></div>
+
+                        <!-- Avatar Refresh Button (HIDDEN - kept for emergency fallback only) -->
+                        <button id="avatarRefreshBtn" style="display: none !important;"></button>
+
+                        <!-- 3. Interactive Caption -->
+                        <div id="mascotCaption" style="
+                            font-size: 14px;
+                            color: #FF6B00;
+                            font-weight: 600;
+                            text-align: center;
+                            animation: gentlePulse 2s ease-in-out infinite;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        " onclick="playMascotCaptionCombo()">
+                            ✨ Click on me to see what I do! ✨
+                        </div>
                     </div>
                     
                     <!-- 4. Avatar Name Badge (swapped with welcome) -->
