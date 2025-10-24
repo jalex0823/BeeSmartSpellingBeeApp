@@ -86,3 +86,7 @@ backups/
 
 # Documentation with large PDFs
 Documentation/
+
+# Converted folder (temporary conversion files)
+Converted/
+convert/
