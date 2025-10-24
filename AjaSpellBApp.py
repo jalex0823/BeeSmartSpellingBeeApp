@@ -1061,7 +1061,7 @@ def get_or_create_guest_user():
         guest_username = f"guest_{uuid.uuid4().hex[:8]}"
         guest_user = User(
             username=guest_username,
-            display_name=f"Guest {guest_username[-4:]}",
+            display_name="NewBee",
             email=f"{guest_username}@beesmart.guest",
             role="guest",
             is_active=True,
@@ -7611,6 +7611,46 @@ def api_update_user_avatar(user_id):
         return jsonify({
             'status': 'error',
             'message': str(e)
+        }), 500
+
+
+@app.route("/api/users/me", methods=["GET"])
+def api_get_current_user():
+    """Get current user's basic information (name, auth status, etc.)"""
+    try:
+        # Check if user is authenticated
+        if current_user.is_authenticated:
+            return jsonify({
+                'status': 'success',
+                'authenticated': True,
+                'user': {
+                    'id': current_user.id,
+                    'username': current_user.username,
+                    'display_name': current_user.display_name,
+                    'email': current_user.email if hasattr(current_user, 'email') else None,
+                    'role': current_user.role if hasattr(current_user, 'role') else 'student'
+                }
+            })
+        else:
+            # Guest user
+            return jsonify({
+                'status': 'success',
+                'authenticated': False,
+                'user': {
+                    'display_name': 'NewBee',
+                    'role': 'guest'
+                }
+            })
+    except Exception as e:
+        print(f"❌ Error fetching current user: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to get user information',
+            'authenticated': False,
+            'user': {
+                'display_name': 'NewBee',
+                'role': 'guest'
+            }
         }), 500
 
 
