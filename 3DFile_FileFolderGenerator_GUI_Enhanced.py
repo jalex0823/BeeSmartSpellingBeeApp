@@ -75,9 +75,9 @@ class Enhanced3DProcessorGUI:
         ]
         self.IMG_EXTS = {".png", ".jpg", ".jpeg"}
         self.RENDER_SIZE = (640, 640)
-        self.BACKGROUND_COLOR = (0, 0, 0, 255)  # Black background instead of transparent
-        self.CAMERA_DISTANCE_MULT = 2.2
-        self.LIGHT_INTENSITY = 6.0
+        self.BACKGROUND_COLOR = (0, 0, 0, 0)  # Transparent background
+        self.CAMERA_DISTANCE_MULT = 2.5
+        self.LIGHT_INTENSITY = 10.0
         
         # Queue for thread communication
         self.message_queue = queue.Queue()
@@ -549,16 +549,33 @@ pip install "pyglet<2" """
         
     def start_thumbnail_generation(self):
         """Start thumbnail generation for existing processed files"""
+        self.log_message("🔍 Starting thumbnail generation...")
+        
         if not RENDERING_AVAILABLE:
-            messagebox.showerror("Error", "Rendering dependencies not available. Please install them first.")
+            self.log_message("❌ Rendering dependencies not available!")
+            self.log_message(f"  NumPy available: {NUMPY_AVAILABLE}")
+            self.log_message(f"  Rendering libraries available: {RENDERING_AVAILABLE}")
+            self.log_message("💡 Install dependencies using the 'Dependencies & Thumbnails' tab")
+            messagebox.showerror("Dependencies Missing", 
+                               "Rendering dependencies not available!\n\n"
+                               "Required packages:\n"
+                               "• numpy\n"
+                               "• trimesh\n" 
+                               "• pyrender\n"
+                               "• pillow\n\n"
+                               "Use the 'Dependencies & Thumbnails' tab to install them.")
             return
             
         if self.processing_mode == "zip" and not self.selected_zip_files:
+            self.log_message("❌ No ZIP files selected for thumbnail generation")
             messagebox.showerror("Error", "Please select ZIP files or process files first")
             return
         elif self.processing_mode == "folder" and not self.input_folder.get():
+            self.log_message("❌ No input folder selected for thumbnail generation")
             messagebox.showerror("Error", "Please select an input folder")
             return
+            
+        self.log_message(f"✅ Prerequisites met. Mode: {self.processing_mode}, Rendering available: {RENDERING_AVAILABLE}")
             
         self.thumbnail_btn.config(state='disabled')
         self.process_btn.config(state='disabled')
@@ -723,12 +740,20 @@ pip install "pyglet<2" """
     def generate_thumbnails_worker(self):
         """Generate thumbnails for processed OBJ files"""
         try:
+            self.message_queue.put("🔍 Looking for converted files...")
+            
             if self.processing_mode == "zip":
+                if not self.selected_zip_files:
+                    self.message_queue.put("❌ No ZIP files selected")
+                    self.message_queue.put("ERROR")
+                    return
                 base_path = Path(self.selected_zip_files[0]).parent
                 converted_root = base_path / "Converted"
+                self.message_queue.put(f"📁 Using ZIP mode - looking in: {converted_root}")
             else:
                 in_root = Path(self.input_folder.get()).resolve()
                 converted_root = in_root / "Converted"
+                self.message_queue.put(f"📁 Using folder mode - looking in: {converted_root}")
             
             if not converted_root.exists():
                 self.message_queue.put("❌ No converted files found. Please process files first.")
@@ -918,7 +943,7 @@ pip install "pyglet<2" """
         mtl_path.write_text("\n".join(out), encoding="utf-8")
 
     def render_thumbnail_black_bg(self, obj_path: Path, thumb_path: Path):
-        """Render OBJ to a PNG with black background using pyrender OffscreenRenderer."""
+        """Render OBJ to a PNG with transparent background using pyrender OffscreenRenderer."""
         if not RENDERING_AVAILABLE or trimesh is None or pyrender is None or Image is None or np is None:
             self.message_queue.put(f"  ⚠️ Thumbnail generation skipped - dependencies not available")
             return
@@ -934,10 +959,10 @@ pip install "pyglet<2" """
                 self.message_queue.put(f"  ⚠️ Empty mesh: {obj_path.name}")
                 return
 
-            # Create scene with black background
+            # Create scene with transparent background
             scene = pyrender.Scene(
-                bg_color=self.BACKGROUND_COLOR,  # (0,0,0,255) for black background
-                ambient_light=[0.4, 0.4, 0.4]   # Slightly brighter ambient
+                bg_color=self.BACKGROUND_COLOR,  # Transparent background
+                ambient_light=[0.8, 0.8, 0.8]   # Bright ambient to see the model
             )
             
             # Add mesh with material for better rendering
@@ -975,10 +1000,10 @@ pip install "pyglet<2" """
             cam_pose[:3, :3] = np.vstack([right, up, forward]).T
             scene.add(cam, pose=cam_pose)
 
-            # Enhanced lighting setup
-            key_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 1.2)
-            fill_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.4)
-            rim_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.6)
+            # Enhanced lighting setup - much brighter
+            key_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY)
+            fill_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.5)
+            rim_light = pyrender.DirectionalLight(color=np.ones(3), intensity=self.LIGHT_INTENSITY * 0.7)
             
             # Key light from camera position
             scene.add(key_light, pose=cam_pose)
@@ -993,18 +1018,32 @@ pip install "pyglet<2" """
             rim_pose[:3, 3] = center + np.array([distance, -distance * 0.2, -distance])
             scene.add(rim_light, pose=rim_pose)
 
-            # Render with higher quality
+            # Render with higher quality using RGBA flags
             r = pyrender.OffscreenRenderer(*self.RENDER_SIZE)
-            color, depth = r.render(scene)
+            color, depth = r.render(scene, flags=pyrender.RenderFlags.RGBA)
             r.delete()
 
-            # Convert to RGB for black background
-            img = Image.fromarray(color, 'RGB')
+            # Color is already RGBA from the renderer
+            # Create image from the RGBA array
+            img = Image.fromarray(color, mode='RGBA')
             
-            # Save with PNG compression
-            img.save(thumb_path, 'PNG', optimize=True)
+            # Convert to numpy array for alpha manipulation
+            data = np.array(img)
             
-            self.message_queue.put(f"  📸 Black background thumbnail: {thumb_path.name}")
+            # Create alpha mask based on depth - background becomes transparent
+            # Depth of 0 means background (no object), so invert the logic
+            alpha_mask = np.where(depth > 0, 255, 0).astype(np.uint8)
+            
+            # Apply alpha mask to the alpha channel
+            data[:, :, 3] = alpha_mask
+            
+            # Create final transparent image
+            final_img = Image.fromarray(data, mode='RGBA')
+            
+            # Save with PNG to preserve transparency
+            final_img.save(thumb_path, 'PNG', optimize=True)
+            
+            self.message_queue.put(f"  📸 Transparent thumbnail created: {thumb_path.name}")
             
         except Exception as e:
             self.message_queue.put(f"  ⚠️ Thumbnail render failed for {obj_path.name}: {e}")
