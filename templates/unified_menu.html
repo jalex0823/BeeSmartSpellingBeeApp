@@ -1558,7 +1558,7 @@
                     margin: 0.5rem auto 1rem auto;
                     white-space: nowrap;
                 ">
-                    👋 Welcome {% if session.get('user_id') %}{{ session.get('username', 'User') }}{% else %}NewBee{% endif %}
+                    👋 Welcome {% if current_user.is_authenticated %}{{ current_user.display_name or current_user.username or 'User' }}{% else %}NewBee{% endif %}
                 </div>
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
