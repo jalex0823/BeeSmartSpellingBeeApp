@@ -739,63 +739,93 @@
             }
         }
 
-        /* Theme-based Visual Effects */
-        .avatar-effect-fire {
-            filter: drop-shadow(0 0 20px #ff4500) drop-shadow(0 0 40px #ff6b00);
-            animation: avatarFullRotation 2s ease-in-out, fireGlow 2s ease-in-out;
-        }
-
-        .avatar-effect-electric {
+        /* Character-specific Visual Effects */
+        .avatar-effect-einstein {
             filter: drop-shadow(0 0 20px #00bfff) drop-shadow(0 0 40px #87ceeb);
-            animation: avatarFullRotation 2s ease-in-out, electricGlow 2s ease-in-out;
+            animation: avatarFullRotation 2s ease-in-out, einsteinGlow 2s ease-in-out;
         }
 
-        .avatar-effect-magic {
-            filter: drop-shadow(0 0 20px #9400d3) drop-shadow(0 0 40px #da70d6);
-            animation: avatarFullRotation 2s ease-in-out, magicGlow 2s ease-in-out;
+        .avatar-effect-academic {
+            filter: drop-shadow(0 0 20px #daa520) drop-shadow(0 0 40px #ffd700);
+            animation: avatarFullRotation 2s ease-in-out, academicGlow 2s ease-in-out;
         }
 
-        .avatar-effect-nature {
-            filter: drop-shadow(0 0 20px #32cd32) drop-shadow(0 0 40px #90ee90);
-            animation: avatarFullRotation 2s ease-in-out, natureGlow 2s ease-in-out;
+        .avatar-effect-monster {
+            filter: drop-shadow(0 0 20px #4b0082) drop-shadow(0 0 40px #8b008b);
+            animation: avatarFullRotation 2s ease-in-out, monsterGlow 2s ease-in-out;
         }
 
-        .avatar-effect-scary {
-            filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #ff0000);
-            animation: avatarFullRotation 2s ease-in-out, scaryGlow 2s ease-in-out;
+        .avatar-effect-vampire {
+            filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #dc143c);
+            animation: avatarFullRotation 2s ease-in-out, vampireGlow 2s ease-in-out;
         }
 
-        .avatar-effect-default {
+        .avatar-effect-zombie {
+            filter: drop-shadow(0 0 20px #228b22) drop-shadow(0 0 40px #32cd32);
+            animation: avatarFullRotation 2s ease-in-out, zombieGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-werewolf {
+            filter: drop-shadow(0 0 20px #cd853f) drop-shadow(0 0 40px #daa520);
+            animation: avatarFullRotation 2s ease-in-out, werewolfGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-rockstar {
+            filter: drop-shadow(0 0 20px #ff1493) drop-shadow(0 0 40px #ff69b4);
+            animation: avatarFullRotation 2s ease-in-out, rockstarGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-nervous {
+            filter: drop-shadow(0 0 20px #ffff00) drop-shadow(0 0 40px #fff8dc);
+            animation: avatarFullRotation 2s ease-in-out, nervousGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-mascot {
             filter: drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 40px #ffff00);
-            animation: avatarFullRotation 2s ease-in-out, defaultGlow 2s ease-in-out;
+            animation: avatarFullRotation 2s ease-in-out, mascotGlow 2s ease-in-out;
         }
 
-        @keyframes fireGlow {
-            0%, 100% { filter: drop-shadow(0 0 20px #ff4500) drop-shadow(0 0 40px #ff6b00); }
-            50% { filter: drop-shadow(0 0 30px #ff4500) drop-shadow(0 0 60px #ff6b00) drop-shadow(0 0 80px #ff8c00); }
-        }
-
-        @keyframes electricGlow {
+        @keyframes einsteinGlow {
             0%, 100% { filter: drop-shadow(0 0 20px #00bfff) drop-shadow(0 0 40px #87ceeb); }
             50% { filter: drop-shadow(0 0 30px #00bfff) drop-shadow(0 0 60px #87ceeb) drop-shadow(0 0 80px #add8e6); }
         }
 
-        @keyframes magicGlow {
-            0%, 100% { filter: drop-shadow(0 0 20px #9400d3) drop-shadow(0 0 40px #da70d6); }
-            50% { filter: drop-shadow(0 0 30px #9400d3) drop-shadow(0 0 60px #da70d6) drop-shadow(0 0 80px #dda0dd); }
+        @keyframes academicGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #daa520) drop-shadow(0 0 40px #ffd700); }
+            50% { filter: drop-shadow(0 0 30px #daa520) drop-shadow(0 0 60px #ffd700) drop-shadow(0 0 80px #fff8dc); }
         }
 
-        @keyframes natureGlow {
-            0%, 100% { filter: drop-shadow(0 0 20px #32cd32) drop-shadow(0 0 40px #90ee90); }
-            50% { filter: drop-shadow(0 0 30px #32cd32) drop-shadow(0 0 60px #90ee90) drop-shadow(0 0 80px #98fb98); }
+        @keyframes monsterGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #4b0082) drop-shadow(0 0 40px #8b008b); }
+            50% { filter: drop-shadow(0 0 30px #4b0082) drop-shadow(0 0 60px #8b008b) drop-shadow(0 0 80px #9370db); }
         }
 
-        @keyframes scaryGlow {
-            0%, 100% { filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #ff0000); }
-            50% { filter: drop-shadow(0 0 30px #8b0000) drop-shadow(0 0 60px #ff0000) drop-shadow(0 0 80px #ff6347); }
+        @keyframes vampireGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #dc143c); }
+            50% { filter: drop-shadow(0 0 30px #8b0000) drop-shadow(0 0 60px #dc143c) drop-shadow(0 0 80px #ff6347); }
         }
 
-        @keyframes defaultGlow {
+        @keyframes zombieGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #228b22) drop-shadow(0 0 40px #32cd32); }
+            50% { filter: drop-shadow(0 0 30px #228b22) drop-shadow(0 0 60px #32cd32) drop-shadow(0 0 80px #90ee90); }
+        }
+
+        @keyframes werewolfGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #cd853f) drop-shadow(0 0 40px #daa520); }
+            50% { filter: drop-shadow(0 0 30px #cd853f) drop-shadow(0 0 60px #daa520) drop-shadow(0 0 80px #f0e68c); }
+        }
+
+        @keyframes rockstarGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #ff1493) drop-shadow(0 0 40px #ff69b4); }
+            50% { filter: drop-shadow(0 0 30px #ff1493) drop-shadow(0 0 60px #ff69b4) drop-shadow(0 0 80px #ffb6c1); }
+        }
+
+        @keyframes nervousGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #ffff00) drop-shadow(0 0 40px #fff8dc); }
+            50% { filter: drop-shadow(0 0 30px #ffff00) drop-shadow(0 0 60px #fff8dc) drop-shadow(0 0 80px #fffacd); }
+        }
+
+        @keyframes mascotGlow {
             0%, 100% { filter: drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 40px #ffff00); }
             50% { filter: drop-shadow(0 0 30px #ffd700) drop-shadow(0 0 60px #ffff00) drop-shadow(0 0 80px #fff8dc); }
         }
@@ -6128,52 +6158,69 @@
             modal.innerHTML = `
                 <style>
                     .dict-voice-visualizer {
-                        width: 200px;
-                        height: 80px;
+                        width: 100%;
+                        height: 60px;
                         display: flex;
-                        align-items: center;
+                        align-items: flex-end;
                         justify-content: center;
-                        gap: 6px;
+                        gap: 3px;
                         margin: 1rem auto;
-                        background: rgba(255, 107, 157, 0.1);
-                        border-radius: 16px;
-                        padding: 0.75rem;
+                        background: rgba(255, 105, 180, 0.08);
+                        border-radius: 0;
+                        padding: 8px;
+                        border: none;
+                        overflow: hidden;
+                        position: relative;
                     }
                     .dict-voice-wave {
-                        width: 6px;
-                        height: 20px;
-                        background: linear-gradient(180deg, #FF69B4 0%, #FF1493 100%);
-                        border-radius: 10px;
-                        transition: height 0.15s ease;
+                        width: 5px;
+                        height: 12px;
+                        background: linear-gradient(180deg, #FF69B4 0%, #FF1493 50%, #FFB6C1 100%);
+                        border-radius: 2px 2px 0 0;
+                        transition: height 0.1s ease;
+                        box-shadow: 0 0 6px rgba(255, 105, 180, 0.3);
+                        animation: dictWaveStatic 0.8s ease-in-out infinite alternate;
                     }
                     .dict-voice-visualizer.speaking .dict-voice-wave {
-                        animation-duration: 0.6s;
+                        animation-duration: 0.4s;
                         animation-iteration-count: infinite;
                         animation-timing-function: ease-in-out;
                     }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(1) { animation-delay: 0.3s; animation-name: dictWaveShort; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(2) { animation-delay: 0.2s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(3) { animation-delay: 0.1s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(4) { animation-delay: 0s; animation-name: dictWaveTallest; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(5) { animation-delay: 0.1s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(6) { animation-delay: 0.2s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(7) { animation-delay: 0.3s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(1) { animation-delay: 0s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(2) { animation-delay: 0.05s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(3) { animation-delay: 0.1s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(4) { animation-delay: 0.15s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(5) { animation-delay: 0.2s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(6) { animation-delay: 0.25s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(7) { animation-delay: 0.3s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(8) { animation-delay: 0.35s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(9) { animation-delay: 0.4s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(10) { animation-delay: 0.45s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(11) { animation-delay: 0.5s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(12) { animation-delay: 0.55s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(13) { animation-delay: 0.6s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(14) { animation-delay: 0.65s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(15) { animation-delay: 0.7s; animation-name: dictWaveTall; }
                     
+                    @keyframes dictWaveStatic {
+                        0%, 100% { height: 12px; transform: scaleY(1); }
+                        50% { height: 16px; transform: scaleY(1.1); }
+                    }
                     @keyframes dictWaveShort {
-                        0%, 100% { height: 20px; }
-                        50% { height: 35px; }
+                        0%, 100% { height: 15px; transform: scaleY(1); }
+                        50% { height: 28px; transform: scaleY(1.6); }
                     }
                     @keyframes dictWaveMedium {
-                        0%, 100% { height: 25px; }
-                        50% { height: 45px; }
+                        0%, 100% { height: 18px; transform: scaleY(1.1); }
+                        50% { height: 38px; transform: scaleY(2); }
                     }
                     @keyframes dictWaveTall {
-                        0%, 100% { height: 30px; }
-                        50% { height: 55px; }
+                        0%, 100% { height: 22px; transform: scaleY(1.2); }
+                        50% { height: 48px; transform: scaleY(2.4); }
                     }
                     @keyframes dictWaveTallest {
-                        0%, 100% { height: 35px; }
-                        50% { height: 65px; }
+                        0%, 100% { height: 25px; transform: scaleY(1.3); }
+                        50% { height: 52px; transform: scaleY(2.6); }
                     }
                     .phonetic-display {
                         background: rgba(255, 182, 193, 0.2);
@@ -6296,6 +6343,14 @@
                     </div>
                     
                     <div class="dict-voice-visualizer" id="dictVoiceVisualizer" style="margin-top: 1.5rem;">
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>
@@ -7530,32 +7585,40 @@
             return null;
         }
 
-        // Determine theme based on avatar name
+        // Determine theme and character-specific actions based on avatar name
         function getAvatarTheme(avatarName) {
             const name = avatarName.toLowerCase();
             
-            if (name.includes('monster') || name.includes('rocker') || name.includes('fire')) {
-                return 'fire';
-            } else if (name.includes('electric') || name.includes('lightning') || name.includes('cyber')) {
-                return 'electric';
-            } else if (name.includes('vamp') || name.includes('witch') || name.includes('magic')) {
-                return 'magic';
-            } else if (name.includes('nature') || name.includes('forest') || name.includes('garden')) {
-                return 'nature';
-            } else if (name.includes('zom') || name.includes('skull') || name.includes('ghost') || name.includes('ware')) {
-                return 'scary';
+            // Character-specific themes with unique personalities
+            if (name.includes('al-bee') || name.includes('albee')) {
+                return 'einstein'; // Science, math, E=mc², equations
+            } else if (name.includes('professor')) {
+                return 'academic'; // Books, graduation cap, teaching
+            } else if (name.includes('monster')) {
+                return 'monster'; // Dark clouds, moon, scary stuff
+            } else if (name.includes('vamp')) {
+                return 'vampire'; // Bats, blood, gothic elements
+            } else if (name.includes('zom')) {
+                return 'zombie'; // Graveyard, bones, spooky
+            } else if (name.includes('ware')) {
+                return 'werewolf'; // Full moon, howling, forest
+            } else if (name.includes('rocker')) {
+                return 'rockstar'; // Music notes, lightning, stage lights
+            } else if (name.includes('anxious')) {
+                return 'nervous'; // Sweat drops, worried expressions
             } else {
-                return 'default';
+                return 'mascot'; // Happy, cheerful, rainbow colors
             }
         }
 
-        // Apply theme-based visual effects
+        // Apply character-specific visual effects
         function applyThemeEffects(container, theme) {
             // Remove any existing effect classes
-            container.classList.remove('avatar-effect-fire', 'avatar-effect-electric', 'avatar-effect-magic', 
-                                     'avatar-effect-nature', 'avatar-effect-scary', 'avatar-effect-default');
+            container.classList.remove('avatar-effect-einstein', 'avatar-effect-academic', 'avatar-effect-monster', 
+                                     'avatar-effect-vampire', 'avatar-effect-zombie', 'avatar-effect-werewolf',
+                                     'avatar-effect-rockstar', 'avatar-effect-nervous', 'avatar-effect-mascot');
             
-            // Add the appropriate theme effect class
+            // Add the appropriate character effect class
             container.classList.add(`avatar-effect-${theme}`);
             
             // Remove the effect class after animation
@@ -7564,125 +7627,177 @@
             }, 2500);
         }
 
-        // Play theme-based audio effects
+        // Play character-specific audio effects
         function playThemeAudio(theme) {
             try {
                 // Create audio context for sound synthesis
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
                 switch (theme) {
-                    case 'fire':
-                        playFireAudio(audioContext);
+                    case 'einstein':
+                        playEinsteinAudio(audioContext);
                         break;
-                    case 'electric':
-                        playElectricAudio(audioContext);
+                    case 'academic':
+                        playAcademicAudio(audioContext);
                         break;
-                    case 'magic':
-                        playMagicAudio(audioContext);
+                    case 'monster':
+                        playMonsterAudio(audioContext);
                         break;
-                    case 'nature':
-                        playNatureAudio(audioContext);
+                    case 'vampire':
+                        playVampireAudio(audioContext);
                         break;
-                    case 'scary':
-                        playScaryAudio(audioContext);
+                    case 'zombie':
+                        playZombieAudio(audioContext);
+                        break;
+                    case 'werewolf':
+                        playWerewolfAudio(audioContext);
+                        break;
+                    case 'rockstar':
+                        playRockstarAudio(audioContext);
+                        break;
+                    case 'nervous':
+                        playNervousAudio(audioContext);
                         break;
                     default:
-                        playDefaultAudio(audioContext);
+                        playMascotAudio(audioContext);
                 }
             } catch (error) {
                 console.log('Audio not available:', error);
             }
         }
 
-        // Fire theme audio (crackling fire sound)
-        function playFireAudio(audioContext) {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.5);
-            oscillator.type = 'sawtooth';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 1);
-        }
-
-        // Electric theme audio (zap sound)
-        function playElectricAudio(audioContext) {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.2);
-            oscillator.type = 'square';
-            
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
-        }
-
-        // Magic theme audio (magical chime)
-        function playMagicAudio(audioContext) {
-            [440, 554, 659, 880].forEach((freq, index) => {
+        // Einstein/Science theme audio (electronic beeps like lab equipment + computation sounds)
+        function playEinsteinAudio(audioContext) {
+            // Science lab beep sequence with harmonic layers
+            [440, 523, 659, 880].forEach((freq, index) => {
                 const oscillator = audioContext.createOscillator();
+                const harmonic = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
+                const harmonicGain = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
+                harmonic.connect(harmonicGain);
                 gainNode.connect(audioContext.destination);
+                harmonicGain.connect(audioContext.destination);
                 
-                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.2);
-                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.15);
+                harmonic.frequency.setValueAtTime(freq * 1.5, audioContext.currentTime + index * 0.15); // Perfect fifth
+                oscillator.type = 'square'; // Digital/scientific sound
+                harmonic.type = 'triangle'; // Softer harmonic
                 
-                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + index * 0.2);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.2 + 0.5);
+                gainNode.gain.setValueAtTime(0.12, audioContext.currentTime + index * 0.15);
+                harmonicGain.gain.setValueAtTime(0.06, audioContext.currentTime + index * 0.15);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.15 + 0.3);
+                harmonicGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.15 + 0.4);
                 
-                oscillator.start(audioContext.currentTime + index * 0.2);
-                oscillator.stop(audioContext.currentTime + index * 0.2 + 0.5);
+                oscillator.start(audioContext.currentTime + index * 0.15);
+                harmonic.start(audioContext.currentTime + index * 0.15);
+                oscillator.stop(audioContext.currentTime + index * 0.15 + 0.3);
+                harmonic.stop(audioContext.currentTime + index * 0.15 + 0.4);
             });
+            
+            // Add computation chirps
+            setTimeout(() => {
+                [800, 1000, 1200].forEach((freq, index) => {
+                    const chirp = audioContext.createOscillator();
+                    const chirpGain = audioContext.createGain();
+                    chirp.connect(chirpGain);
+                    chirpGain.connect(audioContext.destination);
+                    
+                    chirp.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.08);
+                    chirp.type = 'sine';
+                    chirpGain.gain.setValueAtTime(0.08, audioContext.currentTime + index * 0.08);
+                    chirpGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.08 + 0.15);
+                    
+                    chirp.start(audioContext.currentTime + index * 0.08);
+                    chirp.stop(audioContext.currentTime + index * 0.08 + 0.15);
+                });
+            }, 200);
         }
 
-        // Nature theme audio (wind chimes)
-        function playNatureAudio(audioContext) {
+        // Academic/Professor theme audio (majestic university bell chimes + scholarly ambience)
+        function playAcademicAudio(audioContext) {
+            // University bell sequence with harmonics
+            [330, 440, 523, 659].forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const harmonic1 = audioContext.createOscillator();
+                const harmonic2 = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const harmonic1Gain = audioContext.createGain();
+                const harmonic2Gain = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                harmonic1.connect(harmonic1Gain);
+                harmonic2.connect(harmonic2Gain);
+                gainNode.connect(audioContext.destination);
+                harmonic1Gain.connect(audioContext.destination);
+                harmonic2Gain.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.25);
+                harmonic1.frequency.setValueAtTime(freq * 1.5, audioContext.currentTime + index * 0.25); // Perfect fifth
+                harmonic2.frequency.setValueAtTime(freq * 2, audioContext.currentTime + index * 0.25); // Octave
+                oscillator.type = 'sine'; // Pure bell tone
+                harmonic1.type = 'sine';
+                harmonic2.type = 'triangle';
+                
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + index * 0.25);
+                harmonic1Gain.gain.setValueAtTime(0.08, audioContext.currentTime + index * 0.25);
+                harmonic2Gain.gain.setValueAtTime(0.05, audioContext.currentTime + index * 0.25);
+                
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.25 + 1);
+                harmonic1Gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.25 + 0.8);
+                harmonic2Gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.25 + 0.6);
+                
+                oscillator.start(audioContext.currentTime + index * 0.25);
+                harmonic1.start(audioContext.currentTime + index * 0.25);
+                harmonic2.start(audioContext.currentTime + index * 0.25);
+                oscillator.stop(audioContext.currentTime + index * 0.25 + 1);
+                harmonic1.stop(audioContext.currentTime + index * 0.25 + 0.8);
+                harmonic2.stop(audioContext.currentTime + index * 0.25 + 0.6);
+            });
+            
+            // Add graduation ceremony organ-like tones
+            setTimeout(() => {
+                [196, 262, 330].forEach((freq, index) => {
+                    const organ = audioContext.createOscillator();
+                    const organGain = audioContext.createGain();
+                    const organMod = audioContext.createOscillator();
+                    const organModGain = audioContext.createGain();
+                    
+                    organMod.connect(organModGain);
+                    organModGain.connect(organ.frequency);
+                    organ.connect(organGain);
+                    organGain.connect(audioContext.destination);
+                    
+                    organ.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.2);
+                    organMod.frequency.setValueAtTime(0.1, audioContext.currentTime + index * 0.2);
+                    organModGain.gain.setValueAtTime(2, audioContext.currentTime + index * 0.2);
+                    organ.type = 'triangle';
+                    organMod.type = 'sine';
+                    
+                    organGain.gain.setValueAtTime(0.1, audioContext.currentTime + index * 0.2);
+                    organGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.2 + 1.2);
+                    
+                    organMod.start(audioContext.currentTime + index * 0.2);
+                    organ.start(audioContext.currentTime + index * 0.2);
+                    organMod.stop(audioContext.currentTime + index * 0.2 + 1.2);
+                    organ.stop(audioContext.currentTime + index * 0.2 + 1.2);
+                });
+            }, 600);
+        }
+
+        // Monster theme audio (dark rumbling with multi-layered thunder and wind)
+        function playMonsterAudio(audioContext) {
+            // Deep rumble base
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
             
-            oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.3);
-            oscillator.frequency.setValueAtTime(523, audioContext.currentTime + 0.6);
-            oscillator.type = 'triangle';
-            
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 1);
-        }
-
-        // Scary theme audio (ominous tone)
-        function playScaryAudio(audioContext) {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(55, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(49, audioContext.currentTime + 0.5);
-            oscillator.frequency.setValueAtTime(55, audioContext.currentTime + 1);
+            oscillator.frequency.setValueAtTime(40, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(30, audioContext.currentTime + 0.5);
+            oscillator.frequency.setValueAtTime(60, audioContext.currentTime + 1);
             oscillator.type = 'sawtooth';
             
             gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
@@ -7690,61 +7805,446 @@
             
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 1.5);
+
+            // Wind howling layer
+            const windOsc = audioContext.createOscillator();
+            const windGain = audioContext.createGain();
+            const windLFO = audioContext.createOscillator();
+            const windLFOGain = audioContext.createGain();
+            
+            windLFO.connect(windLFOGain);
+            windLFOGain.connect(windOsc.frequency);
+            windOsc.connect(windGain);
+            windGain.connect(audioContext.destination);
+            
+            windOsc.frequency.setValueAtTime(150, audioContext.currentTime);
+            windLFO.frequency.setValueAtTime(0.5, audioContext.currentTime);
+            windLFOGain.gain.setValueAtTime(50, audioContext.currentTime);
+            windOsc.type = 'triangle';
+            windLFO.type = 'sine';
+            
+            windGain.gain.setValueAtTime(0.08, audioContext.currentTime);
+            windGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+            
+            windLFO.start(audioContext.currentTime);
+            windOsc.start(audioContext.currentTime);
+            windLFO.stop(audioContext.currentTime + 2);
+            windOsc.stop(audioContext.currentTime + 2);
+
+            // Add thunder crack effect with multiple strikes
+            setTimeout(() => {
+                [2000, 1800, 2200].forEach((freq, index) => {
+                    const thunderOsc = audioContext.createOscillator();
+                    const thunderGain = audioContext.createGain();
+                    
+                    thunderOsc.connect(thunderGain);
+                    thunderGain.connect(audioContext.destination);
+                    
+                    thunderOsc.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.1);
+                    thunderOsc.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + index * 0.1 + 0.2);
+                    thunderOsc.type = 'square';
+                    
+                    thunderGain.gain.setValueAtTime(0.15, audioContext.currentTime + index * 0.1);
+                    thunderGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.1 + 0.3);
+                    
+                    thunderOsc.start(audioContext.currentTime + index * 0.1);
+                    thunderOsc.stop(audioContext.currentTime + index * 0.1 + 0.3);
+                });
+            }, 800);
+            
+            // Add growling sound
+            setTimeout(() => {
+                const growl = audioContext.createOscillator();
+                const growlGain = audioContext.createGain();
+                const growlMod = audioContext.createOscillator();
+                const growlModGain = audioContext.createGain();
+                
+                growlMod.connect(growlModGain);
+                growlModGain.connect(growl.frequency);
+                growl.connect(growlGain);
+                growlGain.connect(audioContext.destination);
+                
+                growl.frequency.setValueAtTime(120, audioContext.currentTime);
+                growlMod.frequency.setValueAtTime(6, audioContext.currentTime);
+                growlModGain.gain.setValueAtTime(30, audioContext.currentTime);
+                growl.type = 'sawtooth';
+                growlMod.type = 'triangle';
+                
+                growlGain.gain.setValueAtTime(0.12, audioContext.currentTime);
+                growlGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+                
+                growlMod.start(audioContext.currentTime);
+                growl.start(audioContext.currentTime);
+                growlMod.stop(audioContext.currentTime + 0.8);
+                growl.stop(audioContext.currentTime + 0.8);
+            }, 400);
         }
 
-        // Default theme audio (cheerful beep)
-        function playDefaultAudio(audioContext) {
+        // Vampire theme audio (bat wings flapping + eerie cathedral + mysterious whispers)
+        function playVampireAudio(audioContext) {
+            // Wing flapping sound (rapid frequency modulation)
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const lfo = audioContext.createOscillator();
+            const lfoGain = audioContext.createGain();
+            
+            lfo.connect(lfoGain);
+            lfoGain.connect(oscillator.frequency);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            lfo.frequency.setValueAtTime(8, audioContext.currentTime); // Flapping rate
+            lfoGain.gain.setValueAtTime(100, audioContext.currentTime);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.type = 'triangle';
+            
+            gainNode.gain.setValueAtTime(0.18, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            lfo.start(audioContext.currentTime);
+            oscillator.start(audioContext.currentTime);
+            lfo.stop(audioContext.currentTime + 1);
+            oscillator.stop(audioContext.currentTime + 1);
+            
+            // Eerie cathedral bell toll
+            setTimeout(() => {
+                [164, 196, 220].forEach((freq, index) => {
+                    const bell = audioContext.createOscillator();
+                    const bellGain = audioContext.createGain();
+                    const bellMod = audioContext.createOscillator();
+                    const bellModGain = audioContext.createGain();
+                    
+                    bellMod.connect(bellModGain);
+                    bellModGain.connect(bell.frequency);
+                    bell.connect(bellGain);
+                    bellGain.connect(audioContext.destination);
+                    
+                    bell.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.3);
+                    bellMod.frequency.setValueAtTime(0.2, audioContext.currentTime + index * 0.3);
+                    bellModGain.gain.setValueAtTime(3, audioContext.currentTime + index * 0.3);
+                    bell.type = 'sine';
+                    bellMod.type = 'sine';
+                    
+                    bellGain.gain.setValueAtTime(0.12, audioContext.currentTime + index * 0.3);
+                    bellGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.3 + 1.5);
+                    
+                    bellMod.start(audioContext.currentTime + index * 0.3);
+                    bell.start(audioContext.currentTime + index * 0.3);
+                    bellMod.stop(audioContext.currentTime + index * 0.3 + 1.5);
+                    bell.stop(audioContext.currentTime + index * 0.3 + 1.5);
+                });
+            }, 200);
+            
+            // Dark whisper effect (filtered noise-like)
+            setTimeout(() => {
+                const whisper = audioContext.createOscillator();
+                const whisperGain = audioContext.createGain();
+                const whisperLFO = audioContext.createOscillator();
+                const whisperLFOGain = audioContext.createGain();
+                
+                whisperLFO.connect(whisperLFOGain);
+                whisperLFOGain.connect(whisper.frequency);
+                whisper.connect(whisperGain);
+                whisperGain.connect(audioContext.destination);
+                
+                whisper.frequency.setValueAtTime(300, audioContext.currentTime);
+                whisperLFO.frequency.setValueAtTime(0.3, audioContext.currentTime);
+                whisperLFOGain.gain.setValueAtTime(20, audioContext.currentTime);
+                whisper.type = 'square';
+                whisperLFO.type = 'triangle';
+                
+                whisperGain.gain.setValueAtTime(0.06, audioContext.currentTime);
+                whisperGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+                
+                whisperLFO.start(audioContext.currentTime);
+                whisper.start(audioContext.currentTime);
+                whisperLFO.stop(audioContext.currentTime + 0.8);
+                whisper.stop(audioContext.currentTime + 0.8);
+            }, 600);
+        }
+
+        // Zombie theme audio (groaning and shuffling)
+        function playZombieAudio(audioContext) {
+            // Low groan with random pitch variations
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
             
-            oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.2);
-            oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.4);
-            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(60, audioContext.currentTime + 0.3);
+            oscillator.frequency.setValueAtTime(90, audioContext.currentTime + 0.6);
+            oscillator.frequency.setValueAtTime(70, audioContext.currentTime + 0.9);
+            oscillator.type = 'sawtooth';
             
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+            gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.2);
             
             oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.8);
+            oscillator.stop(audioContext.currentTime + 1.2);
         }
 
-        // Create theme-based particle effects
+        // Werewolf theme audio (howling)
+        function playWerewolfAudio(audioContext) {
+            // Wolf howl - rising and falling pitch
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
+            oscillator.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 1);
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 1.5);
+            oscillator.type = 'triangle';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.25, audioContext.currentTime + 0.5);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.8);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1.8);
+        }
+
+        // Rockstar theme audio (electric guitar power chord + amp distortion + crowd cheers)
+        function playRockstarAudio(audioContext) {
+            // Power chord (multiple frequencies with harmonics)
+            const frequencies = [82, 110, 165]; // E, A, E power chord
+            
+            frequencies.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const harmonic = audioContext.createOscillator();
+                const subharmonic = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const harmonicGain = audioContext.createGain();
+                const subGain = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                harmonic.connect(harmonicGain);
+                subharmonic.connect(subGain);
+                gainNode.connect(audioContext.destination);
+                harmonicGain.connect(audioContext.destination);
+                subGain.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                harmonic.frequency.setValueAtTime(freq * 2, audioContext.currentTime); // Octave
+                subharmonic.frequency.setValueAtTime(freq * 0.5, audioContext.currentTime); // Sub octave
+                oscillator.type = 'sawtooth'; // Distorted guitar sound
+                harmonic.type = 'square';
+                subharmonic.type = 'triangle';
+                
+                gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+                harmonicGain.gain.setValueAtTime(0.06, audioContext.currentTime);
+                subGain.gain.setValueAtTime(0.08, audioContext.currentTime);
+                
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.2);
+                harmonicGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                subGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.4);
+                
+                oscillator.start(audioContext.currentTime);
+                harmonic.start(audioContext.currentTime);
+                subharmonic.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 1.2);
+                harmonic.stop(audioContext.currentTime + 1);
+                subharmonic.stop(audioContext.currentTime + 1.4);
+            });
+            
+            // Add guitar feedback with vibrato
+            setTimeout(() => {
+                const feedbackOsc = audioContext.createOscillator();
+                const feedbackGain = audioContext.createGain();
+                const vibrato = audioContext.createOscillator();
+                const vibratoGain = audioContext.createGain();
+                
+                vibrato.connect(vibratoGain);
+                vibratoGain.connect(feedbackOsc.frequency);
+                feedbackOsc.connect(feedbackGain);
+                feedbackGain.connect(audioContext.destination);
+                
+                feedbackOsc.frequency.setValueAtTime(1000, audioContext.currentTime);
+                feedbackOsc.frequency.exponentialRampToValueAtTime(2200, audioContext.currentTime + 0.4);
+                vibrato.frequency.setValueAtTime(6, audioContext.currentTime);
+                vibratoGain.gain.setValueAtTime(15, audioContext.currentTime);
+                feedbackOsc.type = 'square';
+                vibrato.type = 'sine';
+                
+                feedbackGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                feedbackGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                
+                vibrato.start(audioContext.currentTime);
+                feedbackOsc.start(audioContext.currentTime);
+                vibrato.stop(audioContext.currentTime + 0.4);
+                feedbackOsc.stop(audioContext.currentTime + 0.4);
+            }, 500);
+            
+            // Add cymbal crash effect
+            setTimeout(() => {
+                const cymbal = audioContext.createOscillator();
+                const cymbalGain = audioContext.createGain();
+                const cymbalNoise = audioContext.createOscillator();
+                const noiseGain = audioContext.createGain();
+                
+                cymbal.connect(cymbalGain);
+                cymbalNoise.connect(noiseGain);
+                cymbalGain.connect(audioContext.destination);
+                noiseGain.connect(audioContext.destination);
+                
+                cymbal.frequency.setValueAtTime(3000, audioContext.currentTime);
+                cymbal.frequency.exponentialRampToValueAtTime(8000, audioContext.currentTime + 0.1);
+                cymbalNoise.frequency.setValueAtTime(10000, audioContext.currentTime);
+                cymbal.type = 'triangle';
+                cymbalNoise.type = 'square';
+                
+                cymbalGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+                noiseGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+                cymbalGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+                
+                cymbal.start(audioContext.currentTime);
+                cymbalNoise.start(audioContext.currentTime);
+                cymbal.stop(audioContext.currentTime + 0.8);
+                cymbalNoise.stop(audioContext.currentTime + 0.6);
+            }, 800);
+        }
+
+        // Nervous/Anxious theme audio (worried stuttering beeps)
+        function playNervousAudio(audioContext) {
+            // Stuttering, uncertain beeps
+            const timings = [0, 0.1, 0.15, 0.3, 0.35, 0.5, 0.7, 0.75, 0.8];
+            
+            timings.forEach((timing, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(400 + Math.random() * 200, audioContext.currentTime + timing);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.08, audioContext.currentTime + timing);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + timing + 0.1);
+                
+                oscillator.start(audioContext.currentTime + timing);
+                oscillator.stop(audioContext.currentTime + timing + 0.1);
+            });
+        }
+
+        // Mascot theme audio (cheerful melody)
+        function playMascotAudio(audioContext) {
+            // Happy little melody
+            const melody = [523, 659, 784, 523, 659, 784, 880, 784]; // C, E, G, C, E, G, A, G
+            
+            melody.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.15);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.12, audioContext.currentTime + index * 0.15);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.15 + 0.2);
+                
+                oscillator.start(audioContext.currentTime + index * 0.15);
+                oscillator.stop(audioContext.currentTime + index * 0.15 + 0.2);
+            });
+        }
+
+        // Create character-specific particle effects
         function createThemeParticles(container, theme) {
-            const colors = {
-                fire: ['#ff4500', '#ff6b00', '#ff8c00'],
-                electric: ['#00bfff', '#87ceeb', '#add8e6'],
-                magic: ['#9400d3', '#da70d6', '#dda0dd'],
-                nature: ['#32cd32', '#90ee90', '#98fb98'],
-                scary: ['#8b0000', '#ff0000', '#ff6347'],
-                default: ['#ffd700', '#ffff00', '#fff8dc']
+            const particleConfigs = {
+                einstein: {
+                    colors: ['#00bfff', '#87ceeb', '#add8e6'],
+                    symbols: ['E=mc²', '∞', '∑', '∆', '√', '∫', 'π', '∂'],
+                    count: 20
+                },
+                academic: {
+                    colors: ['#daa520', '#ffd700', '#fff8dc'],
+                    symbols: ['📚', '🎓', '✏️', '📝', '💡', '🔬', '📊', '🏆'],
+                    count: 18
+                },
+                monster: {
+                    colors: ['#4b0082', '#8b008b', '#9370db'],
+                    symbols: ['⚡', '🌙', '☁️', '👻', '🦇', '💀', '🌩️', '🔮'],
+                    count: 25
+                },
+                vampire: {
+                    colors: ['#8b0000', '#dc143c', '#ff6347'],
+                    symbols: ['🦇', '🩸', '🌙', '⚰️', '🍷', '🖤', '🌹', '🕷️'],
+                    count: 22
+                },
+                zombie: {
+                    colors: ['#228b22', '#32cd32', '#90ee90'],
+                    symbols: ['🧠', '💀', '⚰️', '🪦', '🦴', '👻', '🕸️', '🌙'],
+                    count: 20
+                },
+                werewolf: {
+                    colors: ['#cd853f', '#daa520', '#f0e68c'],
+                    symbols: ['🌕', '🐺', '🌲', '🌙', '🦴', '👂', '🐾', '🌿'],
+                    count: 24
+                },
+                rockstar: {
+                    colors: ['#ff1493', '#ff69b4', '#ffb6c1'],
+                    symbols: ['🎸', '🎵', '🎶', '🎤', '⚡', '🔥', '🎸', '🌟'],
+                    count: 30
+                },
+                nervous: {
+                    colors: ['#ffff00', '#fff8dc', '#fffacd'],
+                    symbols: ['😰', '💧', '😅', '😬', '💦', '😖', '😓', '🤔'],
+                    count: 15
+                },
+                mascot: {
+                    colors: ['#ffd700', '#ffff00', '#fff8dc'],
+                    symbols: ['🐝', '🌻', '🍯', '🌟', '✨', '🌈', '😊', '🎉'],
+                    count: 25
+                }
             };
             
-            const themeColors = colors[theme] || colors.default;
+            const config = particleConfigs[theme] || particleConfigs.mascot;
             
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < config.count; i++) {
                 setTimeout(() => {
-                    createParticle(container, themeColors[Math.floor(Math.random() * themeColors.length)]);
-                }, i * 100);
+                    createCharacterParticle(container, config);
+                }, i * 80);
             }
         }
 
-        // Create individual particle
-        function createParticle(container, color) {
+        // Create individual character-themed particle
+        function createCharacterParticle(container, config) {
             const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: absolute;
-                width: 6px;
-                height: 6px;
-                background: ${color};
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 1000;
-                box-shadow: 0 0 10px ${color};
-            `;
+            const isSymbol = Math.random() > 0.3; // 70% chance of symbol, 30% color dot
+            const color = config.colors[Math.floor(Math.random() * config.colors.length)];
+            
+            if (isSymbol) {
+                const symbol = config.symbols[Math.floor(Math.random() * config.symbols.length)];
+                particle.innerHTML = symbol;
+                particle.style.cssText = `
+                    position: absolute;
+                    font-size: 16px;
+                    color: ${color};
+                    pointer-events: none;
+                    z-index: 1000;
+                    text-shadow: 0 0 10px ${color};
+                    font-weight: bold;
+                `;
+            } else {
+                particle.style.cssText = `
+                    position: absolute;
+                    width: 8px;
+                    height: 8px;
+                    background: ${color};
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 1000;
+                    box-shadow: 0 0 12px ${color};
+                `;
+            }
             
             const containerRect = container.getBoundingClientRect();
             const startX = containerRect.width / 2;
@@ -7755,43 +8255,108 @@
             
             container.appendChild(particle);
             
-            // Animate particle outward
+            // Animate particle outward with rotation for symbols
             const angle = Math.random() * Math.PI * 2;
-            const distance = 50 + Math.random() * 50;
+            const distance = 60 + Math.random() * 80;
             const endX = startX + Math.cos(angle) * distance;
             const endY = startY + Math.sin(angle) * distance;
             
+            const rotation = isSymbol ? Math.random() * 720 - 360 : 0; // Random rotation for symbols
+            
             particle.animate([
-                { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-                { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0)`, opacity: 0 }
+                { 
+                    transform: `translate(0, 0) scale(1) rotate(0deg)`, 
+                    opacity: 1 
+                },
+                { 
+                    transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.1) rotate(${rotation}deg)`, 
+                    opacity: 0 
+                }
             ], {
-                duration: 1000,
-                easing: 'ease-out'
+                duration: 1500,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
             }).onfinish = () => particle.remove();
         }
 
-        // Perform full rotation on 3D model
+        // Perform character-specific rotation animation on 3D model
         function performFullRotation(mascot, theme) {
             if (!mascot.model) return;
             
             const model = mascot.model;
             const originalRotation = model.rotation.y;
-            const rotationSpeed = theme === 'electric' ? 0.2 : theme === 'scary' ? 0.08 : 0.15;
+            const originalPosition = { x: model.position.x, y: model.position.y, z: model.position.z };
+            
+            // Character-specific rotation behaviors
+            const rotationConfigs = {
+                einstein: { speed: 0.12, bounce: false, wobble: true },
+                academic: { speed: 0.10, bounce: true, wobble: false },
+                monster: { speed: 0.08, bounce: false, wobble: false, shake: true },
+                vampire: { speed: 0.15, bounce: false, wobble: false, flutter: true },
+                zombie: { speed: 0.06, bounce: false, wobble: false, shuffle: true },
+                werewolf: { speed: 0.18, bounce: true, wobble: false },
+                rockstar: { speed: 0.20, bounce: true, wobble: true },
+                nervous: { speed: 0.14, bounce: false, wobble: true, jitter: true },
+                mascot: { speed: 0.15, bounce: true, wobble: false }
+            };
+            
+            const config = rotationConfigs[theme] || rotationConfigs.mascot;
             let currentRotation = 0;
+            let animationFrame = 0;
             
             const rotateInterval = setInterval(() => {
-                currentRotation += rotationSpeed;
+                currentRotation += config.speed;
+                animationFrame++;
+                
+                // Basic rotation
                 model.rotation.y = originalRotation + currentRotation;
                 
-                // Add slight bounce for some themes
-                if (theme === 'magic' || theme === 'default') {
-                    model.position.y = Math.sin(currentRotation * 2) * 0.1;
+                // Character-specific movement patterns
+                if (config.bounce) {
+                    // Bouncing motion (Academic, Werewolf, Rockstar, Mascot)
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 3) * 0.15;
                 }
                 
+                if (config.wobble) {
+                    // Side-to-side wobble (Einstein, Rockstar, Nervous)
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 4) * 0.08;
+                }
+                
+                if (config.shake) {
+                    // Scary shaking motion (Monster)
+                    model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.1;
+                    model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.1;
+                    model.position.z = originalPosition.z + (Math.random() - 0.5) * 0.05;
+                }
+                
+                if (config.flutter) {
+                    // Bat-like fluttering (Vampire)
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 8) * 0.05;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 6) * 0.03;
+                }
+                
+                if (config.shuffle) {
+                    // Zombie shuffle (slow, uneven movement)
+                    if (animationFrame % 10 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.05;
+                        model.position.z = originalPosition.z + (Math.random() - 0.5) * 0.03;
+                    }
+                }
+                
+                if (config.jitter) {
+                    // Nervous jittering (Anxious)
+                    if (Math.random() < 0.3) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.03;
+                        model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.03;
+                    }
+                }
+                
+                // Complete rotation
                 if (currentRotation >= Math.PI * 2) {
                     clearInterval(rotateInterval);
                     model.rotation.y = originalRotation;
-                    model.position.y = 0;
+                    model.position.x = originalPosition.x;
+                    model.position.y = originalPosition.y;
+                    model.position.z = originalPosition.z;
                 }
             }, 16);
         }
@@ -7816,10 +8381,10 @@
 
         // Default rotation show
         function performDefaultRotationShow(mascot, container) {
-            applyThemeEffects(container, 'default');
-            playThemeAudio('default');
-            createThemeParticles(container, 'default');
-            performFullRotation(mascot, 'default');
+            applyThemeEffects(container, 'mascot');
+            playThemeAudio('mascot');
+            createThemeParticles(container, 'mascot');
+            performFullRotation(mascot, 'mascot');
             
             setTimeout(() => {
                 resetMascotShow(container, document.getElementById('mascotCaption'));
