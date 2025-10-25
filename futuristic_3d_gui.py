@@ -849,8 +849,10 @@ class FuturisticCyberpunk3DGUI:
             # Start glow animation on connect button
             self.animations.create_glowing_border(self.connect_btn, self.colors['accent_green'])
             
-            # Transform center panel to Meshy asset browser
+            # Transform center panel to Meshy asset browser with REAL ASSETS
             self.show_meshy_asset_browser()
+            # Fetch real assets from Meshy API
+            self.fetch_real_meshy_assets()
             
         elif status == "error":
             self.status_label.configure(text="❌ Connection Error", fg=self.colors['connection_bad'])
@@ -1914,6 +1916,12 @@ class FuturisticCyberpunk3DGUI:
         actions_frame = tk.Frame(control_bar, bg=self.colors['bg_secondary'])
         actions_frame.pack(side=tk.RIGHT, padx=10, pady=10)
         
+        tk.Button(actions_frame, text="🔄 REFRESH ASSETS",
+                 command=self.fetch_real_meshy_assets,
+                 bg=self.colors['accent_cyan'], fg='#000000',
+                 font=('Exo', 9, 'bold'), relief='flat',
+                 padx=12, pady=6, cursor='hand2').pack(side=tk.LEFT, padx=5)
+        
         tk.Button(actions_frame, text="✅ SELECT ALL",
                  command=self.select_all_assets,
                  bg=self.colors['accent_green'], fg='#000000',
@@ -1946,8 +1954,244 @@ class FuturisticCyberpunk3DGUI:
         self.assets_canvas.pack(side="left", fill="both", expand=True)
         assets_scrollbar.pack(side="right", fill="y")
         
-        # Load and display Meshy bee assets
-        self.load_meshy_bee_assets()
+        # Fetch and display real Meshy assets
+        self.fetch_real_meshy_assets()
+
+    def fetch_real_meshy_assets(self):
+        """Fetch actual assets from Meshy API"""
+        def fetch_thread():
+            try:
+                api_key = self.meshy_api_key.get()
+                if not api_key:
+                    self.root.after(0, lambda: self.log_message("❌ API key required to fetch real assets", "error"))
+                    return
+                
+                import requests
+                import json
+                
+                # Fetch user's models from Meshy API
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                
+                # Try different endpoints to get user's models
+                endpoints = [
+                    'https://api.meshy.ai/v2/text-to-3d',  # Get text-to-3d models
+                    'https://api.meshy.ai/v1/text-to-3d',  # Fallback endpoint
+                ]
+                
+                real_assets = []
+                
+                for endpoint in endpoints:
+                    try:
+                        self.root.after(0, lambda e=endpoint: self.log_message(f"🔍 Fetching from {e}...", "info"))
+                        response = requests.get(endpoint, headers=headers, timeout=15)
+                        
+                        if response.status_code == 200:
+                            data = response.json()
+                            self.root.after(0, lambda: self.log_message(f"✅ Successfully fetched data", "success"))
+                            
+                            # Process the response based on API structure
+                            if 'result' in data:
+                                models = data['result'] if isinstance(data['result'], list) else [data['result']]
+                            elif 'data' in data:
+                                models = data['data'] if isinstance(data['data'], list) else [data['data']]
+                            elif isinstance(data, list):
+                                models = data
+                            else:
+                                models = [data]
+                            
+                            # Convert Meshy API response to our asset format
+                            for model in models:
+                                if isinstance(model, dict):
+                                    asset = {
+                                        'name': model.get('name', model.get('prompt', 'Unnamed Model'))[:50],
+                                        'filename': f"{model.get('id', 'unknown')}.glb",
+                                        'status': 'textured' if model.get('status') == 'SUCCEEDED' else 'pending',
+                                        'type': 'model',
+                                        'download_ready': model.get('status') == 'SUCCEEDED',
+                                        'thumbnail_url': model.get('thumbnail_url'),
+                                        'model_urls': model.get('model_urls', {}),
+                                        'id': model.get('id'),
+                                        'thumbnail_color': '#FFD700',  # Default gold
+                                        'secondary_color': '#87CEEB'   # Default blue
+                                    }
+                                    real_assets.append(asset)
+                            
+                            break  # Success, exit loop
+                            
+                        elif response.status_code == 401:
+                            self.root.after(0, lambda: self.log_message("❌ Invalid API key", "error"))
+                            return
+                        else:
+                            self.root.after(0, lambda s=response.status_code: self.log_message(f"⚠️ API returned status {s}", "warning"))
+                            
+                    except requests.exceptions.RequestException as e:
+                        self.root.after(0, lambda e=str(e): self.log_message(f"⚠️ Request failed: {e}", "warning"))
+                        continue
+                
+                if real_assets:
+                    # Update asset display with real data
+                    self.root.after(0, lambda assets=real_assets: self.display_real_assets(assets))
+                    self.root.after(0, lambda: self.log_message(f"✅ Loaded {len(real_assets)} real assets", "success"))
+                else:
+                    # Fallback to mock data if no real assets found
+                    self.root.after(0, lambda: self.log_message("ℹ️ No assets found, using demo data", "info"))
+                    self.root.after(0, lambda: self.load_meshy_bee_assets())
+                        
+            except Exception as e:
+                self.root.after(0, lambda e=str(e): self.log_message(f"❌ Error fetching assets: {e}", "error"))
+                # Fallback to mock data
+                self.root.after(0, lambda: self.load_meshy_bee_assets())
+        
+        import threading
+        thread = threading.Thread(target=fetch_thread)
+        thread.daemon = True
+        thread.start()
+
+    def display_real_assets(self, assets):
+        """Display real Meshy assets in the grid"""
+        # Clear existing assets
+        for widget in self.assets_grid_frame.winfo_children():
+            widget.destroy()
+        
+        # Configure grid with 4 columns
+        columns = 4
+        for i in range(columns):
+            self.assets_grid_frame.grid_columnconfigure(i, weight=1, minsize=180)
+        
+        # Display real assets
+        for index, asset in enumerate(assets):
+            row = index // columns
+            col = index % columns
+            
+            asset_card = self.create_real_asset_card(self.assets_grid_frame, asset)
+            asset_card.grid(row=row, column=col, padx=8, pady=8, sticky="ew")
+
+    def create_real_asset_card(self, parent, asset):
+        """Create asset card for real Meshy asset"""
+        card = tk.Frame(parent, bg=self.colors['bg_secondary'], relief='solid', bd=1)
+        
+        # Asset thumbnail (try to load real thumbnail or use placeholder)
+        thumbnail_frame = tk.Frame(card, bg=self.colors['bg_tertiary'], height=120)
+        thumbnail_frame.pack(fill=tk.X, padx=8, pady=8)
+        thumbnail_frame.pack_propagate(False)
+        
+        # If there's a thumbnail URL, try to display it (simplified for now)
+        if asset.get('thumbnail_url'):
+            thumbnail_label = tk.Label(thumbnail_frame, text="🎨 REAL\nTHUMBNAIL", 
+                                     bg=asset['thumbnail_color'], fg='#000000',
+                                     font=('Exo', 8, 'bold'))
+        else:
+            # Create a simple placeholder
+            thumbnail_label = tk.Label(thumbnail_frame, text="📦 3D\nMODEL", 
+                                     bg=asset['thumbnail_color'], fg='#000000',
+                                     font=('Exo', 10, 'bold'))
+        
+        thumbnail_label.pack(expand=True, fill=tk.BOTH)
+        
+        # Asset name
+        name_label = tk.Label(card, text=asset['name'], 
+                            bg=self.colors['bg_secondary'], fg=self.colors['text_primary'],
+                            font=('Exo', 9, 'bold'))
+        name_label.pack(pady=(0, 5))
+        
+        # Filename
+        filename_label = tk.Label(card, text=asset['filename'], 
+                                bg=self.colors['bg_secondary'], fg=self.colors['text_muted'],
+                                font=('Exo', 8))
+        filename_label.pack()
+        
+        # Status indicator
+        status_color = self.colors['accent_green'] if asset['status'] == 'textured' else self.colors['accent_orange']
+        status_frame = tk.Frame(card, bg=self.colors['bg_secondary'])
+        status_frame.pack(pady=5)
+        
+        status_dot = tk.Label(status_frame, text="●", fg=status_color, bg=self.colors['bg_secondary'],
+                            font=('Exo', 12))
+        status_dot.pack(side=tk.LEFT)
+        
+        status_label = tk.Label(status_frame, text=asset['status'].upper(), 
+                              fg=status_color, bg=self.colors['bg_secondary'],
+                              font=('Exo', 8, 'bold'))
+        status_label.pack(side=tk.LEFT, padx=(2, 0))
+        
+        # Download buttons (only if ready)
+        if asset['download_ready']:
+            buttons_frame = tk.Frame(card, bg=self.colors['bg_secondary'])
+            buttons_frame.pack(fill=tk.X, padx=8, pady=(5, 8))
+            
+            # Available formats from Meshy API
+            model_urls = asset.get('model_urls', {})
+            formats = [('GLB', 'glb'), ('OBJ', 'obj'), ('PNG', 'png')]
+            
+            for format_name, format_key in formats:
+                if format_key in model_urls or format_key == 'glb':  # GLB is usually default
+                    btn_color = {'GLB': self.colors['accent_green'], 
+                               'OBJ': self.colors['accent_cyan'], 
+                               'PNG': self.colors['accent_orange']}[format_name]
+                    
+                    btn = tk.Button(buttons_frame, text=format_name,
+                                  command=lambda f=format_name, a=asset: self.download_real_asset(a, f),
+                                  bg=btn_color, fg='#000000',
+                                  font=('Exo', 7, 'bold'), relief='flat',
+                                  padx=8, pady=2, cursor='hand2')
+                    btn.pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+        
+        return card
+
+    def download_real_asset(self, asset, format_type):
+        """Download real asset from Meshy API"""
+        def download_thread():
+            try:
+                api_key = self.meshy_api_key.get()
+                model_urls = asset.get('model_urls', {})
+                asset_id = asset.get('id')
+                
+                # Determine download URL
+                if format_type.lower() in model_urls:
+                    download_url = model_urls[format_type.lower()]
+                elif asset_id:
+                    # Construct download URL if not in model_urls
+                    download_url = f"https://api.meshy.ai/v2/text-to-3d/{asset_id}/download"
+                else:
+                    self.root.after(0, lambda: self.log_message(f"❌ No download URL for {format_type}", "error"))
+                    return
+                
+                self.root.after(0, lambda: self.log_message(f"📥 Downloading {asset['name']} as {format_type}...", "info"))
+                
+                # Download the file
+                import requests
+                import os
+                
+                headers = {'Authorization': f'Bearer {api_key}'}
+                response = requests.get(download_url, headers=headers, stream=True, timeout=30)
+                
+                if response.status_code == 200:
+                    # Save to downloads directory
+                    downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads", "Meshy_Assets")
+                    os.makedirs(downloads_dir, exist_ok=True)
+                    
+                    filename = f"{asset['name']}_{asset_id}.{format_type.lower()}"
+                    filepath = os.path.join(downloads_dir, filename)
+                    
+                    with open(filepath, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    self.root.after(0, lambda: self.log_message(f"✅ Downloaded: {filename}", "success"))
+                    
+                else:
+                    self.root.after(0, lambda: self.log_message(f"❌ Download failed: {response.status_code}", "error"))
+                    
+            except Exception as e:
+                self.root.after(0, lambda e=str(e): self.log_message(f"❌ Download error: {e}", "error"))
+        
+        import threading
+        thread = threading.Thread(target=download_thread)
+        thread.daemon = True
+        thread.start()
 
     def load_meshy_bee_assets(self):
         """Load and display bee assets in Meshy.ai grid style"""
