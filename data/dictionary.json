@@ -572,12 +572,36 @@
       "source": "generic_fallback",
       "note": "Definition not available - focus on correct spelling",
       "created": "2025-10-16T15:43:35.295334"
+    },
+    "storybook": {
+      "definition": "A book containing stories, especially children's stories",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-24T20:33:29.866692"
+    },
+    "flower": {
+      "definition": "A colorful, conspicuous structure associated with angiosperms, frequently scented and attracting various insects, and which may or may not be used for sexual reproduction",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈflaʊ.ə/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-24T21:24:01.497142"
+    },
+    "book": {
+      "definition": "A collection of sheets of paper bound together to hinge at one edge, containing printed or written material, pictures, etc",
+      "example": "He was frustrated because he couldn't find anything about dinosaurs in the _____.",
+      "phonetic": "/buːk/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-10-24T21:24:58.869133"
     }
   },
   "stats": {
-    "total_words": 73,
+    "total_words": 76,
     "api_calls": 0,
     "cache_hits": 0
   },
-  "last_updated": "2025-10-16T15:43:35.296103"
+  "last_updated": "2025-10-24T21:24:58.870881"
 }

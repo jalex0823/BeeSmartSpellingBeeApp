@@ -26,6 +26,11 @@ venv/
 env/
 ENV/
 .venv/
+.venv*/
+
+# Runtime safety logs/reports (not source data)
+data/content_violations.json
+data/guardian_reports/
 
 # IDE
 .vscode/
