@@ -6159,25 +6159,25 @@
                 <style>
                     .dict-voice-visualizer {
                         width: 100%;
-                        height: 60px;
+                        height: 80px;
                         display: flex;
-                        align-items: flex-end;
-                        justify-content: center;
-                        gap: 3px;
+                        align-items: center;
+                        justify-content: space-evenly;
+                        gap: 2px;
                         margin: 1rem auto;
                         background: rgba(255, 105, 180, 0.08);
                         border-radius: 0;
-                        padding: 8px;
+                        padding: 12px 20px;
                         border: none;
                         overflow: hidden;
                         position: relative;
                     }
                     .dict-voice-wave {
-                        width: 5px;
+                        width: 8px;
                         height: 12px;
                         background: linear-gradient(180deg, #FF69B4 0%, #FF1493 50%, #FFB6C1 100%);
-                        border-radius: 2px 2px 0 0;
-                        transition: height 0.1s ease;
+                        border-radius: 3px;
+                        transition: all 0.1s ease;
                         box-shadow: 0 0 6px rgba(255, 105, 180, 0.3);
                         animation: dictWaveStatic 0.8s ease-in-out infinite alternate;
                     }
@@ -6187,40 +6187,50 @@
                         animation-timing-function: ease-in-out;
                     }
                     .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(1) { animation-delay: 0s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(2) { animation-delay: 0.05s; animation-name: dictWaveShort; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(3) { animation-delay: 0.1s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(4) { animation-delay: 0.15s; animation-name: dictWaveTallest; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(5) { animation-delay: 0.2s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(6) { animation-delay: 0.25s; animation-name: dictWaveShort; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(7) { animation-delay: 0.3s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(8) { animation-delay: 0.35s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(9) { animation-delay: 0.4s; animation-name: dictWaveShort; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(10) { animation-delay: 0.45s; animation-name: dictWaveTallest; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(11) { animation-delay: 0.5s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(12) { animation-delay: 0.55s; animation-name: dictWaveTall; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(13) { animation-delay: 0.6s; animation-name: dictWaveShort; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(14) { animation-delay: 0.65s; animation-name: dictWaveMedium; }
-                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(15) { animation-delay: 0.7s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(2) { animation-delay: 0.03s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(3) { animation-delay: 0.06s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(4) { animation-delay: 0.09s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(5) { animation-delay: 0.12s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(6) { animation-delay: 0.15s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(7) { animation-delay: 0.18s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(8) { animation-delay: 0.21s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(9) { animation-delay: 0.24s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(10) { animation-delay: 0.27s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(11) { animation-delay: 0.3s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(12) { animation-delay: 0.33s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(13) { animation-delay: 0.36s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(14) { animation-delay: 0.39s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(15) { animation-delay: 0.42s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(16) { animation-delay: 0.45s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(17) { animation-delay: 0.48s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(18) { animation-delay: 0.51s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(19) { animation-delay: 0.54s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(20) { animation-delay: 0.57s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(21) { animation-delay: 0.6s; animation-name: dictWaveMedium; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(22) { animation-delay: 0.63s; animation-name: dictWaveTallest; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(23) { animation-delay: 0.66s; animation-name: dictWaveTall; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(24) { animation-delay: 0.69s; animation-name: dictWaveShort; }
+                    .dict-voice-visualizer.speaking .dict-voice-wave:nth-child(25) { animation-delay: 0.72s; animation-name: dictWaveMedium; }
                     
                     @keyframes dictWaveStatic {
                         0%, 100% { height: 12px; transform: scaleY(1); }
-                        50% { height: 16px; transform: scaleY(1.1); }
+                        50% { height: 18px; transform: scaleY(1.2); }
                     }
                     @keyframes dictWaveShort {
                         0%, 100% { height: 15px; transform: scaleY(1); }
-                        50% { height: 28px; transform: scaleY(1.6); }
+                        50% { height: 32px; transform: scaleY(1.8); }
                     }
                     @keyframes dictWaveMedium {
                         0%, 100% { height: 18px; transform: scaleY(1.1); }
-                        50% { height: 38px; transform: scaleY(2); }
+                        50% { height: 45px; transform: scaleY(2.3); }
                     }
                     @keyframes dictWaveTall {
                         0%, 100% { height: 22px; transform: scaleY(1.2); }
-                        50% { height: 48px; transform: scaleY(2.4); }
+                        50% { height: 58px; transform: scaleY(2.8); }
                     }
                     @keyframes dictWaveTallest {
                         0%, 100% { height: 25px; transform: scaleY(1.3); }
-                        50% { height: 52px; transform: scaleY(2.6); }
+                        50% { height: 70px; transform: scaleY(3.2); }
                     }
                     .phonetic-display {
                         background: rgba(255, 182, 193, 0.2);
@@ -6343,6 +6353,16 @@
                     </div>
                     
                     <div class="dict-voice-visualizer" id="dictVoiceVisualizer" style="margin-top: 1.5rem;">
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
+                        <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>
                         <div class="dict-voice-wave"></div>

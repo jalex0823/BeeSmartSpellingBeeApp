@@ -1,8 +1,34 @@
 # Enhanced 3D File Generator with Meshy API Integration
 
-This enhanced version of the 3D File Generator now includes powerful Meshy AI integration for advanced 3D model processing and Railway app deployment features.
+This enhanced version of the 3D File Generator now includes powerful Meshy AI integration for advanced 3D model processing, Railway app deployment features, and **real-time batch preview capabilities**.
 
 ## 🆕 New Features
+
+### 🎨 Real Color Previews & Batch Processing
+- **OBJ Thumbnails**: Display actual mesh tones with wireframe overlays and complexity indicators
+- **MTL Previews**: Show color swatches based on diffuse colors and texture maps from material definitions
+- **PNG Thumbnails**: Render full image previews with proper scaling and borders
+- **Batch Selection**: Checkboxes beside each asset with "Select All" toggle for quick operations
+- **Neon Glow Borders**: Selected files are highlighted with cyan glow effects
+- **Dynamic File Loading**: Drag-and-drop or browse multiple files simultaneously
+
+### 🧪 Advanced Texture Style Controls
+- **Multi-Select Checkboxes**: Choose from Realistic, Cartoon, Metallic, Wood Grain, Fabric, and Concrete styles
+- **Per-File Assignment**: Optional dropdown for custom texture assignment to individual files
+- **Style Visualization**: Color-coded buttons showing texture style selections
+- **Batch Style Application**: Apply textures to all selected files simultaneously
+
+### 📁 Enhanced Conversion Workflow
+- **Step-by-Step Visual Guide**: Clear processing steps remain visible throughout workflow
+- **Dynamic Process Button**: Updates status from "MESHY PROCESS BATCH" to "PROCESSING..." with progress
+- **Real-Time Status**: Shows file count, selection count, and processing progress
+- **Threaded Processing**: Non-blocking UI during batch operations
+
+### 📜 Comprehensive Log & Output Management
+- **Timestamped Log Entries**: Detailed processing logs with precise timestamps
+- **Output File List**: Preview icons and status indicators for generated files
+- **Export Log Option**: Save processing logs for debugging or audit trail
+- **Scrollable Interfaces**: Handle large file batches with smooth scrolling
 
 ### Meshy API Integration
 - **AI-Powered Texture Generation**: Create high-quality textures using AI
@@ -16,39 +42,30 @@ This enhanced version of the 3D File Generator now includes powerful Meshy AI in
 - **GLB Format Support**: Web-optimized 3D model format
 - **Asset Management**: Proper file referencing for web applications
 
-### Enhanced GUI
-- **Dark Theme**: Professional dark interface
-- **Real-time Progress**: Detailed logging of all operations
-- **Multiple Processing Options**: Choose between standard and AI processing
-- **API Key Management**: Secure handling of Meshy API credentials
-
-## 📋 Requirements
-
-### Python Dependencies
-```bash
-pip install trimesh pyrender pillow numpy matplotlib requests tkinter
-```
-
-### Meshy API Account
-1. Sign up at [https://meshy.ai](https://meshy.ai)
-2. Get your API key from the dashboard
-3. Enter the key in the application settings
-
 ## 🚀 Quick Start
 
-### 1. Standard Processing (Existing Functionality)
+### 1. Enhanced Batch Processing (New Primary Method)
+1. Launch the application: `python enhanced_3d_batch_gui.py`
+2. Click "📁 UPLOAD FILES" to select multiple 3D files (.obj, .mtl, .png)
+3. Review real-time previews with color swatches and thumbnails
+4. Use checkboxes to select files for processing
+5. Choose texture styles for each file type
+6. Enter your Meshy API key
+7. Click "🚀 MESHY PROCESS BATCH" to start AI processing
+8. Monitor progress in real-time log
+9. Export processing logs for documentation
+
+### 2. Standard Processing (Original Functionality)
 1. Launch the application: `python 3DFile_FileFolderGenerator.py`
 2. Select ZIP files containing OBJ models
 3. Choose output directory
 4. Click "Convert Files"
 5. Optionally create PNG thumbnails
 
-### 2. Meshy AI Processing (New Feature)
-1. Enable "Use Meshy API for Processing"
-2. Enter your Meshy API key
-3. Select texture style
-4. Enable "Railway App Ready" for web deployment
-5. Click "Meshy Process"
+### 3. Modern GUI (Design-Focused)
+1. Launch the application: `python enhanced_3d_gui_exact.py`
+2. Experience the modern dark theme interface
+3. Use individual file processing with Meshy API integration
 
 ## 📁 File Structure
 
