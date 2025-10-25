@@ -355,6 +355,10 @@ OVERRIDES: Dict[str, str] = {
 OVERRIDES_JSON = "overrides.json"
 OVERRIDES_CSV  = "overrides.csv"
 
+# Meshy API Configuration
+MESHY_API_KEY = "msy_U3SZ99ULyDJyJITEklPVsVE2cUDmf0wnD1jy"
+MESHY_API_BASE = "https://api.meshy.ai"
+
 # Thumbnail render settings
 RENDER_SIZE = (640, 640)                  # width, height
 BACKGROUND_COLOR = (0, 0, 0, 1)           # RGBA — solid black background
@@ -470,7 +474,125 @@ def detect_files(src_folder: Path) -> Tuple[Optional[Path], Optional[Path], List
     imgs = [p for p in src_folder.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXTS]
     return obj, mtl, imgs
 
+def create_thumbnail_smart(obj_path: Path, thumb_path: Path, base_name: str):
+    """Create thumbnail using the best available method."""
+    try:
+        # Method 1: Try simple matplotlib 3D rendering (most reliable)
+        if create_matplotlib_3d_thumbnail(obj_path, thumb_path):
+            return True
+            
+        # Method 2: Try to get from Meshy API if this was a Meshy model
+        if MESHY_API_KEY and create_meshy_thumbnail(base_name, thumb_path):
+            return True
+            
+        # Method 3: Create a nice placeholder
+        create_placeholder_thumbnail(obj_path, thumb_path)
+        return True
+        
+    except Exception as e:
+        print(f"⚠️ All thumbnail methods failed: {e}")
+        return False
+
+def create_matplotlib_3d_thumbnail(obj_path: Path, thumb_path: Path) -> bool:
+    """Create 3D thumbnail using matplotlib."""
+    try:
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+        
+        print(f"🔍 Loading mesh with matplotlib: {obj_path}")
+        
+        # Load mesh
+        mesh = trimesh.load_mesh(str(obj_path), process=False)
+        if isinstance(mesh, trimesh.Scene):
+            mesh = trimesh.util.concatenate(mesh.dump())
+        
+        if len(mesh.vertices) == 0:
+            return False
+            
+        # Create figure with black background
+        fig = plt.figure(figsize=(8, 8), facecolor='black')
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_facecolor('black')
+        
+        # Get vertices and faces
+        vertices = mesh.vertices
+        faces = mesh.faces
+        
+        # Limit faces for performance
+        max_faces = min(1000, len(faces))
+        face_collection = []
+        
+        for i, face in enumerate(faces[:max_faces]):
+            if i % 100 == 0:  # Progress update
+                print(f"   Processing face {i}/{max_faces}")
+            triangle = vertices[face]
+            face_collection.append(triangle)
+        
+        # Create solid 3D model
+        poly_collection = Poly3DCollection(face_collection, 
+                                         facecolors='lightsteelblue', 
+                                         edgecolors='white',
+                                         alpha=0.8,
+                                         linewidths=0.1)
+        ax.add_collection3d(poly_collection)
+        
+        # Set bounds
+        bounds = mesh.bounds
+        ax.set_xlim(bounds[0, 0], bounds[1, 0])
+        ax.set_ylim(bounds[0, 1], bounds[1, 1]) 
+        ax.set_zlim(bounds[0, 2], bounds[1, 2])
+        
+        # Style the plot
+        ax.set_axis_off()
+        ax.grid(False)
+        ax.view_init(elev=25, azim=45)  # Nice 3D angle
+        
+        # Save with black background
+        plt.savefig(thumb_path, facecolor='black', edgecolor='black',
+                   bbox_inches='tight', dpi=80, format='png', pad_inches=0)
+        plt.close(fig)
+        
+        print(f"📸 Matplotlib 3D thumbnail created: {thumb_path}")
+        return True
+        
+    except Exception as e:
+        print(f"⚠️ Matplotlib 3D rendering failed: {e}")
+        return False
+
+def create_meshy_thumbnail(model_name: str, thumb_path: Path) -> bool:
+    """Try to get thumbnail from Meshy API based on model name."""
+    try:
+        import requests
+        
+        # This would require knowing the Meshy model ID, which we don't have from just the ZIP
+        # For now, return False to use other methods
+        # In the future, you could implement a search or mapping system
+        
+        print(f"🔍 Meshy API thumbnail not implemented yet for: {model_name}")
+        return False
+        
+    except Exception as e:
+        print(f"⚠️ Meshy API thumbnail failed: {e}")
+        return False
+
 def pick_primary_texture(imgs: List[Path], base_hint: str) -> Optional[Path]:
+    """Pick the best candidate as the main color/albedo texture."""
+    if not imgs:
+        return None
+    # Prefer files that contain PRIMARY_TAGS
+    by_score = []
+    for img in imgs:
+        low = img.stem.lower()
+        score = 0
+        for t in PRIMARY_TAGS:
+            if t in low:
+                score += 10
+        if base_hint.lower() in low:
+            score += 5
+        by_score.append((score, img))
+    by_score.sort(key=lambda x: x[0], reverse=True)
+    return by_score[0][1] if by_score else imgs[0]
     """Pick the best candidate as the main color/albedo texture."""
     if not imgs:
         return None
@@ -756,6 +878,9 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
 def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
     """Create a simple but effective thumbnail using matplotlib and trimesh."""
     try:
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        
         print(f"🎨 Creating simple thumbnail for: {obj_path}")
         
         # Load mesh
@@ -768,29 +893,29 @@ def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
             create_placeholder_thumbnail(obj_path, thumb_path)
             return
             
-        # Get a good view of the mesh
+        # Get vertices and faces
         vertices = mesh.vertices
+        faces = mesh.faces
         
         # Create figure with black background
         fig = plt.figure(figsize=(8, 8), facecolor='black')
         ax = fig.add_subplot(111, projection='3d', facecolor='black')
         
-        # Plot the mesh faces as a surface
-        faces = mesh.faces
-        
-        # Sample vertices for better performance
-        max_faces = 1000
+        # Sample faces for better performance
+        max_faces = 500
         if len(faces) > max_faces:
-            # Sample faces evenly
             step = len(faces) // max_faces
             faces = faces[::step]
         
-        # Create triangulated surface
+        # Plot each triangle
         for face in faces:
             triangle = vertices[face]
-            # Create a polygon for each face
-            ax.plot_trisurf(triangle[:, 0], triangle[:, 1], triangle[:, 2], 
-                           color='lightblue', alpha=0.8, edgecolor='white', linewidth=0.1)
+            # Plot triangle as lines to show structure
+            for i in range(3):
+                start = triangle[i]
+                end = triangle[(i + 1) % 3]
+                ax.plot([start[0], end[0]], [start[1], end[1]], [start[2], end[2]], 
+                       'white', alpha=0.7, linewidth=0.8)
         
         # Set equal aspect ratio
         max_range = np.array([vertices[:,0].max()-vertices[:,0].min(),
@@ -808,9 +933,12 @@ def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
         # Set viewing angle for nice 3D perspective
         ax.view_init(elev=20, azim=45)
         
-        # Remove axes and background
+        # Remove axes and make background black
         ax.set_axis_off()
         ax.grid(False)
+        ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
+        ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
+        ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
         
         # Save with black background
         plt.savefig(thumb_path, facecolor='black', bbox_inches='tight',
@@ -1071,12 +1199,13 @@ def process_model_folder(src_folder: Path, out_parent: Path, overrides: Dict[str
     if not skip_thumbnails and out_obj and out_obj.exists():
         thumb_path = out_folder / f"{base}!.png"  # Use ! to distinguish from texture files
         try:
-            # Add timeout protection for thumbnail rendering
-            print(f"🖼️ Generating rendered thumbnail for {base}...")
-            render_thumbnail_transparent(out_obj, thumb_path)
-            print(f"✅ Rendered thumbnail created: {thumb_path}")
+            print(f"🖼️ Generating smart thumbnail for {base}...")
+            if create_thumbnail_smart(out_obj, thumb_path, base):
+                print(f"✅ Smart thumbnail created: {thumb_path}")
+            else:
+                print(f"⚠️ Smart thumbnail failed, using placeholder")
         except Exception as thumb_error:
-            print(f"⚠️ Thumbnail rendering failed for {base}: {thumb_error}")
+            print(f"⚠️ Thumbnail generation failed for {base}: {thumb_error}")
             # Try creating a simple placeholder instead
             try:
                 create_placeholder_thumbnail(out_obj, thumb_path)
