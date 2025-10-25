@@ -916,7 +916,7 @@ class Dark3DProcessorGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("3D Model Processor")
-        self.root.geometry("600x500")
+        self.root.geometry("700x800")  # Larger window for better progress visibility
         self.root.configure(bg='#2b2b2b')  # Dark background
         
         self.selected_zip_files = []
@@ -936,30 +936,30 @@ class Dark3DProcessorGUI:
                               bg=bg_color, fg=fg_color)
         title_label.pack(pady=20)
         
-        # Selected files frame
+        # Selected files frame (compact)
         files_frame = tk.LabelFrame(self.root, text="Selected ZIP Files", 
                                    bg=bg_color, fg=fg_color,
                                    font=('Arial', 12, 'bold'))
-        files_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        files_frame.pack(fill=tk.X, padx=20, pady=10)
         
-        # Listbox for showing selected files
-        self.files_listbox = tk.Listbox(files_frame, height=8,
+        # Listbox for showing selected files (smaller, fixed height)
+        self.files_listbox = tk.Listbox(files_frame, height=4,
                                        bg='#1e1e1e', fg=fg_color,
                                        selectbackground=selected_color,
                                        font=('Consolas', 10))
-        self.files_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.files_listbox.pack(fill=tk.X, padx=10, pady=10)
         
-        # Progress log frame
+        # Progress log frame (larger, expandable)
         progress_frame = tk.LabelFrame(self.root, text="Processing Progress", 
                                       bg=bg_color, fg=fg_color,
                                       font=('Arial', 12, 'bold'))
         progress_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
-        # Scrollable text widget for progress log
+        # Scrollable text widget for progress log (much larger)
         progress_scroll = tk.Scrollbar(progress_frame)
         progress_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.progress_text = tk.Text(progress_frame, height=10,
+        self.progress_text = tk.Text(progress_frame, height=20,
                                      bg='#1e1e1e', fg='#00ff00',  # Green text for terminal look
                                      font=('Consolas', 9),
                                      wrap=tk.WORD,
