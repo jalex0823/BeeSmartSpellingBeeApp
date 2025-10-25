@@ -978,29 +978,53 @@ class Dark3DProcessorGUI:
         button_frame = tk.Frame(self.root, bg=bg_color)
         button_frame.pack(fill=tk.X, padx=20, pady=10)
         
+        # First row of buttons
+        button_row1 = tk.Frame(button_frame, bg=bg_color)
+        button_row1.pack(fill=tk.X, pady=(0, 5))
+        
         # Select ZIP Files button
-        self.select_btn = tk.Button(button_frame, text="📁 Select ZIP Files",
+        self.select_btn = tk.Button(button_row1, text="📁 Select ZIP Files",
                                    command=self.select_zip_files,
                                    bg=button_color, fg=fg_color,
-                                   font=('Arial', 12, 'bold'),
+                                   font=('Arial', 11, 'bold'),
                                    relief='raised', bd=2)
-        self.select_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5, fill=tk.X, expand=True)
+        self.select_btn.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
+        
+        # Manual Process Folder button
+        self.manual_btn = tk.Button(button_row1, text="📂 Process Folder",
+                                   command=self.process_manual_folder,
+                                   bg='#2E8B57', fg=fg_color,
+                                   font=('Arial', 11, 'bold'),
+                                   relief='raised', bd=2)
+        self.manual_btn.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
+        
+        # Clear Selection button
+        self.clear_btn = tk.Button(button_row1, text="🗑️ Clear",
+                                   command=self.clear_selection,
+                                   bg='#8B0000', fg=fg_color,
+                                   font=('Arial', 11, 'bold'),
+                                   relief='raised', bd=2)
+        self.clear_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # Second row of buttons
+        button_row2 = tk.Frame(button_frame, bg=bg_color)
+        button_row2.pack(fill=tk.X)
         
         # Convert button
-        self.convert_btn = tk.Button(button_frame, text="🔄 Convert Files",
+        self.convert_btn = tk.Button(button_row2, text="🔄 Convert Files",
                                     command=self.convert_files,
                                     bg=button_color, fg=fg_color,
                                     font=('Arial', 12, 'bold'),
                                     relief='raised', bd=2)
-        self.convert_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5, fill=tk.X, expand=True)
+        self.convert_btn.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
         
         # Create PNG button
-        self.png_btn = tk.Button(button_frame, text="🖼️ Create PNG!",
+        self.png_btn = tk.Button(button_row2, text="🖼️ Create PNG!",
                                 command=self.create_png,
                                 bg=button_color, fg=fg_color,
                                 font=('Arial', 12, 'bold'),
                                 relief='raised', bd=2)
-        self.png_btn.pack(side=tk.LEFT, pady=5, fill=tk.X, expand=True)
+        self.png_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Status bar
         self.status_label = tk.Label(self.root, text="Ready - Select ZIP files to begin",
@@ -1036,6 +1060,90 @@ class Dark3DProcessorGUI:
             self.log_progress(f"📁 Selected {len(zip_files)} new ZIP file(s):", 'info')
             for zip_file in zip_files:
                 self.log_progress(f"  ✓ {Path(zip_file).name}", 'success')
+            self.log_progress(f"📊 Total files in queue: {len(self.selected_zip_files)}", 'complete')
+    
+    def clear_selection(self):
+        """Clear all selected ZIP files."""
+        if self.selected_zip_files:
+            count = len(self.selected_zip_files)
+            self.selected_zip_files.clear()
+            self.converted_folders.clear()
+            self.update_file_list()
+            self.clear_progress_log()
+            self.status_label.config(text="Ready - Select ZIP files to begin")
+            self.log_progress(f"🗑️ Cleared {count} file(s) from selection", 'info')
+    
+    def process_manual_folder(self):
+        """Manually process an existing folder with 3D files."""
+        folder_path = filedialog.askdirectory(
+            title="Select folder containing 3D model files",
+            initialdir=str(Path.home() / "Downloads")
+        )
+        
+        if not folder_path:
+            return
+        
+        try:
+            self.clear_progress_log()
+            self.log_progress("=" * 60, 'info')
+            self.log_progress("📂 MANUAL FOLDER PROCESSING", 'complete')
+            self.log_progress("=" * 60, 'info')
+            
+            folder = Path(folder_path)
+            self.log_progress(f"📁 Source: {folder.name}", 'info')
+            self.status_label.config(text=f"Processing folder: {folder.name}")
+            self.root.update()
+            
+            # Create output directory
+            output_root = Path.home() / "Downloads" / "Converted_3D_Models"
+            output_root.mkdir(parents=True, exist_ok=True)
+            self.log_progress(f"📂 Output: {output_root}", 'info')
+            self.log_progress("", 'info')
+            
+            # Load overrides
+            self.log_progress("🔄 Loading configuration...", 'processing')
+            file_overrides = load_overrides_file(folder)
+            merged_overrides = {**file_overrides, **OVERRIDES}
+            
+            # Check what's in the folder
+            has_obj = any(folder.glob("*.obj"))
+            has_mtl = any(folder.glob("*.mtl"))
+            has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
+            
+            self.log_progress(f"📊 Contents found:", 'info')
+            self.log_progress(f"  • OBJ files: {'✓ Yes' if has_obj else '✗ None'}", 'success' if has_obj else 'error')
+            self.log_progress(f"  • MTL files: {'✓ Yes' if has_mtl else '✗ None'}", 'success' if has_mtl else 'error')
+            self.log_progress(f"  • Textures: {'✓ Yes' if has_images else '✗ None'}", 'success' if has_images else 'error')
+            self.log_progress("", 'info')
+            
+            if not (has_obj or has_mtl or has_images):
+                self.log_progress("❌ No 3D model files found in this folder!", 'error')
+                messagebox.showwarning("No Files", "This folder doesn't contain any 3D model files (OBJ, MTL, or textures)")
+                return
+            
+            # Process the folder
+            self.log_progress("🔄 Processing 3D model content...", 'processing')
+            process_model_folder(folder, output_root, merged_overrides)
+            self.log_progress("✓ Successfully processed folder!", 'success')
+            
+            # Add to converted folders for PNG generation
+            output_folder = output_root / folder.name
+            if output_folder.exists():
+                self.converted_folders = [output_folder]
+                self.log_progress(f"📁 Output location: {output_folder}", 'success')
+            
+            self.log_progress("", 'info')
+            self.log_progress("=" * 60, 'info')
+            self.log_progress("✅ MANUAL PROCESSING COMPLETE!", 'complete')
+            self.log_progress("=" * 60, 'info')
+            
+            self.status_label.config(text=f"✅ Processed folder: {folder.name}")
+            messagebox.showinfo("Success", f"Processed folder: {folder.name}\n\nOutput: {output_root}")
+            
+        except Exception as e:
+            self.log_progress(f"\n❌ ERROR: {str(e)}", 'error')
+            self.status_label.config(text=f"❌ Processing failed")
+            messagebox.showerror("Error", f"Processing failed: {e}")
     
     def update_file_list(self):
         """Update the listbox with selected ZIP files."""
@@ -1054,7 +1162,14 @@ class Dark3DProcessorGUI:
             self.log_progress("=" * 60, 'info')
             self.log_progress("🔄 STARTING FILE CONVERSION", 'complete')
             self.log_progress("=" * 60, 'info')
+            self.log_progress(f"📊 Files in queue: {len(self.selected_zip_files)}", 'info')
+            self.log_progress("", 'info')
             
+            # List all files to be processed
+            for idx, zip_file in enumerate(self.selected_zip_files, 1):
+                self.log_progress(f"  {idx}. {Path(zip_file).name}", 'info')
+            
+            self.log_progress("", 'info')
             self.status_label.config(text="Converting ZIP files...")
             self.root.update()
             
