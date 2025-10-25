@@ -17,7 +17,7 @@ Usage: Import and integrate into word upload/paste functionality
 
 import re
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple, Optional
 import json
 from pathlib import Path
@@ -49,7 +49,7 @@ class ContentViolationTracker:
             self.session_violations[session_id] = []
         
         violation = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'word': word,
             'violation_type': violation_type,
             'severity': severity,
@@ -65,8 +65,8 @@ class ContentViolationTracker:
         """Get violation count for session within time window"""
         if session_id not in self.session_violations:
             return 0
-        
-        cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
+
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=time_window_hours)
         recent_violations = [
             v for v in self.session_violations[session_id]
             if datetime.fromisoformat(v['timestamp']) > cutoff_time
@@ -83,7 +83,7 @@ class ContentViolationTracker:
         try:
             # Read existing log
             if self.violation_log_file.exists():
-                with open(self.violation_log_file, 'r') as f:
+                with open(self.violation_log_file, 'r', encoding='utf-8') as f:
                     log_data = json.load(f)
             else:
                 log_data = {'violations': []}
@@ -95,8 +95,8 @@ class ContentViolationTracker:
             log_data['violations'] = log_data['violations'][-1000:]
             
             # Write back to file
-            with open(self.violation_log_file, 'w') as f:
-                json.dump(log_data, f, indent=2)
+            with open(self.violation_log_file, 'w', encoding='utf-8') as f:
+                json.dump(log_data, f, indent=2, ensure_ascii=False)
                 
         except Exception as e:
             print(f"⚠️ Could not log violation to file: {e}")
@@ -239,11 +239,11 @@ You have repeatedly tried to use inappropriate words ("{word}" {explanation}).
 
 def generate_guardian_report(session_id: str, violations: List[Dict]) -> str:
     """Generate report for parent/guardian about content violations"""
-    
+
     report = f"""
 🐝 BeeSmart Spelling Bee - Guardian Notification Report
 
-📅 Date: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+📅 Date: {datetime.now(timezone.utc).strftime('%B %d, %Y at %I:%M %p UTC')}
 👤 Session ID: {session_id}
 🚨 Violation Count: {len(violations)}
 
@@ -252,16 +252,16 @@ Your child attempted to use inappropriate content multiple times while using the
 
 📝 VIOLATION DETAILS:
 """
-    
+
     for i, violation in enumerate(violations, 1):
-        timestamp = datetime.fromisoformat(violation['timestamp']).strftime('%I:%M %p')
+        timestamp = datetime.fromisoformat(violation['timestamp']).strftime('%I:%M %p UTC')
         report += f"""
 {i}. Time: {timestamp}
    Word Attempted: "{violation['word']}"
    Issue: {violation['violation_type'].replace('_', ' ').title()}
    Severity: {violation['severity']}
 """
-    
+
     report += f"""
 
 🛡️ SAFETY MEASURES TAKEN:
@@ -283,10 +283,25 @@ BeeSmart is designed to help children (ages 6-14) improve their spelling skills 
 
 ---
 This is an automated safety report from BeeSmart Spelling Bee
-Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+Generated: {datetime.now(timezone.utc).strftime('%B %d, %Y at %I:%M %p UTC')}
 """
-    
+
     return report
+
+def _safe_print(text: str):
+    """Print text safely even if console encoding can't handle emoji on Windows."""
+    import sys
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+        try:
+            sys.stdout.write(text.encode(enc, errors='replace').decode(enc, errors='replace'))
+            sys.stdout.write("\n")
+        except Exception:
+            # Final fallback without emojis
+            ascii_text = text.encode('ascii', errors='ignore').decode('ascii')
+            print(ascii_text)
 
 def filter_content_with_tracking(words: List[str], session_context) -> Tuple[List[str], List[str], List[Dict]]:
     """
@@ -338,13 +353,13 @@ def filter_content_with_tracking(words: List[str], session_context) -> Tuple[Lis
                 
                 # In production, this would email the report to parents
                 # For now, we'll log it
-                print(f"📧 GUARDIAN REPORT GENERATED for session {session_id}")
-                print(guardian_report)
+                _safe_print(f"📧 GUARDIAN REPORT GENERATED for session {session_id}")
+                _safe_print(guardian_report)
                 
                 # Save report to file
-                report_file = Path(f"data/guardian_reports/report_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+                report_file = Path(f"data/guardian_reports/report_{session_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt")
                 report_file.parent.mkdir(exist_ok=True, parents=True)
-                with open(report_file, 'w') as f:
+                with open(report_file, 'w', encoding='utf-8') as f:
                     f.write(guardian_report)
         
         else:

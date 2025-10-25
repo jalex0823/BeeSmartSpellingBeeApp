@@ -16,7 +16,7 @@ import random
 import threading
 import uuid
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import hashlib
 from typing import List, Dict, Optional
@@ -1212,6 +1212,12 @@ def is_kid_friendly(word: str) -> tuple[bool, str]:
         return False, "Empty word"
     
     word_lower = word.lower().strip()
+
+    # Special rule: block any word containing the substring "sex"
+    # This is stricter than the general partial-match rule and reflects
+    # the app's kid-safety policy requested by stakeholders.
+    if "sex" in word_lower:
+        return False, f"Word '{word}' contains restricted substring 'sex'"
     
     # Check against inappropriate words list
     if word_lower in INAPPROPRIATE_WORDS:
@@ -1278,6 +1284,52 @@ def is_kid_friendly(word: str) -> tuple[bool, str]:
             return False, f"Word '{word}' has unusual capitalization (possibly acronym or brand name)"
     
     return True, "OK"
+
+# Helper: filter out any records whose sentence/hint contains profanity or inappropriate text
+def _filter_records_excluding_inappropriate_text(records: List[Dict[str, str]]):
+    """Return (filtered, blocked) where blocked is list of {'word','reason'} dicts.
+    Policy: if sentence or hint contains profanity or other inappropriate content, remove it.
+    Rules:
+      - Block if 'sex' appears anywhere (substring, case-insensitive)
+      - Block if any token matches an inappropriate word exactly (case-insensitive)
+      - Block if any inappropriate word of length > 4 appears as a substring
+    """
+    # Acquire inappropriate vocabulary from enhanced filter if available, else fallback
+    try:
+        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
+        inappropriate_words = set(_ALL)
+    except Exception:
+        # Fallback to base set already in this module
+        inappropriate_words = set(INAPPROPRIATE_WORDS)
+
+    filtered: List[Dict[str, str]] = []
+    blocked: List[Dict[str, str]] = []
+
+    for r in records:
+        sentence = (r.get("sentence") or "")
+        hint = (r.get("hint") or "")
+        combined = f"{sentence} {hint}".lower()
+
+        # Rule 1: special-case substring 'sex'
+        if "sex" in combined:
+            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains restricted substring 'sex'"})
+            continue
+
+        # Tokenize to check exact matches (avoid false positives like 'class')
+        tokens = re.findall(r"[a-z]+", combined)
+        token_set = set(tokens)
+        if any(tok in inappropriate_words for tok in token_set):
+            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains profanity or inappropriate words"})
+            continue
+
+        # Substring rule for longer inappropriate words (>4 chars)
+        if any(len(bad) > 4 and bad in combined for bad in inappropriate_words):
+            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains inappropriate content"})
+            continue
+
+        filtered.append(r)
+
+    return filtered, blocked
 
 # Progress tracking functions for bee-themed upload processing
 def create_upload_session(session_id: str, total_words: int):
@@ -1657,7 +1709,7 @@ def init_quiz_state():
     session[QUIZ_STATE_KEY] = {
         "idx": 0,
         "order": order,
-        "started_at": datetime.utcnow().isoformat(),
+    "started_at": datetime.now(timezone.utc).isoformat(),
         "correct": 0,
         "incorrect": 0,
         "streak": 0,
@@ -1932,7 +1984,7 @@ def upload_to_saved_list():
 
         # Update the word count and timestamp
         wl.word_count = len(words)
-        wl.updated_at = datetime.utcnow()
+        wl.updated_at = datetime.now(timezone.utc)
 
         db.session.commit()
 
@@ -3437,9 +3489,14 @@ def process_upload_with_progress(session_id, request_obj):
         if len(enriched) > MAX_RECORDS:
             enriched = enriched[:MAX_RECORDS]
         
+        # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
+        filtered_enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
+        if blocked_defs:
+            print(f"⚠️ Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+
         # CRITICAL VALIDATION: Check all definitions before quiz can start
         print("DEBUG: Validating wordbank definitions before storing...")
-        is_valid, validation_error = validate_wordbank_definitions(enriched)
+        is_valid, validation_error = validate_wordbank_definitions(filtered_enriched)
         
         if not is_valid:
             print(f"ERROR: Wordbank validation failed: {validation_error}")
@@ -3449,7 +3506,7 @@ def process_upload_with_progress(session_id, request_obj):
         update_upload_progress(session_id, "finalizing", "Bees are storing words in the hive...", "bees_storing", 95)
         
         # Store the wordbank and initialize quiz (USER UPLOAD)
-        set_wordbank(enriched, is_user_upload=True)
+        set_wordbank(filtered_enriched, is_user_upload=True)
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -3465,8 +3522,8 @@ def process_upload_with_progress(session_id, request_obj):
             session.modified = True
             time.sleep(0.2)
         
-        update_upload_progress(session_id, "completed", f"Success! {len(enriched)} words ready for spelling practice!", "bees_celebrating", 100)
-        complete_upload_session(session_id, True, f"🐝 Amazing! The bees collected {len(enriched)} spelling words and are ready for the quiz!")
+        update_upload_progress(session_id, "completed", f"Success! {len(filtered_enriched)} words ready for spelling practice!", "bees_celebrating", 100)
+        complete_upload_session(session_id, True, f"🐝 Amazing! The bees collected {len(filtered_enriched)} spelling words and are ready for the quiz!")
         
     except Exception as e:
         complete_upload_session(session_id, False, f"Oops! The bees encountered an error: {str(e)}")
@@ -3687,6 +3744,11 @@ def api_upload():
     enrichment_time = time.time() - enrichment_start
     print(f"DEBUG /api/upload: Enrichment completed in {enrichment_time:.2f} seconds for {len(enriched)} words")
     
+    # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
+    enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
+    if blocked_defs:
+        print(f"⚠️ /api/upload: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+
     deduped = enriched
 
     if len(deduped) > MAX_RECORDS:
@@ -3887,7 +3949,12 @@ def api_upload_manual_words():
         
         enrichment_time = time.time() - enrichment_start
         print(f"DEBUG /api/upload-manual-words: Enrichment completed in {enrichment_time:.2f} seconds for {len(enriched)} words")
-        
+
+        # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
+        enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
+        if blocked_defs:
+            print(f"⚠️ /api/upload-manual-words: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+
         if len(enriched) > MAX_RECORDS:
             enriched = enriched[:MAX_RECORDS]
         
@@ -4509,7 +4576,7 @@ def api_answer():
         "correct": is_correct,
         "method": method,
         "elapsed_ms": elapsed_ms,
-        "ts": datetime.utcnow().isoformat(),
+    "ts": datetime.now(timezone.utc).isoformat(),
         "skipped": skip_requested
     })
     session[QUIZ_STATE_KEY] = state
@@ -4745,8 +4812,7 @@ def api_save_partial_progress():
         
         # Mark as incomplete (don't call complete_session())
         # But update the end time to show when they last accessed it
-        from datetime import datetime
-        quiz_session.session_end = datetime.utcnow()
+        quiz_session.session_end = datetime.now(timezone.utc)
         
         # Calculate partial accuracy
         total_answered = quiz_session.correct_count + quiz_session.incorrect_count
@@ -5293,7 +5359,7 @@ def api_forgot_password():
         # Create a reset token valid for 30 minutes
         raw = secrets.token_urlsafe(32)
         token_hash = _hash_token(raw)
-        expires = datetime.utcnow() + timedelta(minutes=30)
+        expires = datetime.now(timezone.utc) + timedelta(minutes=30)
 
         prt = PasswordResetToken(
             user_id=user.id,
@@ -6032,7 +6098,7 @@ def export_class_pdf():
     c.drawString(1 * inch, y, "BeeSmart Class Report")
     y -= 0.3 * inch
     c.setFont("Helvetica", 10)
-    c.drawString(1 * inch, y, f"Owner: {current_user.display_name} • Date: {datetime.utcnow().strftime('%Y-%m-%d')}")
+    c.drawString(1 * inch, y, f"Owner: {current_user.display_name} • Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
     y -= 0.4 * inch
 
     headers = ['Name','Grade','Quizzes','Avg %','Points','Best Grade','Best Streak','Last Active']
@@ -6121,7 +6187,7 @@ def export_student_pdf(student_id: int):
     c.drawString(1*inch, y, f"Student Report – {student.display_name}")
     y -= 0.3*inch
     c.setFont("Helvetica", 10)
-    c.drawString(1*inch, y, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d')} • Owner: {current_user.display_name}")
+    c.drawString(1*inch, y, f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')} • Owner: {current_user.display_name}")
     y -= 0.35*inch
 
     avg_acc = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter(
@@ -6192,7 +6258,7 @@ def export_student_pdf(student_id: int):
     c.setFont("Helvetica-Bold", 12)
     c.drawString(1*inch, y, "Struggling Words (60 days)")
     y -= 0.22*inch
-    cutoff = datetime.utcnow() - timedelta(days=60)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=60)
     rows = db.session.query(
         QuizResult.word,
         db.func.count(QuizResult.id).label('misses')
@@ -6271,7 +6337,7 @@ def teacher_student_detail(student_id: int):
 
     # Struggling words: most-missed in last 60 days
     from datetime import timedelta
-    cutoff = datetime.utcnow() - timedelta(days=60)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=60)
     struggling_rows = db.session.query(
         QuizResult.word,
         db.func.count(QuizResult.id).label('misses')
@@ -6310,7 +6376,7 @@ def _generate_unique_teacher_key(display_name: str) -> str:
         if not User.query.filter_by(teacher_key=key).first():
             return key
     # Worst-case: fall back to UUID segment
-    return f"BEE-{datetime.utcnow().year}-AUTO-{str(uuid.uuid4())[:8].upper()}"
+    return f"BEE-{datetime.now(timezone.utc).year}-AUTO-{str(uuid.uuid4())[:8].upper()}"
 
 
 @app.route('/api/teacher/key', methods=['GET'])
@@ -6939,7 +7005,7 @@ def api_admin_export_users():
         return Response(
             output.getvalue(),
             mimetype='text/csv',
-            headers={'Content-Disposition': f'attachment; filename=users_export_{datetime.utcnow().strftime("%Y%m%d")}.csv'}
+            headers={'Content-Disposition': f'attachment; filename=users_export_{datetime.now(timezone.utc).strftime("%Y%m%d")}.csv'}
         )
     
     except Exception as e:
@@ -7032,7 +7098,7 @@ def save_speed_round_score_railway(user_id, score_data):
                     'speed_bonuses': score_data.get('speed_bonuses_earned', 0),
                     'word_details': __import__('json').dumps(score_data.get('word_details', [])),
                     'difficulty_level': score_data.get('difficulty_level', 'unknown'),
-                    'created_at': datetime.utcnow()
+                    'created_at': datetime.now(timezone.utc)
                 }
             )
             
@@ -7560,7 +7626,7 @@ def api_get_avatars():
 def speed_round_health_railway():
     """Speed Round system health check for Railway"""
     health = {
-        'timestamp': datetime.utcnow().isoformat(),
+    'timestamp': datetime.now(timezone.utc).isoformat(),
         'environment': 'Railway' if (os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL')) else 'Local',
         'speed_round_status': 'checking',
         'database_status': 'checking',
