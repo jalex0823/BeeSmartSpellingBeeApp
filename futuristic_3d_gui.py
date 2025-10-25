@@ -227,7 +227,7 @@ class FuturisticCyberpunk3DGUI:
     def setup_window(self):
         """Configure the main window with cyberpunk styling"""
         self.root.title("🌌 ENHANCED 3D FILE GENERATOR - CYBERPUNK EDITION")
-        self.root.geometry("1600x1000")
+        self.root.geometry("1920x1200")
         self.root.configure(bg='#0a0f1a')
         self.root.resizable(True, True)
         
@@ -2034,10 +2034,10 @@ class FuturisticCyberpunk3DGUI:
                 if real_assets:
                     # Update asset display with real data
                     self.root.after(0, lambda assets=real_assets: self.display_real_assets(assets))
-                    self.root.after(0, lambda: self.log_message(f"✅ Loaded {len(real_assets)} real assets", "success"))
+                    self.root.after(0, lambda: self.log_message(f"✅ Loaded {len(real_assets)} real assets from Meshy", "success"))
                 else:
                     # Fallback to mock data if no real assets found
-                    self.root.after(0, lambda: self.log_message("ℹ️ No assets found, using demo data", "info"))
+                    self.root.after(0, lambda: self.log_message("⚠️ No real assets found in your Meshy account, showing demo data", "warning"))
                     self.root.after(0, lambda: self.load_meshy_bee_assets())
                         
             except Exception as e:
@@ -2073,23 +2073,18 @@ class FuturisticCyberpunk3DGUI:
         """Create asset card for real Meshy asset"""
         card = tk.Frame(parent, bg=self.colors['bg_secondary'], relief='solid', bd=1)
         
-        # Asset thumbnail (try to load real thumbnail or use placeholder)
+        # Asset thumbnail with 3D preview
         thumbnail_frame = tk.Frame(card, bg=self.colors['bg_tertiary'], height=120)
         thumbnail_frame.pack(fill=tk.X, padx=8, pady=8)
         thumbnail_frame.pack_propagate(False)
         
-        # If there's a thumbnail URL, try to display it (simplified for now)
-        if asset.get('thumbnail_url'):
-            thumbnail_label = tk.Label(thumbnail_frame, text="🎨 REAL\nTHUMBNAIL", 
-                                     bg=asset['thumbnail_color'], fg='#000000',
-                                     font=('Exo', 8, 'bold'))
-        else:
-            # Create a simple placeholder
-            thumbnail_label = tk.Label(thumbnail_frame, text="📦 3D\nMODEL", 
-                                     bg=asset['thumbnail_color'], fg='#000000',
-                                     font=('Exo', 10, 'bold'))
+        # Create canvas for 3D thumbnail
+        thumb_canvas = tk.Canvas(thumbnail_frame, width=148, height=118, 
+                               bg=self.colors['bg_tertiary'], highlightthickness=0)
+        thumb_canvas.pack()
         
-        thumbnail_label.pack(expand=True, fill=tk.BOTH)
+        # Draw realistic 3D object thumbnail
+        self.draw_3d_object_thumbnail(thumb_canvas, asset)
         
         # Asset name
         name_label = tk.Label(card, text=asset['name'], 
@@ -2349,7 +2344,7 @@ class FuturisticCyberpunk3DGUI:
                                bg=self.colors['bg_tertiary'], highlightthickness=0)
         thumb_canvas.pack()
         
-        self.draw_bee_thumbnail(thumb_canvas, asset)
+        self.draw_3d_object_thumbnail(thumb_canvas, asset)
         
         # Asset name and info
         info_frame = tk.Frame(card_frame, bg=self.colors['bg_secondary'])
@@ -2409,66 +2404,138 @@ class FuturisticCyberpunk3DGUI:
                     bg=self.colors['bg_secondary'], fg=self.colors['accent_orange'],
                     font=('Exo', 9)).pack(pady=5)
 
-    def draw_bee_thumbnail(self, canvas, asset):
-        """Draw bee thumbnail based on asset properties"""
+    def draw_3d_object_thumbnail(self, canvas, asset):
+        """Draw realistic 3D object thumbnail based on asset properties"""
         center_x, center_y = 74, 59
         
         # Get colors from asset
-        primary_color = asset['thumbnail_color']
-        secondary_color = asset['secondary_color']
+        primary_color = asset.get('thumbnail_color', '#A0A0A0')
+        secondary_color = asset.get('secondary_color', '#808080')
         
-        # Draw bee body
-        canvas.create_oval(center_x-25, center_y-8, center_x+25, center_y+8,
-                         fill=primary_color, outline='#000000', width=2)
+        # Clear canvas
+        canvas.delete("all")
         
-        # Add character-specific details
-        if 'Astronaut' in asset['name']:
-            # Space helmet
-            canvas.create_oval(center_x-15, center_y-20, center_x+15, center_y-5,
-                             fill='#E6E6FA', outline='#000000', width=2)
-            # Helmet reflection
-            canvas.create_arc(center_x-12, center_y-17, center_x+5, center_y-8,
-                            start=45, extent=90, fill='#FFFFFF', outline='')
+        # Create gradient background
+        for i in range(0, 118, 2):
+            alpha = i / 118
+            gray_val = int(25 + alpha * 15)
+            color = f"#{gray_val:02x}{gray_val:02x}{gray_val:02x}"
+            canvas.create_rectangle(0, i, 148, i+2, fill=color, outline="")
         
-        elif 'Explorer' in asset['name']:
-            # Explorer hat
-            canvas.create_oval(center_x-18, center_y-18, center_x+18, center_y-5,
-                             fill='#8B4513', outline='#000000', width=2)
+        # Draw 3D object based on asset type/name
+        if 'mesh' in asset.get('name', '').lower() or 'model' in asset.get('name', '').lower():
+            self.draw_generic_3d_mesh(canvas, center_x, center_y, primary_color, secondary_color)
+        elif 'character' in asset.get('name', '').lower() or 'figure' in asset.get('name', '').lower():
+            self.draw_character_model(canvas, center_x, center_y, primary_color, secondary_color)
+        elif 'building' in asset.get('name', '').lower() or 'house' in asset.get('name', '').lower():
+            self.draw_building_model(canvas, center_x, center_y, primary_color, secondary_color)
+        elif 'vehicle' in asset.get('name', '').lower() or 'car' in asset.get('name', '').lower():
+            self.draw_vehicle_model(canvas, center_x, center_y, primary_color, secondary_color)
+        else:
+            # Default: abstract 3D object
+            self.draw_abstract_3d_object(canvas, center_x, center_y, primary_color, secondary_color)
         
-        elif 'Worker' in asset['name']:
-            # Hard hat
-            canvas.create_arc(center_x-15, center_y-18, center_x+15, center_y-5,
-                            start=0, extent=180, fill='#FFD700', outline='#000000', width=2)
-        
-        elif 'Scientist' in asset['name']:
-            # Lab goggles
-            canvas.create_oval(center_x-20, center_y-15, center_x-5, center_y-8,
-                             fill='#87CEEB', outline='#000000', width=2)
-            canvas.create_oval(center_x+5, center_y-15, center_x+20, center_y-8,
-                             fill='#87CEEB', outline='#000000', width=2)
-        
-        # Wings 
-        canvas.create_oval(center_x-35, center_y-15, center_x-15, center_y+5,
-                         fill=secondary_color, outline='#4682B4', width=1)
-        canvas.create_oval(center_x+15, center_y-15, center_x+35, center_y+5,
-                         fill=secondary_color, outline='#4682B4', width=1)
-        
-        # Antennae
-        canvas.create_line(center_x-8, center_y-15, center_x-12, center_y-25, fill='#000000', width=2)
-        canvas.create_line(center_x+8, center_y-15, center_x+12, center_y-25, fill='#000000', width=2)
-        canvas.create_oval(center_x-14, center_y-28, center_x-10, center_y-24, fill='#000000')
-        canvas.create_oval(center_x+10, center_y-28, center_x+14, center_y-24, fill='#000000')
-        
-        # Eyes
-        canvas.create_oval(center_x-8, center_y-5, center_x-3, center_y, fill='#000000')
-        canvas.create_oval(center_x+3, center_y-5, center_x+8, center_y, fill='#000000')
-        
-        # Status overlay for grayscale/pending
-        if asset['status'] == 'grayscale':
-            canvas.create_rectangle(0, 0, 148, 118, fill='', outline='', stipple='gray50')
-        elif asset['status'] == 'pending':
-            canvas.create_text(center_x, center_y+30, text="⏳ PROCESSING",
+        # Add wireframe overlay for pending items
+        if asset.get('status') == 'pending':
+            self.draw_wireframe_overlay(canvas, center_x, center_y)
+            canvas.create_text(center_x, center_y+35, text="⏳ PROCESSING",
                              fill=self.colors['accent_orange'], font=('Exo', 8, 'bold'))
+        
+        # Add selection highlight if needed
+        if asset.get('selected', False):
+            canvas.create_rectangle(2, 2, 146, 116, outline=self.colors['accent_cyan'], width=3)
+
+    def draw_generic_3d_mesh(self, canvas, x, y, primary_color, secondary_color):
+        """Draw a generic 3D mesh object"""
+        # Main object - isometric cube with faces
+        # Front face
+        points = [x-20, y-10, x+20, y-10, x+20, y+20, x-20, y+20]
+        canvas.create_polygon(points, fill=primary_color, outline='#000000', width=2)
+        
+        # Top face (isometric)
+        points = [x-20, y-10, x-5, y-25, x+35, y-25, x+20, y-10]
+        canvas.create_polygon(points, fill=secondary_color, outline='#000000', width=2)
+        
+        # Right face
+        points = [x+20, y-10, x+35, y-25, x+35, y+5, x+20, y+20]
+        canvas.create_polygon(points, fill=primary_color, outline='#000000', width=2)
+        
+        # Add some geometric details
+        canvas.create_line(x-10, y, x+10, y, fill='#000000', width=1)
+        canvas.create_line(x, y-5, x, y+15, fill='#000000', width=1)
+
+    def draw_character_model(self, canvas, x, y, primary_color, secondary_color):
+        """Draw a character/figure model"""
+        # Head
+        canvas.create_oval(x-8, y-25, x+8, y-10, fill=primary_color, outline='#000000', width=2)
+        
+        # Body
+        canvas.create_rectangle(x-12, y-10, x+12, y+15, fill=secondary_color, outline='#000000', width=2)
+        
+        # Arms
+        canvas.create_rectangle(x-20, y-5, x-12, y+5, fill=primary_color, outline='#000000', width=1)
+        canvas.create_rectangle(x+12, y-5, x+20, y+5, fill=primary_color, outline='#000000', width=1)
+        
+        # Legs
+        canvas.create_rectangle(x-8, y+15, x-3, y+30, fill=primary_color, outline='#000000', width=1)
+        canvas.create_rectangle(x+3, y+15, x+8, y+30, fill=primary_color, outline='#000000', width=1)
+
+    def draw_building_model(self, canvas, x, y, primary_color, secondary_color):
+        """Draw a building/architecture model"""
+        # Base structure
+        canvas.create_rectangle(x-25, y+5, x+25, y+25, fill=primary_color, outline='#000000', width=2)
+        
+        # Upper structure
+        canvas.create_rectangle(x-15, y-15, x+15, y+5, fill=secondary_color, outline='#000000', width=2)
+        
+        # Roof
+        points = [x-18, y-15, x, y-30, x+18, y-15]
+        canvas.create_polygon(points, fill=primary_color, outline='#000000', width=2)
+        
+        # Windows
+        canvas.create_rectangle(x-10, y-10, x-5, y-2, fill='#87CEEB', outline='#000000', width=1)
+        canvas.create_rectangle(x+5, y-10, x+10, y-2, fill='#87CEEB', outline='#000000', width=1)
+        
+        # Door
+        canvas.create_rectangle(x-3, y+5, x+3, y+20, fill='#654321', outline='#000000', width=1)
+
+    def draw_vehicle_model(self, canvas, x, y, primary_color, secondary_color):
+        """Draw a vehicle model"""
+        # Main body
+        canvas.create_rectangle(x-25, y-5, x+25, y+10, fill=primary_color, outline='#000000', width=2)
+        
+        # Windshield
+        canvas.create_rectangle(x-15, y-15, x+15, y-5, fill=secondary_color, outline='#000000', width=2)
+        
+        # Wheels
+        canvas.create_oval(x-20, y+8, x-10, y+18, fill='#000000', outline='#666666', width=2)
+        canvas.create_oval(x+10, y+8, x+20, y+18, fill='#000000', outline='#666666', width=2)
+        
+        # Lights
+        canvas.create_oval(x-25, y-2, x-20, y+3, fill='#FFFF00', outline='#000000', width=1)
+        canvas.create_oval(x+20, y-2, x+25, y+3, fill='#FFFF00', outline='#000000', width=1)
+
+    def draw_abstract_3d_object(self, canvas, x, y, primary_color, secondary_color):
+        """Draw an abstract 3D object"""
+        # Complex geometric shape
+        # Main sphere
+        canvas.create_oval(x-15, y-15, x+15, y+15, fill=primary_color, outline='#000000', width=2)
+        
+        # Intersecting shapes
+        canvas.create_rectangle(x-20, y-5, x+20, y+5, fill=secondary_color, outline='#000000', width=1)
+        canvas.create_oval(x-8, y-25, x+8, y+25, fill='', outline='#000000', width=2)
+        
+        # Add surface details
+        canvas.create_arc(x-12, y-12, x+12, y+12, start=45, extent=90, outline='#000000', width=1)
+        canvas.create_arc(x-12, y-12, x+12, y+12, start=225, extent=90, outline='#000000', width=1)
+
+    def draw_wireframe_overlay(self, canvas, x, y):
+        """Draw wireframe overlay for processing items"""
+        # Grid pattern
+        for i in range(0, 148, 20):
+            canvas.create_line(i, 0, i, 118, fill='#444444', width=1, dash=(2, 2))
+        for i in range(0, 118, 15):
+            canvas.create_line(0, i, 148, i, fill='#444444', width=1, dash=(2, 2))
 
     def get_asset_status_color(self, status):
         """Get color for asset status"""
@@ -2508,17 +2575,66 @@ class FuturisticCyberpunk3DGUI:
 
     def download_asset(self, asset, format_type):
         """Download individual asset in specified format"""
-        filename = f"{asset['name'].replace(' ', '_').lower()}.{format_type}"
-        self.log_message(f"💾 Downloading {filename}...", "info")
-        
-        # Simulate download
-        def download_simulation():
-            import time
-            time.sleep(1)
-            self.root.after(0, lambda: self.log_message(f"✅ Downloaded {filename}", "success"))
+        def download_thread():
+            try:
+                # Check if it's a real Meshy asset with download URLs
+                if 'model_urls' in asset and asset['model_urls']:
+                    model_urls = asset['model_urls']
+                    download_url = None
+                    
+                    # Map format types to Meshy API URL keys
+                    if format_type.lower() == 'glb' and 'glb' in model_urls:
+                        download_url = model_urls['glb']
+                    elif format_type.lower() == 'obj' and 'obj' in model_urls:
+                        download_url = model_urls['obj']
+                    elif format_type.lower() == 'png' and 'mtl' in model_urls:
+                        download_url = model_urls['mtl']  # or thumbnail
+                    
+                    if download_url:
+                        import requests
+                        import os
+                        from tkinter import filedialog
+                        
+                        # Ask user where to save the file
+                        filename = f"{asset['name'].replace(' ', '_').lower()}.{format_type}"
+                        file_path = filedialog.asksaveasfilename(
+                            defaultextension=f".{format_type}",
+                            filetypes=[(f"{format_type.upper()} files", f"*.{format_type}")],
+                            initialname=filename
+                        )
+                        
+                        if file_path:
+                            self.root.after(0, lambda: self.log_message(f"💾 Downloading {filename}...", "info"))
+                            
+                            # Download the file
+                            api_key = self.meshy_api_key.get()
+                            headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+                            
+                            response = requests.get(download_url, headers=headers, stream=True)
+                            response.raise_for_status()
+                            
+                            with open(file_path, 'wb') as f:
+                                for chunk in response.iter_content(chunk_size=8192):
+                                    f.write(chunk)
+                            
+                            self.root.after(0, lambda: self.log_message(f"✅ Downloaded {filename} to {file_path}", "success"))
+                        else:
+                            self.root.after(0, lambda: self.log_message("❌ Download cancelled", "warning"))
+                    else:
+                        self.root.after(0, lambda: self.log_message(f"❌ {format_type.upper()} format not available for this asset", "error"))
+                else:
+                    # Fallback for mock assets - simulate download
+                    filename = f"{asset['name'].replace(' ', '_').lower()}.{format_type}"
+                    self.root.after(0, lambda: self.log_message(f"💾 Simulating download of {filename} (demo asset)", "info"))
+                    import time
+                    time.sleep(1)
+                    self.root.after(0, lambda: self.log_message(f"✅ Demo download completed: {filename}", "success"))
+                    
+            except Exception as e:
+                self.root.after(0, lambda: self.log_message(f"❌ Download failed: {str(e)}", "error"))
         
         import threading
-        thread = threading.Thread(target=download_simulation)
+        thread = threading.Thread(target=download_thread)
         thread.daemon = True
         thread.start()
 
