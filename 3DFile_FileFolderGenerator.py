@@ -18,6 +18,14 @@ import pyrender
 from PIL import Image
 import os
 
+# Meshy API integration
+try:
+    from meshy_api_client import MeshyAPIClient, MeshyTask
+    MESHY_AVAILABLE = True
+except ImportError:
+    MESHY_AVAILABLE = False
+    print("⚠️ Meshy API client not available. Some features will be disabled.")
+
 # Try to use pyglet platform on Windows which is more reliable
 os.environ['PYOPENGL_PLATFORM'] = 'pyglet'
 
@@ -356,10 +364,20 @@ OVERRIDES_JSON = "overrides.json"
 OVERRIDES_CSV  = "overrides.csv"
 
 # Meshy API Configuration
-MESHY_API_KEY = "msy_U3SZ99ULyDJyJITEklPVsVE2cUDmf0wnD1jy"
+MESHY_API_KEY = "msy_t9FYfPHBWK1c8VBfX0pLxnEZMdWbg0DEc2qz"
 MESHY_API_BASE = "https://api.meshy.ai"
 
-# Thumbnail render settings
+# Meshy API Processing Options
+MESHY_TEXTURE_STYLES = [
+    "high quality, detailed textures",
+    "cartoon style, vibrant colors", 
+    "realistic materials, PBR textures",
+    "metallic finish, reflective surfaces",
+    "wood grain, natural materials",
+    "fabric texture, soft materials"
+]
+
+# Enhanced thumbnail render settings
 RENDER_SIZE = (640, 640)                  # width, height
 BACKGROUND_COLOR = (0, 0, 0, 1)           # RGBA — solid black background
 CAMERA_DISTANCE_MULT = 2.2                # farther = smaller object
@@ -473,6 +491,43 @@ def detect_files(src_folder: Path) -> Tuple[Optional[Path], Optional[Path], List
     mtl = next((p for p in src_folder.glob("*.mtl")), None)
     imgs = [p for p in src_folder.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXTS]
     return obj, mtl, imgs
+
+def create_railway_snapshot(obj_path: Path, output_dir: Path, base_name: Optional[str] = None) -> Optional[Path]:
+    """
+    Create a PNG snapshot specifically for Railway app deployment.
+    Ensures the filename contains '!' to distinguish from material files.
+    
+    Args:
+        obj_path: Path to the OBJ file
+        output_dir: Directory to save the snapshot
+        base_name: Base name for the file (defaults to obj file stem)
+        
+    Returns:
+        Path to created snapshot or None if failed
+    """
+    if base_name is None:
+        base_name = obj_path.stem
+    
+    # Ensure we have the "!" in the filename
+    snapshot_path = output_dir / f"{base_name}!.png"
+    
+    try:
+        # Create output directory if it doesn't exist
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"🖼️ Creating Railway snapshot: {snapshot_path.name}")
+        
+        # Try to create a high-quality snapshot
+        if create_thumbnail_smart(obj_path, snapshot_path, base_name):
+            print(f"✅ Railway snapshot created: {snapshot_path}")
+            return snapshot_path
+        else:
+            print(f"⚠️ Failed to create snapshot for {obj_path.name}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Railway snapshot creation failed: {e}")
+        return None
 
 def create_thumbnail_smart(obj_path: Path, thumb_path: Path, base_name: str):
     """Create thumbnail using the best available method."""
@@ -1348,11 +1403,12 @@ class Dark3DProcessorGUI:
         
         # Meshy API checkbox
         self.api_check = tk.Checkbutton(api_frame, 
-                                       text="🎨 Use Meshy API for Thumbnails",
+                                       text="🎨 Use Meshy API for Processing",
                                        variable=self.use_meshy_api,
                                        bg=bg_color, fg=fg_color,
                                        selectcolor='#404040',
-                                       font=('Arial', 10))
+                                       font=('Arial', 10),
+                                       command=self.toggle_meshy_options)
         self.api_check.pack(side=tk.LEFT)
         
         # API key entry
@@ -1364,6 +1420,33 @@ class Dark3DProcessorGUI:
                                  font=('Arial', 9), show="*")  # Hide API key
         self.api_entry.pack(side=tk.LEFT)
         
+        # Set default API key if available
+        if MESHY_AVAILABLE and MESHY_API_KEY:
+            self.meshy_api_key.set(MESHY_API_KEY)
+        
+        # Meshy style frame (initially hidden)
+        self.meshy_style_frame = tk.Frame(button_frame, bg=bg_color)
+        
+        # Style selection
+        tk.Label(self.meshy_style_frame, text="Texture Style:", bg=bg_color, fg=fg_color, 
+                font=('Arial', 9)).pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.style_var = tk.StringVar(value=MESHY_TEXTURE_STYLES[0] if 'MESHY_TEXTURE_STYLES' in globals() else "high quality, detailed textures")
+        self.style_dropdown = ttk.Combobox(self.meshy_style_frame, textvariable=self.style_var,
+                                          values=MESHY_TEXTURE_STYLES if 'MESHY_TEXTURE_STYLES' in globals() else ["high quality, detailed textures"],
+                                          width=30, state="readonly")
+        self.style_dropdown.pack(side=tk.LEFT, padx=(0, 20))
+        
+        # Railway ready checkbox
+        self.railway_ready = tk.BooleanVar(value=True)
+        self.railway_check = tk.Checkbutton(self.meshy_style_frame, 
+                                           text="🚂 Railway App Ready",
+                                           variable=self.railway_ready,
+                                           bg=bg_color, fg=fg_color,
+                                           selectcolor='#404040',
+                                           font=('Arial', 10))
+        self.railway_check.pack(side=tk.LEFT)
+        
         # Second row of buttons
         button_row2 = tk.Frame(button_frame, bg=bg_color)
         button_row2.pack(fill=tk.X, pady=(10, 0))
@@ -1374,7 +1457,7 @@ class Dark3DProcessorGUI:
                                     bg=button_color, fg=fg_color,
                                     font=('Arial', 12, 'bold'),
                                     relief='raised', bd=2)
-        self.convert_btn.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
+        self.convert_btn.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
         
         # Create PNG button
         self.png_btn = tk.Button(button_row2, text="🖼️ Create PNG!",
@@ -1382,7 +1465,16 @@ class Dark3DProcessorGUI:
                                 bg=button_color, fg=fg_color,
                                 font=('Arial', 12, 'bold'),
                                 relief='raised', bd=2)
-        self.png_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.png_btn.pack(side=tk.LEFT, padx=(0, 5), fill=tk.X, expand=True)
+        
+        # Meshy Process button
+        self.meshy_btn = tk.Button(button_row2, text="🎨 Meshy Process",
+                                  command=self.process_with_meshy,
+                                  bg='#4a90e2', fg=fg_color,
+                                  font=('Arial', 12, 'bold'),
+                                  relief='raised', bd=2,
+                                  state='disabled')
+        self.meshy_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Status bar
         self.status_label = tk.Label(self.root, text="Ready - Select ZIP files to begin",
@@ -1400,6 +1492,140 @@ class Dark3DProcessorGUI:
     def clear_progress_log(self):
         """Clear the progress log."""
         self.progress_text.delete(1.0, tk.END)
+    
+    def toggle_meshy_options(self):
+        """Toggle visibility of Meshy API options."""
+        if self.use_meshy_api.get():
+            self.meshy_style_frame.pack(fill=tk.X, pady=(5, 0))
+            if MESHY_AVAILABLE and self.meshy_api_key.get():
+                self.meshy_btn.config(state='normal')
+            else:
+                self.meshy_btn.config(state='disabled')
+        else:
+            self.meshy_style_frame.pack_forget()
+            self.meshy_btn.config(state='disabled')
+    
+    def process_with_meshy(self):
+        """Process selected OBJ files with Meshy API."""
+        if not MESHY_AVAILABLE:
+            messagebox.showerror("Error", "Meshy API client not available. Please check installation.")
+            return
+        
+        if not self.meshy_api_key.get():
+            messagebox.showerror("Error", "Please enter your Meshy API key.")
+            return
+        
+        if not self.converted_folders:
+            messagebox.showwarning("No Files", "Please convert files first or select existing folders with OBJ files.")
+            return
+        
+        try:
+            self.clear_progress_log()
+            self.log_progress("=" * 60, 'info')
+            self.log_progress("🎨 STARTING MESHY API PROCESSING", 'complete')
+            self.log_progress("=" * 60, 'info')
+            
+            # Initialize Meshy client
+            if not MESHY_AVAILABLE:
+                raise Exception("Meshy API client not available")
+            
+            from meshy_api_client import MeshyAPIClient
+            client = MeshyAPIClient(self.meshy_api_key.get())
+            style_prompt = self.style_var.get()
+            
+            self.log_progress(f"🔑 API Key: {'*' * (len(self.meshy_api_key.get()) - 4) + self.meshy_api_key.get()[-4:]}", 'info')
+            self.log_progress(f"🎨 Style: {style_prompt}", 'info')
+            self.log_progress(f"🚂 Railway Ready: {'Yes' if self.railway_ready.get() else 'No'}", 'info')
+            self.log_progress("", 'info')
+            
+            # Find all OBJ files
+            obj_files = []
+            for folder in self.converted_folders:
+                for obj_file in folder.rglob("*.obj"):
+                    obj_files.append(obj_file)
+            
+            total_files = len(obj_files)
+            self.log_progress(f"📊 Found {total_files} OBJ file(s) to process", 'info')
+            
+            if total_files == 0:
+                self.log_progress("❌ No OBJ files found in converted folders", 'error')
+                messagebox.showwarning("No Files", "No OBJ files found to process")
+                return
+            
+            processed_count = 0
+            
+            for idx, obj_file in enumerate(obj_files, 1):
+                self.log_progress(f"\n[{idx}/{total_files}] Processing: {obj_file.name}", 'processing')
+                self.status_label.config(text=f"Meshy Processing [{idx}/{total_files}]: {obj_file.name}")
+                self.root.update()
+                
+                try:
+                    # Create output directory for Meshy results
+                    meshy_output = obj_file.parent / "meshy_processed"
+                    meshy_output.mkdir(exist_ok=True)
+                    
+                    # Process with Meshy API
+                    self.log_progress(f"  🚀 Uploading to Meshy API...", 'processing')
+                    results = client.process_obj_file(obj_file, meshy_output, style_prompt)
+                    
+                    if results['success']:
+                        self.log_progress(f"  ✅ Processing successful!", 'success')
+                        for file_path in results['downloaded_files']:
+                            self.log_progress(f"    📥 Downloaded: {Path(file_path).name}", 'success')
+                        
+                        # If Railway ready, copy files to a Railway-compatible structure
+                        if self.railway_ready.get():
+                            self.prepare_railway_assets(obj_file, meshy_output)
+                        
+                        processed_count += 1
+                    else:
+                        self.log_progress(f"  ❌ Processing failed", 'error')
+                        for error in results['errors']:
+                            self.log_progress(f"    • {error}", 'error')
+                
+                except Exception as e:
+                    self.log_progress(f"  ❌ Error: {str(e)}", 'error')
+            
+            self.log_progress(f"\n{'=' * 60}", 'info')
+            self.log_progress(f"✅ MESHY PROCESSING COMPLETE!", 'complete')
+            self.log_progress(f"{'=' * 60}", 'info')
+            self.log_progress(f"📊 Successfully processed: {processed_count}/{total_files} files", 'success')
+            
+            self.status_label.config(text=f"✅ Meshy processed {processed_count} files")
+            messagebox.showinfo("Success", f"Meshy processed {processed_count}/{total_files} files!")
+            
+        except Exception as e:
+            self.log_progress(f"\n❌ ERROR: {str(e)}", 'error')
+            self.status_label.config(text=f"❌ Meshy processing failed")
+            messagebox.showerror("Error", f"Meshy processing failed: {e}")
+    
+    def prepare_railway_assets(self, original_obj: Path, meshy_output: Path):
+        """Prepare assets for Railway deployment."""
+        try:
+            railway_dir = original_obj.parent / "railway_assets"
+            railway_dir.mkdir(exist_ok=True)
+            
+            # Copy processed files with Railway-friendly names
+            base_name = original_obj.stem
+            
+            for file_path in meshy_output.iterdir():
+                if file_path.is_file():
+                    if file_path.suffix.lower() == '.png' and '!' in file_path.name:
+                        # This is a snapshot with ! - keep as is
+                        new_name = f"{base_name}!.png"
+                    elif file_path.suffix.lower() in ['.glb', '.obj']:
+                        # 3D model file
+                        new_name = f"{base_name}_meshy{file_path.suffix}"
+                    else:
+                        # Other files (textures, etc.)
+                        new_name = f"{base_name}_{file_path.name}"
+                    
+                    shutil.copy2(file_path, railway_dir / new_name)
+            
+            self.log_progress(f"    🚂 Railway assets prepared in: {railway_dir.name}", 'success')
+            
+        except Exception as e:
+            self.log_progress(f"    ⚠️ Railway preparation failed: {e}", 'error')
     
     def select_zip_files(self):
         """Select multiple ZIP files containing 3D models."""

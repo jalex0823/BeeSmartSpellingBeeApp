@@ -389,6 +389,7 @@
             animation: cardFloat 6s ease-in-out infinite;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(10px);
+            padding-top: 5rem;       /* INCREASED: Even more buffer to push content down (was 3.5rem) */
         }
         
         @keyframes cardFloat {
@@ -430,7 +431,7 @@
         .logo-section {
             background: transparent;
             text-align: center;
-            padding: 1rem 2rem 3rem 2rem; /* increased bottom padding for avatar clearance */
+            padding: 1rem 2rem 1rem 2rem; /* REDUCED: Less bottom padding (was 3rem) */
             position: relative;
             display: flex;
             flex-direction: column;
@@ -444,20 +445,19 @@
             margin: 0 auto;
         }
         
-        /* 3D Mascot container - permanently centered with flexbox */
-        #mascotBee3D {
-            width: 160px;
-            height: 260px;
-            margin: 0 auto 1.2rem auto;
-            position: relative;
-            transform: translateY(-20px);  /* Move avatar up in container */
-            transition: transform 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Avatar visibility fixes */
-            z-index: 100;              /* Keep well above name plate and tiles */
-            overflow: visible;        /* Prevent clipping */
+        /* FINAL CONTAINER SIZE - Clean optimized dimensions */
+        div#mascotBee3D {
+            width: 160px !important;
+            height: 120px !important;
+            margin: 0 auto 1.2rem auto !important;
+            position: relative !important;
+            transform: translateY(0px) !important;
+            transition: transform 0.3s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 100 !important;
+            overflow: visible !important;
         }
         
         /* Three.js canvas styling for proper layering */
@@ -471,13 +471,13 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -40%) !important;
+            transform: translate(-50%, -50%) !important; /* CENTERED: Avatar in middle of container (was -40%) */
             pointer-events: none;     /* Allow clicks through to UI */
             z-index: 100 !important;   /* Ensure visibility above all cards */
         }
         
         #mascotBee3D:hover {
-            transform: translateY(-35px) scale(1.05);  /* Maintain relative positioning on hover */
+            transform: translateY(-15px) scale(1.05);  /* ADJUSTED: Less upward movement on hover (was -35px) */
         }
         
         @keyframes gentlePulse {
@@ -718,6 +718,86 @@
             to {
                 opacity: 1;
             }
+        }
+
+        /* ✨ Avatar Full Rotation Animation ✨ */
+        @keyframes avatarFullRotation {
+            0% {
+                transform: rotateY(0deg) scale(1);
+            }
+            25% {
+                transform: rotateY(90deg) scale(1.1);
+            }
+            50% {
+                transform: rotateY(180deg) scale(1.2);
+            }
+            75% {
+                transform: rotateY(270deg) scale(1.1);
+            }
+            100% {
+                transform: rotateY(360deg) scale(1);
+            }
+        }
+
+        /* Theme-based Visual Effects */
+        .avatar-effect-fire {
+            filter: drop-shadow(0 0 20px #ff4500) drop-shadow(0 0 40px #ff6b00);
+            animation: avatarFullRotation 2s ease-in-out, fireGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-electric {
+            filter: drop-shadow(0 0 20px #00bfff) drop-shadow(0 0 40px #87ceeb);
+            animation: avatarFullRotation 2s ease-in-out, electricGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-magic {
+            filter: drop-shadow(0 0 20px #9400d3) drop-shadow(0 0 40px #da70d6);
+            animation: avatarFullRotation 2s ease-in-out, magicGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-nature {
+            filter: drop-shadow(0 0 20px #32cd32) drop-shadow(0 0 40px #90ee90);
+            animation: avatarFullRotation 2s ease-in-out, natureGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-scary {
+            filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #ff0000);
+            animation: avatarFullRotation 2s ease-in-out, scaryGlow 2s ease-in-out;
+        }
+
+        .avatar-effect-default {
+            filter: drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 40px #ffff00);
+            animation: avatarFullRotation 2s ease-in-out, defaultGlow 2s ease-in-out;
+        }
+
+        @keyframes fireGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #ff4500) drop-shadow(0 0 40px #ff6b00); }
+            50% { filter: drop-shadow(0 0 30px #ff4500) drop-shadow(0 0 60px #ff6b00) drop-shadow(0 0 80px #ff8c00); }
+        }
+
+        @keyframes electricGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #00bfff) drop-shadow(0 0 40px #87ceeb); }
+            50% { filter: drop-shadow(0 0 30px #00bfff) drop-shadow(0 0 60px #87ceeb) drop-shadow(0 0 80px #add8e6); }
+        }
+
+        @keyframes magicGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #9400d3) drop-shadow(0 0 40px #da70d6); }
+            50% { filter: drop-shadow(0 0 30px #9400d3) drop-shadow(0 0 60px #da70d6) drop-shadow(0 0 80px #dda0dd); }
+        }
+
+        @keyframes natureGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #32cd32) drop-shadow(0 0 40px #90ee90); }
+            50% { filter: drop-shadow(0 0 30px #32cd32) drop-shadow(0 0 60px #90ee90) drop-shadow(0 0 80px #98fb98); }
+        }
+
+        @keyframes scaryGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #8b0000) drop-shadow(0 0 40px #ff0000); }
+            50% { filter: drop-shadow(0 0 30px #8b0000) drop-shadow(0 0 60px #ff0000) drop-shadow(0 0 80px #ff6347); }
+        }
+
+        @keyframes defaultGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #ffd700) drop-shadow(0 0 40px #ffff00); }
+            50% { filter: drop-shadow(0 0 30px #ffd700) drop-shadow(0 0 60px #ffff00) drop-shadow(0 0 80px #fff8dc); }
         }
 
         @keyframes fadeOut {
@@ -1172,9 +1252,9 @@
             
             #mascotBee3D {
                 width: 160px;
-                height: 260px;
+                height: 120px; /* UPDATED: Match new container size (was 260px) */
                 margin: 0 auto 1.2rem auto;
-                transform: translateY(-20px);  /* Move avatar up on mobile too */
+                transform: translateY(-10px);  /* Reduced upward movement (was -20px) */
                 position: relative;
                 left: 0;
                 right: 0;
@@ -1641,11 +1721,11 @@
             text-align: center;
         }
 
-        /* 3. Nudge just the bee upward inside its own container */
+        /* 3. Optimized container - much shorter since bee only uses bottom portion */
         #mascotBee3D {
             transform: translateY(-10px);     /* lift the bee closer to the top */
-            width: 180px;
-            height: 260px;
+            width: 160px;
+            height: 120px;                    /* Reduced from 260px to 120px */
             margin: 0 auto 0.5rem auto;
             position: relative;
             display: flex;
@@ -1655,7 +1735,7 @@
             overflow: visible;
         }
 
-        /* keep canvas filling the space and centered */
+        /* keep canvas filling the space and perfectly centered */
         #mascotBee3D canvas {
             width: 100% !important;
             height: 100% !important;
@@ -1664,7 +1744,7 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -40%) !important;
+            transform: translate(-50%, -50%) scale(1.1) !important; /* ENHANCED: Perfect centering with slight scale up */
             pointer-events: none;
             z-index: 100 !important;
         }
@@ -1680,13 +1760,7 @@
         <div class="content-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
-                <!-- 3D Avatar Display:
-                     - Guest users: Always show MascotBee 
-                     - Authenticated users: Show their selected profile avatar 
-                     - Profile avatars are assigned during registration -->
-                <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
-                
-                <!-- Dynamic Welcome Badge positioned below avatar -->
+                <!-- Dynamic Welcome Badge positioned ABOVE avatar -->
                 <div class="welcome-pill" style="
                     position: relative;
                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
@@ -1698,11 +1772,18 @@
                     display: inline-block;
                     box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
                     border: 2px solid rgba(255, 255, 255, 0.9);
-                    margin: 0.5rem auto 1rem auto;
+                    margin: 2rem auto 0.5rem auto; /* INCREASED: More space above welcome (was 0) */
                     white-space: nowrap;
-                ">
+                    z-index: 35;
+                ">>
                     👋 Welcome {% if current_user.is_authenticated %}{{ current_user.display_name or current_user.username or 'User' }}{% else %}NewBee{% endif %}
                 </div>
+                
+                <!-- 3D Avatar Display:
+                     - Guest users: Always show MascotBee 
+                     - Authenticated users: Show their selected profile avatar 
+                     - Profile avatars are assigned during registration -->
+                <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
@@ -7386,46 +7467,382 @@
             if (mascotShowPlaying) return;
             mascotShowPlaying = true;
             
-            console.log('🎪 Starting mascot show - HORIZONTAL FLY-BY!');
+            console.log('🎪 Starting mascot show - FULL ROTATION WITH EFFECTS!');
             
             // Update caption
             const caption = document.getElementById('mascotCaption');
             if (caption) {
-                caption.textContent = '✈️ Watch me fly! ✈️';
+                caption.textContent = '🌟 Watch me spin with style! 🌟';
                 caption.style.animation = 'none';
             }
             
-            // Get mascot bee (try both possible references)
+            // Get mascot bee and container
             const mascot = window.mascotBee || window.mascotBeePreloaded;
             const mascotContainer = document.getElementById('mascotBee3D');
             
             if (!mascot || !mascot.model) {
                 console.log('⚠️ Mascot not available for show, using fallback effects');
-                playFallbackShow(mascotContainer);
+                playFallbackRotationShow(mascotContainer);
                 return;
             }
-            
-            // Always use the horizontal fly-by animation
-            console.log('🎭 Playing horizontal fly-by animation');
-            
-            // Play sound effects
-            playShowSounds('flyby');
-            
-            // Create particle trail effects
-            createFlybyParticles(mascotContainer);
-            
-            // Execute fly-by animation
-            performHorizontalFlyby(mascot, mascotContainer);
-            
-            // Reset after animation completes (4 seconds)
-            setTimeout(() => {
-                mascotShowPlaying = false;
-                if (caption) {
-                    caption.textContent = '✨ Click on me to see what I do! ✨';
-                    caption.style.animation = 'gentlePulse 2s ease-in-out infinite';
+
+            // Get current avatar info for theme-based effects
+            getCurrentAvatarInfo()
+                .then(avatarInfo => {
+                    const avatarName = avatarInfo?.name || 'mascot-bee';
+                    const theme = getAvatarTheme(avatarName);
+                    
+                    console.log(`🎭 Playing rotation show with ${theme} theme for ${avatarName}`);
+                    
+                    // Apply theme-based visual effects to container
+                    applyThemeEffects(mascotContainer, theme);
+                    
+                    // Play theme-based sound effects
+                    playThemeAudio(theme);
+                    
+                    // Create theme-based particle effects
+                    createThemeParticles(mascotContainer, theme);
+                    
+                    // Execute full rotation animation on the 3D model
+                    performFullRotation(mascot, theme);
+                    
+                    // Reset after animation completes
+                    setTimeout(() => {
+                        resetMascotShow(mascotContainer, caption);
+                    }, 2500);
+                })
+                .catch(error => {
+                    console.log('📝 Using default theme for rotation show');
+                    performDefaultRotationShow(mascot, mascotContainer);
+                });
+        }
+
+        // Get current avatar information
+        async function getCurrentAvatarInfo() {
+            try {
+                const response = await fetch('/api/users/me/avatar');
+                if (response.ok) {
+                    return await response.json();
                 }
-                console.log('✅ Mascot fly-by complete!');
-            }, 4000);
+            } catch (error) {
+                console.log('Could not fetch avatar info:', error);
+            }
+            return null;
+        }
+
+        // Determine theme based on avatar name
+        function getAvatarTheme(avatarName) {
+            const name = avatarName.toLowerCase();
+            
+            if (name.includes('monster') || name.includes('rocker') || name.includes('fire')) {
+                return 'fire';
+            } else if (name.includes('electric') || name.includes('lightning') || name.includes('cyber')) {
+                return 'electric';
+            } else if (name.includes('vamp') || name.includes('witch') || name.includes('magic')) {
+                return 'magic';
+            } else if (name.includes('nature') || name.includes('forest') || name.includes('garden')) {
+                return 'nature';
+            } else if (name.includes('zom') || name.includes('skull') || name.includes('ghost') || name.includes('ware')) {
+                return 'scary';
+            } else {
+                return 'default';
+            }
+        }
+
+        // Apply theme-based visual effects
+        function applyThemeEffects(container, theme) {
+            // Remove any existing effect classes
+            container.classList.remove('avatar-effect-fire', 'avatar-effect-electric', 'avatar-effect-magic', 
+                                     'avatar-effect-nature', 'avatar-effect-scary', 'avatar-effect-default');
+            
+            // Add the appropriate theme effect class
+            container.classList.add(`avatar-effect-${theme}`);
+            
+            // Remove the effect class after animation
+            setTimeout(() => {
+                container.classList.remove(`avatar-effect-${theme}`);
+            }, 2500);
+        }
+
+        // Play theme-based audio effects
+        function playThemeAudio(theme) {
+            try {
+                // Create audio context for sound synthesis
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                switch (theme) {
+                    case 'fire':
+                        playFireAudio(audioContext);
+                        break;
+                    case 'electric':
+                        playElectricAudio(audioContext);
+                        break;
+                    case 'magic':
+                        playMagicAudio(audioContext);
+                        break;
+                    case 'nature':
+                        playNatureAudio(audioContext);
+                        break;
+                    case 'scary':
+                        playScaryAudio(audioContext);
+                        break;
+                    default:
+                        playDefaultAudio(audioContext);
+                }
+            } catch (error) {
+                console.log('Audio not available:', error);
+            }
+        }
+
+        // Fire theme audio (crackling fire sound)
+        function playFireAudio(audioContext) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.5);
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        // Electric theme audio (zap sound)
+        function playElectricAudio(audioContext) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.2);
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        // Magic theme audio (magical chime)
+        function playMagicAudio(audioContext) {
+            [440, 554, 659, 880].forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.2);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + index * 0.2);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.2 + 0.5);
+                
+                oscillator.start(audioContext.currentTime + index * 0.2);
+                oscillator.stop(audioContext.currentTime + index * 0.2 + 0.5);
+            });
+        }
+
+        // Nature theme audio (wind chimes)
+        function playNatureAudio(audioContext) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.3);
+            oscillator.frequency.setValueAtTime(523, audioContext.currentTime + 0.6);
+            oscillator.type = 'triangle';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        // Scary theme audio (ominous tone)
+        function playScaryAudio(audioContext) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(55, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(49, audioContext.currentTime + 0.5);
+            oscillator.frequency.setValueAtTime(55, audioContext.currentTime + 1);
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1.5);
+        }
+
+        // Default theme audio (cheerful beep)
+        function playDefaultAudio(audioContext) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.2);
+            oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.4);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.8);
+        }
+
+        // Create theme-based particle effects
+        function createThemeParticles(container, theme) {
+            const colors = {
+                fire: ['#ff4500', '#ff6b00', '#ff8c00'],
+                electric: ['#00bfff', '#87ceeb', '#add8e6'],
+                magic: ['#9400d3', '#da70d6', '#dda0dd'],
+                nature: ['#32cd32', '#90ee90', '#98fb98'],
+                scary: ['#8b0000', '#ff0000', '#ff6347'],
+                default: ['#ffd700', '#ffff00', '#fff8dc']
+            };
+            
+            const themeColors = colors[theme] || colors.default;
+            
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    createParticle(container, themeColors[Math.floor(Math.random() * themeColors.length)]);
+                }, i * 100);
+            }
+        }
+
+        // Create individual particle
+        function createParticle(container, color) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: absolute;
+                width: 6px;
+                height: 6px;
+                background: ${color};
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 1000;
+                box-shadow: 0 0 10px ${color};
+            `;
+            
+            const containerRect = container.getBoundingClientRect();
+            const startX = containerRect.width / 2;
+            const startY = containerRect.height / 2;
+            
+            particle.style.left = startX + 'px';
+            particle.style.top = startY + 'px';
+            
+            container.appendChild(particle);
+            
+            // Animate particle outward
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 50;
+            const endX = startX + Math.cos(angle) * distance;
+            const endY = startY + Math.sin(angle) * distance;
+            
+            particle.animate([
+                { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0)`, opacity: 0 }
+            ], {
+                duration: 1000,
+                easing: 'ease-out'
+            }).onfinish = () => particle.remove();
+        }
+
+        // Perform full rotation on 3D model
+        function performFullRotation(mascot, theme) {
+            if (!mascot.model) return;
+            
+            const model = mascot.model;
+            const originalRotation = model.rotation.y;
+            const rotationSpeed = theme === 'electric' ? 0.2 : theme === 'scary' ? 0.08 : 0.15;
+            let currentRotation = 0;
+            
+            const rotateInterval = setInterval(() => {
+                currentRotation += rotationSpeed;
+                model.rotation.y = originalRotation + currentRotation;
+                
+                // Add slight bounce for some themes
+                if (theme === 'magic' || theme === 'default') {
+                    model.position.y = Math.sin(currentRotation * 2) * 0.1;
+                }
+                
+                if (currentRotation >= Math.PI * 2) {
+                    clearInterval(rotateInterval);
+                    model.rotation.y = originalRotation;
+                    model.position.y = 0;
+                }
+            }, 16);
+        }
+
+        // Fallback rotation show for when 3D model isn't available
+        function playFallbackRotationShow(container) {
+            if (!container) return;
+            
+            container.style.transform = 'rotateY(360deg) scale(1.2)';
+            container.style.transition = 'transform 2s ease-in-out';
+            container.style.filter = 'drop-shadow(0 0 20px #ffd700)';
+            
+            setTimeout(() => {
+                container.style.transform = '';
+                container.style.filter = '';
+            }, 2000);
+            
+            setTimeout(() => {
+                resetMascotShow(container, document.getElementById('mascotCaption'));
+            }, 2500);
+        }
+
+        // Default rotation show
+        function performDefaultRotationShow(mascot, container) {
+            applyThemeEffects(container, 'default');
+            playThemeAudio('default');
+            createThemeParticles(container, 'default');
+            performFullRotation(mascot, 'default');
+            
+            setTimeout(() => {
+                resetMascotShow(container, document.getElementById('mascotCaption'));
+            }, 2500);
+        }
+
+        // Reset mascot show state
+        function resetMascotShow(container, caption) {
+            mascotShowPlaying = false;
+            
+            if (caption) {
+                caption.textContent = '✨ Click on me to see what I do! ✨';
+                caption.style.animation = 'gentlePulse 2s ease-in-out infinite';
+            }
+            
+            // Clear any lingering effects
+            if (container) {
+                container.style.transform = '';
+                container.style.transition = '';
+                container.style.filter = '';
+            }
+            
+            console.log('✅ Mascot rotation show complete!');
         }
         
         function performSpinShow(mascot) {
@@ -8185,13 +8602,13 @@
                         // Get avatar options
                         const avatarOptions = window.userAvatarLoader ? 
                             window.userAvatarLoader.getAvatarOptions({
-                                width: 250,
-                                height: 250,
+                                width: 160,  // FIXED: Match container width (was 250)
+                                height: 120, // FIXED: Match container height (was 250)
                                 autoRotate: true,
                                 enableInteraction: true
                             }) : {
-                                width: 250,
-                                height: 250,
+                                width: 160,  // FIXED: Match container width (was 250)
+                                height: 120, // FIXED: Match container height (was 250)
                                 autoRotate: false,
                                 enableInteraction: true
                             };
@@ -8243,6 +8660,11 @@
         
         // Initialize magical effects when page loads
         document.addEventListener('DOMContentLoaded', async () => {
+            // 🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            
             // Show loader immediately
             const loader = document.getElementById('honeyLoader');
             if (loader) {
@@ -8443,6 +8865,31 @@
             
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
+            
+            // FORCE CONTAINER DIMENSIONS - Override any library changes
+            setTimeout(() => {
+                const container = document.getElementById('mascotBee3D');
+                if (container) {
+                    console.log('🔧 FORCING container dimensions after library load...');
+                    container.style.width = '160px';
+                    container.style.height = '120px';
+                    container.style.maxWidth = '160px';
+                    container.style.maxHeight = '120px';
+                    container.style.minWidth = '160px';
+                    container.style.minHeight = '120px';
+                    console.log('✅ Container forced to:', container.style.width, 'x', container.style.height);
+                    
+                    // Also force any child canvas elements
+                    const canvas = container.querySelector('canvas');
+                    if (canvas) {
+                        console.log('🎨 FORCING canvas dimensions...');
+                        canvas.style.width = '100%';
+                        canvas.style.height = '100%';
+                        canvas.style.maxWidth = '160px';
+                        canvas.style.maxHeight = '120px';
+                    }
+                }
+            }, 500); // Wait 500ms for all libraries to finish
             
             // Themed avatar effects system
             function playThemedAvatarEffect(avatarId, container) {
@@ -8894,12 +9341,12 @@
                         const scene = new THREE.Scene();
                         const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
                         
-                        // Enhanced camera positioning for optimal avatar visibility
-                        camera.position.set(0, 1.2, 3.2);
-                        camera.lookAt(new THREE.Vector3(0, 0.8, 0));
+                        // Camera positioning for full bee visibility - corrected direction
+                        camera.position.set(0, 0.7, 2.6); // CORRECTED: Lower Y (was 0.9) to see bottom of bee
+                        camera.lookAt(new THREE.Vector3(0, 0.3, 0)); // CORRECTED: Lower look-at Y (was 0.5)
                         
                         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                        renderer.setSize(250, 250);
+                        renderer.setSize(160, 120); /* UPDATED: Match new smaller container size */
                         renderer.setClearColor(0x000000, 0); // Fully transparent background
                         
                         // Configure container and canvas for proper layering
@@ -8910,9 +9357,9 @@
                         // Configure the canvas element
                         const canvas = renderer.domElement;
                         canvas.style.position = 'absolute';
-                        canvas.style.top = '0';
+                        canvas.style.top = '50%'; /* FIXED: Center vertically instead of top:0 */
                         canvas.style.left = '50%';
-                        canvas.style.transform = 'translateX(-50%)';
+                        canvas.style.transform = 'translate(-50%, -50%) scale(1.1)'; /* ENHANCED: Perfect centering with scale */
                         canvas.style.pointerEvents = 'none'; // Allow clicks through to UI
                         canvas.style.zIndex = '10';
                         
@@ -9131,10 +9578,10 @@
                         // Wait for avatar loader to fetch user's avatar
                         await window.userAvatarLoader.init();
                         
-                        // Get avatar options from loader - NO auto-rotation or idle animation
+                        // Get avatar options from loader - UPDATED dimensions to match container
                         const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-                            width: 250,
-                            height: 250,
+                            width: 160,  // FIXED: Match container width (was 250)
+                            height: 120, // FIXED: Match container height (was 250)
                             autoRotate: false,
                             enableInteraction: false, // Disable default interactions
                             idleAnimation: false // No auto-animation
@@ -9593,6 +10040,21 @@
             // Update status periodically
             setInterval(updateAvatarSystemStatus, 10000);
         });
+
+        // 🔝 ADDITIONAL SCROLL-TO-TOP - Handle any edge cases with cached content
+        window.addEventListener('load', () => {
+            // Force scroll to top after everything is loaded
+            setTimeout(() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            }, 100);
+        });
+
+        // 🔝 PREVENT BROWSER RESTORE SCROLL - Override any browser scroll restoration
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
 
     </script>
 </body>

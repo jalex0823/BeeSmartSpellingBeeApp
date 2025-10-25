@@ -1865,7 +1865,7 @@ window.addEventListener('error', (event) => {
 
                 const freq = pick(SH.baseFreq, 2) + w * pick(SH.freqStep, 0.4);
                 const phase = t*0.004 + w*0.6;
-                let amp = (pick(SH.ampBase, 12) + w*pick(SH.ampStep, 4)) * drive; // stronger amplitude for definition
+                let amp = (pick(SH.ampBase, 28) + w*pick(SH.ampStep, 8)) * drive; // INCREASED: More pronounced peaks (was 12 and 4)
 
                 // Edge tip pinch: collapse amplitude and spacing near edges so waves meet
                 const TP = VZ.tipPinch || {};
@@ -1894,7 +1894,7 @@ window.addEventListener('error', (event) => {
                 ctx.beginPath();
                 ctx.fillStyle = color;
                 ctx.shadowColor = color;
-                ctx.shadowBlur = 12 * edgeA;
+                ctx.shadowBlur = 3 * edgeA; // REDUCED: Remove halo effect (was 12)
                 const prevAlpha = ctx.globalAlpha;
                 ctx.globalAlpha = edgeA;
                 ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
@@ -1923,7 +1923,7 @@ window.addEventListener('error', (event) => {
         // Soft central glow with horizontal taper (matches Quiz)
         const CG = VZ.centerGlow || {};
         if (CG.enabled) {
-            const baseAlpha = (typeof CG.alpha === 'number') ? CG.alpha : 0.5;
+            const baseAlpha = (typeof CG.alpha === 'number') ? CG.alpha : 0.15; // REDUCED: Less glow/halo (was 0.5)
             const span = (typeof CG.verticalSpan === 'number') ? Math.max(0.1, Math.min(1, CG.verticalSpan)) : 0.55;
             const energyScale = (typeof CG.energyScale === 'number') ? CG.energyScale : 0.9;
             const horizFrac = (typeof CG.horizontalFraction === 'number') ? Math.max(0, Math.min(0.5, CG.horizontalFraction)) : 0.15;
