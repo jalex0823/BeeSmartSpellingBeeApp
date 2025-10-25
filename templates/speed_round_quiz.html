@@ -681,9 +681,38 @@ let totalPoints = 0;
 let currentHint = '';
 let currentSentence = '';
 // Enhanced voice selection algorithm for natural-sounding female voices
+function isIOS() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    const isAppleMobile = /iPad|iPhone|iPod/.test(ua);
+    // iPadOS 13+ reports as Mac; detect touch-capable Mac
+    const isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return isAppleMobile || isIPadOS;
+}
 function selectBestFemaleVoice() {
     const voices = speechSynthesis.getVoices();
     console.log('🎤 Speed Round: Analyzing', voices.length, 'available voices for best female selection');
+    
+    // iOS-specific override: lock to stable, female Apple voices when available
+    if (isIOS() && voices.length) {
+        const iosPreferred = [
+            // US first
+            'samantha', 'siri', 'ava', 'olivia',
+            // Other English regions as fallbacks
+            'victoria', 'karen', 'moira', 'tessa'
+        ];
+        const lower = name => (name || '').toLowerCase();
+        // Prefer en-US first
+        for (const name of iosPreferred) {
+            const v = voices.find(v => v.lang.startsWith('en-US') && lower(v.name).includes(name));
+            if (v) { console.log('📱 iOS preferred voice selected:', v.name, v.lang); return v; }
+        }
+        // Then any English
+        for (const name of iosPreferred) {
+            const v = voices.find(v => v.lang.startsWith('en') && lower(v.name).includes(name));
+            if (v) { console.log('📱 iOS fallback preferred voice selected:', v.name, v.lang); return v; }
+        }
+        // If none matched, continue to generic scoring below
+    }
     
     // Score voices based on multiple criteria
     const scoredVoices = voices

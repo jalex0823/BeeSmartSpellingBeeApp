@@ -616,9 +616,31 @@ class MagicalSpellingBee {
         const voices = speechSynthesis.getVoices();
         console.log('🎤 Available voices:', voices.length);
         
+        const isIOS = () => {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isAppleMobile = /iPad|iPhone|iPod/.test(ua);
+            const isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            return isAppleMobile || isIPadOS;
+        };
+        
         if (voices.length === 0) {
             console.log('⚠️ No voices available yet');
             return null;
+        }
+        
+        // iOS-specific override: choose stable, natural female voices first
+        if (isIOS()) {
+            const preferred = ['samantha', 'siri', 'ava', 'olivia', 'victoria', 'karen', 'moira', 'tessa'];
+            const lower = n => (n || '').toLowerCase();
+            for (const name of preferred) {
+                const v = voices.find(v => v.lang.startsWith('en-US') && lower(v.name).includes(name));
+                if (v) { console.log('📱 iOS preferred voice selected:', v.name, v.lang); return v; }
+            }
+            for (const name of preferred) {
+                const v = voices.find(v => v.lang.startsWith('en') && lower(v.name).includes(name));
+                if (v) { console.log('📱 iOS fallback preferred voice selected:', v.name, v.lang); return v; }
+            }
+            // if not found, continue to scoring
         }
         
         // Quality scoring system for voice selection
@@ -630,7 +652,7 @@ class MagicalSpellingBee {
             if (voice.localService) score += 30;
             
             // Premium voice name patterns (often higher quality)
-            const premiumNames = ['samantha', 'alex', 'victoria', 'aria', 'jenny', 'nova', 'hazel', 'karen'];
+            const premiumNames = ['samantha', 'alex', 'victoria', 'aria', 'jenny', 'nova', 'hazel', 'karen', 'ava'];
             if (premiumNames.some(name => voice.name.toLowerCase().includes(name))) {
                 score += 40;
             }
