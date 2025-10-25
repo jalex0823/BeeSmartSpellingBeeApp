@@ -1140,26 +1140,52 @@ class Dark3DProcessorGUI:
             return
         
         try:
+            self.log_progress(f"\n{'=' * 60}", 'info')
+            self.log_progress("🖼️  STARTING PNG THUMBNAIL GENERATION", 'complete')
+            self.log_progress(f"{'=' * 60}", 'info')
+            
             self.status_label.config(text="Creating PNG thumbnails...")
             self.root.update()
             
             png_count = 0
+            total_obj_files = []
             
+            # First, collect all OBJ files
             for folder in self.converted_folders:
-                # Find all OBJ files
                 for obj_file in folder.rglob("*.obj"):
-                    self.status_label.config(text=f"Rendering: {obj_file.name}")
-                    self.root.update()
-                    
+                    total_obj_files.append(obj_file)
+            
+            total_files = len(total_obj_files)
+            self.log_progress(f"📊 Found {total_files} OBJ file(s) to render", 'info')
+            
+            for idx, obj_file in enumerate(total_obj_files, 1):
+                self.log_progress(f"\n[{idx}/{total_files}] Rendering: {obj_file.name}", 'processing')
+                self.status_label.config(text=f"Rendering [{idx}/{total_files}]: {obj_file.name}")
+                self.root.update()
+                
+                try:
                     # Create PNG thumbnail with "!" suffix
                     png_file = obj_file.with_name(f"{obj_file.stem}!.png")
+                    self.log_progress(f"  🎨 Generating transparent thumbnail...", 'processing')
+                    
                     render_thumbnail_transparent(obj_file, png_file)
+                    
+                    self.log_progress(f"  ✓ Saved: {png_file.name}", 'success')
                     png_count += 1
+                    
+                except Exception as e:
+                    self.log_progress(f"  ❌ Failed to render {obj_file.name}: {str(e)}", 'error')
+            
+            self.log_progress(f"\n{'=' * 60}", 'info')
+            self.log_progress(f"✅ PNG GENERATION COMPLETE!", 'complete')
+            self.log_progress(f"{'=' * 60}", 'info')
+            self.log_progress(f"📊 Successfully created: {png_count}/{total_files} thumbnails", 'success')
             
             self.status_label.config(text=f"✅ Created {png_count} PNG thumbnails")
             messagebox.showinfo("Success", f"Created {png_count} PNG thumbnails!")
             
         except Exception as e:
+            self.log_progress(f"\n❌ ERROR: {str(e)}", 'error')
             self.status_label.config(text=f"❌ PNG creation failed: {str(e)}")
             messagebox.showerror("Error", f"PNG creation failed: {e}")
     
