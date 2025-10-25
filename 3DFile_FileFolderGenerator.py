@@ -949,6 +949,31 @@ class Dark3DProcessorGUI:
                                        font=('Consolas', 10))
         self.files_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
+        # Progress log frame
+        progress_frame = tk.LabelFrame(self.root, text="Processing Progress", 
+                                      bg=bg_color, fg=fg_color,
+                                      font=('Arial', 12, 'bold'))
+        progress_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Scrollable text widget for progress log
+        progress_scroll = tk.Scrollbar(progress_frame)
+        progress_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.progress_text = tk.Text(progress_frame, height=10,
+                                     bg='#1e1e1e', fg='#00ff00',  # Green text for terminal look
+                                     font=('Consolas', 9),
+                                     wrap=tk.WORD,
+                                     yscrollcommand=progress_scroll.set)
+        self.progress_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        progress_scroll.config(command=self.progress_text.yview)
+        
+        # Configure text tags for colored output
+        self.progress_text.tag_configure('success', foreground='#00ff00')
+        self.progress_text.tag_configure('processing', foreground='#00bfff')
+        self.progress_text.tag_configure('error', foreground='#ff4444')
+        self.progress_text.tag_configure('info', foreground='#ffff00')
+        self.progress_text.tag_configure('complete', foreground='#00ff00', font=('Consolas', 9, 'bold'))
+        
         # Buttons frame
         button_frame = tk.Frame(self.root, bg=bg_color)
         button_frame.pack(fill=tk.X, padx=20, pady=10)
@@ -984,6 +1009,16 @@ class Dark3DProcessorGUI:
                                     relief='sunken', bd=1)
         self.status_label.pack(fill=tk.X, side=tk.BOTTOM, padx=20, pady=10)
     
+    def log_progress(self, message, tag='info'):
+        """Add a message to the progress log with color coding."""
+        self.progress_text.insert(tk.END, f"{message}\n", tag)
+        self.progress_text.see(tk.END)  # Auto-scroll to bottom
+        self.root.update()
+    
+    def clear_progress_log(self):
+        """Clear the progress log."""
+        self.progress_text.delete(1.0, tk.END)
+    
     def select_zip_files(self):
         """Select multiple ZIP files containing 3D models."""
         zip_files = filedialog.askopenfilenames(
@@ -996,6 +1031,11 @@ class Dark3DProcessorGUI:
             self.selected_zip_files.extend(zip_files)
             self.update_file_list()
             self.status_label.config(text=f"Selected {len(self.selected_zip_files)} ZIP files")
+            
+            # Log selected files
+            self.log_progress(f"📁 Selected {len(zip_files)} new ZIP file(s):", 'info')
+            for zip_file in zip_files:
+                self.log_progress(f"  ✓ {Path(zip_file).name}", 'success')
     
     def update_file_list(self):
         """Update the listbox with selected ZIP files."""
@@ -1010,35 +1050,64 @@ class Dark3DProcessorGUI:
             return
         
         try:
+            self.clear_progress_log()
+            self.log_progress("=" * 60, 'info')
+            self.log_progress("🔄 STARTING FILE CONVERSION", 'complete')
+            self.log_progress("=" * 60, 'info')
+            
             self.status_label.config(text="Converting ZIP files...")
             self.root.update()
             
             # Create output directory
             output_root = Path.home() / "Downloads" / "Converted_3D_Models"
             output_root.mkdir(parents=True, exist_ok=True)
+            self.log_progress(f"📂 Output directory: {output_root}", 'info')
             
             self.converted_folders = []
+            total_files = len(self.selected_zip_files)
             
-            for zip_file in self.selected_zip_files:
+            for idx, zip_file in enumerate(self.selected_zip_files, 1):
                 zip_path = Path(zip_file)
-                self.status_label.config(text=f"Extracting: {zip_path.name}")
+                
+                self.log_progress(f"\n[{idx}/{total_files}] Processing: {zip_path.name}", 'processing')
+                self.status_label.config(text=f"Extracting [{idx}/{total_files}]: {zip_path.name}")
                 self.root.update()
                 
                 # Extract ZIP to temporary folder
                 extract_folder = output_root / zip_path.stem
                 extract_folder.mkdir(parents=True, exist_ok=True)
                 
+                self.log_progress(f"  📦 Extracting ZIP archive...", 'processing')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(extract_folder)
+                    file_list = zip_ref.namelist()
+                    self.log_progress(f"  📋 Found {len(file_list)} files in archive", 'info')
+                    
+                    for file_idx, file_name in enumerate(file_list, 1):
+                        zip_ref.extract(file_name, extract_folder)
+                        if file_idx % 10 == 0 or file_idx == len(file_list):
+                            self.status_label.config(text=f"Extracting [{idx}/{total_files}]: {file_idx}/{len(file_list)} files")
+                            self.root.update()
+                    
+                    self.log_progress(f"  ✓ Extracted all files to: {extract_folder.name}", 'success')
                 
                 # Process extracted content using existing functions
-                self.process_extracted_content(extract_folder, output_root)
+                self.log_progress(f"  🔄 Processing 3D model content...", 'processing')
+                processed_count = self.process_extracted_content(extract_folder, output_root)
+                self.log_progress(f"  ✓ Processed {processed_count} model folder(s)", 'success')
+                
                 self.converted_folders.append(extract_folder)
             
+            self.log_progress(f"\n{'=' * 60}", 'info')
+            self.log_progress(f"✅ CONVERSION COMPLETE!", 'complete')
+            self.log_progress(f"{'=' * 60}", 'info')
+            self.log_progress(f"📊 Total ZIP files processed: {total_files}", 'success')
+            self.log_progress(f"📁 Output location: {output_root}", 'success')
+            
             self.status_label.config(text=f"✅ Converted {len(self.selected_zip_files)} ZIP files")
-            messagebox.showinfo("Success", f"Converted {len(self.selected_zip_files)} ZIP files to: {output_root}")
+            messagebox.showinfo("Success", f"Converted {len(self.selected_zip_files)} ZIP files to:\n{output_root}")
             
         except Exception as e:
+            self.log_progress(f"\n❌ ERROR: {str(e)}", 'error')
             self.status_label.config(text=f"❌ Conversion failed: {str(e)}")
             messagebox.showerror("Error", f"Conversion failed: {e}")
     
@@ -1048,6 +1117,8 @@ class Dark3DProcessorGUI:
         file_overrides = load_overrides_file(extract_folder)
         merged_overrides = {**file_overrides, **OVERRIDES}
         
+        processed_count = 0
+        
         # Find folders with 3D content
         for folder in extract_folder.rglob("*"):
             if folder.is_dir():
@@ -1056,7 +1127,11 @@ class Dark3DProcessorGUI:
                 has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
                 
                 if has_obj or has_mtl or has_images:
+                    self.log_progress(f"    → Processing model: {folder.name}", 'processing')
                     process_model_folder(folder, output_root, merged_overrides)
+                    processed_count += 1
+        
+        return processed_count
     
     def create_png(self):
         """Create PNG thumbnails for all OBJ files in converted folders."""
