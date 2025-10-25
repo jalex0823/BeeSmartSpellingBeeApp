@@ -1990,7 +1990,7 @@ class FuturisticCyberpunk3DGUI:
                         
                         if response.status_code == 200:
                             data = response.json()
-                            self.root.after(0, lambda: self.log_message(f"✅ Successfully fetched data", "success"))
+                            self.root.after(0, lambda d=data: self.log_message(f"✅ API Response: {len(data) if isinstance(data, list) else type(data).__name__}", "success"))
                             
                             # Process the response based on API structure
                             if 'result' in data:
@@ -2001,6 +2001,8 @@ class FuturisticCyberpunk3DGUI:
                                 models = data
                             else:
                                 models = [data]
+                            
+                            self.root.after(0, lambda m=models: self.log_message(f"📦 Found {len(m)} models in response", "info"))
                             
                             # Convert Meshy API response to our asset format
                             for model in models:
@@ -2018,6 +2020,7 @@ class FuturisticCyberpunk3DGUI:
                                         'secondary_color': '#87CEEB'   # Default blue
                                     }
                                     real_assets.append(asset)
+                                    self.root.after(0, lambda n=asset['name']: self.log_message(f"  → {n}", "info"))
                             
                             break  # Success, exit loop
                             
@@ -2575,6 +2578,8 @@ class FuturisticCyberpunk3DGUI:
 
     def download_asset(self, asset, format_type):
         """Download individual asset in specified format"""
+        self.log_message(f"🔽 Download button clicked: {asset['name']} as {format_type.upper()}", "info")
+        
         def download_thread():
             try:
                 # Check if it's a real Meshy asset with download URLs
@@ -2600,7 +2605,7 @@ class FuturisticCyberpunk3DGUI:
                         file_path = filedialog.asksaveasfilename(
                             defaultextension=f".{format_type}",
                             filetypes=[(f"{format_type.upper()} files", f"*.{format_type}")],
-                            initialname=filename
+                            initialfile=filename
                         )
                         
                         if file_path:
@@ -2623,12 +2628,51 @@ class FuturisticCyberpunk3DGUI:
                     else:
                         self.root.after(0, lambda: self.log_message(f"❌ {format_type.upper()} format not available for this asset", "error"))
                 else:
-                    # Fallback for mock assets - simulate download
+                    # Fallback for mock assets - create sample files
+                    from tkinter import filedialog
+                    import os
+                    
                     filename = f"{asset['name'].replace(' ', '_').lower()}.{format_type}"
-                    self.root.after(0, lambda: self.log_message(f"💾 Simulating download of {filename} (demo asset)", "info"))
-                    import time
-                    time.sleep(1)
-                    self.root.after(0, lambda: self.log_message(f"✅ Demo download completed: {filename}", "success"))
+                    file_path = filedialog.asksaveasfilename(
+                        defaultextension=f".{format_type}",
+                        filetypes=[(f"{format_type.upper()} files", f"*.{format_type}")],
+                        initialfile=filename
+                    )
+                    
+                    if file_path:
+                        self.root.after(0, lambda: self.log_message(f"💾 Creating demo {format_type.upper()} file: {filename}", "info"))
+                        
+                        # Create a simple demo file based on format
+                        try:
+                            if format_type.lower() == 'obj':
+                                # Create a simple OBJ file content
+                                obj_content = f"""# Demo OBJ file for {asset['name']}
+# Created by Enhanced 3D File Generator
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 1.0 1.0 0.0
+v 0.0 1.0 0.0
+f 1 2 3 4"""
+                                with open(file_path, 'w') as f:
+                                    f.write(obj_content)
+                                    
+                            elif format_type.lower() == 'glb':
+                                # Create a minimal GLB placeholder
+                                glb_content = b"Demo GLB file - placeholder binary content"
+                                with open(file_path, 'wb') as f:
+                                    f.write(glb_content)
+                                    
+                            elif format_type.lower() == 'png':
+                                # Create a simple PNG placeholder
+                                png_content = b"Demo PNG file - placeholder image content"
+                                with open(file_path, 'wb') as f:
+                                    f.write(png_content)
+                            
+                            self.root.after(0, lambda: self.log_message(f"✅ Demo file created: {file_path}", "success"))
+                        except Exception as file_error:
+                            self.root.after(0, lambda: self.log_message(f"❌ Failed to create demo file: {str(file_error)}", "error"))
+                    else:
+                        self.root.after(0, lambda: self.log_message("❌ Download cancelled", "warning"))
                     
             except Exception as e:
                 self.root.after(0, lambda: self.log_message(f"❌ Download failed: {str(e)}", "error"))

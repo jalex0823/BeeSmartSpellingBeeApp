@@ -72,6 +72,21 @@ static/3DFiles/
 static/Avatars/
 static/images/avatars/
 
+# New 3D avatar assets (large binary files - stored locally, linked via database only)
+static/assets/avatars/beedoctor/
+static/assets/avatars/beeknight/
+static/assets/avatars/builderbee/
+static/assets/avatars/buzzbotbee/
+static/assets/avatars/buzzhero/
+static/assets/avatars/detectivebee/
+static/assets/avatars/explorerbee/
+static/assets/avatars/frankenbee/
+static/assets/avatars/motorcyclebuzzbee/
+static/assets/avatars/queenbeemajesty/
+static/assets/avatars/seabee/
+static/assets/avatars/spacebeeexplorer/
+static/assets/avatars/superbeehero/
+
 # Flask-Session server-side session storage
 
 # Flask-Session server-side session storage
