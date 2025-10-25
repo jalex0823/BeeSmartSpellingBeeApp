@@ -10,116 +10,39 @@
         overflow-x: hidden;
     }
 
-    /* Voice Visualizer with Blue Theme (updated from bee theme) */
-    .voice-visualizer {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #0D47A1 100%);
-        border-radius: 20px;
-        padding: 1.2rem;
-        margin-bottom: 1.5rem;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 8px 24px rgba(33, 150, 243, 0.3);
-        border: 2px solid rgba(255, 193, 7, 0.4);
-        min-height: 90px;
-    }
+    /* Voice Visualizer wrapper */
+    .voice-visualizer { margin-bottom: 1.5rem; }
 
-    .voice-visualizer::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 60%);
-        pointer-events: none;
-    }
+    .voice-visualizer::before { display: none; }
 
-    .voice-status {
-        text-align: center;
-        font-size: 1.1rem;
+    /* New dotted ribbon card skin */
+        .voice-card.speaking-mode {
+                background: #FFB300; /* solid amber */
+                border-radius: 28px;
+                padding: 24px 16px 32px;
+                border: none; /* remove border */
+                box-shadow: 0 24px 40px rgba(255,140,0,0.28);
+                max-width: 520px;
+                margin: 0 auto 24px auto;
+                color: #fff;
+                text-align: center;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
+                overflow: hidden; /* keep dots within card corners */
+        }
+    .voice-header {
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #2B1B00;
-        margin-bottom: 1rem;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-    }
-
-    .voice-waves {
+        color: #fff8e1;
+        text-shadow: 0 0 6px rgba(255,255,255,0.8), 0 0 12px rgba(255,214,64,0.8);
         display: flex;
-        justify-content: center;
         align-items: center;
-        gap: 8px;
-        height: 80px;
-        margin-bottom: 0.8rem;
+        justify-content: center;
+        letter-spacing: 0.02em;
+        margin-bottom: 20px;
     }
-
-    .voice-wave {
-        width: 8px;
-        height: 16px;
-        background: linear-gradient(to top, #1976D2, #42A5F5);
-        border-radius: 4px;
-        opacity: 0.7;
-    }
-
-    .voice-visualizer.speaking .voice-wave {
-        animation: waveAnimation 0.6s ease-in-out infinite;
-        background: linear-gradient(to top, #1976D2, #42A5F5) !important;
-        box-shadow: 0 0 10px rgba(66, 165, 245, 0.6);
-    }
-
-    .voice-visualizer.word-pulse .voice-wave {
-        animation: wordPulseAnimation 0.15s ease-out;
-    }
-
-    .voice-visualizer.pausing .voice-wave {
-        animation: pauseAnimation 0.4s ease-in-out;
-        opacity: 0.4;
-    }
-
-    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-delay: 0.2s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-delay: 0.1s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-delay: 0s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-delay: 0.1s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-delay: 0.2s; }
-    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-delay: 0.3s; }
-
-    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-name: waveAnimationShort; }
-    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-name: waveAnimationMedium; }
-    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-name: waveAnimationTall; }
-    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-name: waveAnimationTallest; }
-    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-name: waveAnimationTall; }
-    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-name: waveAnimationMedium; }
-    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-name: waveAnimationShort; }
-
-    @keyframes waveAnimation {
-        0%, 100% { height: 20px; opacity: 0.8; transform: scaleY(1); }
-        50% { height: 55px; opacity: 1; transform: scaleY(1.2); }
-    }
-    @keyframes waveAnimationShort {
-        0%, 100% { height: 16px; opacity: 0.7; transform: scaleY(1); }
-        50% { height: 38px; opacity: 0.95; transform: scaleY(1.1); }
-    }
-    @keyframes waveAnimationMedium {
-        0%, 100% { height: 18px; opacity: 0.75; transform: scaleY(1); }
-        50% { height: 48px; opacity: 1; transform: scaleY(1.15); }
-    }
-    @keyframes waveAnimationTall {
-        0%, 100% { height: 20px; opacity: 0.8; transform: scaleY(1); }
-        50% { height: 58px; opacity: 1; transform: scaleY(1.2); }
-    }
-    @keyframes waveAnimationTallest {
-        0%, 100% { height: 22px; opacity: 0.85; transform: scaleY(1); }
-        50% { height: 65px; opacity: 1; transform: scaleY(1.25); }
-    }
-    @keyframes wordPulseAnimation {
-        0% { transform: scaleY(1); }
-        50% { transform: scaleY(1.4); }
-        100% { transform: scaleY(1); }
-    }
-    @keyframes pauseAnimation {
-        0%, 100% { transform: scaleY(0.8); opacity: 0.4; }
-        50% { transform: scaleY(1); opacity: 0.6; }
-    }
+    .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #ffd54f); }
+    .dotwave-wrapper { display:flex; justify-content:center; align-items:center; padding: 8px 16px; }
+    .dotwave-wrapper canvas { width: 100%; height: 180px; filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(255,200,0,0.4)); }
 
     .speed-quiz-container {
         max-width: 550px;
@@ -597,20 +520,18 @@
 
     <!-- Quiz Card -->
     <div class="quiz-card">
-        <!-- Voice Visualizer -->
-        <div class="voice-visualizer" id="voiceVisualizer">
-            <div class="voice-status" id="voiceStatus">🐝 Ready</div>
-            <div class="voice-waves">
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-                <div class="voice-wave"></div>
-            </div>
-            <div class="microphone-icon">🎤</div>
-        </div>
+                <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
+                <div class="voice-visualizer" id="voiceVisualizer">
+                        <div class="voice-card speaking-mode">
+                            <div class="voice-header">
+                                <span class="voice-bee">🐝</span>
+                                <span class="voice-text" id="voiceStatus">Ready</span>
+                            </div>
+                            <div class="dotwave-wrapper">
+                                <canvas id="dotWaveCanvas" width="500" height="160"></canvas>
+                            </div>
+                        </div>
+                </div>
 
         <div class="word-prompt" id="wordPrompt">
             🐝 Listen carefully and spell the word! 🐝
@@ -667,6 +588,7 @@
     <div class="loading-text">Loading Speed Round...</div>
 </div>
 
+<script src="/static/js/voice-visualizer-config.js"></script>
 <script>
 // Speed Round Quiz State
 let currentWord = null;
@@ -789,6 +711,19 @@ function selectBestFemaleVoice() {
 let cachedVoice = null; // cache selected voice for consistency
 let speechSynthesisInitialized = false; // iOS speech initialization flag
 let wordsUntilNameAnnouncement = 0; // Track sporadic name announcements (0 = announce now)
+// Try to personalize announcements with locally stored student name (set on quiz page)
+let studentName = '';
+// Prefer server-provided name when available; fall back to localStorage for continuity
+{% if user_name %}
+studentName = {{ user_name|tojson }};
+try { localStorage.setItem('studentName', studentName); } catch (e) {}
+{% else %}
+try {
+    studentName = localStorage.getItem('studentName') || '';
+} catch (e) {
+    studentName = '';
+}
+{% endif %}
 
 // Mask target word in text to prevent cheating
 function maskTargetWord(text, targetWord) {
@@ -848,7 +783,7 @@ function announceSpeedRoundIntro() {
         return;
     }
 
-    const intro = "Welcome to the Speed Round! Get ready for an exciting challenge. " +
+    const intro = `${studentName ? studentName + ', ' : ''}Welcome to the Speed Round! Get ready for an exciting challenge. ` +
                   "You'll have limited time to spell each word correctly. " +
                   "Listen carefully, type fast, and earn bonus points for quick answers! " +
                   "Your Speed Round begins... now!";
@@ -876,6 +811,46 @@ function announceSpeedRoundIntro() {
         utterance.onstart = () => {
             visualizer.classList.add('speaking');
         };
+
+        // Boundary-driven pauses during announcement
+        utterance.onboundary = (event) => {
+            if (!visualizer) return;
+            if (event.name === 'word' || event.charLength > 0) {
+                visualizer.classList.add('word-pulse');
+                setTimeout(() => visualizer.classList.remove('word-pulse'), 150);
+                visualizer.classList.add('pausing');
+                setTimeout(() => visualizer.classList.remove('pausing'), 100);
+            }
+            const ch = (utterance.text || '').charAt(event.charIndex);
+            if (ch === '.' || ch === '!' || ch === '?' || ch === ';' || ch === ',') {
+                visualizer.classList.remove('speaking');
+                visualizer.classList.add('pausing');
+                setTimeout(() => {
+                    visualizer.classList.remove('pausing');
+                    visualizer.classList.add('speaking');
+                }, 400);
+            }
+        };
+
+        // Sync visualizer with intro speech using natural pauses
+        utterance.onboundary = (event) => {
+            if (!visualizer) return;
+            if (event.name === 'word' || event.charLength > 0) {
+                visualizer.classList.add('word-pulse');
+                setTimeout(() => visualizer.classList.remove('word-pulse'), 150);
+                visualizer.classList.add('pausing');
+                setTimeout(() => visualizer.classList.remove('pausing'), 100);
+            }
+            const ch = (utterance.text || '').charAt(event.charIndex);
+            if (ch === '.' || ch === '!' || ch === '?' || ch === ';' || ch === ',') {
+                visualizer.classList.remove('speaking');
+                visualizer.classList.add('pausing');
+                setTimeout(() => {
+                    visualizer.classList.remove('pausing');
+                    visualizer.classList.add('speaking');
+                }, 400);
+            }
+        };
         
         utterance.onend = () => {
             visualizer.classList.remove('speaking');
@@ -894,7 +869,13 @@ function announceSpeedRoundIntro() {
             setupEventListeners();
         };
         
-        speechSynthesis.speak(utterance);
+        try {
+            speechSynthesis.speak(utterance);
+        } catch (err) {
+            console.error('speechSynthesis.speak failed:', err);
+            // Trigger onend behavior manually
+            if (typeof utterance.onend === 'function') utterance.onend();
+        }
         
         // iOS fallback - reload voices if empty
         if (speechSynthesis.getVoices().length === 0) {
@@ -908,19 +889,32 @@ function announceSpeedRoundIntro() {
 
 function setupEventListeners() {
     // Submit button
-    document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
+        submitAnswer();
+    });
     
     // Pronounce button
-    document.getElementById('pronounceBtn').addEventListener('click', pronounceWord);
+    document.getElementById('pronounceBtn').addEventListener('click', () => {
+        try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+        pronounceWord();
+    });
     // Hint button
-    document.getElementById('hintBtn').addEventListener('click', showHint);
+    document.getElementById('hintBtn').addEventListener('click', () => {
+        try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+        showHint();
+    });
     
     // Skip button
-    document.getElementById('skipBtn').addEventListener('click', () => submitAnswer(true));
+    document.getElementById('skipBtn').addEventListener('click', () => {
+        try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
+        submitAnswer(true);
+    });
     
     // Enter key to submit
     document.getElementById('spellInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
+            try { window.BeeVoiceViz?.react('submit'); } catch (e2) {}
             submitAnswer();
         }
     });
@@ -1142,26 +1136,29 @@ function announceWord(wordIndex, totalWords) {
         return;
     }
 
-    // Decide whether to announce with name (sporadic usage)
-    const shouldAnnounceName = wordsUntilNameAnnouncement <= 0;
-    
-    // Create announcement text (with or without name)
-    let announcement;
+    // Decide whether to add student name sporadically
+    const shouldAnnounceName = wordsUntilNameAnnouncement <= 0 && !!studentName;
+
+    // Build a friendly announcement phrase
+    const basePhrase = (wordIndex === 1)
+        ? 'Your first word is'
+        : (wordIndex === totalWords ? 'This is your last word' : 'Your next word is');
+
+    let announcement = basePhrase + '...';
+
     if (shouldAnnounceName) {
-        // Include name in announcement (every 3-5 words)
-        if (wordIndex === 1) {
-            announcement = "Your first word is...";
-        } else if (wordIndex === totalWords) {
-            announcement = "Your final word is...";
-        } else {
-            announcement = "Your next word is...";
-        }
-        // Reset counter to 3-5 words
+        const options = [
+            `${studentName}, ${basePhrase.toLowerCase()}...`,
+            `Alright ${studentName}, ${basePhrase.toLowerCase()}...`,
+            `${basePhrase}... ${studentName}!`
+        ];
+        announcement = options[Math.floor(Math.random() * options.length)];
+        // Reset counter to announce name again after a few words (3–5)
         wordsUntilNameAnnouncement = Math.floor(Math.random() * 3) + 3;
     } else {
-        // Skip name, just use simple transition
-        announcement = "Next...";
-        wordsUntilNameAnnouncement--;
+        // If not including name, occasionally use a shorter transition
+        if (Math.random() < 0.25) announcement = 'Next...';
+        wordsUntilNameAnnouncement = Math.max(0, wordsUntilNameAnnouncement - 1);
     }
     
     // iOS Fix: Cancel with delay
@@ -1194,7 +1191,9 @@ function announceWord(wordIndex, totalWords) {
             visualizer.classList.remove('speaking');
             status.textContent = '🐝 Ready';
             // Add 500ms pause between announcement and word pronunciation
+            visualizer.classList.add('pausing');
             setTimeout(() => {
+                visualizer.classList.remove('pausing');
                 pronounceWord();
             }, 500);
         };
@@ -1202,7 +1201,9 @@ function announceWord(wordIndex, totalWords) {
         utterance.onerror = () => {
             visualizer.classList.remove('speaking');
             // Pronounce anyway if there's an error (with same pause)
+            visualizer.classList.add('pausing');
             setTimeout(() => {
+                visualizer.classList.remove('pausing');
                 pronounceWord();
             }, 500);
         };
@@ -1236,11 +1237,13 @@ function pronounceWord() {
     speechSynthesis.cancel();
 
     setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(word);
+    // Speak a friendly prompt and the word twice
+    const phrase = `Spell the word ${word}. ${word}.`;
+    const utterance = new SpeechSynthesisUtterance(phrase);
         utterance.pitch = 1.35;
         utterance.rate = 0.92;
         utterance.volume = 0.9;
-        utterance.text = word;
+    utterance.text = phrase;
 
         // Select enhanced US English female voice for American pronunciation
         if (!cachedVoice) {
@@ -1401,6 +1404,59 @@ async function submitAnswer(isSkip = false) {
 }
 
 function showFeedback(isCorrect, points, correctSpelling) {
+    try { window.BeeVoiceViz?.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
+
+    // Speak a short friendly feedback phrase (kept brief for speed round pacing)
+    const congrats = [
+        'Great job!',
+        'Well done!',
+        'Excellent!',
+        'Nice work!',
+        'You got it!'
+    ];
+    const gentle = [
+        "Good try.",
+        "Almost. You'll get the next one.",
+        "Keep going, you can do it.",
+        "No worries, try the next one.",
+        "Shake it off and try again."
+    ];
+    const phrase = isCorrect ? congrats[Math.floor(Math.random()*congrats.length)]
+                             : gentle[Math.floor(Math.random()*gentle.length)];
+    (function speakQuick(text){
+        try {
+            if (!('speechSynthesis' in window)) return;
+            // cancel any overlap, keep it snappy
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 1.0; u.pitch = 1.1; u.volume = 0.9;
+            if (typeof cachedVoice !== 'undefined' && cachedVoice) u.voice = cachedVoice;
+            const viz = document.getElementById('voiceVisualizer');
+            const status = document.getElementById('voiceStatus');
+            u.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
+            u.onend = async ()=>{
+                // ~20% of the time, follow with the student's name as a separate utterance after a brief pause
+                const doName = !!studentName && Math.random() < 0.20;
+                if (doName) {
+                    viz?.classList.remove('speaking');
+                    viz?.classList.add('pausing');
+                    await new Promise(r=>setTimeout(r, 360));
+                    viz?.classList.remove('pausing');
+                    const n = new SpeechSynthesisUtterance(studentName);
+                    n.rate = 1.0; n.pitch = 1.12; n.volume = 0.95;
+                    if (typeof cachedVoice !== 'undefined' && cachedVoice) n.voice = cachedVoice;
+                    n.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
+                    n.onend = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+                    n.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+                    speechSynthesis.speak(n);
+                    return;
+                }
+                viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready';
+            };
+            u.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+            speechSynthesis.speak(u);
+        } catch {}
+    })(phrase);
     const feedback = document.createElement('div');
     feedback.className = `feedback-message ${isCorrect ? 'correct' : 'incorrect'}`;
     
@@ -1431,6 +1487,24 @@ function highlightStat(boxId) {
 }
 
 async function completeRound() {
+    // Announce end of quiz before redirecting
+    try {
+        if ('speechSynthesis' in window) {
+            speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance("That's the end of the quiz. Please wait for your quiz results.");
+            msg.rate = 1.0; msg.pitch = 1.1; msg.volume = 0.95;
+            if (typeof cachedVoice !== 'undefined' && cachedVoice) msg.voice = cachedVoice;
+            const viz = document.getElementById('voiceVisualizer');
+            const status = document.getElementById('voiceStatus');
+            msg.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
+            msg.onend = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+            msg.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+            speechSynthesis.speak(msg);
+            // small wait so the user hears it before we navigate
+            await new Promise(r=>setTimeout(r, 1200));
+        }
+    } catch {}
+
     // Show loading
     document.getElementById('loadingOverlay').style.display = 'flex';
 
@@ -1545,5 +1619,276 @@ window.addEventListener('error', (event) => {
         true
     );
 });
+// ------- end of main Speed Round logic -------
+</script>
+
+<!-- Dotted ribbon JS with speech-state awareness -->
+<script>
+(function(){
+    const canvas = document.getElementById('dotWaveCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let W = canvas.width;
+    let H = canvas.height;
+    let DPR = window.devicePixelRatio || 1;
+
+    function resizeCanvas(){
+        DPR = window.devicePixelRatio || 1;
+        const cssWidth = canvas.clientWidth || 500;
+        const cssHeight = canvas.clientHeight || 160;
+        canvas.width = Math.round(cssWidth * DPR);
+        canvas.height = Math.round(cssHeight * DPR);
+        canvas.style.width = cssWidth + 'px';
+        canvas.style.height = cssHeight + 'px';
+        W = canvas.width; H = canvas.height;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const VZ = window.BeeSmartVoiceVizCfg || {};
+    const pick = (v, d) => (v !== undefined && v !== null) ? v : d;
+    const MAX_WAVES = pick(VZ.MAX_WAVES, 6); // maximum; will collapse to one during pauses
+    let wavePack = 1;     // 1 => draw all waves, 0 => only one
+    let wavePackTarget = 1;
+    const DOTS_PER_WAVE = pick(VZ.DOTS_PER_WAVE, 56); // more points for definition
+    const DOT_RADIUS = pick(VZ.DOT_RADIUS, 3);
+    const WAVE_SPACING = pick(VZ.WAVE_SPACING, 20);  // slightly larger spacing for clarity
+    const HORIZONTAL_PAD_CSS = pick(VZ.HORIZONTAL_PAD_CSS, 12); // reduce buffer so lines are longer
+
+    const waveColors = VZ.waveColors || ['#6bff6b','#a6ff3a','#ffee33','#ffb62b','#ff7a1f','#ff3a2a'];
+
+    let mode = 'idle';
+    const ET = VZ.energyTargets || {};
+    let energyTarget = pick(ET.idle, 0.04);
+    let energy = energyTarget;
+    let dipBoost = 0;    // down emphasis on pause start
+    let surgeBoost = 0;  // up emphasis on speak start
+
+    function setMode(next){
+        if (mode !== next) {
+            if (next === 'pausing') dipBoost = 1;
+            if (next === 'speaking') surgeBoost = 1;
+        }
+        mode = next;
+        // Expand waves when speaking; collapse to one when paused/idle
+        wavePackTarget = (mode === 'speaking') ? 1 : 0;
+    if (mode === 'speaking') energyTarget = pick(ET.speaking, 1.0);
+    else if (mode === 'pausing') energyTarget = pick(ET.pausing, 0.06);
+    else energyTarget = pick(ET.idle, 0.04);
+    }
+    window.voiceVizSetMode = setMode;
+
+    const host = document.getElementById('voiceVisualizer');
+    if (host && 'MutationObserver' in window){
+        const mo = new MutationObserver(() => {
+            const c = host.classList;
+            if (c.contains('speaking')) setMode('speaking');
+            else if (c.contains('pausing')) setMode('pausing');
+            else setMode('idle');
+        });
+        mo.observe(host, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Lightweight helper to trigger quick visual reactions from UI events (parity with quiz page)
+    window.BeeVoiceViz = (function(){
+        function hostEl(){ return document.getElementById('voiceVisualizer'); }
+        function speak(ms=600){ const h=hostEl(); if(!h) return; h.classList.add('speaking'); setTimeout(()=>h.classList.remove('speaking'), ms); }
+        function pulse(ms=220){ const h=hostEl(); if(!h) return; h.classList.add('pausing','word-pulse'); setTimeout(()=>h.classList.remove('pausing','word-pulse'), ms); }
+        function react(kind){
+            switch(kind){
+                case 'button': return pulse(200);
+                case 'submit': return speak(480);
+                case 'hint': return pulse(260);
+                case 'skip': return pulse(300);
+                case 'feedback-correct': return speak(700);
+                case 'feedback-incorrect': return pulse(520);
+                default: return pulse(180);
+            }
+        }
+        return { speak, pulse, react };
+    })();
+
+        function getEnergy(t){
+        const fake = 0.5 + 0.5*Math.sin(t*0.002) + 0.25*Math.sin(t*0.005 + 2);
+        return Math.max(0, Math.min(1, fake));
+    }
+
+    function drawFrame(t){
+            const base = getEnergy(t);
+            const E = VZ.easing || {};
+            const ENERGY_EASE = pick(E.energy, 0.18);
+            const WAVEPACK_EASE = pick(E.wavePack, 0.22);
+            const DIP_DECAY = pick(E.dipDecay, 0.15);
+            const SURGE_DECAY = pick(E.surgeDecay, 0.10);
+            const B = VZ.boostScales || {};
+            const DIP_SCALE = pick(B.dip, 0.65);
+            const SURGE_SCALE = pick(B.surge, 0.15);
+            const SH = VZ.waveShape || {};
+        energy += (energyTarget - energy) * ENERGY_EASE;
+        // Ease the number of visible waves toward target (1 or many)
+        wavePack += (wavePackTarget - wavePack) * WAVEPACK_EASE;
+        dipBoost += (0 - dipBoost) * DIP_DECAY;
+        surgeBoost += (0 - surgeBoost) * SURGE_DECAY;
+        const motionScale = (1 - DIP_SCALE * dipBoost) * (1 + SURGE_SCALE * surgeBoost);
+            const drive = base * energy * motionScale;
+
+        ctx.clearRect(0,0,W,H);
+
+        // Precompute horizontal padding and optional L-R gradient overlay
+        const pad = HORIZONTAL_PAD_CSS * DPR;
+        const GR = VZ.gradientLR || {};
+        let grad = null;
+        if (GR.enabled) {
+            grad = ctx.createLinearGradient(pad, 0, W - pad, 0);
+            const stops = GR.stops || [];
+            for (let s = 0; s < stops.length; s++) {
+                const st = stops[s] || {};
+                const off = (typeof st.offset === 'number') ? st.offset : (s/(Math.max(1,stops.length-1)));
+                const col = st.color || '#ffffff';
+                grad.addColorStop(off, col);
+            }
+        }
+
+        // End-fade configuration (transparent at both ends)
+        const EF = VZ.endFade || {};
+        const EF_ENABLED = (EF.enabled !== undefined) ? !!EF.enabled : true;
+        const fadeFrac = (typeof EF.fraction === 'number') ? Math.max(0, Math.min(0.5, EF.fraction)) : 0.16;
+        const drawableWidth = Math.max(1, (W - 2*pad));
+        const fadeWidth = Math.max(8 * DPR, fadeFrac * drawableWidth);
+        function edgeFadeAlpha(x){
+            if (!EF_ENABLED) return 1;
+            const leftDist = x - pad;
+            const rightDist = (pad + drawableWidth) - x;
+            const d = Math.max(0, Math.min(leftDist, rightDist));
+            const u = Math.max(0, Math.min(1, d / fadeWidth));
+            return 0.5 - 0.5 * Math.cos(Math.PI * u);
+        }
+
+        const wavesToDraw = Math.max(1, Math.round(1 + (MAX_WAVES-1) * wavePack));
+        // Clip to safe drawable area to ensure visuals stay inside the card border
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(pad, 0, W - 2*pad, H);
+        ctx.clip();
+        for (let w = 0; w < wavesToDraw; w++) {
+            const color = waveColors[w % waveColors.length];
+            const yOffset = -w * WAVE_SPACING;
+
+            for (let i = 0; i < DOTS_PER_WAVE; i++) {
+                const progress = i / (DOTS_PER_WAVE - 1);
+                const x = progress * (W - 2*pad) + pad;
+
+                const freq = pick(SH.baseFreq, 2) + w * pick(SH.freqStep, 0.4);
+                const phase = t*0.004 + w*0.6;
+                let amp = (pick(SH.ampBase, 12) + w*pick(SH.ampStep, 4)) * drive; // stronger amplitude for definition
+
+                // Edge tip pinch: collapse amplitude and spacing near edges so waves meet
+                const TP = VZ.tipPinch || {};
+                let pinch = 1;
+                if (TP.enabled) {
+                    const p = (typeof TP.power === 'number') ? TP.power : 1.25;
+                    pinch = Math.pow(Math.sin(Math.PI * progress), Math.max(0.8, Math.min(2.0, p)));
+                    amp *= pinch;
+                }
+
+                // Thickness bulge across X to enhance ribbon look
+                const TB = VZ.thicknessBulge || {};
+                if (TB.enabled) {
+                    const bulgeMag = (typeof TB.magnitude === 'number') ? TB.magnitude : 0.18;
+                    const bulgeSpeed = (typeof TB.speed === 'number') ? TB.speed : 0.002;
+                    const bulgeCycles = (typeof TB.cycles === 'number') ? TB.cycles : 1.2;
+                    const bulge = 1 + bulgeMag * Math.sin(progress * Math.PI * 2 * bulgeCycles + t * bulgeSpeed * 1000);
+                    amp *= bulge;
+                }
+
+                const mainWaveY = Math.sin(progress * freq * Math.PI + phase) * amp;
+                const ripple = Math.sin(progress * pick(SH.rippleFreq, 12) + t*0.01 + w) * (pick(SH.rippleBase, 3) + w) * (0.5 + 0.5*drive);
+                const y = (H/2 + 20*DPR) + (yOffset * pinch) + mainWaveY + ripple;
+
+                const edgeA = edgeFadeAlpha(x);
+                ctx.beginPath();
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12 * edgeA;
+                const prevAlpha = ctx.globalAlpha;
+                ctx.globalAlpha = edgeA;
+                ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
+                ctx.fill();
+                ctx.closePath();
+
+                if (grad) {
+                    const alpha = (typeof GR.alpha === 'number') ? GR.alpha : 0.45;
+                    const savedAlpha = ctx.globalAlpha;
+                    const prevShadow = ctx.shadowBlur;
+                    ctx.globalAlpha = edgeA * alpha;
+                    ctx.shadowBlur = 0;
+                    ctx.beginPath();
+                    ctx.fillStyle = grad;
+                    ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.closePath();
+                    ctx.globalAlpha = savedAlpha;
+                    ctx.shadowBlur = prevShadow;
+                }
+                ctx.globalAlpha = prevAlpha;
+            }
+    }
+    ctx.restore();
+
+        // Soft central glow with horizontal taper (matches Quiz)
+        const CG = VZ.centerGlow || {};
+        if (CG.enabled) {
+            const baseAlpha = (typeof CG.alpha === 'number') ? CG.alpha : 0.5;
+            const span = (typeof CG.verticalSpan === 'number') ? Math.max(0.1, Math.min(1, CG.verticalSpan)) : 0.55;
+            const energyScale = (typeof CG.energyScale === 'number') ? CG.energyScale : 0.9;
+            const horizFrac = (typeof CG.horizontalFraction === 'number') ? Math.max(0, Math.min(0.5, CG.horizontalFraction)) : 0.15;
+            const glowAlpha = baseAlpha * Math.max(0, Math.min(1, energy * energyScale));
+            const drawableWidth2 = Math.max(1, (W - 2*pad));
+            const feather = Math.max(8 * DPR, horizFrac * drawableWidth2);
+            if (glowAlpha > 0.01) {
+                // Draw vertical glow into an offscreen canvas
+                const off = document.createElement('canvas');
+                off.width = W; off.height = H;
+                const ox = off.getContext('2d');
+                const top = (H*(1-span))/2;
+                const bottom = H - top;
+                const gradY = ox.createLinearGradient(0, top, 0, bottom);
+                gradY.addColorStop(0.0, 'rgba(255,255,255,0)');
+                gradY.addColorStop(0.5, 'rgba(255,255,255,1)');
+                gradY.addColorStop(1.0, 'rgba(255,255,255,0)');
+                ox.fillStyle = gradY;
+                ox.fillRect(pad, top, W - 2*pad, bottom - top);
+
+                // Mask with horizontal taper using destination-in
+                const gradX = ox.createLinearGradient(pad, 0, W - pad, 0);
+                const leftStop = pad + feather;
+                const rightStop = (W - pad) - feather;
+                const lOff = Math.max(0, Math.min(1, (leftStop - pad) / drawableWidth2));
+                const rOff = Math.max(0, Math.min(1, (rightStop - pad) / drawableWidth2));
+                gradX.addColorStop(0, 'rgba(0,0,0,0)');
+                gradX.addColorStop(lOff, 'rgba(0,0,0,1)');
+                gradX.addColorStop(rOff, 'rgba(0,0,0,1)');
+                gradX.addColorStop(1, 'rgba(0,0,0,0)');
+                ox.globalCompositeOperation = 'destination-in';
+                ox.fillStyle = gradX;
+                ox.fillRect(pad, 0, W - 2*pad, H);
+
+                // Blend back onto main
+                const prevComp = ctx.globalCompositeOperation;
+                const prevAlpha2 = ctx.globalAlpha;
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = glowAlpha;
+                ctx.drawImage(off, 0, 0);
+                ctx.globalCompositeOperation = prevComp;
+                ctx.globalAlpha = prevAlpha2;
+            }
+        }
+        requestAnimationFrame(drawFrame);
+    }
+
+    setMode('idle');
+    requestAnimationFrame(drawFrame);
+})();
 </script>
 {% endblock %}

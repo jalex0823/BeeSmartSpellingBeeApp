@@ -7159,7 +7159,16 @@ def speed_round_quiz():
         return redirect(url_for('speed_round_setup'))
     
     timestamp = int(time.time())
-    return render_template('speed_round_quiz.html', timestamp=timestamp)
+    # Pass user information if logged in
+    user_name = None
+    if current_user.is_authenticated:
+        user_name = current_user.display_name
+        try:
+            print(f"DEBUG /speed-round/quiz: User logged in as {user_name}")
+        except Exception:
+            pass
+
+    return render_template('speed_round_quiz.html', timestamp=timestamp, user_name=user_name)
 
 
 @app.route("/api/speed-round/next", methods=["GET"])

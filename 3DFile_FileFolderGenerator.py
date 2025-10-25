@@ -237,7 +237,7 @@ class ZipProcessorGUI:
                     merged_overrides = {**file_overrides, **OVERRIDES}
                     
                     # Process this model folder
-                    process_model_folder(folder, self.output_folder, merged_overrides)
+                    process_model_folder(folder, self.output_folder, merged_overrides, False, False, False)  # Don't ask user, no thumbnails, no force overwrite for old GUI
     
     def run(self):
         """Start the GUI application."""
@@ -357,13 +357,20 @@ OVERRIDES_CSV  = "overrides.csv"
 
 # Thumbnail render settings
 RENDER_SIZE = (640, 640)                  # width, height
-BACKGROUND_COLOR = (0, 0, 0, 0)           # RGBA — transparent
+BACKGROUND_COLOR = (0, 0, 0, 1)           # RGBA — solid black background
 CAMERA_DISTANCE_MULT = 2.2                # farther = smaller object
 LIGHT_INTENSITY = 6.0
 # =================================================================
 
 # Regex to strip Meshy-style numeric suffixes (e.g., _1023150321)
-NUM_SUFFIX = re.compile(r"(?:[_-]\d{6,})+$", re.IGNORECASE)
+NUM_SUFFIX = re.compile(r"(?:[_-]\d{4,})+$", re.IGNORECASE)  # Reduced from 6 to 4 digits minimum
+# Also strip common numeric patterns
+EXTRA_NUM_PATTERNS = [
+    re.compile(r"_\d{8,}$", re.IGNORECASE),    # Long numbers at end
+    re.compile(r"_\d{4}_\d+$", re.IGNORECASE), # Date-like patterns
+    re.compile(r"_texture_obj$", re.IGNORECASE),  # Common suffix
+    re.compile(r"_obj$", re.IGNORECASE),          # OBJ suffix
+]
 # Split on underscores/dashes, collapse multi-separators
 SEP_SPLIT = re.compile(r"[_\-]+")
 
@@ -398,21 +405,63 @@ def camel_no_underscores(s: str) -> str:
         return s.replace("_", "").replace("-", "")
     return "".join(p[:1].upper() + p[1:] for p in parts)
 
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename to be Windows-compatible.
+    Remove or replace characters that are invalid in Windows filenames.
+    """
+    # Invalid characters for Windows filenames
+    invalid_chars = '<>:"/\\|?*'
+    
+    # Replace invalid characters with underscores
+    for char in invalid_chars:
+        filename = filename.replace(char, '_')
+    
+    # Remove trailing dots and spaces (Windows doesn't like these)
+    filename = filename.rstrip('. ')
+    
+    # Ensure it's not empty
+    if not filename:
+        filename = "Model"
+    
+    # Limit length to avoid path length issues
+    if len(filename) > 200:
+        filename = filename[:200]
+    
+    return filename
+
 def clean_base_from_stem(stem: str) -> str:
     """Derive a clean base from a filename stem:
        - strip trailing numeric suffixes
        - drop trailing tokens like 'texture'
        - remove underscores/dashes and camelize
     """
+    # Apply main numeric suffix removal
     stem = NUM_SUFFIX.sub("", stem)
+    
+    # Apply additional cleaning patterns
+    for pattern in EXTRA_NUM_PATTERNS:
+        stem = pattern.sub("", stem)
+    
+    # Split and clean parts
     parts = [p for p in SEP_SPLIT.split(stem) if p]
+    
     # Drop trailing junk tokens
     while parts and parts[-1].lower() in DROP_TRAILING_TOKENS:
         parts.pop()
+    
+    # Additional cleaning: remove any remaining numeric-only parts
+    parts = [p for p in parts if not p.isdigit()]
+    
     if not parts:
         parts = [stem]
+    
     cleaned = camel_no_underscores("_".join(parts))
-    return cleaned or "MeshyModel"
+    result = cleaned or "MeshyModel"
+    
+    # Debug print to see what's happening
+    print(f"🔧 Cleaned '{stem}' -> '{result}'")
+    return result
 
 def detect_files(src_folder: Path) -> Tuple[Optional[Path], Optional[Path], List[Path]]:
     """Find the primary OBJ, optional MTL, and all images in a folder."""
@@ -569,37 +618,54 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
 
         scene = pyrender.Scene(
             bg_color=BACKGROUND_COLOR,
-            ambient_light=[0.35, 0.35, 0.35]
+            ambient_light=[0.4, 0.4, 0.4]  # Brighter ambient light
         )
         
         # Try to create mesh node with error handling
         try:
-            mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=True)
+            # Use material to make the model look better
+            material = pyrender.MetallicRoughnessMaterial(
+                baseColorFactor=[0.8, 0.8, 0.9, 1.0],  # Light blue-white
+                metallicFactor=0.1,
+                roughnessFactor=0.8
+            )
+            mesh_node = pyrender.Mesh.from_trimesh(mesh, material=material, smooth=True)
             scene.add(mesh_node)
-            print("   ✅ Mesh added to scene")
+            print("   ✅ Mesh added to scene with material")
         except Exception as mesh_err:
-            print(f"   ⚠️ Failed to create mesh node: {mesh_err}")
-            # Try without smoothing
-            mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=False)
-            scene.add(mesh_node)
-            print("   ✅ Mesh added to scene (without smoothing)")
+            print(f"   ⚠️ Failed to create mesh node with material: {mesh_err}")
+            # Try without material
+            try:
+                mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=True)
+                scene.add(mesh_node)
+                print("   ✅ Mesh added to scene (without material)")
+            except Exception as mesh_err2:
+                print(f"   ⚠️ Failed to create smooth mesh: {mesh_err2}")
+                # Try without smoothing as last resort
+                mesh_node = pyrender.Mesh.from_trimesh(mesh, smooth=False)
+                scene.add(mesh_node)
+                print("   ✅ Mesh added to scene (no smoothing)")
 
-        # Camera placement with more debugging
+        # Better camera placement for 3D models
         bounds = mesh.bounds
         center = bounds.mean(axis=0)
         extents = mesh.extents
         radius = np.linalg.norm(extents) * 0.5
-        distance = max(0.1, radius * CAMERA_DISTANCE_MULT)
+        distance = max(0.5, radius * 2.5)  # Move camera further back
         
         print(f"   Camera center: {center}")
         print(f"   Camera distance: {distance}")
         print(f"   Mesh radius: {radius}")
 
-        cam = pyrender.PerspectiveCamera(yfov=np.pi / 4.0)
+        # Position camera at an angle for better 3D view
+        cam = pyrender.PerspectiveCamera(yfov=np.pi / 6.0, aspectRatio=1.0)  # Narrower field of view
         cam_pose = np.eye(4)
-        cam_pose[:3, 3] = center + np.array([0.0, 0.0, distance])
         
-        # Simplified camera orientation - just look at center from positive Z
+        # Position camera at a 45-degree angle for better 3D perspective
+        camera_offset = np.array([distance * 0.7, distance * 0.7, distance * 0.7])
+        cam_pose[:3, 3] = center + camera_offset
+        
+        # Better camera orientation for 3D viewing
         forward = (center - cam_pose[:3, 3])
         forward_norm = np.linalg.norm(forward)
         if forward_norm > 1e-7:
@@ -624,16 +690,26 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
         scene.add(cam, pose=cam_pose)
         print("   ✅ Camera added to scene")
 
-        # Add stronger lighting
-        key = pyrender.DirectionalLight(color=np.ones(3), intensity=LIGHT_INTENSITY)
-        fill = pyrender.DirectionalLight(color=np.ones(3), intensity=LIGHT_INTENSITY * 0.6)
-        scene.add(key, pose=cam_pose)
+        # Better lighting setup
+        # Key light (main light)
+        key_light = pyrender.DirectionalLight(color=np.ones(3), intensity=8.0)
+        key_pose = np.eye(4)
+        key_pose[:3, 3] = center + np.array([distance, distance, distance])
+        scene.add(key_light, pose=key_pose)
         
-        # Position fill light differently
+        # Fill light (softer, from opposite side)
+        fill_light = pyrender.DirectionalLight(color=np.ones(3), intensity=4.0)
         fill_pose = np.eye(4)
-        fill_pose[:3, 3] = center + np.array([distance * 0.5, distance * 0.5, distance * 0.5])
-        scene.add(fill, pose=fill_pose)
-        print("   ✅ Lights added to scene")
+        fill_pose[:3, 3] = center + np.array([-distance*0.5, distance*0.5, distance*0.5])
+        scene.add(fill_light, pose=fill_pose)
+        
+        # Rim light (from behind for edge definition)
+        rim_light = pyrender.DirectionalLight(color=np.ones(3), intensity=2.0)
+        rim_pose = np.eye(4)
+        rim_pose[:3, 3] = center + np.array([0.0, -distance*0.3, -distance])
+        scene.add(rim_light, pose=rim_pose)
+        
+        print("   ✅ Three-point lighting setup complete")
 
         # Try different renderer flags
         try:
@@ -674,10 +750,78 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
             
     except Exception as e:
         print(f"⚠️ Thumbnail render failed for {obj_path.name}: {e}")
-        print("🔄 Trying matplotlib fallback...")
-        render_thumbnail_matplotlib_fallback(obj_path, thumb_path)
+        print("🔄 Trying simple thumbnail fallback...")
+        create_simple_obj_thumbnail(obj_path, thumb_path)
 
-def render_thumbnail_matplotlib_fallback(obj_path: Path, thumb_path: Path):
+def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
+    """Create a simple but effective thumbnail using matplotlib and trimesh."""
+    try:
+        print(f"🎨 Creating simple thumbnail for: {obj_path}")
+        
+        # Load mesh
+        mesh = trimesh.load_mesh(str(obj_path), process=True)
+        
+        if isinstance(mesh, trimesh.Scene):
+            mesh = mesh.dump(concatenate=True)
+        
+        if len(mesh.vertices) == 0:
+            create_placeholder_thumbnail(obj_path, thumb_path)
+            return
+            
+        # Get a good view of the mesh
+        vertices = mesh.vertices
+        
+        # Create figure with black background
+        fig = plt.figure(figsize=(8, 8), facecolor='black')
+        ax = fig.add_subplot(111, projection='3d', facecolor='black')
+        
+        # Plot the mesh faces as a surface
+        faces = mesh.faces
+        
+        # Sample vertices for better performance
+        max_faces = 1000
+        if len(faces) > max_faces:
+            # Sample faces evenly
+            step = len(faces) // max_faces
+            faces = faces[::step]
+        
+        # Create triangulated surface
+        for face in faces:
+            triangle = vertices[face]
+            # Create a polygon for each face
+            ax.plot_trisurf(triangle[:, 0], triangle[:, 1], triangle[:, 2], 
+                           color='lightblue', alpha=0.8, edgecolor='white', linewidth=0.1)
+        
+        # Set equal aspect ratio
+        max_range = np.array([vertices[:,0].max()-vertices[:,0].min(),
+                             vertices[:,1].max()-vertices[:,1].min(),
+                             vertices[:,2].max()-vertices[:,2].min()]).max() / 2.0
+        
+        mid_x = (vertices[:,0].max()+vertices[:,0].min()) * 0.5
+        mid_y = (vertices[:,1].max()+vertices[:,1].min()) * 0.5
+        mid_z = (vertices[:,2].max()+vertices[:,2].min()) * 0.5
+        
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+        
+        # Set viewing angle for nice 3D perspective
+        ax.view_init(elev=20, azim=45)
+        
+        # Remove axes and background
+        ax.set_axis_off()
+        ax.grid(False)
+        
+        # Save with black background
+        plt.savefig(thumb_path, facecolor='black', bbox_inches='tight',
+                   dpi=80, format='png', edgecolor='black', pad_inches=0)
+        plt.close(fig)
+        
+        print(f"✅ Simple thumbnail created: {thumb_path}")
+        
+    except Exception as e:
+        print(f"⚠️ Simple thumbnail failed: {e}")
+        create_placeholder_thumbnail(obj_path, thumb_path)
     """Fallback rendering using matplotlib for systems without proper OpenGL."""
     try:
         import matplotlib.pyplot as plt
@@ -695,9 +839,9 @@ def render_thumbnail_matplotlib_fallback(obj_path: Path, thumb_path: Path):
             create_placeholder_thumbnail(obj_path, thumb_path)
             return
             
-        # Create a simple 2D projection view
-        fig, ax = plt.subplots(figsize=(8, 8), facecolor='none')
-        ax.set_facecolor('none')
+        # Create a simple 2D projection view with black background
+        fig, ax = plt.subplots(figsize=(8, 8), facecolor='black')
+        ax.set_facecolor('black')
         
         # Project 3D vertices to 2D (simple orthographic projection)
         vertices = mesh.vertices
@@ -706,16 +850,22 @@ def render_thumbnail_matplotlib_fallback(obj_path: Path, thumb_path: Path):
         x_coords = vertices[:, 0]
         y_coords = vertices[:, 1]
         
-        # Draw edges by connecting face vertices
+        # Draw edges by connecting face vertices in white on black background  
         faces = mesh.faces
-        for face in faces[:min(200, len(faces))]:  # Limit for performance
+        edge_count = 0
+        max_edges = 500  # Limit edges for better performance and cleaner look
+        
+        for face in faces:
+            if edge_count >= max_edges:
+                break
             face_verts = vertices[face]
-            # Draw triangle edges
+            # Draw triangle edges in bright white for better visibility
             for i in range(3):
                 start = face_verts[i]
                 end = face_verts[(i + 1) % 3]
                 ax.plot([start[0], end[0]], [start[1], end[1]], 
-                       'b-', alpha=0.6, linewidth=0.5)
+                       'white', alpha=0.9, linewidth=1.2)
+                edge_count += 1
         
         # Set equal aspect and remove axes
         ax.set_aspect('equal')
@@ -727,10 +877,10 @@ def render_thumbnail_matplotlib_fallback(obj_path: Path, thumb_path: Path):
         ax.set_xlim(bounds[0, 0] - margin, bounds[1, 0] + margin)
         ax.set_ylim(bounds[0, 1] - margin, bounds[1, 1] + margin)
         
-        # Save with transparent background
-        plt.savefig(thumb_path, transparent=True, bbox_inches='tight', 
-                   dpi=100, format='png', facecolor='none', 
-                   edgecolor='none', pad_inches=0)
+        # Save with black background
+        plt.savefig(thumb_path, transparent=False, bbox_inches='tight', 
+                   dpi=100, format='png', facecolor='black', 
+                   edgecolor='black', pad_inches=0)
         plt.close(fig)
         
         print(f"📸 Matplotlib wireframe thumbnail: {thumb_path}")
@@ -745,23 +895,23 @@ def create_placeholder_thumbnail(obj_path: Path, thumb_path: Path):
     try:
         from PIL import Image, ImageDraw, ImageFont
         
-        # Create a simple placeholder
-        background_color = (240, 240, 240, 128)
+        # Create a placeholder with black background
+        background_color = (0, 0, 0, 255)  # Solid black
         img = Image.new('RGBA', RENDER_SIZE, background_color)
         draw = ImageDraw.Draw(img)
         
-        # Draw a simple 3D box icon
+        # Draw a simple 3D box icon in white
         w, h = RENDER_SIZE
         cx, cy = w//2, h//2
         size = min(w, h) // 4
         
-        # Draw isometric cube
+        # Draw isometric cube in white
         points = [
             (cx - size, cy), (cx, cy - size//2), (cx + size, cy), (cx, cy + size//2)
         ]
-        draw.polygon(points, fill=(100, 150, 200, 180), outline=(50, 100, 150, 255))
+        draw.polygon(points, fill=(200, 200, 200, 180), outline=(255, 255, 255, 255))
         
-        # Add text
+        # Add text in white
         text = obj_path.stem[:20]  # Truncate if too long
         try:
             font = ImageFont.truetype("arial.ttf", 24)
@@ -772,7 +922,7 @@ def create_placeholder_thumbnail(obj_path: Path, thumb_path: Path):
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         draw.text((cx - text_w//2, cy + size + 20), text, 
-                 fill=(50, 50, 50, 255), font=font)
+                 fill=(255, 255, 255, 255), font=font)  # White text on black background
         
         img.save(thumb_path)
         print(f"📸 Placeholder thumbnail: {thumb_path}")
@@ -869,11 +1019,11 @@ def load_overrides_file(in_root: Path) -> Dict[str, str]:
             pass
     return out
 
-def choose_output_name_for_folder(folder: Path, auto_base: str, overrides: Dict[str, str]) -> str:
+def choose_output_name_for_folder(folder: Path, auto_base: str, overrides: Dict[str, str], ask_user: bool = True) -> str:
     key = folder.name
     if key in overrides:
         return camel_no_underscores(overrides[key])
-    if ASK:
+    if ask_user and ASK:
         print(f"\nSource folder: {folder}")
         user = input(f"Output name? (Enter for '{auto_base}'): ").strip()
         if user:
@@ -882,7 +1032,7 @@ def choose_output_name_for_folder(folder: Path, auto_base: str, overrides: Dict[
 
 # --------------------- Main processing flow ----------------------
 
-def process_model_folder(src_folder: Path, out_parent: Path, overrides: Dict[str, str]):
+def process_model_folder(src_folder: Path, out_parent: Path, overrides: Dict[str, str], skip_thumbnails: bool = False, force_overwrite: bool = False, ask_user: bool = True):
     obj, mtl, imgs = detect_files(src_folder)
     if not obj and not mtl and not imgs:
         return  # nothing to do
@@ -891,9 +1041,23 @@ def process_model_folder(src_folder: Path, out_parent: Path, overrides: Dict[str
     base_source = obj or mtl or (imgs[0] if imgs else None)
     auto_base = clean_base_from_stem(base_source.stem if base_source else src_folder.name)
 
-    base = choose_output_name_for_folder(src_folder, auto_base, overrides)
+    base = choose_output_name_for_folder(src_folder, auto_base, overrides, ask_user)
+    
+    # Sanitize the base name for Windows compatibility
+    base = sanitize_filename(base)
 
     out_folder = out_parent / base
+    
+    # Check if folder already exists and handle overwrite logic
+    if out_folder.exists() and not force_overwrite:
+        print(f"⚠️ Folder {base} already exists. Skipping (use force overwrite to replace)")
+        return
+    elif out_folder.exists() and force_overwrite:
+        print(f"🔄 Overwriting existing folder: {base}")
+        # Remove existing folder contents
+        import shutil
+        shutil.rmtree(out_folder)
+    
     out_folder.mkdir(parents=True, exist_ok=True)
 
     out_obj, out_mtl, out_imgs, primary_img = copy_and_rename(obj, mtl, imgs, out_folder, base)
@@ -903,9 +1067,26 @@ def process_model_folder(src_folder: Path, out_parent: Path, overrides: Dict[str
     if out_mtl:
         patch_mtl(out_mtl, out_imgs, primary_img)
 
-    if out_obj and out_obj.exists():
-        thumb_path = out_folder / f"{base}!.png"
-        render_thumbnail_transparent(out_obj, thumb_path)
+    # Only generate thumbnails if not skipped
+    if not skip_thumbnails and out_obj and out_obj.exists():
+        thumb_path = out_folder / f"{base}!.png"  # Use ! to distinguish from texture files
+        try:
+            # Add timeout protection for thumbnail rendering
+            print(f"🖼️ Generating rendered thumbnail for {base}...")
+            render_thumbnail_transparent(out_obj, thumb_path)
+            print(f"✅ Rendered thumbnail created: {thumb_path}")
+        except Exception as thumb_error:
+            print(f"⚠️ Thumbnail rendering failed for {base}: {thumb_error}")
+            # Try creating a simple placeholder instead
+            try:
+                create_placeholder_thumbnail(out_obj, thumb_path)
+                print(f"📸 Created placeholder thumbnail: {thumb_path}")
+            except:
+                print(f"❌ Could not create any thumbnail for {base}")
+    elif skip_thumbnails:
+        print(f"⏭️ Skipping thumbnail generation for {base} (user choice)")
+    else:
+        print(f"⚠️ No OBJ file found for thumbnail generation: {base}")
 
 def iter_source_folders(root: Path, recursive: bool) -> List[Path]:
     if not recursive:
@@ -921,6 +1102,10 @@ class Dark3DProcessorGUI:
         
         self.selected_zip_files = []
         self.converted_folders = []
+        self.skip_thumbnails = tk.BooleanVar(value=False)  # Generate thumbnails by default
+        self.force_overwrite = tk.BooleanVar(value=True)   # Force overwrite by default for convenience
+        self.use_meshy_api = tk.BooleanVar(value=False)    # Option to use Meshy API for thumbnails
+        self.meshy_api_key = tk.StringVar(value="")        # Store Meshy API key
         self.setup_dark_gui()
     
     def setup_dark_gui(self):
@@ -1006,9 +1191,53 @@ class Dark3DProcessorGUI:
                                    relief='raised', bd=2)
         self.clear_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
+        # Options frame
+        options_frame = tk.Frame(button_frame, bg=bg_color)
+        options_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Skip thumbnails checkbox
+        self.thumbnail_check = tk.Checkbutton(options_frame, 
+                                             text="⚡ Skip Thumbnail Generation (Faster Processing)",
+                                             variable=self.skip_thumbnails,
+                                             bg=bg_color, fg=fg_color,
+                                             selectcolor='#404040',
+                                             font=('Arial', 10))
+        self.thumbnail_check.pack(side=tk.LEFT)
+        
+        # Force overwrite checkbox
+        self.overwrite_check = tk.Checkbutton(options_frame, 
+                                             text="🔄 Force Overwrite Existing Files",
+                                             variable=self.force_overwrite,
+                                             bg=bg_color, fg=fg_color,
+                                             selectcolor='#404040',
+                                             font=('Arial', 10))
+        self.overwrite_check.pack(side=tk.LEFT, padx=(20, 0))
+        
+        # API options frame
+        api_frame = tk.Frame(button_frame, bg=bg_color)
+        api_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Meshy API checkbox
+        self.api_check = tk.Checkbutton(api_frame, 
+                                       text="🎨 Use Meshy API for Thumbnails",
+                                       variable=self.use_meshy_api,
+                                       bg=bg_color, fg=fg_color,
+                                       selectcolor='#404040',
+                                       font=('Arial', 10))
+        self.api_check.pack(side=tk.LEFT)
+        
+        # API key entry
+        tk.Label(api_frame, text="API Key:", bg=bg_color, fg=fg_color, 
+                font=('Arial', 9)).pack(side=tk.LEFT, padx=(20, 5))
+        
+        self.api_entry = tk.Entry(api_frame, textvariable=self.meshy_api_key,
+                                 bg='#1e1e1e', fg=fg_color, width=25,
+                                 font=('Arial', 9), show="*")  # Hide API key
+        self.api_entry.pack(side=tk.LEFT)
+        
         # Second row of buttons
         button_row2 = tk.Frame(button_frame, bg=bg_color)
-        button_row2.pack(fill=tk.X)
+        button_row2.pack(fill=tk.X, pady=(10, 0))
         
         # Convert button
         self.convert_btn = tk.Button(button_row2, text="🔄 Convert Files",
@@ -1091,6 +1320,8 @@ class Dark3DProcessorGUI:
             
             folder = Path(folder_path)
             self.log_progress(f"📁 Source: {folder.name}", 'info')
+            self.log_progress(f"⚡ Skip thumbnails: {'Yes' if self.skip_thumbnails.get() else 'No'}", 'info')
+            self.log_progress(f"🔄 Force overwrite: {'Yes' if self.force_overwrite.get() else 'No'}", 'info')
             self.status_label.config(text=f"Processing folder: {folder.name}")
             self.root.update()
             
@@ -1123,7 +1354,7 @@ class Dark3DProcessorGUI:
             
             # Process the folder
             self.log_progress("🔄 Processing 3D model content...", 'processing')
-            process_model_folder(folder, output_root, merged_overrides)
+            process_model_folder(folder, output_root, merged_overrides, self.skip_thumbnails.get(), self.force_overwrite.get(), False)  # Don't ask user in GUI
             self.log_progress("✓ Successfully processed folder!", 'success')
             
             # Add to converted folders for PNG generation
@@ -1163,6 +1394,8 @@ class Dark3DProcessorGUI:
             self.log_progress("🔄 STARTING FILE CONVERSION", 'complete')
             self.log_progress("=" * 60, 'info')
             self.log_progress(f"📊 Files in queue: {len(self.selected_zip_files)}", 'info')
+            self.log_progress(f"⚡ Skip thumbnails: {'Yes' if self.skip_thumbnails.get() else 'No'}", 'info')
+            self.log_progress(f"🔄 Force overwrite: {'Yes' if self.force_overwrite.get() else 'No'}", 'info')
             self.log_progress("", 'info')
             
             # List all files to be processed
@@ -1175,8 +1408,12 @@ class Dark3DProcessorGUI:
             
             # Create output directory
             output_root = Path.home() / "Downloads" / "Converted_3D_Models"
-            output_root.mkdir(parents=True, exist_ok=True)
-            self.log_progress(f"📂 Output directory: {output_root}", 'info')
+            try:
+                output_root.mkdir(parents=True, exist_ok=True)
+                self.log_progress(f"📂 Output directory: {output_root}", 'info')
+            except Exception as e:
+                self.log_progress(f"❌ Failed to create output directory: {e}", 'error')
+                raise Exception(f"Cannot create output directory: {e}")
             
             self.converted_folders = []
             total_files = len(self.selected_zip_files)
@@ -1189,8 +1426,12 @@ class Dark3DProcessorGUI:
                 self.root.update()
                 
                 # Extract ZIP to temporary folder
-                extract_folder = output_root / zip_path.stem
-                extract_folder.mkdir(parents=True, exist_ok=True)
+                extract_folder = output_root / sanitize_filename(zip_path.stem)
+                try:
+                    extract_folder.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    self.log_progress(f"  ❌ Failed to create extraction folder: {e}", 'error')
+                    continue
                 
                 self.log_progress(f"  📦 Extracting ZIP archive...", 'processing')
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -1207,10 +1448,21 @@ class Dark3DProcessorGUI:
                 
                 # Process extracted content using existing functions
                 self.log_progress(f"  🔄 Processing 3D model content...", 'processing')
-                processed_count = self.process_extracted_content(extract_folder, output_root)
-                self.log_progress(f"  ✓ Processed {processed_count} model folder(s)", 'success')
+                self.status_label.config(text=f"Processing 3D models [{idx}/{total_files}]: {zip_path.name}")
+                self.root.update()
+                
+                try:
+                    processed_count = self.process_extracted_content(extract_folder, output_root)
+                    self.log_progress(f"  ✓ Processed {processed_count} model folder(s)", 'success')
+                except Exception as process_error:
+                    self.log_progress(f"  ⚠️ Error processing 3D content: {process_error}", 'error')
+                    processed_count = 0
                 
                 self.converted_folders.append(extract_folder)
+                
+                # Update progress after each file
+                progress_percent = (idx / total_files) * 100
+                self.log_progress(f"  📊 Progress: {idx}/{total_files} files ({progress_percent:.1f}%) complete", 'info')
             
             self.log_progress(f"\n{'=' * 60}", 'info')
             self.log_progress(f"✅ CONVERSION COMPLETE!", 'complete')
@@ -1228,25 +1480,53 @@ class Dark3DProcessorGUI:
     
     def process_extracted_content(self, extract_folder: Path, output_root: Path):
         """Process extracted folder content using existing functions."""
-        # Load overrides
-        file_overrides = load_overrides_file(extract_folder)
-        merged_overrides = {**file_overrides, **OVERRIDES}
-        
-        processed_count = 0
-        
-        # Find folders with 3D content
-        for folder in extract_folder.rglob("*"):
-            if folder.is_dir():
-                has_obj = any(folder.glob("*.obj"))
-                has_mtl = any(folder.glob("*.mtl"))
-                has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
-                
-                if has_obj or has_mtl or has_images:
-                    self.log_progress(f"    → Processing model: {folder.name}", 'processing')
-                    process_model_folder(folder, output_root, merged_overrides)
-                    processed_count += 1
-        
-        return processed_count
+        try:
+            # Load overrides
+            file_overrides = load_overrides_file(extract_folder)
+            merged_overrides = {**file_overrides, **OVERRIDES}
+            
+            processed_count = 0
+            
+            # Find folders with 3D content
+            for folder in extract_folder.rglob("*"):
+                if folder.is_dir():
+                    has_obj = any(folder.glob("*.obj"))
+                    has_mtl = any(folder.glob("*.mtl"))
+                    has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
+                    
+                    if has_obj or has_mtl or has_images:
+                        self.log_progress(f"    → Processing model: {folder.name}", 'processing')
+                        self.root.update()  # Keep UI responsive
+                        
+                        try:
+                            # Check if folder already exists for logging
+                            obj, mtl, imgs = detect_files(folder)
+                            if obj or mtl or imgs:
+                                base_source = obj or mtl or (imgs[0] if imgs else None)
+                                auto_base = clean_base_from_stem(base_source.stem if base_source else folder.name)
+                                base = choose_output_name_for_folder(folder, auto_base, merged_overrides, False)  # Don't ask user in GUI
+                                base = sanitize_filename(base)
+                                out_folder = output_root / base
+                                
+                                if out_folder.exists() and self.force_overwrite.get():
+                                    self.log_progress(f"    🔄 Overwriting existing: {folder.name}", 'processing')
+                                elif out_folder.exists() and not self.force_overwrite.get():
+                                    self.log_progress(f"    ⏭️ Skipping existing: {folder.name} (already exists)", 'info')
+                                    continue
+                            
+                            process_model_folder(folder, output_root, merged_overrides, self.skip_thumbnails.get(), self.force_overwrite.get(), False)  # Don't ask user in GUI
+                            processed_count += 1
+                            self.log_progress(f"    ✓ Successfully processed: {folder.name}", 'success')
+                        except Exception as model_error:
+                            self.log_progress(f"    ⚠️ Failed to process {folder.name}: {model_error}", 'error')
+                            # Continue with next folder even if one fails
+                            continue
+            
+            return processed_count
+            
+        except Exception as e:
+            self.log_progress(f"    ❌ Error in content processing: {e}", 'error')
+            return 0
     
     def create_png(self):
         """Create PNG thumbnails for all OBJ files in converted folders."""

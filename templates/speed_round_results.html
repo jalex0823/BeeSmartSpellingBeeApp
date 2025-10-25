@@ -279,6 +279,27 @@ if ('speechSynthesis' in window) {
 <script>
 // Load user avatar on results page
 document.addEventListener('DOMContentLoaded', async () => {
+    // Speak end-of-quiz announcement again on results page (kept short) and sync visualizer if present
+    try {
+        if ('speechSynthesis' in window) {
+            // cancel overlapping
+            speechSynthesis.cancel();
+            const line = "That's the end of the quiz. Please wait for your quiz results.";
+            const u = new SpeechSynthesisUtterance(line);
+            // prefer en-US for consistency
+            const voices = speechSynthesis.getVoices();
+            const enUS = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang?.startsWith('en')) || null;
+            if (enUS) u.voice = enUS;
+            u.rate = 1.0; u.pitch = 1.05; u.volume = 0.95;
+            const viz = document.getElementById('voiceVisualizer');
+            const status = document.getElementById('voiceStatus');
+            u.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
+            u.onend = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+            u.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
+            speechSynthesis.speak(u);
+        }
+    } catch {}
+
     const container = document.getElementById('userAvatar3D');
     if (!container) {
         console.warn('Avatar container not found');

@@ -29,6 +29,22 @@
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
     </script>
+    <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
+    <script>
+        (function(){
+            try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(e) {}
+            function jumpTop(){ try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch(e){ window.scrollTo(0,0); } }
+            window.addEventListener('DOMContentLoaded', function(){
+                // run twice to win against late layout shifts
+                setTimeout(jumpTop, 0);
+                setTimeout(jumpTop, 150);
+            });
+            window.addEventListener('load', function(){
+                setTimeout(jumpTop, 0);
+                setTimeout(jumpTop, 300);
+            });
+        })();
+    </script>
     <!-- Mascot Bee 3D Component -->
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     <!-- User Avatar Loader -->

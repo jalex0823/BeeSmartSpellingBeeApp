@@ -673,28 +673,18 @@
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: linear-gradient(135deg, #FFB300 0%, #FF8F00 50%, #E65100 100%);
+        background: #FFB300; /* solid amber */
         border-radius: 20px;
         padding: 1.2rem;
         margin-bottom: 1.5rem;
         position: relative;
         overflow: visible;
-        box-shadow: 0 8px 24px rgba(255, 152, 0, 0.3);
-        border: 2px solid rgba(255, 193, 7, 0.4);
-        min-height: 120px;
+        box-shadow: 0 10px 26px rgba(255, 153, 0, 0.28);
+        border: none; /* remove border */
+        min-height: 140px;
     }
 
-    .voice-visualizer::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 60%);
-        pointer-events: none;
-        z-index: 0;
-    }
+    .voice-visualizer::before { display: none; }
     
     /* Animated Bee Mouth for Voice Visualization */
     .bee-mouth-container {
@@ -860,7 +850,8 @@
     }
     
     /* Natural pause state - amber bars stay visible with subtle animation */
-    .voice-visualizer.paused .voice-wave {
+    .voice-visualizer.paused .voice-wave,
+    .voice-visualizer.paused .wave-bar {
         opacity: 0.7;
         animation: naturalPause 1.2s ease-in-out infinite !important;
         background: linear-gradient(to top, #FF8C00, #FFB347) !important;
@@ -875,12 +866,14 @@
     }
     
     /* Word pulse effect - intensifies animation briefly */
-    .voice-visualizer.word-pulse .voice-wave {
+    .voice-visualizer.word-pulse .voice-wave,
+    .voice-visualizer.word-pulse .wave-bar {
         animation: wordPulseAnimation 0.15s ease-out;
     }
     
     /* Pausing effect - reduces animation during sentence breaks */
-    .voice-visualizer.pausing .voice-wave {
+    .voice-visualizer.pausing .voice-wave,
+    .voice-visualizer.pausing .wave-bar {
         animation: pauseAnimation 0.4s ease-in-out;
         opacity: 0.4;
     }
@@ -2285,21 +2278,363 @@
             </div>
         </div>
 
-        <!-- Voice Visualizer with Bee Theme -->
-        <div class="voice-visualizer" id="voiceVisualizer">
-            <div class="voice-status" id="voiceStatus">🐝 Ready</div>
-            
-            <!-- Animated voice wave bars -->
-            <div id="voiceWaveContainer" aria-hidden="true">
-                <div class="wave-bar" style="animation-delay: 0ms;"></div>
-                <div class="wave-bar" style="animation-delay: 100ms;"></div>
-                <div class="wave-bar" style="animation-delay: 200ms;"></div>
-                <div class="wave-bar" style="animation-delay: 300ms;"></div>
-                <div class="wave-bar" style="animation-delay: 200ms;"></div>
-                <div class="wave-bar" style="animation-delay: 100ms;"></div>
-                <div class="wave-bar" style="animation-delay: 0ms;"></div>
-            </div>
-        </div>
+                <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
+                <div class="voice-visualizer" id="voiceVisualizer">
+                        <div class="voice-card speaking-mode">
+                            <div class="voice-header">
+                                <span class="voice-bee">🐝</span>
+                                <span class="voice-text" id="voiceStatus">Ready</span>
+                            </div>
+
+                            <div class="dotwave-wrapper">
+                                <canvas id="dotWaveCanvas" width="500" height="160"></canvas>
+                            </div>
+                        </div>
+                </div>
+
+                <!-- Dotted ribbon CSS (BeeSmart glowing dots) -->
+                <style>
+                    .voice-card.speaking-mode {
+                        background: radial-gradient(circle at 30% 30%, #ffa726 0%, #ef6c00 60%, #c14900 100%);
+                        border-radius: 28px;
+                        padding: 24px 16px 32px;
+                        border: 2px solid rgba(255,255,255,0.25);
+                        box-shadow:
+                            0 24px 40px rgba(255,140,0,0.35),
+                            0 0 60px rgba(255,214,79,0.35) inset;
+                        max-width: 520px;
+                        margin: 0 auto 24px auto;
+                        color: #fff;
+                        text-align: center;
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
+                                    overflow: hidden; /* keep dots within card corners */
+                    }
+
+                    .voice-header {
+                        font-size: 1.25rem;
+                        font-weight: 600;
+                        color: #fff8e1;
+                        text-shadow:
+                            0 0 6px rgba(255,255,255,0.8),
+                            0 0 12px rgba(255,214,64,0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        letter-spacing: 0.02em;
+                        margin-bottom: 20px;
+                    }
+
+                    .voice-bee {
+                        margin-right: 8px;
+                        display: inline-block;
+                        filter:
+                            drop-shadow(0 0 4px #fff)
+                            drop-shadow(0 0 8px #ffd54f);
+                    }
+
+                                .dotwave-wrapper {
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    padding: 8px 16px; /* small buffer from edges */
+                                }
+
+                                .dotwave-wrapper canvas {
+                                    width: 100%;
+                                    height: 180px; /* fill more vertical space */
+                                    filter:
+                                        drop-shadow(0 0 4px rgba(255,255,255,0.4))
+                                        drop-shadow(0 0 12px rgba(255,200,0,0.4));
+                                }
+                </style>
+
+                <!-- Dotted ribbon config (shared across pages) -->
+                <script src="/static/js/voice-visualizer-config.js"></script>
+                <!-- Dotted ribbon JS with speech-state awareness -->
+                <script>
+                (function(){
+                                const canvas = document.getElementById('dotWaveCanvas');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+
+                                let W = canvas.width;
+                                let H = canvas.height;
+                                let DPR = window.devicePixelRatio || 1;
+
+                    // Resize handler to keep crisp drawing on DPR changes
+                    function resizeCanvas(){
+                                    DPR = window.devicePixelRatio || 1;
+                                    const cssWidth = canvas.clientWidth || 500;
+                                    const cssHeight = canvas.clientHeight || 160;
+                                    canvas.width = Math.round(cssWidth * DPR);
+                                    canvas.height = Math.round(cssHeight * DPR);
+                        canvas.style.width = cssWidth + 'px';
+                        canvas.style.height = cssHeight + 'px';
+                                    W = canvas.width; H = canvas.height;
+                    }
+                    resizeCanvas();
+                    window.addEventListener('resize', resizeCanvas);
+
+                    // CONFIG (from shared file with safe fallbacks)
+                                const VZ = window.BeeSmartVoiceVizCfg || {};
+                                const pick = (v, d) => (v !== undefined && v !== null) ? v : d;
+                                const MAX_WAVES = pick(VZ.MAX_WAVES, 6); // maximum; collapses to one on pauses
+                                let wavePack = 1;     // 1 => draw all waves, 0 => only one
+                                let wavePackTarget = 1;
+                                const DOTS_PER_WAVE = pick(VZ.DOTS_PER_WAVE, 56); // more points for a defined curve
+                    const DOT_RADIUS = pick(VZ.DOT_RADIUS, 3);
+                    const WAVE_SPACING = pick(VZ.WAVE_SPACING, 20);  // spacing for definition
+                                const HORIZONTAL_PAD_CSS = pick(VZ.HORIZONTAL_PAD_CSS, 12); // reduced buffer for longer lines
+                                const waveColors = (VZ.waveColors && VZ.waveColors.length) ? VZ.waveColors : ['rgba(255, 190, 52, 0.80)'];
+
+                                // Visualizer state (driven by announcer): speaking | pausing | idle
+                                let mode = 'idle';
+                                const ET = VZ.energyTargets || {};
+                                let energyTarget = pick(ET.idle, 0.04);
+                                let energy = energyTarget;
+                                // Transitional boosts to make pauses/speeches feel more pronounced
+                                let dipBoost = 0;   // 0..1 extra reduction when pausing begins
+                                let surgeBoost = 0; // 0..1 extra lift when speaking begins
+
+                    function setMode(next){
+                                    if (mode !== next) {
+                                        if (next === 'pausing') dipBoost = 1;      // immediate dip
+                                        if (next === 'speaking') surgeBoost = 1;   // immediate lift
+                                    }
+                                    mode = next;
+                        // Expand waves while speaking; collapse to one when paused/idle
+                        wavePackTarget = (mode === 'speaking') ? 1 : 0;
+                                    if (mode === 'speaking') energyTarget = pick(ET.speaking, 1.0);
+                                    else if (mode === 'pausing') energyTarget = pick(ET.pausing, 0.06);
+                                    else energyTarget = pick(ET.idle, 0.04);
+                    }
+                    // Expose to page scripts
+                    window.voiceVizSetMode = setMode;
+
+                    // Observe class changes on #voiceVisualizer to auto-sync mode
+                    const host = document.getElementById('voiceVisualizer');
+                    if (host && 'MutationObserver' in window){
+                        const mo = new MutationObserver(() => {
+                            const c = host.classList;
+                            if (c.contains('speaking')) setMode('speaking');
+                            else if (c.contains('pausing')) setMode('pausing');
+                            else setMode('idle');
+                        });
+                        mo.observe(host, { attributes: true, attributeFilter: ['class'] });
+                    }
+
+                    // Lightweight helper to trigger quick visual reactions from UI events
+                    window.BeeVoiceViz = (function(){
+                        function hostEl(){ return document.getElementById('voiceVisualizer'); }
+                        function speak(ms=600){ const h=hostEl(); if(!h) return; h.classList.add('speaking'); setTimeout(()=>h.classList.remove('speaking'), ms); }
+                        function pulse(ms=220){ const h=hostEl(); if(!h) return; h.classList.add('pausing','word-pulse'); setTimeout(()=>h.classList.remove('pausing','word-pulse'), ms); }
+                        function react(kind){
+                            switch(kind){
+                                case 'button': return pulse(200);
+                                case 'submit': return speak(480);
+                                case 'hint': return pulse(260);
+                                case 'skip': return pulse(300);
+                                case 'feedback-correct': return speak(700);
+                                case 'feedback-incorrect': return pulse(520);
+                                default: return pulse(180);
+                            }
+                        }
+                        return { speak, pulse, react };
+                    })();
+
+                                function getEnergy(t){
+                        // base animated energy 0..1
+                        const fake = 0.5 + 0.5*Math.sin(t*0.002) + 0.25*Math.sin(t*0.005 + 2);
+                        return Math.max(0, Math.min(1, fake));
+                    }
+
+                    function drawFrame(t){
+                                    // Ease energy toward target faster so pauses are visible
+                                    const base = getEnergy(t);
+                                    const E = VZ.easing || {};
+                                    const ENERGY_EASE = pick(E.energy, 0.18);
+                                    const WAVEPACK_EASE = pick(E.wavePack, 0.22);
+                                    const DIP_DECAY = pick(E.dipDecay, 0.15);
+                                    const SURGE_DECAY = pick(E.surgeDecay, 0.10);
+                                    const B = VZ.boostScales || {};
+                                    const DIP_SCALE = pick(B.dip, 0.65);
+                                    const SURGE_SCALE = pick(B.surge, 0.15);
+                                    const SH = VZ.waveShape || {};
+                                    energy += (energyTarget - energy) * ENERGY_EASE;
+                                    // Ease the number of visible waves toward target (1 or many)
+                                    wavePack += (wavePackTarget - wavePack) * WAVEPACK_EASE;
+                                    // decay boosts
+                                    dipBoost += (0 - dipBoost) * DIP_DECAY;
+                                    surgeBoost += (0 - surgeBoost) * SURGE_DECAY;
+                                    // Apply boosts: stronger downward dip when pausing, small lift when speaking resumes
+                                    const motionScale = (1 - DIP_SCALE * dipBoost) * (1 + SURGE_SCALE * surgeBoost);
+                                    const drive = base * energy * motionScale;
+
+                        ctx.clearRect(0,0,W,H);
+
+                        // Precompute horizontal padding and optional L-R gradient overlay
+                        const pad = HORIZONTAL_PAD_CSS * DPR;
+                        const GR = VZ.gradientLR || {};
+                        let grad = null;
+                        if (GR.enabled) {
+                            grad = ctx.createLinearGradient(pad, 0, W - pad, 0);
+                            const stops = GR.stops || [];
+                            for (let s = 0; s < stops.length; s++) {
+                                const st = stops[s] || {};
+                                const off = (typeof st.offset === 'number') ? st.offset : (s/(Math.max(1,stops.length-1)));
+                                const col = st.color || '#ffffff';
+                                grad.addColorStop(off, col);
+                            }
+                        }
+
+                        // End-fade configuration (transparent at both ends)
+                        const EF = VZ.endFade || {};
+                        const EF_ENABLED = (EF.enabled !== undefined) ? !!EF.enabled : true;
+                        const fadeFrac = (typeof EF.fraction === 'number') ? Math.max(0, Math.min(0.5, EF.fraction)) : 0.16;
+                        const drawableWidth = Math.max(1, (W - 2*pad));
+                        const fadeWidth = Math.max(8 * DPR, fadeFrac * drawableWidth);
+                        function edgeFadeAlpha(x){
+                            if (!EF_ENABLED) return 1;
+                            // distance to nearest drawable edge
+                            const leftDist = x - pad;
+                            const rightDist = (pad + drawableWidth) - x;
+                            const d = Math.max(0, Math.min(leftDist, rightDist));
+                            const u = Math.max(0, Math.min(1, d / fadeWidth)); // 0 at edge -> 1 away
+                            // cosine smoothstep for a soft fade in/out
+                            return 0.5 - 0.5 * Math.cos(Math.PI * u);
+                        }
+
+                        const wavesToDraw = Math.max(1, Math.round(1 + (MAX_WAVES-1) * wavePack));
+                        // Clip to safe drawable area to guarantee nothing bleeds past card border
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(pad, 0, W - 2*pad, H);
+                        ctx.clip();
+                        for (let w = 0; w < wavesToDraw; w++) {
+                            const color = waveColors[w % waveColors.length];
+                            const yOffset = -w * WAVE_SPACING;
+
+                            for (let i = 0; i < DOTS_PER_WAVE; i++) {
+                                const progress = i / (DOTS_PER_WAVE - 1);
+                                const x = progress * (W - 2*pad) + pad; // keep inside edges
+
+                                const freq = pick(SH.baseFreq, 2) + w * pick(SH.freqStep, 0.4);
+                                const phase = t*0.004 + w*0.6;
+                                let amp = (pick(SH.ampBase, 12) + w*pick(SH.ampStep, 4)) * drive; // definition
+
+                                // Edge tip pinch: collapse amplitude and spacing near ends so waves meet
+                                const TP = VZ.tipPinch || {};
+                                let pinch = 1;
+                                if (TP.enabled) {
+                                    const p = (typeof TP.power === 'number') ? TP.power : 1.25;
+                                    pinch = Math.pow(Math.sin(Math.PI * progress), Math.max(0.8, Math.min(2.0, p)));
+                                    amp *= pinch;
+                                }
+
+                                // Thickness bulge across X to mimic a wavy sheet
+                                const TB = VZ.thicknessBulge || {};
+                                if (TB.enabled) {
+                                    const bulgeMag = (typeof TB.magnitude === 'number') ? TB.magnitude : 0.18;
+                                    const bulgeSpeed = (typeof TB.speed === 'number') ? TB.speed : 0.002;
+                                    const bulgeCycles = (typeof TB.cycles === 'number') ? TB.cycles : 1.2;
+                                    const bulge = 1 + bulgeMag * Math.sin(progress * Math.PI * 2 * bulgeCycles + t * bulgeSpeed * 1000);
+                                    amp *= bulge;
+                                }
+
+                                const mainWaveY = Math.sin(progress * freq * Math.PI + phase) * amp;
+                                const ripple = Math.sin(progress * pick(SH.rippleFreq, 12) + t*0.01 + w) * (pick(SH.rippleBase, 3) + w) * (0.5 + 0.5*drive);
+                                // Collapse vertical spacing yOffset near tips using the same pinch scale
+                                const y = (H/2 + 20*DPR) + (yOffset * pinch) + mainWaveY + ripple;
+
+                                const edgeA = edgeFadeAlpha(x);
+
+                                ctx.beginPath();
+                                ctx.fillStyle = color;
+                                ctx.shadowColor = color;
+                                ctx.shadowBlur = 12 * edgeA; // reduce glow near ends
+                                const prevAlpha = ctx.globalAlpha;
+                                ctx.globalAlpha = edgeA;
+                                ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
+                                ctx.fill();
+                                ctx.closePath();
+
+                                // Optional gradient overlay for L->R color sweep
+                                if (grad) {
+                                    const alpha = (typeof GR.alpha === 'number') ? GR.alpha : 0.45;
+                                    const savedAlpha = ctx.globalAlpha;
+                                    const prevShadow = ctx.shadowBlur;
+                                    ctx.globalAlpha = edgeA * alpha; // apply end fade to overlay too
+                                    ctx.shadowBlur = 0; // overlay without glow
+                                    ctx.beginPath();
+                                    ctx.fillStyle = grad;
+                                    ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
+                                    ctx.fill();
+                                    ctx.closePath();
+                                    ctx.globalAlpha = savedAlpha;
+                                    ctx.shadowBlur = prevShadow;
+                                }
+                                // restore for next dot if no overlay
+                                ctx.globalAlpha = prevAlpha;
+                            }
+                        }
+                        ctx.restore();
+
+                        // Soft central glow overlay (lighter blend), scaled by energy
+                        const CG = VZ.centerGlow || {};
+                        if (CG.enabled) {
+                            const baseAlpha = (typeof CG.alpha === 'number') ? CG.alpha : 0.5;
+                            const span = (typeof CG.verticalSpan === 'number') ? Math.max(0.1, Math.min(1, CG.verticalSpan)) : 0.55;
+                            const energyScale = (typeof CG.energyScale === 'number') ? CG.energyScale : 0.9;
+                            const horizFrac = (typeof CG.horizontalFraction === 'number') ? Math.max(0, Math.min(0.5, CG.horizontalFraction)) : 0.15;
+                            const glowAlpha = baseAlpha * Math.max(0, Math.min(1, energy * energyScale));
+                            const drawableWidth2 = Math.max(1, (W - 2*pad));
+                            const feather = Math.max(8 * DPR, horizFrac * drawableWidth2);
+                            if (glowAlpha > 0.01) {
+                                // Draw vertical glow into an offscreen canvas
+                                const off = document.createElement('canvas');
+                                off.width = W; off.height = H;
+                                const ox = off.getContext('2d');
+                                const top = (H*(1-span))/2;
+                                const bottom = H - top;
+                                const gradY = ox.createLinearGradient(0, top, 0, bottom);
+                                gradY.addColorStop(0.0, 'rgba(255,255,255,0)');
+                                gradY.addColorStop(0.5, 'rgba(255,255,255,1)');
+                                gradY.addColorStop(1.0, 'rgba(255,255,255,0)');
+                                ox.fillStyle = gradY;
+                                ox.fillRect(pad, top, W - 2*pad, bottom - top);
+
+                                // Mask with horizontal taper using destination-in
+                                const gradX = ox.createLinearGradient(pad, 0, W - pad, 0);
+                                const leftStop = pad + feather;
+                                const rightStop = (W - pad) - feather;
+                                const lOff = Math.max(0, Math.min(1, (leftStop - pad) / drawableWidth2));
+                                const rOff = Math.max(0, Math.min(1, (rightStop - pad) / drawableWidth2));
+                                gradX.addColorStop(0, 'rgba(0,0,0,0)');
+                                gradX.addColorStop(lOff, 'rgba(0,0,0,1)');
+                                gradX.addColorStop(rOff, 'rgba(0,0,0,1)');
+                                gradX.addColorStop(1, 'rgba(0,0,0,0)');
+                                ox.globalCompositeOperation = 'destination-in';
+                                ox.fillStyle = gradX;
+                                ox.fillRect(pad, 0, W - 2*pad, H);
+
+                                // Blend back onto main
+                                const prevComp = ctx.globalCompositeOperation;
+                                const prevAlpha2 = ctx.globalAlpha;
+                                ctx.globalCompositeOperation = 'lighter';
+                                ctx.globalAlpha = glowAlpha;
+                                ctx.drawImage(off, 0, 0);
+                                ctx.globalCompositeOperation = prevComp;
+                                ctx.globalAlpha = prevAlpha2;
+                            }
+                        }
+                        requestAnimationFrame(drawFrame);
+                    }
+
+                    // Kick off
+                    setMode('idle');
+                    requestAnimationFrame(drawFrame);
+                })();
+                </script>
 
         <div class="bee-input" id="beeInputWrapper">
             <input type="text"
@@ -2663,7 +2998,12 @@ class BeeSoundboard {
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
             };
 
-            speechSynthesis.speak(utterance);
+            try {
+                speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.error('speechSynthesis.speak failed:', err);
+                if (onEndCallback) onEndCallback();
+            }
         };
         
         // iOS Safari fix: Better voice loading with timeout
@@ -3090,7 +3430,9 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            this.soundboard.speakWord(data.word, onEndCallback);
+            // Speak a friendly prompt and the word twice
+            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+            this.soundboard.speakWord(phrase, onEndCallback);
         } else if (onEndCallback) {
             onEndCallback();
         }
@@ -3537,20 +3879,24 @@ class QuizManager {
                     if (event.name === 'word') {
                         console.log('🎤 Word boundary:', event.charIndex);
                         visualizer.classList.add('word-pulse');
-                        setTimeout(() => visualizer.classList.remove('word-pulse'), 150);
-                        
-                        // Add natural micro-pause between words (amber bars, no disruption)
-                        visualizer.classList.add('paused');
-                        setTimeout(() => visualizer.classList.remove('paused'), 100);
+                        // Briefly switch from speaking→pausing→speaking for a visible dip
+                        visualizer.classList.remove('speaking');
+                        visualizer.classList.add('pausing');
+                        setTimeout(() => {
+                            visualizer.classList.remove('pausing', 'word-pulse');
+                            visualizer.classList.add('speaking');
+                        }, 130);
                     }
                     
                     // Natural pause on sentence boundaries (longer, amber bars)
-                    if (event.name === 'sentence') {
+                    const utterText = (utterance.text || '');
+                    const ch = utterText.charAt(event.charIndex);
+                    if (ch === '.' || ch === '!' || ch === '?' || event.name === 'sentence') {
                         console.log('🎤 Sentence boundary - natural pause');
                         visualizer.classList.remove('speaking');
-                        visualizer.classList.add('paused');
+                        visualizer.classList.add('pausing');
                         setTimeout(() => {
-                            visualizer.classList.remove('paused');
+                            visualizer.classList.remove('pausing');
                             visualizer.classList.add('speaking');
                         }, 400);
                     }
@@ -4015,11 +4361,28 @@ class QuizManager {
                 const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                 await this.speakAnnouncement(preface);
             }
-            // ⏱️ Announce word FIRST, then start timer AFTER announcement completes
-            const firstWordIntro = `Your first spelling word will be: ${data.word}`;
+            // ⏱️ Announce word FIRST, then insert a short pause and auto‑pronounce before timer
+            const firstWordIntro = `Your first word is: ${data.word}`;
             
             // Wait for word announcement to complete
             await this.speakAnnouncement(firstWordIntro);
+            
+            // Brief visual pause between phases
+            {
+                const visualizer = document.getElementById('voiceVisualizer');
+                const status = document.getElementById('voiceStatus');
+                if (visualizer && status) {
+                    visualizer.classList.add('pausing');
+                    status.textContent = '⏸️ Pause...';
+                }
+                await new Promise(r => setTimeout(r, 500));
+                if (visualizer && status) {
+                    visualizer.classList.remove('pausing');
+                }
+            }
+            
+            // Auto‑pronounce the word (so kids hear it clearly before timing)
+            await this.pronounceWord({ refresh: true });
             
             // Then announce timer start and actually start the timer
             if (this.timerEnabled && this.quizStarted) {
@@ -4455,20 +4818,28 @@ class QuizManager {
     getRandomAudioAnnouncement(isCorrect) {
         const announcementArray = isCorrect ? this.correctAnnouncements : this.incorrectAnnouncements;
         const randomIndex = Math.floor(Math.random() * announcementArray.length);
-        let announcement = announcementArray[randomIndex];
-        
-        // For variety, sometimes add the student name sporadically (10% chance only)
-        // This keeps it fresh and not repetitive
-        if (this.studentName && Math.random() < 0.10) {
-            // Randomly add name at beginning or end
+        const base = announcementArray[randomIndex];
+
+        // Occasionally personalize with name; mostly do it with a deliberate pause
+        // between the phrase and the name so it sounds natural.
+        if (this.studentName && Math.random() < 0.12) { // ~12% of the time
+            // 70%: split into two utterances (phrase, then name after a short pause)
+            if (Math.random() < 0.7) {
+                return {
+                    phrase: base,               // speak the core message first
+                    name: this.studentName,     // then speak just the name
+                    pauseMs: 380                // ~0.38s pause feels natural with our cadence
+                };
+            }
+            // 30%: inline the name for variety (fallback to commas)
             if (Math.random() < 0.5) {
-                announcement = `${this.studentName}, ${announcement.charAt(0).toLowerCase()}${announcement.slice(1)}`;
+                return `${this.studentName}, ${base.charAt(0).toLowerCase()}${base.slice(1)}`;
             } else {
-                announcement = announcement.replace(/!$/, `, ${this.studentName}!`);
+                return base.replace(/!$/, `, ${this.studentName}!`);
             }
         }
-        
-        return announcement;
+
+        return base;
     }
 
     initializeEventListeners() {
@@ -4496,23 +4867,39 @@ class QuizManager {
             }
         });
 
-        submitButton.addEventListener('click', () => this.submitAnswer());
+        submitButton.addEventListener('click', () => {
+            try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
+            this.submitAnswer();
+        });
         spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
+                try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
                 this.submitAnswer();
             }
         });
 
         if (speakButton) {
-            speakButton.addEventListener('click', () => this.pronounceWord());
+            speakButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.pronounceWord();
+            });
         }
 
         if (repeatButton) {
-            repeatButton.addEventListener('click', () => this.pronounceWord());
+            repeatButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.pronounceWord();
+            });
         }
 
-        getHintButton.addEventListener('click', () => this.getDefinition({ refresh: true }));
-        skipButton.addEventListener('click', () => this.skipWord());
+        getHintButton.addEventListener('click', () => {
+            try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+            this.getDefinition({ refresh: true });
+        });
+        skipButton.addEventListener('click', () => {
+            try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
+            this.skipWord();
+        });
         restartButton.addEventListener('click', () => this.restartQuiz());
 
         // Voice toggle button
@@ -4783,30 +5170,25 @@ class QuizManager {
                     const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                     await this.speakAnnouncement(preface);
                 }
-                // Subsequent words get varied announcements with optional name usage
-                const nextWordPhrases = [
-                    `Your next word is: ${data.word}`,
-                    `Now, spell: ${data.word}`,
-                    `Ready for this one? ${data.word}`,
-                    `Here comes: ${data.word}`,
-                    `Let's try: ${data.word}`,
-                    `Next up: ${data.word}`,
-                    `Spell this word: ${data.word}`
-                ];
+                // Subsequent words: consistent phrasing for clarity
+                const phrase = `Your next word is: ${data.word}`;
+                await this.speakAnnouncement(phrase);
                 
-                let phrase = nextWordPhrases[Math.floor(Math.random() * nextWordPhrases.length)];
-                
-                // 30% chance to add student name
-                if (this.studentName && Math.random() < 0.3) {
-                    const namePositions = [
-                        `${this.studentName}, ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`,
-                        `${phrase} ${this.studentName}!`,
-                        `Alright ${this.studentName}, ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`
-                    ];
-                    phrase = namePositions[Math.floor(Math.random() * namePositions.length)];
+                // Brief visual pause between phases, then auto‑pronounce
+                {
+                    const visualizer = document.getElementById('voiceVisualizer');
+                    const status = document.getElementById('voiceStatus');
+                    if (visualizer && status) {
+                        visualizer.classList.add('pausing');
+                        status.textContent = '⏸️ Pause...';
+                    }
+                    await new Promise(r => setTimeout(r, 500));
+                    if (visualizer && status) {
+                        visualizer.classList.remove('pausing');
+                    }
                 }
                 
-                await this.speakAnnouncement(phrase);
+                await this.pronounceWord();
             }
 
             const spellingInput = document.getElementById('spellingInput');
@@ -5051,13 +5433,30 @@ class QuizManager {
                     status.textContent = '🗣️ Speaking...';
                 }
                 
-                // Trigger speech with callback to stop animation
-                this.delight?.handlePronounce(data, () => {
-                    console.log('🎤 Stopping voice visualizer animation');
-                    // Remove animation when speech ends
-                    if (visualizer && status) {
-                        visualizer.classList.remove('speaking');
-                        status.textContent = '🐝 Ready';
+                // Return a promise that resolves when speech ends to allow precise sequencing
+                return await new Promise((resolve) => {
+                    const onDone = () => {
+                        console.log('🎤 Stopping voice visualizer animation');
+                        if (visualizer && status) {
+                            visualizer.classList.remove('speaking');
+                            status.textContent = '🐝 Ready';
+                        }
+                        resolve();
+                    };
+                    // Prefer delight handler when available, otherwise speak directly
+                    if (this.delight && typeof this.delight.handlePronounce === 'function') {
+                        try {
+                            this.delight.handlePronounce(data, onDone);
+                        } catch (e) {
+                            console.warn('handlePronounce failed, falling back to direct TTS:', e);
+                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                            this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone) : onDone();
+                        }
+                    } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        this.soundboard.speakWord(phrase, onDone);
+                    } else {
+                        onDone();
                     }
                 });
             } else {
@@ -5171,14 +5570,15 @@ class QuizManager {
     }
 
     async showFeedback(result) {
+        try { window.BeeVoiceViz?.react(result?.correct ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         
         // Use randomized feedback instead of server message
         const randomMessage = this.getRandomFeedback(result.correct);
         
-        // Get audio announcement (personalized with name)
-        const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
+    // Get audio announcement (may be a string or an object {phrase, name, pauseMs})
+    const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
 
         if (result.correct) {
             // � Use points from backend response
@@ -5206,8 +5606,14 @@ class QuizManager {
             // Play honey collection sound on correct answer
             this.soundboard?.play('honey-collect');
             
-            // Audio announcement - speak the personalized message and wait for it to finish
-            await this.speakAnnouncement(audioAnnouncement);
+            // Audio announcement - may include a separate name utterance after a short pause
+            if (typeof audioAnnouncement === 'string') {
+                await this.speakAnnouncement(audioAnnouncement);
+            } else if (audioAnnouncement && audioAnnouncement.phrase) {
+                await this.speakAnnouncement(audioAnnouncement.phrase);
+                await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
+                await this.speakAnnouncement(audioAnnouncement.name);
+            }
             
             // 🍯 Display animated points popup if points earned
             if (earnedPoints > 0) {
@@ -5237,10 +5643,16 @@ class QuizManager {
             
             // Spell out the word letter by letter
             const spelledOut = correctWord.split('').join(', ').toUpperCase();
-            const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}`;
-            
-            // Wait for announcement to finish before resolving
-            await this.speakAnnouncement(announcement);
+            // Speak feedback; if announcement was split, preserve the pause structure
+            if (typeof audioAnnouncement === 'string') {
+                const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}`;
+                await this.speakAnnouncement(announcement);
+            } else if (audioAnnouncement && audioAnnouncement.phrase) {
+                await this.speakAnnouncement(audioAnnouncement.phrase);
+                await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
+                await this.speakAnnouncement(audioAnnouncement.name);
+                await this.speakAnnouncement(`The correct spelling is: ${spelledOut}`);
+            }
         }
 
         this.delight?.handleFeedback(result);
@@ -5329,7 +5741,7 @@ class QuizManager {
 
     async announceQuizEnding() {
         // Announce that the quiz has ended and report card is coming
-        const announcement = "The quiz has now ended. Please hold on to see how you scored!";
+        const announcement = "That's the end of the quiz. Please wait for your quiz results.";
         
         try {
             await this.speakAnnouncement(announcement);
