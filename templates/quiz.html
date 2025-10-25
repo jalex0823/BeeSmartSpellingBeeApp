@@ -2592,6 +2592,10 @@ class BeeSoundboard {
             utterance.volume = 0.9;
             utterance.text = word;
             
+            // Visualizer elements
+            const visualizer = document.getElementById('voiceVisualizer');
+            const statusEl = document.getElementById('voiceStatus');
+            
             // Add event listeners for voice visualizer
             if (onEndCallback) {
                 utterance.addEventListener('end', onEndCallback);
@@ -2615,6 +2619,50 @@ class BeeSoundboard {
                 utterance.voice = this.cachedVoice;
             }
             
+            // Sync visual display with announcer
+            utterance.onstart = () => {
+                if (visualizer) visualizer.classList.add('speaking');
+                if (statusEl) statusEl.textContent = this.cachedVoice
+                    ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
+                    : '🎙️ Speaking';
+            };
+            
+            utterance.onboundary = (event) => {
+                // Word-level micro pauses for natural cadence
+                if (event.name === 'word' || event.charLength > 0) {
+                    if (visualizer) {
+                        visualizer.classList.remove('speaking');
+                        visualizer.classList.add('pausing', 'word-pulse');
+                        setTimeout(() => {
+                            visualizer.classList.remove('pausing', 'word-pulse');
+                            visualizer.classList.add('speaking');
+                        }, 150);
+                    }
+                }
+                // Longer pause at sentence punctuation
+                const char = (utterance.text || '').charAt(event.charIndex || 0);
+                if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                    if (visualizer) {
+                        visualizer.classList.remove('speaking');
+                        visualizer.classList.add('pausing');
+                        setTimeout(() => {
+                            visualizer.classList.remove('pausing');
+                            visualizer.classList.add('speaking');
+                        }, 400);
+                    }
+                }
+            };
+            
+            utterance.onend = () => {
+                if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                if (statusEl) statusEl.textContent = '🐝 Ready';
+            };
+            
+            utterance.onerror = () => {
+                if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                if (statusEl) statusEl.textContent = '⚠️ Voice error';
+            };
+
             speechSynthesis.speak(utterance);
         };
         
