@@ -722,7 +722,19 @@
             if (wordSource === 'uploaded') {
                 // Check if user has uploaded words
                 try {
-                    const checkResponse = await fetch('/api/wordbank');
+                    // iOS Fix: Add timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const checkResponse = await fetch('/api/wordbank', {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (!checkResponse.ok) {
+                        throw new Error('Failed to check word list');
+                    }
+                    
                     const checkData = await checkResponse.json();
                     
                     if (!checkData || !checkData.words || checkData.words.length === 0) {
@@ -733,7 +745,12 @@
                     }
                 } catch (error) {
                     console.error('Error checking word list:', error);
-                    alert('📝 Please upload a word list first!\n\nYou\'ll be redirected to the home page.');
+                    
+                    if (error.name === 'AbortError') {
+                        alert('⏱️ Connection timeout. Please check your internet connection.');
+                    } else {
+                        alert('📝 Please upload a word list first!\n\nYou\'ll be redirected to the home page.');
+                    }
                     window.location.href = '/';
                     return;
                 }
@@ -762,13 +779,24 @@
             console.log('🚀 Starting speed round with config:', formData);
             
             try {
+                // iOS Fix: Add timeout for fetch request
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
                 const response = await fetch('/api/speed-round/start', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
+                
+                // iOS Fix: Check response status
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
                 
                 const result = await response.json();
                 
@@ -781,7 +809,13 @@
                 }
             } catch (error) {
                 console.error('Error starting speed round:', error);
-                alert('Failed to start speed round. Please try again.');
+                
+                // iOS-specific error messages
+                if (error.name === 'AbortError') {
+                    alert('⏱️ Connection timeout. Please check your internet connection and try again.');
+                } else {
+                    alert('❌ Failed to start speed round: ' + error.message + '\n\nPlease try again.');
+                }
                 closeSpeedIntro();
             }
         }

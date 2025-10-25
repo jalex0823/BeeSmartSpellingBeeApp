@@ -740,10 +740,14 @@ function maskTargetWord(text, targetWord) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // iOS Critical Fix: Set up event listeners IMMEDIATELY on page load
+    // Don't wait for speech synthesis to complete
+    setupEventListeners();
+    
     // iOS Speech Synthesis Fix: Force initialization with user interaction
     initializeSpeechSynthesisForIOS();
     
-    // Announce Speed Round intro first
+    // Announce Speed Round intro first, then load first word
     announceSpeedRoundIntro();
 });
 
@@ -776,9 +780,9 @@ function announceSpeedRoundIntro() {
     
     if (!('speechSynthesis' in window)) {
         // If no speech support, just start the round
+        // Note: Event listeners already set up on DOMContentLoaded
         setTimeout(() => {
             loadNextWord();
-            setupEventListeners();
         }, 1000);
         return;
     }
@@ -858,7 +862,7 @@ function announceSpeedRoundIntro() {
             // Start the actual quiz after intro
             setTimeout(() => {
                 loadNextWord();
-                setupEventListeners();
+                // Note: setupEventListeners() already called on DOMContentLoaded for iOS compatibility
             }, 500);
         };
         
@@ -866,7 +870,7 @@ function announceSpeedRoundIntro() {
             visualizer.classList.remove('speaking');
             // Start anyway if there's an error
             loadNextWord();
-            setupEventListeners();
+            // Note: setupEventListeners() already called on DOMContentLoaded for iOS compatibility
         };
         
         try {
@@ -888,36 +892,47 @@ function announceSpeedRoundIntro() {
 }
 
 function setupEventListeners() {
+    // iOS Fix: Add both click and touchend events for better mobile support
+    const addButtonHandler = (id, handler, reactType) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        
+        const wrappedHandler = (e) => {
+            e.preventDefault(); // Prevent double-firing on iOS
+            try { window.BeeVoiceViz?.react(reactType); } catch (err) {}
+            handler();
+        };
+        
+        // Remove any existing listeners first
+        btn.replaceWith(btn.cloneNode(true));
+        const freshBtn = document.getElementById(id);
+        
+        freshBtn.addEventListener('click', wrappedHandler);
+        freshBtn.addEventListener('touchend', wrappedHandler);
+    };
+    
     // Submit button
-    document.getElementById('submitBtn').addEventListener('click', () => {
-        try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
-        submitAnswer();
-    });
+    addButtonHandler('submitBtn', () => submitAnswer(), 'submit');
     
     // Pronounce button
-    document.getElementById('pronounceBtn').addEventListener('click', () => {
-        try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-        pronounceWord();
-    });
+    addButtonHandler('pronounceBtn', () => pronounceWord(), 'button');
+    
     // Hint button
-    document.getElementById('hintBtn').addEventListener('click', () => {
-        try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
-        showHint();
-    });
+    addButtonHandler('hintBtn', () => showHint(), 'hint');
     
     // Skip button
-    document.getElementById('skipBtn').addEventListener('click', () => {
-        try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
-        submitAnswer(true);
-    });
+    addButtonHandler('skipBtn', () => submitAnswer(true), 'skip');
     
     // Enter key to submit
-    document.getElementById('spellInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            try { window.BeeVoiceViz?.react('submit'); } catch (e2) {}
-            submitAnswer();
-        }
-    });
+    const spellInput = document.getElementById('spellInput');
+    if (spellInput) {
+        spellInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                try { window.BeeVoiceViz?.react('submit'); } catch (e2) {}
+                submitAnswer();
+            }
+        });
+    }
 }
 
 async function loadNextWord() {
@@ -928,7 +943,14 @@ async function loadNextWord() {
             timerInterval = null;
         }
 
-        const response = await fetch('/api/speed-round/next');
+        // iOS Fix: Add timeout to prevent hanging fetch requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch('/api/speed-round/next', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         
         // Guard: Check response is valid
         if (!response || !response.ok) {
@@ -999,6 +1021,40 @@ async function loadNextWord() {
         // Mask target word in hint and sentence to prevent cheating
         currentHint = maskTargetWord(data.hint || '', data.word);
         currentSentence = maskTargetWord(data.sentence || '', data.word);
+        
+        // Hide any previous hint
+        const hintArea = document.getElementById('hintArea');
+        if (hintArea) {
+            hintArea.style.display = 'none';
+            hintArea.textContent = '';
+        }
+        
+        // Announce word context, then auto-pronounce
+        announceWord(currentIndex, totalWords);
+
+        // Start timer
+        wordStartTime = Date.now();
+        startTimer();
+
+    } catch (error) {
+        console.error('❌ Error loading next word:', error);
+        
+        // iOS-specific error handling for aborted requests
+        if (error.name === 'AbortError') {
+            showErrorBoundary(
+                'Connection Timeout',
+                'The request took too long. Please check your internet connection and try again.',
+                true
+            );
+        } else {
+            showErrorBoundary(
+                'Speed Round content failed to load',
+                'We couldn\'t load the next word. This might be a temporary issue.',
+                true // Show retry button
+            );
+        }
+    }
+}
         
         // Hide any previous hint
         const hintArea = document.getElementById('hintArea');
@@ -1348,11 +1404,16 @@ async function submitAnswer(isSkip = false) {
     // Stop timer
     if (timerInterval) {
         clearInterval(timerInterval);
+        timerInterval = null;
     }
 
     const elapsedTime = Date.now() - wordStartTime;
 
     try {
+        // iOS Fix: Add timeout to prevent hanging POST requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const response = await fetch('/api/speed-round/answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1360,8 +1421,15 @@ async function submitAnswer(isSkip = false) {
                 user_input: userInput || '',
                 elapsed_ms: elapsedTime,
                 skipped: isSkip
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
+
+        // iOS Fix: Check response status before parsing JSON
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
 
         const data = await response.json();
 
@@ -1396,6 +1464,22 @@ async function submitAnswer(isSkip = false) {
                 loadNextWord();
             }
         }, 1500);
+
+    } catch (error) {
+        console.error('❌ Error submitting answer:', error);
+        
+        // iOS-specific error handling
+        if (error.name === 'AbortError') {
+            alert('⏱️ Connection timeout. Your answer wasn\'t submitted. Please check your connection.');
+        } else {
+            alert('❌ Failed to submit answer: ' + error.message);
+        }
+        
+        // Restart timer to give user another chance
+        wordStartTime = Date.now();
+        startTimer();
+    }
+}
 
     } catch (error) {
         console.error('Error submitting answer:', error);
