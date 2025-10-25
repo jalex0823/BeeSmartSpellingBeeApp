@@ -9926,9 +9926,9 @@
                         const scene = new THREE.Scene();
                         const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
                         
-                        // Camera positioning for full bee visibility - corrected direction
-                        camera.position.set(0, 0.7, 2.6); // CORRECTED: Lower Y (was 0.9) to see bottom of bee
-                        camera.lookAt(new THREE.Vector3(0, 0.3, 0)); // CORRECTED: Lower look-at Y (was 0.5)
+                        // Camera positioning for full bee visibility - adjusted for larger avatars
+                        camera.position.set(0, 0.5, 3.2); // Moved back and lowered for full avatar view
+                        camera.lookAt(new THREE.Vector3(0, 0.1, 0)); // Lower look-at to include feet
                         
                         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                         renderer.setSize(160, 120); /* UPDATED: Match new smaller container size */

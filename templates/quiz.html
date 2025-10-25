@@ -673,15 +673,16 @@
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: #FFB300; /* solid amber */
-        border-radius: 20px;
-        padding: 1.2rem;
+        background: rgba(255, 179, 0, 0.08); /* single solid color background */
+        border-radius: 0; /* no border radius */
+        padding: 1.5rem 2rem; /* wider padding */
         margin-bottom: 1.5rem;
         position: relative;
-        overflow: visible;
-        box-shadow: 0 10px 26px rgba(255, 153, 0, 0.28);
+        overflow: visible; /* Allow full wave pattern visibility - no clipping */
+        box-shadow: none; /* no shadow */
         border: none; /* remove border */
-        min-height: 140px;
+        min-height: 160px; /* taller for fuller waves */
+        width: 100%; /* full width */
     }
 
     .voice-visualizer::before { display: none; }
@@ -828,25 +829,27 @@
     /* Voice wave bars container */
     #voiceWaveContainer {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        height: 80px;
-        padding: 10px;
+        align-items: center; /* center alignment for symmetric expansion */
+        justify-content: space-evenly; /* better distribution */
+        gap: 2px; /* tighter gaps */
+        height: 100px; /* taller container */
+        padding: 12px 20px; /* more padding for edge spacing */
+        width: 100%; /* full width */
     }
 
     .wave-bar {
-        width: 8px;
-        height: 20px;
-        background: linear-gradient(180deg, #FFB347 0%, #FF8C00 100%);
-        border-radius: 4px;
-        opacity: 0.3;
-        transition: all 0.2s ease;
+        width: 8px; /* wider bars */
+        height: 15px; /* base height */
+        background: linear-gradient(180deg, #FF69B4 0%, #FF1493 50%, #FFB6C1 100%); /* better gradient */
+        border-radius: 3px; /* rounded corners */
+        opacity: 0.7; /* better visibility when idle */
+        transition: all 0.1s ease;
+        box-shadow: 0 0 6px rgba(255, 105, 180, 0.3); /* subtle glow */
     }
     
     .voice-visualizer.speaking .wave-bar {
         opacity: 1;
-        animation: waveAnimation 0.6s ease-in-out infinite;
+        animation: waveSymmetric 0.4s ease-in-out infinite;
     }
     
     /* Natural pause state - amber bars stay visible with subtle animation */
@@ -887,81 +890,72 @@
     .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-delay: 0.2s; }
     .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-delay: 0.3s; }
     
-    /* Height scaling - center bars taller */
-    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-name: waveAnimationShort; }
-    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-name: waveAnimationMedium; }
-    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-name: waveAnimationTall; }
-    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-name: waveAnimationTallest; } /* Center */
-    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-name: waveAnimationTall; }
-    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-name: waveAnimationMedium; }
-    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-name: waveAnimationShort; }
+    /* Height scaling - center bars taller with symmetric animations */
+    .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-name: waveSymmetricShort; }
+    .voice-visualizer.speaking .voice-wave:nth-child(2) { animation-name: waveSymmetricMedium; }
+    .voice-visualizer.speaking .voice-wave:nth-child(3) { animation-name: waveSymmetricTall; }
+    .voice-visualizer.speaking .voice-wave:nth-child(4) { animation-name: waveSymmetricTallest; } /* Center */
+    .voice-visualizer.speaking .voice-wave:nth-child(5) { animation-name: waveSymmetricTall; }
+    .voice-visualizer.speaking .voice-wave:nth-child(6) { animation-name: waveSymmetricMedium; }
+    .voice-visualizer.speaking .voice-wave:nth-child(7) { animation-name: waveSymmetricShort; }
 
-    @keyframes waveAnimation {
+    /* Symmetric wave animations - expand both up and down from center */
+    @keyframes waveSymmetric {
         0%, 100% { 
-            height: 20px;
-            opacity: 0.8;
+            height: 15px;
             transform: scaleY(1);
         }
         50% { 
-            height: 55px;
-            opacity: 1;
-            transform: scaleY(1.2);
+            height: 45px;
+            transform: scaleY(2.5);
         }
     }
     
-    /* Outer bars - shortest */
-    @keyframes waveAnimationShort {
+    /* Outer bars - shortest symmetric */
+    @keyframes waveSymmetricShort {
         0%, 100% { 
-            height: 16px;
-            opacity: 0.7;
+            height: 12px;
             transform: scaleY(1);
         }
         50% { 
-            height: 38px;
-            opacity: 0.95;
+            height: 35px;
+            transform: scaleY(2);
+        }
+    }
+    
+    /* Mid-outer bars - medium symmetric */
+    @keyframes waveSymmetricMedium {
+        0%, 100% { 
+            height: 15px;
             transform: scaleY(1.1);
         }
+        50% { 
+            height: 50px;
+            transform: scaleY(2.8);
+        }
     }
     
-    /* Mid-outer bars - medium */
-    @keyframes waveAnimationMedium {
+    /* Inner bars - tall symmetric */
+    @keyframes waveSymmetricTall {
         0%, 100% { 
             height: 18px;
-            opacity: 0.75;
-            transform: scaleY(1);
-        }
-        50% { 
-            height: 48px;
-            opacity: 1;
-            transform: scaleY(1.15);
-        }
-    }
-    
-    /* Inner bars - tall */
-    @keyframes waveAnimationTall {
-        0%, 100% { 
-            height: 20px;
-            opacity: 0.8;
-            transform: scaleY(1);
-        }
-        50% { 
-            height: 58px;
-            opacity: 1;
             transform: scaleY(1.2);
         }
+        50% { 
+            height: 65px;
+            transform: scaleY(3.2);
+        }
     }
     
-    /* Center bar - tallest! */
-    @keyframes waveAnimationTallest {
+    /* Center bar - tallest symmetric! */
+    @keyframes waveSymmetricTallest {
         0%, 100% { 
-            height: 22px;
-            opacity: 0.85;
-            transform: scaleY(1);
+            height: 20px;
+            transform: scaleY(1.3);
         }
         50% { 
-            height: 70px;
-            opacity: 1;
-            transform: scaleY(1.3);
+            height: 80px;
+            transform: scaleY(3.8);
         }
     }
     
@@ -1457,6 +1451,30 @@
         0% { opacity: 0; transform: scale(0.5); }
         50% { opacity: 0.8; transform: scale(1.5); }
         100% { opacity: 0; transform: scale(2); }
+    }
+
+    /* ✨ Avatar Full 360-Degree Rotation Animation ✨ */
+    @keyframes avatarFullRotation {
+        0% {
+            transform: rotateY(0deg) scale(1);
+        }
+        25% {
+            transform: rotateY(90deg) scale(1.1);
+        }
+        50% {
+            transform: rotateY(180deg) scale(1.2);
+        }
+        75% {
+            transform: rotateY(270deg) scale(1.1);
+        }
+        100% {
+            transform: rotateY(360deg) scale(1);
+        }
+    }
+
+    /* Avatar effect classes with rotation */
+    .avatar-effect-rotating {
+        animation: avatarFullRotation 2s ease-in-out;
     }
 
     /* Exit Modal Styling */
@@ -2239,6 +2257,47 @@
             <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
             <div id="mascotBee3D" class="mascot-3d-container"></div>
             
+            <!-- Avatar Name Badge (shows user's chosen avatar name) -->
+            {% if user_name %}
+            <div id="avatarNameBadge" style="
+                display: block;
+                margin: 8px auto 10px;
+                padding: 4px 12px;
+                background: linear-gradient(135deg, #FF4444, #FF0000);
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-align: center;
+                color: white;
+                box-shadow: 0 2px 4px rgba(255, 0, 0, 0.3);
+                max-width: 120px;
+                position: relative;
+                z-index: 10;
+                border: 1px solid rgba(255, 0, 0, 0.5);
+            " title="Your chosen avatar name">
+                <span>🔴 {{ user_name }} 🔴</span>
+            </div>
+            {% else %}
+            <div style="
+                display: block;
+                margin: 8px auto 10px;
+                padding: 4px 12px;
+                background: linear-gradient(135deg, #00FF00, #008800);
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                text-align: center;
+                color: white;
+                box-shadow: 0 2px 4px rgba(0, 255, 0, 0.3);
+                max-width: 120px;
+                position: relative;
+                z-index: 10;
+                border: 1px solid rgba(0, 255, 0, 0.5);
+            " title="Debug: No user logged in">
+                <span>🟢 GUEST 🟢</span>
+            </div>
+            {% endif %}
+            
             <!-- Kid-Safe Content Badge -->
             <div class="kid-safe-badge-quiz" title="All words are automatically filtered for age-appropriate content">
                 <span>Kid-Safe Words</span>
@@ -2247,10 +2306,11 @@
 
         <!-- Version Info -->
         <div class="version-info">
-            <small>JS v3-cache-1768522562258</small>
+            <small>JS v3-cache-{{ timestamp }}</small>
         </div>
 
-        <div class="definition-display" id="definitionDisplay">
+        <!-- Hidden definition storage for JavaScript (shown in visualizer instead) -->
+        <div class="definition-display" id="definitionDisplay" style="display: none;">
             Loading your first word...
         </div>
         
@@ -2281,13 +2341,19 @@
                 <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
                 <div class="voice-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
-                            <div class="voice-header">
+                            <!-- Hidden status for JavaScript (not displayed visually) -->
+                            <div class="voice-header" style="display: none;">
                                 <span class="voice-bee">🐝</span>
                                 <span class="voice-text" id="voiceStatus">Ready</span>
                             </div>
-
+                            
                             <div class="dotwave-wrapper">
-                                <canvas id="dotWaveCanvas" width="500" height="160"></canvas>
+                                <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
+                            </div>
+                            
+                            <!-- Definition display inside visualizer -->
+                            <div class="voice-definition" id="voiceDefinition">
+                                🐝 Listen carefully and spell the word! 🐝
                             </div>
                         </div>
                 </div>
@@ -2297,17 +2363,17 @@
                     .voice-card.speaking-mode {
                         background: radial-gradient(circle at 30% 30%, #ffa726 0%, #ef6c00 60%, #c14900 100%);
                         border-radius: 28px;
-                        padding: 24px 16px 32px;
+                        padding: 40px 24px 40px; /* Even more padding for wave clearance */
                         border: 2px solid rgba(255,255,255,0.25);
                         box-shadow:
                             0 24px 40px rgba(255,140,0,0.35),
                             0 0 60px rgba(255,214,79,0.35) inset;
-                        max-width: 520px;
+                        max-width: 920px; /* Much wider for more room */
                         margin: 0 auto 24px auto;
                         color: #fff;
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
-                                    overflow: hidden; /* keep dots within card corners */
+                        overflow: visible; /* Allow full wave pattern visibility */
                     }
 
                     .voice-header {
@@ -2332,19 +2398,32 @@
                             drop-shadow(0 0 8px #ffd54f);
                     }
 
+                    .voice-definition {
+                        font-size: 1.1rem;
+                        font-weight: 500;
+                        color: #ffffff; /* White text */
+                        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        padding: 16px 20px;
+                        margin-top: 12px;
+                        line-height: 1.5;
+                        letter-spacing: 0.01em;
+                    }
+
                                 .dotwave-wrapper {
                                     display: flex;
                                     justify-content: center;
                                     align-items: center;
-                                    padding: 8px 16px; /* small buffer from edges */
+                                    padding: 28px 24px; /* Maximum padding for wave clearance */
+                                    overflow: visible; /* Ensure waves aren't clipped */
                                 }
 
                                 .dotwave-wrapper canvas {
                                     width: 100%;
-                                    height: 180px; /* fill more vertical space */
+                                    height: 260px; /* Much taller for wave peaks */
                                     filter:
                                         drop-shadow(0 0 4px rgba(255,255,255,0.4))
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
+                                    display: block; /* Remove inline spacing */
                                 }
                 </style>
 
@@ -2364,8 +2443,8 @@
                     // Resize handler to keep crisp drawing on DPR changes
                     function resizeCanvas(){
                                     DPR = window.devicePixelRatio || 1;
-                                    const cssWidth = canvas.clientWidth || 500;
-                                    const cssHeight = canvas.clientHeight || 160;
+                                    const cssWidth = canvas.clientWidth || 860;
+                                    const cssHeight = canvas.clientHeight || 260;
                                     canvas.width = Math.round(cssWidth * DPR);
                                     canvas.height = Math.round(cssHeight * DPR);
                         canvas.style.width = cssWidth + 'px';
@@ -2543,15 +2622,20 @@
 
                                 const mainWaveY = Math.sin(progress * freq * Math.PI + phase) * amp;
                                 const ripple = Math.sin(progress * pick(SH.rippleFreq, 12) + t*0.01 + w) * (pick(SH.rippleBase, 3) + w) * (0.5 + 0.5*drive);
-                                // Collapse vertical spacing yOffset near tips using the same pinch scale
-                                const y = (H/2 + 20*DPR) + (yOffset * pinch) + mainWaveY + ripple;
+                                // Center waves with extra room at top (50% down with taller canvas)
+                                const y = (H * 0.50) + (yOffset * pinch) + mainWaveY + ripple;
 
-                                const edgeA = edgeFadeAlpha(x);
+                                // Reduce opacity for bottom waves to eliminate halo effect
+                                const waveOpacity = w > 0 ? Math.max(0.3, 1 - (w * 0.12)) : 1;
+                                
+                                const edgeA = edgeFadeAlpha(x) * waveOpacity;
 
                                 ctx.beginPath();
                                 ctx.fillStyle = color;
-                                ctx.shadowColor = color;
-                                ctx.shadowBlur = 3 * edgeA; // REDUCED: Remove halo effect (was 12)
+                                ctx.shadowColor = 'transparent'; // FORCE NO SHADOW
+                                ctx.shadowBlur = 0; // Remove halo completely
+                                ctx.shadowOffsetX = 0; // NO SHADOW OFFSET
+                                ctx.shadowOffsetY = 0; // NO SHADOW OFFSET
                                 const prevAlpha = ctx.globalAlpha;
                                 ctx.globalAlpha = edgeA;
                                 ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
@@ -2912,7 +2996,7 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null) {
+    speakWord(word, onEndCallback = null, rate = 0.92) {
         if (!word || !('speechSynthesis' in window)) {
             if (onEndCallback) onEndCallback();
             return;
@@ -2923,7 +3007,7 @@ class BeeSoundboard {
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.pitch = 1.35;
-            utterance.rate = 0.92;
+            utterance.rate = rate; // Use provided rate instead of fixed 0.92
             utterance.volume = 0.9;
             utterance.text = word;
             
@@ -3432,7 +3516,8 @@ class BeeDelightManager {
         if (data?.word) {
             // Speak a friendly prompt and the word twice
             const phrase = `Spell the word ${data.word}. ${data.word}.`;
-            this.soundboard.speakWord(phrase, onEndCallback);
+            const rate = data.rate || 0.92; // Use provided rate or default
+            this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
         }
@@ -4342,7 +4427,14 @@ class QuizManager {
             }
             
             // Apply safety blanker to hide target word if it appears in the definition
-            defBox.textContent = hideTargetWord(chosen, data.word);
+            const finalDefinition = hideTargetWord(chosen, data.word);
+            defBox.textContent = finalDefinition;
+            
+            // Also update the voice visualizer definition
+            const voiceDefBox = document.getElementById('voiceDefinition');
+            if (voiceDefBox) {
+                voiceDefBox.textContent = finalDefinition;
+            }
 
             // Store the word data
             this.currentWordData = {
@@ -4586,9 +4678,9 @@ class QuizManager {
             pointsHtml += `<div style="margin: 5px 0;">🔥 Streak Bonus: +${breakdown.streakBonus} points</div>`;
         }
         pointsHtml += '<hr style="margin: 10px 0; border: 1px solid rgba(74,44,42,0.3);">';
-        pointsHtml += `<div style="font-size: 1.5em; font-weight: bold; margin-top: 10px;">💰 Total: ${points} points!</div>`;
+        pointsHtml += `<div style="font-size: 1.5em; font-weight: bold; margin-top: 10px;">💰 Total: ${points.toLocaleString()} points!</div>`;
         pointsHtml += '</div>';
-        pointsHtml += `<div style="margin-top: 15px; font-size: 1.1em;">🏆 Session Total: ${this.sessionPoints} points</div>`;
+        pointsHtml += `<div style="margin-top: 15px; font-size: 1.1em;">🏆 Session Total: ${this.sessionPoints.toLocaleString()} points</div>`;
         pointsHtml += '</div>';
         
         const currentFeedback = feedbackArea.innerHTML;
@@ -4628,7 +4720,7 @@ class QuizManager {
         }
         
         popup.innerHTML = `
-            <div class="points-total">+${points}</div>
+            <div class="points-total">+${points.toLocaleString()}</div>
             ${breakdownHTML ? `<div class="points-breakdown">${breakdownHTML}</div>` : ''}
         `;
         
@@ -4880,15 +4972,17 @@ class QuizManager {
 
         if (speakButton) {
             speakButton.addEventListener('click', () => {
+                console.log('🔊 Pronounce button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.pronounceWord();
+                this.pronounceWordSlow(); // Pronounce at slower speed for learning
             });
         }
 
         if (repeatButton) {
             repeatButton.addEventListener('click', () => {
+                console.log('🔁 Repeat button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.pronounceWord();
+                this.repeatWord(); // Repeat at normal speed
             });
         }
 
@@ -5148,7 +5242,14 @@ class QuizManager {
             }
             
             // Apply safety blanker to hide target word if it appears in the definition
-            defBox.textContent = hideTargetWord(chosen, data.word);
+            const finalDefinition = hideTargetWord(chosen, data.word);
+            defBox.textContent = finalDefinition;
+            
+            // Also update the voice visualizer definition
+            const voiceDefBox = document.getElementById('voiceDefinition');
+            if (voiceDefBox) {
+                voiceDefBox.textContent = finalDefinition;
+            }
 
             // Store the word data for pronunciation
             this.currentWordData = {
@@ -5413,7 +5514,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false } = {}) {
+    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
@@ -5423,14 +5524,15 @@ class QuizManager {
             if (this.currentWordData && this.currentWordData.word) {
                 const data = {
                     word: this.currentWordData.word,
-                    definition: this.currentWordData.definition
+                    definition: this.currentWordData.definition,
+                    rate: rate // Pass speech rate to handlers
                 };
                 
                 // Start visualizer animation BEFORE speaking
                 if (visualizer && status) {
                     console.log('🎤 Starting voice visualizer animation');
                     visualizer.classList.add('speaking');
-                    status.textContent = '🗣️ Speaking...';
+                    status.textContent = rate < 1.0 ? '🐌 Speaking slowly...' : '🗣️ Speaking...';
                 }
                 
                 // Return a promise that resolves when speech ends to allow precise sequencing
@@ -5450,13 +5552,15 @@ class QuizManager {
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
                             const phrase = `Spell the word ${data.word}. ${data.word}.`;
-                            this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone) : onDone();
+                            this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
                         const phrase = `Spell the word ${data.word}. ${data.word}.`;
-                        this.soundboard.speakWord(phrase, onDone);
+                        this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
-                        onDone();
+                        // Direct speech synthesis fallback
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        this.speakDirectly(phrase, onDone, rate);
                     }
                 });
             } else {
@@ -5473,6 +5577,62 @@ class QuizManager {
                 status.textContent = '🐝 Ready';
             }
         }
+    }
+
+    // Direct speech synthesis fallback
+    speakDirectly(text, onDone, rate = 1.0) {
+        if ('speechSynthesis' in window) {
+            try {
+                speechSynthesis.cancel(); // Cancel any ongoing speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = rate;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.9;
+                
+                // Use the same female voice selection as other speech methods
+                if (this.cachedVoice) {
+                    utterance.voice = this.cachedVoice;
+                    console.log(`Using cached female voice: ${this.cachedVoice.name}`);
+                } else {
+                    // Try to select best female voice if not cached yet
+                    const femaleVoice = this.selectBestFemaleVoice();
+                    if (femaleVoice) {
+                        utterance.voice = femaleVoice;
+                        this.cachedVoice = femaleVoice;
+                        console.log(`Selected female voice: ${femaleVoice.name}`);
+                    }
+                }
+                
+                utterance.onend = () => {
+                    console.log('Direct speech synthesis completed');
+                    if (onDone) onDone();
+                };
+                
+                utterance.onerror = (event) => {
+                    console.error('Speech synthesis error:', event);
+                    if (onDone) onDone();
+                };
+                
+                speechSynthesis.speak(utterance);
+                console.log(`Direct speech synthesis started: "${text}" at rate ${rate}`);
+            } catch (error) {
+                console.error('Speech synthesis failed:', error);
+                if (onDone) onDone();
+            }
+        } else {
+            console.warn('Speech synthesis not supported');
+            if (onDone) onDone();
+        }
+    }
+
+    // Pronounce word at slower speed for learning
+    async pronounceWordSlow() {
+        return await this.pronounceWord({ rate: 0.7 });
+    }
+
+    // Repeat word at normal speed
+    async repeatWord() {
+        return await this.pronounceWord({ rate: 1.0 });
     }
 
     async submitAnswer() {
@@ -6388,6 +6548,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const avatarId = window.userAvatarLoader.getAvatarId();
         console.log(`✨ 3D mascot initialized with avatar: ${avatarId}`);
+        
+        // Add click handler for themed animation
+        const mascotContainer = document.getElementById('mascotBee3D');
+        if (mascotContainer) {
+            mascotContainer.style.cursor = 'pointer';
+            mascotContainer.addEventListener('click', () => {
+                console.log('🐝 Quiz mascot clicked - playing themed animation');
+                playThemedAvatarEffect(avatarId, mascotContainer);
+            });
+        }
     } catch (error) {
         console.warn('3D mascot failed to load:', error);
     }
@@ -6494,5 +6664,435 @@ window.addEventListener('pagehide', () => {
     navigator.sendBeacon('/api/save-partial-progress', blob);
     console.log('✅ Final cleanup complete');
 });
+
+// Themed avatar effects system for quiz
+function playThemedAvatarEffect(avatarId, container) {
+    console.log('🎭 Playing themed effect for:', avatarId);
+    
+    // 🌟 ALWAYS apply 360-degree rotation first for all avatars!
+    container.classList.add('avatar-effect-rotating');
+    setTimeout(() => container.classList.remove('avatar-effect-rotating'), 2000);
+    
+    // Create effect overlay
+    const effectOverlay = document.createElement('div');
+    effectOverlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10;
+        overflow: hidden;
+    `;
+    container.style.position = 'relative';
+    container.appendChild(effectOverlay);
+    
+    // Remove after animation
+    setTimeout(() => effectOverlay.remove(), 3000);
+    
+    // Avatar-specific effects
+    switch(avatarId) {
+        case 'cool-bee':
+            // Sunglasses sparkle
+            createSparkles(effectOverlay, '😎', '#00d4ff');
+            playThemedSound('cool');
+            break;
+        case 'explorer-bee':
+            // Compass spin
+            createSpinningIcon(effectOverlay, '🧭', 1080);
+            playThemedSound('adventure');
+            break;
+        case 'rockstar-bee':
+            // Electric guitar + stage lights
+            createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00']);
+            createFloatingIcon(effectOverlay, '🎸', 3);
+            playThemedSound('guitar-riff');
+            break;
+        case 'doctor-bee':
+            // Healing particles
+            createHealingParticles(effectOverlay);
+            playThemedSound('healing');
+            break;
+        case 'scientist-bee':
+            // Chemistry bubbles
+            createBubbles(effectOverlay, '⚗️🧪', 10);
+            playThemedSound('bubbling');
+            break;
+        case 'professor-bee':
+            // Flying books
+            createFloatingIcon(effectOverlay, '📚📖', 5);
+            playThemedSound('wise-hmm');
+            break;
+        case 'superhero-bee':
+            // Cape swoosh
+            createSwooshEffect(effectOverlay);
+            playThemedSound('whoosh');
+            break;
+        case 'knight-bee':
+            // Sword slash
+            createSlashEffect(effectOverlay);
+            playThemedSound('sword-clang');
+            break;
+        case 'robot-bee':
+            // Digital glitch
+            createGlitchEffect(container);
+            playThemedSound('robot-beep');
+            break;
+        case 'bee-diva':
+            // Sparkles and stars
+            createSparkles(effectOverlay, '✨⭐💫', '#ff69b4');
+            playThemedSound('fabulous');
+            break;
+        case 'queen-bee':
+            // Crown glow
+            createGlowEffect(effectOverlay, '#ffd700');
+            createFloatingIcon(effectOverlay, '👑', 1);
+            playThemedSound('fanfare');
+            break;
+        case 'sea-bee':
+            // Water splash
+            createWaterSplash(effectOverlay);
+            playThemedSound('ocean-waves');
+            break;
+        case 'biker-bee':
+            // Tire tracks and smoke
+            createSmokeEffect(effectOverlay);
+            playThemedSound('engine-rev');
+            break;
+        case 'builder-bee':
+            // Hammer sparks
+            createSparkles(effectOverlay, '🔨🔧⚙️', '#ff8c00');
+            playThemedSound('hammer');
+            break;
+        case 'brother-bee':
+            // High-five effect
+            createHighFiveEffect(effectOverlay);
+            playThemedSound('yo-bro');
+            break;
+        case 'killer-bee':
+            // Lightning storm
+            createLightningEffect(effectOverlay);
+            playThemedSound('roar');
+            break;
+        case 'anxious-bee':
+            // Thought bubbles
+            createThoughtBubbles(effectOverlay);
+            playThemedSound('nervous-hmm');
+            break;
+        default:
+            // Generic bounce sparkle
+            createSparkles(effectOverlay, '✨', '#ffeb3b');
+            break;
+    }
+}
+
+// Effect helper functions
+function createSparkles(container, emoji, color) {
+    const emojiArray = Array.from(emoji);
+    for (let i = 0; i < 8; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.textContent = emojiArray[i % emojiArray.length];
+        sparkle.style.cssText = `
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            font-size: 24px;
+            animation: sparkle-${i} 1.5s ease-out;
+        `;
+        container.appendChild(sparkle);
+    }
+    addThemedKeyframes(`
+        @keyframes sparkle-0 { to { transform: translate(-60px, -60px); opacity: 0; } }
+        @keyframes sparkle-1 { to { transform: translate(60px, -60px); opacity: 0; } }
+        @keyframes sparkle-2 { to { transform: translate(-60px, 60px); opacity: 0; } }
+        @keyframes sparkle-3 { to { transform: translate(60px, 60px); opacity: 0; } }
+        @keyframes sparkle-4 { to { transform: translate(-80px, 0); opacity: 0; } }
+        @keyframes sparkle-5 { to { transform: translate(80px, 0); opacity: 0; } }
+        @keyframes sparkle-6 { to { transform: translate(0, -80px); opacity: 0; } }
+        @keyframes sparkle-7 { to { transform: translate(0, 80px); opacity: 0; } }
+    `);
+}
+
+function createFloatingIcon(container, emoji, count) {
+    const emojiArray = Array.from(emoji);
+    for (let i = 0; i < count; i++) {
+        const icon = document.createElement('div');
+        icon.textContent = emojiArray[i % emojiArray.length];
+        icon.style.cssText = `
+            position: absolute;
+            left: ${20 + Math.random() * 60}%;
+            top: 100%;
+            font-size: ${20 + Math.random() * 20}px;
+            animation: float-up ${2 + Math.random()}s ease-out ${i * 0.2}s;
+        `;
+        container.appendChild(icon);
+    }
+    addThemedKeyframes(`
+        @keyframes float-up {
+            to { transform: translateY(-300px) rotate(${Math.random() * 360}deg); opacity: 0; }
+        }
+    `);
+}
+
+function createSpinningIcon(container, emoji, degrees) {
+    const icon = document.createElement('div');
+    icon.textContent = emoji;
+    icon.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 48px;
+        animation: spin-icon 1.5s ease-in-out;
+    `;
+    container.appendChild(icon);
+    addThemedKeyframes(`@keyframes spin-icon { to { transform: translate(-50%, -50%) rotate(${degrees}deg) scale(2); opacity: 0; } }`);
+}
+
+function createFlashingLights(container, colors) {
+    for (let i = 0; i < 6; i++) {
+        const light = document.createElement('div');
+        light.style.cssText = `
+            position: absolute;
+            left: ${i * 20}%;
+            top: -20%;
+            width: 40px;
+            height: 200px;
+            background: linear-gradient(to bottom, ${colors[i % colors.length]} 0%, transparent 100%);
+            animation: flash-light 0.5s infinite alternate;
+            animation-delay: ${i * 0.1}s;
+        `;
+        container.appendChild(light);
+    }
+    addThemedKeyframes(`@keyframes flash-light { to { opacity: 0.3; } }`);
+}
+
+function createHealingParticles(container) {
+    for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.textContent = '✚';
+        particle.style.cssText = `
+            position: absolute;
+            left: ${Math.random() * 100}%;
+            top: 100%;
+            color: #00ff00;
+            font-size: 16px;
+            animation: heal-rise ${1 + Math.random()}s ease-out ${Math.random() * 0.5}s;
+        `;
+        container.appendChild(particle);
+    }
+    addThemedKeyframes(`@keyframes heal-rise { to { transform: translateY(-250px); opacity: 0; } }`);
+}
+
+function createBubbles(container, emoji, count) {
+    const emojiArray = Array.from(emoji);
+    for (let i = 0; i < count; i++) {
+        const bubble = document.createElement('div');
+        bubble.textContent = emojiArray[i % emojiArray.length];
+        bubble.style.cssText = `
+            position: absolute;
+            left: ${Math.random() * 100}%;
+            top: 100%;
+            font-size: ${12 + Math.random() * 20}px;
+            animation: bubble-rise ${2 + Math.random() * 2}s ease-in-out ${Math.random() * 0.5}s;
+        `;
+        container.appendChild(bubble);
+    }
+    addThemedKeyframes(`
+        @keyframes bubble-rise {
+            to { transform: translateY(-300px) translateX(${Math.random() * 40 - 20}px); opacity: 0; }
+        }
+    `);
+}
+
+function createSwooshEffect(container) {
+    const swoosh = document.createElement('div');
+    swoosh.style.cssText = `
+        position: absolute;
+        left: -100%;
+        top: 50%;
+        width: 200%;
+        height: 4px;
+        background: linear-gradient(to right, transparent, #ffeb3b, transparent);
+        animation: swoosh 0.6s ease-out;
+    `;
+    container.appendChild(swoosh);
+    addThemedKeyframes(`@keyframes swoosh { to { left: 100%; } }`);
+}
+
+function createSlashEffect(container) {
+    const slash = document.createElement('div');
+    slash.textContent = '⚔️';
+    slash.style.cssText = `
+        position: absolute;
+        left: -10%;
+        top: 10%;
+        font-size: 64px;
+        animation: slash 0.4s ease-out;
+    `;
+    container.appendChild(slash);
+    addThemedKeyframes(`@keyframes slash { to { left: 110%; transform: rotate(360deg); opacity: 0; } }`);
+}
+
+function createGlitchEffect(container) {
+    container.style.animation = 'glitch 0.5s';
+    setTimeout(() => container.style.animation = '', 500);
+    addThemedKeyframes(`
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); filter: none; }
+            20% { transform: translate(-5px, 2px); filter: hue-rotate(90deg); }
+            40% { transform: translate(5px, -2px); filter: hue-rotate(180deg); }
+            60% { transform: translate(-2px, 5px); filter: hue-rotate(270deg); }
+            80% { transform: translate(2px, -5px); filter: hue-rotate(360deg); }
+        }
+    `);
+}
+
+function createGlowEffect(container, color) {
+    const glow = document.createElement('div');
+    glow.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 100%;
+        height: 100%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        box-shadow: 0 0 60px 30px ${color};
+        animation: glow-pulse 1.5s ease-out;
+    `;
+    container.appendChild(glow);
+    addThemedKeyframes(`@keyframes glow-pulse { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }`);
+}
+
+function createWaterSplash(container) {
+    for (let i = 0; i < 12; i++) {
+        const drop = document.createElement('div');
+        drop.textContent = '💧';
+        drop.style.cssText = `
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            font-size: 20px;
+            animation: splash-${i} 1s ease-out;
+        `;
+        container.appendChild(drop);
+    }
+    addThemedKeyframes(`
+        @keyframes splash-0 { to { transform: translate(-60px, -80px); opacity: 0; } }
+        @keyframes splash-1 { to { transform: translate(60px, -80px); opacity: 0; } }
+        @keyframes splash-2 { to { transform: translate(-80px, -40px); opacity: 0; } }
+        @keyframes splash-3 { to { transform: translate(80px, -40px); opacity: 0; } }
+        @keyframes splash-4 { to { transform: translate(-90px, 0); opacity: 0; } }
+        @keyframes splash-5 { to { transform: translate(90px, 0); opacity: 0; } }
+    `);
+}
+
+function createSmokeEffect(container) {
+    for (let i = 0; i < 6; i++) {
+        const smoke = document.createElement('div');
+        smoke.textContent = '💨';
+        smoke.style.cssText = `
+            position: absolute;
+            left: ${10 + i * 15}%;
+            top: 70%;
+            font-size: 28px;
+            opacity: 0.7;
+            animation: smoke-drift ${1 + Math.random()}s ease-out ${i * 0.1}s;
+        `;
+        container.appendChild(smoke);
+    }
+    addThemedKeyframes(`@keyframes smoke-drift { to { transform: translateX(100px) scale(2); opacity: 0; } }`);
+}
+
+function createHighFiveEffect(container) {
+    const hand = document.createElement('div');
+    hand.textContent = '✋';
+    hand.style.cssText = `
+        position: absolute;
+        right: -50px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 48px;
+        animation: high-five 0.6s ease-out;
+    `;
+    container.appendChild(hand);
+    
+    const impact = document.createElement('div');
+    impact.textContent = '💥';
+    impact.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-size: 48px;
+        animation: impact 0.4s ease-out 0.3s;
+    `;
+    container.appendChild(impact);
+    
+    addThemedKeyframes(`
+        @keyframes high-five { to { right: 50%; opacity: 0; } }
+        @keyframes impact { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+    `);
+}
+
+function createLightningEffect(container) {
+    for (let i = 0; i < 4; i++) {
+        const bolt = document.createElement('div');
+        bolt.textContent = '⚡';
+        bolt.style.cssText = `
+            position: absolute;
+            left: ${20 + i * 20}%;
+            top: -20%;
+            font-size: 42px;
+            color: #ffeb3b;
+            animation: lightning-strike 0.3s ease-in ${i * 0.15}s;
+        `;
+        container.appendChild(bolt);
+    }
+    addThemedKeyframes(`@keyframes lightning-strike { to { top: 100%; opacity: 0; } }`);
+}
+
+function createThoughtBubbles(container) {
+    const thoughts = ['💭', '🤔', '...', '?'];
+    for (let i = 0; i < 4; i++) {
+        const bubble = document.createElement('div');
+        bubble.textContent = thoughts[i];
+        bubble.style.cssText = `
+            position: absolute;
+            left: ${30 + i * 15}%;
+            top: ${60 - i * 20}%;
+            font-size: ${16 + i * 4}px;
+            animation: thought-rise 2s ease-out ${i * 0.3}s;
+        `;
+        container.appendChild(bubble);
+    }
+    addThemedKeyframes(`@keyframes thought-rise { to { transform: translateY(-80px); opacity: 0; } }`);
+}
+
+function addThemedKeyframes(css) {
+    const styleId = 'quiz-themed-effects-styles';
+    let style = document.getElementById(styleId);
+    if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+    }
+    style.textContent += css;
+}
+
+function playThemedSound(soundType) {
+    // Sound playback for themed effects
+    try {
+        const audio = new Audio(`/static/sounds/${soundType}.mp3`);
+        audio.volume = 0.3;
+        audio.play().catch(() => {
+            // Ignore sound errors - effects work without sound
+        });
+    } catch (e) {
+        // Ignore sound errors - effects work without sound
+    }
+}
 </script>
 {% endblock %}

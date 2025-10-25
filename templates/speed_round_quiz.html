@@ -11,7 +11,10 @@
     }
 
     /* Voice Visualizer wrapper */
-    .voice-visualizer { margin-bottom: 1.5rem; }
+    .voice-visualizer { 
+        margin-bottom: 1.5rem;
+        padding-top: 0.5rem; /* Prevent clipping at top */
+    }
 
     .voice-visualizer::before { display: none; }
 
@@ -19,15 +22,15 @@
         .voice-card.speaking-mode {
                 background: #FFB300; /* solid amber */
                 border-radius: 28px;
-                padding: 24px 16px 32px;
+                padding: 32px 20px 32px; /* Extra padding top/bottom for wave clearance */
                 border: none; /* remove border */
                 box-shadow: 0 24px 40px rgba(255,140,0,0.28);
-                max-width: 520px;
+                max-width: 900px; /* Much wider for more room */
                 margin: 0 auto 24px auto;
                 color: #fff;
                 text-align: center;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
-                overflow: hidden; /* keep dots within card corners */
+                overflow: visible; /* Allow full wave pattern visibility */
         }
     .voice-header {
         font-size: 1.25rem;
@@ -41,8 +44,31 @@
         margin-bottom: 20px;
     }
     .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #ffd54f); }
-    .dotwave-wrapper { display:flex; justify-content:center; align-items:center; padding: 8px 16px; }
-    .dotwave-wrapper canvas { width: 100%; height: 180px; filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(255,200,0,0.4)); }
+    .dotwave-wrapper { 
+        display:flex; 
+        justify-content:center; 
+        align-items:center; 
+        padding: 20px 20px; /* Extra padding for wave clearance */
+        overflow: visible; /* Ensure waves aren't clipped */
+    }
+    .dotwave-wrapper canvas { 
+        width: 100%; 
+        height: 220px; /* Taller for fuller waves */
+        filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(255,200,0,0.4));
+        display: block; /* Remove inline spacing */
+    }
+    
+    /* Definition display inside voice visualizer */
+    .voice-definition {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #fff;
+        text-align: center;
+        padding: 12px 20px 4px;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
 
     .speed-quiz-container {
         max-width: 550px;
@@ -523,17 +549,24 @@
                 <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
                 <div class="voice-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
-                            <div class="voice-header">
+                            <!-- Hidden status for JavaScript (not displayed visually) -->
+                            <div class="voice-header" style="display: none;">
                                 <span class="voice-bee">🐝</span>
                                 <span class="voice-text" id="voiceStatus">Ready</span>
                             </div>
+                            
                             <div class="dotwave-wrapper">
-                                <canvas id="dotWaveCanvas" width="500" height="160"></canvas>
+                                <canvas id="dotWaveCanvas" width="840" height="220"></canvas>
+                            </div>
+                            <!-- Definition display inside visualizer -->
+                            <div class="voice-definition" id="voiceDefinition">
+                                🐝 Listen carefully and spell the word! 🐝
                             </div>
                         </div>
                 </div>
 
-        <div class="word-prompt" id="wordPrompt">
+        <!-- Keep word prompt for backwards compatibility but hide it -->
+        <div class="word-prompt" id="wordPrompt" style="display: none;">
             🐝 Listen carefully and spell the word! 🐝
         </div>
 
@@ -1011,9 +1044,17 @@ async function loadNextWord() {
             submitBtn.disabled = true;
         }
         
+        // Update definition display inside voice visualizer
+        const voiceDefinition = document.getElementById('voiceDefinition');
+        if (voiceDefinition) {
+            // Mask the target word in the definition to prevent cheating
+            const maskedDefinition = maskTargetWord(data.definition || '🐝 Listen carefully and spell the word! 🐝', data.word);
+            voiceDefinition.textContent = maskedDefinition;
+        }
+        
+        // Also update legacy wordPrompt for backwards compatibility
         const wordPrompt = document.getElementById('wordPrompt');
         if (wordPrompt) {
-            // Mask the target word in the definition to prevent cheating
             const maskedDefinition = maskTargetWord(data.definition || '🐝 Listen carefully and spell the word! 🐝', data.word);
             wordPrompt.textContent = maskedDefinition;
         }
@@ -1053,30 +1094,6 @@ async function loadNextWord() {
                 true // Show retry button
             );
         }
-    }
-}
-        
-        // Hide any previous hint
-        const hintArea = document.getElementById('hintArea');
-        if (hintArea) {
-            hintArea.style.display = 'none';
-            hintArea.textContent = '';
-        }
-        
-        // Announce word context, then auto-pronounce
-        announceWord(currentIndex, totalWords);
-
-        // Start timer
-        wordStartTime = Date.now();
-        startTimer();
-
-    } catch (error) {
-        console.error('❌ Error loading next word:', error);
-        showErrorBoundary(
-            'Speed Round content failed to load',
-            'We couldn\'t load the next word. This might be a temporary issue.',
-            true // Show retry button
-        );
     }
 }
 
@@ -1173,8 +1190,8 @@ function startTimer() {
 
 function updateStats() {
     document.getElementById('progressStat').textContent = `${currentIndex}/${totalWords}`;
-    document.getElementById('streakStat').textContent = currentStreak;
-    document.getElementById('pointsStat').textContent = totalPoints;
+    document.getElementById('streakStat').textContent = currentStreak.toLocaleString();
+    document.getElementById('pointsStat').textContent = totalPoints.toLocaleString();
 }
 
 function clearInput() {
@@ -1297,9 +1314,8 @@ function pronounceWord() {
     const phrase = `Spell the word ${word}. ${word}.`;
     const utterance = new SpeechSynthesisUtterance(phrase);
         utterance.pitch = 1.35;
-        utterance.rate = 0.92;
+        utterance.rate = 0.7; // Slower rate for better comprehension (same as Pronounce button)
         utterance.volume = 0.9;
-    utterance.text = phrase;
 
         // Select enhanced US English female voice for American pronunciation
         if (!cachedVoice) {
@@ -1456,14 +1472,14 @@ async function submitAnswer(isSkip = false) {
             highlightStat('pointsBox');
         }
 
-        // Load next word after delay
+        // Load next word after delay - give announcer time to finish speaking
         setTimeout(() => {
             if (data.complete) {
                 completeRound();
             } else {
                 loadNextWord();
             }
-        }, 1500);
+        }, 2800);
 
     } catch (error) {
         console.error('❌ Error submitting answer:', error);
@@ -1478,12 +1494,6 @@ async function submitAnswer(isSkip = false) {
         // Restart timer to give user another chance
         wordStartTime = Date.now();
         startTimer();
-    }
-}
-
-    } catch (error) {
-        console.error('Error submitting answer:', error);
-        alert('Failed to submit answer. Please try again.');
     }
 }
 
@@ -1719,8 +1729,8 @@ window.addEventListener('error', (event) => {
 
     function resizeCanvas(){
         DPR = window.devicePixelRatio || 1;
-        const cssWidth = canvas.clientWidth || 500;
-        const cssHeight = canvas.clientHeight || 160;
+        const cssWidth = canvas.clientWidth || 840;
+        const cssHeight = canvas.clientHeight || 220;
         canvas.width = Math.round(cssWidth * DPR);
         canvas.height = Math.round(cssHeight * DPR);
         canvas.style.width = cssWidth + 'px';
@@ -1888,13 +1898,17 @@ window.addEventListener('error', (event) => {
 
                 const mainWaveY = Math.sin(progress * freq * Math.PI + phase) * amp;
                 const ripple = Math.sin(progress * pick(SH.rippleFreq, 12) + t*0.01 + w) * (pick(SH.rippleBase, 3) + w) * (0.5 + 0.5*drive);
-                const y = (H/2 + 20*DPR) + (yOffset * pinch) + mainWaveY + ripple;
+                // Position waves higher to prevent top clipping (45% down instead of 52%)
+                const y = (H * 0.45) + (yOffset * pinch) + mainWaveY + ripple;
 
-                const edgeA = edgeFadeAlpha(x);
+                // Reduce opacity for bottom waves to eliminate halo effect
+                const waveOpacity = w > 0 ? Math.max(0.15, 1 - (w * 0.12)) : 1; // Lower min opacity to reduce halo
+                
+                const edgeA = edgeFadeAlpha(x) * waveOpacity;
                 ctx.beginPath();
                 ctx.fillStyle = color;
                 ctx.shadowColor = color;
-                ctx.shadowBlur = 3 * edgeA; // REDUCED: Remove halo effect (was 12)
+                ctx.shadowBlur = 0; // Remove halo completely
                 const prevAlpha = ctx.globalAlpha;
                 ctx.globalAlpha = edgeA;
                 ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);

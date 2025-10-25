@@ -392,6 +392,41 @@ def _blank_word(text, word):
     
     return result
 
+def _filter_definition(definition, word):
+    """Filter definition to remove the target word and provide alternative if needed."""
+    if not definition or not word:
+        return definition or ""
+    
+    # Remove unhelpful phrases like "American spelling of...", "British spelling of...", etc.
+    unhelpful_patterns = [
+        r"^American spelling of\s+\w+\.?\s*",
+        r"^British spelling of\s+\w+\.?\s*",
+        r"^US spelling of\s+\w+\.?\s*",
+        r"^UK spelling of\s+\w+\.?\s*",
+        r"^Alternative spelling of\s+\w+\.?\s*",
+        r"^Alternative form of\s+\w+\.?\s*",
+    ]
+    
+    filtered = definition
+    for pattern in unhelpful_patterns:
+        filtered = re.sub(pattern, "", filtered, flags=re.IGNORECASE).strip()
+    
+    # If we removed everything, return a generic description
+    if not filtered or len(filtered) < 10:
+        return f"A word to practice spelling"
+    
+    # Now blank out the word
+    filtered = _blank_word(filtered, word)
+    
+    # If the definition is mostly blanks now, provide a generic alternative
+    blank_count = filtered.count("_____")
+    word_count = len(filtered.split())
+    
+    if blank_count > 0 and (blank_count / max(word_count, 1)) > 0.3:  # More than 30% blanks
+        return f"A word to practice spelling"
+    
+    return filtered
+
 def get_word_info(word):
     """Get definition and example sentence for a word. 
     Priority: 1) Simple Wiktionary (50K words), 2) API cache, 3) API lookup
@@ -409,6 +444,8 @@ def get_word_info(word):
             if example and len(example) > 10:
                 example = _blank_word(example, word)
                 print(f"📖 Found '{word}' in Simple Wiktionary with example")
+                # Filter definition to remove target word
+                definition = _filter_definition(definition, word)
                 return f"{definition}. Fill in the blank: {example}"
             else:
                 # Have definition but no example
@@ -421,6 +458,7 @@ def get_word_info(word):
         definition = word_data.get("definition", "")
         example = word_data.get("example", "")
         if definition and example:
+            definition = _filter_definition(definition, word)
             example = _blank_word(example, word)
             print(f"✅ Found '{word}' in API cache")
             return f"{definition}. Fill in the blank: {example}"
@@ -439,6 +477,7 @@ def get_word_info(word):
         
         definition = api_result.get("definition", "")
         example = api_result.get("example", "")
+        definition = _filter_definition(definition, word)
         example = _blank_word(example, word)
         print(f"✅ API returned definition for '{word}'")
         return f"{definition}. Fill in the blank: {example}"
@@ -2068,13 +2107,16 @@ def quiz_page():
         
     print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
     
+    # Cache busting timestamp
+    timestamp = int(time.time() * 1000)
+    
     # Pass user information if logged in
     user_name = None
     if current_user.is_authenticated:
         user_name = current_user.display_name
         print(f"DEBUG /quiz: User logged in as {user_name}")
     
-    return render_template("quiz.html", user_name=user_name)
+    return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
 
 @app.route("/battle/<battle_code>")
 def battle_page(battle_code):

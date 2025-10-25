@@ -3,12 +3,12 @@
 (function(){
   window.BeeSmartVoiceVizCfg = {
     // Densify to look like a ribbon (more waves, closer spacing, smaller dots)
-  MAX_WAVES: 10,
-  DOTS_PER_WAVE: 84,
-  DOT_RADIUS: 2.3,
-  WAVE_SPACING: 16,
+  MAX_WAVES: 12,
+  DOTS_PER_WAVE: 96,
+  DOT_RADIUS: 2.8,
+  WAVE_SPACING: 14,
   // Make lines longer by reducing side padding
-  HORIZONTAL_PAD_CSS: 2, // px inside-card buffer left/right (closer to card edges)
+  HORIZONTAL_PAD_CSS: 1, // px inside-card buffer left/right (closer to card edges)
 
     // Amber-first palette (bottom -> top) — minimal green, warm ambers/oranges
     waveColors: [
@@ -17,7 +17,9 @@
       'rgba(255, 180, 55, 0.95)',  // amber
       'rgba(255, 162, 41, 0.95)',  // orange-amber
       'rgba(255, 140, 26, 0.95)',  // orange
-      'rgba(255, 111, 0, 0.95)'    // deep orange
+      'rgba(255, 111, 0, 0.95)',   // deep orange
+      'rgba(255, 95, 0, 0.95)',    // richer orange
+      'rgba(255, 80, 0, 0.95)'     // deepest orange - fuller bottom
     ],
 
     // Optional left-to-right gradient overlay applied per dot (second pass)
@@ -48,11 +50,11 @@
     // Soft central glow highlight (like a gentle white core)
     centerGlow: {
       enabled: true,
-      alpha: 0.5,         // base opacity of the glow
-      verticalSpan: 0.55, // portion of height covered (centered) 0..1
-      energyScale: 0.9,   // multiply by current energy level
+      alpha: 0.6,         // base opacity of the glow (increased)
+      verticalSpan: 0.7,  // portion of height covered (centered) 0..1 (fuller)
+      energyScale: 1.1,   // multiply by current energy level (more responsive)
       // Horizontal taper at both ends (as fraction of drawable width per side)
-      horizontalFraction: 0.15
+      horizontalFraction: 0.12
     },
 
     // Force waves to meet at a shared tip near both ends by collapsing
@@ -86,11 +88,11 @@
     // Wave shape parameters
     waveShape: {
       baseFreq: 2,
-      freqStep: 0.4,
-      ampBase: 18,
-      ampStep: 5,
-      rippleFreq: 12,
-      rippleBase: 3
+      freqStep: 0.3,
+      ampBase: 22,
+      ampStep: 6,
+      rippleFreq: 10,
+      rippleBase: 4
     }
   };
 })();
