@@ -833,18 +833,13 @@ function announceSpeedRoundIntro() {
         utterance.pitch = 1.35;
         utterance.rate = 0.95;
         utterance.volume = 0.9;
-        
-        // Select voice (use US English)
-        const voices = speechSynthesis.getVoices();
-        const voice = voices.find(v => 
-            v.lang.includes('en-US') && 
-            v.name.toLowerCase().includes('female')
-        ) || voices.find(v => v.lang.includes('en-US')) || 
-            voices.find(v => v.lang.startsWith('en'));
-        
-        if (voice) {
-            utterance.voice = voice;
-            cachedVoice = voice; // Cache for subsequent calls
+
+        // Use the same best-female voice selector as regular quiz
+        // This avoids defaulting to a male voice on some systems
+        const bestVoice = selectBestFemaleVoice();
+        if (bestVoice) {
+            utterance.voice = bestVoice;
+            cachedVoice = bestVoice; // Cache for subsequent calls
         }
         
         status.textContent = '🎙️ Welcome to Speed Round!';
@@ -875,9 +870,8 @@ function announceSpeedRoundIntro() {
         // iOS fallback - reload voices if empty
         if (speechSynthesis.getVoices().length === 0) {
             speechSynthesis.addEventListener('voiceschanged', () => {
-                const voices = speechSynthesis.getVoices();
-                const voice = voices.find(v => v.lang.startsWith('en'));
-                if (voice) utterance.voice = voice;
+                const fallback = selectBestFemaleVoice() || speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
+                if (fallback) utterance.voice = fallback;
             }, { once: true });
         }
     }, 100); // iOS Fix: 100ms delay
@@ -1154,10 +1148,10 @@ function announceWord(wordIndex, totalWords) {
         if (cachedVoice) {
             utterance.voice = cachedVoice;
         } else {
+            // Select and cache the best female voice (same logic as quiz)
             cachedVoice = selectBestFemaleVoice();
             if (cachedVoice) {
                 utterance.voice = cachedVoice;
-                cachedVoice = voice; // Cache it
             }
         }
         
@@ -1195,26 +1189,6 @@ function announceWord(wordIndex, totalWords) {
             }, { once: true });
         }
     }, 100); // iOS Fix: 100ms delay
-}
-
-// Pronounce word with visual feedback
-function pronounceWord() {
-    if (!('speechSynthesis' in window)) {
-        visualizer.classList.remove('speaking');
-        // Pronounce anyway if there's an error
-        pronounceWord();
-    };
-    
-    speechSynthesis.speak(utterance);
-    
-    // iOS fallback
-    if (speechSynthesis.getVoices().length === 0) {
-        speechSynthesis.addEventListener('voiceschanged', () => {
-            const voices = speechSynthesis.getVoices();
-            const voice = voices.find(v => v.lang.startsWith('en'));
-            if (voice) utterance.voice = voice;
-        }, { once: true });
-    }
 }
 
 function pronounceWord() {
