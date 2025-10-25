@@ -6,19 +6,19 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <style>
     body {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 50%, #FFDAB9 100%);
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
         overflow-x: hidden;
     }
 
-    /* Voice Visualizer with Bee Theme (parity with main quiz) */
+    /* Voice Visualizer with Blue Theme (updated from bee theme) */
     .voice-visualizer {
-        background: linear-gradient(135deg, #FFB300 0%, #FF8F00 50%, #E65100 100%);
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #0D47A1 100%);
         border-radius: 20px;
         padding: 1.2rem;
         margin-bottom: 1.5rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 8px 24px rgba(255, 152, 0, 0.3);
+        box-shadow: 0 8px 24px rgba(33, 150, 243, 0.3);
         border: 2px solid rgba(255, 193, 7, 0.4);
         min-height: 90px;
     }
@@ -55,15 +55,15 @@
     .voice-wave {
         width: 8px;
         height: 16px;
-        background: linear-gradient(to top, #FF6B00, #FFD700);
+        background: linear-gradient(to top, #1976D2, #42A5F5);
         border-radius: 4px;
         opacity: 0.7;
     }
 
     .voice-visualizer.speaking .voice-wave {
         animation: waveAnimation 0.6s ease-in-out infinite;
-        background: linear-gradient(to top, #FF6B00, #FFD700) !important;
-        box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+        background: linear-gradient(to top, #1976D2, #42A5F5) !important;
+        box-shadow: 0 0 10px rgba(66, 165, 245, 0.6);
     }
 
     .voice-visualizer.word-pulse .voice-wave {
@@ -153,9 +153,9 @@
     .speed-title {
         font-size: 1.8rem;
         font-weight: 800;
-        color: #FF6B00;
+        color: #1976D2;
         margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+        text-shadow: 2px 2px 4px rgba(25, 118, 210, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -171,23 +171,23 @@
     }
 
     .stat-box {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
-        border: 2px solid #FFD700;
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        border: 2px solid #42A5F5;
         border-radius: 16px;
         padding: 0.75rem 0.5rem;
         transition: all 0.3s ease;
     }
 
     .stat-box.highlight {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        background: linear-gradient(135deg, #42A5F5 0%, #2196F3 100%);
         transform: scale(1.1);
-        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.5);
+        box-shadow: 0 8px 20px rgba(33, 150, 243, 0.5);
     }
 
     .stat-label {
         font-size: 0.75rem;
         font-weight: 600;
-        color: #8B6914;
+        color: #0D47A1;
         margin-bottom: 0.25rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -196,7 +196,7 @@
     .stat-value {
         font-size: 1.5rem;
         font-weight: 800;
-        color: #FF6B00;
+        color: #1976D2;
     }
 
     .stat-box.highlight .stat-label,
@@ -215,12 +215,12 @@
 
     .timer-svg {
         transform: rotate(-90deg);
-        filter: drop-shadow(0 8px 20px rgba(255, 107, 0, 0.4));
+        filter: drop-shadow(0 8px 20px rgba(25, 118, 210, 0.4));
     }
 
     .timer-circle-bg {
         fill: none;
-        stroke: #FFE8CC;
+        stroke: #BBDEFB;
         stroke-width: 12;
     }
 
@@ -249,8 +249,8 @@
         transform: translate(-50%, -50%);
         font-size: 3rem;
         font-weight: 800;
-        color: #FF6B00;
-        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+        color: #1976D2;
+        text-shadow: 2px 2px 4px rgba(25, 118, 210, 0.2);
         line-height: 1;
     }
 
@@ -310,10 +310,10 @@
         font-size: 1.5rem;
         font-weight: 700;
         text-align: center;
-        border: 3px solid #FFD700;
+        border: 3px solid #42A5F5;
         border-radius: 16px;
-        background: #FFF9E6;
-        color: #FF6B00;
+        background: #E3F2FD;
+        color: #1976D2;
         transition: all 0.2s;
         margin-bottom: 1rem;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -321,8 +321,8 @@
 
     .spell-input:focus {
         outline: none;
-        border-color: #FF6B00;
-        box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.2);
+        border-color: #1976D2;
+        box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
         background: #FFFFFF;
     }
 
@@ -580,11 +580,11 @@
         <svg class="timer-svg" width="180" height="180" viewBox="0 0 180 180">
             <defs>
                 <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#FF6B00;stop-opacity:1" />
+                    <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
                 </linearGradient>
                 <linearGradient id="warningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#FF6B00;stop-opacity:1" />
+                    <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
                     <stop offset="100%" style="stop-color:#FF4444;stop-opacity:1" />
                 </linearGradient>
             </defs>
@@ -680,6 +680,83 @@ let currentStreak = 0;
 let totalPoints = 0;
 let currentHint = '';
 let currentSentence = '';
+// Enhanced voice selection algorithm for natural-sounding female voices
+function selectBestFemaleVoice() {
+    const voices = speechSynthesis.getVoices();
+    console.log('🎤 Speed Round: Analyzing', voices.length, 'available voices for best female selection');
+    
+    // Score voices based on multiple criteria
+    const scoredVoices = voices
+        .filter(voice => voice.lang.startsWith('en')) // English only
+        .map(voice => {
+            let score = 0;
+            const name = voice.name.toLowerCase();
+            
+            // Language preference (US English gets highest priority)
+            if (voice.lang === 'en-US') score += 100;
+            else if (voice.lang.startsWith('en-')) score += 50;
+            
+            // Quality indicators (higher quality = more natural)
+            if (voice.quality === 'high') score += 50;
+            else if (voice.quality === 'enhanced') score += 40;
+            else if (voice.quality === 'normal') score += 20;
+            
+            // Local voices often sound more natural than cloud-based
+            if (voice.localService) score += 30;
+            
+            // Explicit female voice indicators
+            if (name.includes('female')) score += 80;
+            if (name.includes('woman')) score += 80;
+            
+            // Premium/Natural voice names (typically higher quality)
+            if (name.includes('natural')) score += 60;
+            if (name.includes('premium')) score += 60;
+            if (name.includes('neural')) score += 60;
+            
+            // Known high-quality female voices (ordered by naturalness)
+            const premiumVoices = {
+                'samantha': 90,     // macOS - very natural
+                'alex': 85,         // macOS - excellent quality
+                'victoria': 80,     // Windows - natural sounding
+                'zira': 75,         // Windows - clear and natural
+                'aria': 85,         // Modern Windows neural
+                'jenny': 85,        // Modern neural voice
+                'nova': 80,         // Modern neural voice
+                'allison': 70,      // Traditional but good
+                'ava': 70,          // Traditional but good
+                'joanna': 65,       // Amazon Polly style
+                'susan': 60,        // Traditional
+                'karen': 55,        // Traditional
+                'moira': 50         // Traditional Irish
+            };
+            
+            // Check for premium voice names
+            for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                if (name.includes(voiceName)) {
+                    score += points;
+                    break;
+                }
+            }
+            
+            // Avoid robotic or synthetic-sounding voices
+            if (name.includes('robot')) score -= 50;
+            if (name.includes('synthetic')) score -= 30;
+            if (name.includes('microsoft') && !name.includes('aria')) score -= 10;
+            
+            return { voice, score };
+        })
+        .sort((a, b) => b.score - a.score);
+    
+    if (scoredVoices.length > 0) {
+        const bestVoice = scoredVoices[0].voice;
+        console.log(`🏆 Speed Round: Selected best voice: ${bestVoice.name} (${bestVoice.lang}) with score ${scoredVoices[0].score}`);
+        return bestVoice;
+    }
+    
+    console.warn('⚠️ Speed Round: No suitable female voice found');
+    return null;
+}
+
 let cachedVoice = null; // cache selected voice for consistency
 let speechSynthesisInitialized = false; // iOS speech initialization flag
 let wordsUntilNameAnnouncement = 0; // Track sporadic name announcements (0 = announce now)
@@ -1073,24 +1150,13 @@ function announceWord(wordIndex, totalWords) {
         utterance.rate = 0.92;
         utterance.volume = 0.9;
         
-        // Use cached voice or select new one (US English)
+        // Use cached voice or select enhanced one (US English)
         if (cachedVoice) {
             utterance.voice = cachedVoice;
         } else {
-            const voices = speechSynthesis.getVoices();
-            const voice = voices.find(v => 
-                v.lang === 'en-US' && 
-                v.name.toLowerCase().includes('female')
-            ) || voices.find(v => 
-                v.lang === 'en-US' &&
-                (v.name.includes('Samantha') || v.name.includes('Victoria') ||
-                 v.name.includes('Zira') || v.name.includes('Joanna') ||
-                 v.name.includes('Ava') || v.name.includes('Allison'))
-            ) || voices.find(v => v.lang.startsWith('en-US')) || 
-                voices.find(v => v.lang.startsWith('en'));
-            
-            if (voice) {
-                utterance.voice = voice;
+            cachedVoice = selectBestFemaleVoice();
+            if (cachedVoice) {
+                utterance.voice = cachedVoice;
                 cachedVoice = voice; // Cache it
             }
         }
@@ -1173,24 +1239,9 @@ function pronounceWord() {
         utterance.volume = 0.9;
         utterance.text = word;
 
-        // Select US English female voice for American pronunciation
+        // Select enhanced US English female voice for American pronunciation
         if (!cachedVoice) {
-            const voices = speechSynthesis.getVoices();
-            cachedVoice = voices.find(voice =>
-                voice.lang === 'en-US' &&
-                voice.name.toLowerCase().includes('female')
-            ) || voices.find(voice =>
-                voice.lang === 'en-US' &&
-                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
-                 voice.name.includes('Zira') || voice.name.includes('Joanna') ||
-                 voice.name.includes('Ava') || voice.name.includes('Allison'))
-            ) || voices.find(voice =>
-                voice.lang.startsWith('en-US')
-            ) || voices.find(voice =>
-                voice.lang.startsWith('en') &&
-                (voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
-                 voice.name.includes('Zira') || voice.name.includes('Ava'))
-            );
+            cachedVoice = selectBestFemaleVoice();
         }
 
         if (cachedVoice) {

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <style>
         body {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+            background: linear-gradient(135deg, #42A5F5 0%, #2196F3 50%, #1976D2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -23,7 +23,7 @@
             max-width: 600px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            border: 3px solid rgba(255, 193, 7, 0.6);
+            border: 3px solid rgba(66, 165, 245, 0.6);
         }
 
         .setup-header {
@@ -33,7 +33,7 @@
 
         .setup-header h1 {
             font-size: 2.5rem;
-            color: #FF4500;
+            color: #1976D2;
             margin: 0 0 0.5rem 0;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -46,17 +46,17 @@
 
         .config-section {
             margin-bottom: 2rem;
-            background: rgba(255, 250, 205, 0.5);
+            background: rgba(227, 242, 253, 0.5);
             padding: 1.5rem;
             border-radius: 15px;
-            border: 2px solid rgba(255, 193, 7, 0.3);
+            border: 2px solid rgba(66, 165, 245, 0.3);
         }
 
         .config-section label {
             display: block;
             font-size: 1.3rem;
             font-weight: 700;
-            color: #FF4500;
+            color: #1976D2;
             margin-bottom: 0.75rem;
         }
 
@@ -64,7 +64,7 @@
             width: 100%;
             padding: 1rem;
             font-size: 1.1rem;
-            border: 2px solid rgba(255, 140, 0, 0.4);
+            border: 2px solid rgba(33, 150, 243, 0.4);
             border-radius: 12px;
             background: white;
             font-family: inherit;
@@ -74,8 +74,8 @@
 
         .config-section select:focus {
             outline: none;
-            border-color: #FFD700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            border-color: #42A5F5;
+            box-shadow: 0 0 15px rgba(66, 165, 245, 0.4);
         }
 
         .radio-group {
@@ -89,15 +89,15 @@
             align-items: center;
             padding: 1rem;
             background: white;
-            border: 2px solid rgba(255, 140, 0, 0.3);
+            border: 2px solid rgba(33, 150, 243, 0.3);
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .radio-option:hover {
-            border-color: #FFD700;
-            background: rgba(255, 215, 0, 0.1);
+            border-color: #42A5F5;
+            background: rgba(66, 165, 245, 0.1);
             transform: translateY(-2px);
         }
 
@@ -118,17 +118,17 @@
         }
 
         .radio-option.selected {
-            border-color: #FF4500;
-            background: rgba(255, 69, 0, 0.1);
-            box-shadow: 0 0 15px rgba(255, 69, 0, 0.2);
+            border-color: #1976D2;
+            background: rgba(25, 118, 210, 0.1);
+            box-shadow: 0 0 15px rgba(25, 118, 210, 0.2);
         }
 
         .preview-section {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            background: linear-gradient(135deg, #42A5F5 0%, #2196F3 100%);
             padding: 1.5rem;
             border-radius: 15px;
             margin-bottom: 2rem;
-            border: 3px solid #FF8C00;
+            border: 3px solid #1976D2;
         }
 
         .preview-section h3 {
@@ -228,8 +228,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%);
-            border: 5px solid #FFD700;
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            border: 5px solid #42A5F5;
             border-radius: 30px;
             padding: 2.5rem;
             max-width: 700px;
@@ -237,7 +237,7 @@
             max-height: 90vh;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(66, 165, 245, 0.3);
             animation: slideInScale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         
@@ -248,7 +248,7 @@
         
         .speed-intro-header h2 {
             font-size: 2.5rem;
-            color: #FF4500;
+            color: #1976D2;
             margin: 0 0 0.5rem 0;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
             animation: pulse 2s ease-in-out infinite;
@@ -256,7 +256,7 @@
         
         .speed-intro-header p {
             font-size: 1.2rem;
-            color: #FF8C00;
+            color: #1976D2;
             font-weight: 700;
             margin: 0;
         }
@@ -266,12 +266,12 @@
             border-radius: 20px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
-            border: 3px solid rgba(255, 140, 0, 0.3);
+            border: 3px solid rgba(33, 150, 243, 0.3);
         }
         
         .speed-intro-rules h3 {
             font-size: 1.5rem;
-            color: #FF4500;
+            color: #1976D2;
             margin: 0 0 1rem 0;
             text-align: center;
         }
@@ -299,12 +299,12 @@
         }
         
         .speed-rule-text strong {
-            color: #FF4500;
+            color: #1976D2;
         }
         
         .speed-intro-warning {
-            background: rgba(255, 69, 0, 0.1);
-            border: 2px solid #FF4500;
+            background: rgba(25, 118, 210, 0.1);
+            border: 2px solid #1976D2;
             border-radius: 15px;
             padding: 1rem;
             margin-bottom: 1.5rem;
@@ -314,7 +314,7 @@
         .speed-intro-warning p {
             margin: 0;
             font-size: 1.1rem;
-            color: #FF4500;
+            color: #1976D2;
             font-weight: 700;
         }
         

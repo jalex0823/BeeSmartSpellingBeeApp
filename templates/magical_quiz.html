@@ -612,6 +612,68 @@ class MagicalSpellingBee {
         }
     }
     
+    selectBestFemaleVoice() {
+        const voices = speechSynthesis.getVoices();
+        console.log('🎤 Available voices:', voices.length);
+        
+        if (voices.length === 0) {
+            console.log('⚠️ No voices available yet');
+            return null;
+        }
+        
+        // Quality scoring system for voice selection
+        const scoreVoice = (voice) => {
+            let score = 0;
+            
+            // Base quality assessment
+            if (voice.quality === 'high' || voice.quality === 'enhanced') score += 50;
+            if (voice.localService) score += 30;
+            
+            // Premium voice name patterns (often higher quality)
+            const premiumNames = ['samantha', 'alex', 'victoria', 'aria', 'jenny', 'nova', 'hazel', 'karen'];
+            if (premiumNames.some(name => voice.name.toLowerCase().includes(name))) {
+                score += 40;
+            }
+            
+            // Language preference
+            if (voice.lang.startsWith('en-US')) score += 20;
+            else if (voice.lang.startsWith('en-GB')) score += 15;
+            else if (voice.lang.startsWith('en-AU')) score += 10;
+            else if (voice.lang.startsWith('en')) score += 5;
+            
+            // Female voice preference
+            const femaleIndicators = ['female', 'woman', 'girl'];
+            if (femaleIndicators.some(indicator => voice.name.toLowerCase().includes(indicator))) {
+                score += 25;
+            }
+            
+            // Common high-quality female voice names
+            const qualityFemaleNames = ['samantha', 'victoria', 'aria', 'jenny', 'nova', 'ava', 'allison', 'joanna', 'karen', 'hazel'];
+            if (qualityFemaleNames.some(name => voice.name.toLowerCase().includes(name))) {
+                score += 35;
+            }
+            
+            return score;
+        };
+        
+        // Score all voices and find the best female voice
+        const scoredVoices = voices.map(voice => ({
+            voice,
+            score: scoreVoice(voice)
+        }));
+        
+        // Sort by score descending
+        scoredVoices.sort((a, b) => b.score - a.score);
+        
+        console.log('🏆 Top 5 voice candidates:');
+        scoredVoices.slice(0, 5).forEach((item, index) => {
+            console.log(`${index + 1}. ${item.voice.name} (${item.voice.lang}) - Score: ${item.score}`);
+        });
+        
+        // Return the highest-scoring voice
+        return scoredVoices.length > 0 ? scoredVoices[0].voice : voices[0];
+    }
+    
     async speakWord() {
         try {
             // Use Web Speech API for TTS
@@ -625,12 +687,21 @@ class MagicalSpellingBee {
                 // Cancel any ongoing speech
                 window.speechSynthesis.cancel();
                 
+                // Get the best female voice
+                const bestVoice = this.selectBestFemaleVoice();
+                
                 // Create utterance
                 const utterance = new SpeechSynthesisUtterance(currentWord.word);
                 utterance.rate = 0.8; // Slower for spelling practice
                 utterance.pitch = 1.0;
                 utterance.volume = 1.0;
                 utterance.lang = 'en-US';
+                
+                // Apply the selected voice
+                if (bestVoice) {
+                    utterance.voice = bestVoice;
+                    console.log('🎤 Using voice:', bestVoice.name, '(', bestVoice.lang, ')');
+                }
                 
                 // Add event handlers
                 utterance.onstart = () => {

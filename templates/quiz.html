@@ -2598,45 +2598,14 @@ class BeeSoundboard {
                 utterance.addEventListener('error', onEndCallback);
             }
             
-            // Use cached voice for consistency with announcer (US English)
+            // Use enhanced voice selection for natural-sounding female voices
             if (!this.cachedVoice) {
-                const voices = speechSynthesis.getVoices();
-                
-                // Priority 1: US English Female voices (with "Female" in name)
-                this.cachedVoice = voices.find(voice => 
-                    voice.lang === 'en-US' && 
-                    voice.name.toLowerCase().includes('female')
-                );
-                
-                // Priority 2: US English Female voices (by specific names)
-                if (!this.cachedVoice) {
-                    this.cachedVoice = voices.find(voice => 
-                        voice.lang === 'en-US' &&
-                        (voice.name.includes('Samantha') || voice.name.includes('Victoria') || 
-                         voice.name.includes('Zira') || voice.name.includes('Joanna') ||
-                         voice.name.includes('Ava') || voice.name.includes('Allison'))
-                    );
-                }
-                
-                // Priority 3: Any US English voice
-                if (!this.cachedVoice) {
-                    this.cachedVoice = voices.find(voice => 
-                        voice.lang.startsWith('en-US')
-                    );
-                }
-                
-                // Priority 4: Any female voice in any English variant
-                if (!this.cachedVoice) {
-                    this.cachedVoice = voices.find(voice => 
-                        voice.lang.startsWith('en') &&
-                        (voice.name.toLowerCase().includes('female') ||
-                         voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
-                         voice.name.includes('Zira') || voice.name.includes('Ava'))
-                    );
-                }
+                this.cachedVoice = this.selectBestFemaleVoice();
                 
                 if (this.cachedVoice) {
-                    console.log('🎤 speakWord using voice:', this.cachedVoice.name, this.cachedVoice.lang);
+                    console.log('🎤 speakWord using enhanced voice:', this.cachedVoice.name, this.cachedVoice.lang, 
+                               'Quality:', this.cachedVoice.quality || 'default', 
+                               'Local:', this.cachedVoice.localService);
                 } else {
                     console.warn('⚠️ speakWord: No suitable voice found, using browser default');
                 }
@@ -3363,6 +3332,91 @@ class QuizManager {
         return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
     }
     
+    // Enhanced voice selection algorithm for natural-sounding female voices
+    selectBestFemaleVoice() {
+        const voices = speechSynthesis.getVoices();
+        console.log('🎤 Analyzing', voices.length, 'available voices for best female selection');
+        
+        // Score voices based on multiple criteria
+        const scoredVoices = voices
+            .filter(voice => voice.lang.startsWith('en')) // English only
+            .map(voice => {
+                let score = 0;
+                const name = voice.name.toLowerCase();
+                
+                // Language preference (US English gets highest priority)
+                if (voice.lang === 'en-US') score += 100;
+                else if (voice.lang.startsWith('en-')) score += 50;
+                
+                // Quality indicators (higher quality = more natural)
+                if (voice.quality === 'high') score += 50;
+                else if (voice.quality === 'enhanced') score += 40;
+                else if (voice.quality === 'normal') score += 20;
+                
+                // Local voices often sound more natural than cloud-based
+                if (voice.localService) score += 30;
+                
+                // Explicit female voice indicators
+                if (name.includes('female')) score += 80;
+                if (name.includes('woman')) score += 80;
+                
+                // Premium/Natural voice names (typically higher quality)
+                if (name.includes('natural')) score += 60;
+                if (name.includes('premium')) score += 60;
+                if (name.includes('neural')) score += 60;
+                
+                // Known high-quality female voices (ordered by naturalness)
+                const premiumVoices = {
+                    'samantha': 90,     // macOS - very natural
+                    'alex': 85,         // macOS - excellent quality
+                    'victoria': 80,     // Windows - natural sounding
+                    'zira': 75,         // Windows - clear and natural
+                    'aria': 85,         // Modern Windows neural
+                    'jenny': 85,        // Modern neural voice
+                    'nova': 80,         // Modern neural voice
+                    'allison': 70,      // Traditional but good
+                    'ava': 70,          // Traditional but good
+                    'joanna': 65,       // Amazon Polly style
+                    'susan': 60,        // Traditional
+                    'karen': 55,        // Traditional
+                    'moira': 50         // Traditional Irish
+                };
+                
+                // Check for premium voice names
+                for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                    if (name.includes(voiceName)) {
+                        score += points;
+                        break;
+                    }
+                }
+                
+                // Avoid robotic or synthetic-sounding voices
+                if (name.includes('robot')) score -= 50;
+                if (name.includes('synthetic')) score -= 30;
+                if (name.includes('microsoft') && !name.includes('aria')) score -= 10; // Modern MS voices are better
+                
+                // Log voice evaluation for debugging
+                console.log(`🎤 Voice: ${voice.name} (${voice.lang}) - Score: ${score}`, {
+                    quality: voice.quality || 'default',
+                    local: voice.localService,
+                    voiceURI: voice.voiceURI
+                });
+                
+                return { voice, score };
+            })
+            .sort((a, b) => b.score - a.score); // Sort by highest score first
+        
+        if (scoredVoices.length > 0) {
+            const bestVoice = scoredVoices[0].voice;
+            console.log(`🏆 Selected best voice: ${bestVoice.name} (${bestVoice.lang}) with score ${scoredVoices[0].score}`);
+            console.log(`   Quality: ${bestVoice.quality || 'default'}, Local: ${bestVoice.localService}, URI: ${bestVoice.voiceURI}`);
+            return bestVoice;
+        }
+        
+        console.warn('⚠️ No suitable female voice found in', voices.length, 'available voices');
+        return null;
+    }
+    
     speakAnnouncement(text) {
         // Check if announcer is enabled
         if (!this.announcerEnabled) {
@@ -3410,52 +3464,16 @@ class QuizManager {
                 utterance.pitch = 1.1;
                 utterance.volume = 0.85;
                 
-                // Cache the selected voice to ensure consistency (US English)
+                // Cache the selected voice to ensure consistency using enhanced selection
                 if (!this.cachedVoice) {
-                    const voices = speechSynthesis.getVoices();
-                    console.log('🎤 Available voices:', voices.length);
-                    console.log('🎤 Voice details:', voices.map(v => `${v.name} (${v.lang})`).join(', '));
-                    
-                    // Priority 1: US English Female voices (with "Female" in name)
-                    this.cachedVoice = voices.find(voice => 
-                        voice.lang === 'en-US' && 
-                        voice.name.toLowerCase().includes('female')
-                    );
-                    
-                    // Priority 2: US English Female voices (by specific names)
-                    if (!this.cachedVoice) {
-                        this.cachedVoice = voices.find(voice => 
-                            voice.lang === 'en-US' &&
-                            (voice.name.includes('Samantha') || voice.name.includes('Victoria') || 
-                             voice.name.includes('Zira') || voice.name.includes('Joanna') ||
-                             voice.name.includes('Ava') || voice.name.includes('Allison'))
-                        );
-                    }
-                    
-                    // Priority 3: Any US English voice
-                    if (!this.cachedVoice) {
-                        this.cachedVoice = voices.find(voice => 
-                            voice.lang.startsWith('en-US')
-                        );
-                    }
-                    
-                    // Priority 4: Any female voice in any English variant (fallback)
-                    if (!this.cachedVoice) {
-                        this.cachedVoice = voices.find(voice => 
-                            voice.lang.startsWith('en') &&
-                            (voice.name.toLowerCase().includes('female') ||
-                             voice.name.includes('Samantha') || voice.name.includes('Victoria') ||
-                             voice.name.includes('Zira') || voice.name.includes('Ava') ||
-                             voice.name.includes('Karen') || voice.name.includes('Moira'))
-                        );
-                    }
+                    this.cachedVoice = this.selectBestFemaleVoice();
                     
                     if (this.cachedVoice) {
                         const voiceType = this.cachedVoice.lang === 'en-US' 
-                            ? '�� US Female' : '🗣️ Female English';
-                        console.log(`🎤 Selected voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
+                            ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
+                        console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
                     } else {
-                        console.warn('⚠️ No suitable US female voice found, using browser default');
+                        console.warn('⚠️ No suitable enhanced female voice found, using browser default');
                     }
                 }
                 
@@ -5088,7 +5106,7 @@ class QuizManager {
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
                     
-                    // After all modals shown, load next word (or show final report)
+                    // After all modals shown, load next word (which will show completion if quiz is done)
                     setTimeout(() => this.loadNextWord(), 800);
                 }, 1500);
             } else {

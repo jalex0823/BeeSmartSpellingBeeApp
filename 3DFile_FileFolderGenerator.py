@@ -4,9 +4,13 @@ import sys
 import csv
 import json
 import shutil
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import numpy as np
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
 
 # Rendering deps
 import trimesh
@@ -17,8 +21,319 @@ import os
 # Try to use pyglet platform on Windows which is more reliable
 os.environ['PYOPENGL_PLATFORM'] = 'pyglet'
 
+class ZipProcessorGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("3D Model ZIP Processor")
+        self.root.geometry("800x600")
+        self.selected_zip_files = []
+        self.output_folder = None
+        self.setup_gui()
+    
+    def setup_gui(self):
+        # Main frame
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Title
+        title_label = ttk.Label(main_frame, text="3D Model ZIP Processor", 
+                               font=('Arial', 16, 'bold'))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        
+        # ZIP file selection
+        zip_frame = ttk.LabelFrame(main_frame, text="1. Select ZIP Files", padding="10")
+        zip_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        ttk.Button(zip_frame, text="📁 Select ZIP Files", 
+                  command=self.select_zip_files).grid(row=0, column=0, padx=(0, 10))
+        
+        ttk.Button(zip_frame, text="🗑️ Clear List", 
+                  command=self.clear_zip_list).grid(row=0, column=1)
+        
+        # List of selected files
+        self.zip_listbox = tk.Listbox(zip_frame, height=6)
+        self.zip_listbox.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        
+        # Output folder selection
+        output_frame = ttk.LabelFrame(main_frame, text="2. Output Folder", padding="10")
+        output_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        ttk.Button(output_frame, text="📂 Select Output Folder", 
+                  command=self.select_output_folder).grid(row=0, column=0, padx=(0, 10))
+        
+        self.output_label = ttk.Label(output_frame, text="No folder selected")
+        self.output_label.grid(row=0, column=1)
+        
+        # Process button
+        self.process_btn = ttk.Button(main_frame, text="🚀 Process ZIP Files", 
+                                     command=self.process_files, state='disabled')
+        self.process_btn.grid(row=3, column=0, columnspan=3, pady=20)
+        
+        # Progress bar
+        self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
+        self.progress.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        # Log output
+        log_frame = ttk.LabelFrame(main_frame, text="Progress Log", padding="10")
+        log_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        
+        self.log_text = ScrolledText(log_frame, height=10, state='disabled')
+        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Configure grid weights
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(5, weight=1)
+        zip_frame.columnconfigure(0, weight=1)
+        output_frame.columnconfigure(1, weight=1)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+    
+    def log(self, message):
+        """Add message to log output."""
+        self.log_text.config(state='normal')
+        self.log_text.insert(tk.END, message + '\n')
+        self.log_text.see(tk.END)
+        self.log_text.config(state='disabled')
+        self.root.update()
+    
+    def select_zip_files(self):
+        """Open dialog to select multiple ZIP files."""
+        zip_files = filedialog.askopenfilenames(
+            title="Select ZIP files containing 3D models",
+            filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")],
+            initialdir=str(Path.home() / "Downloads")
+        )
+        
+        if zip_files:
+            self.selected_zip_files.extend(zip_files)
+            self.update_zip_list()
+            self.update_process_button()
+    
+    def clear_zip_list(self):
+        """Clear the list of selected ZIP files."""
+        self.selected_zip_files.clear()
+        self.update_zip_list()
+        self.update_process_button()
+    
+    def update_zip_list(self):
+        """Update the listbox showing selected ZIP files."""
+        self.zip_listbox.delete(0, tk.END)
+        for zip_file in self.selected_zip_files:
+            self.zip_listbox.insert(tk.END, Path(zip_file).name)
+    
+    def select_output_folder(self):
+        """Select output folder."""
+        folder = filedialog.askdirectory(
+            title="Select output folder for processed models",
+            initialdir=str(Path.home() / "Downloads")
+        )
+        
+        if folder:
+            self.output_folder = Path(folder)
+            self.output_label.config(text=f"Output: {self.output_folder.name}")
+            self.update_process_button()
+    
+    def update_process_button(self):
+        """Enable/disable process button based on selections."""
+        if self.selected_zip_files and self.output_folder:
+            self.process_btn.config(state='normal')
+        else:
+            self.process_btn.config(state='disabled')
+    
+    def extract_zip_file(self, zip_path: Path, extract_to: Path) -> Optional[Path]:
+        """Extract a ZIP file and return the extraction folder."""
+        try:
+            self.log(f"📦 Extracting: {zip_path.name}")
+            
+            # Create extraction folder
+            extract_folder = extract_to / zip_path.stem
+            extract_folder.mkdir(parents=True, exist_ok=True)
+            
+            # Extract ZIP
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_folder)
+            
+            self.log(f"✅ Extracted to: {extract_folder.name}")
+            return extract_folder
+            
+        except Exception as e:
+            self.log(f"❌ Failed to extract {zip_path.name}: {e}")
+            return None
+    
+    def process_files(self):
+        """Process all selected ZIP files."""
+        if not self.selected_zip_files or not self.output_folder:
+            messagebox.showerror("Error", "Please select ZIP files and output folder")
+            return
+        
+        try:
+            self.process_btn.config(state='disabled')
+            self.progress.start()
+            
+            self.log("🚀 Starting processing...")
+            
+            # Create temporary extraction folder
+            temp_extract = self.output_folder / "temp_extract"
+            temp_extract.mkdir(parents=True, exist_ok=True)
+            
+            processed_count = 0
+            
+            for zip_file in self.selected_zip_files:
+                zip_path = Path(zip_file)
+                
+                # Extract ZIP file
+                extract_folder = self.extract_zip_file(zip_path, temp_extract)
+                if not extract_folder:
+                    continue
+                
+                # Process the extracted content
+                self.process_extracted_folder(extract_folder)
+                processed_count += 1
+            
+            # Clean up temporary folder
+            if temp_extract.exists():
+                shutil.rmtree(temp_extract)
+                self.log("🧹 Cleaned up temporary files")
+            
+            self.progress.stop()
+            self.process_btn.config(state='normal')
+            
+            self.log(f"✅ COMPLETED! Processed {processed_count} ZIP files")
+            self.log(f"📂 Output folder: {self.output_folder}")
+            
+            # Ask to open output folder
+            if messagebox.askyesno("Complete", f"Processing complete!\n\nProcessed {processed_count} ZIP files.\n\nOpen output folder?"):
+                try:
+                    import subprocess
+                    subprocess.run(['explorer', str(self.output_folder)], check=True)
+                except:
+                    pass
+            
+        except Exception as e:
+            self.progress.stop()
+            self.process_btn.config(state='normal')
+            self.log(f"❌ Error during processing: {e}")
+            messagebox.showerror("Error", f"Processing failed: {e}")
+    
+    def process_extracted_folder(self, extract_folder: Path):
+        """Process an extracted folder containing 3D models."""
+        self.log(f"🔍 Processing: {extract_folder.name}")
+        
+        # Find all subfolders that might contain 3D models
+        for folder in extract_folder.rglob("*"):
+            if folder.is_dir():
+                # Check if this folder contains 3D model files
+                has_obj = any(folder.glob("*.obj"))
+                has_mtl = any(folder.glob("*.mtl"))
+                has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
+                
+                if has_obj or has_mtl or has_images:
+                    self.log(f"   📁 Found model folder: {folder.name}")
+                    
+                    # Load override settings
+                    file_overrides = load_overrides_file(extract_folder)
+                    merged_overrides = {**file_overrides, **OVERRIDES}
+                    
+                    # Process this model folder
+                    process_model_folder(folder, self.output_folder, merged_overrides)
+    
+    def run(self):
+        """Start the GUI application."""
+        self.root.mainloop()
+
+def select_source_folder() -> Optional[Path]:
+    """Open a dialog to select the source folder containing 3D models."""
+    try:
+        print("🔄 Opening folder selection dialog...")
+        print("   (Dialog may appear behind other windows - check your taskbar)")
+        
+        # Hide the main tkinter window
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)  # Bring to front
+        root.lift()
+        root.focus_force()
+        
+        # Open folder selection dialog
+        folder_path = filedialog.askdirectory(
+            title="Select Source Folder (containing OBJ/3D model folders)",
+            initialdir=str(Path.home() / "Downloads"),
+            parent=root
+        )
+        
+        root.destroy()
+        
+        if folder_path:
+            print(f"✅ Selected: {folder_path}")
+            return Path(folder_path).resolve()
+        else:
+            print("❌ No folder selected")
+            return None
+    except Exception as e:
+        print(f"⚠️ Error opening folder dialog: {e}")
+        print("   Falling back to manual input...")
+        return None
+
+def select_output_folder(default_name: str = "Meshy_Cleaned") -> Optional[Path]:
+    """Open a dialog to select the output folder."""
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        
+        # Suggest a default output folder
+        default_path = Path.home() / "Downloads" / default_name
+        
+        folder_path = filedialog.askdirectory(
+            title="Select Output Folder (where cleaned models will be saved)",
+            initialdir=str(default_path.parent)
+        )
+        
+        root.destroy()
+        
+        if folder_path:
+            return Path(folder_path).resolve()
+        return None
+    except Exception as e:
+        print(f"⚠️ Error opening folder dialog: {e}")
+        return None
+
+def get_folder_interactively(prompt: str, default_path: str) -> Path:
+    """Get folder path either through GUI or command line input."""
+    print(f"\n{prompt}")
+    print(f"Default: {default_path}")
+    
+    choice = input("Choose method: (G)UI dialog, (D)efault, or (T)ype path [G]: ").strip().upper()
+    
+    if choice == "D":
+        return Path(default_path).resolve()
+    elif choice == "T":
+        while True:
+            user_path = input("Enter folder path: ").strip().strip('"')
+            if user_path:
+                path = Path(user_path).resolve()
+                if path.exists() or choice == "T":  # Allow non-existing for output
+                    return path
+                else:
+                    print(f"❌ Path doesn't exist: {path}")
+            else:
+                print("❌ Please enter a valid path")
+    else:  # Default to GUI
+        if "Source" in prompt:
+            folder = select_source_folder()
+        else:
+            folder = select_output_folder()
+        
+        if folder:
+            return folder
+        else:
+            print("No folder selected, using default...")
+            return Path(default_path).resolve()
+
 # ========================= USER SETTINGS =========================
 # Source parent with one or many Meshy export folders (unzipped)
+# NOTE: When running the script, you'll be prompted to select folders interactively
 INPUT_ROOT  = r"C:\Users\Jeff\Downloads\Meshy_Imports"
 # Destination parent where cleaned folders are created
 OUTPUT_ROOT = r"C:\Users\Jeff\Downloads\Meshy_Cleaned"
@@ -359,8 +674,111 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
             
     except Exception as e:
         print(f"⚠️ Thumbnail render failed for {obj_path.name}: {e}")
-        import traceback
-        traceback.print_exc()
+        print("🔄 Trying matplotlib fallback...")
+        render_thumbnail_matplotlib_fallback(obj_path, thumb_path)
+
+def render_thumbnail_matplotlib_fallback(obj_path: Path, thumb_path: Path):
+    """Fallback rendering using matplotlib for systems without proper OpenGL."""
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as patches
+        
+        print(f"🔄 Using matplotlib fallback for: {obj_path}")
+        
+        # Load mesh
+        mesh = trimesh.load_mesh(str(obj_path), process=False)
+        if isinstance(mesh, trimesh.Scene):
+            mesh = trimesh.util.concatenate(mesh.dump())
+        
+        if len(mesh.vertices) == 0:
+            print("⚠️ Mesh has no vertices!")
+            create_placeholder_thumbnail(obj_path, thumb_path)
+            return
+            
+        # Create a simple 2D projection view
+        fig, ax = plt.subplots(figsize=(8, 8), facecolor='none')
+        ax.set_facecolor('none')
+        
+        # Project 3D vertices to 2D (simple orthographic projection)
+        vertices = mesh.vertices
+        
+        # Use X,Y coordinates (top view) or rotate for isometric
+        x_coords = vertices[:, 0]
+        y_coords = vertices[:, 1]
+        
+        # Draw edges by connecting face vertices
+        faces = mesh.faces
+        for face in faces[:min(200, len(faces))]:  # Limit for performance
+            face_verts = vertices[face]
+            # Draw triangle edges
+            for i in range(3):
+                start = face_verts[i]
+                end = face_verts[(i + 1) % 3]
+                ax.plot([start[0], end[0]], [start[1], end[1]], 
+                       'b-', alpha=0.6, linewidth=0.5)
+        
+        # Set equal aspect and remove axes
+        ax.set_aspect('equal')
+        ax.set_axis_off()
+        
+        # Set limits based on mesh bounds
+        bounds = mesh.bounds
+        margin = mesh.extents.max() * 0.1
+        ax.set_xlim(bounds[0, 0] - margin, bounds[1, 0] + margin)
+        ax.set_ylim(bounds[0, 1] - margin, bounds[1, 1] + margin)
+        
+        # Save with transparent background
+        plt.savefig(thumb_path, transparent=True, bbox_inches='tight', 
+                   dpi=100, format='png', facecolor='none', 
+                   edgecolor='none', pad_inches=0)
+        plt.close(fig)
+        
+        print(f"📸 Matplotlib wireframe thumbnail: {thumb_path}")
+        
+    except Exception as e:
+        print(f"⚠️ Matplotlib fallback failed: {e}")
+        # Create a simple placeholder image
+        create_placeholder_thumbnail(obj_path, thumb_path)
+
+def create_placeholder_thumbnail(obj_path: Path, thumb_path: Path):
+    """Create a simple placeholder thumbnail when rendering fails."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        
+        # Create a simple placeholder
+        background_color = (240, 240, 240, 128)
+        img = Image.new('RGBA', RENDER_SIZE, background_color)
+        draw = ImageDraw.Draw(img)
+        
+        # Draw a simple 3D box icon
+        w, h = RENDER_SIZE
+        cx, cy = w//2, h//2
+        size = min(w, h) // 4
+        
+        # Draw isometric cube
+        points = [
+            (cx - size, cy), (cx, cy - size//2), (cx + size, cy), (cx, cy + size//2)
+        ]
+        draw.polygon(points, fill=(100, 150, 200, 180), outline=(50, 100, 150, 255))
+        
+        # Add text
+        text = obj_path.stem[:20]  # Truncate if too long
+        try:
+            font = ImageFont.truetype("arial.ttf", 24)
+        except:
+            font = ImageFont.load_default()
+            
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        draw.text((cx - text_w//2, cy + size + 20), text, 
+                 fill=(50, 50, 50, 255), font=font)
+        
+        img.save(thumb_path)
+        print(f"📸 Placeholder thumbnail: {thumb_path}")
+        
+    except Exception as e:
+        print(f"⚠️ Even placeholder creation failed: {e}")
 
 def test_rendering_simple():
     """Test rendering with a simple generated mesh to verify the pipeline works."""
@@ -494,38 +912,192 @@ def iter_source_folders(root: Path, recursive: bool) -> List[Path]:
         return [p for p in root.iterdir() if p.is_dir()]
     return [p for p in root.rglob("*") if p.is_dir()]
 
-def main():
-    # Test rendering first
-    print("🔧 Testing rendering setup...")
-    if not test_rendering_simple():
-        print("❌ Cannot establish working OpenGL context for rendering.")
-        print("💡 Try installing: pip install PyOpenGL-accelerate")
-        print("💡 Or try updating your graphics drivers.")
-        return
+class Dark3DProcessorGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("3D Model Processor")
+        self.root.geometry("600x500")
+        self.root.configure(bg='#2b2b2b')  # Dark background
+        
+        self.selected_zip_files = []
+        self.converted_folders = []
+        self.setup_dark_gui()
     
-    in_root = Path(INPUT_ROOT).resolve()
-    out_root = Path(OUTPUT_ROOT).resolve()
-    if not in_root.exists():
-        print(f"❌ INPUT_ROOT not found: {in_root}")
-        sys.exit(1)
-    out_root.mkdir(parents=True, exist_ok=True)
-
-    # Merge override sources: file(s) + in-script dict
-    file_overrides = load_overrides_file(in_root)
-    merged_overrides = {**file_overrides, **OVERRIDES}
-
-    folders = iter_source_folders(in_root, RECURSIVE)
-    count = 0
-    for folder in folders:
-        has_candidate = any(folder.glob("*.obj")) or any(folder.glob("*.mtl")) or any(
-            p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file()
+    def setup_dark_gui(self):
+        # Configure dark theme colors
+        bg_color = '#2b2b2b'
+        fg_color = '#ffffff'
+        button_color = '#404040'
+        selected_color = '#0078d4'
+        
+        # Title
+        title_label = tk.Label(self.root, text="3D Model Processor", 
+                              font=('Arial', 18, 'bold'),
+                              bg=bg_color, fg=fg_color)
+        title_label.pack(pady=20)
+        
+        # Selected files frame
+        files_frame = tk.LabelFrame(self.root, text="Selected ZIP Files", 
+                                   bg=bg_color, fg=fg_color,
+                                   font=('Arial', 12, 'bold'))
+        files_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Listbox for showing selected files
+        self.files_listbox = tk.Listbox(files_frame, height=8,
+                                       bg='#1e1e1e', fg=fg_color,
+                                       selectbackground=selected_color,
+                                       font=('Consolas', 10))
+        self.files_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Buttons frame
+        button_frame = tk.Frame(self.root, bg=bg_color)
+        button_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        # Select ZIP Files button
+        self.select_btn = tk.Button(button_frame, text="📁 Select ZIP Files",
+                                   command=self.select_zip_files,
+                                   bg=button_color, fg=fg_color,
+                                   font=('Arial', 12, 'bold'),
+                                   relief='raised', bd=2)
+        self.select_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5, fill=tk.X, expand=True)
+        
+        # Convert button
+        self.convert_btn = tk.Button(button_frame, text="🔄 Convert Files",
+                                    command=self.convert_files,
+                                    bg=button_color, fg=fg_color,
+                                    font=('Arial', 12, 'bold'),
+                                    relief='raised', bd=2)
+        self.convert_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5, fill=tk.X, expand=True)
+        
+        # Create PNG button
+        self.png_btn = tk.Button(button_frame, text="🖼️ Create PNG!",
+                                command=self.create_png,
+                                bg=button_color, fg=fg_color,
+                                font=('Arial', 12, 'bold'),
+                                relief='raised', bd=2)
+        self.png_btn.pack(side=tk.LEFT, pady=5, fill=tk.X, expand=True)
+        
+        # Status bar
+        self.status_label = tk.Label(self.root, text="Ready - Select ZIP files to begin",
+                                    bg='#1e1e1e', fg=fg_color,
+                                    font=('Arial', 10),
+                                    relief='sunken', bd=1)
+        self.status_label.pack(fill=tk.X, side=tk.BOTTOM, padx=20, pady=10)
+    
+    def select_zip_files(self):
+        """Select multiple ZIP files containing 3D models."""
+        zip_files = filedialog.askopenfilenames(
+            title="Select ZIP files containing 3D models",
+            filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")],
+            initialdir=str(Path.home() / "Downloads")
         )
-        if not has_candidate:
-            continue
-        process_model_folder(folder, out_root, merged_overrides)
-        count += 1
+        
+        if zip_files:
+            self.selected_zip_files.extend(zip_files)
+            self.update_file_list()
+            self.status_label.config(text=f"Selected {len(self.selected_zip_files)} ZIP files")
+    
+    def update_file_list(self):
+        """Update the listbox with selected ZIP files."""
+        self.files_listbox.delete(0, tk.END)
+        for zip_file in self.selected_zip_files:
+            self.files_listbox.insert(tk.END, Path(zip_file).name)
+    
+    def convert_files(self):
+        """Extract and convert ZIP files to organized 3D model folders."""
+        if not self.selected_zip_files:
+            messagebox.showwarning("No Files", "Please select ZIP files first")
+            return
+        
+        try:
+            self.status_label.config(text="Converting ZIP files...")
+            self.root.update()
+            
+            # Create output directory
+            output_root = Path.home() / "Downloads" / "Converted_3D_Models"
+            output_root.mkdir(parents=True, exist_ok=True)
+            
+            self.converted_folders = []
+            
+            for zip_file in self.selected_zip_files:
+                zip_path = Path(zip_file)
+                self.status_label.config(text=f"Extracting: {zip_path.name}")
+                self.root.update()
+                
+                # Extract ZIP to temporary folder
+                extract_folder = output_root / zip_path.stem
+                extract_folder.mkdir(parents=True, exist_ok=True)
+                
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_folder)
+                
+                # Process extracted content using existing functions
+                self.process_extracted_content(extract_folder, output_root)
+                self.converted_folders.append(extract_folder)
+            
+            self.status_label.config(text=f"✅ Converted {len(self.selected_zip_files)} ZIP files")
+            messagebox.showinfo("Success", f"Converted {len(self.selected_zip_files)} ZIP files to: {output_root}")
+            
+        except Exception as e:
+            self.status_label.config(text=f"❌ Conversion failed: {str(e)}")
+            messagebox.showerror("Error", f"Conversion failed: {e}")
+    
+    def process_extracted_content(self, extract_folder: Path, output_root: Path):
+        """Process extracted folder content using existing functions."""
+        # Load overrides
+        file_overrides = load_overrides_file(extract_folder)
+        merged_overrides = {**file_overrides, **OVERRIDES}
+        
+        # Find folders with 3D content
+        for folder in extract_folder.rglob("*"):
+            if folder.is_dir():
+                has_obj = any(folder.glob("*.obj"))
+                has_mtl = any(folder.glob("*.mtl"))
+                has_images = any(p.suffix.lower() in IMG_EXTS for p in folder.iterdir() if p.is_file())
+                
+                if has_obj or has_mtl or has_images:
+                    process_model_folder(folder, output_root, merged_overrides)
+    
+    def create_png(self):
+        """Create PNG thumbnails for all OBJ files in converted folders."""
+        if not self.converted_folders:
+            messagebox.showwarning("No Converted Files", "Please convert files first")
+            return
+        
+        try:
+            self.status_label.config(text="Creating PNG thumbnails...")
+            self.root.update()
+            
+            png_count = 0
+            
+            for folder in self.converted_folders:
+                # Find all OBJ files
+                for obj_file in folder.rglob("*.obj"):
+                    self.status_label.config(text=f"Rendering: {obj_file.name}")
+                    self.root.update()
+                    
+                    # Create PNG thumbnail with "!" suffix
+                    png_file = obj_file.with_name(f"{obj_file.stem}!.png")
+                    render_thumbnail_transparent(obj_file, png_file)
+                    png_count += 1
+            
+            self.status_label.config(text=f"✅ Created {png_count} PNG thumbnails")
+            messagebox.showinfo("Success", f"Created {png_count} PNG thumbnails!")
+            
+        except Exception as e:
+            self.status_label.config(text=f"❌ PNG creation failed: {str(e)}")
+            messagebox.showerror("Error", f"PNG creation failed: {e}")
+    
+    def run(self):
+        """Start the GUI."""
+        self.root.mainloop()
 
-    print(f"\n✅ Done. Processed {count} folder(s).\nOutput → {out_root}")
-
+def main():
+    """Main entry point."""
+    # Create and run the dark-themed GUI
+    app = Dark3DProcessorGUI()
+    app.run()
+            
 if __name__ == "__main__":
+    main()
     main()

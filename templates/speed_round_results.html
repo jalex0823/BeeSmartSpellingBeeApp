@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <style>
     body {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 50%, #FFDAB9 100%);
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
     }
 
     /* Avatar Container - Centered and Locked */
@@ -38,22 +38,22 @@
         background: #FFFFFF;
         border-radius: 24px;
         padding: 2.5rem;
-        box-shadow: 0 15px 40px rgba(255, 140, 0, 0.3);
-        border: 3px solid #FFD700;
+        box-shadow: 0 15px 40px rgba(33, 150, 243, 0.3);
+        border: 3px solid #42A5F5;
         margin-bottom: 1.5rem;
     }
 
     .results-title {
         font-size: 2.5rem;
         font-weight: 800;
-        color: #FF6B00;
+        color: #1976D2;
         margin-bottom: 0.5rem;
-        text-shadow: 2px 2px 4px rgba(255, 107, 0, 0.2);
+        text-shadow: 2px 2px 4px rgba(25, 118, 210, 0.2);
     }
 
     .results-subtitle {
         font-size: 1.2rem;
-        color: #8B6914;
+        color: #0D47A1;
         margin-bottom: 2rem;
         font-weight: 600;
     }
@@ -66,8 +66,8 @@
     }
 
     .stat-item {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
-        border: 2px solid #FFD700;
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        border: 2px solid #42A5F5;
         border-radius: 16px;
         padding: 1.5rem;
     }
@@ -80,14 +80,14 @@
     .stat-value {
         font-size: 2rem;
         font-weight: 800;
-        color: #FF6B00;
+        color: #1976D2;
         margin-bottom: 0.25rem;
     }
 
     .stat-label {
         font-size: 0.9rem;
         font-weight: 600;
-        color: #8B6914;
+        color: #0D47A1;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -114,9 +114,9 @@
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #FFD700 0%, #FF6B00 100%);
+        background: linear-gradient(135deg, #42A5F5 0%, #1976D2 100%);
         color: white;
-        border: 3px solid #FF6B00;
+        border: 3px solid #1976D2;
     }
 
     .btn-secondary {
@@ -194,13 +194,13 @@
         </div>
 
         {% if results.incorrect_words and results.incorrect_words|length > 0 %}
-        <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-radius: 16px; border: 2px solid #FFB74D;">
-            <h3 style="color: #E65100; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800;">
+        <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-radius: 16px; border: 2px solid #42A5F5;">
+            <h3 style="color: #1976D2; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800;">
                 📝 Words to Practice
             </h3>
             <div style="display: grid; gap: 0.75rem; text-align: left;">
                 {% for item in results.incorrect_words %}
-                <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #FFB74D; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #42A5F5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     <div style="flex: 1; min-width: 150px;">
                         <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
                             ✓ {{ item.word }}

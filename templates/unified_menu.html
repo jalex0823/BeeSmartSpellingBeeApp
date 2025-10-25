@@ -72,6 +72,132 @@
             position: relative;
         }
         
+        /* Bee Swarm Visual Effects */
+        .bee-swarm-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            overflow: hidden;
+        }
+        
+        .flying-bee {
+            position: absolute;
+            width: 24px;
+            height: 16px;
+            background: linear-gradient(45deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+            border-radius: 50% 50% 40% 40%;
+            animation: beeSwarmFlight 12s linear infinite;
+            opacity: 0;
+        }
+        
+        .flying-bee::before,
+        .flying-bee::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            width: 12px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            animation: wingFlutter 0.3s ease-in-out infinite;
+        }
+        
+        .flying-bee::before {
+            left: -3px;
+        }
+        
+        .flying-bee::after {
+            right: -3px;
+            animation-delay: 0.15s;
+        }
+        
+        .flying-bee:nth-child(2) {
+            animation-delay: -3s;
+            animation-duration: 10s;
+        }
+        
+        .flying-bee:nth-child(3) {
+            animation-delay: -6s;
+            animation-duration: 14s;
+        }
+        
+        .flying-bee:nth-child(4) {
+            animation-delay: -9s;
+            animation-duration: 11s;
+        }
+        
+        @keyframes beeSwarmFlight {
+            0% {
+                transform: translateX(-50px) translateY(50vh) rotate(0deg);
+                opacity: 0;
+            }
+            5% {
+                opacity: 0.8;
+            }
+            15% {
+                transform: translateX(20vw) translateY(30vh) rotate(15deg);
+                opacity: 1;
+            }
+            35% {
+                transform: translateX(50vw) translateY(60vh) rotate(-10deg);
+                opacity: 0.9;
+            }
+            55% {
+                transform: translateX(80vw) translateY(25vh) rotate(20deg);
+                opacity: 0.8;
+            }
+            75% {
+                transform: translateX(100vw) translateY(45vh) rotate(-5deg);
+                opacity: 0.6;
+            }
+            95% {
+                opacity: 0.2;
+            }
+            100% {
+                transform: translateX(120vw) translateY(40vh) rotate(0deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes wingFlutter {
+            0%, 100% { transform: scaleY(1) rotate(-10deg); }
+            50% { transform: scaleY(0.3) rotate(10deg); }
+        }
+        
+        /* Interactive Bee Particles on Hover */
+        .menu-option:hover .bee-particle {
+            animation: beeParticleExplode 0.8s ease-out forwards;
+        }
+        
+        .bee-particle {
+            position: absolute;
+            width: 8px;
+            height: 6px;
+            background: #FFD700;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        @keyframes beeParticleExplode {
+            0% {
+                opacity: 0;
+                transform: scale(0) rotate(0deg);
+            }
+            20% {
+                opacity: 1;
+                transform: scale(1) rotate(90deg);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translateX(var(--particle-x, 20px)) translateY(var(--particle-y, -20px)) rotate(360deg);
+            }
+        }
+
         /* Magical background particles */
         .magic-background {
             position: fixed;
@@ -541,20 +667,20 @@
         }
 
         .menu-option.theme-lightning {
-            --tile-bg: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6B00 100%);
-            --tile-border: rgba(255, 215, 0, 0.9);
-            --tile-shadow: rgba(255, 140, 0, 0.45);
-            --tile-hover-shadow: rgba(255, 107, 0, 0.7);
+            --tile-bg: linear-gradient(135deg, #42A5F5 0%, #2196F3 50%, #1976D2 100%);
+            --tile-border: rgba(66, 165, 245, 0.9);
+            --tile-shadow: rgba(33, 150, 243, 0.45);
+            --tile-hover-shadow: rgba(25, 118, 210, 0.7);
             --tile-text: #ffffff;
             animation: lightningGlow 2.5s ease-in-out infinite;
         }
 
         @keyframes lightningGlow {
             0%, 100% {
-                box-shadow: 0 10px 22px rgba(255, 140, 0, 0.45), 0 0 15px rgba(255, 215, 0, 0.3);
+                box-shadow: 0 10px 22px rgba(33, 150, 243, 0.45), 0 0 15px rgba(66, 165, 245, 0.3);
             }
             50% {
-                box-shadow: 0 12px 30px rgba(255, 107, 0, 0.65), 0 0 25px rgba(255, 215, 0, 0.5);
+                box-shadow: 0 12px 30px rgba(25, 118, 210, 0.65), 0 0 25px rgba(66, 165, 245, 0.5);
             }
         }
 
@@ -1529,6 +1655,7 @@
     </style>
     
     <div class="magic-background"></div>
+    <div class="bee-swarm-container" id="beeSwarmContainer"></div>
     <div class="fairy-container"></div>
     
     <!-- Main container -->
@@ -1625,11 +1752,33 @@
                     v2.1
                 </div>
                 
+                <!-- Sound Toggle Button -->
+                <div style="margin-top: 8px;">
+                    <button id="soundToggleBtn" onclick="kidSounds.toggleSound()" onmouseover="kidSounds.playPop()" style="
+                        background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
+                        color: white;
+                        border: 2px solid rgba(76, 175, 80, 0.3);
+                        border-radius: 12px;
+                        padding: 6px 12px;
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+                        transition: all 0.3s ease;
+                    " title="Toggle sound effects on/off">
+                        🔊 Sounds ON
+                    </button>
+                </div>
+                
                 <!-- Kid-Safe Content Badge -->
                 <div class="kid-safe-badge">
                     <span>Kid-Safe Content</span>
                 </div>
-                <div style="font-size: 0.75rem; color: rgba(0,0,0,0.5); margin: 0.5rem auto 0; text-align: center; max-width: 300px;">
+            </section>
+            
+            <!-- Safety Message - Centered Between Button and Title -->
+            <section class="menu-container" style="padding: 0.5rem 2rem;">
+                <div style="font-size: 0.75rem; color: rgba(0,0,0,0.5); margin: 0 auto; text-align: center; max-width: 300px;">
                     All words are automatically filtered for age-appropriate content
                 </div>
             </section>
@@ -1956,7 +2105,7 @@
             <!-- Menu options -->
             <section class="menu-container">
                 <!-- Upload Text File -->
-                <div class="menu-option theme-berry" onclick="selectOption('text', this)" title="📄 Upload your word list from a text file, CSV, or paste words directly!">
+                <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title="📄 Upload your word list from a text file, CSV, or paste words directly!">
                     <div class="option-icon">📄</div>
                     <div class="option-title">Upload Text File</div>
                     <div class="option-description">Plain text, CSV, comma/space separated, Word docs</div>
@@ -1964,7 +2113,7 @@
                 </div>
 
                 <!-- Type Words Manually -->
-                <div class="menu-option" style="background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-color: rgba(129, 199, 132, 0.5);" onclick="selectOption('manual', this)" title="✍️ Type or paste your spelling words directly!">
+                <div class="menu-option" style="background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-color: rgba(129, 199, 132, 0.5);" onclick="kidSounds.playRandomEffect(); selectOption('manual', this)" onmouseover="kidSounds.playPop()" title="✍️ Type or paste your spelling words directly!">
                     <div class="option-icon">✍️</div>
                     <div class="option-title">Type Words Manually</div>
                     <div class="option-description">Type or paste your word list</div>
@@ -1972,7 +2121,7 @@
                 </div>
 
                 <!-- Upload Image -->
-                <div class="menu-option theme-ocean" onclick="selectOption('image', this)" title="📷 Take a photo of a book page or worksheet and we'll find the words for you!">
+                <div class="menu-option theme-ocean" onclick="kidSounds.playRandomEffect(); selectOption('image', this)" onmouseover="kidSounds.playSoftClick()" title="📷 Take a photo of a book page or worksheet and we'll find the words for you!">
                     <div class="option-icon">📷</div>
                     <div class="option-title">Upload Image</div>
                     <div class="option-description">Extract words from photos</div>
@@ -1980,7 +2129,7 @@
                 </div>
 
                 <!-- Dictionary Search -->
-                <div class="menu-option theme-sunshine" onclick="selectOption('dictionary', this)" title="🔍 Look up any word to learn its meaning and add it to your spelling practice!">
+                <div class="menu-option theme-sunshine" onclick="kidSounds.playRandomEffect(); selectOption('dictionary', this)" onmouseover="kidSounds.playHappyDing()" title="🔍 Look up any word to learn its meaning and add it to your spelling practice!">
                     <div class="option-icon">🔍</div>
                     <div class="option-title">Dictionary Search</div>
                     <div class="option-description">Look up word definitions</div>
@@ -1988,7 +2137,7 @@
                 </div>
 
                 <!-- Saved Word Lists -->
-                <div class="menu-option theme-lavender" onclick="selectOption('saved', this)" title="📚 Access your previously saved spelling lists and continue practicing!">
+                <div class="menu-option theme-lavender" onclick="kidSounds.playRandomEffect(); selectOption('saved', this)" onmouseover="kidSounds.playBuzz()" title="📚 Access your previously saved spelling lists and continue practicing!">
                     <span id="savedListsBadge" class="option-badge" style="display:none;">0</span>
                     <div class="option-icon">📚</div>
                     <div class="option-title">Saved Word Lists</div>
@@ -1997,7 +2146,7 @@
                 </div>
 
                 <!-- Random Play -->
-                <div class="menu-option theme-random" onclick="selectOption('random', this)" title="🎲 Let the app pick random words for you based on difficulty!">
+                <div class="menu-option theme-random" onclick="kidSounds.playRandomEffect(); selectOption('random', this)" onmouseover="kidSounds.playPop()" title="🎲 Let the app pick random words for you based on difficulty!">
                     <div class="option-icon">🎲</div>
                     <div class="option-title">Random Play</div>
                     <div class="option-description">AI picks 10 words by difficulty level</div>
@@ -2005,7 +2154,7 @@
                 </div>
 
                 <!-- Battle of the Bees -->
-                <div class="menu-option theme-battle" onclick="selectOption('battle', this)" title="⚔️ Compete with classmates in an epic spelling battle!">
+                <div class="menu-option theme-battle" onclick="kidSounds.playRandomEffect(); selectOption('battle', this)" onmouseover="kidSounds.playHappyDing()" title="⚔️ Compete with classmates in an epic spelling battle!">
                     <div class="option-icon">⚔️</div>
                     <div class="option-title">Battle of the Bees</div>
                     <div class="option-description">Compete with friends & classmates!</div>
@@ -2013,7 +2162,7 @@
                 </div>
 
                 <!-- Speed Round Challenge -->
-                <div class="menu-option theme-lightning" onclick="selectOption('speed', this)" title="⚡ Race against time in a fast-paced spelling challenge!">
+                <div class="menu-option theme-lightning" onclick="kidSounds.playRandomEffect(); selectOption('speed', this)" onmouseover="kidSounds.playSoftClick()" title="⚡ Race against time in a fast-paced spelling challenge!">
                     <div class="option-icon">⚡</div>
                     <div class="option-title">Speed Round Challenge</div>
                     <div class="option-description">Race against time! Earn bonus points!</div>
@@ -2023,30 +2172,30 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
-                <button type="button" class="action-btn secondary" onclick="exportWordList()" title="💾 Save your word list with definitions">
+                <button type="button" class="action-btn secondary" onclick="kidSounds.playSoftClick(); exportWordList()" onmouseover="kidSounds.playPop()" title="💾 Save your word list with definitions">
                     💾 Export List
                 </button>
-                <button type="button" class="action-btn secondary" onclick="importWordList()" title="📥 Load a previously saved CSV word list">
+                <button type="button" class="action-btn secondary" onclick="kidSounds.playSoftClick(); importWordList()" onmouseover="kidSounds.playPop()" title="📥 Load a previously saved CSV word list">
                     📥 Import CSV File
                 </button>
-                <button type="button" class="action-btn secondary" onclick="clearAll()" title="🗑️ Start fresh with a new word list">
+                <button type="button" class="action-btn secondary" onclick="kidSounds.playSoftClick(); clearAll()" onmouseover="kidSounds.playPop()" title="🗑️ Start fresh with a new word list">
                     🧹 Start Fresh
                 </button>
                 
                 <!-- Help & Documentation Section -->
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0;">
-                    <a href="/help" class="action-btn info" title="❓ Quick help and tips" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px;">
+                    <a href="/help" class="action-btn info" onclick="kidSounds.playSoftClick()" onmouseover="kidSounds.playBuzz()" title="❓ Quick help and tips" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px;">
                         ❓ Quick Help
                     </a>
-                    <a href="/guide" class="action-btn info" title="📖 Complete user guide with detailed instructions" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); border-color: rgba(33, 150, 243, 0.3);">
+                    <a href="/guide" class="action-btn info" onclick="kidSounds.playSoftClick()" onmouseover="kidSounds.playBuzz()" title="📖 Complete user guide with detailed instructions" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); border-color: rgba(33, 150, 243, 0.3);">
                         📖 User Guide
                     </a>
-                    <a href="/admin-guide" class="action-btn info" title="🔧 Technical administrator guide" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); border-color: rgba(156, 39, 176, 0.3);">
+                    <a href="/admin-guide" class="action-btn info" onclick="kidSounds.playSoftClick()" onmouseover="kidSounds.playBuzz()" title="🔧 Technical administrator guide" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); border-color: rgba(156, 39, 176, 0.3);">
                         🔧 Admin Guide
                     </a>
                 </div>
                 
-                <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" onclick="startQuiz()" disabled title="🚀 Begin your spelling adventure!">
+                <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" onclick="kidSounds.playHappyDing(); startQuiz()" onmouseover="kidSounds.playRandomEffect()" disabled title="🚀 Begin your spelling adventure!">
                     🐝 Let's Get Buzzing Spelling Some Words!
                 </button>
             </section>
@@ -2057,6 +2206,356 @@
     </div>
 
     <script>
+        // Kid-Friendly Sound System
+        class KidFriendlySounds {
+            constructor() {
+                this.context = null;
+                this.initialized = false;
+                this.soundEnabled = true;
+            }
+
+            async init() {
+                if (this.initialized) return;
+                try {
+                    this.context = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                } catch (e) {
+                    console.log('Audio context not available:', e);
+                }
+            }
+
+            // Generate happy bee buzz sound
+            playBuzz() {
+                if (!this.shouldPlay()) return;
+                this.generateTone(220, 0.1, 'sine', 0.15);
+            }
+
+            // Generate magical chime for hover
+            playChime() {
+                if (!this.shouldPlay()) return;
+                this.generateTone(523.25, 0.2, 'sine', 0.1); // C5 note
+            }
+
+            // Generate friendly pop sound
+            playPop() {
+                if (!this.shouldPlay()) return;
+                this.generateTone(659.25, 0.1, 'sine', 0.08); // E5 note
+            }
+
+            // Generate soft click
+            playSoftClick() {
+                if (!this.shouldPlay()) return;
+                this.generateTone(440, 0.05, 'square', 0.05); // A4 note
+            }
+
+            // Generate happy ding
+            playHappyDing() {
+                if (!this.shouldPlay()) return;
+                this.generateTone(783.99, 0.15, 'sine', 0.12); // G5 note
+            }
+
+            // Generate random kid-friendly sound effect
+            playRandomEffect() {
+                if (!this.shouldPlay()) return;
+                
+                const effects = [
+                    // Musical notes
+                    () => this.generateTone(523.25, 0.15, 'sine', 0.1), // C5 sparkle
+                    () => this.generateTone(659.25, 0.12, 'sine', 0.08), // E5 pop
+                    () => this.generateTone(783.99, 0.1, 'sine', 0.09), // G5 ding
+                    () => this.generateTone(880, 0.13, 'sine', 0.07), // A5 chime
+                    () => this.generateTone(1046.5, 0.11, 'sine', 0.06), // C6 twinkle
+                    
+                    // Fun sound sequences
+                    () => this.playRisingChime(),
+                    () => this.playDescendingTrill(),
+                    () => this.playBounceEffect(),
+                    () => this.playSparkleSequence(),
+                    () => this.playGiggleSound(),
+                    () => this.playWhooshEffect(),
+                    () => this.playBubbleSound(),
+                    () => this.playMagicSpell(),
+                    () => this.playJumpSound(),
+                    () => this.playSuccessJingle()
+                ];
+                
+                // Pick a random effect
+                const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+                randomEffect();
+            }
+
+            // Rising chime sequence
+            playRisingChime() {
+                const notes = [440, 523.25, 659.25]; // A4, C5, E5
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.08, 'sine', 0.08);
+                    }, i * 50);
+                });
+            }
+
+            // Descending trill
+            playDescendingTrill() {
+                const notes = [880, 783.99, 659.25, 523.25]; // A5, G5, E5, C5
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.06, 'triangle', 0.06);
+                    }, i * 40);
+                });
+            }
+
+            // Bounce effect
+            playBounceEffect() {
+                const bounces = [523.25, 392, 523.25, 392, 523.25]; // C5-G4 bounces
+                bounces.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.05, 'square', 0.05);
+                    }, i * 70);
+                });
+            }
+
+            // Sparkle sequence
+            playSparkleSequence() {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const freq = 800 + Math.random() * 400; // Random high frequencies
+                        this.generateTone(freq, 0.04, 'sine', 0.04);
+                    }, i * 30);
+                }
+            }
+
+            // Giggle sound
+            playGiggleSound() {
+                const giggles = [659.25, 783.99, 659.25]; // E5-G5-E5
+                giggles.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.06, 'triangle', 0.07);
+                    }, i * 60);
+                });
+            }
+
+            // Whoosh effect
+            playWhooshEffect() {
+                // Sweeping frequency
+                try {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(200, this.context.currentTime);
+                    oscillator.frequency.linearRampToValueAtTime(600, this.context.currentTime + 0.15);
+                    oscillator.type = 'sawtooth';
+                    
+                    gainNode.gain.setValueAtTime(0, this.context.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.08, this.context.currentTime + 0.02);
+                    gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.15);
+                    
+                    oscillator.start(this.context.currentTime);
+                    oscillator.stop(this.context.currentTime + 0.15);
+                } catch (e) {
+                    // Fallback to simple tone
+                    this.generateTone(400, 0.15, 'sawtooth', 0.08);
+                }
+            }
+
+            // Bubble sound
+            playBubbleSound() {
+                const bubbles = [261.63, 329.63, 392]; // C4, E4, G4
+                bubbles.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.08, 'sine', 0.06);
+                    }, i * 80);
+                });
+            }
+
+            // Magic spell sound
+            playMagicSpell() {
+                const spell = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+                spell.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.1, 'triangle', 0.05);
+                    }, i * 45);
+                });
+            }
+
+            // Jump sound
+            playJumpSound() {
+                setTimeout(() => this.generateTone(392, 0.08, 'square', 0.07), 0);
+                setTimeout(() => this.generateTone(523.25, 0.06, 'square', 0.05), 80);
+            }
+
+            // Success jingle
+            playSuccessJingle() {
+                const jingle = [523.25, 659.25, 783.99, 1046.5]; // C5-E5-G5-C6 major chord
+                jingle.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.generateTone(freq, 0.2, 'sine', 0.04);
+                    }, i * 20); // Play together as chord
+                });
+            }
+
+            shouldPlay() {
+                return this.initialized && this.soundEnabled && this.context && this.context.state === 'running';
+            }
+
+            generateTone(frequency, duration, type = 'sine', volume = 0.1) {
+                try {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
+                    oscillator.type = type;
+                    
+                    gainNode.gain.setValueAtTime(0, this.context.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, this.context.currentTime + 0.01);
+                    gainNode.gain.linearRampToValueAtTime(0, this.context.currentTime + duration);
+                    
+                    oscillator.start(this.context.currentTime);
+                    oscillator.stop(this.context.currentTime + duration);
+                } catch (e) {
+                    console.log('Sound generation error:', e);
+                }
+            }
+
+            toggle() {
+                this.soundEnabled = !this.soundEnabled;
+                return this.soundEnabled;
+            }
+            
+            toggleSound() {
+                const enabled = this.toggle();
+                const btn = document.getElementById('soundToggleBtn');
+                if (btn) {
+                    if (enabled) {
+                        btn.innerHTML = '🔊 Sounds ON';
+                        btn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45A049 100%)';
+                        btn.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                        btn.style.boxShadow = '0 3px 8px rgba(76, 175, 80, 0.3)';
+                        this.playHappyDing(); // Confirmation sound
+                    } else {
+                        btn.innerHTML = '🔇 Sounds OFF';
+                        btn.style.background = 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)';
+                        btn.style.borderColor = 'rgba(158, 158, 158, 0.3)';
+                        btn.style.boxShadow = '0 3px 8px rgba(158, 158, 158, 0.3)';
+                    }
+                }
+            }
+        }
+
+        // Initialize sound system
+        const kidSounds = new KidFriendlySounds();
+
+        // Bee Swarm Visual Effects System
+        class BeeSwarmEffects {
+            constructor() {
+                this.container = document.getElementById('beeSwarmContainer');
+                this.activeBees = [];
+                this.isEnabled = true;
+            }
+
+            createFlyingBee(startX, startY) {
+                if (!this.isEnabled || !this.container) return;
+
+                const bee = document.createElement('div');
+                bee.className = 'flying-bee';
+                bee.style.left = startX + 'px';
+                bee.style.top = startY + 'px';
+                
+                // Random path variation
+                const randomDelay = Math.random() * 2;
+                const randomDuration = 8 + Math.random() * 4;
+                bee.style.animationDelay = randomDelay + 's';
+                bee.style.animationDuration = randomDuration + 's';
+                
+                this.container.appendChild(bee);
+                this.activeBees.push(bee);
+
+                // Remove bee after animation
+                setTimeout(() => {
+                    if (bee.parentNode) {
+                        bee.parentNode.removeChild(bee);
+                    }
+                    this.activeBees = this.activeBees.filter(b => b !== bee);
+                }, (randomDuration + randomDelay) * 1000);
+            }
+
+            triggerSwarmFromElement(element) {
+                if (!this.isEnabled) return;
+
+                const rect = element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                // Create multiple bees with slight delays
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const offsetX = (Math.random() - 0.5) * 100;
+                        const offsetY = (Math.random() - 0.5) * 50;
+                        this.createFlyingBee(centerX + offsetX, centerY + offsetY);
+                    }, i * 200);
+                }
+            }
+
+            createAmbientBees() {
+                if (!this.isEnabled) return;
+
+                // Create background flying bees periodically
+                const createAmbientBee = () => {
+                    const startX = -50;
+                    const startY = Math.random() * window.innerHeight * 0.8 + window.innerHeight * 0.1;
+                    this.createFlyingBee(startX, startY);
+                };
+
+                // Start ambient bees
+                createAmbientBee();
+                setInterval(createAmbientBee, 8000 + Math.random() * 4000);
+            }
+
+            addParticleExplosion(element) {
+                if (!this.isEnabled) return;
+
+                // Add temporary bee particles to the element
+                for (let i = 0; i < 6; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'bee-particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.top = Math.random() * 100 + '%';
+                    particle.style.setProperty('--particle-x', (Math.random() - 0.5) * 80 + 'px');
+                    particle.style.setProperty('--particle-y', (Math.random() - 0.5) * 80 + 'px');
+                    
+                    element.style.position = 'relative';
+                    element.appendChild(particle);
+
+                    // Remove particle after animation
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }, 800);
+                }
+            }
+
+            disable() {
+                this.isEnabled = false;
+            }
+
+            enable() {
+                this.isEnabled = true;
+            }
+        }
+
+        const beeEffects = new BeeSwarmEffects();
+        
+        // Initialize sounds when user first interacts
+        document.addEventListener('click', async () => {
+            await kidSounds.init();
+        }, { once: true });
+
         // Rotating Bee Quotes System
         const beeQuotes = [
             "🐝 Bee Cool - Stay Calm and Spell On!",
@@ -2269,6 +2768,10 @@
         // Initialize page components on load
         function initializePage() {
             showRandomBeeQuote();
+            // Initialize bee swarm ambient effects
+            if (window.beeEffects) {
+                beeEffects.createAmbientBees();
+            }
             // Temporarily disable content filter check to troubleshoot loading issue
             // checkContentFilterStatus();
         }
@@ -2333,6 +2836,12 @@
         
         function selectOption(type, element) {
             console.log('selectOption called with type:', type);
+            
+            // Trigger bee swarm visual effects
+            if (element && window.beeEffects) {
+                beeEffects.triggerSwarmFromElement(element);
+                beeEffects.addParticleExplosion(element);
+            }
             
             // Play magical sound
             if (window.magicalEffects) {
@@ -2669,8 +3178,9 @@
                             <div style="opacity:0.8; font-size:0.9rem;">${l.description || ''}</div>
                         </div>
                         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                            <button class="action-btn primary" style="min-width:140px; padding:0.6rem 0.9rem;" data-id="${l.id}" data-uuid="${l.uuid}">Use in Quiz</button>
-                            <button class="action-btn secondary" style="min-width:110px; padding:0.6rem 0.9rem;" data-del="${l.id}">Delete</button>
+                            <button class="action-btn primary" style="min-width:120px; padding:0.6rem 0.9rem;" data-id="${l.id}" data-uuid="${l.uuid}">Use in Quiz</button>
+                            <button class="action-btn info" style="min-width:120px; padding:0.6rem 0.9rem; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);" data-upload="${l.id}" data-name="${l.name}">📤 Upload</button>
+                            <button class="action-btn secondary" style="min-width:90px; padding:0.6rem 0.9rem;" data-del="${l.id}">Delete</button>
                         </div>`;
                     container.appendChild(row);
                 });
@@ -2691,6 +3201,14 @@
                                 showErrorMessage(data.error || 'Failed to load list');
                             }
                         } catch(e){ showErrorMessage('Failed to load list'); }
+                    });
+                });
+                // Wire upload buttons for updating saved lists from files
+                container.querySelectorAll('button[data-upload]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const listId = btn.getAttribute('data-upload');
+                        const listName = btn.getAttribute('data-name');
+                        showUploadToSavedListModal(listId, listName);
                     });
                 });
                 // Wire delete buttons (iOS-compatible - no async/await)
@@ -2811,6 +3329,131 @@
             }, {passive: false});
             
             loadSaved();
+        }
+
+        function showUploadToSavedListModal(listId, listName) {
+            // Create upload modal
+            let modal = document.getElementById('uploadToSavedModal');
+            if (modal) {
+                modal.remove();
+            }
+
+            modal = document.createElement('div');
+            modal.id = 'uploadToSavedModal';
+            modal.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(255, 240, 245, 0.95);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10025;
+                padding: 1.5rem;
+                animation: fadeIn 0.3s ease;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    max-width: 480px;
+                    width: 100%;
+                    background: linear-gradient(135deg, #FFF0F6 0%, #FFFAE3 100%);
+                    border-radius: 24px;
+                    padding: 2rem;
+                    box-shadow: 0 18px 40px rgba(255, 182, 193, 0.45);
+                    border: 3px solid rgba(255, 107, 157, 0.4);
+                    position: relative;
+                ">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1.5rem;">
+                        <h2 style="margin:0; color:#FF6B9D; font-weight:800;">📤 Upload to "${listName}"</h2>
+                        <button id="uploadCloseBtn" style="background: transparent; border:none; font-size:1.5rem; cursor:pointer;">×</button>
+                    </div>
+
+                    <div style="text-align: center; margin-bottom: 1.5rem; color: #8B4513;">
+                        <p style="margin: 0.5rem 0;">Select a file to update your saved word list:</p>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem; opacity: 0.8;">Supported formats: CSV, TXT, DOCX, PDF, or Images (OCR)</p>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <input type="file" id="uploadToSavedFile" accept=".csv,.txt,.docx,.pdf,image/*" style="
+                            width: 100%;
+                            padding: 1rem;
+                            border: 2px dashed #FF6B9D;
+                            border-radius: 12px;
+                            background: rgba(255, 255, 255, 0.7);
+                            color: #8B4513;
+                            font-size: 1rem;
+                            cursor: pointer;
+                        "/>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button id="uploadToSavedBtn" class="action-btn primary" style="min-width: 160px;" disabled>📤 Upload & Update</button>
+                        <button id="cancelUploadBtn" class="action-btn secondary" style="min-width: 120px;">Cancel</button>
+                    </div>
+
+                    <div id="uploadToSavedStatus" style="margin-top: 1rem; text-align: center; color: #8B4513; font-weight: 600;"></div>
+                </div>
+            `;
+
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+
+            // Wire up event handlers
+            const fileInput = document.getElementById('uploadToSavedFile');
+            const uploadBtn = document.getElementById('uploadToSavedBtn');
+            const statusEl = document.getElementById('uploadToSavedStatus');
+
+            fileInput.addEventListener('change', () => {
+                uploadBtn.disabled = !fileInput.files.length;
+            });
+
+            document.getElementById('uploadCloseBtn').onclick = () => modal.remove();
+            document.getElementById('cancelUploadBtn').onclick = () => modal.remove();
+            
+            document.getElementById('uploadToSavedBtn').onclick = async () => {
+                const file = fileInput.files[0];
+                if (!file) {
+                    statusEl.textContent = 'Please select a file first.';
+                    return;
+                }
+
+                statusEl.textContent = 'Uploading and updating list...';
+                uploadBtn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('savedListId', listId);
+
+                    const response = await fetch('/api/upload-to-saved-list', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        statusEl.textContent = `✅ Successfully updated "${listName}" with ${data.word_count} words!`;
+                        setTimeout(() => {
+                            modal.remove();
+                            // Refresh the saved lists if the modal is still open
+                            const savedModal = document.getElementById('savedWordListsModal');
+                            if (savedModal) {
+                                const refreshBtn = document.getElementById('refreshSavedBtn');
+                                if (refreshBtn) refreshBtn.click();
+                            }
+                            showSuccessMessage(`Word list "${listName}" updated successfully!`);
+                        }, 2000);
+                    } else {
+                        statusEl.textContent = `❌ Error: ${data.error || 'Upload failed'}`;
+                        uploadBtn.disabled = false;
+                    }
+                } catch (error) {
+                    statusEl.textContent = '❌ Upload failed. Please try again.';
+                    uploadBtn.disabled = false;
+                    console.error('Upload error:', error);
+                }
+            };
         }
 
         function showRandomPlayInterface() {
@@ -3939,10 +4582,10 @@
                                 <div style="font-size: 4rem; margin-bottom: 1rem;">⚡</div>
                                 <h2 style="
                                     font-size: 2rem;
-                                    color: #FF8C00;
+                                    color: #1976D2;
                                     margin: 0 0 1rem 0;
                                     font-weight: 700;
-                                    text-shadow: 0 2px 4px rgba(255, 140, 0, 0.2);
+                                    text-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
                                 ">Speed Round Challenge</h2>
                                 <p style="
                                     color: #666;
@@ -3956,11 +4599,11 @@
                                 </p>
                                 
                                 <div style="
-                                    background: rgba(255, 140, 0, 0.1);
+                                    background: rgba(33, 150, 243, 0.1);
                                     padding: 1.5rem;
                                     border-radius: 15px;
                                     margin-bottom: 2rem;
-                                    border: 2px solid rgba(255, 140, 0, 0.2);
+                                    border: 2px solid rgba(33, 150, 243, 0.2);
                                 ">
                                     <p style="margin: 0; font-size: 1.1rem; color: #333;">
                                         📚 <strong>${wordCount} words</strong> loaded<br/>
@@ -6727,12 +7370,12 @@
             if (mascotShowPlaying) return;
             mascotShowPlaying = true;
             
-            console.log('🎪 Starting mascot show!');
+            console.log('🎪 Starting mascot show - HORIZONTAL FLY-BY!');
             
             // Update caption
             const caption = document.getElementById('mascotCaption');
             if (caption) {
-                caption.textContent = '🎪 Enjoy the show! 🎪';
+                caption.textContent = '✈️ Watch me fly! ✈️';
                 caption.style.animation = 'none';
             }
             
@@ -6746,47 +7389,27 @@
                 return;
             }
             
-            // Random show sequence
-            const showTypes = ['spin', 'bounce', 'figure8', 'explosion', 'combo'];
-            const randomShow = showTypes[Math.floor(Math.random() * showTypes.length)];
-            
-            console.log(`🎭 Playing show type: ${randomShow}`);
+            // Always use the horizontal fly-by animation
+            console.log('🎭 Playing horizontal fly-by animation');
             
             // Play sound effects
-            playShowSounds(randomShow);
+            playShowSounds('flyby');
             
-            // Create particle effects
-            createShowParticles(mascotContainer);
+            // Create particle trail effects
+            createFlybyParticles(mascotContainer);
             
-            // Execute animation sequence
-            switch (randomShow) {
-                case 'spin':
-                    performSpinShow(mascot);
-                    break;
-                case 'bounce':
-                    performBounceShow(mascot);
-                    break;
-                case 'figure8':
-                    performFigure8Show(mascot);
-                    break;
-                case 'explosion':
-                    performExplosionShow(mascot, mascotContainer);
-                    break;
-                case 'combo':
-                    performComboShow(mascot);
-                    break;
-            }
+            // Execute fly-by animation
+            performHorizontalFlyby(mascot, mascotContainer);
             
-            // Reset after show (3-5 seconds depending on show type)
-            const showDuration = randomShow === 'combo' ? 5000 : 3500;
+            // Reset after animation completes (4 seconds)
             setTimeout(() => {
                 mascotShowPlaying = false;
                 if (caption) {
                     caption.textContent = '✨ Click on me to see what I do! ✨';
                     caption.style.animation = 'gentlePulse 2s ease-in-out infinite';
                 }
-                console.log('✅ Mascot show complete!');
-            }, showDuration);
+                console.log('✅ Mascot fly-by complete!');
+            }, 4000);
         }
         
         function performSpinShow(mascot) {
@@ -6888,18 +7511,150 @@
         }
         
         function playFallbackShow(container) {
-            // If 3D mascot not available, do fun 2D effects
-            container.style.transform = 'scale(1.5) rotate(360deg)';
-            container.style.transition = 'all 0.8s ease-in-out';
+            // If 3D mascot not available, do 2D horizontal fly-by with CSS
+            console.log('🎪 Using 2D CSS fly-by (WebGL fallback)');
             
-            createShowParticles(container);
-            playShowSounds('explosion');
+            // Create particle trail
+            createFlybyParticles(container);
+            playShowSounds('flyby');
+            
+            // Get card width for calculating path
+            const card = document.querySelector('.content-card');
+            const cardWidth = card ? card.getBoundingClientRect().width : 600;
+            
+            // Phase 1: Fly right (0-1s)
+            container.style.transition = 'transform 1s ease-in-out';
+            container.style.transform = `translateX(${cardWidth * 0.6}px) translateY(-20px) scale(0.8)`;
             
             setTimeout(() => {
-                container.style.transform = 'scale(1) rotate(0deg)';
-                mascotShowPlaying = false;
-            }, 3000);
+                // Phase 2: Behind card (1-2s) - scale down and move further
+                container.style.transition = 'transform 1s ease-in-out';
+                container.style.transform = `translateX(${cardWidth * 0.5}px) translateY(-50px) scale(0.4)`;
+                
+                setTimeout(() => {
+                    // Phase 3: Come around left (2-3s)
+                    container.style.transition = 'transform 1s ease-in-out';
+                    container.style.transform = `translateX(-${cardWidth * 0.3}px) translateY(-30px) scale(0.8)`;
+                    
+                    setTimeout(() => {
+                        // Phase 4: Return home (3-4s)
+                        container.style.transition = 'transform 1s ease-in-out';
+                        container.style.transform = 'translateX(0) translateY(-20px) scale(1)';
+                        
+                        setTimeout(() => {
+                            mascotShowPlaying = false;
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+            }, 1000);
         }
+        
+        // ✨ NEW HORIZONTAL FLY-BY ANIMATION ✨
+        function performHorizontalFlyby(mascot, container) {
+            const model = mascot.model;
+            const startPos = { x: model.position.x, y: model.position.y, z: model.position.z };
+            const startRotY = model.rotation.y;
+            
+            // Get card dimensions for calculating path
+            const card = document.querySelector('.content-card');
+            const cardRect = card ? card.getBoundingClientRect() : { width: 600 };
+            const flyDistance = (cardRect.width / 160) * 3; // Scale based on card width
+            
+            let time = 0;
+            const duration = 4000; // 4 seconds total
+            const startTime = Date.now();
+            
+            const flyInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = elapsed / duration;
+                
+                if (progress >= 1) {
+                    // Return to start position
+                    model.position.x = startPos.x;
+                    model.position.y = startPos.y;
+                    model.position.z = startPos.z;
+                    model.rotation.y = startRotY;
+                    container.style.transform = 'translateY(-20px)';
+                    clearInterval(flyInterval);
+                    return;
+                }
+                
+                // Phase 1 (0-25%): Move right horizontally
+                if (progress < 0.25) {
+                    const phase1Progress = progress / 0.25;
+                    model.position.x = startPos.x + (flyDistance * phase1Progress);
+                    model.rotation.y = startRotY + (Math.PI * 0.25 * phase1Progress);
+                    container.style.transform = `translateY(-20px) translateX(${phase1Progress * 200}px)`;
+                }
+                // Phase 2 (25-50%): Go behind card (reduce scale + move further right)
+                else if (progress < 0.5) {
+                    const phase2Progress = (progress - 0.25) / 0.25;
+                    model.position.x = startPos.x + flyDistance + (flyDistance * 0.5 * phase2Progress);
+                    model.position.z = startPos.z - (2 * phase2Progress); // Move away (behind)
+                    model.rotation.y = startRotY + Math.PI * 0.25 + (Math.PI * 0.5 * phase2Progress);
+                    const scaleDown = 1 - (0.3 * phase2Progress); // Scale down to 0.7
+                    container.style.transform = `translateY(-20px) translateX(${200 + phase2Progress * 100}px) scale(${scaleDown})`;
+                }
+                // Phase 3 (50-75%): Come around left side behind card
+                else if (progress < 0.75) {
+                    const phase3Progress = (progress - 0.5) / 0.25;
+                    model.position.x = startPos.x + flyDistance * 1.5 - (flyDistance * 3 * phase3Progress);
+                    model.position.z = startPos.z - 2; // Stay behind
+                    model.rotation.y = startRotY + Math.PI * 0.75 + (Math.PI * 0.5 * phase3Progress);
+                    const scaleDown = 0.7; // Stay small while behind
+                    container.style.transform = `translateY(-20px) translateX(${300 - phase3Progress * 500}px) scale(${scaleDown})`;
+                }
+                // Phase 4 (75-100%): Return to start from left
+                else {
+                    const phase4Progress = (progress - 0.75) / 0.25;
+                    model.position.x = startPos.x - flyDistance * 1.5 + (flyDistance * 1.5 * phase4Progress);
+                    model.position.z = startPos.z - 2 + (2 * phase4Progress); // Come back forward
+                    model.rotation.y = startRotY + Math.PI * 1.25 + (Math.PI * 0.75 * phase4Progress);
+                    const scaleUp = 0.7 + (0.3 * phase4Progress); // Scale back to 1.0
+                    container.style.transform = `translateY(-20px) translateX(${-200 + phase4Progress * 200}px) scale(${scaleUp})`;
+                }
+                
+                // Add slight bobbing motion throughout
+                model.position.y = startPos.y + Math.sin(progress * Math.PI * 4) * 0.3;
+                
+            }, 16); // 60fps
+        }
+        
+        function createFlybyParticles(container) {
+            const rect = container.getBoundingClientRect();
+            
+            // Create trailing sparkles during flight
+            let particleCount = 0;
+            const maxParticles = 50;
+            
+            const particleInterval = setInterval(() => {
+                if (particleCount >= maxParticles) {
+                    clearInterval(particleInterval);
+                    return;
+                }
+                
+                const particle = document.createElement('div');
+                particle.textContent = ['✨', '⭐', '💫', '🌟', '✈️'][Math.floor(Math.random() * 5)];
+                particle.style.cssText = `
+                    position: fixed;
+                    left: ${rect.left + rect.width / 2}px;
+                    top: ${rect.top + rect.height / 2}px;
+                    font-size: ${12 + Math.random() * 12}px;
+                    pointer-events: none;
+                    z-index: 9999;
+                    animation: flybyParticleFade 1s ease-out forwards;
+                `;
+                
+                document.body.appendChild(particle);
+                particleCount++;
+                
+                setTimeout(() => particle.remove(), 1000);
+            }, 80); // Emit particle every 80ms
+            
+            // Stop creating particles after 3 seconds
+            setTimeout(() => clearInterval(particleInterval), 3000);
+        }
+        
         
         function playShowSounds(showType) {
             try {
@@ -6912,7 +7667,8 @@
                     bounce: [392, 330, 392, 330],  // G, E, G, E (bouncy)
                     figure8: [262, 294, 330, 349, 392, 440, 494, 523],  // C major scale
                     explosion: [784, 659, 523],  // G, E, C (descending dramatic)
-                    combo: [262, 330, 392, 523, 659, 784]  // Full range
+                    combo: [262, 330, 392, 523, 659, 784],  // Full range
+                    flyby: [523, 587, 659, 698, 784, 880, 988, 1047]  // C to C octave (whoosh sound)
                 };
                 
                 const sequence = soundSequences[showType] || soundSequences.explosion;
@@ -6926,14 +7682,14 @@
                         gainNode.connect(audioCtx.destination);
                         
                         oscillator.frequency.value = freq;
-                        oscillator.type = 'sine';
+                        oscillator.type = showType === 'flyby' ? 'sawtooth' : 'sine'; // Different waveform for flyby
                         
                         gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
                         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                         
                         oscillator.start(audioCtx.currentTime);
                         oscillator.stop(audioCtx.currentTime + 0.3);
-                    }, index * 150);
+                    }, index * (showType === 'flyby' ? 300 : 150)); // Slower for flyby effect
                 });
             } catch (e) {
                 console.log('Sound effects not available:', e);
@@ -7041,6 +7797,17 @@
                 }
                 100% {
                     transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes flybyParticleFade {
+                0% {
+                    transform: translate(0, 0) scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(${Math.random() * 60 - 30}px, ${Math.random() * 60 - 30}px) scale(0.2);
                     opacity: 0;
                 }
             }
@@ -8521,278 +9288,9 @@
             monitorAvatarLoading();
         });
         
-        // 🎪 Interactive Mascot Show - Spin, Bounce, Fly, and Explode!
-        function playMascotShow() {
-            const mascot = document.getElementById('mascotBee3D');
-            const caption = document.getElementById('mascotCaption');
-            
-            if (!mascot) return;
-            
-            console.log('🎪 Starting mascot show!');
-            
-            // Hide caption during show
-            if (caption) {
-                caption.style.opacity = '0';
-            }
-            
-            // Random animation sequence
-            const animations = ['spin', 'bounce', 'fly', 'explode', 'dance'];
-            const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
-            
-            console.log('🎭 Playing animation:', randomAnimation);
-            
-            // Play sound effect
-            playMascotSound(randomAnimation);
-            
-            // Execute animation
-            switch(randomAnimation) {
-                case 'spin':
-                    performSpin(mascot);
-                    break;
-                case 'bounce':
-                    performBounce(mascot);
-                    break;
-                case 'fly':
-                    performFly(mascot);
-                    break;
-                case 'explode':
-                    performExplosion(mascot);
-                    break;
-                case 'dance':
-                    performDance(mascot);
-                    break;
-            }
-            
-            // Show caption again after animation
-            setTimeout(() => {
-                if (caption) {
-                    caption.style.opacity = '0.8';
-                }
-            }, 3000);
-        }
-        
-        // Animation: Spinning mascot
-        function performSpin(mascot) {
-            mascot.style.animation = 'mascotSpin 1.5s ease-in-out';
-            setTimeout(() => {
-                mascot.style.animation = '';
-            }, 1500);
-        }
-        
-        // Animation: Bouncing mascot
-        function performBounce(mascot) {
-            mascot.style.animation = 'mascotBounce 1s ease-in-out 3';
-            setTimeout(() => {
-                mascot.style.animation = '';
-            }, 3000);
-        }
-        
-        // Animation: Flying around
-        function performFly(mascot) {
-            mascot.style.animation = 'mascotFly 2.5s ease-in-out';
-            setTimeout(() => {
-                mascot.style.animation = '';
-            }, 2500);
-        }
-        
-        // Animation: Explosion effect with particles
-        function performExplosion(mascot) {
-            // Create explosion particles
-            createExplosionParticles(mascot);
-            
-            // Shake mascot
-            mascot.style.animation = 'mascotShake 0.5s ease-in-out';
-            setTimeout(() => {
-                mascot.style.animation = '';
-            }, 500);
-        }
-        
-        // Animation: Dance moves
-        function performDance(mascot) {
-            mascot.style.animation = 'mascotDance 2s ease-in-out';
-            setTimeout(() => {
-                mascot.style.animation = '';
-            }, 2000);
-        }
-        
-        // Create explosion particles around mascot
-        function createExplosionParticles(mascot) {
-            const rect = mascot.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            const particles = 30;
-            const emojis = ['🐝', '✨', '⭐', '💥', '🌟', '💛', '🍯', '🎉'];
-            
-            for (let i = 0; i < particles; i++) {
-                const particle = document.createElement('div');
-                const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-                
-                particle.textContent = emoji;
-                particle.style.cssText = `
-                    position: fixed;
-                    left: ${centerX}px;
-                    top: ${centerY}px;
-                    font-size: ${20 + Math.random() * 20}px;
-                    pointer-events: none;
-                    z-index: 10000;
-                `;
-                
-                document.body.appendChild(particle);
-                
-                // Animate particle
-                const angle = (Math.PI * 2 * i) / particles;
-                const velocity = 150 + Math.random() * 100;
-                const tx = Math.cos(angle) * velocity;
-                const ty = Math.sin(angle) * velocity;
-                
-                particle.animate([
-                    { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 },
-                    { transform: `translate(${tx}px, ${ty}px) scale(0.3) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-                ], {
-                    duration: 1000 + Math.random() * 500,
-                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-                });
-                
-                // Remove after animation
-                setTimeout(() => {
-                    if (particle.parentNode) {
-                        particle.parentNode.removeChild(particle);
-                    }
-                }, 1500);
-            }
-        }
-        
-        // Play sound effects for mascot animations
-        function playMascotSound(animationType) {
-            if (!window.AudioContext && !window.webkitAudioContext) return;
-            
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Resume context if suspended (iOS fix)
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                
-                const masterGain = audioContext.createGain();
-                masterGain.connect(audioContext.destination);
-                masterGain.gain.value = 0.3;
-                
-                let notes = [];
-                
-                switch(animationType) {
-                    case 'spin':
-                        // Ascending spiral sound
-                        notes = [
-                            {freq: 261.63, time: 0, duration: 0.1},      // C
-                            {freq: 329.63, time: 0.1, duration: 0.1},    // E
-                            {freq: 392.00, time: 0.2, duration: 0.1},    // G
-                            {freq: 523.25, time: 0.3, duration: 0.2}     // C (high)
-                        ];
-                        break;
-                    case 'bounce':
-                        // Bouncy sound
-                        notes = [
-                            {freq: 392.00, time: 0, duration: 0.15},
-                            {freq: 392.00, time: 0.3, duration: 0.15},
-                            {freq: 392.00, time: 0.6, duration: 0.15}
-                        ];
-                        break;
-                    case 'fly':
-                        // Swooshing sound
-                        notes = [
-                            {freq: 220.00, time: 0, duration: 0.3},
-                            {freq: 440.00, time: 0.2, duration: 0.3},
-                            {freq: 880.00, time: 0.4, duration: 0.3}
-                        ];
-                        break;
-                    case 'explode':
-                        // Explosion sound
-                        notes = [
-                            {freq: 100, time: 0, duration: 0.1},
-                            {freq: 80, time: 0.05, duration: 0.15},
-                            {freq: 60, time: 0.1, duration: 0.2}
-                        ];
-                        break;
-                    case 'dance':
-                        // Funky dance beat
-                        notes = [
-                            {freq: 261.63, time: 0, duration: 0.2},
-                            {freq: 329.63, time: 0.2, duration: 0.2},
-                            {freq: 392.00, time: 0.4, duration: 0.2},
-                            {freq: 329.63, time: 0.6, duration: 0.2}
-                        ];
-                        break;
-                }
-                
-                // Play notes
-                notes.forEach(note => {
-                    const oscillator = audioContext.createOscillator();
-                    const noteGain = audioContext.createGain();
-                    
-                    oscillator.type = animationType === 'explode' ? 'sawtooth' : 'sine';
-                    oscillator.frequency.value = note.freq;
-                    
-                    noteGain.gain.setValueAtTime(0, audioContext.currentTime + note.time);
-                    noteGain.gain.linearRampToValueAtTime(1, audioContext.currentTime + note.time + 0.01);
-                    noteGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.time + note.duration);
-                    
-                    oscillator.connect(noteGain);
-                    noteGain.connect(masterGain);
-                    
-                    oscillator.start(audioContext.currentTime + note.time);
-                    oscillator.stop(audioContext.currentTime + note.time + note.duration);
-                });
-                
-            } catch (e) {
-                console.log('Sound playback not available:', e);
-            }
-        }
-        
-        // Add animation keyframes to page
-        const mascotAnimations = document.createElement('style');
-        mascotAnimations.textContent = `
-            @keyframes mascotSpin {
-                0% { transform: translateY(-10px) rotate(0deg) scale(1); }
-                50% { transform: translateY(-30px) rotate(360deg) scale(1.2); }
-                100% { transform: translateY(-10px) rotate(720deg) scale(1); }
-            }
-            
-            @keyframes mascotBounce {
-                0%, 100% { transform: translateY(-10px); }
-                50% { transform: translateY(-80px); }
-            }
-            
-            @keyframes mascotFly {
-                0% { transform: translate(0, -10px) scale(1); }
-                25% { transform: translate(100px, -100px) scale(0.8) rotate(15deg); }
-                50% { transform: translate(0, -150px) scale(1.2) rotate(0deg); }
-                75% { transform: translate(-100px, -100px) scale(0.8) rotate(-15deg); }
-                100% { transform: translate(0, -10px) scale(1) rotate(0deg); }
-            }
-            
-            @keyframes mascotShake {
-                0%, 100% { transform: translateY(-10px) translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateY(-10px) translateX(-10px); }
-                20%, 40%, 60%, 80% { transform: translateY(-10px) translateX(10px); }
-            }
-            
-            @keyframes mascotDance {
-                0%, 100% { transform: translateY(-10px) rotate(0deg) scale(1); }
-                10% { transform: translateY(-30px) rotate(-10deg) scale(1.1); }
-                20% { transform: translateY(-10px) rotate(10deg) scale(1); }
-                30% { transform: translateY(-40px) rotate(-15deg) scale(1.15); }
-                40% { transform: translateY(-10px) rotate(15deg) scale(1); }
-                50% { transform: translateY(-50px) rotate(0deg) scale(1.2); }
-                60% { transform: translateY(-10px) rotate(-15deg) scale(1); }
-                70% { transform: translateY(-40px) rotate(15deg) scale(1.15); }
-                80% { transform: translateY(-10px) rotate(-10deg) scale(1); }
-                90% { transform: translateY(-30px) rotate(10deg) scale(1.1); }
-            }
-        `;
-        document.head.appendChild(mascotAnimations);
-        
+        // 🎪 DUPLICATE REMOVED - Using enhanced horizontal fly-by animation defined earlier
+
+        // Old helper functions removed - using new fly-by animation
         console.log('✨ Interactive mascot system loaded');
 
         // Avatar Info Modal (shows name + fun backstory)

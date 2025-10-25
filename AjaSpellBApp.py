@@ -1857,6 +1857,103 @@ def delete_saved_wordlist():
         db.session.rollback()
         return jsonify({"ok": False, "error": "Failed to delete list"}), 500
 
+@app.route("/api/upload-to-saved-list", methods=["POST"])
+def upload_to_saved_list():
+    """Upload a file to update an existing saved word list."""
+    try:
+        # Get the saved list ID from form data
+        saved_list_id = request.form.get('savedListId')
+        if not saved_list_id:
+            return jsonify({"ok": False, "error": "Missing saved list ID"}), 400
+
+        # Get current user
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        # Find the saved list
+        try:
+            wl = WordList.query.filter_by(id=int(saved_list_id), created_by_user_id=user.id).first()
+        except (ValueError, TypeError):
+            wl = WordList.query.filter_by(uuid=str(saved_list_id), created_by_user_id=user.id).first()
+
+        if not wl:
+            return jsonify({"ok": False, "error": "Saved list not found"}), 404
+
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"ok": False, "error": "No file uploaded"}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"ok": False, "error": "No file selected"}), 400
+
+        # Process the uploaded file (reuse existing upload logic)
+        words = []
+        filename = file.filename.lower()
+
+        if filename.endswith('.csv'):
+            words = parse_csv(file)
+        elif filename.endswith('.txt'):
+            words = parse_txt(file)
+        elif filename.endswith('.docx'):
+            words = parse_docx(file)
+        elif filename.endswith('.pdf'):
+            words = parse_pdf(file)
+        elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+            if not TESSERACT_AVAILABLE:
+                return jsonify({"ok": False, "error": "Image processing requires Tesseract OCR installation"}), 400
+            words = parse_image_ocr(file)
+        else:
+            return jsonify({"ok": False, "error": "Unsupported file format"}), 400
+
+        if not words:
+            return jsonify({"ok": False, "error": "No words found in the uploaded file"}), 400
+
+        # Deduplicate and enrich words
+        words = deduplicate_words(words)
+        words = enrich_with_definitions(words)
+
+        # Delete existing items for this list
+        WordListItem.query.filter_by(word_list_id=wl.id).delete()
+
+        # Add new items
+        position = 1
+        for word_data in words:
+            item = WordListItem(
+                word_list_id=wl.id,
+                word=(word_data.get("word") or "").strip(),
+                sentence=(word_data.get("sentence") or "").strip(),
+                hint=(word_data.get("hint") or "").strip(),
+                position=position
+            )
+            db.session.add(item)
+            position += 1
+
+        # Update the word count and timestamp
+        wl.word_count = len(words)
+        wl.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({
+            "ok": True,
+            "updated": {
+                "id": wl.id,
+                "uuid": wl.uuid,
+                "name": wl.list_name,
+                "word_count": wl.word_count
+            },
+            "word_count": len(words)
+        })
+
+    except Exception as e:
+        print(f"ERROR /api/upload-to-saved-list: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Failed to update list"}), 500
+
 # --- Routes: UI --------------------------------------------------------------
 @app.route("/")
 def home():
@@ -4299,9 +4396,24 @@ def api_answer():
     print(f"DEBUG /api/answer: session_id={session.get('session_id')}, wordbank_len={len(wb)}, "
           f"quiz_idx={state['idx'] if state else 'NO_STATE'}, user_input='{user_input}'")
     
-    if not wb or state is None:
-        print(f"ERROR /api/answer: No session! wb={len(wb) if wb else 0}, state={state is not None}")
+    # Check wordbank first
+    if not wb:
+        print(f"ERROR /api/answer: No wordbank! wb={len(wb) if wb else 0}")
         return jsonify({"error": "No active session"}), 400
+    
+    # Initialize quiz state if missing (same protection as /api/next)
+    if state is None:
+        print("WARNING /api/answer: No quiz state found! Attempting emergency initialization...")
+        init_quiz_state()
+        session.modified = True
+        session.permanent = True
+        time.sleep(0.2)  # Give session time to persist
+        
+        # Retry getting state
+        state = get_quiz_state()
+        if state is None:
+            print("ERROR /api/answer: Quiz state STILL missing after init! Session corrupted.")
+            return jsonify({"error": "Quiz initialization failed"}), 500
 
     idx = state["idx"]
     order = state["order"]
@@ -4470,7 +4582,13 @@ def api_answer():
     quiz_complete = state["idx"] >= len(order)
     
     # 🔍 DEBUG: Log quiz completion status
-    print(f"📊 Quiz Status: idx={state['idx']}, total={len(order)}, complete={quiz_complete}")
+    print(f"� QUIZ STATUS DEBUG:")
+    print(f"   Current index: {state['idx']}")
+    print(f"   Total words: {len(order)}")
+    print(f"   Quiz complete: {quiz_complete}")
+    print(f"   Words correct: {state['correct']}")
+    print(f"   Words incorrect: {state['incorrect']}")
+    print(f"   Progress: {state['idx']}/{len(order)}")
     
     if quiz_complete:
         # Track total hints used across all words
