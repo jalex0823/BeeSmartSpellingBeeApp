@@ -837,6 +837,12 @@ class Avatar(db.Model):
     texture_file = db.Column(db.String(200))  # e.g., 'cool-bee-texture.png'
     thumbnail_file = db.Column(db.String(200))  # e.g., 'cool-bee-thumb.png'
     
+    # Binary file data (stored directly in database for cloud deployment)
+    obj_data = db.Column(db.LargeBinary)  # 3D model OBJ file content
+    mtl_data = db.Column(db.LargeBinary)  # Material MTL file content
+    texture_data = db.Column(db.LargeBinary)  # Texture PNG file content
+    thumbnail_data = db.Column(db.LargeBinary)  # Thumbnail PNG file content
+    
     # Metadata
     unlock_level = db.Column(db.Integer, default=1)  # Minimum level to unlock (1 = always available)
     points_required = db.Column(db.Integer, default=0)  # Points needed to unlock

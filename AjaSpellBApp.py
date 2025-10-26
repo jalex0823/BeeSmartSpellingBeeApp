@@ -7922,6 +7922,61 @@ def api_update_user_avatar(user_id):
         }), 500
 
 
+# --- Avatar File Serving from Database -------------------------------------------
+@app.route("/static/assets/avatars/<slug>/<filename>")
+def serve_avatar_file_from_db(slug, filename):
+    """Serve avatar 3D files from database binary data"""
+    try:
+        from models import Avatar
+        from io import BytesIO
+        
+        # Get avatar from database
+        avatar = Avatar.query.filter_by(slug=slug).first()
+        if not avatar:
+            # Try from filesystem as fallback
+            try:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            except:
+                return "Avatar not found", 404
+        
+        # Determine which binary field to serve based on file extension
+        ext = filename.lower().split('.')[-1]
+        
+        if ext == 'obj':
+            if not avatar.obj_data:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            return Response(avatar.obj_data, mimetype='application/octet-stream')
+        
+        elif ext == 'mtl':
+            if not avatar.mtl_data:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            return Response(avatar.mtl_data, mimetype='text/plain')
+        
+        elif ext == 'png' and '!' in filename:
+            # Thumbnail
+            if not avatar.thumbnail_data:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            return Response(avatar.thumbnail_data, mimetype='image/png')
+        
+        elif ext == 'png':
+            # Texture
+            if not avatar.texture_data:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            return Response(avatar.texture_data, mimetype='image/png')
+        
+        else:
+            # Unknown file type, try filesystem
+            return send_from_directory(f'static/assets/avatars/{slug}', filename)
+    
+    except Exception as e:
+        print(f"❌ Error serving avatar file {slug}/{filename}: {e}")
+        # Fallback to filesystem
+        try:
+            return send_from_directory(f'static/assets/avatars/{slug}', filename)
+        except:
+            return "File not found", 404
+
+
 @app.route("/api/users/me", methods=["GET"])
 def api_get_current_user():
     """Get current user's basic information (name, auth status, etc.)"""
