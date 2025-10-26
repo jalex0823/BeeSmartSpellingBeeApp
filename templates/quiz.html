@@ -2501,106 +2501,98 @@
                         return { speak, pulse, react };
                     })();
 
-                    // Optimized center-expanding waves config (matches reference image 2)
+                    // Multi-layer waveform with translucent overlapping colors (BeeSmart amber theme)
                     const config = {
-                        waves: 6,           // Number of wave rings expanding from center
-                        maxRadius: 180,     // Maximum wave radius
-                        minRadius: 20,      // Minimum wave radius
-                        thickness: 15,      // Thickness of each wave band
-                        expandSpeed: 0.8,   // How fast waves expand outward
-                        pulseSpeed: 0.05    // Wave pulsation speed
+                        points: 120,
+                        smoothing: 0.7,
+                        layers: [
+                            { amplitude: 0.70, frequency: 1.0, phase: 0, r: 153, g: 63, b: 0, baseAlpha: 0.7 },      // Deep rust (#993F00) - Darkest
+                            { amplitude: 0.62, frequency: 1.15, phase: 0.3, r: 204, g: 92, b: 0, baseAlpha: 0.6 },  // Burnt orange (#CC5C00) - Darker
+                            { amplitude: 0.55, frequency: 1.25, phase: 0.6, r: 230, g: 115, b: 0, baseAlpha: 0.55 },// Rich amber (#E67300) - Slightly Dark
+                            { amplitude: 0.48, frequency: 1.4, phase: 0.9, r: 255, g: 153, b: 51, baseAlpha: 0.5 }, // Classic orange (#FF9933) - Slightly Light
+                            { amplitude: 0.41, frequency: 1.6, phase: 1.2, r: 255, g: 184, b: 112, baseAlpha: 0.45 },// Warm tangerine (#FFB870) - Lighter
+                            { amplitude: 0.34, frequency: 1.8, phase: 1.5, r: 255, g: 216, b: 176, baseAlpha: 0.4 } // Soft peachy orange (#FFD8B0) - Lightest
+                        ]
                     };
 
-                    // BeeSmart amber gradient for center-expanding waves
-                    function getWaveColor(waveIndex, intensity) {
-                        const ratio = waveIndex / config.waves;
-                        let r, g, b;
-                        
-                        // Gradient from center (bright) to outer (darker amber)
-                        if (ratio < 0.33) {
-                            // Center: Bright honey yellow
-                            r = 255;
-                            g = 250;
-                            b = Math.floor(130 + ratio * 3 * 50);
-                        } else if (ratio < 0.66) {
-                            // Middle: Golden amber
-                            const localRatio = (ratio - 0.33) / 0.33;
-                            r = 255;
-                            g = Math.floor(250 - localRatio * 80);
-                            b = Math.floor(180 - localRatio * 100);
-                        } else {
-                            // Outer: Deep amber/orange
-                            const localRatio = (ratio - 0.66) / 0.34;
-                            r = Math.floor(255 - localRatio * 50);
-                            g = Math.floor(170 - localRatio * 70);
-                            b = Math.floor(80 - localRatio * 80);
-                        }
-                        
-                        const alpha = (0.4 + intensity * 0.5) * (1 - ratio * 0.3); // Fade outer waves
-                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                    }
+                    // Store smoothed amplitudes per layer
+                    let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
 
-                    // Center-expanding wave visualizer (like reference image 2)
-                    function drawExpandingWaves() {
+                    // Draw smooth waveform with multiple translucent layers
+                    function drawHorizontalWaveform() {
                         ctx.clearRect(0, 0, W, H);
                         
-                        const centerX = W / 2;
                         const centerY = H / 2;
-                        
-                        // Draw expanding wave rings from center
-                        for (let i = 0; i < config.waves; i++) {
-                            // Calculate wave expansion with pulsation
-                            const wavePhase = (time * config.expandSpeed + i * 0.5) % (config.maxRadius / 10);
-                            const baseRadius = config.minRadius + wavePhase * 10;
-                            
-                            // Add pulsation for organic feel
-                            const pulse = Math.sin(time * config.pulseSpeed + i * 0.8) * 8;
-                            const radius = baseRadius + pulse + (i * 20);
-                            
-                            // Skip if wave has expanded beyond canvas
-                            if (radius > config.maxRadius) continue;
-                            
-                            // Energy-based intensity (stronger in center, responsive to sound)
-                            const distanceFactor = 1 - (radius / config.maxRadius);
-                            const intensity = energy * (0.5 + distanceFactor * 0.5);
-                            
-                            // Get color for this wave
-                            const color = getWaveColor(i, intensity);
-                            
-                            // Draw wave ring
-                            ctx.strokeStyle = color;
-                            ctx.lineWidth = config.thickness * (0.7 + intensity * 0.3);
-                            
-                            // Add variable thickness for organic look
-                            const thicknessVariation = Math.sin(time * 0.03 + i) * 2;
-                            ctx.lineWidth += thicknessVariation;
-                            
-                            // Draw the expanding circle wave
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                            ctx.stroke();
-                            
-                            // Add inner glow for depth
-                            if (intensity > 0.4) {
-                                ctx.strokeStyle = `rgba(255, 250, 150, ${intensity * 0.3})`;
-                                ctx.lineWidth = config.thickness * 0.4;
-                                ctx.stroke();
+                        const buffer = 40; // Increased safety buffer from edges to prevent clipping
+                        const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
+                        const spacing = W / (config.points - 1);
+                        const centerIdx = config.points / 2;
+
+                        // Draw each layer from back to front
+                        config.layers.forEach((layer, layerIdx) => {
+                            // Calculate amplitudes for this layer - waves ORIGINATE from center, expand outward
+                            const amplitudes = [];
+                            for (let i = 0; i < config.points; i++) {
+                                const distFromCenter = Math.abs(i - centerIdx) / centerIdx;
+                                
+                                // Wave propagates FROM center outward (not left-to-right)
+                                // Use distance from center as the primary phase, not position index
+                                const wavePhase = (time * 0.04 * layer.frequency) - (distFromCenter * 4) + layer.phase;
+                                
+                                // Organic sine-based amplitude with CENTER PEAK emphasis
+                                const baseWave = Math.sin(wavePhase) * 0.5 + 0.5;
+                                
+                                // Center is tallest, gradually decreases toward edges
+                                const centerBoost = 1.15 - (distFromCenter * 0.55);
+                                
+                                // Edge tapering - force edges to be very thin (approaching zero)
+                                const edgeTaper = 1 - Math.pow(distFromCenter, 2.5); // Exponential falloff at edges
+                                
+                                // Energy drives amplitude - low energy = almost flat line, high energy = big waves
+                                const energyFactor = Math.max(0.05, energy * 0.95);
+                                
+                                const targetAmp = baseWave * centerBoost * edgeTaper * energyFactor * maxHeight * layer.amplitude;
+                                
+                                // Smooth transition
+                                layerAmplitudes[layerIdx][i] += (targetAmp - layerAmplitudes[layerIdx][i]) * config.smoothing;
+                                
+                                // Strict clamping with extra safety margin to prevent any clipping
+                                const safeAmp = Math.max(1, Math.min(maxHeight * 0.92, layerAmplitudes[layerIdx][i]));
+                                amplitudes.push(safeAmp);
                             }
-                        }
-                        
-                        // Center bright point (energy source)
-                        if (energy > 0.2) {
-                            const coreSize = 15 + energy * 15;
-                            const coreGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreSize);
-                            coreGlow.addColorStop(0, `rgba(255, 250, 180, ${0.9 * energy})`);
-                            coreGlow.addColorStop(0.5, `rgba(255, 220, 120, ${0.5 * energy})`);
-                            coreGlow.addColorStop(1, 'rgba(255, 180, 60, 0)');
+
+                            // Draw upper half with gradient fade at edges
+                            const gradient = ctx.createLinearGradient(0, centerY, W, centerY);
+                            const edgeFadeStart = 0.15; // Start fading at 15% from edges
+                            const edgeFadeEnd = 0.02;   // Fully transparent at 2% from edges
                             
-                            ctx.fillStyle = coreGlow;
+                            gradient.addColorStop(0, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
+                            gradient.addColorStop(edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(0.5, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(1 - edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(1, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
+                            
                             ctx.beginPath();
-                            ctx.arc(centerX, centerY, coreSize, 0, Math.PI * 2);
+                            ctx.moveTo(0, centerY);
+                            for (let i = 0; i < config.points; i++) {
+                                ctx.lineTo(i * spacing, centerY - amplitudes[i]);
+                            }
+                            ctx.lineTo(W, centerY);
+                            ctx.closePath();
+                            ctx.fillStyle = gradient;
                             ctx.fill();
-                        }
+
+                            // Draw lower half (mirror) with same gradient
+                            ctx.beginPath();
+                            ctx.moveTo(0, centerY);
+                            for (let i = 0; i < config.points; i++) {
+                                ctx.lineTo(i * spacing, centerY + amplitudes[i]);
+                            }
+                            ctx.lineTo(W, centerY);
+                            ctx.closePath();
+                            ctx.fillStyle = gradient;
+                            ctx.fill();
+                        });
                     }
 
                     // Optimized animation loop
@@ -2612,7 +2604,7 @@
                         
                         // Only animate when needed (performance optimization)
                         if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
-                            drawExpandingWaves();  // Changed to center-expanding waves
+                            drawHorizontalWaveform();  // Horizontal waveform expanding from center
                         }
                         
                         time += 1;

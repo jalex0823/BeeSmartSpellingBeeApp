@@ -2103,7 +2103,14 @@ def quiz_page():
         print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
         init_quiz_state()
     else:
-        print(f"DEBUG /quiz: Using existing quiz state - idx={state.get('idx')}, total={len(state.get('order', []))}")
+        # Check if quiz is completed - reset if so
+        idx = state.get('idx', 0)
+        order = state.get('order', [])
+        if idx >= len(order):
+            print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
+            init_quiz_state()
+        else:
+            print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
         
     print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
     

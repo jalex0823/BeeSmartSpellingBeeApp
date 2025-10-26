@@ -219,10 +219,12 @@ function selectAvatar(avatar) {
     });
     document.querySelector(`.avatar-option[data-avatar-id="${avatar.id}"]`)?.classList.add('selected');
     
-    // Show preview
-    updatePreview();
+    // Defer 3D preview loading to not block UI
+    requestIdleCallback(() => {
+        updatePreview();
+    }, { timeout: 100 });
     
-    // Enable select button
+    // Enable select button immediately
     const selectBtn = document.getElementById('selectAvatarBtn');
     if (selectBtn) {
         selectBtn.disabled = false;
@@ -330,7 +332,7 @@ function updatePreview() {
                         y: e.touches[0].clientY 
                     };
                 }
-            });
+            }, { passive: true });
             
             renderer.domElement.addEventListener('touchmove', (e) => {
                 if (!isDragging || e.touches.length !== 1) return;
@@ -351,7 +353,7 @@ function updatePreview() {
             
             renderer.domElement.addEventListener('touchend', () => {
                 isDragging = false;
-            });
+            }, { passive: true });
             
             // Add cursor style
             renderer.domElement.style.cursor = 'grab';
