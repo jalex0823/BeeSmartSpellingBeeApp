@@ -5890,6 +5890,12 @@ def test_avatar_loading():
     return render_template('test_avatar_loading.html')
 
 
+@app.route('/test/single-avatar')
+def test_single_avatar():
+    """Test page for single avatar loading with detailed diagnostics"""
+    return render_template('test_single_avatar.html')
+
+
 @app.route('/teacher/dashboard')
 @login_required
 def teacher_dashboard():

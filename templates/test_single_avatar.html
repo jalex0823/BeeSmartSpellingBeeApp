@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Avatar Test - Superbee</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        #avatar-canvas {
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            display: block;
+            margin-bottom: 20px;
+        }
+        .log-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+            color: #ffcdd2;
+        }
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            color: #ffe0b2;
+        }
+        .log-entry.success {
+            border-left-color: #4CAF50;
+            color: #c8e6c9;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐝 Single Avatar Test</h1>
+        <p class="subtitle">Testing Superbee rendering with detailed diagnostics</p>
+
+        <canvas id="avatar-canvas"></canvas>
+
+        <div class="controls">
+            <button onclick="loadAvatar()">🔄 Reload Avatar</button>
+            <button onclick="rotateLeft()">⬅️ Rotate Left</button>
+            <button onclick="rotateRight()">➡️ Rotate Right</button>
+            <button onclick="resetCamera()">📷 Reset Camera</button>
+            <button onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Load Status</div>
+                <div class="stat-value" id="load-status">⏳</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Load Time</div>
+                <div class="stat-value" id="load-time">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Vertices</div>
+                <div class="stat-value" id="vertex-count">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Triangles</div>
+                <div class="stat-value" id="triangle-count">-</div>
+            </div>
+        </div>
+
+        <div class="log-section" id="log-container">
+            <div class="log-entry success">📋 Console initialized. Waiting for avatar load...</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+
+    <script>
+        // Logging system
+        function log(message, type = 'success') {
+            const container = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('log-container').innerHTML = '';
+            log('Logs cleared', 'success');
+        }
+
+        // Three.js setup
+        let scene, camera, renderer, avatarObject;
+        let loadStartTime;
+
+        function initThreeJS() {
+            log('Initializing Three.js scene...', 'success');
+            
+            const canvas = document.getElementById('avatar-canvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            log('✓ Scene created', 'success');
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 2, 8);
+            camera.lookAt(0, 0, 0);
+            log('✓ Camera positioned at (0, 2, 8)', 'success');
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            log(`✓ Renderer initialized (${width}x${height})`, 'success');
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+            
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            fillLight.position.set(-5, 0, -5);
+            scene.add(fillLight);
+            log('✓ Lights added (ambient + 2 directional)', 'success');
+
+            // Axes helper
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+            log('✓ Axes helper added', 'success');
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(10, 10);
+            scene.add(gridHelper);
+            log('✓ Grid helper added', 'success');
+
+            // Start animation loop
+            animate();
+            log('✓ Animation loop started', 'success');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Auto-rotate avatar if loaded
+            if (avatarObject) {
+                avatarObject.rotation.y += 0.005;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        function loadAvatar() {
+            log('========================================', 'success');
+            log('Starting avatar load sequence...', 'success');
+            loadStartTime = Date.now();
+            document.getElementById('load-status').textContent = '⏳';
+            document.getElementById('load-time').textContent = '-';
+
+            // Remove existing avatar
+            if (avatarObject) {
+                scene.remove(avatarObject);
+                log('Removed previous avatar from scene', 'warning');
+            }
+
+            const avatarPath = '/static/assets/avatars/superbeehero';
+            const objFile = 'SuperheroBee.obj';
+            const mtlFile = 'SuperBeeHero.mtl';
+            const texturFile = 'SuperheroBee.png';
+
+            log(`Avatar path: ${avatarPath}`, 'success');
+            log(`OBJ file: ${objFile}`, 'success');
+            log(`MTL file: ${mtlFile}`, 'success');
+            log(`Texture file: ${texturFile}`, 'success');
+
+            // MTL Loader
+            const mtlLoader = new THREE.MTLLoader();
+            mtlLoader.setPath(avatarPath + '/');
+            
+            log(`Loading MTL: ${avatarPath}/${mtlFile}`, 'success');
+            
+            mtlLoader.load(
+                mtlFile,
+                function(materials) {
+                    log('✓ MTL loaded successfully', 'success');
+                    log(`  Materials found: ${Object.keys(materials.materials).join(', ')}`, 'success');
+                    materials.preload();
+                    log('✓ Materials preloaded', 'success');
+
+                    // OBJ Loader
+                    const objLoader = new THREE.OBJLoader();
+                    objLoader.setMaterials(materials);
+                    objLoader.setPath(avatarPath + '/');
+                    
+                    log(`Loading OBJ: ${avatarPath}/${objFile}`, 'success');
+                    
+                    objLoader.load(
+                        objFile,
+                        function(object) {
+                            const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(2);
+                            log(`✓ OBJ loaded successfully in ${loadTime}s`, 'success');
+                            
+                            // Calculate stats
+                            let vertices = 0;
+                            let triangles = 0;
+                            object.traverse((child) => {
+                                if (child.isMesh) {
+                                    vertices += child.geometry.attributes.position.count;
+                                    triangles += child.geometry.index ? child.geometry.index.count / 3 : child.geometry.attributes.position.count / 3;
+                                    log(`  Mesh found: ${child.name || 'unnamed'}`, 'success');
+                                    log(`    Vertices: ${child.geometry.attributes.position.count.toLocaleString()}`, 'success');
+                                    log(`    Material: ${child.material.name || 'default'}`, 'success');
+                                    
+                                    // Check texture
+                                    if (child.material.map) {
+                                        log(`    ✓ Texture applied: ${child.material.map.image?.src || 'unknown'}`, 'success');
+                                    } else {
+                                        log(`    ⚠ No texture found on material`, 'warning');
+                                    }
+                                }
+                            });
+
+                            document.getElementById('vertex-count').textContent = vertices.toLocaleString();
+                            document.getElementById('triangle-count').textContent = Math.floor(triangles).toLocaleString();
+                            document.getElementById('load-time').textContent = `${loadTime}s`;
+                            document.getElementById('load-status').textContent = '✅';
+
+                            // Center and scale
+                            const box = new THREE.Box3().setFromObject(object);
+                            const center = box.getCenter(new THREE.Vector3());
+                            const size = box.getSize(new THREE.Vector3());
+                            
+                            object.position.x = -center.x;
+                            object.position.y = -center.y;
+                            object.position.z = -center.z;
+                            
+                            const maxDim = Math.max(size.x, size.y, size.z);
+                            const scale = 3 / maxDim;
+                            object.scale.setScalar(scale);
+                            
+                            log(`  Bounding box: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`, 'success');
+                            log(`  Scale factor: ${scale.toFixed(3)}`, 'success');
+
+                            avatarObject = object;
+                            scene.add(avatarObject);
+                            log('✓ Avatar added to scene and visible!', 'success');
+                            log('========================================', 'success');
+                        },
+                        function(xhr) {
+                            const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+                            log(`Loading OBJ: ${percent}% (${(xhr.loaded / 1024 / 1024).toFixed(2)} MB)`, 'success');
+                        },
+                        function(error) {
+                            log(`❌ OBJ load error: ${error.message || error}`, 'error');
+                            console.error('OBJ Error:', error);
+                            document.getElementById('load-status').textContent = '❌';
+                        }
+                    );
+                },
+                function(xhr) {
+                    const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+                    log(`Loading MTL: ${percent}%`, 'success');
+                },
+                function(error) {
+                    log(`❌ MTL load error: ${error.message || error}`, 'error');
+                    console.error('MTL Error:', error);
+                    document.getElementById('load-status').textContent = '❌';
+                }
+            );
+        }
+
+        function rotateLeft() {
+            if (avatarObject) {
+                avatarObject.rotation.y -= 0.5;
+                log('Rotated left 30°', 'success');
+            }
+        }
+
+        function rotateRight() {
+            if (avatarObject) {
+                avatarObject.rotation.y += 0.5;
+                log('Rotated right 30°', 'success');
+            }
+        }
+
+        function resetCamera() {
+            camera.position.set(0, 2, 8);
+            camera.lookAt(0, 0, 0);
+            log('Camera reset to default position', 'success');
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('avatar-canvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+            log(`Window resized: ${width}x${height}`, 'success');
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, initializing...', 'success');
+            initThreeJS();
+            setTimeout(() => {
+                loadAvatar();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
