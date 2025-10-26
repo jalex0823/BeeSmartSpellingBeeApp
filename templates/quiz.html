@@ -2338,7 +2338,7 @@
             </div>
         </div>
 
-                <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
+                <!-- Voice Visualizer (Upgraded center-flowing amber wave) -->
                 <div class="voice-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
                             <!-- Hidden status for JavaScript (not displayed visually) -->
@@ -2358,7 +2358,7 @@
                         </div>
                 </div>
 
-                <!-- Dotted ribbon CSS (BeeSmart glowing dots) -->
+                <!-- Center-Flowing Amber Wave CSS -->
                 <style>
                     .voice-card.speaking-mode {
                         background: radial-gradient(circle at 30% 30%, #ffa726 0%, #ef6c00 60%, #c14900 100%);
@@ -2427,70 +2427,50 @@
                                 }
                 </style>
 
-                <!-- Dotted ribbon config (shared across pages) -->
-                <script src="/static/js/voice-visualizer-config.js"></script>
-                <!-- Dotted ribbon JS with speech-state awareness -->
+                <!-- Optimized Wavy Amber Voice Visualizer -->
                 <script>
                 (function(){
-                                const canvas = document.getElementById('dotWaveCanvas');
+                    const canvas = document.getElementById('dotWaveCanvas');
                     if (!canvas) return;
                     const ctx = canvas.getContext('2d');
 
-                                let W = canvas.width;
-                                let H = canvas.height;
-                                let DPR = window.devicePixelRatio || 1;
+                    let W = canvas.width;
+                    let H = canvas.height;
+                    let DPR = window.devicePixelRatio || 1;
 
-                    // Resize handler to keep crisp drawing on DPR changes
+                    // Resize handler
                     function resizeCanvas(){
-                                    DPR = window.devicePixelRatio || 1;
-                                    const cssWidth = canvas.clientWidth || 860;
-                                    const cssHeight = canvas.clientHeight || 260;
-                                    canvas.width = Math.round(cssWidth * DPR);
-                                    canvas.height = Math.round(cssHeight * DPR);
+                        DPR = window.devicePixelRatio || 1;
+                        const cssWidth = canvas.clientWidth || 860;
+                        const cssHeight = canvas.clientHeight || 260;
+                        canvas.width = Math.round(cssWidth * DPR);
+                        canvas.height = Math.round(cssHeight * DPR);
                         canvas.style.width = cssWidth + 'px';
                         canvas.style.height = cssHeight + 'px';
-                                    W = canvas.width; H = canvas.height;
+                        W = canvas.width; H = canvas.height;
                     }
                     resizeCanvas();
                     window.addEventListener('resize', resizeCanvas);
 
-                    // CONFIG (from shared file with safe fallbacks)
-                                const VZ = window.BeeSmartVoiceVizCfg || {};
-                                const pick = (v, d) => (v !== undefined && v !== null) ? v : d;
-                                const MAX_WAVES = pick(VZ.MAX_WAVES, 6); // maximum; collapses to one on pauses
-                                let wavePack = 1;     // 1 => draw all waves, 0 => only one
-                                let wavePackTarget = 1;
-                                const DOTS_PER_WAVE = pick(VZ.DOTS_PER_WAVE, 56); // more points for a defined curve
-                    const DOT_RADIUS = pick(VZ.DOT_RADIUS, 3);
-                    const WAVE_SPACING = pick(VZ.WAVE_SPACING, 20);  // spacing for definition
-                                const HORIZONTAL_PAD_CSS = pick(VZ.HORIZONTAL_PAD_CSS, 12); // reduced buffer for longer lines
-                                const waveColors = (VZ.waveColors && VZ.waveColors.length) ? VZ.waveColors : ['rgba(255, 190, 52, 0.80)'];
-
-                                // Visualizer state (driven by announcer): speaking | pausing | idle
-                                let mode = 'idle';
-                                const ET = VZ.energyTargets || {};
-                                let energyTarget = pick(ET.idle, 0.04);
-                                let energy = energyTarget;
-                                // Transitional boosts to make pauses/speeches feel more pronounced
-                                let dipBoost = 0;   // 0..1 extra reduction when pausing begins
-                                let surgeBoost = 0; // 0..1 extra lift when speaking begins
+                    // Simplified state management for better performance
+                    let mode = 'idle';
+                    let time = 0;
+                    let energy = 0.1;
+                    let energyTarget = 0.1;
+                    let isAnimating = true;
 
                     function setMode(next){
-                                    if (mode !== next) {
-                                        if (next === 'pausing') dipBoost = 1;      // immediate dip
-                                        if (next === 'speaking') surgeBoost = 1;   // immediate lift
-                                    }
-                                    mode = next;
-                        // Expand waves while speaking; collapse to one when paused/idle
-                        wavePackTarget = (mode === 'speaking') ? 1 : 0;
-                                    if (mode === 'speaking') energyTarget = pick(ET.speaking, 1.0);
-                                    else if (mode === 'pausing') energyTarget = pick(ET.pausing, 0.06);
-                                    else energyTarget = pick(ET.idle, 0.04);
+                        if (mode !== next) {
+                            mode = next;
+                            // More dramatic energy differences for better sync
+                            if (mode === 'speaking') energyTarget = 1.2;
+                            else if (mode === 'pausing') energyTarget = 0.15; // More noticeable pause
+                            else energyTarget = 0.05; // Very quiet when idle
+                        }
                     }
-                    // Expose to page scripts
                     window.voiceVizSetMode = setMode;
 
-                    // Observe class changes on #voiceVisualizer to auto-sync mode
+                    // Observe class changes for voice sync
                     const host = document.getElementById('voiceVisualizer');
                     if (host && 'MutationObserver' in window){
                         const mo = new MutationObserver(() => {
@@ -2502,7 +2482,7 @@
                         mo.observe(host, { attributes: true, attributeFilter: ['class'] });
                     }
 
-                    // Lightweight helper to trigger quick visual reactions from UI events
+                    // Lightweight UI reaction helper
                     window.BeeVoiceViz = (function(){
                         function hostEl(){ return document.getElementById('voiceVisualizer'); }
                         function speak(ms=600){ const h=hostEl(); if(!h) return; h.classList.add('speaking'); setTimeout(()=>h.classList.remove('speaking'), ms); }
@@ -2521,202 +2501,136 @@
                         return { speak, pulse, react };
                     })();
 
-                                function getEnergy(t){
-                        // base animated energy 0..1
-                        const fake = 0.5 + 0.5*Math.sin(t*0.002) + 0.25*Math.sin(t*0.005 + 2);
-                        return Math.max(0, Math.min(1, fake));
+                    // Optimized wavy visualizer config
+                    const config = {
+                        bars: 80,           // Fewer bars for better performance
+                        maxHeight: 100,     // Maximum wave height
+                        minHeight: 5,       // Minimum wave height
+                        barWidth: 8,        // Width of frequency bars
+                        waveSpeed: 0.02,    // Wave animation speed
+                        flowSpeed: 0.5      // How fast waves flow toward center
+                    };
+
+                    // BeeSmart amber gradient optimized
+                    function getBarColor(index, intensity) {
+                        const ratio = index / config.bars;
+                        let r, g, b;
+                        
+                        // Smooth amber gradient like your reference image
+                        if (ratio < 0.4) {
+                            // Honey yellow to golden
+                            r = 255;
+                            g = Math.floor(235 + ratio * 2.5 * 20);  // 235 -> 255
+                            b = Math.floor(80 + ratio * 2.5 * 70);   // 80 -> 150
+                        } else if (ratio < 0.7) {
+                            // Golden to orange
+                            const localRatio = (ratio - 0.4) / 0.3;
+                            r = 255;
+                            g = Math.floor(255 - localRatio * 100);  // 255 -> 155
+                            b = Math.floor(150 - localRatio * 150);  // 150 -> 0
+                        } else {
+                            // Orange to deep amber
+                            const localRatio = (ratio - 0.7) / 0.3;
+                            r = Math.floor(255 - localRatio * 40);   // 255 -> 215
+                            g = Math.floor(155 - localRatio * 55);   // 155 -> 100
+                            b = 0;
+                        }
+                        
+                        const alpha = 0.8 + intensity * 0.2;
+                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
                     }
 
-                    function drawFrame(t){
-                                    // Ease energy toward target faster so pauses are visible
-                                    const base = getEnergy(t);
-                                    const E = VZ.easing || {};
-                                    const ENERGY_EASE = pick(E.energy, 0.18);
-                                    const WAVEPACK_EASE = pick(E.wavePack, 0.22);
-                                    const DIP_DECAY = pick(E.dipDecay, 0.15);
-                                    const SURGE_DECAY = pick(E.surgeDecay, 0.10);
-                                    const B = VZ.boostScales || {};
-                                    const DIP_SCALE = pick(B.dip, 0.65);
-                                    const SURGE_SCALE = pick(B.surge, 0.15);
-                                    const SH = VZ.waveShape || {};
-                                    energy += (energyTarget - energy) * ENERGY_EASE;
-                                    // Ease the number of visible waves toward target (1 or many)
-                                    wavePack += (wavePackTarget - wavePack) * WAVEPACK_EASE;
-                                    // decay boosts
-                                    dipBoost += (0 - dipBoost) * DIP_DECAY;
-                                    surgeBoost += (0 - surgeBoost) * SURGE_DECAY;
-                                    // Apply boosts: stronger downward dip when pausing, small lift when speaking resumes
-                                    const motionScale = (1 - DIP_SCALE * dipBoost) * (1 + SURGE_SCALE * surgeBoost);
-                                    const drive = base * energy * motionScale;
-
-                        ctx.clearRect(0,0,W,H);
-
-                        // Precompute horizontal padding and optional L-R gradient overlay
-                        const pad = HORIZONTAL_PAD_CSS * DPR;
-                        const GR = VZ.gradientLR || {};
-                        let grad = null;
-                        if (GR.enabled) {
-                            grad = ctx.createLinearGradient(pad, 0, W - pad, 0);
-                            const stops = GR.stops || [];
-                            for (let s = 0; s < stops.length; s++) {
-                                const st = stops[s] || {};
-                                const off = (typeof st.offset === 'number') ? st.offset : (s/(Math.max(1,stops.length-1)));
-                                const col = st.color || '#ffffff';
-                                grad.addColorStop(off, col);
-                            }
+                    // Optimized wavy draw function
+                    function drawWavySpectrum() {
+                        ctx.clearRect(0, 0, W, H);
+                        
+                        const centerX = W / 2;
+                        const centerY = H / 2;
+                        const barSpacing = W / config.bars;
+                        
+                        // Draw wavy frequency spectrum
+                        for (let i = 0; i < config.bars; i++) {
+                            const x = i * barSpacing;
+                            const distanceFromCenter = Math.abs(x - centerX) / centerX;
+                            
+                            // Create wavy, flowing pattern like your reference
+                            const wavePhase = time * config.waveSpeed + i * 0.15;
+                            const wave1 = Math.sin(wavePhase) * 0.8;
+                            const wave2 = Math.sin(wavePhase * 1.7 + 2) * 0.4;
+                            const wave3 = Math.sin(wavePhase * 0.6 + 4) * 0.3;
+                            
+                            // Combine waves for natural variation
+                            const combinedWave = wave1 + wave2 + wave3;
+                            
+                            // Frequency response (higher frequencies shorter)
+                            const freqResponse = Math.pow(1 - (i / config.bars), 0.8);
+                            
+                            // Calculate height with energy and wave motion
+                            const baseHeight = freqResponse * config.maxHeight * energy;
+                            const waveHeight = baseHeight * (0.7 + combinedWave * 0.5);
+                            const finalHeight = Math.max(config.minHeight, Math.abs(waveHeight));
+                            
+                            // Create flowing effect toward center
+                            const flowOffset = Math.sin(time * config.flowSpeed + distanceFromCenter * 3) * 3;
+                            const drawX = x + flowOffset * (centerX - x) * 0.01;
+                            
+                            // Color based on position and intensity
+                            const intensity = finalHeight / config.maxHeight;
+                            const color = getBarColor(i, intensity);
+                            
+                            // Draw wavy frequency bar
+                            ctx.fillStyle = color;
+                            
+                            // Make it more wavy by varying the bar shape
+                            const topY = centerY - finalHeight / 2;
+                            const bottomY = centerY + finalHeight / 2;
+                            
+                            // Add slight curve to make it more organic
+                            const curve = Math.sin(time * 0.05 + i * 0.2) * 2;
+                            
+                            ctx.beginPath();
+                            ctx.roundRect(drawX - config.barWidth/2, topY + curve, config.barWidth, bottomY - topY, 2);
+                            ctx.fill();
                         }
-
-                        // End-fade configuration (transparent at both ends)
-                        const EF = VZ.endFade || {};
-                        const EF_ENABLED = (EF.enabled !== undefined) ? !!EF.enabled : true;
-                        const fadeFrac = (typeof EF.fraction === 'number') ? Math.max(0, Math.min(0.5, EF.fraction)) : 0.16;
-                        const drawableWidth = Math.max(1, (W - 2*pad));
-                        const fadeWidth = Math.max(8 * DPR, fadeFrac * drawableWidth);
-                        function edgeFadeAlpha(x){
-                            if (!EF_ENABLED) return 1;
-                            // distance to nearest drawable edge
-                            const leftDist = x - pad;
-                            const rightDist = (pad + drawableWidth) - x;
-                            const d = Math.max(0, Math.min(leftDist, rightDist));
-                            const u = Math.max(0, Math.min(1, d / fadeWidth)); // 0 at edge -> 1 away
-                            // cosine smoothstep for a soft fade in/out
-                            return 0.5 - 0.5 * Math.cos(Math.PI * u);
+                        
+                        // Center glow effect (optimized)
+                        if (energy > 0.3) {
+                            const glowRadius = 60 * energy;
+                            const centerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+                            centerGlow.addColorStop(0, `rgba(255, 240, 100, ${0.3 * energy})`);
+                            centerGlow.addColorStop(0.6, `rgba(255, 179, 0, ${0.15 * energy})`);
+                            centerGlow.addColorStop(1, 'rgba(255, 143, 0, 0)');
+                            
+                            ctx.fillStyle = centerGlow;
+                            ctx.fillRect(centerX - glowRadius, centerY - glowRadius/2, glowRadius * 2, glowRadius);
                         }
-
-                        const wavesToDraw = Math.max(1, Math.round(1 + (MAX_WAVES-1) * wavePack));
-                        // Clip to safe drawable area to guarantee nothing bleeds past card border
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.rect(pad, 0, W - 2*pad, H);
-                        ctx.clip();
-                        for (let w = 0; w < wavesToDraw; w++) {
-                            const color = waveColors[w % waveColors.length];
-                            const yOffset = -w * WAVE_SPACING;
-
-                            for (let i = 0; i < DOTS_PER_WAVE; i++) {
-                                const progress = i / (DOTS_PER_WAVE - 1);
-                                const x = progress * (W - 2*pad) + pad; // keep inside edges
-
-                                const freq = pick(SH.baseFreq, 2) + w * pick(SH.freqStep, 0.4);
-                                const phase = t*0.004 + w*0.6;
-                                let amp = (pick(SH.ampBase, 28) + w*pick(SH.ampStep, 8)) * drive; // INCREASED: More pronounced peaks (was 12 and 4)
-
-                                // Edge tip pinch: collapse amplitude and spacing near ends so waves meet
-                                const TP = VZ.tipPinch || {};
-                                let pinch = 1;
-                                if (TP.enabled) {
-                                    const p = (typeof TP.power === 'number') ? TP.power : 1.25;
-                                    pinch = Math.pow(Math.sin(Math.PI * progress), Math.max(0.8, Math.min(2.0, p)));
-                                    amp *= pinch;
-                                }
-
-                                // Thickness bulge across X to mimic a wavy sheet
-                                const TB = VZ.thicknessBulge || {};
-                                if (TB.enabled) {
-                                    const bulgeMag = (typeof TB.magnitude === 'number') ? TB.magnitude : 0.18;
-                                    const bulgeSpeed = (typeof TB.speed === 'number') ? TB.speed : 0.002;
-                                    const bulgeCycles = (typeof TB.cycles === 'number') ? TB.cycles : 1.2;
-                                    const bulge = 1 + bulgeMag * Math.sin(progress * Math.PI * 2 * bulgeCycles + t * bulgeSpeed * 1000);
-                                    amp *= bulge;
-                                }
-
-                                const mainWaveY = Math.sin(progress * freq * Math.PI + phase) * amp;
-                                const ripple = Math.sin(progress * pick(SH.rippleFreq, 12) + t*0.01 + w) * (pick(SH.rippleBase, 3) + w) * (0.5 + 0.5*drive);
-                                // Center waves with extra room at top (50% down with taller canvas)
-                                const y = (H * 0.50) + (yOffset * pinch) + mainWaveY + ripple;
-
-                                // Reduce opacity for bottom waves to eliminate halo effect
-                                const waveOpacity = w > 0 ? Math.max(0.3, 1 - (w * 0.12)) : 1;
-                                
-                                const edgeA = edgeFadeAlpha(x) * waveOpacity;
-
-                                ctx.beginPath();
-                                ctx.fillStyle = color;
-                                ctx.shadowColor = 'transparent'; // FORCE NO SHADOW
-                                ctx.shadowBlur = 0; // Remove halo completely
-                                ctx.shadowOffsetX = 0; // NO SHADOW OFFSET
-                                ctx.shadowOffsetY = 0; // NO SHADOW OFFSET
-                                const prevAlpha = ctx.globalAlpha;
-                                ctx.globalAlpha = edgeA;
-                                ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
-                                ctx.fill();
-                                ctx.closePath();
-
-                                // Optional gradient overlay for L->R color sweep
-                                if (grad) {
-                                    const alpha = (typeof GR.alpha === 'number') ? GR.alpha : 0.45;
-                                    const savedAlpha = ctx.globalAlpha;
-                                    const prevShadow = ctx.shadowBlur;
-                                    ctx.globalAlpha = edgeA * alpha; // apply end fade to overlay too
-                                    ctx.shadowBlur = 0; // overlay without glow
-                                    ctx.beginPath();
-                                    ctx.fillStyle = grad;
-                                    ctx.arc(x, y, DOT_RADIUS, 0, Math.PI*2);
-                                    ctx.fill();
-                                    ctx.closePath();
-                                    ctx.globalAlpha = savedAlpha;
-                                    ctx.shadowBlur = prevShadow;
-                                }
-                                // restore for next dot if no overlay
-                                ctx.globalAlpha = prevAlpha;
-                            }
-                        }
-                        ctx.restore();
-
-                        // Soft central glow overlay (lighter blend), scaled by energy
-                        const CG = VZ.centerGlow || {};
-                        if (CG.enabled) {
-                            const baseAlpha = (typeof CG.alpha === 'number') ? CG.alpha : 0.15; // REDUCED: Less glow/halo (was 0.5)
-                            const span = (typeof CG.verticalSpan === 'number') ? Math.max(0.1, Math.min(1, CG.verticalSpan)) : 0.55;
-                            const energyScale = (typeof CG.energyScale === 'number') ? CG.energyScale : 0.9;
-                            const horizFrac = (typeof CG.horizontalFraction === 'number') ? Math.max(0, Math.min(0.5, CG.horizontalFraction)) : 0.15;
-                            const glowAlpha = baseAlpha * Math.max(0, Math.min(1, energy * energyScale));
-                            const drawableWidth2 = Math.max(1, (W - 2*pad));
-                            const feather = Math.max(8 * DPR, horizFrac * drawableWidth2);
-                            if (glowAlpha > 0.01) {
-                                // Draw vertical glow into an offscreen canvas
-                                const off = document.createElement('canvas');
-                                off.width = W; off.height = H;
-                                const ox = off.getContext('2d');
-                                const top = (H*(1-span))/2;
-                                const bottom = H - top;
-                                const gradY = ox.createLinearGradient(0, top, 0, bottom);
-                                gradY.addColorStop(0.0, 'rgba(255,255,255,0)');
-                                gradY.addColorStop(0.5, 'rgba(255,255,255,1)');
-                                gradY.addColorStop(1.0, 'rgba(255,255,255,0)');
-                                ox.fillStyle = gradY;
-                                ox.fillRect(pad, top, W - 2*pad, bottom - top);
-
-                                // Mask with horizontal taper using destination-in
-                                const gradX = ox.createLinearGradient(pad, 0, W - pad, 0);
-                                const leftStop = pad + feather;
-                                const rightStop = (W - pad) - feather;
-                                const lOff = Math.max(0, Math.min(1, (leftStop - pad) / drawableWidth2));
-                                const rOff = Math.max(0, Math.min(1, (rightStop - pad) / drawableWidth2));
-                                gradX.addColorStop(0, 'rgba(0,0,0,0)');
-                                gradX.addColorStop(lOff, 'rgba(0,0,0,1)');
-                                gradX.addColorStop(rOff, 'rgba(0,0,0,1)');
-                                gradX.addColorStop(1, 'rgba(0,0,0,0)');
-                                ox.globalCompositeOperation = 'destination-in';
-                                ox.fillStyle = gradX;
-                                ox.fillRect(pad, 0, W - 2*pad, H);
-
-                                // Blend back onto main
-                                const prevComp = ctx.globalCompositeOperation;
-                                const prevAlpha2 = ctx.globalAlpha;
-                                ctx.globalCompositeOperation = 'lighter';
-                                ctx.globalAlpha = glowAlpha;
-                                ctx.drawImage(off, 0, 0);
-                                ctx.globalCompositeOperation = prevComp;
-                                ctx.globalAlpha = prevAlpha2;
-                            }
-                        }
-                        requestAnimationFrame(drawFrame);
                     }
 
-                    // Kick off
+                    // Optimized animation loop
+                    function animate() {
+                        if (!isAnimating) return;
+                        
+                        // Faster energy transitions for better voice sync
+                        energy += (energyTarget - energy) * 0.12;
+                        
+                        // Only animate when needed (performance optimization)
+                        if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
+                            drawWavySpectrum();
+                        }
+                        
+                        time += 1;
+                        requestAnimationFrame(animate);
+                    }
+
+                    // Initialize
                     setMode('idle');
-                    requestAnimationFrame(drawFrame);
+                    requestAnimationFrame(animate);
+                    
+                    // Pause animation when page is hidden (performance)
+                    document.addEventListener('visibilitychange', () => {
+                        isAnimating = !document.hidden;
+                        if (isAnimating) requestAnimationFrame(animate);
+                    });
                 })();
                 </script>
 
