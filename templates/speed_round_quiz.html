@@ -20,11 +20,11 @@
 
     /* New dotted ribbon card skin */
         .voice-card.speaking-mode {
-                background: #FFB300; /* solid amber */
+                background: #2383da; /* solid blue */
                 border-radius: 28px;
                 padding: 32px 20px 32px; /* Extra padding top/bottom for wave clearance */
                 border: none; /* remove border */
-                box-shadow: 0 24px 40px rgba(255,140,0,0.28);
+                box-shadow: 0 24px 40px rgba(35,131,218,0.28);
                 max-width: 900px; /* Much wider for more room */
                 margin: 0 auto 24px auto;
                 color: #fff;
@@ -35,15 +35,15 @@
     .voice-header {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #fff8e1;
-        text-shadow: 0 0 6px rgba(255,255,255,0.8), 0 0 12px rgba(255,214,64,0.8);
+        color: #e3f2fd;
+        text-shadow: 0 0 6px rgba(255,255,255,0.8), 0 0 12px rgba(58,155,238,0.8);
         display: flex;
         align-items: center;
         justify-content: center;
         letter-spacing: 0.02em;
         margin-bottom: 20px;
     }
-    .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #ffd54f); }
+    .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #5eb3f2); }
     .dotwave-wrapper { 
         display:flex; 
         justify-content:center; 
@@ -54,7 +54,7 @@
     .dotwave-wrapper canvas { 
         width: 100%; 
         height: 220px; /* Taller for fuller waves */
-        filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(255,200,0,0.4));
+        filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(58,155,238,0.4));
         display: block; /* Remove inline spacing */
     }
     
@@ -1750,7 +1750,7 @@ window.addEventListener('error', (event) => {
     const WAVE_SPACING = pick(VZ.WAVE_SPACING, 20);  // slightly larger spacing for clarity
     const HORIZONTAL_PAD_CSS = pick(VZ.HORIZONTAL_PAD_CSS, 12); // reduce buffer so lines are longer
 
-    const waveColors = VZ.waveColors || ['#6bff6b','#a6ff3a','#ffee33','#ffb62b','#ff7a1f','#ff3a2a'];
+    const waveColors = VZ.waveColors || ['#7dc3f7','#5eb3f2','#3a9bee','#2687e0','#1a74cc','#0e5fb5'];
 
     let mode = 'idle';
     const ET = VZ.energyTargets || {};
