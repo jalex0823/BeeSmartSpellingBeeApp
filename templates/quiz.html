@@ -1352,11 +1352,11 @@
         transition: all 0.1s ease;
     }
 
-    /* Quiz Buttons Container */
+    /* Quiz Buttons Container - Updated for 2x3 grid + separate exit */
     .quiz-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr 1fr;
+        grid-template-rows: auto auto auto;
         gap: 1rem;
         margin-top: 1.5rem;
     }
@@ -1364,6 +1364,60 @@
     .quiz-buttons .action-btn {
         width: 100%;
         min-height: 50px;
+    }
+    
+    /* Exit Button Container - Centered below main grid */
+    .exit-button-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 2px dashed rgba(255, 193, 7, 0.3);
+    }
+    
+    .exit-button-container .action-btn.exit {
+        width: 60%;
+        max-width: 300px;
+    }
+    
+    /* Retry Button Styling */
+    .action-btn.retry {
+        background: linear-gradient(90deg, #FF9800 0%, #FFB74D 100%);
+        color: white;
+        border: 2px solid rgba(255, 152, 0, 0.6);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .action-btn.retry::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: retryShimmer 2s infinite;
+    }
+    
+    @keyframes retryShimmer {
+        0% { left: -100%; }
+        50%, 100% { left: 100%; }
+    }
+    
+    .action-btn.retry:hover {
+        background: linear-gradient(90deg, #FB8C00 0%, #FFA726 100%);
+        border-color: #FF9800;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+    }
+    
+    .action-btn.retry:disabled {
+        background: linear-gradient(90deg, #BDBDBD 0%, #E0E0E0 100%);
+        color: #9E9E9E;
+        border-color: #BDBDBD;
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 
     /* Exit Button Special Styling */
@@ -2665,6 +2719,14 @@
             <button type="button" class="action-btn secondary" id="skipButton">
                 Skip Word
             </button>
+            <button type="button" class="action-btn retry" id="retryButton" style="display: none;">
+                <span class="bee-icon" aria-hidden="true">🔄</span>
+                Retry (33% points)
+            </button>
+        </div>
+        
+        <!-- Exit Quiz Button - Now separate, centered at bottom -->
+        <div class="exit-button-container">
             <button type="button" class="action-btn exit" id="exitQuizButton">
                 <span class="bee-icon" aria-hidden="true">🚪</span>
                 Exit Quiz
@@ -3027,9 +3089,12 @@ class CountdownTimer {
         this.onCritical = options.onCritical || null;
         
         // Settings
-        this.warningThreshold = options.warningThreshold || 5;
+        this.warningThreshold = options.warningThreshold || 10;  // Start ticking at 10s
         this.criticalThreshold = options.criticalThreshold || 3;
         this.soundEnabled = options.soundEnabled !== false; // Default true
+        
+        // Sound state
+        this.tickSoundStarted = false;
         
         // DOM elements
         this.container = document.getElementById('countdownContainer');
@@ -3049,6 +3114,7 @@ class CountdownTimer {
         this.remaining = this.duration;
         this.hasWarned = false;
         this.hasCritical = false;
+        this.tickSoundStarted = false;  // Reset tick sound state
         
         // Show timer with animation
         this.container.classList.remove('hidden');
@@ -3069,12 +3135,17 @@ class CountdownTimer {
             this.remaining--;
             this.updateDisplay();
             
+            // Play tick sound during last 10 seconds
+            if (this.remaining <= this.warningThreshold && this.remaining > 0 && this.soundEnabled) {
+                this.playTickSound();
+            }
+            
             // Callbacks
             if (this.onTick) {
                 this.onTick(this.remaining);
             }
             
-            // Warning zone (5 seconds)
+            // Warning zone (10 seconds for tick sounds)
             if (this.remaining === this.warningThreshold && !this.hasWarned) {
                 this.triggerWarning();
                 this.hasWarned = true;
@@ -3145,9 +3216,69 @@ class CountdownTimer {
     triggerExpired() {
         console.log('⏰ Timer expired!');
         
-        // Optional longer buzz for time's up
+        // Play ANGRY BEE BUZZ for time's up!
         if (this.soundEnabled) {
-            this.playBuzzSound(0.3); // Slightly longer buzz
+            this.playAngryBeeBuzz();
+        }
+    }
+    
+    playTickSound() {
+        try {
+            // Jeopardy-style tick sound (short, high-pitched click)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // High-pitched click
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            // Very short, sharp sound
+            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.05);
+        } catch (err) {
+            console.warn('Tick sound failed:', err);
+        }
+    }
+    
+    playAngryBeeBuzz() {
+        try {
+            // ANGRY bee buzz - louder, longer, more aggressive
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator1.connect(gainNode);
+            oscillator2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Dual oscillators for angrier sound
+            oscillator1.frequency.value = 150;  // Low angry buzz
+            oscillator2.frequency.value = 250;  // Mid range
+            oscillator1.type = 'sawtooth';
+            oscillator2.type = 'square';
+            
+            // Louder and longer for "mad bee"
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.25, audioContext.currentTime + 0.05); // Quick attack
+            gainNode.gain.setValueAtTime(0.25, audioContext.currentTime + 0.4); // Hold
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7); // Fade out
+            
+            oscillator1.start(audioContext.currentTime);
+            oscillator2.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.7);
+            oscillator2.stop(audioContext.currentTime + 0.7);
+            
+            console.log('🐝😡 Angry bee buzz played!');
+        } catch (err) {
+            console.warn('Angry bee buzz failed:', err);
         }
     }
     
@@ -3569,6 +3700,12 @@ class QuizManager {
         
         // 💡 Hint tracking for current word
         this.hintUsedThisWord = false; // Track if hint was used for current word
+        
+        // 🔄 Retry System Tracking
+        this.retryAvailable = false; // Can the user retry this word?
+        this.hasRetried = false; // Has user already used their retry?
+        this.isRetryAttempt = false; // Is current attempt a retry?
+        this.retryTimeoutId = null; // Timeout for auto-advance after retry
         
         // Get student name - prioritize server-provided name for logged-in users
         {% if user_name %}
@@ -4611,6 +4748,9 @@ class QuizManager {
         const popup = document.createElement('div');
         popup.className = 'points-popup';
         
+        // Check if this is a retry attempt (33% points)
+        const isRetry = this.isRetryAttempt;
+        
         // Build breakdown HTML
         let breakdownHTML = '';
         if (breakdown.base) {
@@ -4631,9 +4771,15 @@ class QuizManager {
             breakdownHTML += `<div class="points-breakdown-item"><span>🧠 No Hints</span><span>+${breakdown.no_hints}</span></div>`;
         }
         
+        // Add retry penalty indicator if this is a retry
+        if (isRetry) {
+            breakdownHTML += `<div class="points-breakdown-item" style="color: #FF9800; font-weight: 600;"><span>🔄 Retry Penalty</span><span>-67% points</span></div>`;
+        }
+        
         popup.innerHTML = `
             <div class="points-total">+${points.toLocaleString()}</div>
             ${breakdownHTML ? `<div class="points-breakdown">${breakdownHTML}</div>` : ''}
+            ${isRetry ? '<div style="font-size: 0.75rem; color: #FF9800; margin-top: 0.5rem;">Points deducted due to retry attempt</div>' : ''}
         `;
         
         document.body.appendChild(popup);
@@ -4643,7 +4789,7 @@ class QuizManager {
             popup.remove();
         }, 2500);
         
-        console.log(`🍯 Displayed points popup: +${points} points`);
+        console.log(`🍯 Displayed points popup: +${points} points${isRetry ? ' (Retry)' : ''}`);
     }
     
     // 🏆 Badge Achievement System
@@ -4906,6 +5052,16 @@ class QuizManager {
             try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
             this.skipWord();
         });
+        
+        // Retry button
+        const retryButton = document.getElementById('retryButton');
+        if (retryButton) {
+            retryButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.handleRetry();
+            });
+        }
+        
         restartButton.addEventListener('click', () => this.restartQuiz());
 
         // Voice toggle button
@@ -5092,6 +5248,13 @@ class QuizManager {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
             this.hintUsedThisWord = false;
+            
+            // 🔄 Reset retry system for new word
+            this.retryAvailable = false;
+            this.hasRetried = false;
+            this.isRetryAttempt = false;
+            this.clearRetryCountdown();
+            this.hideRetryButton();
             
             const response = await fetch('/api/next', { 
                 method: 'POST',
@@ -5660,10 +5823,17 @@ class QuizManager {
     const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
 
         if (result.correct) {
-            // � Use points from backend response
+            // 🏆 Use points from backend response
             const pointsData = result.points || {};
-            const earnedPoints = pointsData.earned || 0;
+            let earnedPoints = pointsData.earned || 0;
             const breakdown = pointsData.breakdown || {};
+            
+            // 🔄 RETRY PENALTY: If this is a retry attempt, only award 33% of points
+            if (this.isRetryAttempt) {
+                const originalPoints = earnedPoints;
+                earnedPoints = Math.floor(earnedPoints * 0.33);
+                console.log(`🔄 Retry penalty applied: ${originalPoints} → ${earnedPoints} (33%)`);
+            }
             
             // Update streak
             this.currentStreak = result.progress?.streak || this.currentStreak;
@@ -5674,6 +5844,7 @@ class QuizManager {
             feedbackArea.className = 'feedback-area feedback-success';
             feedbackArea.innerHTML = `
                 <div style="font-size: 1.15rem; font-weight: 700;">${randomMessage}</div>
+                ${this.isRetryAttempt ? '<div style="color: #FF9800; font-weight: 600; margin-top: 0.3rem;">🔄 Retry: 33% points awarded</div>' : ''}
                 <div style="margin-top: 0.5rem;">Moving to the next word...</div>
             `;
             
@@ -5708,29 +5879,68 @@ class QuizManager {
             // Get the correct spelling from the current word data
             const correctWord = this.currentWordData?.word || result.word || '';
             
-            feedbackArea.className = 'feedback-area feedback-error';
-            feedbackArea.innerHTML = `
-                <div style="font-size: 1.15rem; font-weight: 700;">${randomMessage}</div>
-                <div style="margin-top: 0.5rem;">The correct spelling is: <strong>${correctWord}</strong></div>
-                <div style="margin-top: 0.3rem;">Moving to the next word...</div>
-            `;
-            
-            // Mascot encourages!
-            if (this.smartyBee) {
-                this.smartyBee.onIncorrectAnswer();
-            }
-            
-            // Spell out the word letter by letter
-            const spelledOut = correctWord.split('').join(', ').toUpperCase();
-            // Speak feedback; if announcement was split, preserve the pause structure
-            if (typeof audioAnnouncement === 'string') {
-                const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}`;
-                await this.speakAnnouncement(announcement);
-            } else if (audioAnnouncement && audioAnnouncement.phrase) {
-                await this.speakAnnouncement(audioAnnouncement.phrase);
-                await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
-                await this.speakAnnouncement(audioAnnouncement.name);
-                await this.speakAnnouncement(`The correct spelling is: ${spelledOut}`);
+            // 🔄 RETRY LOGIC: Show retry button if this is first failure and retry not used
+            if (!this.isRetryAttempt && !this.hasRetried) {
+                // This is first failure - offer retry
+                this.retryAvailable = true;
+                this.showRetryButton();
+                
+                feedbackArea.className = 'feedback-area feedback-error';
+                feedbackArea.innerHTML = `
+                    <div style="font-size: 1.15rem; font-weight: 700;">${randomMessage}</div>
+                    <div style="margin-top: 0.5rem;">The correct spelling is: <strong>${correctWord}</strong></div>
+                    <div style="margin-top: 0.5rem; color: #FF9800; font-weight: 600;">💡 You have ONE retry available! (33% points)</div>
+                    <div id="retryCountdown" style="margin-top: 0.3rem; font-size: 0.9rem; color: #666;"></div>
+                `;
+                
+                // Mascot encourages retry
+                if (this.smartyBee) {
+                    this.smartyBee.onIncorrectAnswer();
+                }
+                
+                // Speak feedback with retry offer
+                const spelledOut = correctWord.split('').join(', ').toUpperCase();
+                if (typeof audioAnnouncement === 'string') {
+                    const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}. You have one retry available for partial credit.`;
+                    await this.speakAnnouncement(announcement);
+                } else if (audioAnnouncement && audioAnnouncement.phrase) {
+                    await this.speakAnnouncement(audioAnnouncement.phrase);
+                    await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
+                    await this.speakAnnouncement(audioAnnouncement.name);
+                    await this.speakAnnouncement(`The correct spelling is: ${spelledOut}. You have one retry available for partial credit.`);
+                }
+                
+                // Start 3-second auto-advance countdown
+                this.startRetryCountdown();
+                
+            } else {
+                // This is either a retry failure OR user already used retry - no more chances
+                this.retryAvailable = false;
+                this.hideRetryButton();
+                
+                feedbackArea.className = 'feedback-area feedback-error';
+                feedbackArea.innerHTML = `
+                    <div style="font-size: 1.15rem; font-weight: 700;">${randomMessage}</div>
+                    <div style="margin-top: 0.5rem;">The correct spelling is: <strong>${correctWord}</strong></div>
+                    <div style="margin-top: 0.3rem;">Moving to the next word...</div>
+                `;
+                
+                // Mascot encourages!
+                if (this.smartyBee) {
+                    this.smartyBee.onIncorrectAnswer();
+                }
+                
+                // Spell out the word letter by letter
+                const spelledOut = correctWord.split('').join(', ').toUpperCase();
+                if (typeof audioAnnouncement === 'string') {
+                    const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}`;
+                    await this.speakAnnouncement(announcement);
+                } else if (audioAnnouncement && audioAnnouncement.phrase) {
+                    await this.speakAnnouncement(audioAnnouncement.phrase);
+                    await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
+                    await this.speakAnnouncement(audioAnnouncement.name);
+                    await this.speakAnnouncement(`The correct spelling is: ${spelledOut}`);
+                }
             }
         }
 
@@ -5794,6 +6004,97 @@ class QuizManager {
     enableInput() {
         document.getElementById('spellingInput').disabled = false;
         document.getElementById('submitButton').disabled = false;
+    }
+
+    // 🔄 RETRY SYSTEM METHODS
+    showRetryButton() {
+        const retryButton = document.getElementById('retryButton');
+        if (retryButton) {
+            retryButton.style.display = 'block';
+            console.log('🔄 Retry button shown');
+        }
+    }
+    
+    hideRetryButton() {
+        const retryButton = document.getElementById('retryButton');
+        if (retryButton) {
+            retryButton.style.display = 'none';
+            console.log('🔄 Retry button hidden');
+        }
+    }
+    
+    startRetryCountdown() {
+        let secondsLeft = 3;
+        const countdownElement = document.getElementById('retryCountdown');
+        
+        // Clear any existing timeout
+        if (this.retryTimeoutId) {
+            clearTimeout(this.retryTimeoutId);
+        }
+        
+        // Update countdown display
+        const updateCountdown = () => {
+            if (countdownElement) {
+                countdownElement.textContent = `Auto-advancing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...`;
+            }
+            secondsLeft--;
+            
+            if (secondsLeft >= 0) {
+                this.retryTimeoutId = setTimeout(updateCountdown, 1000);
+            } else {
+                // Time's up - auto-advance to next word
+                this.retryAvailable = false;
+                this.hideRetryButton();
+                this.loadNextWord();
+            }
+        };
+        
+        updateCountdown();
+    }
+    
+    clearRetryCountdown() {
+        if (this.retryTimeoutId) {
+            clearTimeout(this.retryTimeoutId);
+            this.retryTimeoutId = null;
+        }
+        const countdownElement = document.getElementById('retryCountdown');
+        if (countdownElement) {
+            countdownElement.textContent = '';
+        }
+    }
+    
+    handleRetry() {
+        console.log('🔄 Retry button clicked!');
+        
+        // Clear countdown and hide retry button
+        this.clearRetryCountdown();
+        this.hideRetryButton();
+        this.retryAvailable = false;
+        this.hasRetried = true;
+        this.isRetryAttempt = true;  // Mark this as a retry attempt
+        
+        // Clear the input and enable it
+        const spellingInput = document.getElementById('spellingInput');
+        if (spellingInput) {
+            spellingInput.value = '';
+            spellingInput.disabled = false;
+            spellingInput.placeholder = 'Retry spelling... (33% points)';
+            spellingInput.focus();
+        }
+        
+        // Hide feedback area
+        this.hideFeedback();
+        
+        // Re-enable submit button
+        const submitButton = document.getElementById('submitButton');
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
+        
+        // Restart timer for retry attempt
+        this.startCountdownTimer();
+        
+        console.log('🔄 Retry initialized - user can try again for 33% points');
     }
 
     async skipWord() {
