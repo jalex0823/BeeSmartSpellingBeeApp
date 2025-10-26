@@ -9347,31 +9347,33 @@
                 window.avatarEmergencyMode = true;
             }
             
-            // 80% - Load and wait for 3D mascot to fully initialize
-            window.loadingSystem.updateProgress(80, '🐝 Loading your bee...');
+            // 80% - Prepare for 3D mascot (but defer actual loading)
+            window.loadingSystem.updateProgress(80, '🐝 Preparing your bee...');
             
-            // Initialize 3D Avatar/Mascot and WAIT for it to complete
+            // Store mascot container reference for deferred loading
             const mascotContainer = document.getElementById('mascotBee3D');
             let avatarLoadSuccess = false;
             
             if (mascotContainer) {
                 try {
-                    // Try to load the avatar
-                    window.loadingSystem.updateProgress(85, '🎨 Loading avatar...');
+                    // Mark that we'll load the avatar after page becomes interactive
+                    window.loadingSystem.updateProgress(85, '🎨 Preparing avatar...');
                     
-                    // Prefer using presence of a loaded avatar over auth gating
-                    // If the API returned an avatar with URLs, load it regardless of server auth flag
+                    // Check if custom avatar is available
                     const hasCustomAvatar = window.userAvatarLoader && 
                                           window.userAvatarLoader.userAvatar &&
                                           window.userAvatarLoader.userAvatar.urls;
                     
-                    if (hasCustomAvatar) {
-                        try {
-                            await initUserAvatar3D(window.userAvatarLoader.userAvatar);
-                            avatarLoadSuccess = true;
-                            console.log('✅ Custom avatar loaded successfully:', window.userAvatarLoader.userAvatar.avatar_id);
-                        } catch (avatarError) {
-                            console.error('❌ Custom avatar failed to load:', avatarError);
+                    // OPTIMIZATION: Defer actual 3D model loading until after page load
+                    // This prevents Three.js violation and speeds up initial page render
+                    window.deferredAvatarLoad = async () => {
+                        if (hasCustomAvatar) {
+                            try {
+                                await initUserAvatar3D(window.userAvatarLoader.userAvatar);
+                                avatarLoadSuccess = true;
+                                console.log('✅ Custom avatar loaded successfully:', window.userAvatarLoader.userAvatar.avatar_id);
+                            } catch (avatarError) {
+                                console.error('❌ Custom avatar failed to load:', avatarError);
                             
                             // Show refresh button for manual retry
                             const refreshBtn = document.getElementById('avatarRefreshBtn');
@@ -9430,6 +9432,12 @@
                     if (avatarLoadSuccess) {
                         window.loadingSystem.updateProgress(90, '✨ Avatar ready!');
                     }
+                };
+                
+                // Don't await - let it load in background
+                avatarLoadSuccess = true; // Mark as "will load"
+                window.loadingSystem.updateProgress(90, '✨ Avatar will load shortly...');
+                    
                 } catch (error) {
                     console.error('❌ Avatar system error:', error);
                     window.loadingSystem.updateProgress(90, '⚠️ Using basic fallback...');
@@ -9477,6 +9485,19 @@
                     }
                 }
             }, 500); // Wait 500ms for all libraries to finish
+            
+            // DEFERRED 3D AVATAR LOADING - Load after page is interactive
+            // This prevents Three.js violation by not blocking the main thread
+            setTimeout(() => {
+                if (typeof window.deferredAvatarLoad === 'function') {
+                    console.log('🚀 Starting deferred 3D avatar load...');
+                    window.deferredAvatarLoad().then(() => {
+                        console.log('✅ Deferred avatar load completed');
+                    }).catch(err => {
+                        console.error('❌ Deferred avatar load failed:', err);
+                    });
+                }
+            }, 100); // Start after page load animation completes
             
             // Themed avatar effects system
             function playThemedAvatarEffect(avatarId, container) {
