@@ -4132,7 +4132,15 @@ def api_next():
             order = state["order"]
             # Fall through to return first question
         else:
-            # finished
+            # finished - extract incorrect words for study review
+            incorrect_words = []
+            for entry in state.get("history", []):
+                if not entry.get("correct") and not entry.get("skipped"):
+                    incorrect_words.append({
+                        "word": entry.get("word", ""),
+                        "user_answer": entry.get("user_input", "")
+                    })
+            
             return jsonify({
                 "done": True,
                 "summary": {
@@ -4140,7 +4148,8 @@ def api_next():
                     "correct": state["correct"],
                     "incorrect": state["incorrect"],
                     "streak": state["streak"],
-                    "history": state["history"]
+                    "history": state["history"],
+                    "incorrect_words": incorrect_words
                 }
             })
 

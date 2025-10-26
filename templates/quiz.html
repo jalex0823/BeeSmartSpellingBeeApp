@@ -6364,6 +6364,37 @@ class QuizManager {
                 <!-- Achievements moved below for breathing room -->
                 ${badgesHTML}
                 ${levelHTML}
+                
+                <!-- Missed Words Section (Study Review) -->
+                ${(() => {
+                    const incorrectWords = summary.incorrect_words || [];
+                    if (incorrectWords.length === 0) return '';
+                    
+                    return `
+                        <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-radius: 16px; border: 2px solid #42A5F5; animation: slideInUp 0.6s ease 0.8s backwards;">
+                            <h3 style="color: #1976D2; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800; text-align: center;">
+                                📝 Words to Practice
+                            </h3>
+                            <div style="display: grid; gap: 0.75rem; text-align: left;">
+                                ${incorrectWords.map(item => `
+                                    <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #42A5F5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                        <div style="flex: 1; min-width: 150px;">
+                                            <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
+                                                ✓ ${item.word}
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: #757575; margin-top: 0.25rem;">
+                                                ${item.user_answer ? `Your answer: <span style="color: #D32F2F; font-weight: 600;">${item.user_answer}</span>` : '(Skipped or no answer)'}
+                                            </div>
+                                        </div>
+                                        <button onclick="pronounceWordFromReport('${item.word}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                                            🔊 Hear It
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                })()}
             </div>
             
             <style>
@@ -6500,6 +6531,31 @@ class QuizManager {
         } catch (error) {
             BeeSmart.showError('Failed to restart quiz. Please refresh the page.');
         }
+    }
+}
+
+// 🔊 Pronounce word from report card (missed words review)
+function pronounceWordFromReport(word) {
+    if (!word) return;
+    
+    if ('speechSynthesis' in window) {
+        // Cancel any ongoing speech
+        speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(word);
+        const voices = speechSynthesis.getVoices();
+        
+        // Prefer US English voice
+        const enUSVoice = voices.find(v => v.lang === 'en-US') || 
+                         voices.find(v => v.lang?.startsWith('en')) || 
+                         null;
+        if (enUSVoice) utterance.voice = enUSVoice;
+        
+        utterance.rate = 0.85;  // Slow for clarity
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        speechSynthesis.speak(utterance);
     }
 }
 
