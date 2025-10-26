@@ -2501,104 +2501,106 @@
                         return { speak, pulse, react };
                     })();
 
-                    // Optimized wavy visualizer config
+                    // Optimized center-expanding waves config (matches reference image 2)
                     const config = {
-                        bars: 80,           // Fewer bars for better performance
-                        maxHeight: 100,     // Maximum wave height
-                        minHeight: 5,       // Minimum wave height
-                        barWidth: 8,        // Width of frequency bars
-                        waveSpeed: 0.02,    // Wave animation speed
-                        flowSpeed: 0.5      // How fast waves flow toward center
+                        waves: 6,           // Number of wave rings expanding from center
+                        maxRadius: 180,     // Maximum wave radius
+                        minRadius: 20,      // Minimum wave radius
+                        thickness: 15,      // Thickness of each wave band
+                        expandSpeed: 0.8,   // How fast waves expand outward
+                        pulseSpeed: 0.05    // Wave pulsation speed
                     };
 
-                    // BeeSmart amber gradient optimized
-                    function getBarColor(index, intensity) {
-                        const ratio = index / config.bars;
+                    // BeeSmart amber gradient for center-expanding waves
+                    function getWaveColor(waveIndex, intensity) {
+                        const ratio = waveIndex / config.waves;
                         let r, g, b;
                         
-                        // Smooth amber gradient like your reference image
-                        if (ratio < 0.4) {
-                            // Honey yellow to golden
+                        // Gradient from center (bright) to outer (darker amber)
+                        if (ratio < 0.33) {
+                            // Center: Bright honey yellow
                             r = 255;
-                            g = Math.floor(235 + ratio * 2.5 * 20);  // 235 -> 255
-                            b = Math.floor(80 + ratio * 2.5 * 70);   // 80 -> 150
-                        } else if (ratio < 0.7) {
-                            // Golden to orange
-                            const localRatio = (ratio - 0.4) / 0.3;
+                            g = 250;
+                            b = Math.floor(130 + ratio * 3 * 50);
+                        } else if (ratio < 0.66) {
+                            // Middle: Golden amber
+                            const localRatio = (ratio - 0.33) / 0.33;
                             r = 255;
-                            g = Math.floor(255 - localRatio * 100);  // 255 -> 155
-                            b = Math.floor(150 - localRatio * 150);  // 150 -> 0
+                            g = Math.floor(250 - localRatio * 80);
+                            b = Math.floor(180 - localRatio * 100);
                         } else {
-                            // Orange to deep amber
-                            const localRatio = (ratio - 0.7) / 0.3;
-                            r = Math.floor(255 - localRatio * 40);   // 255 -> 215
-                            g = Math.floor(155 - localRatio * 55);   // 155 -> 100
-                            b = 0;
+                            // Outer: Deep amber/orange
+                            const localRatio = (ratio - 0.66) / 0.34;
+                            r = Math.floor(255 - localRatio * 50);
+                            g = Math.floor(170 - localRatio * 70);
+                            b = Math.floor(80 - localRatio * 80);
                         }
                         
-                        const alpha = 0.8 + intensity * 0.2;
+                        const alpha = (0.4 + intensity * 0.5) * (1 - ratio * 0.3); // Fade outer waves
                         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
                     }
 
-                    // Optimized wavy draw function
-                    function drawWavySpectrum() {
+                    // Center-expanding wave visualizer (like reference image 2)
+                    function drawExpandingWaves() {
                         ctx.clearRect(0, 0, W, H);
                         
                         const centerX = W / 2;
                         const centerY = H / 2;
-                        const barSpacing = W / config.bars;
                         
-                        // Draw wavy frequency spectrum
-                        for (let i = 0; i < config.bars; i++) {
-                            const x = i * barSpacing;
-                            const distanceFromCenter = Math.abs(x - centerX) / centerX;
+                        // Draw expanding wave rings from center
+                        for (let i = 0; i < config.waves; i++) {
+                            // Calculate wave expansion with pulsation
+                            const wavePhase = (time * config.expandSpeed + i * 0.5) % (config.maxRadius / 10);
+                            const baseRadius = config.minRadius + wavePhase * 10;
                             
-                            // Create wavy, flowing pattern like your reference
-                            const wavePhase = time * config.waveSpeed + i * 0.15;
-                            const wave1 = Math.sin(wavePhase) * 0.8;
-                            const wave2 = Math.sin(wavePhase * 1.7 + 2) * 0.4;
-                            const wave3 = Math.sin(wavePhase * 0.6 + 4) * 0.3;
+                            // Add pulsation for organic feel
+                            const pulse = Math.sin(time * config.pulseSpeed + i * 0.8) * 8;
+                            const radius = baseRadius + pulse + (i * 20);
                             
-                            // Combine waves for natural variation
-                            const combinedWave = wave1 + wave2 + wave3;
+                            // Skip if wave has expanded beyond canvas
+                            if (radius > config.maxRadius) continue;
                             
-                            // Frequency response (higher frequencies shorter)
-                            const freqResponse = Math.pow(1 - (i / config.bars), 0.8);
+                            // Energy-based intensity (stronger in center, responsive to sound)
+                            const distanceFactor = 1 - (radius / config.maxRadius);
+                            const intensity = energy * (0.5 + distanceFactor * 0.5);
                             
-                            // Calculate height with energy and wave motion
-                            const baseHeight = freqResponse * config.maxHeight * energy;
-                            const waveHeight = baseHeight * (0.7 + combinedWave * 0.5);
-                            const finalHeight = Math.max(config.minHeight, Math.abs(waveHeight));
+                            // Get color for this wave
+                            const color = getWaveColor(i, intensity);
                             
-                            // Create flowing effect toward center
-                            const flowOffset = Math.sin(time * config.flowSpeed + distanceFromCenter * 3) * 3;
-                            const drawX = x + flowOffset * (centerX - x) * 0.01;
+                            // Draw wave ring
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = config.thickness * (0.7 + intensity * 0.3);
                             
-                            // Color based on position and intensity
-                            const intensity = finalHeight / config.maxHeight;
-                            const color = getBarColor(i, intensity);
+                            // Add variable thickness for organic look
+                            const thicknessVariation = Math.sin(time * 0.03 + i) * 2;
+                            ctx.lineWidth += thicknessVariation;
                             
-                            // Draw wavy frequency bar
-                            ctx.fillStyle = color;
-                            
-                            // Make it more wavy by varying the bar shape
-                            const topY = centerY - finalHeight / 2;
-                            const bottomY = centerY + finalHeight / 2;
-                            
-                            // Add slight curve to make it more organic
-                            const curve = Math.sin(time * 0.05 + i * 0.2) * 2;
-                            
+                            // Draw the expanding circle wave
                             ctx.beginPath();
-                            ctx.roundRect(drawX - config.barWidth/2, topY + curve, config.barWidth, bottomY - topY, 2);
-                            ctx.fill();
+                            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                            ctx.stroke();
+                            
+                            // Add inner glow for depth
+                            if (intensity > 0.4) {
+                                ctx.strokeStyle = `rgba(255, 250, 150, ${intensity * 0.3})`;
+                                ctx.lineWidth = config.thickness * 0.4;
+                                ctx.stroke();
+                            }
                         }
                         
-                        // Center glow effect (optimized)
-                        if (energy > 0.3) {
-                            const glowRadius = 60 * energy;
-                            const centerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
-                            centerGlow.addColorStop(0, `rgba(255, 240, 100, ${0.3 * energy})`);
-                            centerGlow.addColorStop(0.6, `rgba(255, 179, 0, ${0.15 * energy})`);
+                        // Center bright point (energy source)
+                        if (energy > 0.2) {
+                            const coreSize = 15 + energy * 15;
+                            const coreGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreSize);
+                            coreGlow.addColorStop(0, `rgba(255, 250, 180, ${0.9 * energy})`);
+                            coreGlow.addColorStop(0.5, `rgba(255, 220, 120, ${0.5 * energy})`);
+                            coreGlow.addColorStop(1, 'rgba(255, 180, 60, 0)');
+                            
+                            ctx.fillStyle = coreGlow;
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, coreSize, 0, Math.PI * 2);
+                            ctx.fill();
+                        }                            centerGlow.addColorStop(0.6, `rgba(255, 179, 0, ${0.15 * energy})`);
                             centerGlow.addColorStop(1, 'rgba(255, 143, 0, 0)');
                             
                             ctx.fillStyle = centerGlow;
@@ -2615,7 +2617,7 @@
                         
                         // Only animate when needed (performance optimization)
                         if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
-                            drawWavySpectrum();
+                            drawExpandingWaves();  // Changed to center-expanding waves
                         }
                         
                         time += 1;
