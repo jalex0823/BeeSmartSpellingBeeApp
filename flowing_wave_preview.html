@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowing Wave Spectrum - BeeSmart Style</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .visualizer-container {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .visualizer-canvas {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid rgba(255, 179, 0, 0.3);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FFB300, #FF8F00);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 179, 0, 0.4);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .description {
+            background: rgba(255, 179, 0, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #FFB300;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 Flowing Wave Spectrum Visualizer</h1>
+        <div class="description">
+            <p><strong>Style:</strong> Organic flowing wave pattern with dotted/pixelated effect</p>
+            <p><strong>Features:</strong> Blue-to-purple gradient, natural wave curves, particle-like dots</p>
+            <p><strong>Perfect for:</strong> Dynamic, flowing audio visualization that follows speech patterns</p>
+        </div>
+        
+        <div class="visualizer-container">
+            <h3>🐝 BeeSmart Flowing Wave Visualizer</h3>
+            <canvas id="flowingWaveCanvas" class="visualizer-canvas" width="800" height="150"></canvas>
+            
+            <div class="controls">
+                <button onclick="startAnimation()">🎤 Start Voice Animation</button>
+                <button onclick="stopAnimation()">⏹️ Stop</button>
+                <button onclick="toggleWaveStyle()">🔄 Toggle Wave Style</button>
+            </div>
+            
+            <div style="margin-top: 15px; text-align: center; opacity: 0.8;">
+                <small>This shows the flowing wave pattern that will sync with your voice</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flowingWaveCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isAnimating = false;
+        let animationId = null;
+        let time = 0;
+        let waveStyle = 'dotted'; // 'dotted' or 'smooth'
+        
+        // Configuration for flowing wave
+        const config = {
+            points: 200,        // Number of points across the wave
+            dotSize: 2.5,       // Size of each dot
+            maxAmplitude: 60,   // Maximum wave height
+            baseY: 75,          // Center line of the wave
+            frequency: 0.02,    // Wave frequency
+            speed: 0.05,        // Animation speed
+            layers: 3           // Number of wave layers for thickness
+        };
+        
+        // Color gradient from blue to purple/pink (matching your reference)
+        function getWaveColor(x, intensity, layer = 0) {
+            const ratio = x / canvas.width;
+            
+            // Blue to purple to pink gradient
+            let r, g, b;
+            
+            if (ratio < 0.33) {
+                // Blue to cyan
+                r = Math.floor(20 + ratio * 3 * 120);      // 20 -> 140
+                g = Math.floor(140 + ratio * 3 * 110);     // 140 -> 250
+                b = 255;                                    // Full blue
+            } else if (ratio < 0.66) {
+                // Cyan to purple
+                const localRatio = (ratio - 0.33) / 0.33;
+                r = Math.floor(140 + localRatio * 120);    // 140 -> 260
+                g = Math.floor(250 - localRatio * 150);    // 250 -> 100
+                b = 255;                                    // Full blue
+            } else {
+                // Purple to pink
+                const localRatio = (ratio - 0.66) / 0.34;
+                r = Math.floor(260 - localRatio * 60);     // 260 -> 200 (more purple)
+                g = Math.floor(100 + localRatio * 50);     // 100 -> 150
+                b = Math.floor(255 - localRatio * 100);    // 255 -> 155
+            }
+            
+            // Clamp values
+            r = Math.min(255, Math.max(0, r));
+            g = Math.min(255, Math.max(0, g));
+            b = Math.min(255, Math.max(0, b));
+            
+            // Apply intensity and layer transparency
+            const alpha = (0.6 + intensity * 0.4) * (1 - layer * 0.2);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
+        function drawFlowingWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const stepSize = canvas.width / config.points;
+            const centerX = canvas.width / 2;
+            
+            // Draw multiple layers for thickness and depth
+            for (let layer = 0; layer < config.layers; layer++) {
+                const layerOffset = layer * 2;
+                
+                for (let i = 0; i < config.points; i++) {
+                    const x = i * stepSize;
+                    
+                    // Distance from center (for convergence effect)
+                    const distanceFromCenter = Math.abs(x - centerX) / centerX;
+                    
+                    // Create flowing wave with multiple frequencies
+                    // Add convergence effect - waves flow toward center
+                    const convergencePhase = (x - centerX) * 0.01 + time * config.speed * 2;
+                    const primaryWave = Math.sin(x * config.frequency + convergencePhase);
+                    const secondaryWave = Math.sin(x * config.frequency * 2.3 + convergencePhase * 1.3) * 0.4;
+                    const tertiaryWave = Math.sin(x * config.frequency * 0.7 + convergencePhase * 0.8) * 0.6;
+                    
+                    // Add center-focused energy pattern
+                    const centerPull = Math.sin(distanceFromCenter * Math.PI + time * 0.1) * 0.3;
+                    
+                    // Add some randomness for organic feel
+                    const noise = (Math.sin(x * 0.01 + time * 0.02) + Math.sin(x * 0.03 + time * 0.01)) * 0.2;
+                    
+                    // Combine waves with center convergence
+                    const combinedWave = primaryWave + secondaryWave + tertiaryWave + centerPull + noise;
+                    
+                    // Calculate amplitude with center focus (stronger at center, weaker at edges)
+                    const centerBoost = 1.2 - (distanceFromCenter * 0.5); // Stronger at center
+                    const amplitudeMultiplier = (0.7 + Math.sin(x * 0.008 + time * 0.03) * 0.3) * centerBoost;
+                    const amplitude = combinedWave * config.maxAmplitude * amplitudeMultiplier;
+                    
+                    // Calculate wave positions (top and bottom)
+                    const topY = config.baseY - Math.abs(amplitude) - layerOffset;
+                    const bottomY = config.baseY + Math.abs(amplitude) + layerOffset;
+                    
+                    // Get color based on position and intensity (more intense at center)
+                    const intensity = (Math.abs(amplitude) / config.maxAmplitude) * centerBoost;
+                    const color = getWaveColor(x, intensity, layer);
+                    
+                    if (waveStyle === 'dotted') {
+                        // Draw dotted wave
+                        ctx.fillStyle = color;
+                        
+                        // Top part of wave
+                        if (amplitude !== 0) {
+                            const dotsInColumn = Math.floor(Math.abs(amplitude) / 4);
+                            for (let d = 0; d < dotsInColumn; d++) {
+                                const dotY = config.baseY - (d * 4) - layerOffset;
+                                if (dotY > 0) {
+                                    // Add slight horizontal drift toward center
+                                    const driftX = x + (centerX - x) * 0.02 * Math.sin(time * 0.05 + d * 0.5);
+                                    ctx.fillRect(driftX - config.dotSize/2, dotY, config.dotSize, config.dotSize);
+                                }
+                            }
+                            
+                            // Bottom part of wave
+                            for (let d = 0; d < dotsInColumn; d++) {
+                                const dotY = config.baseY + (d * 4) + layerOffset;
+                                if (dotY < canvas.height) {
+                                    // Add slight horizontal drift toward center
+                                    const driftX = x + (centerX - x) * 0.02 * Math.sin(time * 0.05 + d * 0.5);
+                                    ctx.fillRect(driftX - config.dotSize/2, dotY, config.dotSize, config.dotSize);
+                                }
+                            }
+                        }
+                    } else {
+                        // Draw smooth wave
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, topY, 2, bottomY - topY);
+                    }
+                }
+            }
+            
+            // Add center focal point (subtle glow)
+            const centerGlow = ctx.createRadialGradient(centerX, config.baseY, 0, centerX, config.baseY, 30);
+            centerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            centerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = centerGlow;
+            ctx.fillRect(centerX - 30, config.baseY - 30, 60, 60);
+        }
+        
+        function animate() {
+            if (!isAnimating) return;
+            
+            drawFlowingWave();
+            time += 1;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function startAnimation() {
+            if (!isAnimating) {
+                isAnimating = true;
+                animate();
+            }
+        }
+        
+        function stopAnimation() {
+            isAnimating = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function toggleWaveStyle() {
+            waveStyle = waveStyle === 'dotted' ? 'smooth' : 'dotted';
+            const button = event.target;
+            button.textContent = waveStyle === 'dotted' ? '🔄 Switch to Smooth' : '🔄 Switch to Dotted';
+        }
+        
+        // Auto-start a brief demo
+        setTimeout(() => {
+            startAnimation();
+            setTimeout(() => stopAnimation(), 5000);
+        }, 500);
+    </script>
+</body>
+</html>

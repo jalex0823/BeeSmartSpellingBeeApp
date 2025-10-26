@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dense Frequency Spectrum - BeeSmart Style</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .visualizer-container {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .visualizer-canvas {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid rgba(255, 179, 0, 0.3);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FFB300, #FF8F00);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 179, 0, 0.4);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .description {
+            background: rgba(255, 179, 0, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #FFB300;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Dense Frequency Spectrum Visualizer</h1>
+        <div class="description">
+            <p><strong>Style:</strong> Dense dotted frequency spectrum like your reference image</p>
+            <p><strong>Features:</strong> Blue-to-purple gradient, pixelated/dotted effect, many frequency bars</p>
+            <p><strong>Perfect for:</strong> Modern, professional audio visualization</p>
+        </div>
+        
+        <div class="visualizer-container">
+            <h3>🐝 BeeSmart Voice Visualizer (Enhanced)</h3>
+            <canvas id="denseDotCanvas" class="visualizer-canvas" width="800" height="150"></canvas>
+            
+            <div class="controls">
+                <button onclick="startAnimation()">🎤 Start Voice Animation</button>
+                <button onclick="stopAnimation()">⏹️ Stop</button>
+                <button onclick="toggleDotMode()">🔄 Toggle Dot Style</button>
+            </div>
+            
+            <div style="margin-top: 15px; text-align: center; opacity: 0.8;">
+                <small>This preview shows how it will look during speech synthesis</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('denseDotCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isAnimating = false;
+        let animationId = null;
+        let time = 0;
+        let dotMode = true; // true = dotted, false = solid bars
+        
+        // Configuration for dense spectrum
+        const config = {
+            bars: 120,          // Many bars for dense effect
+            maxHeight: 130,     // Maximum bar height
+            minHeight: 2,       // Minimum bar height
+            barWidth: 6,        // Width of each bar
+            spacing: 1,         // Space between bars
+            dotSize: 2,         // Size of dots when in dot mode
+            dotSpacing: 3       // Vertical spacing between dots
+        };
+        
+        // Color gradient from blue to purple/pink (like your reference)
+        function getBarColor(index, intensity) {
+            const ratio = index / config.bars;
+            
+            // Blue to purple to pink gradient
+            let r, g, b;
+            
+            if (ratio < 0.33) {
+                // Blue to cyan
+                r = Math.floor(30 + ratio * 3 * 100);      // 30 -> 130
+                g = Math.floor(150 + ratio * 3 * 100);     // 150 -> 250
+                b = 255;                                    // Full blue
+            } else if (ratio < 0.66) {
+                // Cyan to purple
+                const localRatio = (ratio - 0.33) / 0.33;
+                r = Math.floor(130 + localRatio * 100);    // 130 -> 230
+                g = Math.floor(250 - localRatio * 150);    // 250 -> 100
+                b = 255;                                    // Full blue
+            } else {
+                // Purple to pink
+                const localRatio = (ratio - 0.66) / 0.34;
+                r = Math.floor(230 + localRatio * 25);     // 230 -> 255
+                g = Math.floor(100 - localRatio * 50);     // 100 -> 50
+                b = Math.floor(255 - localRatio * 100);    // 255 -> 155
+            }
+            
+            // Apply intensity for brightness variation
+            const alpha = 0.7 + intensity * 0.3;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
+        function drawDottedBar(x, height, colorIndex, intensity) {
+            const color = getBarColor(colorIndex, intensity);
+            ctx.fillStyle = color;
+            
+            if (dotMode) {
+                // Draw dotted bar
+                const numDots = Math.floor(height / config.dotSpacing);
+                for (let i = 0; i < numDots; i++) {
+                    const dotY = canvas.height - (i * config.dotSpacing) - config.dotSize;
+                    ctx.fillRect(x, dotY, config.dotSize, config.dotSize);
+                }
+            } else {
+                // Draw solid bar
+                ctx.fillRect(x, canvas.height - height, config.barWidth, height);
+            }
+        }
+        
+        function animate() {
+            if (!isAnimating) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate bar positions
+            const totalWidth = config.bars * (config.barWidth + config.spacing);
+            const startX = (canvas.width - totalWidth) / 2;
+            
+            // Draw frequency bars
+            for (let i = 0; i < config.bars; i++) {
+                const x = startX + i * (config.barWidth + config.spacing);
+                
+                // Create realistic frequency response
+                // Lower frequencies (left) = taller, higher frequencies (right) = shorter
+                const freqResponse = Math.pow(1 - (i / config.bars), 0.7);
+                
+                // Add multiple sine waves for natural variation
+                const wave1 = Math.sin(time * 0.1 + i * 0.1) * 0.3;
+                const wave2 = Math.sin(time * 0.07 + i * 0.05) * 0.2;
+                const wave3 = Math.sin(time * 0.13 + i * 0.08) * 0.15;
+                const randomNoise = (Math.random() - 0.5) * 0.1;
+                
+                // Combine all components
+                const amplitude = freqResponse + wave1 + wave2 + wave3 + randomNoise;
+                const normalizedAmp = Math.max(0, Math.min(1, amplitude + 0.3));
+                
+                // Calculate height
+                const height = config.minHeight + (normalizedAmp * (config.maxHeight - config.minHeight));
+                
+                // Draw the bar
+                drawDottedBar(x, height, i, normalizedAmp);
+            }
+            
+            time += 1;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function startAnimation() {
+            if (!isAnimating) {
+                isAnimating = true;
+                animate();
+            }
+        }
+        
+        function stopAnimation() {
+            isAnimating = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function toggleDotMode() {
+            dotMode = !dotMode;
+            // Update button text based on current mode
+            const button = event.target;
+            button.textContent = dotMode ? '🔄 Switch to Solid Bars' : '🔄 Switch to Dotted';
+        }
+        
+        // Auto-start a brief demo
+        setTimeout(() => {
+            startAnimation();
+            setTimeout(() => stopAnimation(), 4000);
+        }, 500);
+    </script>
+</body>
+</html>

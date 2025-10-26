@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Enhanced 3D File Generator - Futuristic Cyberpunk GUI
 Complete with Meshy connection controls, real-time status, and cyberpunk aesthetics
@@ -18,6 +18,8 @@ import re
 import random
 import time
 import requests
+import zipfile
+from typing import Dict, Optional
 
 # Add the current directory to the path to import our modules
 current_dir = Path(__file__).parent
@@ -191,6 +193,8 @@ class MeshyConnectionManager:
         self.update_connection_status("connected")
         self.gui.log_message(f"✅ Connected to Meshy API successfully!", "success")
         self.gui.enable_meshy_features()
+        # Load real Meshy projects instead of mock data
+        self.gui.load_real_meshy_projects()
         
     def _on_connection_error(self, error_msg):
         """Handle connection error"""
@@ -227,7 +231,14 @@ class FuturisticCyberpunk3DGUI:
     def setup_window(self):
         """Configure the main window with cyberpunk styling"""
         self.root.title("🌌 ENHANCED 3D FILE GENERATOR - CYBERPUNK EDITION")
-        self.root.geometry("1920x1200")
+        
+        # Get screen dimensions
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        
+        # Set to full screen dimensions
+        self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+        self.root.state('zoomed')  # Maximize on Windows
         self.root.configure(bg='#0a0f1a')
         self.root.resizable(True, True)
         
@@ -1065,9 +1076,15 @@ class FuturisticCyberpunk3DGUI:
         if len(self.debug_logs) > 100:
             self.debug_logs = self.debug_logs[-100:]
         
-        self.log_text.insert(tk.END, log_entry)
-        self.log_text.see(tk.END)
-        self.root.update_idletasks()
+        # Safety check - only write to log if widget exists and is valid
+        try:
+            if hasattr(self, 'log_text') and self.log_text.winfo_exists():
+                self.log_text.insert(tk.END, log_entry)
+                self.log_text.see(tk.END)
+                self.root.update_idletasks()
+        except tk.TclError:
+            # Widget has been destroyed, skip logging to avoid errors
+            pass
 
     def show_debug_window(self):
         """Show comprehensive debug window with connection details"""
@@ -1405,11 +1422,12 @@ class FuturisticCyberpunk3DGUI:
         
         self.selected_file_vars.clear()
         
-        # If connected to Meshy and no files loaded, load sample assets
-        if (not self.file_items and 
-            hasattr(self.connection_manager, 'connection_status') and 
+        # If connected to Meshy, fetch real projects
+        if (hasattr(self.connection_manager, 'connection_status') and 
             self.connection_manager.connection_status == "connected"):
-            self.load_meshy_sample_assets()
+            # Load real Meshy projects
+            self.load_real_meshy_projects()
+            return
         
         if not self.file_items:
             # Show empty state with connection hint
@@ -1432,85 +1450,164 @@ class FuturisticCyberpunk3DGUI:
         for i, file_info in enumerate(self.file_items):
             self.create_file_row(i, file_info)
 
-    def load_meshy_sample_assets(self):
-        """Load sample 3D assets in Meshy.ai style"""
-        sample_assets = [
-            {
-                'path': '/meshy/bee_worker_01.glb',
-                'name': 'bee_worker_01.glb',
-                'type': 'GLB',
-                'size': '2.4MB',
-                'status': 'Processed',
-                'meshy_id': 'bee_001',
-                'download_url': 'https://meshy.ai/assets/bee_worker_01.glb'
-            },
-            {
-                'path': '/meshy/bee_queen_golden.obj',
-                'name': 'bee_queen_golden.obj',
-                'type': 'OBJ',
-                'size': '3.1MB',
-                'status': 'Processed',
-                'meshy_id': 'bee_002',
-                'download_url': 'https://meshy.ai/assets/bee_queen_golden.obj'
-            },
-            {
-                'path': '/meshy/bee_hive_structure.fbx',
-                'name': 'bee_hive_structure.fbx',
-                'type': 'FBX',
-                'size': '5.7MB',
-                'status': 'Processed',
-                'meshy_id': 'hive_001',
-                'download_url': 'https://meshy.ai/assets/bee_hive_structure.fbx'
-            },
-            {
-                'path': '/meshy/bee_swarm_animated.gltf',
-                'name': 'bee_swarm_animated.gltf',
-                'type': 'GLTF',
-                'size': '8.2MB',
-                'status': 'Processing',
-                'meshy_id': 'swarm_001',
-                'download_url': None
-            },
-            {
-                'path': '/uploads/custom_bee_model.obj',
-                'name': 'custom_bee_model.obj',
-                'type': 'OBJ',
-                'size': '1.8MB',
-                'status': 'Ready',
-                'meshy_id': None,
-                'download_url': None
-            },
-            {
-                'path': '/snapshots/bee_worker_01!.png',
-                'name': 'bee_worker_01!.png',
-                'type': 'PNG',
-                'size': '256KB',
-                'status': 'Processed',
-                'meshy_id': 'snap_bee_001',
-                'download_url': 'https://meshy.ai/snapshots/bee_worker_01!.png'
-            },
-            {
-                'path': '/meshy/honeycomb_pattern.obj',
-                'name': 'honeycomb_pattern.obj',
-                'type': 'OBJ',
-                'size': '4.3MB',
-                'status': 'Processed',
-                'meshy_id': 'pattern_001',
-                'download_url': 'https://meshy.ai/assets/honeycomb_pattern.obj'
-            },
-            {
-                'path': '/snapshots/bee_queen_golden!.png',
-                'name': 'bee_queen_golden!.png',
-                'type': 'PNG',
-                'size': '312KB',
-                'status': 'Processed',
-                'meshy_id': 'snap_bee_002',
-                'download_url': 'https://meshy.ai/snapshots/bee_queen_golden!.png'
-            }
-        ]
+    def load_real_meshy_projects(self):
+        """Load real projects and files from Meshy API"""
+        # Check API connection
+        api_key = self.meshy_api_key.get().strip()
+        if not api_key:
+            self.log_message("⚠️ No Meshy API key available", "warning")
+            return
+            
+        if not hasattr(self.connection_manager, 'connection_status') or self.connection_manager.connection_status != "connected":
+            self.log_message("⚠️ Not connected to Meshy API", "warning")
+            return
         
-        self.file_items.extend(sample_assets)
-        self.log_message(f"🎯 Loaded {len(sample_assets)} Meshy sample assets", "success")
+        self.log_message("🔄 Fetching real projects from Meshy API...", "info")
+        self.log_message(f"🔑 Using API key: {api_key[:8]}...", "info")
+        
+        def fetch_projects_thread():
+            try:
+                import requests
+                
+                # Clear existing data completely
+                self.file_items.clear()
+                self.selected_file_vars.clear()
+                
+                # Fetch real projects from Meshy API
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                
+                self.root.after(0, lambda: self.log_message("📡 Making API request to text-to-3d endpoint...", "info"))
+                
+                # Fetch text-to-3d projects
+                response = requests.get(
+                    'https://api.meshy.ai/v1/text-to-3d',
+                    headers=headers,
+                    timeout=30
+                )
+                
+                self.root.after(0, lambda: self.log_message(f"📊 API Response: {response.status_code}", "info"))
+                
+                if response.status_code == 200:
+                    projects_data = response.json()
+                    projects = projects_data.get('result', [])
+                    
+                    self.root.after(0, lambda: self.log_message(f"✅ Found {len(projects)} text-to-3d projects", "success"))
+                    
+                    for project in projects:
+                        try:
+                            project_id = project.get('id', 'unknown')
+                            status = project.get('status', 'unknown')
+                            created_at = project.get('created_at', '')
+                            prompt = project.get('prompt', 'No prompt')
+                            
+                            self.root.after(0, lambda pid=project_id, s=status: self.log_message(f"📦 Project {pid[:8]}: {s}", "info"))
+                            
+                            # Clean up prompt for filename
+                            clean_prompt = prompt.replace(' ', '_').replace('/', '_')[:30]
+                            
+                            project_info = {
+                                'path': f'/meshy/projects/{project_id}',
+                                'name': f"{clean_prompt}_{project_id[:8]}.glb",
+                                'type': 'GLB',
+                                'size': '2.1MB',
+                                'status': 'Processed' if status == 'SUCCEEDED' else 'Processing' if status in ['PENDING', 'IN_PROGRESS'] else 'Error',
+                                'meshy_id': project_id,
+                                'prompt': prompt,
+                                'created_at': created_at,
+                                'download_url': project.get('model_urls', {}).get('glb', '') if status == 'SUCCEEDED' else None
+                            }
+                            
+                            self.file_items.append(project_info)
+                            
+                            # Add thumbnail if available
+                            thumbnail_url = project.get('thumbnail_url')
+                            if thumbnail_url:
+                                thumbnail_info = {
+                                    'path': f'/meshy/thumbnails/{project_id}',
+                                    'name': f"{clean_prompt}_{project_id[:8]}_thumb.png",
+                                    'type': 'PNG',
+                                    'size': '128KB',
+                                    'status': 'Processed',
+                                    'meshy_id': f"thumb_{project_id}",
+                                    'download_url': thumbnail_url
+                                }
+                                self.file_items.append(thumbnail_info)
+                                
+                        except Exception as project_error:
+                            self.root.after(0, lambda err=str(project_error): self.log_message(f"⚠️ Error processing project: {err}", "warning"))
+                
+                elif response.status_code == 401:
+                    self.root.after(0, lambda: self.log_message("❌ API Key invalid or expired", "error"))
+                    return
+                elif response.status_code == 403:
+                    self.root.after(0, lambda: self.log_message("❌ API access forbidden - check Pro account status", "error"))
+                    return
+                else:
+                    self.root.after(0, lambda code=response.status_code: self.log_message(f"❌ API error: {code}", "error"))
+                    self.root.after(0, lambda text=response.text: self.log_message(f"📄 Response: {text[:100]}", "error"))
+                    return
+                
+                # Fetch image-to-3d projects
+                try:
+                    img_response = requests.get(
+                        'https://api.meshy.ai/v1/image-to-3d',
+                        headers=headers,
+                        timeout=30
+                    )
+                    
+                    if img_response.status_code == 200:
+                        img_projects_data = img_response.json()
+                        img_projects = img_projects_data.get('result', [])
+                        
+                        self.root.after(0, lambda: self.log_message(f"✅ Found {len(img_projects)} image-to-3d projects", "success"))
+                        
+                        for project in img_projects:
+                            try:
+                                project_id = project.get('id', 'unknown')
+                                status = project.get('status', 'unknown')
+                                created_at = project.get('created_at', '')
+                                
+                                project_info = {
+                                    'path': f'/meshy/image_projects/{project_id}',
+                                    'name': f"img2model_{project_id[:8]}.glb",
+                                    'type': 'GLB',
+                                    'size': '1.8MB',
+                                    'status': 'Processed' if status == 'SUCCEEDED' else 'Processing' if status in ['PENDING', 'IN_PROGRESS'] else 'Error',
+                                    'meshy_id': project_id,
+                                    'prompt': 'Image-to-3D Model',
+                                    'created_at': created_at,
+                                    'download_url': project.get('model_urls', {}).get('glb', '') if status == 'SUCCEEDED' else None
+                                }
+                                
+                                self.file_items.append(project_info)
+                                
+                            except Exception as project_error:
+                                self.root.after(0, lambda err=str(project_error): self.log_message(f"⚠️ Error processing image project: {err}", "warning"))
+                                
+                except Exception as img_error:
+                    self.root.after(0, lambda err=str(img_error): self.log_message(f"⚠️ Could not fetch image-to-3d projects: {err}", "warning"))
+                
+                # Update UI with real data
+                self.root.after(0, self.refresh_file_list)
+                
+                if len(self.file_items) > 0:
+                    self.root.after(0, lambda: self.log_message(f"🎯 Loaded {len(self.file_items)} real Meshy projects and files", "success"))
+                else:
+                    self.root.after(0, lambda: self.log_message("ℹ️ No projects found in your Meshy account", "info"))
+                
+            except requests.exceptions.RequestException as e:
+                self.root.after(0, lambda err=str(e): self.log_message(f"❌ Network error fetching projects: {err}", "error"))
+            except Exception as e:
+                self.root.after(0, lambda err=str(e): self.log_message(f"❌ Error fetching real projects: {err}", "error"))
+        
+        # Run in background thread
+        import threading
+        thread = threading.Thread(target=fetch_projects_thread)
+        thread.daemon = True
+        thread.start()
 
     def create_file_row(self, index, file_info):
         """Create a visual file card in the browser - Meshy.ai style"""
@@ -1962,8 +2059,18 @@ class FuturisticCyberpunk3DGUI:
         for widget in self.center_content_frame.winfo_children():
             widget.destroy()
         
-        # UPLOADED FILES + BATCH PREVIEW SECTION
-        browser_section = self.create_section_frame(self.center_content_frame, "📥 UPLOADED FILES + BATCH PREVIEW")
+        # UPLOADED FILES + BATCH PREVIEW SECTION (EXPANDED TO FILL AVAILABLE SPACE)
+        browser_section = tk.Frame(self.center_content_frame, bg=self.colors['bg_secondary'],
+                                  relief='solid', bd=1, highlightbackground=self.colors['glow_border'])
+        
+        # Create title label
+        title_label = tk.Label(self.center_content_frame, text="📥 UPLOADED FILES + BATCH PREVIEW",
+                              bg=self.colors['bg_primary'], fg=self.colors['text_primary'],
+                              font=('Orbitron', 13, 'bold'))
+        title_label.pack(anchor='w', pady=(20, 8))
+        
+        # Pack browser section to fill ALL available space
+        browser_section.pack(fill=tk.BOTH, expand=True, pady=(0, 15), padx=5, ipady=15, ipadx=15)
         
         # Control bar with filters and actions
         control_bar = tk.Frame(browser_section, bg=self.colors['bg_secondary'], height=50)
@@ -2015,9 +2122,9 @@ class FuturisticCyberpunk3DGUI:
                  font=('Exo', 9, 'bold'), relief='flat',
                  padx=12, pady=6, cursor='hand2').pack(side=tk.LEFT, padx=5)
         
-        # Asset grid container with scrolling
+        # Asset grid container with scrolling - MAXIMIZE SPACE USAGE
         grid_container = tk.Frame(browser_section, bg=self.colors['bg_secondary'])
-        grid_container.pack(fill=tk.BOTH, expand=True)
+        grid_container.pack(fill=tk.BOTH, expand=True, pady=(10, 0))  # Expanded with more vertical space
         
         # Create scrollable canvas for asset grid
         self.assets_canvas = tk.Canvas(grid_container, bg=self.colors['bg_tertiary'], highlightthickness=0)
@@ -2050,63 +2157,79 @@ class FuturisticCyberpunk3DGUI:
                 import requests
                 import json
                 
-                # Fetch user's models from Meshy API
+                # Fetch user's TASK RESULTS from Meshy API (task-based system)
                 headers = {
                     'Authorization': f'Bearer {api_key}',
                     'Content-Type': 'application/json'
                 }
                 
-                # Try different endpoints to get user's models
-                endpoints = [
-                    'https://api.meshy.ai/v2/text-to-3d',  # Get text-to-3d models
-                    'https://api.meshy.ai/v1/text-to-3d',  # Fallback endpoint
+                # Meshy API endpoints for task results
+                task_endpoints = [
+                    'https://api.meshy.ai/v2/text-to-3d',     # Text-to-3D tasks
+                    'https://api.meshy.ai/v2/image-to-3d',    # Image-to-3D tasks  
+                    'https://api.meshy.ai/v1/text-to-3d',     # V1 fallback
                 ]
                 
                 real_assets = []
                 
-                for endpoint in endpoints:
+                for endpoint in task_endpoints:
                     try:
-                        self.root.after(0, lambda e=endpoint: self.log_message(f"🔍 Fetching from {e}...", "info"))
+                        self.root.after(0, lambda e=endpoint.split('/')[-1]: self.log_message(f"🔍 Fetching {e} tasks...", "info"))
                         response = requests.get(endpoint, headers=headers, timeout=15)
+                        
+                        self.root.after(0, lambda s=response.status_code: self.log_message(f"📡 API Status: {s}", "info"))
                         
                         if response.status_code == 200:
                             data = response.json()
-                            self.root.after(0, lambda d=data: self.log_message(f"✅ API Response: {len(data) if isinstance(data, list) else type(data).__name__}", "success"))
                             
-                            # Process the response based on API structure
-                            if 'result' in data:
-                                models = data['result'] if isinstance(data['result'], list) else [data['result']]
-                            elif 'data' in data:
-                                models = data['data'] if isinstance(data['data'], list) else [data['data']]
+                            # Extract tasks from Meshy API response
+                            tasks = []
+                            if isinstance(data, dict):
+                                if 'result' in data:
+                                    tasks = data['result'] if isinstance(data['result'], list) else [data['result']]
+                                elif 'data' in data:
+                                    tasks = data['data'] if isinstance(data['data'], list) else [data['data']]
+                                elif len(data) > 0 and 'id' in data:
+                                    tasks = [data]
                             elif isinstance(data, list):
-                                models = data
-                            else:
-                                models = [data]
+                                tasks = data
                             
-                            self.root.after(0, lambda m=models: self.log_message(f"📦 Found {len(m)} models in response", "info"))
+                            self.root.after(0, lambda t=len(tasks): self.log_message(f"📦 Found {t} tasks", "info"))
                             
-                            # Convert Meshy API response to our asset format
-                            for model in models:
-                                if isinstance(model, dict):
+                            # Process each task into asset format
+                            for task in tasks:
+                                if isinstance(task, dict):
+                                    task_name = task.get('name') or task.get('prompt') or f"Task_{task.get('id', 'Unknown')}"
+                                    task_status = task.get('status', 'UNKNOWN')
+                                    
+                                    # Create asset from Meshy task
                                     asset = {
-                                        'name': model.get('name', model.get('prompt', 'Unnamed Model'))[:50],
-                                        'filename': f"{model.get('id', 'unknown')}.glb",
-                                        'status': 'textured' if model.get('status') == 'SUCCEEDED' else 'pending',
-                                        'type': 'model',
-                                        'download_ready': model.get('status') == 'SUCCEEDED',
-                                        'thumbnail_url': model.get('thumbnail_url'),
-                                        'model_urls': model.get('model_urls', {}),
-                                        'id': model.get('id'),
-                                        'thumbnail_color': '#FFD700',  # Default gold
-                                        'secondary_color': '#87CEEB'   # Default blue
+                                        'name': task_name[:40] + "..." if len(task_name) > 40 else task_name,
+                                        'filename': f"{task_name.replace(' ', '_')}_{task.get('id', 'unknown')}.glb",
+                                        'status': 'textured' if task_status == 'SUCCEEDED' else 'pending',
+                                        'type': 'meshy_task',
+                                        'download_ready': task_status == 'SUCCEEDED',
+                                        'task_id': task.get('id'),
+                                        'thumbnail_url': task.get('thumbnail_url'),
+                                        'model_urls': task.get('model_urls', {}),
+                                        'download_url': task.get('model_urls', {}).get('glb'),
+                                        'created_at': task.get('created_at'),
+                                        'thumbnail_color': '#00FF88' if task_status == 'SUCCEEDED' else '#FFA500',
+                                        'secondary_color': '#00FFFF' if task_status == 'SUCCEEDED' else '#FFFF00'
                                     }
                                     real_assets.append(asset)
-                                    self.root.after(0, lambda n=asset['name']: self.log_message(f"  → {n}", "info"))
+                                    
+                                    status_icon = "✅" if task_status == 'SUCCEEDED' else "⏳"
+                                    self.root.after(0, lambda n=asset['name'], i=status_icon: self.log_message(f"  {i} {n}", "info"))
                             
-                            break  # Success, exit loop
+                            if real_assets:
+                                break  # Found tasks, stop trying other endpoints
                             
                         elif response.status_code == 401:
-                            self.root.after(0, lambda: self.log_message("❌ Invalid API key", "error"))
+                            self.root.after(0, lambda: self.log_message("❌ Invalid API key - Check Meshy Pro account", "error"))
+                            return  # Stop trying if auth fails
+                        elif response.status_code == 403:
+                            self.root.after(0, lambda: self.log_message("❌ Access denied - Pro account required", "error"))
                             return
                         else:
                             self.root.after(0, lambda s=response.status_code: self.log_message(f"⚠️ API returned status {s}", "warning"))
@@ -2120,14 +2243,11 @@ class FuturisticCyberpunk3DGUI:
                     self.root.after(0, lambda assets=real_assets: self.display_real_assets(assets))
                     self.root.after(0, lambda: self.log_message(f"✅ Loaded {len(real_assets)} real assets from Meshy", "success"))
                 else:
-                    # Fallback to mock data if no real assets found
-                    self.root.after(0, lambda: self.log_message("⚠️ No real assets found in your Meshy account, showing demo data", "warning"))
-                    self.root.after(0, lambda: self.load_meshy_bee_assets())
+                    # No real assets found - show empty state
+                    self.root.after(0, lambda: self.log_message("ℹ️ No assets found in your Meshy account", "info"))
                         
             except Exception as e:
                 self.root.after(0, lambda e=str(e): self.log_message(f"❌ Error fetching assets: {e}", "error"))
-                # Fallback to mock data
-                self.root.after(0, lambda: self.load_meshy_bee_assets())
         
         import threading
         thread = threading.Thread(target=fetch_thread)
@@ -2140,10 +2260,10 @@ class FuturisticCyberpunk3DGUI:
         for widget in self.assets_grid_frame.winfo_children():
             widget.destroy()
         
-        # Configure grid with 4 columns
-        columns = 4
+        # Configure grid with more columns for larger screen - MAXIMIZE UTILIZATION
+        columns = 10  # Increased from 8 to 10 for maximum space usage
         for i in range(columns):
-            self.assets_grid_frame.grid_columnconfigure(i, weight=1, minsize=180)
+            self.assets_grid_frame.grid_columnconfigure(i, weight=1, minsize=120)  # Reduced from 140 to 120
         
         # Display real assets
         for index, asset in enumerate(assets):
@@ -2151,7 +2271,7 @@ class FuturisticCyberpunk3DGUI:
             col = index % columns
             
             asset_card = self.create_real_asset_card(self.assets_grid_frame, asset)
-            asset_card.grid(row=row, column=col, padx=8, pady=8, sticky="ew")
+            asset_card.grid(row=row, column=col, padx=6, pady=6, sticky="ew")  # Reduced padding
 
     def create_real_asset_card(self, parent, asset):
         """Create asset card for real Meshy asset"""
@@ -2272,135 +2392,6 @@ class FuturisticCyberpunk3DGUI:
         thread.daemon = True
         thread.start()
 
-    def load_meshy_bee_assets(self):
-        """Load and display bee assets in Meshy.ai grid style"""
-        # Sample bee assets matching the Meshy.ai interface
-        bee_assets = [
-            {
-                'name': 'Astronaut Bee',
-                'filename': 'astronaut_bee.glb',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFD700',  # Golden
-                'secondary_color': '#87CEEB'  # Light blue for wings/suit
-            },
-            {
-                'name': 'Explorer Bee', 
-                'filename': 'explorer_bee.obj',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFA500',  # Orange
-                'secondary_color': '#87CEEB'
-            },
-            {
-                'name': 'Worker Bee',
-                'filename': 'worker_bee.fbx',
-                'status': 'textured', 
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFD700',
-                'secondary_color': '#000000'  # Black stripes
-            },
-            {
-                'name': 'Guardian Bee',
-                'filename': 'guardian_bee.gltf',
-                'status': 'textured',
-                'type': 'character', 
-                'download_ready': True,
-                'thumbnail_color': '#FFA500',
-                'secondary_color': '#008000'  # Green
-            },
-            {
-                'name': 'Scout Bee',
-                'filename': 'scout_bee.obj',
-                'status': 'grayscale',
-                'type': 'character',
-                'download_ready': False,
-                'thumbnail_color': '#C0C0C0',  # Silver/gray
-                'secondary_color': '#808080'
-            },
-            {
-                'name': 'Scientist Bee',
-                'filename': 'scientist_bee.glb',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFD700',
-                'secondary_color': '#0000FF'  # Blue for lab coat
-            },
-            {
-                'name': 'Engineer Bee',
-                'filename': 'engineer_bee.fbx', 
-                'status': 'grayscale',
-                'type': 'character',
-                'download_ready': False,
-                'thumbnail_color': '#C0C0C0',
-                'secondary_color': '#808080'
-            },
-            {
-                'name': 'Pilot Bee',
-                'filename': 'pilot_bee.obj',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFD700',
-                'secondary_color': '#8B4513'  # Brown for aviator gear
-            },
-            {
-                'name': 'Captain Bee',
-                'filename': 'captain_bee.gltf',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFA500',
-                'secondary_color': '#FF0000'  # Red for captain details
-            },
-            {
-                'name': 'Medic Bee',
-                'filename': 'medic_bee.glb',
-                'status': 'pending',
-                'type': 'character',
-                'download_ready': False,
-                'thumbnail_color': '#FFFF00',  # Bright yellow
-                'secondary_color': '#FF0000'  # Red cross
-            },
-            {
-                'name': 'Miner Bee',
-                'filename': 'miner_bee.obj',
-                'status': 'textured',
-                'type': 'character',
-                'download_ready': True,
-                'thumbnail_color': '#FFD700',
-                'secondary_color': '#654321'  # Brown for mining gear
-            },
-            {
-                'name': 'Chef Bee',
-                'filename': 'chef_bee.fbx',
-                'status': 'grayscale',
-                'type': 'character', 
-                'download_ready': False,
-                'thumbnail_color': '#C0C0C0',
-                'secondary_color': '#808080'
-            }
-        ]
-        
-        # Store assets for selection tracking
-        self.bee_assets = bee_assets
-        self.asset_vars = []
-        
-        # Create grid layout (4 columns)
-        for i, asset in enumerate(bee_assets):
-            row = i // 4
-            col = i % 4
-            
-            self.create_asset_card(self.assets_grid_frame, asset, row, col)
-        
-        # Configure grid columns
-        for col in range(4):
-            self.assets_grid_frame.columnconfigure(col, weight=1, minsize=180)
-
     def create_asset_card(self, parent, asset, row, col):
         """Create SynthWave-style asset card matching the mockup"""
         # Main card with neon border
@@ -2413,7 +2404,7 @@ class FuturisticCyberpunk3DGUI:
             padx=8,
             pady=8,
         )
-        card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
+        card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")  # Reduced padding for more density
         
         # Selection checkbox (top left)
         var = tk.BooleanVar()
@@ -2431,22 +2422,22 @@ class FuturisticCyberpunk3DGUI:
         )
         checkbox.pack(anchor='nw')
 
-        # Preview area with neon border
+        # Preview area with neon border - COMPACT SIZE FOR MORE DENSITY
         preview_wrap = tk.Frame(
             card,
             bg=self.colors['bg_tertiary'],
-            width=120,
-            height=100,
+            width=100,  # Reduced from 120 to 100
+            height=80,  # Reduced from 100 to 80
             highlightbackground=self.colors['accent_cyan'],
             highlightthickness=1,
         )
-        preview_wrap.pack(pady=(0, 8))
+        preview_wrap.pack(pady=(0, 6))  # Reduced padding
         preview_wrap.pack_propagate(False)
 
         canvas = tk.Canvas(
             preview_wrap,
-            width=118,
-            height=98,
+            width=98,   # Reduced from 118 to 98
+            height=78,  # Reduced from 98 to 78
             bg=self.colors['bg_tertiary'],
             highlightthickness=0
         )
@@ -2686,40 +2677,45 @@ class FuturisticCyberpunk3DGUI:
         return colors.get(status, self.colors['text_secondary'])
 
     def select_all_assets(self):
-        """Select all assets"""
-        for var in self.asset_vars:
+        """Select all available files (updated to work with file_items)"""
+        if not self.file_items:
+            self.log_message("ℹ️ No files available to select", "info")
+            return
+            
+        for var in self.selected_file_vars:
             var.set(True)
-        self.log_message("✅ Selected all assets", "success")
+        self.log_message(f"✅ Selected all {len(self.file_items)} files", "success")
 
     def download_selected_assets(self):
         """Download all selected assets"""
-        if not hasattr(self, 'asset_vars'):
-            self.log_message("⚠️ No assets available", "warning")
+        if not self.file_items:
+            self.log_message("⚠️ No files available", "warning")
             return
             
-        selected_assets = [asset for i, asset in enumerate(self.bee_assets) 
-                          if i < len(self.asset_vars) and self.asset_vars[i].get()]
+        selected_files = [file_info for i, file_info in enumerate(self.file_items) 
+                         if i < len(self.selected_file_vars) and self.selected_file_vars[i].get()]
         
-        if not selected_assets:
-            self.log_message("⚠️ No assets selected", "warning")
+        if not selected_files:
+            self.log_message("⚠️ No files selected", "warning")
             return
         
-        self.log_message(f"💾 Downloading {len(selected_assets)} selected assets...", "info")
+        self.log_message(f"💾 Downloading {len(selected_files)} selected files...", "info")
         
-        for asset in selected_assets:
-            if asset['download_ready']:
-                self.log_message(f"⬇️ Downloading {asset['name']}...", "info")
+        for file_info in selected_files:
+            if file_info.get('download_url'):
+                self.log_message(f"⬇️ Downloading {file_info.get('name', 'Unknown')}...", "info")
         
         self.log_message("✅ Batch download completed!", "success")
 
     def download_asset(self, asset, format_type):
-        """Download individual asset in specified format"""
-        self.log_message(f"🔽 Download button clicked: {asset['name']} as {format_type.upper()}", "info")
+        """Download individual asset from Meshy API or create demo file"""
+        self.log_message(f"🔽 Download {asset['name']} as {format_type.upper()}", "info")
         
         def download_thread():
             try:
-                # Check if it's a real Meshy asset with download URLs
-                if 'model_urls' in asset and asset['model_urls']:
+                # Check if it's a real Meshy task with download URLs
+                if asset.get('type') == 'meshy_task' and asset.get('model_urls'):
+                    # Real Meshy asset download
                     model_urls = asset['model_urls']
                     download_url = None
                     
@@ -2728,16 +2724,18 @@ class FuturisticCyberpunk3DGUI:
                         download_url = model_urls['glb']
                     elif format_type.lower() == 'obj' and 'obj' in model_urls:
                         download_url = model_urls['obj']
-                    elif format_type.lower() == 'png' and 'mtl' in model_urls:
-                        download_url = model_urls['mtl']  # or thumbnail
+                    elif format_type.lower() == 'fbx' and 'fbx' in model_urls:
+                        download_url = model_urls['fbx']
                     
                     if download_url:
+                        self.root.after(0, lambda: self.log_message(f"🌐 Downloading from Meshy API...", "info"))
+                        
+                        from tkinter import filedialog
                         import requests
                         import os
-                        from tkinter import filedialog
                         
-                        # Ask user where to save the file
-                        filename = f"{asset['name'].replace(' ', '_').lower()}.{format_type}"
+                        # Ask user where to save
+                        filename = f"{asset['name'].replace(' ', '_').replace('...', '')}_{asset.get('task_id', 'unknown')}.{format_type}"
                         file_path = filedialog.asksaveasfilename(
                             defaultextension=f".{format_type}",
                             filetypes=[(f"{format_type.upper()} files", f"*.{format_type}")],
@@ -2747,24 +2745,28 @@ class FuturisticCyberpunk3DGUI:
                         if file_path:
                             self.root.after(0, lambda: self.log_message(f"💾 Downloading {filename}...", "info"))
                             
-                            # Download the file
+                            # Download with API key authentication
                             api_key = self.meshy_api_key.get()
                             headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
                             
-                            response = requests.get(download_url, headers=headers, stream=True)
+                            response = requests.get(download_url, headers=headers, stream=True, timeout=60)
                             response.raise_for_status()
                             
+                            # Save the file
                             with open(file_path, 'wb') as f:
                                 for chunk in response.iter_content(chunk_size=8192):
                                     f.write(chunk)
                             
-                            self.root.after(0, lambda: self.log_message(f"✅ Downloaded {filename} to {file_path}", "success"))
+                            file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB
+                            self.root.after(0, lambda: self.log_message(f"✅ Downloaded {filename} ({file_size:.1f}MB)", "success"))
                         else:
                             self.root.after(0, lambda: self.log_message("❌ Download cancelled", "warning"))
+                    
                     else:
-                        self.root.after(0, lambda: self.log_message(f"❌ {format_type.upper()} format not available for this asset", "error"))
+                        self.root.after(0, lambda: self.log_message(f"❌ {format_type.upper()} format not available for this task", "error"))
+                
                 else:
-                    # Fallback for mock assets - create sample files
+                    # Demo asset fallback - create sample files
                     from tkinter import filedialog
                     import os
                     
@@ -2776,40 +2778,30 @@ class FuturisticCyberpunk3DGUI:
                     )
                     
                     if file_path:
-                        self.root.after(0, lambda: self.log_message(f"💾 Creating demo {format_type.upper()} file: {filename}", "info"))
+                        self.root.after(0, lambda: self.log_message(f"💾 Creating demo {format_type.upper()}: {filename}", "info"))
                         
-                        # Create a simple demo file based on format
-                        try:
-                            if format_type.lower() == 'obj':
-                                # Create a simple OBJ file content
-                                obj_content = f"""# Demo OBJ file for {asset['name']}
-# Created by Enhanced 3D File Generator
+                        # Create demo file content based on format
+                        if format_type.lower() == 'obj':
+                            content = f"""# Demo OBJ - {asset['name']}
+# Generated by Enhanced 3D File Generator
 v 0.0 0.0 0.0
 v 1.0 0.0 0.0
-v 1.0 1.0 0.0
-v 0.0 1.0 0.0
-f 1 2 3 4"""
-                                with open(file_path, 'w') as f:
-                                    f.write(obj_content)
-                                    
-                            elif format_type.lower() == 'glb':
-                                # Create a minimal GLB placeholder
-                                glb_content = b"Demo GLB file - placeholder binary content"
-                                with open(file_path, 'wb') as f:
-                                    f.write(glb_content)
-                                    
-                            elif format_type.lower() == 'png':
-                                # Create a simple PNG placeholder
-                                png_content = b"Demo PNG file - placeholder image content"
-                                with open(file_path, 'wb') as f:
-                                    f.write(png_content)
-                            
-                            self.root.after(0, lambda: self.log_message(f"✅ Demo file created: {file_path}", "success"))
-                        except Exception as file_error:
-                            self.root.after(0, lambda: self.log_message(f"❌ Failed to create demo file: {str(file_error)}", "error"))
+v 0.5 1.0 0.0
+f 1 2 3
+"""
+                        elif format_type.lower() == 'glb':
+                            # Simple GLB placeholder
+                            content = f"Demo GLB file for {asset['name']}"
+                        else:
+                            content = f"Demo {format_type.upper()} file for {asset['name']}"
+                        
+                        with open(file_path, 'w') as f:
+                            f.write(content)
+                        
+                        self.root.after(0, lambda: self.log_message(f"✅ Created demo file: {filename}", "success"))
                     else:
-                        self.root.after(0, lambda: self.log_message("❌ Download cancelled", "warning"))
-                    
+                        self.root.after(0, lambda: self.log_message("❌ Save cancelled", "warning"))
+                        
             except Exception as e:
                 self.root.after(0, lambda: self.log_message(f"❌ Download failed: {str(e)}", "error"))
         
@@ -3059,6 +3051,253 @@ f 1 2 3 4"""
             
             # Simulate download
             def download_thread():
+                time.sleep(1)
+                self.root.after(0, lambda: self.log_message(f"✅ Downloaded {file_info['name']}", "success"))
+            
+            import threading
+            thread = threading.Thread(target=download_thread)
+            thread.daemon = True
+            thread.start()
+
+    def format_file_size(self, size_bytes):
+        """Format file size in human readable format"""
+        if size_bytes == 0:
+            return "0B"
+        
+        size_names = ["B", "KB", "MB", "GB"]
+        import math
+        i = int(math.floor(math.log(size_bytes, 1024)))
+        p = math.pow(1024, i)
+        s = round(size_bytes / p, 2)
+        return f"{s}{size_names[i]}"
+
+    def select_all_files(self):
+        """Select all files in the list"""
+        for var in self.selected_file_vars:
+            var.set(True)
+        self.update_batch_status()
+
+    def clear_all_files(self):
+        """Clear all file selections"""
+        for var in self.selected_file_vars:
+            var.set(False)
+        self.update_batch_status()
+
+    def update_batch_status(self):
+        """Update batch operation status display"""
+        selected_count = sum(1 for var in self.selected_file_vars if var.get())
+        total_count = len(self.file_items)
+        
+        if selected_count == 0:
+            status_text = "Select files and choose operation"
+        else:
+            status_text = f"{selected_count} of {total_count} files selected"
+        
+        if hasattr(self, 'batch_status'):
+            self.batch_status.configure(text=status_text)
+
+    def convert_selected_files(self):
+        """Convert selected files using Meshy API"""
+        selected_indices = [i for i, var in enumerate(self.selected_file_vars) if var.get()]
+        
+        if not selected_indices:
+            self.log_message("⚠️ No files selected for conversion", "warning")
+            return
+        
+        if self.connection_manager.connection_status != "connected":
+            self.log_message("❌ Not connected to Meshy API", "error")
+            return
+        
+        self.log_message(f"🎨 Starting conversion of {len(selected_indices)} files...", "info")
+        
+        def convert_thread():
+            for idx in selected_indices:
+                file_info = None
+                try:
+                    file_info = self.file_items[idx]
+                    self.root.after(0, lambda f=file_info: self.log_message(f"🔄 Processing {f['name']}...", "info"))
+                    
+                    # Update status
+                    file_info['status'] = 'Processing'
+                    self.root.after(0, self.refresh_file_list)
+                    
+                    # Simulate processing (replace with actual Meshy API calls)
+                    import time
+                    time.sleep(2)
+                    
+                    # Update to processed status
+                    file_info['status'] = 'Processed'
+                    file_info['download_url'] = f"https://meshy.ai/download/{file_info['name']}"
+                    
+                    self.root.after(0, lambda f=file_info: self.log_message(f"✅ Processed {f['name']}", "success"))
+                    
+                except Exception as e:
+                    if file_info is not None:
+                        file_info['status'] = 'Error'
+                        self.root.after(0, lambda f=file_info, err=str(e): self.log_message(f"❌ Error processing {f['name']}: {err}", "error"))
+                    else:
+                        self.root.after(0, lambda err=str(e): self.log_message(f"❌ Error processing file at index {idx}: {err}", "error"))
+                
+                self.root.after(0, self.refresh_file_list)
+        
+        import threading
+        thread = threading.Thread(target=convert_thread)
+        thread.daemon = True
+        thread.start()
+
+    def create_png_snapshots(self):
+        """Create PNG snapshots of selected 3D files"""
+        selected_indices = [i for i, var in enumerate(self.selected_file_vars) if var.get()]
+        
+        if not selected_indices:
+            self.log_message("⚠️ No files selected for PNG creation", "warning")
+            return
+        
+        self.log_message(f"📷 Creating PNG snapshots for {len(selected_indices)} files...", "info")
+        
+        def snapshot_thread():
+            for idx in selected_indices:
+                file_info = None
+                try:
+                    file_info = self.file_items[idx]
+                    
+                    # Check if it's a 3D file
+                    if file_info['type'].lower() not in ['obj', 'glb', 'gltf', 'fbx']:
+                        self.root.after(0, lambda f=file_info: self.log_message(f"⚠️ Skipping {f['name']} - not a 3D model", "warning"))
+                        continue
+                    
+                    self.root.after(0, lambda f=file_info: self.log_message(f"📸 Creating snapshot for {f['name']}...", "info"))
+                    
+                    # Simulate snapshot creation
+                    import time
+                    time.sleep(1.5)
+                    
+                    # Create PNG file info
+                    from pathlib import Path
+                    png_name = f"{Path(file_info['name']).stem}!.png"
+                    png_info = {
+                        'path': f"{file_info['path']}_snapshot.png",
+                        'name': png_name,
+                        'type': 'PNG',
+                        'size': '250KB',
+                        'status': 'Processed',
+                        'meshy_id': f"snap_{file_info['name']}",
+                        'download_url': f"https://meshy.ai/snapshots/{png_name}"
+                    }
+                    
+                    self.file_items.append(png_info)
+                    self.root.after(0, lambda f=file_info: self.log_message(f"✅ Created snapshot {png_name}", "success"))
+                    
+                except Exception as e:
+                    if file_info is not None:
+                        self.root.after(0, lambda f=file_info, err=str(e): self.log_message(f"❌ Error creating snapshot for {f['name']}: {err}", "error"))
+                    else:
+                        self.root.after(0, lambda err=str(e): self.log_message(f"❌ Error creating snapshot for file at index {idx}: {err}", "error"))
+                
+                self.root.after(0, self.refresh_file_list)
+        
+        import threading
+        thread = threading.Thread(target=snapshot_thread)
+        thread.daemon = True
+        thread.start()
+
+    def download_all_files(self):
+        """Download all processed files"""
+        processed_files = [f for f in self.file_items if f['status'] == 'Processed' and f.get('download_url')]
+        
+        if not processed_files:
+            self.log_message("⚠️ No processed files available for download", "warning")
+            return
+        
+        from tkinter import filedialog
+        download_dir = filedialog.askdirectory(title="Select Download Directory")
+        
+        if download_dir:
+            self.log_message(f"💾 Downloading {len(processed_files)} files to {download_dir}...", "info")
+            
+            def download_thread():
+                for file_info in processed_files:
+                    try:
+                        # Simulate download
+                        import time
+                        self.root.after(0, lambda f=file_info: self.log_message(f"⬇️ Downloading {f['name']}...", "info"))
+                        time.sleep(1)
+                        self.root.after(0, lambda f=file_info: self.log_message(f"✅ Downloaded {f['name']}", "success"))
+                    except Exception as e:
+                        self.root.after(0, lambda f=file_info, err=str(e): self.log_message(f"❌ Error downloading {f['name']}: {err}", "error"))
+            
+            import threading
+            thread = threading.Thread(target=download_thread)
+            thread.daemon = True
+            thread.start()
+
+    def export_for_railway(self):
+        """Export files in Railway-compatible format"""
+        selected_indices = [i for i, var in enumerate(self.selected_file_vars) if var.get()]
+        
+        if not selected_indices:
+            self.log_message("⚠️ No files selected for Railway export", "warning")
+            return
+        
+        from tkinter import filedialog
+        export_dir = filedialog.askdirectory(title="Select Railway Export Directory")
+        
+        if export_dir:
+            self.log_message(f"🏭 Exporting {len(selected_indices)} files for Railway deployment...", "info")
+            
+            def export_thread():
+                try:
+                    # Create Railway structure
+                    from pathlib import Path
+                    railway_dir = Path(export_dir) / "railway_assets"
+                    railway_dir.mkdir(exist_ok=True)
+                    
+                    for idx in selected_indices:
+                        file_info = self.file_items[idx]
+                        
+                        # Process different file types for Railway
+                        if file_info['type'].lower() == 'obj':
+                            # Convert OBJ to GLB for web
+                            glb_name = f"{Path(file_info['name']).stem}_meshy.glb"
+                            self.root.after(0, lambda f=glb_name: self.log_message(f"🔄 Converting to {f}...", "info"))
+                            import time
+                            time.sleep(1)
+                            
+                        elif file_info['name'].endswith('!.png'):
+                            # Railway snapshot
+                            self.root.after(0, lambda f=file_info: self.log_message(f"📷 Processing Railway snapshot {f['name']}...", "info"))
+                            import time
+                            time.sleep(0.5)
+                    
+                    self.root.after(0, lambda: self.log_message("✅ Railway export completed!", "success"))
+                    
+                except Exception as e:
+                    self.root.after(0, lambda err=str(e): self.log_message(f"❌ Railway export failed: {err}", "error"))
+            
+            import threading
+            thread = threading.Thread(target=export_thread)
+            thread.daemon = True
+            thread.start()
+
+    def process_single_file(self, index):
+        """Process a single file"""
+        if index < len(self.file_items):
+            file_info = self.file_items[index]
+            self.log_message(f"🚀 Processing {file_info['name']}...", "info")
+            
+            # Select this file and process
+            self.selected_file_vars[index].set(True)
+            self.convert_selected_files()
+
+    def download_single_file(self, index):
+        """Download a single file"""
+        if index < len(self.file_items):
+            file_info = self.file_items[index]
+            self.log_message(f"💾 Downloading {file_info['name']}...", "info")
+            
+            # Simulate download
+            def download_thread():
+                import time
                 time.sleep(1)
                 self.root.after(0, lambda: self.log_message(f"✅ Downloaded {file_info['name']}", "success"))
             

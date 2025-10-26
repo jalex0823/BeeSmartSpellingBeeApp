@@ -41,7 +41,7 @@ class ZipProcessorGUI:
     def setup_gui(self):
         # Main frame
         main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.grid(row=0, column=0, sticky="nsew")
         
         # Title
         title_label = ttk.Label(main_frame, text="3D Model ZIP Processor", 
@@ -50,7 +50,7 @@ class ZipProcessorGUI:
         
         # ZIP file selection
         zip_frame = ttk.LabelFrame(main_frame, text="1. Select ZIP Files", padding="10")
-        zip_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        zip_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 10))
         
         ttk.Button(zip_frame, text="📁 Select ZIP Files", 
                   command=self.select_zip_files).grid(row=0, column=0, padx=(0, 10))
@@ -60,11 +60,11 @@ class ZipProcessorGUI:
         
         # List of selected files
         self.zip_listbox = tk.Listbox(zip_frame, height=6)
-        self.zip_listbox.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        self.zip_listbox.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         
         # Output folder selection
         output_frame = ttk.LabelFrame(main_frame, text="2. Output Folder", padding="10")
-        output_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        output_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 10))
         
         ttk.Button(output_frame, text="📂 Select Output Folder", 
                   command=self.select_output_folder).grid(row=0, column=0, padx=(0, 10))
@@ -79,14 +79,14 @@ class ZipProcessorGUI:
         
         # Progress bar
         self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
-        self.progress.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        self.progress.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 10))
         
         # Log output
         log_frame = ttk.LabelFrame(main_frame, text="Progress Log", padding="10")
-        log_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        log_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", pady=(0, 10))
         
         self.log_text = ScrolledText(log_frame, height=10, state='disabled')
-        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.log_text.grid(row=0, column=0, sticky="nsew")
         
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
@@ -244,8 +244,9 @@ class ZipProcessorGUI:
                     file_overrides = load_overrides_file(extract_folder)
                     merged_overrides = {**file_overrides, **OVERRIDES}
                     
-                    # Process this model folder
-                    process_model_folder(folder, self.output_folder, merged_overrides, False, False, False)  # Don't ask user, no thumbnails, no force overwrite for old GUI
+                    # Process this model folder (check if output_folder is not None)
+                    if self.output_folder is not None:
+                        process_model_folder(folder, self.output_folder, merged_overrides, False, False, False)  # Don't ask user, no thumbnails, no force overwrite for old GUI
     
     def run(self):
         """Start the GUI application."""
@@ -893,18 +894,26 @@ def render_thumbnail_transparent(obj_path: Path, thumb_path: Path):
             r = pyrender.OffscreenRenderer(*RENDER_SIZE)
             print(f"   ✅ Renderer created: {RENDER_SIZE}")
             
-            color, depth = r.render(scene)
-            print(f"   Rendered color shape: {color.shape}, dtype: {color.dtype}")
-            print(f"   Color range: min={color.min()}, max={color.max()}")
-            
-            # Check if we actually rendered anything
-            if color.max() == 0:
-                print("   ⚠️ Rendered image is completely black!")
-                # Try with a white background for debugging
-                scene.bg_color = [1.0, 1.0, 1.0, 1.0]
-                color, depth = r.render(scene)
-                print(f"   White background render - Color range: min={color.min()}, max={color.max()}")
-                scene.bg_color = BACKGROUND_COLOR  # Restore transparent background
+            render_result = r.render(scene)
+            if render_result is not None:
+                color, depth = render_result
+                print(f"   Rendered color shape: {color.shape}, dtype: {color.dtype}")
+                print(f"   Color range: min={color.min()}, max={color.max()}")
+                
+                # Check if we actually rendered anything
+                if color.max() == 0:
+                    print("   ⚠️ Rendered image is completely black!")
+                    # Try with a white background for debugging
+                    scene.bg_color = [1.0, 1.0, 1.0, 1.0]
+                    render_result2 = r.render(scene)
+                    if render_result2 is not None:
+                        color, depth = render_result2
+                        print(f"   White background render - Color range: min={color.min()}, max={color.max()}")
+                    scene.bg_color = BACKGROUND_COLOR  # Restore transparent background
+            else:
+                print("   ❌ Render returned None")
+                r.delete()
+                return False
                 
             r.delete()
 
@@ -939,18 +948,27 @@ def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
         print(f"🎨 Creating simple thumbnail for: {obj_path}")
         
         # Load mesh
-        mesh = trimesh.load_mesh(str(obj_path), process=True)
+        mesh_data = trimesh.load_mesh(str(obj_path), process=True)
         
-        if isinstance(mesh, trimesh.Scene):
-            mesh = mesh.dump(concatenate=True)
+        if isinstance(mesh_data, trimesh.Scene):
+            mesh_data = mesh_data.dump(concatenate=True)
         
-        if len(mesh.vertices) == 0:
+        # Handle case where mesh might be a list
+        if isinstance(mesh_data, list):
+            if len(mesh_data) == 0:
+                create_placeholder_thumbnail(obj_path, thumb_path)
+                return
+            mesh_data = mesh_data[0]  # Take the first mesh
+            
+        # Cast to Trimesh for type safety
+        mesh = mesh_data  # type: ignore
+        if not hasattr(mesh, 'vertices') or len(mesh.vertices) == 0:  # type: ignore
             create_placeholder_thumbnail(obj_path, thumb_path)
             return
             
         # Get vertices and faces
-        vertices = mesh.vertices
-        faces = mesh.faces
+        vertices = mesh.vertices  # type: ignore
+        faces = mesh.faces  # type: ignore
         
         # Create figure with black background
         fig = plt.figure(figsize=(8, 8), facecolor='black')
@@ -991,9 +1009,15 @@ def create_simple_obj_thumbnail(obj_path: Path, thumb_path: Path):
         # Remove axes and make background black
         ax.set_axis_off()
         ax.grid(False)
-        ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
-        ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
-        ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))
+        
+        # Try to set pane colors (not available in all matplotlib versions)
+        try:
+            ax.xaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))  # type: ignore
+            ax.yaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))  # type: ignore
+            ax.zaxis.set_pane_color((0.0, 0.0, 0.0, 1.0))  # type: ignore
+        except AttributeError:
+            # Fallback for older matplotlib versions
+            pass
         
         # Save with black background
         plt.savefig(thumb_path, facecolor='black', bbox_inches='tight',
@@ -1079,8 +1103,7 @@ def create_placeholder_thumbnail(obj_path: Path, thumb_path: Path):
         from PIL import Image, ImageDraw, ImageFont
         
         # Create a placeholder with black background
-        background_color = (0, 0, 0, 255)  # Solid black
-        img = Image.new('RGBA', RENDER_SIZE, background_color)
+        img = Image.new('RGB', RENDER_SIZE, 0)  # 0 represents black
         draw = ImageDraw.Draw(img)
         
         # Draw a simple 3D box icon in white
@@ -1153,7 +1176,13 @@ def test_rendering_simple():
             
             # Render
             r = pyrender.OffscreenRenderer(640, 640)
-            color, depth = r.render(scene)
+            render_result = r.render(scene)
+            if render_result is not None:
+                color, depth = render_result
+            else:
+                print("❌ Test render failed")
+                r.delete()
+                return
             r.delete()
             
             # Save test image
@@ -1945,10 +1974,10 @@ class Dark3DProcessorGUI:
 
 def main():
     """Main entry point."""
+    print("🚀 Starting Enhanced 3D File Generator (Dark3DProcessorGUI)...")
     # Create and run the dark-themed GUI
     app = Dark3DProcessorGUI()
     app.run()
             
 if __name__ == "__main__":
-    main()
     main()

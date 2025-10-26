@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Voice Visualizer Options</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .visualizer-option {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .visualizer-canvas {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.1), rgba(255, 143, 0, 0.2));
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px solid rgba(255, 179, 0, 0.4);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            opacity: 0.8;
+        }
+        
+        .active {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Modern Voice Visualizer Options</h1>
+        <p>Choose your preferred voice visualization style:</p>
+        
+        <!-- Option 1: Flowing Waveform -->
+        <div class="visualizer-option">
+            <h3>1. Smooth Flowing Waveform</h3>
+            <canvas id="flowCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('flow')">Test Animation</button>
+            <p>Modern smooth wave that flows naturally with speech patterns.</p>
+        </div>
+        
+        <!-- Option 2: Frequency Spectrum -->
+        <div class="visualizer-option">
+            <h3>2. Frequency Spectrum Bars</h3>
+            <canvas id="spectrumCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('spectrum')">Test Animation</button>
+            <p>Many thin bars like a professional audio equalizer.</p>
+        </div>
+        
+        <!-- Option 3: Circular Radial -->
+        <div class="visualizer-option">
+            <h3>3. Circular Radial Pattern</h3>
+            <canvas id="radialCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('radial')">Test Animation</button>
+            <p>Circular waveform radiating from center.</p>
+        </div>
+        
+        <!-- Option 4: Layered Waves -->
+        <div class="visualizer-option">
+            <h3>4. Multi-Layer Sine Waves</h3>
+            <canvas id="layeredCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('layered')">Test Animation</button>
+            <p>Multiple overlapping sine waves with different frequencies.</p>
+        </div>
+        
+        <!-- Option 5: Particle Wave -->
+        <div class="visualizer-option">
+            <h3>5. Particle Wave System</h3>
+            <canvas id="particleCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('particle')">Test Animation</button>
+            <p>Individual particles forming wave patterns.</p>
+        </div>
+        
+        <!-- Option 6: Center-Flowing Wave -->
+        <div class="visualizer-option">
+            <h3>6. Center-Flowing Wave (NEW!)</h3>
+            <canvas id="centerFlowCanvas" class="visualizer-canvas" width="600" height="120"></canvas>
+            <button onclick="toggleAnimation('centerflow')">Test Animation</button>
+            <p><strong>� Waves flow from LEFT and RIGHT edges with BeeSmart AMBER HONEY colors!</strong></p>
+        </div>
+    </div>
+
+    <script>
+        let animations = {};
+        
+        // Bee-themed color palette
+        const colors = {
+            primary: '#FFB300',    // Honey yellow
+            secondary: '#FF8F00',  // Orange
+            accent: '#FFC107',     // Amber
+            highlight: '#FFECB3'   // Light yellow
+        };
+        
+        // Option 1: Flowing Waveform
+        function initFlowWave() {
+            const canvas = document.getElementById('flowCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 3;
+                
+                // Create flowing gradient
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+                gradient.addColorStop(0, colors.primary);
+                gradient.addColorStop(0.5, colors.accent);
+                gradient.addColorStop(1, colors.secondary);
+                ctx.strokeStyle = gradient;
+                
+                // Draw smooth wave
+                ctx.beginPath();
+                for (let x = 0; x < canvas.width; x++) {
+                    const amplitude = 30 + Math.sin(time * 0.02) * 10;
+                    const frequency = 0.02 + Math.sin(time * 0.01) * 0.005;
+                    const y = canvas.height / 2 + Math.sin(x * frequency + time * 0.05) * amplitude;
+                    
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.flow = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Option 2: Frequency Spectrum
+        function initSpectrum() {
+            const canvas = document.getElementById('spectrumCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            const bars = 50;
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = canvas.width / bars;
+                
+                for (let i = 0; i < bars; i++) {
+                    const height = Math.sin(time * 0.1 + i * 0.3) * 40 + 
+                                  Math.sin(time * 0.05 + i * 0.1) * 20 + 40;
+                    
+                    const hue = (i / bars) * 60 + 20; // Yellow to orange range
+                    ctx.fillStyle = `hsl(${hue}, 90%, 60%)`;
+                    
+                    ctx.fillRect(i * barWidth, canvas.height - height, barWidth - 2, height);
+                }
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.spectrum = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Option 3: Circular Radial
+        function initRadial() {
+            const canvas = document.getElementById('radialCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const baseRadius = 30;
+                
+                ctx.lineWidth = 2;
+                
+                for (let i = 0; i < 3; i++) {
+                    const phase = i * Math.PI * 0.5;
+                    ctx.strokeStyle = `hsla(${45 + i * 15}, 90%, 60%, ${0.8 - i * 0.2})`;
+                    
+                    ctx.beginPath();
+                    for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+                        const radius = baseRadius + i * 15 + 
+                                     Math.sin(angle * 3 + time * 0.05 + phase) * 15;
+                        const x = centerX + Math.cos(angle) * radius;
+                        const y = centerY + Math.sin(angle) * radius;
+                        
+                        if (angle === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.radial = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Option 4: Layered Waves
+        function initLayered() {
+            const canvas = document.getElementById('layeredCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 2;
+                
+                // Draw multiple overlapping waves
+                const waves = [
+                    { freq: 0.02, amp: 25, speed: 0.03, color: colors.primary },
+                    { freq: 0.015, amp: 20, speed: 0.04, color: colors.accent },
+                    { freq: 0.025, amp: 15, speed: 0.02, color: colors.secondary }
+                ];
+                
+                waves.forEach((wave, index) => {
+                    ctx.strokeStyle = wave.color + '80'; // Add transparency
+                    ctx.beginPath();
+                    
+                    for (let x = 0; x < canvas.width; x++) {
+                        const y = canvas.height / 2 + 
+                                 Math.sin(x * wave.freq + time * wave.speed) * wave.amp;
+                        
+                        if (x === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                });
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.layered = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Option 5: Particle Wave
+        function initParticle() {
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            const particles = [];
+            
+            // Initialize particles
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: (i / 40) * canvas.width,
+                    baseY: canvas.height / 2,
+                    phase: Math.random() * Math.PI * 2,
+                    speed: 0.02 + Math.random() * 0.02
+                });
+            }
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                particles.forEach((particle, index) => {
+                    const y = particle.baseY + 
+                             Math.sin(time * particle.speed + particle.phase) * 30;
+                    
+                    const hue = (index / particles.length) * 60 + 20;
+                    ctx.fillStyle = `hsl(${hue}, 90%, 60%)`;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.particle = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Option 6: Center-Flowing Wave
+        function initCenterFlow() {
+            const canvas = document.getElementById('centerFlowCanvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+            let active = false;
+            
+            const config = {
+                points: 120,
+                dotSize: 2,
+                maxAmplitude: 40,
+                baseY: 60,
+                frequency: 0.03,
+                speed: 0.08,
+                layers: 2
+            };
+            
+            function getWaveColor(x, intensity, layer = 0) {
+                const ratio = x / canvas.width;
+                let r, g, b;
+                
+                // BeeSmart amber/honey gradient: Yellow -> Orange -> Deep Amber
+                if (ratio < 0.33) {
+                    // Light honey yellow to golden yellow
+                    r = 255;                                    // Full red
+                    g = Math.floor(220 + ratio * 3 * 35);      // 220 -> 255 (bright yellow)
+                    b = Math.floor(50 + ratio * 3 * 50);       // 50 -> 100 (light yellow tint)
+                } else if (ratio < 0.66) {
+                    // Golden yellow to orange
+                    const localRatio = (ratio - 0.33) / 0.33;
+                    r = 255;                                    // Full red
+                    g = Math.floor(255 - localRatio * 112);    // 255 -> 143 (orange)
+                    b = Math.floor(100 - localRatio * 100);    // 100 -> 0 (pure orange)
+                } else {
+                    // Orange to deep amber
+                    const localRatio = (ratio - 0.66) / 0.34;
+                    r = Math.floor(255 - localRatio * 55);     // 255 -> 200 (deep amber)
+                    g = Math.floor(143 - localRatio * 43);     // 143 -> 100 (amber)
+                    b = 0;                                      // No blue (pure amber/orange)
+                }
+                
+                // Clamp values
+                r = Math.min(255, Math.max(0, r));
+                g = Math.min(255, Math.max(0, g));
+                b = Math.min(255, Math.max(0, b));
+                
+                // Apply intensity and layer transparency
+                const alpha = (0.7 + intensity * 0.3) * (1 - layer * 0.15);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            
+            function draw() {
+                if (!active) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const stepSize = canvas.width / config.points;
+                const centerX = canvas.width / 2;
+                
+                for (let layer = 0; layer < config.layers; layer++) {
+                    const layerOffset = layer * 2;
+                    
+                    for (let i = 0; i < config.points; i++) {
+                        const x = i * stepSize;
+                        const distanceFromCenter = Math.abs(x - centerX);
+                        const normalizedDistance = distanceFromCenter / centerX;
+                        
+                        // Create waves flowing from left and right toward center
+                        let wavePhase;
+                        if (x < centerX) {
+                            // Left side - wave flows from left to center
+                            wavePhase = (x * config.frequency) + (time * config.speed);
+                        } else {
+                            // Right side - wave flows from right to center  
+                            wavePhase = ((canvas.width - x) * config.frequency) + (time * config.speed);
+                        }
+                        
+                        // Primary wave with side-to-center flow
+                        const primaryWave = Math.sin(wavePhase);
+                        const secondaryWave = Math.sin(wavePhase * 1.5 + time * 0.03) * 0.4;
+                        
+                        // Center meeting effect - stronger amplitude as waves approach center
+                        const centerApproach = 1 - normalizedDistance; // Stronger near center
+                        const amplitude = (primaryWave + secondaryWave) * config.maxAmplitude * centerApproach;
+                        
+                        // Create "meeting" effect at center with collision energy
+                        const centerCollision = Math.sin(time * 0.1) * 0.3;
+                        const finalAmplitude = amplitude + (centerCollision * (1 - normalizedDistance));
+                        
+                        const intensity = Math.abs(finalAmplitude) / config.maxAmplitude;
+                        const color = getWaveColor(x, intensity, layer);
+                        
+                        ctx.fillStyle = color;
+                        
+                        if (finalAmplitude !== 0) {
+                            const dotsInColumn = Math.floor(Math.abs(finalAmplitude) / 4);
+                            for (let d = 0; d < dotsInColumn; d++) {
+                                // Top dots
+                                const dotY = config.baseY - (d * 4) - layerOffset;
+                                if (dotY > 0) {
+                                    // Horizontal flow toward center
+                                    let flowX = x;
+                                    if (x < centerX) {
+                                        // Flow from left toward center
+                                        flowX = x + (time * 0.5) % (centerX - x);
+                                    } else {
+                                        // Flow from right toward center
+                                        flowX = x - (time * 0.5) % (x - centerX);
+                                    }
+                                    ctx.fillRect(flowX - config.dotSize/2, dotY, config.dotSize, config.dotSize);
+                                }
+                                
+                                // Bottom dots
+                                const dotY2 = config.baseY + (d * 4) + layerOffset;
+                                if (dotY2 < canvas.height) {
+                                    // Horizontal flow toward center
+                                    let flowX = x;
+                                    if (x < centerX) {
+                                        // Flow from left toward center
+                                        flowX = x + (time * 0.5) % (centerX - x);
+                                    } else {
+                                        // Flow from right toward center
+                                        flowX = x - (time * 0.5) % (x - centerX);
+                                    }
+                                    ctx.fillRect(flowX - config.dotSize/2, dotY2, config.dotSize, config.dotSize);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Intense center collision point with amber glow
+                const centerGlow = ctx.createRadialGradient(centerX, config.baseY, 0, centerX, config.baseY, 25);
+                centerGlow.addColorStop(0, 'rgba(255, 255, 100, 0.4)');  // Bright honey yellow center
+                centerGlow.addColorStop(0.5, 'rgba(255, 179, 0, 0.2)');  // Amber middle
+                centerGlow.addColorStop(1, 'rgba(255, 143, 0, 0)');      // Orange fade
+                ctx.fillStyle = centerGlow;
+                ctx.fillRect(centerX - 25, config.baseY - 25, 50, 50);
+                
+                time++;
+                requestAnimationFrame(draw);
+            }
+            
+            animations.centerflow = {
+                start: () => { active = true; draw(); },
+                stop: () => { active = false; ctx.clearRect(0, 0, canvas.width, canvas.height); }
+            };
+        }
+        
+        // Toggle animation function
+        function toggleAnimation(type) {
+            // Stop all other animations
+            Object.keys(animations).forEach(key => {
+                if (animations[key] && key !== type) {
+                    animations[key].stop();
+                }
+            });
+            
+            // Toggle selected animation
+            if (animations[type]) {
+                animations[type].start();
+                
+                // Auto-stop after 3 seconds
+                setTimeout(() => {
+                    animations[type].stop();
+                }, 3000);
+            }
+        }
+        
+        // Initialize all visualizers
+        initFlowWave();
+        initSpectrum();
+        initRadial();
+        initLayered();
+        initParticle();
+        initCenterFlow();
+    </script>
+</body>
+</html>
