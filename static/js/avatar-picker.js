@@ -79,6 +79,12 @@ async function loadAvatars() {
                 loadBar.style.width = '100%';
             }
             
+            // Update test page avatar count if present
+            const avatarCountSpan = document.getElementById('avatarCount');
+            if (avatarCountSpan) {
+                avatarCountSpan.textContent = avatars.length;
+            }
+            
             // Small delay to show completion
             await new Promise(resolve => setTimeout(resolve, 300));
             
