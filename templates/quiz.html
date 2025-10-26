@@ -4359,9 +4359,10 @@ class QuizManager {
                 definition: data.definition || ''
             };
 
-            this.enableInput();
+            // DISABLE input until timer starts
+            document.getElementById('spellingInput').disabled = true;
             document.getElementById('spellingInput').value = '';
-            document.getElementById('spellingInput').focus();
+            document.getElementById('spellingInput').placeholder = 'Wait for timer...';
 
             // If this first question is also the last, announce that explicitly
             if (data.total && questionNumber === data.total) {
@@ -4460,6 +4461,14 @@ class QuizManager {
         
         // Start the timer
         this.countdownTimer.start();
+        
+        // ENABLE input now that timer has started
+        const spellingInput = document.getElementById('spellingInput');
+        if (spellingInput) {
+            spellingInput.disabled = false;
+            spellingInput.placeholder = 'Type your answer...';
+            spellingInput.focus();
+        }
     }
     
     getTimerDuration() {
@@ -5208,18 +5217,25 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
+            // DISABLE input until timer starts
             const spellingInput = document.getElementById('spellingInput');
+            spellingInput.disabled = true;
             spellingInput.value = '';
-            spellingInput.focus();
+            spellingInput.placeholder = 'Wait for timer...';
 
             this.hideFeedback();
             this.hideLetterHint();  // Hide letter hint for new word
-            this.enableInput();
             this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
+            // Input will be enabled when timer starts
             if (this.timerEnabled && this.quizStarted) {
                 await this.announceAndStartTimer();
+            } else {
+                // If timer is disabled, enable input immediately
+                spellingInput.disabled = false;
+                spellingInput.placeholder = 'Type your answer...';
+                spellingInput.focus();
             }
         } catch (error) {
             console.error('Error loading next word:', error);
