@@ -2600,11 +2600,6 @@
                             ctx.beginPath();
                             ctx.arc(centerX, centerY, coreSize, 0, Math.PI * 2);
                             ctx.fill();
-                        }                            centerGlow.addColorStop(0.6, `rgba(255, 179, 0, ${0.15 * energy})`);
-                            centerGlow.addColorStop(1, 'rgba(255, 143, 0, 0)');
-                            
-                            ctx.fillStyle = centerGlow;
-                            ctx.fillRect(centerX - glowRadius, centerY - glowRadius/2, glowRadius * 2, glowRadius);
                         }
                     }
 
