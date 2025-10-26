@@ -9315,8 +9315,10 @@
                     window.userAvatarLoader = new UserAvatarLoader();
                 }
                 
-                // Run comprehensive avatar system preload
-                const preloadResults = await window.userAvatarLoader.preloadAvatarSystem();
+                // Run comprehensive avatar system preload with progress callback
+                const preloadResults = await window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
+                    window.loadingSystem.updateProgress(75, `🔍 Checking: ${avatarName}...`);
+                });
                 
                 // Update progress based on preload results
                 if (preloadResults.systemReady) {

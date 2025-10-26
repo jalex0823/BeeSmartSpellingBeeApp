@@ -206,7 +206,7 @@ class UserAvatarLoader {
     /**
      * Preload and validate all avatar files before main menu display
      */
-    async preloadAvatarSystem() {
+    async preloadAvatarSystem(progressCallback = null) {
         console.log('🔄 Starting avatar system preload validation...');
         
         // Lazy load avatar catalog if not already loaded
@@ -247,15 +247,27 @@ class UserAvatarLoader {
             
             // Mark all avatars as successful (database has already validated them)
             preloadResults.successfulAvatars = preloadResults.totalAvatars;
-            for (const { key: avatarKey } of uniqueAvatars) {
+            for (const { key: avatarKey, data: avatarData } of uniqueAvatars) {
+                // Report progress with avatar name
+                if (progressCallback) {
+                    const avatarName = avatarData.name || avatarKey;
+                    progressCallback(avatarName);
+                }
+                
                 preloadResults.validationDetails[avatarKey] = {
                     status: 'valid',
                     files: ['trusted-from-database'],
                     timestamp: new Date().toISOString()
                 };
+                
+                // Small delay to show progress (10ms per avatar = ~220ms total for 22 avatars)
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
             
             // Only validate fallback system (MascotBee) - critical for app stability
+            if (progressCallback) {
+                progressCallback('MascotBee (Fallback)');
+            }
             console.log('🔍 Validating fallback system (MascotBee)...');
             try {
                 await this.validateAvatarFilesForPaths(this.defaultAvatar);
