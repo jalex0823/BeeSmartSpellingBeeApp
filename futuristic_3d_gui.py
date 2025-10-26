@@ -341,6 +341,87 @@ class FuturisticCyberpunk3DGUI:
                                  bg=self.colors['bg_primary'], fg=self.colors['accent_green'])
         subtitle_label.pack(side=tk.LEFT, padx=(10, 0))
 
+        # RIGHT SIDE - Search + Upload (NEW)
+        right_header = tk.Frame(header_frame, bg=self.colors['bg_primary'])
+        right_header.pack(side=tk.RIGHT)
+
+        # Search field wrapper
+        search_wrapper = tk.Frame(
+            right_header,
+            bg=self.colors['bg_secondary'],
+            highlightbackground=self.colors['accent_cyan'],
+            highlightthickness=1,
+            bd=0
+        )
+        search_wrapper.pack(side=tk.LEFT, padx=(0, 10))
+
+        tk.Label(
+            search_wrapper,
+            text="🔍",
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['accent_cyan'],
+            font=('Exo', 11, 'bold')
+        ).pack(side=tk.LEFT, padx=(10, 6), pady=6)
+
+        self.search_var = tk.StringVar()
+        tk.Entry(
+            search_wrapper,
+            textvariable=self.search_var,
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['text_secondary'],
+            insertbackground=self.colors['accent_cyan'],
+            relief='flat',
+            font=('Exo', 11),
+            width=24,
+            bd=0
+        ).pack(side=tk.LEFT, pady=6, padx=(0, 10))
+
+        # "SEARCH ASSETS" button
+        tk.Button(
+            right_header,
+            text="SEARCH ASSETS",
+            command=self.search_assets,
+            bg=self.colors['bg_primary'],
+            fg=self.colors['accent_cyan'],
+            relief='solid',
+            bd=1,
+            highlightbackground=self.colors['accent_cyan'],
+            highlightthickness=1,
+            font=('Orbitron', 10, 'bold'),
+            padx=14,
+            pady=10,
+            cursor='hand2'
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        # "UPLOAD NEW MODEL" button
+        tk.Button(
+            right_header,
+            text="⬆ UPLOAD NEW MODEL",
+            command=self.upload_files,
+            bg=self.colors['accent_cyan'],
+            fg='#000000',
+            relief='flat',
+            font=('Orbitron', 10, 'bold'),
+            padx=14,
+            pady=10,
+            cursor='hand2'
+        ).pack(side=tk.LEFT)
+
+    def search_assets(self):
+        """Filter assets based on search query"""
+        query = self.search_var.get().strip().lower()
+        if hasattr(self, 'file_items') and self.file_items:
+            # Filter based on name
+            filtered = [f for f in self.file_items if query in f['name'].lower()]
+            if hasattr(self, 'batch_status'):
+                if filtered:
+                    self.batch_status.configure(text=f"🔎 {len(filtered)} match(es) for '{query}'")
+                else:
+                    self.batch_status.configure(text=f"🔎 No matches for '{query}'")
+            self.log_message(f"🔍 Search: '{query}' found {len(filtered)} results", "info")
+        else:
+            self.log_message("🔍 No assets to search", "warning")
+
     def create_control_panel(self, parent):
         """Create left control panel with Meshy connection controls"""
         control_frame = tk.Frame(parent, bg=self.colors['bg_secondary'],
@@ -2321,89 +2402,144 @@ class FuturisticCyberpunk3DGUI:
             self.assets_grid_frame.columnconfigure(col, weight=1, minsize=180)
 
     def create_asset_card(self, parent, asset, row, col):
-        """Create individual asset card in Meshy.ai style"""
-        # Main card frame
-        card_frame = tk.Frame(parent, bg=self.colors['bg_secondary'], relief='solid', bd=1)
-        card_frame.grid(row=row, column=col, padx=8, pady=8, sticky='nsew')
+        """Create SynthWave-style asset card matching the mockup"""
+        # Main card with neon border
+        card = tk.Frame(
+            parent,
+            bg=self.colors['bg_secondary'],
+            highlightbackground=self.colors['accent_purple'],
+            highlightthickness=2,
+            bd=0,
+            padx=8,
+            pady=8,
+        )
+        card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
         
-        # Selection checkbox
+        # Selection checkbox (top left)
         var = tk.BooleanVar()
+        if not hasattr(self, 'asset_vars'):
+            self.asset_vars = []
         self.asset_vars.append(var)
         
-        checkbox = tk.Checkbutton(card_frame, variable=var,
-                                bg=self.colors['bg_secondary'],
-                                selectcolor=self.colors['accent_cyan'],
-                                activebackground=self.colors['bg_secondary'])
-        checkbox.pack(anchor='nw', padx=5, pady=5)
-        
-        # Thumbnail area
-        thumb_frame = tk.Frame(card_frame, bg=self.colors['bg_tertiary'], 
-                             width=150, height=120, relief='solid', bd=1)
-        thumb_frame.pack(padx=10, pady=(0, 10))
-        thumb_frame.pack_propagate(False)
-        
-        # Create bee thumbnail
-        thumb_canvas = tk.Canvas(thumb_frame, width=148, height=118, 
-                               bg=self.colors['bg_tertiary'], highlightthickness=0)
-        thumb_canvas.pack()
-        
-        self.draw_3d_object_thumbnail(thumb_canvas, asset)
-        
-        # Asset name and info
-        info_frame = tk.Frame(card_frame, bg=self.colors['bg_secondary'])
-        info_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-        
-        # Asset name
-        tk.Label(info_frame, text=asset['name'],
-                bg=self.colors['bg_secondary'], fg=self.colors['text_primary'],
-                font=('Exo', 10, 'bold')).pack()
-        
+        checkbox = tk.Checkbutton(
+            card,
+            variable=var,
+            bg=self.colors['bg_secondary'],
+            selectcolor=self.colors['accent_cyan'],
+            activebackground=self.colors['bg_secondary'],
+            fg=self.colors['accent_cyan']
+        )
+        checkbox.pack(anchor='nw')
+
+        # Preview area with neon border
+        preview_wrap = tk.Frame(
+            card,
+            bg=self.colors['bg_tertiary'],
+            width=120,
+            height=100,
+            highlightbackground=self.colors['accent_cyan'],
+            highlightthickness=1,
+        )
+        preview_wrap.pack(pady=(0, 8))
+        preview_wrap.pack_propagate(False)
+
+        canvas = tk.Canvas(
+            preview_wrap,
+            width=118,
+            height=98,
+            bg=self.colors['bg_tertiary'],
+            highlightthickness=0
+        )
+        canvas.pack(expand=True)
+        self.draw_3d_object_thumbnail(canvas, asset)
+
+        # Asset name in CAPS
+        name_label = tk.Label(
+            card,
+            text=asset['name'].upper(),
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['accent_cyan'],
+            font=('Orbitron', 9, 'bold'),
+            wraplength=140,
+            justify='center'
+        )
+        name_label.pack(pady=(0, 4))
+
         # Filename
-        tk.Label(info_frame, text=asset['filename'],
-                bg=self.colors['bg_secondary'], fg=self.colors['text_muted'],
-                font=('Courier New', 8)).pack()
+        filename_label = tk.Label(
+            card,
+            text=asset['filename'],
+            bg=self.colors['bg_secondary'],
+            fg=self.colors['text_muted'],
+            font=('Courier New', 7)
+        )
+        filename_label.pack(pady=(0, 6))
+
+        # Status indicator with dot
+        status_frame = tk.Frame(card, bg=self.colors['bg_secondary'])
+        status_frame.pack(pady=(0, 8))
         
-        # Status indicator
-        status_color = self.get_asset_status_color(asset['status'])
-        status_frame = tk.Frame(info_frame, bg=self.colors['bg_secondary'])
-        status_frame.pack(fill=tk.X, pady=5)
+        status_color = self.colors['accent_green'] if asset['status'] == 'textured' else self.colors['accent_orange']
+        status_dot = tk.Label(status_frame, text="●", fg=status_color, bg=self.colors['bg_secondary'], font=('Exo', 10))
+        status_dot.pack(side=tk.LEFT)
         
-        tk.Label(status_frame, text="●",
-                bg=self.colors['bg_secondary'], fg=status_color,
-                font=('Exo', 12)).pack(side=tk.LEFT)
-        tk.Label(status_frame, text=asset['status'].upper(),
-                bg=self.colors['bg_secondary'], fg=status_color,
-                font=('Exo', 8, 'bold')).pack(side=tk.LEFT, padx=(5, 0))
-        
-        # Download buttons
+        status_label = tk.Label(status_frame, text=asset['status'].upper(), 
+                              fg=status_color, bg=self.colors['bg_secondary'],
+                              font=('Exo', 7, 'bold'))
+        status_label.pack(side=tk.LEFT, padx=(4, 0))
+
+        # Download buttons - SynthWave style
         if asset['download_ready']:
-            buttons_frame = tk.Frame(card_frame, bg=self.colors['bg_secondary'])
-            buttons_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-            
-            # GLB download
-            tk.Button(buttons_frame, text="📦 GLB",
-                     command=lambda a=asset: self.download_asset(a, 'glb'),
-                     bg=self.colors['accent_green'], fg='#000000',
-                     font=('Exo', 8, 'bold'), relief='flat',
-                     width=8, cursor='hand2').pack(side=tk.LEFT, padx=2)
-            
-            # OBJ download  
-            tk.Button(buttons_frame, text="🎯 OBJ", 
-                     command=lambda a=asset: self.download_asset(a, 'obj'),
-                     bg=self.colors['accent_cyan'], fg='#000000',
-                     font=('Exo', 8, 'bold'), relief='flat',
-                     width=8, cursor='hand2').pack(side=tk.LEFT, padx=2)
-            
-            # Thumbnail if available
-            if asset['status'] == 'textured':
-                tk.Button(buttons_frame, text="🖼️ PNG",
-                         command=lambda a=asset: self.download_asset(a, 'png'),
-                         bg=self.colors['accent_orange'], fg='#000000',
-                         font=('Exo', 8, 'bold'), relief='flat',
-                         width=8, cursor='hand2').pack(side=tk.LEFT, padx=2)
+            buttons_frame = tk.Frame(card, bg=self.colors['bg_secondary'])
+            buttons_frame.pack(fill='x', pady=(0, 4))
+
+            # GLB button
+            glb_btn = tk.Button(
+                buttons_frame,
+                text="GLB",
+                command=lambda a=asset: self.download_asset(a, 'glb'),
+                bg=self.colors['accent_green'],
+                fg='#000000',
+                relief='flat',
+                font=('Orbitron', 7, 'bold'),
+                padx=6,
+                pady=2,
+                cursor='hand2'
+            )
+            glb_btn.pack(side=tk.LEFT, padx=(0, 2), fill='x', expand=True)
+
+            # OBJ button
+            obj_btn = tk.Button(
+                buttons_frame,
+                text="OBJ",
+                command=lambda a=asset: self.download_asset(a, 'obj'),
+                bg=self.colors['accent_cyan'],
+                fg='#000000',
+                relief='flat',
+                font=('Orbitron', 7, 'bold'),
+                padx=6,
+                pady=2,
+                cursor='hand2'
+            )
+            obj_btn.pack(side=tk.LEFT, padx=2, fill='x', expand=True)
+
+            # PNG button
+            png_btn = tk.Button(
+                buttons_frame,
+                text="PNG",
+                command=lambda a=asset: self.download_asset(a, 'png'),
+                bg=self.colors['accent_orange'],
+                fg='#000000',
+                relief='flat',
+                font=('Orbitron', 7, 'bold'),
+                padx=6,
+                pady=2,
+                cursor='hand2'
+            )
+            png_btn.pack(side=tk.LEFT, padx=(2, 0), fill='x', expand=True)
         else:
             # Status message for non-ready assets
-            tk.Label(card_frame, text="⏳ Processing...",
+            tk.Label(card, text="⏳ Processing...",
                     bg=self.colors['bg_secondary'], fg=self.colors['accent_orange'],
                     font=('Exo', 9)).pack(pady=5)
 
