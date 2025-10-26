@@ -234,6 +234,49 @@
 </div>
 
 <script>
+// Enhanced voice selection for female voices (same as Speed Round quiz)
+function selectBestFemaleVoice() {
+    const voices = speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+    
+    // iOS-specific: prefer Apple voices
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+        const samantha = voices.find(v => v.name === 'Samantha');
+        if (samantha) return samantha;
+    }
+    
+    // Score each voice
+    let bestVoice = null;
+    let bestScore = -1;
+    
+    voices.forEach(v => {
+        const name = v.name.toLowerCase();
+        const lang = v.lang.toLowerCase();
+        let score = 0;
+        
+        // Must be English
+        if (!lang.startsWith('en')) return;
+        score += 50;
+        
+        // Prefer US English
+        if (lang.includes('us')) score += 30;
+        
+        // Female voice indicators
+        if (name.includes('female')) score += 80;
+        if (name.includes('samantha')) score += 100;
+        if (name.includes('zira')) score += 90;
+        if (name.includes('susan')) score += 85;
+        
+        if (score > bestScore) {
+            bestScore = score;
+            bestVoice = v;
+        }
+    });
+    
+    return bestVoice || voices.find(v => v.lang.startsWith('en')) || voices[0];
+}
+
 // Pronounce word function for review
 function pronounceWord(word) {
     if (!('speechSynthesis' in window)) {
@@ -247,11 +290,10 @@ function pronounceWord(word) {
     // Create utterance
     const utterance = new SpeechSynthesisUtterance(word);
     
-    // Use en-US voice
-    const voices = speechSynthesis.getVoices();
-    const enUSVoice = voices.find(v => v.lang === 'en-US') || voices[0];
-    if (enUSVoice) {
-        utterance.voice = enUSVoice;
+    // Use consistent female voice
+    const femaleVoice = selectBestFemaleVoice();
+    if (femaleVoice) {
+        utterance.voice = femaleVoice;
     }
     utterance.lang = 'en-US';
     utterance.rate = 0.8;  // Slightly slower for clarity
@@ -286,10 +328,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             speechSynthesis.cancel();
             const line = "That's the end of the quiz. Please wait for your quiz results.";
             const u = new SpeechSynthesisUtterance(line);
-            // prefer en-US for consistency
-            const voices = speechSynthesis.getVoices();
-            const enUS = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang?.startsWith('en')) || null;
-            if (enUS) u.voice = enUS;
+            // Use consistent female voice
+            const femaleVoice = selectBestFemaleVoice();
+            if (femaleVoice) u.voice = femaleVoice;
             u.rate = 1.0; u.pitch = 1.05; u.volume = 0.95;
             const viz = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
