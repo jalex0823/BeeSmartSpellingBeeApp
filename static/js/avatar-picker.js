@@ -14,7 +14,51 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadAvatars() {
+    const grid = document.getElementById('avatarGrid');
+    
     try {
+        // Show loading indicator
+        if (grid) {
+            grid.innerHTML = `
+                <div class="avatar-loading-indicator" style="
+                    grid-column: 1 / -1;
+                    text-align: center;
+                    padding: 3rem 2rem;
+                    color: #FF9800;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+                    border-radius: 12px;
+                    margin-bottom: 1rem;
+                ">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🐝</div>
+                    <div class="loading-text">Loading bee avatars...</div>
+                    <div class="loading-progress" style="
+                        margin-top: 1rem;
+                        font-size: 0.9rem;
+                        color: #666;
+                    ">
+                        <span id="avatarLoadCount">0</span> avatars ready
+                    </div>
+                    <div style="
+                        width: 200px;
+                        height: 4px;
+                        background: rgba(255, 152, 0, 0.2);
+                        border-radius: 2px;
+                        margin: 1rem auto;
+                        overflow: hidden;
+                    ">
+                        <div id="avatarLoadBar" style="
+                            width: 0%;
+                            height: 100%;
+                            background: linear-gradient(90deg, #FFD700, #FF9800);
+                            transition: width 0.3s ease;
+                        "></div>
+                    </div>
+                </div>
+            `;
+        }
+        
         console.log('🐝 Fetching avatars from /api/avatars...');
         const response = await fetch('/api/avatars');
         const data = await response.json();
@@ -26,15 +70,32 @@ async function loadAvatars() {
             if (avatars.length > 0) {
                 console.log('🔍 First avatar sample:', avatars[0]);
             }
+            
+            // Update progress bar to 100%
+            const loadBar = document.getElementById('avatarLoadBar');
+            const loadCount = document.getElementById('avatarLoadCount');
+            if (loadBar && loadCount) {
+                loadCount.textContent = avatars.length;
+                loadBar.style.width = '100%';
+            }
+            
+            // Small delay to show completion
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
             renderAvatarGrid(avatars);
             // Verify asset naming consistency across OBJ/MTL/Texture
             verifyAvatarsConsistency(avatars);
         } else {
             console.error('❌ API returned error status');
+            if (grid) {
+                grid.innerHTML = '<p style="padding: 2rem; text-align: center; color: #f56565;">Failed to load avatars. Please refresh the page.</p>';
+            }
         }
     } catch (error) {
         console.error('❌ Error loading avatars:', error);
-        document.getElementById('avatarGrid').innerHTML = '<p style="padding: 2rem; text-align: center; color: #f56565;">Failed to load avatars. Please refresh the page.</p>';
+        if (grid) {
+            grid.innerHTML = '<p style="padding: 2rem; text-align: center; color: #f56565;">Failed to load avatars. Please refresh the page.</p>';
+        }
     }
 }
 
