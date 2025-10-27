@@ -9362,16 +9362,16 @@
                     grid-template-columns: 28px 1fr auto 64px;
                     align-items: center;
                     padding: 0.6rem 0.7rem;
-                    background: rgba(0, 255, 136, 0.08);
-                    border: 1px solid rgba(0, 255, 136, 0.18);
+                    background: rgba(34, 139, 34, 0.25);
+                    border: 2px solid rgba(0, 100, 0, 0.5);
                     border-radius: 8px;
                     transition: background 0.3s ease, border-color 0.3s ease;
                 `;
                 checkEl.innerHTML = `
-                    <span style="font-size: 1.1rem; margin-right: 0.25rem; filter: drop-shadow(0 0 2px rgba(0,255,136,0.6));">${icon}</span>
-                    <span style="opacity: 0.95;">${name}</span>
-                    <span id="${checkId}-status" style="font-weight: 800; color: #a6ffce; margin-right: 0.5rem;">${status}</span>
-                    <span id="${checkId}-pct" style="text-align: right; font-weight: 800; color: #00ff88;">${Math.floor(this.progress)}%</span>
+                    <span style="font-size: 1.1rem; margin-right: 0.25rem; filter: drop-shadow(0 0 3px rgba(0,128,0,0.8));">${icon}</span>
+                    <span style="opacity: 0.95; font-weight: 600; color: #1a5f1a;">${name}</span>
+                    <span id="${checkId}-status" style="font-weight: 800; color: #228b22; margin-right: 0.5rem;">${status}</span>
+                    <span id="${checkId}-pct" style="text-align: right; font-weight: 800; color: #006400;">${Math.floor(this.progress)}%</span>
                 `;
                 checksList.appendChild(checkEl);
                 
@@ -9451,47 +9451,84 @@
                     this.updateProgress(30, '🐝 Using fallback');
                 }
                 
-                // Check 3: Web Audio API
-                const check3 = this.addCheck('Audio System', 'Checking...', '⏳');
+                // Check 3: User Name Consistency (ensure authenticated users show correct name)
+                const check3 = this.addCheck('User Name', 'Checking...', '⏳');
+                await this.delay(200);
+                try {
+                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    const authenticatedName = "{{ current_user.display_name if current_user.is_authenticated else '' }}";
+                    
+                    if (isAuthenticated && authenticatedName) {
+                        // Authenticated user - sync display_name to input and localStorage
+                        const nameInput = document.getElementById('studentName');
+                        if (nameInput) {
+                            nameInput.value = authenticatedName;
+                            localStorage.setItem('studentName', authenticatedName);
+                            this.updateCheck(check3, authenticatedName, '✅', 35);
+                            this.updateProgress(35, `👋 Welcome ${authenticatedName}!`);
+                            console.log('✅ User name synced:', authenticatedName);
+                        } else {
+                            this.updateCheck(check3, 'Input Missing', '⚠️', 35);
+                            this.updateProgress(35, '⚠️ Name input not found');
+                        }
+                    } else {
+                        // Guest user
+                        const savedName = localStorage.getItem('studentName');
+                        if (savedName) {
+                            this.updateCheck(check3, `Guest: ${savedName}`, '✅', 35);
+                            this.updateProgress(35, `👋 Welcome back ${savedName}!`);
+                        } else {
+                            this.updateCheck(check3, 'Guest User', '✅', 35);
+                            this.updateProgress(35, '👋 Welcome guest!');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Name check failed:', error);
+                    this.updateCheck(check3, 'Check Failed', '⚠️', 35);
+                    this.updateProgress(35, '⚠️ Name check error');
+                }
+                
+                // Check 4: Web Audio API
+                const check4 = this.addCheck('Audio System', 'Checking...', '⏳');
                 await this.delay(200);
                 if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
-                    this.updateCheck(check3, 'Ready', '✅', 40);
+                    this.updateCheck(check4, 'Ready', '✅', 40);
                     this.updateProgress(40, '🎵 Audio system ready');
                 } else {
-                    this.updateCheck(check3, 'Unavailable', '❌', 40);
+                    this.updateCheck(check4, 'Unavailable', '❌', 40);
                     this.updateProgress(40, '🔇 Audio unavailable');
                 }
                 
-                // Check 4: Session Storage
-                const check4 = this.addCheck('Session Storage', 'Checking...', '⏳');
+                // Check 5: Session Storage
+                const check5 = this.addCheck('Session Storage', 'Checking...', '⏳');
                 await this.delay(200);
                 try {
                     localStorage.setItem('test', 'test');
                     localStorage.removeItem('test');
-                    this.updateCheck(check4, 'Working', '✅', 50);
+                    this.updateCheck(check5, 'Working', '✅', 50);
                     this.updateProgress(50, '💾 Storage available');
                 } catch (e) {
-                    this.updateCheck(check4, 'Blocked', '⚠️', 50);
+                    this.updateCheck(check5, 'Blocked', '⚠️', 50);
                     this.updateProgress(50, '⚠️ Storage limited');
                 }
                 
-                // Check 5: Network Connection
-                const check5 = this.addCheck('Network Connection', 'Checking...', '⏳');
+                // Check 6: Network Connection
+                const check6 = this.addCheck('Network Connection', 'Checking...', '⏳');
                 await this.delay(200);
                 if (navigator.onLine) {
-                    this.updateCheck(check5, 'Online', '✅', 55);
+                    this.updateCheck(check6, 'Online', '✅', 55);
                     this.updateProgress(55, '🌐 Connected');
                 } else {
-                    this.updateCheck(check5, 'Offline', '⚠️', 55);
+                    this.updateCheck(check6, 'Offline', '⚠️', 55);
                     this.updateProgress(55, '📴 Offline mode');
                 }
                 
-                // Check 6: Speech API (removed from display)
+                // Check 7: Speech API (removed from display)
                 await this.delay(200);
                 this.updateProgress(60, '🎯 Systems ready');
                 
-                // Check 7: Word List (Session Check)
-                const check7 = this.addCheck('Word List', 'Checking...', '⏳');
+                // Check 8: Word List (Session Check)
+                const check8 = this.addCheck('Word List', 'Checking...', '⏳');
                 await this.delay(200);
                 try {
                     const response = await fetch('/api/wordbank', {
@@ -9500,14 +9537,14 @@
                     });
                     const data = await response.json();
                     if (data.success && data.count > 0) {
-                        this.updateCheck(check7, `${data.count} words ready`, '✅', 65);
+                        this.updateCheck(check8, `${data.count} words ready`, '✅', 65);
                         this.updateProgress(65, `📚 ${data.count} words loaded`);
                     } else {
-                        this.updateCheck(check7, 'No words loaded', '⚠️', 65);
+                        this.updateCheck(check8, 'No words loaded', '⚠️', 65);
                         this.updateProgress(65, '⚠️ Upload word list to start');
                     }
                 } catch (e) {
-                    this.updateCheck(check7, 'Check failed', '⚠️', 65);
+                    this.updateCheck(check8, 'Check failed', '⚠️', 65);
                     this.updateProgress(65, '⚠️ Session check failed');
                     console.error('Session check error:', e);
                 }
@@ -9644,27 +9681,9 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
-            // Load saved student name (but prioritize authenticated user's display_name)
-            const nameInput = document.getElementById('studentName');
-            if (nameInput) {
-                // For authenticated users, their display_name should always be shown
-                const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
-                const authenticatedName = "{{ current_user.display_name if current_user.is_authenticated else '' }}";
-                
-                if (isAuthenticated && authenticatedName) {
-                    // Authenticated users: use their display_name and sync to localStorage
-                    nameInput.value = authenticatedName;
-                    localStorage.setItem('studentName', authenticatedName);
-                    console.log('📝 Using authenticated user display name:', authenticatedName);
-                } else {
-                    // Guest users: load from localStorage if available
-                    const savedName = localStorage.getItem('studentName');
-                    if (savedName) {
-                        nameInput.value = savedName;
-                        console.log('📝 Loaded guest student name:', savedName);
-                    }
-                }
-            }
+            // NOTE: Student name loading is now handled in runSystemChecks() above
+            // This ensures authenticated users always see their correct display_name
+            // before the page finishes loading
             
             // 75% - Preload and validate avatar system
             window.loadingSystem.updateProgress(75, '🔍 Checking avatar system...');
