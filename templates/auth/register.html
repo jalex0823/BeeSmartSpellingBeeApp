@@ -300,13 +300,17 @@
                 const avatars = data.avatars;
                 const bust = Date.now();
                 for (const a of avatars) {
+                  // Use the thumbnail URL from API response - it includes the correct filename
+                  const thumbnailUrl = a.urls && a.urls.thumbnail ? a.urls.thumbnail : a.thumbnail;
+                  const fullThumbnailUrl = `${thumbnailUrl}?t=${bust}`;
+                  
                   // Construct DOM with NAME ABOVE the thumbnail
                   const div = document.createElement('div');
                   div.className = 'avatar-option';
                   div.dataset.avatarId = a.id;
                   div.innerHTML = `
                     <div class="avatar-name">${a.name}</div>
-                    <img src="/static/assets/avatars/${a.id}/thumbnail.png?t=${bust}" alt="${a.name}" onerror="this.src='/static/assets/avatars/fallback.png'">
+                    <img src="${fullThumbnailUrl}" alt="${a.name}" onerror="this.src='/static/assets/avatars/fallback.png'">
                   `;
                   grid.appendChild(div);
                 }
