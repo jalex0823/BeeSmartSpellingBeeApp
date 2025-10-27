@@ -1774,12 +1774,14 @@ def init_quiz_state():
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
 
-# Register Battle of the Bees API Blueprint (temporarily disabled)
-print("🔧 Battle API temporarily disabled until Flask-SocketIO is installed")
-# TODO: Uncomment once Flask-SocketIO is properly installed
-# from battles_api import battles_bp
-# app.register_blueprint(battles_bp, url_prefix='/api')
-print("⚠️ Battle API not registered - will be enabled after Socket.IO setup")
+# Register Battle of the Bees API Blueprint
+print("🔧 Registering Battle API...")
+try:
+    from battles_api import battles_bp
+    app.register_blueprint(battles_bp, url_prefix='/api')
+    print("✅ Battle API registered successfully")
+except Exception as e:
+    print(f"⚠️ Battle API registration failed: {e}")
 
 # --- Routes: Saved Word Lists (Persistent) -----------------------------------
 @app.route("/api/saved-lists", methods=["GET"])
