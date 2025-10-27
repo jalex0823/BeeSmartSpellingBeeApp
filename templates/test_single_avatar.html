@@ -173,7 +173,8 @@
             { name: 'Superhero Bee', slug: 'superbeehero', obj: 'SuperheroBee.obj', mtl: 'SuperBeeHero.mtl', texture: 'SuperheroBee.png' }
         ];
         
-        let currentAvatarIndex = 0;
+        // Start with Super Bee Hero (index 12)
+        let currentAvatarIndex = 12;
         
         function previousAvatar() {
             currentAvatarIndex = (currentAvatarIndex - 1 + AVATARS.length) % AVATARS.length;
@@ -308,7 +309,11 @@
                 mtlFile,
                 function(materials) {
                     log('✓ MTL loaded successfully', 'success');
-                    log(`  Materials found: ${Object.keys(materials.materials).join(', ')}`, 'success');
+                    log(`  Materials found: ${Object.keys(materials.materials).length} total`, 'success');
+                    Object.keys(materials.materials).forEach(name => {
+                        const mat = materials.materials[name];
+                        log(`    - ${name}: map=${!!mat.map}, color=${mat.color ? mat.color.getHexString() : 'none'}`, 'success');
+                    });
                     materials.preload();
                     log('✓ Materials preloaded', 'success');
 
