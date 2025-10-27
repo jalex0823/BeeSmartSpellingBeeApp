@@ -184,8 +184,8 @@
             { name: 'Superhero Bee', slug: 'superbeehero', obj: 'SuperheroBee.obj', mtl: 'SuperBeeHero.mtl', texture: 'SuperheroBee.png' }
         ];
         
-        // Start with Super Bee Hero (index 12)
-        let currentAvatarIndex = 12;
+        // Start with Doctor Bee (index 0) for testing
+        let currentAvatarIndex = 0;
         
         function previousAvatar() {
             currentAvatarIndex = (currentAvatarIndex - 1 + AVATARS.length) % AVATARS.length;
@@ -315,6 +315,12 @@
             mtlLoader.setPath(avatarPath + '/');
             
             log(`Loading MTL: ${avatarPath}/${mtlFile}`, 'success');
+            
+            console.log('=== LOADING START ===');
+            console.log('Avatar Path:', avatarPath);
+            console.log('MTL URL:', `${avatarPath}/${mtlFile}`);
+            console.log('OBJ URL:', `${avatarPath}/${objFile}`);
+            console.log('=====================');
             
             mtlLoader.load(
                 mtlFile,
@@ -580,6 +586,8 @@
             log('Reloading avatar to restore materials...', 'success');
             loadAvatar();
         }
+
+        function toggleBackfaceCulling() {
             if (!avatarObject) {
                 log('No avatar loaded yet', 'warning');
                 return;
@@ -606,6 +614,7 @@
             const newSide = sides[avatarObject.children[0]?.material?.side] || 'Unknown';
             log(`Backface culling: ${newSide} side visible`, 'success');
         }
+
         window.addEventListener('resize', () => {
             const canvas = document.getElementById('avatar-canvas');
             const width = canvas.clientWidth;
@@ -616,40 +625,6 @@
             renderer.setSize(width, height);
             log(`Window resized: ${width}x${height}`, 'success');
         });
-
-        // Missing debug function
-        function toggleBackfaceCulling() {
-            try {
-                if (!avatarObject) {
-                    log('No avatar loaded yet', 'warning');
-                    return;
-                }
-                
-                let meshCount = 0;
-                avatarObject.traverse((child) => {
-                    if (child.isMesh) {
-                        const current = child.material.side;
-                        if (current === THREE.FrontSide) {
-                            child.material.side = THREE.BackSide;
-                        } else if (current === THREE.BackSide) {
-                            child.material.side = THREE.DoubleSide;
-                        } else {
-                            child.material.side = THREE.FrontSide;
-                        }
-                        child.material.needsUpdate = true;
-                        meshCount++;
-                    }
-                });
-                
-                const firstMesh = avatarObject.children?.[0];
-                const sideMap = {1: 'Front', 2: 'Back', 3: 'Double'};
-                const newSide = sideMap[firstMesh?.material?.side] || 'Unknown';
-                log(`✓ Culling: ${newSide} side (${meshCount} meshes)`, 'success');
-            } catch (err) {
-                log(`❌ Culling error: ${err.message}`, 'error');
-                console.error(err);
-            }
-        }
 
         // Initialize on page load
         window.addEventListener('load', () => {
