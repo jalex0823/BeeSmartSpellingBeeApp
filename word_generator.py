@@ -1,9 +1,64 @@
 """
 BeeSmart Spelling App - Word Generation System
 Auto-generates spelling words by difficulty level for speed rounds
+CRITICAL: All generated words MUST pass kid-friendly filter
 """
 
 import random
+
+
+def _is_word_safe(word):
+    """
+    Internal function to check if word is kid-friendly.
+    This avoids circular import by duplicating the filter logic.
+    """
+    # Import the INAPPROPRIATE_WORDS set from AjaSpellBApp
+    # This list MUST stay in sync with the main filter
+    INAPPROPRIATE_WORDS = {
+        # Profanity and vulgar terms
+        "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
+        # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
+        "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
+        "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
+        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+        "molest", "molestation", "molester", "molesting", "molesters",
+        "rape", "rapist", "raping", "rapes", "raped",
+        "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
+        "predator", "predators", "groom", "grooming", "groomer", "groomers",
+        "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
+        "victim", "victims", "exploit", "exploitation", "exploiting",
+        "assault", "assaulting", "assaults", "assaulted",
+        "harass", "harassment", "harassing",
+        "nude", "naked", "horny", "arousal", "climax", "intercourse",
+        "erotic", "sexuality", "genitals", "genital",
+        # Violence/weapons
+        "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
+        "gun", "shoot", "shooting", "bomb", "explosive",
+        # Drugs/alcohol
+        "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
+        # Hate speech
+        "racist", "sexist", "nazi", "hate",
+        # Other inappropriate
+        "death", "die", "dying", "blood", "bloody", "torture"
+    }
+    
+    word_lower = word.lower().strip()
+    
+    # Check against inappropriate words list
+    if word_lower in INAPPROPRIATE_WORDS:
+        return False, f"Word '{word}' is not appropriate for children"
+    
+    # Check for partial matches (longer words containing inappropriate substrings)
+    for inappropriate in INAPPROPRIATE_WORDS:
+        if len(inappropriate) > 4 and inappropriate in word_lower:
+            return False, f"Word '{word}' contains inappropriate content"
+    
+    # Special rule: block "sex" substring
+    if "sex" in word_lower:
+        return False, f"Word '{word}' contains restricted substring 'sex'"
+    
+    return True, "OK"
+
 
 # Grade 1-2: CVC words, basic sight words
 GRADE_1_2_WORDS = [
@@ -96,6 +151,7 @@ HIGH_SCHOOL_WORDS = [
 def generate_words_by_difficulty(difficulty_level, count=20, exclude_words=None):
     """
     Generate a list of words for the specified difficulty level
+    CRITICAL: All words are filtered through kid-friendly content filter
     
     Args:
         difficulty_level (str): One of 'grade_1_2', 'grade_3_4', 'grade_5_6', 
@@ -104,7 +160,7 @@ def generate_words_by_difficulty(difficulty_level, count=20, exclude_words=None)
         exclude_words (list): Words to exclude from selection
     
     Returns:
-        list: List of word strings
+        list: List of filtered, kid-friendly word strings
     """
     word_pools = {
         'grade_1_2': GRADE_1_2_WORDS,
@@ -119,6 +175,22 @@ def generate_words_by_difficulty(difficulty_level, count=20, exclude_words=None)
         difficulty_level = 'grade_3_4'  # Default fallback
     
     word_pool = word_pools[difficulty_level].copy()
+    
+    # CRITICAL: Filter out inappropriate words
+    filtered_pool = []
+    blocked_count = 0
+    for word in word_pool:
+        is_safe, reason = _is_word_safe(word)
+        if is_safe:
+            filtered_pool.append(word)
+        else:
+            blocked_count += 1
+            print(f"🛡️ Word generator blocked inappropriate word: '{word}' - {reason}")
+    
+    if blocked_count > 0:
+        print(f"⚠️ Word generator filtered out {blocked_count} inappropriate word(s) from {difficulty_level}")
+    
+    word_pool = filtered_pool
     
     # Remove excluded words
     if exclude_words:
@@ -162,13 +234,14 @@ def get_difficulty_name(difficulty_level):
 def generate_mixed_words(count=20, exclude_words=None):
     """
     Generate a mixed difficulty word list for extra challenge
+    CRITICAL: All words are filtered through kid-friendly content filter
     
     Args:
         count (int): Number of words to generate
         exclude_words (list): Words to exclude from selection
     
     Returns:
-        list: List of word strings from various difficulty levels
+        list: List of filtered, kid-friendly word strings from various difficulty levels
     """
     all_words = (
         GRADE_1_2_WORDS + 
@@ -177,6 +250,22 @@ def generate_mixed_words(count=20, exclude_words=None):
         MIDDLE_SCHOOL_WORDS + 
         HIGH_SCHOOL_WORDS
     )
+    
+    # CRITICAL: Filter out inappropriate words
+    filtered_words = []
+    blocked_count = 0
+    for word in all_words:
+        is_safe, reason = _is_word_safe(word)
+        if is_safe:
+            filtered_words.append(word)
+        else:
+            blocked_count += 1
+            print(f"🛡️ Mixed word generator blocked inappropriate word: '{word}' - {reason}")
+    
+    if blocked_count > 0:
+        print(f"⚠️ Mixed word generator filtered out {blocked_count} inappropriate word(s)")
+    
+    all_words = filtered_words
     
     if exclude_words:
         all_words = [w for w in all_words if w.lower() not in [e.lower() for e in exclude_words]]
