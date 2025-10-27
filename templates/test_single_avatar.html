@@ -134,6 +134,8 @@
             <button onclick="dumpSceneInfo()">📊 Dump Scene Info</button>
             <button onclick="testTextureDirectly()">🖼️ Test Texture</button>
             <button onclick="toggleBackfaceCulling()">👁️ Toggle Backface Culling</button>
+            <button onclick="forceShowMagenta()">🎨 Force Magenta (Test Visibility)</button>
+            <button onclick="restoreMaterials()">♻️ Restore Materials</button>
         </div>
 
         <div class="stats">
@@ -431,102 +433,153 @@
         // ============ DEBUGGING FUNCTIONS ============
         
         function toggleWireframe() {
-            if (!avatarObject) {
-                log('No avatar loaded yet', 'warning');
-                return;
-            }
-            
-            avatarObject.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.wireframe = !child.material.wireframe;
+            try {
+                if (!avatarObject) {
+                    log('No avatar loaded yet', 'warning');
+                    return;
                 }
-            });
-            
-            const state = avatarObject.children[0]?.material?.wireframe ? 'ON' : 'OFF';
-            log(`Wireframe mode: ${state}`, 'success');
+                
+                let wireframeCount = 0;
+                avatarObject.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.wireframe = !child.material.wireframe;
+                        wireframeCount++;
+                        log(`  Toggled ${child.name || 'mesh'} wireframe: ${child.material.wireframe}`, 'success');
+                    }
+                });
+                
+                log(`✓ Wireframe toggled on ${wireframeCount} meshes`, 'success');
+            } catch (err) {
+                log(`❌ Wireframe error: ${err.message}`, 'error');
+                console.error(err);
+            }
         }
 
         function toggleLighting() {
-            const lights = scene.children.filter(c => c.isLight);
-            lights.forEach(light => {
-                light.visible = !light.visible;
-            });
-            
-            const state = lights[0]?.visible ? 'ON' : 'OFF';
-            log(`Lighting: ${state}`, 'success');
+            try {
+                const lights = scene.children.filter(c => c.isLight);
+                if (lights.length === 0) {
+                    log('No lights found in scene', 'warning');
+                    return;
+                }
+                
+                lights.forEach(light => {
+                    light.visible = !light.visible;
+                });
+                
+                const state = lights[0]?.visible ? 'ON' : 'OFF';
+                log(`✓ Lighting: ${state} (${lights.length} lights)`, 'success');
+            } catch (err) {
+                log(`❌ Lighting error: ${err.message}`, 'error');
+                console.error(err);
+            }
         }
 
         function dumpSceneInfo() {
-            if (!avatarObject) {
-                log('No avatar loaded yet', 'warning');
-                return;
-            }
-            
-            log('=== SCENE DEBUG INFO ===', 'success');
-            log(`Avatar object: ${avatarObject.name || 'unnamed'}`, 'success');
-            log(`Position: (${avatarObject.position.x.toFixed(2)}, ${avatarObject.position.y.toFixed(2)}, ${avatarObject.position.z.toFixed(2)})`, 'success');
-            log(`Scale: (${avatarObject.scale.x.toFixed(2)}, ${avatarObject.scale.y.toFixed(2)}, ${avatarObject.scale.z.toFixed(2)})`, 'success');
-            log(`Rotation: (${avatarObject.rotation.x.toFixed(2)}, ${avatarObject.rotation.y.toFixed(2)}, ${avatarObject.rotation.z.toFixed(2)})`, 'success');
-            
-            let meshCount = 0;
-            let totalVertices = 0;
-            avatarObject.traverse((child) => {
-                if (child.isMesh) {
-                    meshCount++;
-                    totalVertices += child.geometry.attributes.position.count;
-                    log(`Mesh: ${child.name || 'unnamed'} - Vertices: ${child.geometry.attributes.position.count}`, 'success');
-                    log(`  Material: ${child.material.name || 'default'}, Wireframe: ${child.material.wireframe}`, 'success');
-                    log(`  Has texture: ${!!child.material.map}`, child.material.map ? 'success' : 'warning');
-                    if (child.material.map) {
-                        log(`    Texture URL: ${child.material.map.image?.currentSrc || 'unknown'}`, 'success');
-                    }
+            try {
+                log('=== SCENE DEBUG INFO ===', 'success');
+                
+                if (!avatarObject) {
+                    log('⚠️ No avatar loaded yet', 'warning');
+                    log('=== END DEBUG INFO ===', 'success');
+                    return;
                 }
-            });
-            
-            log(`Total Meshes: ${meshCount}, Total Vertices: ${totalVertices}`, 'success');
-            log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`, 'success');
-            log('=== END DEBUG INFO ===', 'success');
+                
+                log(`Avatar: ${avatarObject.name || 'unnamed'}`, 'success');
+                log(`Position: (${avatarObject.position.x.toFixed(2)}, ${avatarObject.position.y.toFixed(2)}, ${avatarObject.position.z.toFixed(2)})`, 'success');
+                log(`Scale: (${avatarObject.scale.x.toFixed(2)}, ${avatarObject.scale.y.toFixed(2)}, ${avatarObject.scale.z.toFixed(2)})`, 'success');
+                
+                let meshCount = 0;
+                let totalVertices = 0;
+                
+                avatarObject.traverse((child) => {
+                    if (child.isMesh) {
+                        meshCount++;
+                        totalVertices += child.geometry.attributes.position.count;
+                        const hasTexture = !!child.material.map;
+                        const hasColor = child.material.color?.getHexString?.();
+                        
+                        log(`Mesh ${meshCount}: ${child.name || 'unnamed'}`, 'success');
+                        log(`  Vertices: ${child.geometry.attributes.position.count}`, 'success');
+                        log(`  Material: ${child.material.name || 'default'}`, 'success');
+                        log(`  Has texture: ${hasTexture}`, hasTexture ? 'success' : 'warning');
+                        log(`  Color: ${hasColor || 'default'}`, 'success');
+                        log(`  Wireframe: ${child.material.wireframe}`, 'success');
+                    }
+                });
+                
+                log(`Total: ${meshCount} meshes, ${totalVertices} vertices`, 'success');
+                log(`Camera Z: ${camera.position.z.toFixed(2)}`, 'success');
+                log('=== END DEBUG INFO ===', 'success');
+            } catch (err) {
+                log(`❌ Debug error: ${err.message}`, 'error');
+                console.error(err);
+            }
         }
 
         function testTextureDirectly() {
+            try {
+                if (!avatarObject) {
+                    log('No avatar loaded yet', 'warning');
+                    return;
+                }
+                
+                log('Testing textures...', 'success');
+                let textureCount = 0;
+                
+                avatarObject.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.material.map) {
+                            textureCount++;
+                            const texture = child.material.map;
+                            log(`✓ Texture on ${child.name}: ${texture.image?.currentSrc || 'src unknown'}`, 'success');
+                        } else {
+                            log(`✗ No texture on ${child.name}`, 'warning');
+                        }
+                    }
+                });
+                
+                log(`Found ${textureCount} textured meshes`, textureCount > 0 ? 'success' : 'warning');
+            } catch (err) {
+                log(`❌ Texture test error: ${err.message}`, 'error');
+                console.error(err);
+            }
+        }
+
+        function forceShowMagenta() {
             if (!avatarObject) {
                 log('No avatar loaded yet', 'warning');
                 return;
             }
             
-            log('Testing texture loading...', 'success');
+            log('Forcing magenta material to see if model is visible...', 'success');
+            let meshCount = 0;
             
             avatarObject.traverse((child) => {
-                if (child.isMesh && child.material.map) {
-                    const texture = child.material.map;
-                    log(`Found texture on ${child.name}:`, 'success');
-                    log(`  Source: ${texture.image?.currentSrc || 'unknown'}`, 'success');
-                    log(`  Image loaded: ${!!texture.image}`, texture.image ? 'success' : 'error');
-                    log(`  Image size: ${texture.image?.width}x${texture.image?.height}`, 'success');
-                    
-                    // Try reloading texture
-                    const textureLoader = new THREE.TextureLoader();
-                    const imageSrc = texture.image?.currentSrc;
-                    if (imageSrc) {
-                        log(`Attempting to reload texture from: ${imageSrc}`, 'success');
-                        textureLoader.load(
-                            imageSrc,
-                            (newTexture) => {
-                                log(`✓ Texture reloaded successfully!`, 'success');
-                                child.material.map = newTexture;
-                                child.material.needsUpdate = true;
-                            },
-                            undefined,
-                            (err) => {
-                                log(`✗ Texture reload failed: ${err}`, 'error');
-                            }
-                        );
-                    }
+                if (child.isMesh) {
+                    meshCount++;
+                    // Create a bright magenta material
+                    child.material = new THREE.MeshPhongMaterial({
+                        color: 0xff00ff,
+                        emissive: 0xff00ff,
+                        shininess: 100
+                    });
+                    log(`  Applied magenta to ${child.name || 'mesh'}`, 'success');
                 }
             });
+            
+            log(`Magenta applied to ${meshCount} meshes - if you see magenta, model is there!`, 'success');
         }
 
-        function toggleBackfaceCulling() {
+        function restoreMaterials() {
+            if (!avatarObject) {
+                log('No avatar loaded yet', 'warning');
+                return;
+            }
+            
+            log('Reloading avatar to restore materials...', 'success');
+            loadAvatar();
+        }
             if (!avatarObject) {
                 log('No avatar loaded yet', 'warning');
                 return;
@@ -563,6 +616,40 @@
             renderer.setSize(width, height);
             log(`Window resized: ${width}x${height}`, 'success');
         });
+
+        // Missing debug function
+        function toggleBackfaceCulling() {
+            try {
+                if (!avatarObject) {
+                    log('No avatar loaded yet', 'warning');
+                    return;
+                }
+                
+                let meshCount = 0;
+                avatarObject.traverse((child) => {
+                    if (child.isMesh) {
+                        const current = child.material.side;
+                        if (current === THREE.FrontSide) {
+                            child.material.side = THREE.BackSide;
+                        } else if (current === THREE.BackSide) {
+                            child.material.side = THREE.DoubleSide;
+                        } else {
+                            child.material.side = THREE.FrontSide;
+                        }
+                        child.material.needsUpdate = true;
+                        meshCount++;
+                    }
+                });
+                
+                const firstMesh = avatarObject.children?.[0];
+                const sideMap = {1: 'Front', 2: 'Back', 3: 'Double'};
+                const newSide = sideMap[firstMesh?.material?.side] || 'Unknown';
+                log(`✓ Culling: ${newSide} side (${meshCount} meshes)`, 'success');
+            } catch (err) {
+                log(`❌ Culling error: ${err.message}`, 'error');
+                console.error(err);
+            }
+        }
 
         // Initialize on page load
         window.addEventListener('load', () => {
