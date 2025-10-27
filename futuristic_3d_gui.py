@@ -258,7 +258,7 @@ class FuturisticCyberpunk3DGUI:
         
     def setup_variables(self):
         """Initialize application state variables"""
-        self.meshy_api_key = tk.StringVar(value="msy_t9FYfPHBWK1c8VBfX0pLxnEZMdWbg0DEc2qz")
+        self.meshy_api_key = tk.StringVar(value="msy_VCJPHtPz6SqlulrYNcEBiVhecWChB9aQv3zV")
         self.connection_status_var = tk.StringVar(value="Disconnected")
         self.selected_files = []
         self.file_items = []
@@ -414,6 +414,20 @@ class FuturisticCyberpunk3DGUI:
             relief='flat',
             font=('Orbitron', 10, 'bold'),
             padx=14,
+            pady=10,
+            cursor='hand2'
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        # "BATCH DOWNLOAD & RENAME" button
+        tk.Button(
+            right_header,
+            text="📦 BATCH DOWNLOAD & RENAME",
+            command=self.batch_download_and_rename,
+            bg=self.colors['accent_purple'],
+            fg=self.colors['text_primary'],
+            relief='flat',
+            font=('Orbitron', 9, 'bold'),
+            padx=12,
             pady=10,
             cursor='hand2'
         ).pack(side=tk.LEFT)
@@ -680,6 +694,20 @@ class FuturisticCyberpunk3DGUI:
                  font=('Exo', 10), relief='flat', 
                  pady=8, cursor='hand2').pack(side=tk.LEFT, padx=(0, 10))
         
+        # Add debug button to show detailed status
+        tk.Button(upload_controls, text="🔍 DEBUG STATUS",
+                 command=self.show_debug_status,
+                 bg=self.colors['warning'], fg=self.colors['text_primary'],
+                 font=('Exo', 10), relief='flat', 
+                 pady=8, cursor='hand2').pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Add connection debug button
+        tk.Button(upload_controls, text="🔌 DEBUG CONNECTION",
+                 command=self.debug_connection_status,
+                 bg=self.colors['accent_orange'], fg=self.colors['text_primary'],
+                 font=('Exo', 10), relief='flat', 
+                 pady=8, cursor='hand2').pack(side=tk.LEFT, padx=(0, 10))
+        
         # File selection controls
         selection_controls = tk.Frame(upload_controls, bg=self.colors['bg_secondary'])
         selection_controls.pack(side=tk.RIGHT)
@@ -921,10 +949,25 @@ class FuturisticCyberpunk3DGUI:
 
     def check_and_refresh_files(self):
         """Check if connected and refresh file list"""
-        if (hasattr(self.connection_manager, 'connection_status') and 
-            self.connection_manager.connection_status == "connected"):
-            self.refresh_file_list()
-            self.log_message("🎯 Auto-loaded Meshy sample assets", "success")
+        # DEBUG: Force connection status check
+        self.log_message("🔍 DEBUG: Checking connection status...", "info")
+        
+        if hasattr(self.connection_manager, 'connection_status'):
+            status = self.connection_manager.connection_status
+            self.log_message(f"🔍 Connection Status: {status}", "info")
+            
+            if status == "connected":
+                self.log_message("✅ Status is 'connected' - calling refresh_file_list()", "success")
+                self.refresh_file_list()
+            else:
+                self.log_message(f"❌ Status is '{status}' - NOT calling refresh_file_list()", "warning")
+                # Try manual connection
+                api_key = self.meshy_api_key.get().strip()
+                if api_key and len(api_key) >= 30:
+                    self.log_message("🔄 Attempting manual connection...", "info")
+                    self.connection_manager.connect_to_meshy(api_key)
+        else:
+            self.log_message("❌ connection_manager has no connection_status attribute", "error")
 
     def update_connection_ui(self, status):
         """Update connection status UI elements"""
@@ -1414,11 +1457,315 @@ class FuturisticCyberpunk3DGUI:
             self.refresh_file_list()
             self.update_batch_status()
 
+    def batch_download_and_rename(self):
+        """Enhanced batch download with smart renaming and OBJ file linking"""
+        api_key = self.meshy_api_key.get().strip()
+        if not api_key:
+            self.log_message("❌ No Meshy API key configured", "error")
+            return
+            
+        if not hasattr(self.connection_manager, 'connection_status') or self.connection_manager.connection_status != "connected":
+            self.log_message("⚠️ Not connected to Meshy API", "warning")
+            return
+        
+        # Get download directory
+        download_dir = filedialog.askdirectory(title="Select Download Directory for Organized Meshy Assets")
+        if not download_dir:
+            return
+        
+        # Get custom base name for renaming
+        import tkinter.simpledialog as simpledialog
+        base_name = simpledialog.askstring(
+            "Custom Name", 
+            "Enter base name for files (e.g., 'bee_character', 'monster_01'):\n\nFiles will be renamed as:\n• {base_name}.obj\n• {base_name}_texture.png\n• {base_name}.mtl",
+            initialvalue="meshy_asset"
+        )
+        
+        if not base_name:
+            return
+        
+        # Clean base name for safe file naming
+        import re
+        base_name = re.sub(r'[^\w\s-]', '', base_name).strip()
+        base_name = re.sub(r'[-\s]+', '_', base_name)
+        
+        self.log_message("🚀 Starting Enhanced Meshy Batch Download & Organization...", "info")
+        self.log_message(f"📁 Download directory: {download_dir}", "info")
+        self.log_message(f"🏷️ Base name: {base_name}", "info")
+        
+        def download_and_organize_thread():
+            try:
+                import requests
+                import os
+                import zipfile
+                import shutil
+                from urllib.parse import urlparse
+                
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                
+                # Use corrected endpoints with /openapi/ path
+                working_endpoints = [
+                    ('https://api.meshy.ai/openapi/v1/image-to-3d', 'Image-to-3D'),
+                    ('https://api.meshy.ai/openapi/v2/text-to-3d', 'Text-to-3D'),
+                    ('https://api.meshy.ai/openapi/v1/text-to-texture', 'Text-to-Texture')
+                ]
+                
+                all_projects = []
+                total_processed = 0
+                
+                # Step 1: Fetch projects from corrected endpoints
+                for endpoint_url, endpoint_type in working_endpoints:
+                    self.root.after(0, lambda ep=endpoint_type: self.log_message(f"🔍 Fetching {ep} projects...", "info"))
+                    
+                    try:
+                        params = {'limit': 100, 'status': 'SUCCEEDED'}  # Only successful projects
+                        response = requests.get(endpoint_url, headers=headers, params=params, timeout=30)
+                        
+                        if response.status_code == 200:
+                            projects_data = response.json()
+                            
+                            if isinstance(projects_data, list):
+                                projects = projects_data
+                            elif isinstance(projects_data, dict):
+                                projects = projects_data.get('result', projects_data.get('data', projects_data.get('tasks', [])))
+                            else:
+                                projects = []
+                            
+                            if projects:
+                                self.root.after(0, lambda count=len(projects), ep=endpoint_type: 
+                                               self.log_message(f"✅ Found {count} {ep} projects", "success"))
+                                
+                                for project in projects:
+                                    project['_endpoint_type'] = endpoint_type
+                                
+                                all_projects.extend(projects)
+                        
+                    except Exception as e:
+                        self.root.after(0, lambda ep=endpoint_type, err=str(e): 
+                                       self.log_message(f"❌ Error fetching {ep}: {err}", "error"))
+                
+                self.root.after(0, lambda count=len(all_projects): 
+                               self.log_message(f"🎯 Total projects to download: {count}", "info"))
+                
+                if not all_projects:
+                    self.root.after(0, lambda: self.log_message("⚠️ No projects found to download", "warning"))
+                    return
+                
+                # Step 2: Process each project with smart renaming
+                for i, project in enumerate(all_projects, 1):
+                    try:
+                        project_id = project.get('id', f'unknown_{i}')
+                        project_name = project.get('name', project.get('prompt', f'project_{i}'))
+                        endpoint_type = project.get('_endpoint_type', 'Unknown')
+                        
+                        # Create unique project name
+                        project_base_name = f"{base_name}_{i:02d}" if len(all_projects) > 1 else base_name
+                        
+                        self.root.after(0, lambda name=project_base_name, ep=endpoint_type, current=i, total=len(all_projects): 
+                                       self.log_message(f"📦 [{current}/{total}] Processing {ep}: {name}", "info"))
+                        
+                        # Step 3: Extract download URLs from various fields
+                        download_urls = []
+                        
+                        # Check common URL fields
+                        url_fields = ['model_urls', 'model_url', 'result_urls', 'download_url', 'file_url', 'url']
+                        
+                        for field in url_fields:
+                            if field in project and project[field]:
+                                urls = project[field]
+                                if isinstance(urls, str):
+                                    download_urls.append(urls)
+                                elif isinstance(urls, list):
+                                    download_urls.extend(urls)
+                                elif isinstance(urls, dict):
+                                    # Handle GLB, OBJ formats from model_urls
+                                    for format_key, url in urls.items():
+                                        if isinstance(url, str) and url.startswith('http'):
+                                            download_urls.append(url)
+                        
+                        # Also check nested result object
+                        if 'result' in project and isinstance(project['result'], dict):
+                            result = project['result']
+                            for field in url_fields:
+                                if field in result and result[field]:
+                                    urls = result[field]
+                                    if isinstance(urls, str):
+                                        download_urls.append(urls)
+                                    elif isinstance(urls, list):
+                                        download_urls.extend(urls)
+                                    elif isinstance(urls, dict):
+                                        for format_key, url in urls.items():
+                                            if isinstance(url, str) and url.startswith('http'):
+                                                download_urls.append(url)
+                        
+                        if not download_urls:
+                            self.root.after(0, lambda name=project_base_name: 
+                                           self.log_message(f"⚠️ No download URLs found for: {name}", "warning"))
+                            continue
+                        
+                        # Step 4: Create organized project folder
+                        project_folder = os.path.join(download_dir, f"{endpoint_type}_{project_base_name}")
+                        os.makedirs(project_folder, exist_ok=True)
+                        
+                        # Step 5: Download, extract, and organize files with smart renaming
+                        for j, url in enumerate(download_urls, 1):
+                            try:
+                                self.root.after(0, lambda current=j, total=len(download_urls), name=project_base_name: 
+                                               self.log_message(f"⬇️ Downloading file {current}/{total} for {name}...", "info"))
+                                
+                                # Download the file
+                                file_response = requests.get(url, timeout=60)
+                                file_response.raise_for_status()
+                                
+                                # Determine file type and save appropriately
+                                parsed_url = urlparse(url)
+                                original_filename = os.path.basename(parsed_url.path) or f"asset_{j}"
+                                
+                                # Save to temporary location
+                                temp_file = os.path.join(project_folder, f"temp_{original_filename}")
+                                with open(temp_file, 'wb') as f:
+                                    f.write(file_response.content)
+                                
+                                # Process based on file type
+                                if temp_file.lower().endswith('.zip'):
+                                    # Extract ZIP and organize contents
+                                    self.root.after(0, lambda: self.log_message(f"📦 Extracting ZIP archive...", "info"))
+                                    
+                                    with zipfile.ZipFile(temp_file, 'r') as zip_ref:
+                                        zip_ref.extractall(project_folder)
+                                    
+                                    os.remove(temp_file)  # Remove ZIP after extraction
+                                    
+                                elif temp_file.lower().endswith(('.glb', '.gltf')):
+                                    # Rename GLB/GLTF files
+                                    final_glb_path = os.path.join(project_folder, f"{project_base_name}.glb")
+                                    os.rename(temp_file, final_glb_path)
+                                    
+                                elif temp_file.lower().endswith(('.obj', '.ply', '.fbx')):
+                                    # Keep as-is for now, will be renamed later
+                                    pass
+                                
+                                file_size = len(file_response.content)
+                                self.root.after(0, lambda size=file_size: 
+                                               self.log_message(f"✅ Downloaded: {file_size:,} bytes", "success"))
+                                
+                            except Exception as e:
+                                self.root.after(0, lambda url=url, err=str(e): 
+                                               self.log_message(f"❌ Failed to download {url}: {err}", "error"))
+                        
+                        # Step 6: Smart file renaming and OBJ linking
+                        self.root.after(0, lambda name=project_base_name: 
+                                       self.log_message(f"🔧 Organizing and linking files for {name}...", "info"))
+                        
+                        obj_files = []
+                        texture_files = []
+                        mtl_files = []
+                        
+                        # Scan all files in project folder
+                        for root_dir, dirs, files in os.walk(project_folder):
+                            for file in files:
+                                if not file.startswith('temp_'):  # Skip temp files
+                                    file_path = os.path.join(root_dir, file)
+                                    if file.lower().endswith(('.obj', '.ply', '.fbx')):
+                                        obj_files.append(file_path)
+                                    elif file.lower().endswith(('.png', '.jpg', '.jpeg', '.tga', '.bmp')):
+                                        texture_files.append(file_path)
+                                    elif file.lower().endswith('.mtl'):
+                                        mtl_files.append(file_path)
+                        
+                        # Rename files with base name convention
+                        if obj_files:
+                            primary_obj = obj_files[0]
+                            final_obj_name = f"{project_base_name}.obj"
+                            final_obj_path = os.path.join(project_folder, final_obj_name)
+                            shutil.move(primary_obj, final_obj_path)
+                            
+                            self.root.after(0, lambda name=final_obj_name: 
+                                           self.log_message(f"📐 Renamed OBJ: {name}", "success"))
+                        
+                        if texture_files:
+                            primary_texture = texture_files[0]
+                            texture_ext = os.path.splitext(primary_texture)[1]
+                            final_texture_name = f"{project_base_name}_texture{texture_ext}"
+                            final_texture_path = os.path.join(project_folder, final_texture_name)
+                            shutil.move(primary_texture, final_texture_path)
+                            
+                            self.root.after(0, lambda name=final_texture_name: 
+                                           self.log_message(f"🎨 Renamed Texture: {name}", "success"))
+                        
+                        # Step 7: Create/Update MTL file with correct texture references
+                        if obj_files and texture_files:
+                            mtl_name = f"{project_base_name}.mtl"
+                            mtl_path = os.path.join(project_folder, mtl_name)
+                            
+                            with open(mtl_path, 'w') as mtl_file:
+                                mtl_file.write(f"# Material file for {project_base_name}\n")
+                                mtl_file.write(f"newmtl {project_base_name}_material\n")
+                                mtl_file.write("Ka 1.000 1.000 1.000\n")
+                                mtl_file.write("Kd 1.000 1.000 1.000\n")
+                                mtl_file.write("Ks 0.000 0.000 0.000\n")
+                                mtl_file.write("d 1.0\n")
+                                mtl_file.write("illum 2\n")
+                                mtl_file.write(f"map_Kd {final_texture_name}\n")
+                            
+                            # Update OBJ file to reference the correct MTL
+                            if os.path.exists(final_obj_path):
+                                with open(final_obj_path, 'r') as obj_file:
+                                    obj_content = obj_file.read()
+                                
+                                # Ensure MTL reference is correct
+                                obj_lines = obj_content.split('\n')
+                                
+                                # Remove any existing mtllib lines
+                                obj_lines = [line for line in obj_lines if not line.startswith('mtllib')]
+                                
+                                # Add correct MTL reference at the top
+                                obj_lines.insert(0, f"mtllib {mtl_name}")
+                                obj_lines.insert(1, f"usemtl {project_base_name}_material")
+                                
+                                with open(final_obj_path, 'w') as obj_file:
+                                    obj_file.write('\n'.join(obj_lines))
+                            
+                            self.root.after(0, lambda: self.log_message(f"🔗 Updated OBJ-MTL-Texture links", "success"))
+                        
+                        total_processed += 1
+                        
+                    except Exception as e:
+                        self.root.after(0, lambda name=project_name, err=str(e): 
+                                       self.log_message(f"❌ Error processing project {name}: {err}", "error"))
+                
+                # Final summary
+                self.root.after(0, lambda count=total_processed: 
+                               self.log_message(f"🎉 Batch download complete! {count} projects processed", "success"))
+                self.root.after(0, lambda dir=download_dir: 
+                               self.log_message(f"📂 All organized assets saved to: {dir}", "info"))
+                self.root.after(0, lambda: 
+                               self.log_message("✨ Files renamed and linked - ready for Blender/Unity!", "success"))
+                
+            except Exception as e:
+                self.root.after(0, lambda err=str(e): self.log_message(f"❌ Batch download failed: {err}", "error"))
+        
+        # Start download in background thread
+        thread = threading.Thread(target=download_and_organize_thread)
+        thread.daemon = True
+        thread.start()
+
     def refresh_file_list(self):
         """Refresh the file list display"""
-        # Clear existing items
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
+        # Clear existing items safely
+        try:
+            if hasattr(self, 'scrollable_frame') and self.scrollable_frame.winfo_exists():
+                for widget in self.scrollable_frame.winfo_children():
+                    widget.destroy()
+            else:
+                self.log_message("⚠️ File display area invalid, skipping clear", "warning")
+        except tk.TclError as e:
+            self.log_message(f"⚠️ Error clearing display: {str(e)}", "warning")
+        except Exception as e:
+            self.log_message(f"⚠️ Unexpected error: {str(e)}", "warning")
         
         self.selected_file_vars.clear()
         
@@ -1446,9 +1793,159 @@ class FuturisticCyberpunk3DGUI:
             empty_label.pack(expand=True)
             return
         
-        # Create file item cards
-        for i, file_info in enumerate(self.file_items):
-            self.create_file_row(i, file_info)
+        # Create file item cards safely
+        try:
+            for i, file_info in enumerate(self.file_items):
+                self.create_file_row(i, file_info)
+        except Exception as e:
+            self.log_message(f"⚠️ Error creating file rows: {str(e)}", "warning")
+
+    def show_debug_status(self):
+        """Show detailed debug information about why files aren't loading"""
+        self.log_message("🔍 DEBUG STATUS - Checking system state...", "info")
+        
+        # Check connection status
+        if hasattr(self.connection_manager, 'connection_status'):
+            status = self.connection_manager.connection_status
+            self.log_message(f"📡 Connection Status: {status}", "info")
+        else:
+            self.log_message("📡 Connection Status: UNKNOWN - connection_manager missing", "warning")
+        
+        # Check API key
+        api_key = self.meshy_api_key.get().strip()
+        if api_key:
+            self.log_message(f"🔑 API Key: {api_key[:8]}...{api_key[-4:]} (length: {len(api_key)})", "info")
+        else:
+            self.log_message("🔑 API Key: MISSING or EMPTY", "error")
+        
+        # Check file items
+        self.log_message(f"📁 File Items Count: {len(self.file_items)}", "info")
+        if self.file_items:
+            sample = self.file_items[0]
+            self.log_message(f"📄 Sample File Item: {sample.get('name', 'No name')}", "info")
+
+    def debug_connection_status(self):
+        """Debug the connection status in detail"""
+        self.log_message("=" * 60, "info")
+        self.log_message("🔍 CONNECTION DEBUG REPORT", "info")
+        self.log_message("=" * 60, "info")
+        
+        # Check if connection manager exists
+        if hasattr(self, 'connection_manager'):
+            self.log_message("✅ connection_manager exists", "success")
+            
+            # Check if it has connection_status attribute
+            if hasattr(self.connection_manager, 'connection_status'):
+                status = self.connection_manager.connection_status
+                self.log_message(f"📊 connection_status = '{status}'", "info")
+                
+                if status == "connected":
+                    self.log_message("✅ Status is 'connected' - should load projects", "success")
+                else:
+                    self.log_message(f"❌ Status is '{status}' - will NOT load projects", "warning")
+            else:
+                self.log_message("❌ connection_manager has NO connection_status attribute", "error")
+        else:
+            self.log_message("❌ connection_manager does NOT exist", "error")
+        
+        # Check API key
+        api_key = self.meshy_api_key.get().strip()
+        if api_key:
+            self.log_message(f"🔑 API Key: {api_key[:8]}...{api_key[-4:]} (length: {len(api_key)})", "info")
+            if len(api_key) >= 30:
+                self.log_message("✅ API key length looks valid", "success")
+            else:
+                self.log_message("❌ API key seems too short", "warning")
+        else:
+            self.log_message("❌ NO API KEY found", "error")
+        
+        # Check file items
+        self.log_message(f"📁 File Items: {len(self.file_items)}", "info")
+        
+        # Force a manual connection attempt
+        self.log_message("🔄 Attempting MANUAL connection...", "info")
+        try:
+            if api_key and len(api_key) >= 30:
+                self.connection_manager.connect_to_meshy(api_key)
+            else:
+                self.log_message("❌ Can't connect - invalid API key", "error")
+        except Exception as e:
+            self.log_message(f"❌ Manual connection failed: {str(e)}", "error")
+        
+        self.log_message("=" * 60, "info")
+        
+        # Check scrollable frame
+        if hasattr(self, 'scrollable_frame'):
+            try:
+                exists = self.scrollable_frame.winfo_exists()
+                children_count = len(self.scrollable_frame.winfo_children())
+                self.log_message(f"🖼️ Display Frame: Exists={exists}, Children={children_count}", "info")
+            except Exception as e:
+                self.log_message(f"🖼️ Display Frame: ERROR - {str(e)}", "error")
+        else:
+            self.log_message("🖼️ Display Frame: MISSING", "error")
+        
+        # Force a manual API test
+        self.log_message("🚀 Testing API connection manually...", "info")
+        self.test_api_connection()
+
+    def test_api_connection(self):
+        """Test the API connection manually with detailed logging"""
+        api_key = self.meshy_api_key.get().strip()
+        if not api_key:
+            self.log_message("❌ Cannot test API - no API key", "error")
+            return
+            
+        def test_thread():
+            try:
+                import requests
+                
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                
+                self.root.after(0, lambda: self.log_message("📡 Sending test request to Meshy API...", "info"))
+                
+                response = requests.get(
+                    'https://api.meshy.ai/v1/text-to-3d',
+                    headers=headers,
+                    timeout=10
+                )
+                
+                self.root.after(0, lambda: self.log_message(f"📊 Response Status: {response.status_code}", "info"))
+                self.root.after(0, lambda: self.log_message(f"📄 Response Headers: {dict(response.headers)}", "info"))
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    projects = data.get('result', [])
+                    self.root.after(0, lambda: self.log_message(f"✅ API Test SUCCESS: Found {len(projects)} projects", "success"))
+                    
+                    # Show project details
+                    for i, project in enumerate(projects[:2]):  # Show first 2
+                        pid = project.get('id', 'unknown')
+                        status = project.get('status', 'unknown')
+                        prompt = project.get('prompt', 'No prompt')[:50]
+                        self.root.after(0, lambda p=pid, s=status, pr=prompt: 
+                                      self.log_message(f"📦 Project {i+1}: {p[:8]}... Status:{s} Prompt:{pr}...", "info"))
+                        
+                elif response.status_code == 401:
+                    self.root.after(0, lambda: self.log_message("❌ API Test FAILED: Invalid API key", "error"))
+                elif response.status_code == 403:
+                    self.root.after(0, lambda: self.log_message("❌ API Test FAILED: Access forbidden (need Pro account)", "error"))
+                else:
+                    error_text = response.text[:200]
+                    self.root.after(0, lambda: self.log_message(f"❌ API Test FAILED: {response.status_code} - {error_text}", "error"))
+                    
+            except requests.exceptions.RequestException as e:
+                self.root.after(0, lambda err=str(e): self.log_message(f"❌ Network Error: {err}", "error"))
+            except Exception as e:
+                self.root.after(0, lambda err=str(e): self.log_message(f"❌ Unexpected Error: {err}", "error"))
+        
+        import threading
+        thread = threading.Thread(target=test_thread)
+        thread.daemon = True
+        thread.start()
 
     def load_real_meshy_projects(self):
         """Load real projects and files from Meshy API"""
@@ -1479,22 +1976,146 @@ class FuturisticCyberpunk3DGUI:
                     'Content-Type': 'application/json'
                 }
                 
-                self.root.after(0, lambda: self.log_message("📡 Making API request to text-to-3d endpoint...", "info"))
+                # FIRST: Check account information to verify API key account
+                self.root.after(0, lambda: self.log_message("=" * 50, "info"))
+                self.root.after(0, lambda: self.log_message("🔐 ACCOUNT VERIFICATION", "info"))
+                self.root.after(0, lambda: self.log_message("=" * 50, "info"))
                 
-                # Fetch text-to-3d projects
-                response = requests.get(
-                    'https://api.meshy.ai/v1/text-to-3d',
-                    headers=headers,
-                    timeout=30
-                )
+                account_endpoints = [
+                    'https://api.meshy.ai/v1/account',
+                    'https://api.meshy.ai/v1/user', 
+                    'https://api.meshy.ai/v1/profile',
+                    'https://api.meshy.ai/v1/me',
+                    'https://api.meshy.ai/account',
+                    'https://api.meshy.ai/user',
+                    'https://api.meshy.ai/profile'
+                ]
                 
-                self.root.after(0, lambda: self.log_message(f"📊 API Response: {response.status_code}", "info"))
+                account_found = False
+                for account_endpoint in account_endpoints:
+                    try:
+                        self.root.after(0, lambda ep=account_endpoint: self.log_message(f"🔍 Testing account endpoint: {ep}", "info"))
+                        response = requests.get(account_endpoint, headers=headers, timeout=10)
+                        
+                        if response.status_code == 200:
+                            account_data = response.json()
+                            self.root.after(0, lambda ep=account_endpoint: self.log_message(f"✅ Account endpoint found: {ep}", "success"))
+                            self.root.after(0, lambda data=str(account_data): self.log_message(f"� Account data: {data}", "info"))
+                            account_found = True
+                            break
+                        elif response.status_code == 404:
+                            self.root.after(0, lambda ep=account_endpoint: self.log_message(f"❌ Not found: {ep}", "warning"))
+                        else:
+                            self.root.after(0, lambda ep=account_endpoint, code=response.status_code: self.log_message(f"⚠️ Error {code}: {ep}", "warning"))
+                    except Exception as e:
+                        self.root.after(0, lambda ep=account_endpoint, err=str(e): self.log_message(f"❌ Exception with {ep}: {err}", "error"))
                 
-                if response.status_code == 200:
-                    projects_data = response.json()
-                    projects = projects_data.get('result', [])
-                    
-                    self.root.after(0, lambda: self.log_message(f"✅ Found {len(projects)} text-to-3d projects", "success"))
+                if not account_found:
+                    self.root.after(0, lambda: self.log_message("⚠️ No account endpoint found. This suggests the API key might be from a different account.", "warning"))
+                    self.root.after(0, lambda: self.log_message("💡 SOLUTION: Generate a new API key from the Meshy account where you see your 27 projects.", "info"))
+                    self.root.after(0, lambda: self.log_message("🔧 Steps: 1) Log into Meshy where projects are visible 2) Go to API settings 3) Generate new key", "info"))
+                
+                self.root.after(0, lambda: self.log_message("\n" + "=" * 50, "info"))
+                self.root.after(0, lambda: self.log_message("🔍 TESTING ONLY WORKING ENDPOINTS (Status 200)", "info"))
+                self.root.after(0, lambda: self.log_message("=" * 50, "info"))
+                self.root.after(0, lambda: self.log_message("🎯 Focusing on: CORRECT Meshy API endpoints with /openapi/ path", "info"))
+                
+                # FIRST: Test with dummy API key if current key doesn't work
+                test_mode_key = "msy_dummy_api_key_for_test_mode_12345678"
+                if api_key != test_mode_key:
+                    self.root.after(0, lambda: self.log_message("🧪 Will test with dummy API key if current key fails", "info"))
+                
+                # CORRECT MESHY API ENDPOINTS (with /openapi/ path)
+                endpoints_to_try = [
+                    'https://api.meshy.ai/openapi/v2/text-to-3d',       # ✅ Correct endpoint from docs
+                    'https://api.meshy.ai/openapi/v1/image-to-3d',     # ✅ Try image-to-3d with openapi
+                    'https://api.meshy.ai/openapi/v2/image-to-3d',     # ✅ Try v2 image-to-3d
+                    'https://api.meshy.ai/openapi/v1/text-to-texture', # ✅ Try texture endpoint
+                ]
+                
+                projects = []
+                successful_endpoint = None
+                
+                for endpoint in endpoints_to_try:
+                    try:
+                        self.root.after(0, lambda ep=endpoint: self.log_message(f"📡 Trying endpoint: {ep}", "info"))
+                        
+                        # Try with different pagination and filter parameters
+                        param_combinations = [
+                            {'limit': 100},  # Get more results
+                            {'limit': 100, 'status': 'SUCCEEDED'},  # Only successful
+                            {'limit': 100, 'status': 'PENDING'},  # Pending projects
+                            {'limit': 100, 'status': 'IN_PROGRESS'},  # In progress
+                            {'limit': 100, 'status': 'FAILED'},  # Failed projects
+                            {},  # Default parameters
+                            {'offset': 0, 'limit': 50},  # Different pagination
+                            {'sortBy': 'created_at', 'order': 'desc', 'limit': 100},  # Sort by date
+                        ]
+                        
+                        for params in param_combinations:
+                            response = requests.get(
+                                endpoint,
+                                headers=headers,
+                                params=params,
+                                timeout=30
+                            )
+                            
+                            self.root.after(0, lambda: self.log_message(f"📊 API Response: {response.status_code}", "info"))
+                            
+                            if response.status_code == 200:
+                                projects_data = response.json()
+                                
+                                # Debug: Check if response is a list or dict
+                                if isinstance(projects_data, list):
+                                    self.root.after(0, lambda: self.log_message(f"🔍 API returned list with {len(projects_data)} items", "info"))
+                                    projects = projects_data
+                                    
+                                    # If we get 0 items, log the raw response to see what's happening
+                                    if len(projects_data) == 0:
+                                        self.root.after(0, lambda ep=endpoint, params_str=str(params): self.log_message(f"🔍 Empty response from {ep} with params {params_str}", "info"))
+                                        # Log first successful endpoint's full raw response for debugging
+                                        if endpoint == 'https://api.meshy.ai/v2/text-to-3d' and not hasattr(self, '_logged_raw_response'):
+                                            self.root.after(0, lambda raw=str(projects_data): self.log_message(f"🔍 RAW RESPONSE: {raw}", "info"))
+                                            self._logged_raw_response = True
+                                            
+                                elif isinstance(projects_data, dict):
+                                    self.root.after(0, lambda: self.log_message(f"🔍 Raw API Response Keys: {list(projects_data.keys())}", "info"))
+                                    projects = projects_data.get('result', [])
+                                    if not projects:
+                                        projects = projects_data.get('data', [])
+                                        if not projects:
+                                            projects = projects_data.get('tasks', [])
+                                            
+                                    # If we get 0 items from a dict, show the full structure
+                                    if len(projects) == 0 and not hasattr(self, '_logged_dict_response'):
+                                        self.root.after(0, lambda raw=str(projects_data): self.log_message(f"🔍 DICT RESPONSE: {raw}", "info"))
+                                        self._logged_dict_response = True
+                                else:
+                                    self.root.after(0, lambda: self.log_message(f"🔍 Unexpected response type: {type(projects_data)}", "error"))
+                                    projects = []
+                                
+                                if projects:
+                                    successful_endpoint = endpoint
+                                    self.root.after(0, lambda ep=endpoint, count=len(projects): self.log_message(f"✅ SUCCESS! Found {count} projects using {ep}", "success"))
+                                    break
+                            elif response.status_code == 404:
+                                self.root.after(0, lambda ep=endpoint: self.log_message(f"❌ {ep} returned 404 - endpoint not found", "warning"))
+                            else:
+                                self.root.after(0, lambda ep=endpoint, code=response.status_code: self.log_message(f"❌ {ep} returned {code}", "warning"))
+                        
+                        if projects:
+                            break
+                            
+                    except Exception as e:
+                        self.root.after(0, lambda ep=endpoint, err=str(e): self.log_message(f"❌ Error with {ep}: {err}", "error"))
+                        continue
+                
+                # Final result logging
+                self.root.after(0, lambda: self.log_message(f"✅ Found {len(projects)} text-to-3d projects", "success"))
+                if projects:
+                    self.root.after(0, lambda: self.log_message(f"🔍 Sample project keys: {list(projects[0].keys()) if projects else 'No projects'}", "info"))
+                else:
+                    self.root.after(0, lambda: self.log_message("❌ No projects found with any endpoint", "error"))
                     
                     for project in projects:
                         try:
@@ -1539,21 +2160,10 @@ class FuturisticCyberpunk3DGUI:
                         except Exception as project_error:
                             self.root.after(0, lambda err=str(project_error): self.log_message(f"⚠️ Error processing project: {err}", "warning"))
                 
-                elif response.status_code == 401:
-                    self.root.after(0, lambda: self.log_message("❌ API Key invalid or expired", "error"))
-                    return
-                elif response.status_code == 403:
-                    self.root.after(0, lambda: self.log_message("❌ API access forbidden - check Pro account status", "error"))
-                    return
-                else:
-                    self.root.after(0, lambda code=response.status_code: self.log_message(f"❌ API error: {code}", "error"))
-                    self.root.after(0, lambda text=response.text: self.log_message(f"📄 Response: {text[:100]}", "error"))
-                    return
-                
                 # Fetch image-to-3d projects
                 try:
                     img_response = requests.get(
-                        'https://api.meshy.ai/v1/image-to-3d',
+                        'https://api.meshy.ai/v2/image-to-3d',
                         headers=headers,
                         timeout=30
                     )
@@ -1597,6 +2207,7 @@ class FuturisticCyberpunk3DGUI:
                     self.root.after(0, lambda: self.log_message(f"🎯 Loaded {len(self.file_items)} real Meshy projects and files", "success"))
                 else:
                     self.root.after(0, lambda: self.log_message("ℹ️ No projects found in your Meshy account", "info"))
+                    self.root.after(0, lambda: self.log_message("💡 Create some 3D projects at https://www.meshy.ai to see them here!", "info"))
                 
             except requests.exceptions.RequestException as e:
                 self.root.after(0, lambda err=str(e): self.log_message(f"❌ Network error fetching projects: {err}", "error"))
