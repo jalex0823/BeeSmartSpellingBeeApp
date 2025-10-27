@@ -281,6 +281,80 @@
             renderer.render(scene, camera);
         }
 
+        function loadOBJDirectly(avatarPath, objFile, materials) {
+            // Load OBJ without MTL, optionally with pre-loaded materials
+            const objLoader = new THREE.OBJLoader();
+            objLoader.setPath(avatarPath + '/');
+            if (materials) {
+                objLoader.setMaterials(materials);
+            }
+            
+            log(`Loading OBJ: ${avatarPath}/${objFile}`, 'success');
+            
+            objLoader.load(
+                objFile,
+                function(object) {
+                    const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(2);
+                    log(`✓ OBJ loaded successfully in ${loadTime}s`, 'success');
+                    
+                    // Calculate stats
+                    let vertices = 0;
+                    let triangles = 0;
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            vertices += child.geometry.attributes.position.count;
+                            triangles += child.geometry.index ? child.geometry.index.count / 3 : child.geometry.attributes.position.count / 3;
+                            log(`  Mesh found: ${child.name || 'unnamed'}`, 'success');
+                            log(`    Vertices: ${child.geometry.attributes.position.count.toLocaleString()}`, 'success');
+                            log(`    Material: ${child.material.name || 'default'}`, 'success');
+                            
+                            // Check texture
+                            if (child.material.map) {
+                                log(`    ✓ Texture applied: ${child.material.map.image?.src || 'unknown'}`, 'success');
+                            } else {
+                                log(`    ⚠ No texture found on material`, 'warning');
+                            }
+                        }
+                    });
+
+                    document.getElementById('vertex-count').textContent = vertices.toLocaleString();
+                    document.getElementById('triangle-count').textContent = Math.floor(triangles).toLocaleString();
+                    document.getElementById('load-time').textContent = `${loadTime}s`;
+                    document.getElementById('load-status').textContent = '✅';
+
+                    // Center and scale
+                    const box = new THREE.Box3().setFromObject(object);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    object.position.x = -center.x;
+                    object.position.y = -center.y;
+                    object.position.z = -center.z;
+                    
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 3 / maxDim;
+                    object.scale.setScalar(scale);
+                    
+                    log(`  Bounding box: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`, 'success');
+                    log(`  Scale factor: ${scale.toFixed(3)}`, 'success');
+
+                    avatarObject = object;
+                    scene.add(avatarObject);
+                    log('✓ Avatar added to scene and visible!', 'success');
+                    log('========================================', 'success');
+                },
+                function(xhr) {
+                    const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+                    log(`Loading OBJ: ${percent}% (${(xhr.loaded / 1024 / 1024).toFixed(2)} MB)`, 'success');
+                },
+                function(error) {
+                    log(`❌ OBJ load error: ${error.message || error}`, 'error');
+                    console.error('OBJ Error:', error);
+                    document.getElementById('load-status').textContent = '❌';
+                }
+            );
+        }
+
         function loadAvatar() {
             log('========================================', 'success');
             const avatar = AVATARS[currentAvatarIndex];
@@ -310,21 +384,22 @@
             log(`MTL file: ${mtlFile}`, 'success');
             log(`Texture file: ${texturFile}`, 'success');
 
-            // MTL Loader
+            // MTL Loader with timeout
             const mtlLoader = new THREE.MTLLoader();
             mtlLoader.setPath(avatarPath + '/');
             
             log(`Loading MTL: ${avatarPath}/${mtlFile}`, 'success');
             
-            console.log('=== LOADING START ===');
-            console.log('Avatar Path:', avatarPath);
-            console.log('MTL URL:', `${avatarPath}/${mtlFile}`);
-            console.log('OBJ URL:', `${avatarPath}/${objFile}`);
-            console.log('=====================');
+            // Set a timeout for MTL loading - if it takes more than 5 seconds, fallback
+            let mtlTimeoutId = setTimeout(() => {
+                log(`⚠️ MTL loading timed out after 5s, loading OBJ without materials`, 'warning');
+                loadOBJDirectly(avatarPath, objFile, null);
+            }, 5000);
             
             mtlLoader.load(
                 mtlFile,
                 function(materials) {
+                    clearTimeout(mtlTimeoutId);
                     log('✓ MTL loaded successfully', 'success');
                     log(`  Materials found: ${Object.keys(materials.materials).length} total`, 'success');
                     Object.keys(materials.materials).forEach(name => {
@@ -334,75 +409,8 @@
                     materials.preload();
                     log('✓ Materials preloaded', 'success');
 
-                    // OBJ Loader
-                    const objLoader = new THREE.OBJLoader();
-                    objLoader.setMaterials(materials);
-                    objLoader.setPath(avatarPath + '/');
-                    
-                    log(`Loading OBJ: ${avatarPath}/${objFile}`, 'success');
-                    
-                    objLoader.load(
-                        objFile,
-                        function(object) {
-                            const loadTime = ((Date.now() - loadStartTime) / 1000).toFixed(2);
-                            log(`✓ OBJ loaded successfully in ${loadTime}s`, 'success');
-                            
-                            // Calculate stats
-                            let vertices = 0;
-                            let triangles = 0;
-                            object.traverse((child) => {
-                                if (child.isMesh) {
-                                    vertices += child.geometry.attributes.position.count;
-                                    triangles += child.geometry.index ? child.geometry.index.count / 3 : child.geometry.attributes.position.count / 3;
-                                    log(`  Mesh found: ${child.name || 'unnamed'}`, 'success');
-                                    log(`    Vertices: ${child.geometry.attributes.position.count.toLocaleString()}`, 'success');
-                                    log(`    Material: ${child.material.name || 'default'}`, 'success');
-                                    
-                                    // Check texture
-                                    if (child.material.map) {
-                                        log(`    ✓ Texture applied: ${child.material.map.image?.src || 'unknown'}`, 'success');
-                                    } else {
-                                        log(`    ⚠ No texture found on material`, 'warning');
-                                    }
-                                }
-                            });
-
-                            document.getElementById('vertex-count').textContent = vertices.toLocaleString();
-                            document.getElementById('triangle-count').textContent = Math.floor(triangles).toLocaleString();
-                            document.getElementById('load-time').textContent = `${loadTime}s`;
-                            document.getElementById('load-status').textContent = '✅';
-
-                            // Center and scale
-                            const box = new THREE.Box3().setFromObject(object);
-                            const center = box.getCenter(new THREE.Vector3());
-                            const size = box.getSize(new THREE.Vector3());
-                            
-                            object.position.x = -center.x;
-                            object.position.y = -center.y;
-                            object.position.z = -center.z;
-                            
-                            const maxDim = Math.max(size.x, size.y, size.z);
-                            const scale = 3 / maxDim;
-                            object.scale.setScalar(scale);
-                            
-                            log(`  Bounding box: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`, 'success');
-                            log(`  Scale factor: ${scale.toFixed(3)}`, 'success');
-
-                            avatarObject = object;
-                            scene.add(avatarObject);
-                            log('✓ Avatar added to scene and visible!', 'success');
-                            log('========================================', 'success');
-                        },
-                        function(xhr) {
-                            const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
-                            log(`Loading OBJ: ${percent}% (${(xhr.loaded / 1024 / 1024).toFixed(2)} MB)`, 'success');
-                        },
-                        function(error) {
-                            log(`❌ OBJ load error: ${error.message || error}`, 'error');
-                            console.error('OBJ Error:', error);
-                            document.getElementById('load-status').textContent = '❌';
-                        }
-                    );
+                    // Load OBJ with materials
+                    loadOBJDirectly(avatarPath, objFile, materials);
                 },
                 function(xhr) {
                     const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
@@ -411,7 +419,10 @@
                 function(error) {
                     log(`❌ MTL load error: ${error.message || error}`, 'error');
                     console.error('MTL Error:', error);
-                    document.getElementById('load-status').textContent = '❌';
+                    document.getElementById('load-status').textContent = '❌ MTL Error';
+                    // Fallback: try loading OBJ without MTL
+                    log('Falling back to OBJ without MTL...', 'warning');
+                    loadOBJDirectly(avatarPath, objFile, null);
                 }
             );
         }
