@@ -7212,6 +7212,64 @@ def update_user_lifetime_points_railway(user_id, points_to_add):
         speed_logger.error(f"Failed to update user lifetime points: {e}")
         return False
 
+
+def update_user_stats_railway(user_id, points_to_add, words_correct, words_attempted):
+    """
+    Railway-safe comprehensive user stats update for speed rounds
+    Updates: quizzes completed, lifetime points, and average accuracy
+    """
+    try:
+        engine = db.get_engine()
+        
+        accuracy = (words_correct / words_attempted * 100) if words_attempted > 0 else 0
+        
+        with engine.begin() as conn:
+            # First, get current stats
+            result = conn.execute(
+                text("""
+                    SELECT total_quizzes_completed, average_accuracy 
+                    FROM users 
+                    WHERE id = :user_id
+                """),
+                {'user_id': user_id}
+            ).fetchone()
+            
+            if result:
+                current_quizzes = result[0] or 0
+                current_avg_accuracy = result[1] or 0.0
+                
+                # Calculate new average accuracy (cumulative)
+                total_quizzes_after = current_quizzes + 1
+                new_avg_accuracy = ((current_avg_accuracy * current_quizzes) + accuracy) / total_quizzes_after
+                
+                # Update all stats in one query
+                conn.execute(
+                    text("""
+                        UPDATE users 
+                        SET total_lifetime_points = COALESCE(total_lifetime_points, 0) + :points,
+                            total_quizzes_completed = COALESCE(total_quizzes_completed, 0) + 1,
+                            average_accuracy = :new_avg_accuracy
+                        WHERE id = :user_id
+                    """),
+                    {
+                        'user_id': user_id, 
+                        'points': points_to_add,
+                        'new_avg_accuracy': round(new_avg_accuracy, 2)
+                    }
+                )
+                
+                speed_logger.info(f"Updated user {user_id} stats: Quizzes={total_quizzes_after}, Points=+{points_to_add}, Accuracy={new_avg_accuracy:.1f}%")
+                return True
+            else:
+                speed_logger.error(f"User {user_id} not found for stats update")
+                return False
+            
+    except Exception as e:
+        speed_logger.error(f"Failed to update user stats: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 # ==============================================================================
 # END SPEED ROUND RAILWAY FIXES
 # ==============================================================================
@@ -7534,10 +7592,15 @@ def api_speed_round_complete():
         score_id = save_speed_round_score_railway(current_user.id, score_data)
         
         if score_id:
-            # Update user's total points using Railway-safe method
-            points_updated = update_user_lifetime_points_railway(current_user.id, speed_round['total_points'])
+            # Update user's comprehensive stats (quizzes, points, accuracy) using Railway-safe method
+            stats_updated = update_user_stats_railway(
+                current_user.id, 
+                speed_round['total_points'],
+                words_correct,
+                words_attempted
+            )
             
-            speed_logger.info(f"Speed Round saved: {words_correct}/{words_attempted} correct, {speed_round['total_points']} pts, points_updated={points_updated}")
+            speed_logger.info(f"Speed Round saved: {words_correct}/{words_attempted} correct, {speed_round['total_points']} pts, stats_updated={stats_updated}")
         else:
             speed_logger.error("Failed to save Speed Round score")
         
