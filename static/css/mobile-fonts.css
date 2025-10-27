@@ -1,0 +1,88 @@
+/* =========================================================
+   Mobile Font Fixes for iOS and Android
+   Ensures consistent system font rendering across all devices
+   ========================================================= */
+
+/* Force system fonts globally - override any problematic declarations */
+html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Override any Comic Sans MS, cursive, or problematic monospace fonts */
+* {
+  font-family: inherit;
+}
+
+/* Ensure form elements use system fonts */
+button, 
+input, 
+textarea, 
+select, 
+option {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Override specific problematic selectors */
+.voice-card,
+.voice-visualizer,
+.notification,
+.modal-content,
+.avatar-picker-container,
+.setup-container,
+.leaderboard-container,
+.quiz-container,
+.report-card {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Fix monospace fonts to use system monospace instead of problematic ones */
+code, 
+pre, 
+kbd, 
+samp,
+.monospace {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
+}
+
+/* Ensure headings use system fonts */
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+}
+
+/* Mobile-specific font optimizations */
+@media (max-width: 768px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Prevent font boosting on Android */
+  * {
+    max-height: 999999px;
+  }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
+  }
+}
+
+/* Android-specific fixes */
+@supports not (-webkit-touch-callout: none) {
+  body {
+    font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
+  }
+}

@@ -14,7 +14,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <style>
         body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
+            /* Use system fonts for consistent mobile rendering - no Comic Sans */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             background: linear-gradient(135deg, #FFF9E6 0%, #FFEAA7 100%);
             margin: 0;
             padding: 2rem;
