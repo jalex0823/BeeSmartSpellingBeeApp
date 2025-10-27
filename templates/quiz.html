@@ -302,7 +302,7 @@
     
     .definition-display .word-definition {
         font-weight: 500;
-        color: #2C3E50;
+        color: #5A2C15; /* Dark brown for better visibility */
         margin-bottom: 1rem;
         display: block;
         line-height: 1.7;
@@ -317,7 +317,7 @@
     
     .definition-display .sentence-example {
         font-style: italic;
-        color: #5D6D7E;
+        color: #5A2C15; /* Dark brown for better visibility */
         display: block;
         margin-top: 0.75rem;
         padding: 0.75rem 1rem;
@@ -2520,13 +2520,11 @@
                 <!-- Center-Flowing Amber Wave CSS -->
                 <style>
                     .voice-card.speaking-mode {
-                        background: radial-gradient(circle at 30% 30%, #ffa726 0%, #ef6c00 60%, #c14900 100%);
+                        background: transparent;
                         border-radius: 28px;
                         padding: 40px 24px 40px; /* Even more padding for wave clearance */
-                        border: 2px solid rgba(255,255,255,0.25);
-                        box-shadow:
-                            0 24px 40px rgba(255,140,0,0.35),
-                            0 0 60px rgba(255,214,79,0.35) inset;
+                        border: none;
+                        box-shadow: none;
                         max-width: 920px; /* Much wider for more room */
                         margin: 0 auto 24px auto;
                         color: #fff;
@@ -2560,8 +2558,8 @@
                     .voice-definition {
                         font-size: 1.1rem;
                         font-weight: 500;
-                        color: #ffffff; /* White text */
-                        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        color: #5A2C15; /* Dark brown for better visibility */
+                        text-shadow: none;
                         padding: 16px 20px;
                         margin-top: 12px;
                         line-height: 1.5;
