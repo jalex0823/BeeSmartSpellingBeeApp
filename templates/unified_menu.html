@@ -9644,13 +9644,25 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
-            // Load saved student name
-            const savedName = localStorage.getItem('studentName');
-            if (savedName) {
-                const nameInput = document.getElementById('studentName');
-                if (nameInput) {
-                    nameInput.value = savedName;
-                    console.log('📝 Loaded student name:', savedName);
+            // Load saved student name (but prioritize authenticated user's display_name)
+            const nameInput = document.getElementById('studentName');
+            if (nameInput) {
+                // For authenticated users, their display_name should always be shown
+                const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+                const authenticatedName = "{{ current_user.display_name if current_user.is_authenticated else '' }}";
+                
+                if (isAuthenticated && authenticatedName) {
+                    // Authenticated users: use their display_name and sync to localStorage
+                    nameInput.value = authenticatedName;
+                    localStorage.setItem('studentName', authenticatedName);
+                    console.log('📝 Using authenticated user display name:', authenticatedName);
+                } else {
+                    // Guest users: load from localStorage if available
+                    const savedName = localStorage.getItem('studentName');
+                    if (savedName) {
+                        nameInput.value = savedName;
+                        console.log('📝 Loaded guest student name:', savedName);
+                    }
                 }
             }
             
