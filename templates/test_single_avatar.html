@@ -284,6 +284,7 @@
         function loadOBJDirectly(avatarPath, objFile, materials) {
             // Load OBJ without MTL, optionally with pre-loaded materials
             const objLoader = new THREE.OBJLoader();
+            objLoader.setCrossOrigin('anonymous');
             objLoader.setPath(avatarPath + '/');
             if (materials) {
                 objLoader.setMaterials(materials);
@@ -396,8 +397,16 @@
             log(`MTL file: ${mtlFile}`, 'success');
             log(`Texture file: ${texturFile}`, 'success');
 
+            // Use absolute URLs for loading
+            const fullMTLUrl = `${window.location.origin}${avatarPath}/${mtlFile}`;
+            const fullOBJUrl = `${window.location.origin}${avatarPath}/${objFile}`;
+            
+            log(`Full MTL URL: ${fullMTLUrl}`, 'success');
+            log(`Full OBJ URL: ${fullOBJUrl}`, 'success');
+
             // MTL Loader with timeout
             const mtlLoader = new THREE.MTLLoader();
+            mtlLoader.setCrossOrigin('anonymous');
             mtlLoader.setPath(avatarPath + '/');
             
             log(`Loading MTL: ${avatarPath}/${mtlFile}`, 'success');
