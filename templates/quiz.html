@@ -5526,6 +5526,17 @@ class QuizManager {
 
     async loadNextWord() {
         try {
+            // 🎭 ENSURE WE'RE IN VOICE MODE before loading the next word
+            if (window.morphController) {
+                // If we were in timer mode, morph back to voice visualization
+                if (window.morphController.currentMode === 'timer') {
+                    console.log('🎭 Ensuring VOICE mode before loading next word...');
+                    window.morphController.morphToVoice(800);
+                    // Give morphing animation time to start
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+            
             this.lastPronounceData = null;
             // Reset hint tracking for new word
             this.hintUsedThisWord = false;
@@ -6093,6 +6104,12 @@ class QuizManager {
     }
 
     async showFeedback(result) {
+        // 🎭 MORPH BACK: Transition from honey jar timer to voice visualizer
+        if (window.morphController) {
+            console.log('🎭 Morphing back to VOICE visualizer for feedback...');
+            window.morphController.morphToVoice(1000); // 1 second morph
+        }
+        
         try { window.BeeVoiceViz?.react(result?.correct ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
