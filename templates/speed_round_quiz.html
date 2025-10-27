@@ -20,14 +20,14 @@
 
     /* New dotted ribbon card skin */
         .voice-card.speaking-mode {
-                background: #0d4a7a; /* darker blue than darkest wave */
+                background: transparent; /* Let warm page gradient show through */
                 border-radius: 28px;
                 padding: 32px 20px 32px; /* Extra padding top/bottom for wave clearance */
                 border: none; /* remove border */
-                box-shadow: 0 24px 40px rgba(35,131,218,0.28);
+                box-shadow: 0 8px 16px rgba(255, 140, 0, 0.15); /* Warm bee-themed shadow */
                 max-width: 900px; /* Much wider for more room */
                 margin: 0 auto 24px auto;
-                color: #fff;
+                color: #5A3A1A; /* Warm brown text for readability */
                 text-align: center;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                 overflow: visible; /* Allow full wave pattern visibility */
@@ -35,15 +35,15 @@
     .voice-header {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #e3f2fd;
-        text-shadow: 0 0 6px rgba(255,255,255,0.8), 0 0 12px rgba(58,155,238,0.8);
+        color: #5A3A1A; /* Warm brown for readability on light background */
+        text-shadow: 0 0 6px rgba(255, 215, 0, 0.5), 0 0 12px rgba(255, 165, 0, 0.3); /* Golden glow */
         display: flex;
         align-items: center;
         justify-content: center;
         letter-spacing: 0.02em;
         margin-bottom: 20px;
     }
-    .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #5eb3f2); }
+    .voice-bee { margin-right: 8px; display:inline-block; filter: drop-shadow(0 0 4px #FFD700) drop-shadow(0 0 8px #FFA500); /* Golden bee glow */ }
     .dotwave-wrapper { 
         display:flex; 
         justify-content:center; 
