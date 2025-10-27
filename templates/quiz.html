@@ -7621,7 +7621,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     } catch (error) {
-        console.warn('3D mascot failed to load:', error);
+        console.warn('3D mascot failed to load, using fallback:', error);
+        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+        try {
+            await window.userAvatarLoader.load2DFallback('mascotBee3D');
+        } catch (fallbackError) {
+            console.error('❌ Fallback avatar also failed:', fallbackError);
+        }
     }
 
     fetch('/api/wordbank', {

@@ -1227,9 +1227,20 @@ def normalize(s: str) -> str:
 INAPPROPRIATE_WORDS = {
     # Profanity and vulgar terms
     "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
-    # Sexual/adult content
+    # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
     "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
     "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
+    "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+    "molest", "molestation", "molester", "molesting", "molesters",
+    "rape", "rapist", "raping", "rapes", "raped",
+    "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
+    "predator", "predators", "groom", "grooming", "groomer", "groomers",
+    "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
+    "victim", "victims", "exploit", "exploitation", "exploiting",
+    "assault", "assaulting", "assaults", "assaulted",
+    "harass", "harassment", "harassing",
+    "nude", "naked", "horny", "arousal", "climax", "intercourse",
+    "erotic", "sexuality", "genitals", "genital",
     # Violence/weapons
     "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
     "gun", "shoot", "shooting", "bomb", "explosive",

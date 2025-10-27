@@ -111,12 +111,22 @@ ENHANCED_INAPPROPRIATE_WORDS = {
     'sexual_content': {
         "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
         "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
-        "nude", "naked", "horny", "arousal", "climax", "intercourse"
+        "nude", "naked", "horny", "arousal", "climax", "intercourse",
+        # CRITICAL: Child safety - block all pedophilia/abuse terms
+        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+        "molest", "molestation", "molester", "molesting", "molesters",
+        "rape", "rapist", "raping", "rapes", "raped",
+        "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
+        "predator", "predators", "groom", "grooming", "groomer", "groomers",
+        "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
+        "victim", "victims", "exploit", "exploitation", "exploiting",
+        "erotic", "sexuality", "genitals", "genital"
     },
     'violence': {
         "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
         "gun", "shoot", "shooting", "bomb", "explosive", "stab", "stabbing",
-        "violence", "violent", "assault", "attack", "terroris"
+        "violence", "violent", "assault", "assaults", "assaulting", "assaulted",
+        "attack", "terrorism", "terrorist", "harass", "harassment", "harassing"
     },
     'drugs_alcohol': {
         "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
