@@ -1115,6 +1115,77 @@
         border: 2px solid rgba(255, 112, 67, 0.65);
         color: #bf360c;
     }
+
+    /* Retry Countdown Timer Styling */
+    .retry-countdown-timer {
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.25), rgba(255, 193, 7, 0.2));
+        border: 3px solid #FF9800;
+        border-radius: 16px;
+        padding: 1.2rem;
+        margin: 1rem 0 0 0;
+        text-align: center;
+        font-weight: 700;
+        animation: countdownPulse 1s ease-in-out infinite;
+    }
+
+    .retry-countdown-timer.countdown-critical {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(233, 30, 99, 0.2));
+        border-color: #f44336;
+        animation: countdownCriticalPulse 0.6s ease-in-out infinite;
+    }
+
+    .countdown-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.3rem;
+    }
+
+    .countdown-number {
+        font-size: 2.8rem;
+        color: #FF9800;
+        line-height: 1;
+        font-weight: 900;
+    }
+
+    .retry-countdown-timer.countdown-critical .countdown-number {
+        color: #f44336;
+    }
+
+    .countdown-text {
+        font-size: 0.85rem;
+        color: #999;
+        margin-top: 0.3rem;
+    }
+
+    @keyframes countdownPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.02); opacity: 0.95; }
+    }
+
+    @keyframes countdownCriticalPulse {
+        0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 15px rgba(244, 67, 54, 0.4); }
+        50% { transform: scale(1.03); opacity: 1; box-shadow: 0 0 25px rgba(244, 67, 54, 0.6); }
+    }
+
+    /* Next Word Button */
+    .action-btn.next-word {
+        background: linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%);
+        color: white;
+        border: 2px solid rgba(76, 175, 80, 0.6);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .action-btn.next-word:hover {
+        background: linear-gradient(90deg, #43A047 0%, #558B2F 100%);
+        border-color: #4CAF50;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .action-btn.next-word:active {
+        transform: translateY(-1px) scale(0.98);
+    }
     
     @media (max-width: 768px) {
         .quiz-container {
@@ -1420,14 +1491,21 @@
     .exit-button-container {
         display: flex;
         justify-content: center;
+        gap: 1rem;
         margin-top: 1rem;
         padding-top: 1rem;
         border-top: 2px dashed rgba(255, 193, 7, 0.3);
+        flex-wrap: wrap;
+    }
+    
+    .exit-button-container .action-btn {
+        flex: 1;
+        min-width: 140px;
+        max-width: 250px;
     }
     
     .exit-button-container .action-btn.exit {
-        width: 60%;
-        max-width: 300px;
+        width: auto;
     }
     
     /* Retry Button Styling */
@@ -2824,7 +2902,7 @@
             <button type="button" class="action-btn secondary" id="skipButton">
                 Skip Word
             </button>
-            <button type="button" class="action-btn retry" id="retryButton" style="display: none;">
+            <button type="button" class="action-btn retry" id="retryButton" disabled>
                 <span class="bee-icon" aria-hidden="true">🔄</span>
                 Retry (33% points)
             </button>
@@ -2832,6 +2910,10 @@
         
         <!-- Exit Quiz Button - Now separate, centered at bottom -->
         <div class="exit-button-container">
+            <button type="button" class="action-btn next-word" id="nextWordButton" style="display: none;">
+                <span class="bee-icon" aria-hidden="true">➡️</span>
+                Next Word
+            </button>
             <button type="button" class="action-btn exit" id="exitQuizButton">
                 <span class="bee-icon" aria-hidden="true">🚪</span>
                 Exit Quiz
@@ -3059,6 +3141,22 @@ class BeeSoundboard {
                     { freq: 220, duration: 0.15, gain: 0.30, wave: 'sawtooth', fade: false, delay: 0.02 },
                     { freq: 180, duration: 0.15, gain: 0.28, wave: 'square', fade: false, delay: 0.02 },
                     { freq: 220, duration: 0.2, gain: 0.32, wave: 'sawtooth', fade: true, delay: 0.02 }
+                ]);
+                break;
+            case 'morph-to-timer':
+                // Smooth magical transition sound - morphing to honey jar timer (LOUDER)
+                this.sequence([
+                    { freq: 523, duration: 0.15, gain: 0.28, wave: 'sine', fade: false },  // C5
+                    { freq: 659, duration: 0.15, gain: 0.32, wave: 'sine', fade: false, delay: 0.08 },  // E5
+                    { freq: 784, duration: 0.25, gain: 0.36, wave: 'sine', fade: true, delay: 0.08 }   // G5
+                ]);
+                break;
+            case 'morph-to-visualization':
+                // Bright ascending chime - morphing back to voice visualization (LOUDER)
+                this.sequence([
+                    { freq: 784, duration: 0.12, gain: 0.32, wave: 'sine', fade: false },  // G5
+                    { freq: 987, duration: 0.12, gain: 0.36, wave: 'sine', fade: false, delay: 0.06 },  // B5
+                    { freq: 1319, duration: 0.20, gain: 0.40, wave: 'sine', fade: true, delay: 0.06 }   // E6
                 ]);
                 break;
         }
@@ -3293,6 +3391,11 @@ class MorphController {
         console.log('🎭 Morphing to VOICE visualizer...');
         this.morphing = true;
         
+        // 🔊 Play morphing sound effect
+        if (window.soundboard) {
+            window.soundboard.play('morph-to-visualization');
+        }
+        
         // Add morphing animation class
         this.container.classList.add('morphing-to-voice');
         this.container.classList.remove('mode-timer');
@@ -3316,6 +3419,11 @@ class MorphController {
         
         console.log('🎭 Morphing to HONEY JAR timer...');
         this.morphing = true;
+        
+        // 🔊 Play morphing sound effect
+        if (window.soundboard) {
+            window.soundboard.play('morph-to-timer');
+        }
         
         // 🍯 ALWAYS show FULL honey jar at 60 seconds when morphing to timer
         const honeyFillRect = document.getElementById('honeyFillRect');
@@ -3618,6 +3726,7 @@ class BeeDelightManager {
 
     setupExitQuiz() {
         const exitButton = document.getElementById('exitQuizButton');
+        const nextWordButton = document.getElementById('nextWordButton');
         const exitModal = document.getElementById('exitModal');
         const stayButton = document.getElementById('stayButton');
         const confirmExitButton = document.getElementById('confirmExitButton');
@@ -3625,6 +3734,15 @@ class BeeDelightManager {
         // Show exit confirmation modal
         exitButton?.addEventListener('click', () => {
             this.showExitModal();
+        });
+
+        // Next Word button - manual advance after retry window closes
+        nextWordButton?.addEventListener('click', () => {
+            console.log('⏭️ Next Word button clicked');
+            this.hideNextWordButton();
+            this.hideFeedback();
+            this.soundboard?.play('button-primary');
+            this.loadNextWord();
         });
 
         // Stay and continue practicing
@@ -5545,6 +5663,7 @@ class QuizManager {
             this.isRetryAttempt = false;
             this.clearRetryCountdown();
             this.hideRetryButton();
+            this.hideNextWordButton();
             
             const response = await fetch('/api/next', { 
                 method: 'POST',
@@ -6205,7 +6324,10 @@ class QuizManager {
                     await this.speakAnnouncement('You have one retry available for partial credit.');
                 }
                 
-                // Start 3-second auto-advance countdown
+                // 🔊 Announce the 8-second timer BEFORE starting it
+                await this.speakAnnouncement('You have 8 seconds to decide if you want to retry this word.');
+                
+                // Start 8-second countdown AFTER announcement
                 this.startRetryCountdown();
                 
             } else {
@@ -6305,42 +6427,75 @@ class QuizManager {
     showRetryButton() {
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
-            retryButton.style.display = 'block';
-            console.log('🔄 Retry button shown');
+            retryButton.disabled = false;
+            console.log('🔄 Retry button enabled');
         }
     }
     
     hideRetryButton() {
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
-            retryButton.style.display = 'none';
-            console.log('🔄 Retry button hidden');
+            retryButton.disabled = true;
+            console.log('🔄 Retry button disabled');
         }
     }
     
     startRetryCountdown() {
-        let secondsLeft = 3;
+        let secondsLeft = 8;
         const countdownElement = document.getElementById('retryCountdown');
+        const spellingInput = document.getElementById('spellingInput');
         
         // Clear any existing timeout
         if (this.retryTimeoutId) {
             clearTimeout(this.retryTimeoutId);
         }
         
-        // Update countdown display
+        // Enable input for retry attempt
+        if (spellingInput) {
+            spellingInput.value = '';
+            spellingInput.disabled = false;
+            spellingInput.placeholder = 'Retry your spelling...';
+            spellingInput.focus();
+        }
+        
+        // Update countdown display with animated styling
         const updateCountdown = () => {
             if (countdownElement) {
-                countdownElement.textContent = `Auto-advancing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...`;
+                countdownElement.className = 'retry-countdown-timer';
+                if (secondsLeft <= 3) {
+                    countdownElement.classList.add('countdown-critical');
+                }
+                countdownElement.innerHTML = `
+                    <div class="countdown-label">⏱️ Time to Retry:</div>
+                    <div class="countdown-number">${secondsLeft}</div>
+                    <div class="countdown-text">Type your answer and click Submit, or wait for next word</div>
+                `;
             }
             secondsLeft--;
             
             if (secondsLeft >= 0) {
                 this.retryTimeoutId = setTimeout(updateCountdown, 1000);
             } else {
-                // Time's up - auto-advance to next word
+                // Time's up - show "Next Word" button and the correct answer
                 this.retryAvailable = false;
                 this.hideRetryButton();
-                this.loadNextWord();
+                
+                // Show the correct spelling
+                const correctWord = this.currentWordData?.word || '';
+                const feedbackArea = document.getElementById('feedbackArea');
+                feedbackArea.innerHTML = `
+                    <div style="font-size: 1.15rem; font-weight: 700;">Time's up! ⏰</div>
+                    <div style="margin-top: 0.5rem;">The correct spelling is: <strong>${correctWord}</strong></div>
+                    <div style="margin-top: 0.3rem; font-size: 0.9rem; color: #999;">Click "Next Word" to continue</div>
+                `;
+                
+                // Disable input
+                if (spellingInput) {
+                    spellingInput.disabled = true;
+                }
+                
+                // Show Next Word button
+                this.showNextWordButton();
             }
         };
         
@@ -6357,6 +6512,22 @@ class QuizManager {
             countdownElement.textContent = '';
         }
     }
+
+    showNextWordButton() {
+        const nextWordButton = document.getElementById('nextWordButton');
+        if (nextWordButton) {
+            nextWordButton.style.display = 'block';
+            console.log('✅ Next Word button shown');
+        }
+    }
+
+    hideNextWordButton() {
+        const nextWordButton = document.getElementById('nextWordButton');
+        if (nextWordButton) {
+            nextWordButton.style.display = 'none';
+            console.log('✅ Next Word button hidden');
+        }
+    }
     
     handleRetry() {
         console.log('🔄 Retry button clicked!');
@@ -6364,6 +6535,7 @@ class QuizManager {
         // Clear countdown and hide retry button
         this.clearRetryCountdown();
         this.hideRetryButton();
+        this.hideNextWordButton();
         this.retryAvailable = false;
         this.hasRetried = true;
         this.isRetryAttempt = true;  // Mark this as a retry attempt
