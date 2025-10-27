@@ -127,6 +127,15 @@
             <button onclick="clearLogs()">🗑️ Clear Logs</button>
         </div>
 
+        <div class="controls">
+            <strong>Debugging Tools:</strong><br>
+            <button onclick="toggleWireframe()">🔲 Toggle Wireframe</button>
+            <button onclick="toggleLighting()">💡 Toggle Lighting</button>
+            <button onclick="dumpSceneInfo()">📊 Dump Scene Info</button>
+            <button onclick="testTextureDirectly()">🖼️ Test Texture</button>
+            <button onclick="toggleBackfaceCulling()">👁️ Toggle Backface Culling</button>
+        </div>
+
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-label">Load Status</div>
@@ -419,7 +428,131 @@
             log('Camera reset to default position', 'success');
         }
 
-        // Window resize handler
+        // ============ DEBUGGING FUNCTIONS ============
+        
+        function toggleWireframe() {
+            if (!avatarObject) {
+                log('No avatar loaded yet', 'warning');
+                return;
+            }
+            
+            avatarObject.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.wireframe = !child.material.wireframe;
+                }
+            });
+            
+            const state = avatarObject.children[0]?.material?.wireframe ? 'ON' : 'OFF';
+            log(`Wireframe mode: ${state}`, 'success');
+        }
+
+        function toggleLighting() {
+            const lights = scene.children.filter(c => c.isLight);
+            lights.forEach(light => {
+                light.visible = !light.visible;
+            });
+            
+            const state = lights[0]?.visible ? 'ON' : 'OFF';
+            log(`Lighting: ${state}`, 'success');
+        }
+
+        function dumpSceneInfo() {
+            if (!avatarObject) {
+                log('No avatar loaded yet', 'warning');
+                return;
+            }
+            
+            log('=== SCENE DEBUG INFO ===', 'success');
+            log(`Avatar object: ${avatarObject.name || 'unnamed'}`, 'success');
+            log(`Position: (${avatarObject.position.x.toFixed(2)}, ${avatarObject.position.y.toFixed(2)}, ${avatarObject.position.z.toFixed(2)})`, 'success');
+            log(`Scale: (${avatarObject.scale.x.toFixed(2)}, ${avatarObject.scale.y.toFixed(2)}, ${avatarObject.scale.z.toFixed(2)})`, 'success');
+            log(`Rotation: (${avatarObject.rotation.x.toFixed(2)}, ${avatarObject.rotation.y.toFixed(2)}, ${avatarObject.rotation.z.toFixed(2)})`, 'success');
+            
+            let meshCount = 0;
+            let totalVertices = 0;
+            avatarObject.traverse((child) => {
+                if (child.isMesh) {
+                    meshCount++;
+                    totalVertices += child.geometry.attributes.position.count;
+                    log(`Mesh: ${child.name || 'unnamed'} - Vertices: ${child.geometry.attributes.position.count}`, 'success');
+                    log(`  Material: ${child.material.name || 'default'}, Wireframe: ${child.material.wireframe}`, 'success');
+                    log(`  Has texture: ${!!child.material.map}`, child.material.map ? 'success' : 'warning');
+                    if (child.material.map) {
+                        log(`    Texture URL: ${child.material.map.image?.currentSrc || 'unknown'}`, 'success');
+                    }
+                }
+            });
+            
+            log(`Total Meshes: ${meshCount}, Total Vertices: ${totalVertices}`, 'success');
+            log(`Camera Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`, 'success');
+            log('=== END DEBUG INFO ===', 'success');
+        }
+
+        function testTextureDirectly() {
+            if (!avatarObject) {
+                log('No avatar loaded yet', 'warning');
+                return;
+            }
+            
+            log('Testing texture loading...', 'success');
+            
+            avatarObject.traverse((child) => {
+                if (child.isMesh && child.material.map) {
+                    const texture = child.material.map;
+                    log(`Found texture on ${child.name}:`, 'success');
+                    log(`  Source: ${texture.image?.currentSrc || 'unknown'}`, 'success');
+                    log(`  Image loaded: ${!!texture.image}`, texture.image ? 'success' : 'error');
+                    log(`  Image size: ${texture.image?.width}x${texture.image?.height}`, 'success');
+                    
+                    // Try reloading texture
+                    const textureLoader = new THREE.TextureLoader();
+                    const imageSrc = texture.image?.currentSrc;
+                    if (imageSrc) {
+                        log(`Attempting to reload texture from: ${imageSrc}`, 'success');
+                        textureLoader.load(
+                            imageSrc,
+                            (newTexture) => {
+                                log(`✓ Texture reloaded successfully!`, 'success');
+                                child.material.map = newTexture;
+                                child.material.needsUpdate = true;
+                            },
+                            undefined,
+                            (err) => {
+                                log(`✗ Texture reload failed: ${err}`, 'error');
+                            }
+                        );
+                    }
+                }
+            });
+        }
+
+        function toggleBackfaceCulling() {
+            if (!avatarObject) {
+                log('No avatar loaded yet', 'warning');
+                return;
+            }
+            
+            let cullingSwitched = false;
+            avatarObject.traverse((child) => {
+                if (child.isMesh) {
+                    const currentSide = child.material.side;
+                    // Cycle: FrontSide -> BackSide -> DoubleSide -> FrontSide
+                    if (currentSide === THREE.FrontSide) {
+                        child.material.side = THREE.BackSide;
+                        cullingSwitched = true;
+                    } else if (currentSide === THREE.BackSide) {
+                        child.material.side = THREE.DoubleSide;
+                    } else {
+                        child.material.side = THREE.FrontSide;
+                    }
+                    child.material.needsUpdate = true;
+                }
+            });
+            
+            const sides = {[THREE.FrontSide]: 'Front', [THREE.BackSide]: 'Back', [THREE.DoubleSide]: 'Double'};
+            const newSide = sides[avatarObject.children[0]?.material?.side] || 'Unknown';
+            log(`Backface culling: ${newSide} side visible`, 'success');
+        }
         window.addEventListener('resize', () => {
             const canvas = document.getElementById('avatar-canvas');
             const width = canvas.clientWidth;
