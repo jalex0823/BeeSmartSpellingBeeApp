@@ -113,14 +113,16 @@
 <body>
     <div class="container">
         <h1>🐝 Single Avatar Test</h1>
-        <p class="subtitle">Testing Superbee rendering with detailed diagnostics</p>
+        <p class="subtitle" id="avatar-name">Testing Superbee rendering with detailed diagnostics</p>
 
         <canvas id="avatar-canvas"></canvas>
 
         <div class="controls">
+            <button onclick="previousAvatar()">⬅️ Previous Avatar</button>
+            <button onclick="nextAvatar()">Next Avatar ➡️</button>
             <button onclick="loadAvatar()">🔄 Reload Avatar</button>
-            <button onclick="rotateLeft()">⬅️ Rotate Left</button>
-            <button onclick="rotateRight()">➡️ Rotate Right</button>
+            <button onclick="rotateLeft()">↺ Rotate Left</button>
+            <button onclick="rotateRight()">Rotate Right ↻</button>
             <button onclick="resetCamera()">📷 Reset Camera</button>
             <button onclick="clearLogs()">🗑️ Clear Logs</button>
         </div>
@@ -154,6 +156,35 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
 
     <script>
+        // Avatar database - all avatars with their ACTUAL file names
+        const AVATARS = [
+            { name: 'Doctor Bee', slug: 'beedoctor', obj: 'DoctorBee.obj', mtl: 'BeeDoctor.mtl', texture: 'DoctorBee.png' },
+            { name: 'Knight Bee', slug: 'beeknight', obj: 'KnightBee.obj', mtl: 'BeeKnight.mtl', texture: 'KnightBee.png' },
+            { name: 'Builder Bee', slug: 'builderbee', obj: 'BuilderBee.obj', mtl: 'BuilderBee.mtl', texture: 'BuilderBee.png' },
+            { name: 'Buzzbot Bee', slug: 'buzzbotbee', obj: 'BuzzbotBee.obj', mtl: 'BuzzbotBee.mtl', texture: 'BuzzbotBee.png' },
+            { name: 'Buzzhero Bee', slug: 'buzzhero', obj: 'BuzzheroBee.obj', mtl: 'BuzzHero.mtl', texture: 'BuzzheroBee.png' },
+            { name: 'Detective Bee', slug: 'detectivebee', obj: 'DetectiveBee.obj', mtl: 'DetectiveBee.mtl', texture: 'DetectiveBee.png' },
+            { name: 'Explorer Bee', slug: 'explorerbee', obj: 'ExplorerBee.obj', mtl: 'ExplorerBee.mtl', texture: 'ExplorerBee.png' },
+            { name: 'Franken Bee', slug: 'frankenbee', obj: 'FrankenBee.obj', mtl: 'Frankenbee.mtl', texture: 'FrankenBee.png' },
+            { name: 'Motorcyclebuzz Bee', slug: 'motorcyclebuzzbee', obj: 'MotorcyclebuzzBee.obj', mtl: 'MotorcycleBuzzBee.mtl', texture: 'MotorcyclebuzzBee.png' },
+            { name: 'Queen Bee Majesty', slug: 'queenbeemajesty', obj: 'QueenmajestyBee.obj', mtl: 'QueenBeeMajesty.mtl', texture: 'QueenmajestyBee.png' },
+            { name: 'Sea Bee', slug: 'seabee', obj: 'SeaBee.obj', mtl: 'SeaBee.mtl', texture: 'SeaBee.png' },
+            { name: 'Space Explorer Bee', slug: 'spacebeeexplorer', obj: 'SpaceexplorerBee.obj', mtl: 'SpaceBeeExplorer.mtl', texture: 'SpaceexplorerBee.png' },
+            { name: 'Superhero Bee', slug: 'superbeehero', obj: 'SuperheroBee.obj', mtl: 'SuperBeeHero.mtl', texture: 'SuperheroBee.png' }
+        ];
+        
+        let currentAvatarIndex = 0;
+        
+        function previousAvatar() {
+            currentAvatarIndex = (currentAvatarIndex - 1 + AVATARS.length) % AVATARS.length;
+            loadAvatar();
+        }
+        
+        function nextAvatar() {
+            currentAvatarIndex = (currentAvatarIndex + 1) % AVATARS.length;
+            loadAvatar();
+        }
+        
         // Logging system
         function log(message, type = 'success') {
             const container = document.getElementById('log-container');
@@ -240,7 +271,13 @@
 
         function loadAvatar() {
             log('========================================', 'success');
-            log('Starting avatar load sequence...', 'success');
+            const avatar = AVATARS[currentAvatarIndex];
+            log(`Starting avatar load sequence: ${avatar.name} (${currentAvatarIndex + 1}/${AVATARS.length})`, 'success');
+            
+            // Update title
+            document.getElementById('avatar-name').textContent = `Testing ${avatar.name} (${currentAvatarIndex + 1}/${AVATARS.length})`;
+            document.title = `Single Avatar Test - ${avatar.name}`;
+            
             loadStartTime = Date.now();
             document.getElementById('load-status').textContent = '⏳';
             document.getElementById('load-time').textContent = '-';
@@ -251,10 +288,10 @@
                 log('Removed previous avatar from scene', 'warning');
             }
 
-            const avatarPath = '/static/assets/avatars/superbeehero';
-            const objFile = 'SuperheroBee.obj';
-            const mtlFile = 'SuperBeeHero.mtl';
-            const texturFile = 'SuperheroBee.png';
+            const avatarPath = `/static/assets/avatars/${avatar.slug}`;
+            const objFile = avatar.obj;
+            const mtlFile = avatar.mtl;
+            const texturFile = avatar.texture;
 
             log(`Avatar path: ${avatarPath}`, 'success');
             log(`OBJ file: ${objFile}`, 'success');

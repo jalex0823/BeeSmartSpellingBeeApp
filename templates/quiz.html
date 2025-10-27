@@ -382,8 +382,16 @@
         transform: translateY(0);
     }
     
-    .countdown-container.hidden {
+    /* Hidden class - only hide if NOT inside morph-container */
+    .countdown-container.hidden:not(.morph-content .countdown-container) {
         display: none;
+    }
+    
+    /* Inside morph-container, never use display:none - use opacity instead */
+    .morph-content .countdown-container.hidden {
+        display: flex !important;
+        opacity: 0;
+        pointer-events: none;
     }
     
     .honey-jar-timer {
@@ -394,115 +402,82 @@
         gap: 0.5rem;
     }
     
-    .jar-outline {
-        position: relative;
-        width: 80px;
-        height: 100px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 70%);
-        border: 3px solid rgba(150, 110, 20, 0.85);
-        border-radius: 16px 16px 20px 20px;
-        backdrop-filter: blur(5px);
-        box-shadow: 0 4px 16px rgba(255, 193, 7, 0.4), inset 0 2px 8px rgba(255, 255, 255, 0.3);
-        overflow: hidden;
+    /* SVG Jar Styling - WIDER JAR */
+    .jar-svg {
+        width: 180px; /* Increased from 120px */
+        height: 200px; /* Increased from 160px */
+        filter: drop-shadow(0 8px 24px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
     }
     
-    /* Jar lid */
-    .jar-outline::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 8px;
-        right: 8px;
-        height: 8px;
-        border-radius: 0 0 8px 8px;
-        background: linear-gradient(180deg, #FFCC80 0%, #FB8C00 100%);
-        box-shadow: 0 2px 8px rgba(251, 140, 0, 0.6);
-        z-index: 5;
-    }
-    
-    .honey-fill {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(180deg, #FFD700 0%, #FFA500 60%, #FF8C00 100%);
-        transition: height 0.3s linear;
-        border-radius: 0 0 16px 16px;
-        box-shadow: inset 0 2px 12px rgba(255, 255, 255, 0.4);
+    /* Honey fill animation */
+    .honey-fill-animated {
+        transition: height 0.3s linear, y 0.3s linear;
         animation: honeyShimmer 2s ease-in-out infinite;
     }
     
     @keyframes honeyShimmer {
         0%, 100% { 
-            filter: brightness(1); 
+            opacity: 0.95;
         }
         50% { 
-            filter: brightness(1.15);
+            opacity: 1;
         }
     }
     
-    /* Honey bubbles */
-    .honey-bubbles {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 100%;
-        pointer-events: none;
-        z-index: 2;
+    /* Honey bubble animations */
+    .honey-bubble {
+        animation: bubbleFloat 3s ease-in-out infinite;
+        opacity: 0;
     }
     
-    .bubble {
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.6);
-        border-radius: 50%;
-        animation: bubbleRise 3s ease-in-out infinite;
-    }
-    
-    .bubble:nth-child(1) {
-        left: 20%;
+    .honey-bubble:nth-child(1) {
         animation-delay: 0s;
+        animation-duration: 3s;
     }
     
-    .bubble:nth-child(2) {
-        left: 50%;
+    .honey-bubble:nth-child(2) {
         animation-delay: 1s;
         animation-duration: 3.5s;
     }
     
-    .bubble:nth-child(3) {
-        left: 75%;
+    .honey-bubble:nth-child(3) {
         animation-delay: 2s;
         animation-duration: 4s;
     }
     
-    @keyframes bubbleRise {
+    @keyframes bubbleFloat {
         0% {
-            bottom: 5%;
             opacity: 0;
-            transform: scale(0.8);
+            transform: translateY(0) scale(0.8);
         }
         20% {
-            opacity: 1;
+            opacity: 0.6;
+        }
+        80% {
+            opacity: 0.4;
         }
         100% {
-            bottom: 95%;
             opacity: 0;
-            transform: scale(1.2);
+            transform: translateY(-60px) scale(1.2);
         }
     }
     
+    /* Timer number - OVERLAY ON JAR */
     .timer-number {
-        font-size: 2rem;
-        font-weight: 800;
+        position: absolute; /* Position over the jar */
+        top: 50%; /* Center vertically on jar */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3rem; /* Larger for visibility */
+        font-weight: 900;
         color: #5d4100;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-shadow: 
+            0 2px 8px rgba(255, 255, 255, 0.8),
+            0 0 20px rgba(255, 255, 255, 0.6); /* White glow for contrast */
         transition: color 0.3s ease, transform 0.2s ease;
-        min-width: 50px;
-        text-align: center;
+        z-index: 10; /* Above jar */
+        pointer-events: none;
     }
     
     .timer-label {
@@ -514,14 +489,9 @@
     }
     
     /* Warning state (5 seconds left) */
-    .honey-jar-timer.warning .jar-outline {
-        border-color: rgba(255, 152, 0, 0.9);
-        box-shadow: 0 4px 20px rgba(255, 152, 0, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.3);
+    .honey-jar-timer.warning .jar-svg {
         animation: jarPulseWarning 0.8s ease-in-out infinite;
-    }
-    
-    .honey-jar-timer.warning .honey-fill {
-        background: linear-gradient(180deg, #FF9800 0%, #FF6F00 60%, #E65100 100%);
+        filter: drop-shadow(0 8px 24px rgba(255, 152, 0, 0.6));
     }
     
     .honey-jar-timer.warning .timer-number {
@@ -539,17 +509,9 @@
     }
     
     /* Critical state (3 seconds left) */
-    .honey-jar-timer.critical .jar-outline {
-        border-color: rgba(244, 67, 54, 0.95);
-        box-shadow: 0 4px 24px rgba(244, 67, 54, 0.7), 
-                    0 0 30px rgba(244, 67, 54, 0.5),
-                    inset 0 2px 8px rgba(255, 255, 255, 0.3);
+    .honey-jar-timer.critical .jar-svg {
         animation: jarPulseCritical 0.4s ease-in-out infinite;
-    }
-    
-    .honey-jar-timer.critical .honey-fill {
-        background: linear-gradient(180deg, #FF5722 0%, #F44336 60%, #D32F2F 100%);
-        animation: honeyCriticalGlow 0.4s ease-in-out infinite;
+        filter: drop-shadow(0 8px 24px rgba(244, 67, 54, 0.8));
     }
     
     .honey-jar-timer.critical .timer-number {
@@ -567,15 +529,6 @@
         }
     }
     
-    @keyframes honeyCriticalGlow {
-        0%, 100% { 
-            filter: brightness(1);
-        }
-        50% { 
-            filter: brightness(1.3);
-        }
-    }
-    
     @keyframes timerShake {
         0%, 100% { 
             transform: scale(1.1) rotate(0deg); 
@@ -589,14 +542,8 @@
     }
     
     /* Time expired state */
-    .honey-jar-timer.expired .jar-outline {
-        border-color: rgba(158, 158, 158, 0.7);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        animation: none;
-    }
-    
-    .honey-jar-timer.expired .honey-fill {
-        background: rgba(200, 200, 200, 0.3);
+    .honey-jar-timer.expired .jar-svg {
+        filter: grayscale(0.8) opacity(0.6);
         animation: none;
     }
     
@@ -645,12 +592,14 @@
     
     /* Mobile responsiveness */
     @media (max-width: 768px) {
-        .jar-outline {
-            width: 65px;
-            height: 85px;
+        .jar-svg {
+            width: 150px; /* Wider on mobile too */
+            height: 180px;
         }
         
         .timer-number {
+            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
+        }
             font-size: 1.6rem;
         }
         
@@ -673,7 +622,7 @@
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: rgba(255, 179, 0, 0.08); /* single solid color background */
+        background: rgba(255, 179, 0, 0.08); /* Amber background - kept during transitions */
         border-radius: 0; /* no border radius */
         padding: 1.5rem 2rem; /* wider padding */
         margin-bottom: 1.5rem;
@@ -1005,6 +954,107 @@
             opacity: 0.85;
             transform: scaleY(1.1);
         }
+    }
+
+    /* 🎭 MORPHING CONTAINER - Smooth transition between voice visualizer and honey jar timer */
+    .morph-container {
+        position: relative;
+        width: 100%;
+        min-height: 200px;
+        margin: 1.5rem 0;
+        transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+    }
+    
+    /* Voice visualizer state (speaking mode) */
+    .morph-container.mode-voice {
+        /* Visualizer is visible, timer is hidden */
+    }
+    
+    /* Honey jar timer state (countdown mode) */
+    .morph-container.mode-timer {
+        /* Timer is visible, visualizer is hidden */
+        min-height: 200px; /* Same as voice mode for consistent height */
+    }
+    
+    /* Layered content - stack visualizer and timer in SAME POSITION */
+    .morph-content {
+        position: relative;
+        width: 100%;
+    }
+    
+    /* Voice visualizer layer */
+    .morph-content .voice-visualizer {
+        position: relative;
+        opacity: 1;
+        transform: scale(1);
+        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        pointer-events: auto;
+    }
+    
+    /* Timer layer - ABSOLUTE positioned to overlap visualizer */
+    .morph-content .countdown-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.85); /* Center and scale */
+        opacity: 0;
+        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        pointer-events: none;
+        display: flex !important; /* Override hidden class */
+        margin: 0; /* Remove default margin */
+    }
+    
+    /* When morphing to timer mode */
+    .morph-container.mode-timer .voice-visualizer {
+        opacity: 0;
+        transform: scale(0.85);
+        pointer-events: none;
+    }
+    
+    .morph-container.mode-timer .countdown-container {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1); /* Center and full scale */
+        pointer-events: auto;
+    }
+    
+    /* Morphing animation - scales and fades simultaneously */
+    @keyframes morphToTimer {
+        0% {
+            opacity: 1;
+            transform: scale(1) rotateY(0deg);
+        }
+        50% {
+            opacity: 0.3;
+            transform: scale(0.92) rotateY(90deg);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.85) rotateY(180deg);
+        }
+    }
+    
+    @keyframes morphToVoice {
+        0% {
+            opacity: 0;
+            transform: scale(0.85) rotateY(180deg);
+        }
+        50% {
+            opacity: 0.3;
+            transform: scale(0.92) rotateY(90deg);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) rotateY(0deg);
+        }
+    }
+    
+    /* Smooth morph with 3D effect - SLOWED DOWN */
+    .morph-container.morphing-to-timer .voice-visualizer {
+        animation: morphToTimer 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    
+    .morph-container.morphing-to-voice .countdown-container {
+        animation: morphToVoice 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     @keyframes hintBounce {
@@ -2376,21 +2426,76 @@
             </button>
         </div>
 
-        <!-- ⏱️ Countdown Timer - Honey Jar -->
-        <div class="countdown-container hidden" id="countdownContainer">
-            <div class="honey-jar-timer" id="honeyJarTimer">
-                <div class="jar-outline">
-                    <div class="honey-fill" id="honeyFill"></div>
-                    <div class="honey-bubbles">
-                        <span class="bubble"></span>
-                        <span class="bubble"></span>
-                        <span class="bubble"></span>
+        <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
+        <div class="morph-container mode-voice" id="morphContainer">
+            <div class="morph-content">
+                <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
+                <div class="countdown-container hidden" id="countdownContainer">
+                    <div class="honey-jar-timer" id="honeyJarTimer">
+                        <!-- SVG Honey Jar with realistic glass appearance -->
+                        <svg class="jar-svg" viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Jar Body (Glass with shine) -->
+                            <defs>
+                                <!-- Glass gradient -->
+                                <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:rgba(255,255,255,0.4);stop-opacity:1" />
+                                    <stop offset="50%" style="stop-color:rgba(255,255,255,0.1);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:rgba(255,255,255,0.3);stop-opacity:1" />
+                                </linearGradient>
+                                
+                                <!-- Honey gradient -->
+                                <linearGradient id="honeyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.95" />
+                                    <stop offset="50%" style="stop-color:#FFC107;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:1" />
+                                </linearGradient>
+                                
+                                <!-- Shine gradient -->
+                                <radialGradient id="shineGradient" cx="30%" cy="30%">
+                                    <stop offset="0%" style="stop-color:rgba(255,255,255,0.8);stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:0" />
+                                </radialGradient>
+                                
+                                <!-- Clip path for honey fill -->
+                                <clipPath id="jarClip">
+                                    <rect x="25" y="35" width="70" height="110" rx="8" />
+                                </clipPath>
+                            </defs>
+                            
+                            <!-- Jar Lid (Golden cap) -->
+                            <ellipse cx="60" cy="25" rx="30" ry="8" fill="#D4A34A" stroke="#8B6914" stroke-width="2"/>
+                            <rect x="30" y="20" width="60" height="15" fill="#E5B85F" stroke="#8B6914" stroke-width="2"/>
+                            <ellipse cx="60" cy="20" rx="30" ry="8" fill="#F4C96B"/>
+                            
+                            <!-- Jar Neck -->
+                            <rect x="40" y="25" width="40" height="10" fill="url(#glassGradient)" stroke="#8B6914" stroke-width="2" opacity="0.6"/>
+                            
+                            <!-- Jar Body (Main container) -->
+                            <rect x="25" y="35" width="70" height="110" rx="8" fill="url(#glassGradient)" 
+                                  stroke="#8B6914" stroke-width="2.5" opacity="0.7"/>
+                            
+                            <!-- Honey Fill (Animated) -->
+                            <g clip-path="url(#jarClip)">
+                                <rect id="honeyFillRect" x="25" y="35" width="70" height="110" 
+                                      fill="url(#honeyGradient)" class="honey-fill-animated"/>
+                                
+                                <!-- Honey bubbles -->
+                                <circle class="honey-bubble" cx="45" cy="120" r="3" fill="rgba(255,255,255,0.5)"/>
+                                <circle class="honey-bubble" cx="60" cy="130" r="2.5" fill="rgba(255,255,255,0.4)"/>
+                                <circle class="honey-bubble" cx="75" cy="115" r="2" fill="rgba(255,255,255,0.6)"/>
+                            </g>
+                            
+                            <!-- Glass shine effect overlay -->
+                            <ellipse cx="40" cy="60" rx="20" ry="40" fill="url(#shineGradient)" opacity="0.4"/>
+                            
+                            <!-- Jar rim highlight -->
+                            <ellipse cx="60" cy="35" rx="35" ry="3" fill="rgba(255,255,255,0.3)"/>
+                        </svg>
+                        
+                        <div class="timer-number" id="timerNumber">60</div>
+                        <div class="timer-label">SECONDS</div>
                     </div>
                 </div>
-                <div class="timer-number" id="timerNumber">60</div>
-                <div class="timer-label">seconds</div>
-            </div>
-        </div>
 
                 <!-- Voice Visualizer (Upgraded center-flowing amber wave) -->
                 <div class="voice-visualizer" id="voiceVisualizer">
@@ -2676,6 +2781,8 @@
                     });
                 })();
                 </script>
+            </div> <!-- End morph-content -->
+        </div> <!-- End morph-container -->
 
         <div class="bee-input" id="beeInputWrapper">
             <input type="text"
@@ -2925,6 +3032,37 @@ class BeeSoundboard {
                     { freq: 880, duration: 0.12, gain: 0.12, wave: 'triangle', fade: true, delay: 0.08 }
                 ]);
                 break;
+            case 'jeopardy-tick':
+                // Classic Jeopardy countdown tick sound
+                this.sequence([
+                    { freq: 800, duration: 0.06, gain: 0.14, wave: 'square', fade: true },
+                    { freq: 600, duration: 0.04, gain: 0.10, wave: 'sine', fade: true, delay: 0.02 }
+                ]);
+                break;
+            case 'timer-warning':
+                // Urgent warning beep (10 seconds left)
+                this.sequence([
+                    { freq: 880, duration: 0.1, gain: 0.16, wave: 'square', fade: true },
+                    { freq: 1100, duration: 0.08, gain: 0.14, wave: 'triangle', fade: true, delay: 0.04 }
+                ]);
+                break;
+            case 'timer-critical':
+                // Critical alarm (3 seconds left)
+                this.sequence([
+                    { freq: 1200, duration: 0.12, gain: 0.20, wave: 'square', fade: true },
+                    { freq: 1400, duration: 0.10, gain: 0.18, wave: 'sawtooth', fade: true, delay: 0.05 }
+                ]);
+                break;
+            case 'timer-buzzer':
+                // LOUD buzzing alarm for time's up!
+                this.sequence([
+                    { freq: 220, duration: 0.15, gain: 0.30, wave: 'sawtooth', fade: false },
+                    { freq: 180, duration: 0.15, gain: 0.28, wave: 'square', fade: false, delay: 0.02 },
+                    { freq: 220, duration: 0.15, gain: 0.30, wave: 'sawtooth', fade: false, delay: 0.02 },
+                    { freq: 180, duration: 0.15, gain: 0.28, wave: 'square', fade: false, delay: 0.02 },
+                    { freq: 220, duration: 0.2, gain: 0.32, wave: 'sawtooth', fade: true, delay: 0.02 }
+                ]);
+                break;
         }
     }
 
@@ -3003,12 +3141,14 @@ class BeeSoundboard {
                 utterance.voice = this.cachedVoice;
             }
             
-            // Sync visual display with announcer
+            // Sync visual display with announcer + morph to voice visualizer
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
                 if (statusEl) statusEl.textContent = this.cachedVoice
                     ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
                     : '🎙️ Speaking';
+                
+                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onboundary = (event) => {
@@ -3040,11 +3180,15 @@ class BeeSoundboard {
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '🐝 Ready';
+                
+                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
+                
+                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
 
             try {
@@ -3072,6 +3216,165 @@ class BeeSoundboard {
             }, { once: true });
         }
     }
+    
+    // Enhanced voice selection algorithm for natural-sounding female voices
+    selectBestFemaleVoice() {
+        const voices = speechSynthesis.getVoices();
+        
+        // Score voices based on multiple criteria
+        const scoredVoices = voices
+            .filter(voice => voice.lang.startsWith('en')) // English only
+            .map(voice => {
+                let score = 0;
+                const name = voice.name.toLowerCase();
+                
+                // Language preference (US English gets highest priority)
+                if (voice.lang === 'en-US') score += 100;
+                else if (voice.lang.startsWith('en-')) score += 50;
+                
+                // Quality indicators
+                if (voice.quality === 'high') score += 50;
+                else if (voice.quality === 'enhanced') score += 40;
+                
+                // Local voices often sound better
+                if (voice.localService) score += 30;
+                
+                // Explicit female voice indicators
+                if (name.includes('female')) score += 80;
+                if (name.includes('woman')) score += 80;
+                
+                // Premium/Natural voice names
+                if (name.includes('natural')) score += 60;
+                if (name.includes('premium')) score += 60;
+                if (name.includes('neural')) score += 60;
+                
+                // Known high-quality female voices
+                const premiumVoices = {
+                    'samantha': 90, 'aria': 85, 'jenny': 85, 'alex': 85,
+                    'victoria': 80, 'nova': 80, 'zira': 75, 'allison': 70
+                };
+                
+                for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                    if (name.includes(voiceName)) {
+                        score += points;
+                        break;
+                    }
+                }
+                
+                return { voice, score };
+            })
+            .sort((a, b) => b.score - a.score);
+        
+        if (scoredVoices.length > 0) {
+            return scoredVoices[0].voice;
+        }
+        
+        return null;
+    }
+}
+
+// 🎭 Morphing Controller - Smooth transitions between voice visualizer and honey jar timer
+class MorphController {
+    constructor(containerId = 'morphContainer') {
+        this.container = document.getElementById(containerId);
+        this.currentMode = 'voice'; // 'voice' or 'timer'
+        this.morphing = false;
+        
+        if (!this.container) {
+            console.warn('⚠️ MorphController: Container not found:', containerId);
+        }
+    }
+    
+    /**
+     * Morph to voice visualizer (speaking mode)
+     * @param {number} duration - Animation duration in ms (default 1200)
+     */
+    morphToVoice(duration = 1200) {
+        if (this.currentMode === 'voice' || this.morphing) return;
+        
+        console.log('🎭 Morphing to VOICE visualizer...');
+        this.morphing = true;
+        
+        // Add morphing animation class
+        this.container.classList.add('morphing-to-voice');
+        this.container.classList.remove('mode-timer');
+        
+        // Transition to voice mode
+        setTimeout(() => {
+            this.container.classList.add('mode-voice');
+            this.container.classList.remove('morphing-to-voice');
+            this.currentMode = 'voice';
+            this.morphing = false;
+            console.log('✅ Morphed to VOICE mode');
+        }, duration);
+    }
+    
+    /**
+     * Morph to honey jar timer (countdown mode)
+     * @param {number} duration - Animation duration in ms (default 1200)
+     */
+    morphToTimer(duration = 1200) {
+        if (this.currentMode === 'timer' || this.morphing) return;
+        
+        console.log('🎭 Morphing to HONEY JAR timer...');
+        this.morphing = true;
+        
+        // 🍯 ALWAYS show FULL honey jar at 60 seconds when morphing to timer
+        const honeyFillRect = document.getElementById('honeyFillRect');
+        const timerNumber = document.getElementById('timerNumber');
+        if (honeyFillRect) {
+            // Set to 100% fill (60 seconds)
+            const jarHeight = 110;
+            honeyFillRect.setAttribute('height', jarHeight);
+            honeyFillRect.setAttribute('y', 35); // Top of jar body
+        }
+        if (timerNumber) {
+            timerNumber.textContent = '60';
+        }
+        
+        // Add morphing animation class
+        this.container.classList.add('morphing-to-timer');
+        this.container.classList.remove('mode-voice');
+        
+        // Transition to timer mode
+        setTimeout(() => {
+            this.container.classList.add('mode-timer');
+            this.container.classList.remove('morphing-to-timer');
+            this.currentMode = 'timer';
+            this.morphing = false;
+            console.log('✅ Morphed to TIMER mode (jar filled to 60s)');
+        }, duration);
+    }
+    
+    /**
+     * Reset to voice mode instantly (no animation)
+     */
+    resetToVoice() {
+        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-timer');
+        this.container.classList.add('mode-voice');
+        this.currentMode = 'voice';
+        this.morphing = false;
+        console.log('🔄 Reset to VOICE mode');
+    }
+    
+    /**
+     * Reset to timer mode instantly (no animation)
+     */
+    resetToTimer() {
+        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-voice');
+        this.container.classList.add('mode-timer');
+        this.currentMode = 'timer';
+        this.morphing = false;
+        console.log('🔄 Reset to TIMER mode');
+    }
+    
+    /**
+     * Get current mode
+     * @returns {string} 'voice' or 'timer'
+     */
+    getMode() {
+        return this.currentMode;
+    }
 }
 
 // ⏱️ Countdown Timer Class - Honey Jar Animation
@@ -3093,13 +3396,14 @@ class CountdownTimer {
         this.criticalThreshold = options.criticalThreshold || 3;
         this.soundEnabled = options.soundEnabled !== false; // Default true
         
-        // Sound state
+        // Sound system - use BeeSoundboard for consistent audio
+        this.soundboard = options.soundboard || null;
         this.tickSoundStarted = false;
         
         // DOM elements
         this.container = document.getElementById('countdownContainer');
         this.jarTimer = document.getElementById('honeyJarTimer');
-        this.honeyFill = document.getElementById('honeyFill');
+        this.honeyFill = document.getElementById('honeyFillRect');  // SVG rect element
         this.timerNumber = document.getElementById('timerNumber');
         
         // State flags
@@ -3121,6 +3425,11 @@ class CountdownTimer {
         setTimeout(() => {
             this.container.classList.add('active');
         }, 50);
+        
+        // 🎭 Morph to timer mode when countdown starts
+        if (window.morphController) {
+            window.morphController.morphToTimer();
+        }
         
         // Reset jar appearance
         this.jarTimer.classList.remove('warning', 'critical', 'expired');
@@ -3170,9 +3479,16 @@ class CountdownTimer {
     }
     
     updateDisplay() {
-        // Update honey level (percentage)
+        // Update honey level in SVG (percentage from bottom)
         const percentage = Math.max(0, (this.remaining / this.duration) * 100);
-        this.honeyFill.style.height = `${percentage}%`;
+        const jarHeight = 110; // SVG jar body height
+        const fillHeight = (percentage / 100) * jarHeight;
+        const fillY = 35 + (jarHeight - fillHeight); // Start from bottom
+        
+        if (this.honeyFill) {
+            this.honeyFill.setAttribute('height', fillHeight);
+            this.honeyFill.setAttribute('y', fillY);
+        }
         
         // Update number
         this.timerNumber.textContent = Math.max(0, this.remaining);
@@ -3203,9 +3519,9 @@ class CountdownTimer {
     triggerCritical() {
         console.log('🚨 Timer critical: ' + this.remaining + 's left');
         
-        // Play gentle buzz sound
-        if (this.soundEnabled) {
-            this.playBuzzSound();
+        // Play critical warning sound
+        if (this.soundEnabled && this.soundboard) {
+            this.soundboard.play('timer-critical');
         }
         
         if (this.onCritical) {
@@ -3216,95 +3532,30 @@ class CountdownTimer {
     triggerExpired() {
         console.log('⏰ Timer expired!');
         
-        // Play ANGRY BEE BUZZ for time's up!
-        if (this.soundEnabled) {
-            this.playAngryBeeBuzz();
+        // Play LOUD buzzer for time's up!
+        if (this.soundEnabled && this.soundboard) {
+            this.soundboard.play('timer-buzzer');
         }
     }
     
     playTickSound() {
-        try {
-            // Jeopardy-style tick sound (short, high-pitched click)
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            // High-pitched click
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            // Very short, sharp sound
-            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.05);
-        } catch (err) {
-            console.warn('Tick sound failed:', err);
+        // Use BeeSoundboard for consistent Jeopardy-style tick
+        if (this.soundboard) {
+            this.soundboard.play('jeopardy-tick');
         }
     }
     
     playAngryBeeBuzz() {
-        try {
-            // ANGRY bee buzz - louder, longer, more aggressive
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator1 = audioContext.createOscillator();
-            const oscillator2 = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator1.connect(gainNode);
-            oscillator2.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            // Dual oscillators for angrier sound
-            oscillator1.frequency.value = 150;  // Low angry buzz
-            oscillator2.frequency.value = 250;  // Mid range
-            oscillator1.type = 'sawtooth';
-            oscillator2.type = 'square';
-            
-            // Louder and longer for "mad bee"
-            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.25, audioContext.currentTime + 0.05); // Quick attack
-            gainNode.gain.setValueAtTime(0.25, audioContext.currentTime + 0.4); // Hold
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7); // Fade out
-            
-            oscillator1.start(audioContext.currentTime);
-            oscillator2.start(audioContext.currentTime);
-            oscillator1.stop(audioContext.currentTime + 0.7);
-            oscillator2.stop(audioContext.currentTime + 0.7);
-            
-            console.log('🐝😡 Angry bee buzz played!');
-        } catch (err) {
-            console.warn('Angry bee buzz failed:', err);
+        // Use BeeSoundboard for consistent buzzer
+        if (this.soundboard) {
+            this.soundboard.play('timer-buzzer');
         }
     }
     
     playBuzzSound(duration = 0.15) {
-        try {
-            // Use Web Audio API for gentle "bzz" sound
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            // Low frequency buzz (bee-like)
-            oscillator.frequency.value = 180;
-            oscillator.type = 'sawtooth'; // Buzzy sound
-            
-            // Gentle volume
-            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.08, audioContext.currentTime + 0.02); // Fade in
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration); // Fade out
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + duration);
-        } catch (err) {
-            console.warn('Buzz sound failed:', err);
+        // Use BeeSoundboard for warning sound
+        if (this.soundboard) {
+            this.soundboard.play('timer-warning');
         }
     }
     
@@ -3353,7 +3604,7 @@ class BeeDelightManager {
         this.inputWrapper = document.getElementById('beeInputWrapper');
         this.feedbackArea = document.getElementById('feedbackArea');
         this.phoneticHint = document.getElementById('phoneticHint');
-        this.honeyFill = document.getElementById('honeyFill');
+        this.honeyFill = document.getElementById('honeyFillRect');  // SVG rect element
         this.mascot = document.getElementById('beeMascot');
         this.soundboard = new BeeSoundboard();
         this.totalQuestions = 0;
@@ -3536,8 +3787,15 @@ class BeeDelightManager {
 
         const correct = Math.max(progress.correct ?? 0, 0);
         const ratio = Math.min(correct / workingTotal, 1);
-        const height = 12 + ratio * 78;
-        this.honeyFill.style.height = `${Math.max(12, Math.round(height))}%`;
+        
+        // Update SVG honey fill
+        const jarHeight = 110; // SVG jar body height
+        const minHeight = 13; // 12% of 110
+        const fillHeight = minHeight + (ratio * (jarHeight - minHeight));
+        const fillY = 35 + (jarHeight - fillHeight);
+        
+        this.honeyFill.setAttribute('height', Math.max(minHeight, Math.round(fillHeight)));
+        this.honeyFill.setAttribute('y', fillY);
     }
 
     handleDefinition() {
@@ -3679,6 +3937,7 @@ class QuizManager {
     constructor(options = {}) {
         this.delight = options.delight || null;
         this.smartyBee = options.smartyBee || null;
+        this.soundboard = (this.delight && this.delight.soundboard) || new BeeSoundboard(); // Get soundboard from delight or create new
         this.isAnswering = false;
         this.lastPronounceData = null;
         this.currentWordData = null;
@@ -4034,6 +4293,8 @@ class QuizManager {
                         visualizer.classList.add('speaking');
                         status.textContent = '🗣️ Speaking...';
                     }
+                    
+                    // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                 };
                 
                 // Add event listeners to resolve promise when speech ends
@@ -4045,6 +4306,9 @@ class QuizManager {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
+                    
+                    // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                    
                     resolve();
                 };
                 
@@ -4055,6 +4319,12 @@ class QuizManager {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
+                    
+                    // 🎭 Morph back to timer on error
+                    if (window.morphController) {
+                        window.morphController.morphToTimer();
+                    }
+                    
                     resolve(); // Resolve even on error to prevent blocking
                 };
                 
@@ -4543,6 +4813,12 @@ class QuizManager {
         // Announce the timer start
         await this.speakAnnouncement(announcement);
         
+        // 🎭 NOW morph to honey jar timer (ONLY after "timer starts now" announcement)
+        if (window.morphController) {
+            console.log('🎭 Morphing to honey jar after timer announcement');
+            window.morphController.morphToTimer();
+        }
+        
         // Small pause for clarity (0.3 seconds)
         await new Promise(resolve => setTimeout(resolve, 300));
         
@@ -4575,6 +4851,7 @@ class QuizManager {
         
         // Create new timer
         this.countdownTimer = new CountdownTimer(duration, {
+            soundboard: this.soundboard, // Pass soundboard for consistent audio
             onComplete: () => this.handleTimerExpired(),
             onWarning: (remaining) => console.log(`⚠️ Warning: ${remaining}s left`),
             onCritical: (remaining) => console.log(`🚨 Critical: ${remaining}s left`),
@@ -4631,7 +4908,11 @@ class QuizManager {
         this.speakAnnouncement('Times up! Moving to the next word.');
         
         // Update stats display
-        this.updateStats();
+        this.updateScoreDisplay({
+            correct: this.correctCount,
+            incorrect: this.incorrectCount,
+            streak: this.currentStreak
+        });
         
         // Wait 3 seconds, then auto-advance to next word
         setTimeout(() => {
@@ -5888,8 +6169,8 @@ class QuizManager {
                 feedbackArea.className = 'feedback-area feedback-error';
                 feedbackArea.innerHTML = `
                     <div style="font-size: 1.15rem; font-weight: 700;">${randomMessage}</div>
-                    <div style="margin-top: 0.5rem;">The correct spelling is: <strong>${correctWord}</strong></div>
                     <div style="margin-top: 0.5rem; color: #FF9800; font-weight: 600;">💡 You have ONE retry available! (33% points)</div>
+                    <div style="margin-top: 0.3rem; font-size: 0.95rem;">Think carefully and try again!</div>
                     <div id="retryCountdown" style="margin-top: 0.3rem; font-size: 0.9rem; color: #666;"></div>
                 `;
                 
@@ -5898,16 +6179,15 @@ class QuizManager {
                     this.smartyBee.onIncorrectAnswer();
                 }
                 
-                // Speak feedback with retry offer
-                const spelledOut = correctWord.split('').join(', ').toUpperCase();
+                // Speak feedback with retry offer - NO spelling revealed!
                 if (typeof audioAnnouncement === 'string') {
-                    const announcement = `${audioAnnouncement}. The correct spelling is: ${spelledOut}. You have one retry available for partial credit.`;
+                    const announcement = `${audioAnnouncement}. You have one retry available for partial credit.`;
                     await this.speakAnnouncement(announcement);
                 } else if (audioAnnouncement && audioAnnouncement.phrase) {
                     await this.speakAnnouncement(audioAnnouncement.phrase);
                     await new Promise(r => setTimeout(r, Math.max(200, Math.min(1000, audioAnnouncement.pauseMs || 350))));
                     await this.speakAnnouncement(audioAnnouncement.name);
-                    await this.speakAnnouncement(`The correct spelling is: ${spelledOut}. You have one retry available for partial credit.`);
+                    await this.speakAnnouncement('You have one retry available for partial credit.');
                 }
                 
                 // Start 3-second auto-advance countdown
@@ -6371,13 +6651,13 @@ class QuizManager {
                     if (incorrectWords.length === 0) return '';
                     
                     return `
-                        <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-radius: 16px; border: 2px solid #42A5F5; animation: slideInUp 0.6s ease 0.8s backwards;">
-                            <h3 style="color: #1976D2; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800; text-align: center;">
+                        <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B8 100%); border-radius: 16px; border: 2px solid #FFA726; animation: slideInUp 0.6s ease 0.8s backwards;">
+                            <h3 style="color: #E65100; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 800; text-align: center;">
                                 📝 Words to Practice
                             </h3>
                             <div style="display: grid; gap: 0.75rem; text-align: left;">
                                 ${incorrectWords.map(item => `
-                                    <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #42A5F5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #FFB74D; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                         <div style="flex: 1; min-width: 150px;">
                                             <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
                                                 ✓ ${item.word}
@@ -6386,7 +6666,7 @@ class QuizManager {
                                                 ${item.user_answer ? `Your answer: <span style="color: #D32F2F; font-weight: 600;">${item.user_answer}</span>` : '(Skipped or no answer)'}
                                             </div>
                                         </div>
-                                        <button onclick="pronounceWordFromReport('${item.word}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                        <button onclick="pronounceWordFromReport('${item.word}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
                                             🔊 Hear It
                                         </button>
                                     </div>
@@ -6800,6 +7080,10 @@ unlockiOSAudio();
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+    // 🎭 Initialize morphing controller
+    window.morphController = new MorphController('morphContainer');
+    console.log('🎭 Morph controller initialized');
+    
     const delight = new BeeDelightManager();
     
     // Bee swarm and hive removed - too distracting during quiz
