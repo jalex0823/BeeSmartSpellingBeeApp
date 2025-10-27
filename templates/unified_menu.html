@@ -22,6 +22,7 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
@@ -9703,12 +9704,15 @@
                         width: 40px;
                         height: 200px;
                         background: linear-gradient(to bottom, ${colors[i % colors.length]} 0%, transparent 100%);
-                        animation: flash-light 0.5s infinite alternate;
+                        animation: flash-light 1.5s ease-in-out 3;
                         animation-delay: ${i * 0.1}s;
                     `;
                     container.appendChild(light);
                 }
-                addKeyframes(`@keyframes flash-light { to { opacity: 0.3; } }`);
+                addKeyframes(`@keyframes flash-light { 
+                    from { opacity: 1; } 
+                    to { opacity: 0.5; } 
+                }`);
             }
             
             function createHealingParticles(container) {
