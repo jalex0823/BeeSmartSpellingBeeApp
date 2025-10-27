@@ -348,9 +348,21 @@
                     log(`Loading OBJ: ${percent}% (${(xhr.loaded / 1024 / 1024).toFixed(2)} MB)`, 'success');
                 },
                 function(error) {
-                    log(`❌ OBJ load error: ${error.message || error}`, 'error');
-                    console.error('OBJ Error:', error);
-                    document.getElementById('load-status').textContent = '❌';
+                    // Error could be ProgressEvent, string, or object
+                    let errorMsg = error?.message || error?.type || JSON.stringify(error) || 'Unknown error';
+                    console.error('OBJ Load Error Details:', {
+                        error: error,
+                        message: error?.message,
+                        type: error?.type,
+                        status: error?.status,
+                        statusText: error?.statusText,
+                        errorMsg: errorMsg,
+                        url: `${avatarPath}/${objFile}`
+                    });
+                    
+                    log(`❌ OBJ load error: ${errorMsg}`, 'error');
+                    log(`   URL attempted: ${avatarPath}/${objFile}`, 'error');
+                    document.getElementById('load-status').textContent = '❌ OBJ Error';
                 }
             );
         }
@@ -417,8 +429,19 @@
                     log(`Loading MTL: ${percent}%`, 'success');
                 },
                 function(error) {
-                    log(`❌ MTL load error: ${error.message || error}`, 'error');
-                    console.error('MTL Error:', error);
+                    let errorMsg = error?.message || error?.type || JSON.stringify(error) || 'Unknown error';
+                    console.error('MTL Load Error Details:', {
+                        error: error,
+                        message: error?.message,
+                        type: error?.type,
+                        status: error?.status,
+                        statusText: error?.statusText,
+                        errorMsg: errorMsg,
+                        url: `${avatarPath}/${mtlFile}`
+                    });
+                    
+                    log(`❌ MTL load error: ${errorMsg}`, 'error');
+                    log(`   URL attempted: ${avatarPath}/${mtlFile}`, 'error');
                     document.getElementById('load-status').textContent = '❌ MTL Error';
                     // Fallback: try loading OBJ without MTL
                     log('Falling back to OBJ without MTL...', 'warning');
