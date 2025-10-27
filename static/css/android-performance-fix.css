@@ -3,33 +3,85 @@
  * Addresses flickering, flashing, and performance issues on Android devices
  */
 
-/* Disable backdrop-filter on Android (causes flickering/flashing) */
-@supports (-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)) {
-    @media screen and (max-width: 768px) {
-        /* Replace backdrop-filter with solid semi-transparent background on mobile */
-        *[style*="backdrop-filter"] {
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
+/* ========================================
+   FIX 1: Android Scroll Flickering
+   ======================================== */
+@media screen and (max-width: 768px) {
+    /* Prevent scroll jank/flickering on Android */
+    * {
+        -webkit-overflow-scrolling: touch !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    html, body {
+        /* Smooth scrolling without flicker */
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        /* Prevent background attachment flicker */
+        background-attachment: scroll !important;
+        /* Hardware acceleration */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+    }
+    
+    /* Prevent white flash during scroll */
+    body {
+        background-color: #FFF9E6 !important;
+        min-height: 100vh;
+    }
+    
+    /* Smoother scrolling for containers */
+    .menu-container,
+    .quiz-container,
+    #honeyLoader,
+    #systemChecks {
+        -webkit-overflow-scrolling: touch;
+        will-change: scroll-position;
     }
 }
 
-/* Reduce animation intensity on mobile to prevent flashing */
+/* ========================================
+   FIX 2: Disable backdrop-filter (causes flickering)
+   ======================================== */
+@media screen and (max-width: 768px) {
+    /* Replace backdrop-filter with solid semi-transparent background on mobile */
+    *[style*="backdrop-filter"] {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    /* Override inline backdrop-filter styles */
+    .modal-content,
+    .bee-prompt,
+    .bee-confirm,
+    .loading-overlay,
+    #beePromptModal,
+    #beeConfirmModal {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+}
+
+/* ========================================
+   FIX 3: Reduce animation intensity
+   ======================================== */
 @media screen and (max-width: 768px) {
     /* Slow down rapid animations that cause flashing */
     *[style*="animation: flash-light"],
     *[style*="animation:flash-light"] {
-        animation-duration: 1.5s !important; /* Slow from 0.5s to 1.5s */
-        animation-iteration-count: 3 !important; /* Limit infinite to 3 iterations */
+        animation-duration: 1.5s !important;
+        animation-iteration-count: 3 !important;
     }
     
     /* Disable infinite alternating animations on mobile */
     @keyframes flash-light {
         from { opacity: 1; }
-        to { opacity: 0.5; } /* Less dramatic change */
+        to { opacity: 0.5; }
     }
     
-    /* Hardware acceleration for smoother animations on Android */
+    /* Hardware acceleration for smoother animations */
     * {
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
@@ -39,7 +91,7 @@
         perspective: 1000;
     }
     
-    /* Reduce motion for users who prefer it (accessibility) */
+    /* Reduce motion for accessibility */
     @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -51,57 +103,32 @@
     }
 }
 
-/* Android-specific fixes using user-agent detection fallback */
-@supports (-webkit-appearance: none) {
-    /* Chrome/Android specific */
-    .modal-content,
-    .bee-prompt,
-    .bee-confirm,
-    .loading-overlay {
-        /* Replace backdrop-filter with solid background */
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background-color: rgba(255, 249, 230, 0.95) !important; /* Fallback solid color */
-    }
-    
-    /* Disable transform animations that cause rendering issues on Android */
-    @media screen and (max-width: 768px) {
-        .fairy-container,
-        .sparkle,
-        .particle {
-            will-change: auto !important; /* Prevent compositor layer issues */
-        }
-    }
-}
-
-/* Fix for menu background flashing on Android */
+/* ========================================
+   FIX 4: Position fixes - prevent blank space
+   ======================================== */
 @media screen and (max-width: 768px) {
-    body,
-    .menu-container,
-    .quiz-container {
-        /* Ensure consistent background rendering */
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        
-        /* Prevent background color flashing */
-        background-attachment: fixed;
-        background-position: center center;
-        background-repeat: no-repeat;
-        background-size: cover;
+    /* Ensure content starts at top of viewport */
+    body {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
     }
     
-    /* Prevent white flashes during page transitions */
-    html {
-        background-color: #FFF9E6; /* Bee theme color */
+    /* Fix loading screen position */
+    #honeyLoader {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
     }
-}
-
-/* Disable problematic 3D transforms on lower-end Android devices */
-@media screen and (max-width: 768px) and (max-device-pixel-ratio: 2) {
-    .mascot-3d-container,
-    canvas {
-        /* Reduce 3D complexity on lower DPI screens */
-        transform: none !important;
-        -webkit-transform: none !important;
+    
+    /* Disable problematic 3D transforms on lower-end Android */
+    @media (max-device-pixel-ratio: 2) {
+        .mascot-3d-container,
+        canvas {
+            transform: none !important;
+            -webkit-transform: none !important;
+        }
     }
 }
