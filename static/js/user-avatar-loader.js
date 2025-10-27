@@ -20,6 +20,7 @@ class UserAvatarLoader {
             'monsterbee': 'monster-bee',
             'professorbee': 'professor-bee',
             'rockerbee': 'rocker-bee',
+            'superbee': 'superbee',
             'vampbee': 'vamp-bee',
             'warebee': 'ware-bee',
             'zombee': 'zom-bee'
@@ -66,6 +67,12 @@ class UserAvatarLoader {
                 mtl: '/static/assets/avatars/rocker-bee/RockerBee.mtl',
                 texture: '/static/assets/avatars/rocker-bee/RockerBee.png',
                 thumbnail: '/static/assets/avatars/rocker-bee/RockerBee!.png'
+            },
+            'superbee': {
+                obj: '/static/assets/avatars/superbeehero/SuperheroBee.obj',
+                mtl: '/static/assets/avatars/superbeehero/SuperBeeHero.mtl',
+                texture: '/static/assets/avatars/superbeehero/SuperheroBee.png',
+                thumbnail: '/static/assets/avatars/superbeehero/SuperBeeHero!.png'
             },
             'vamp-bee': {
                 obj: '/static/assets/avatars/vamp-bee/VampBee.obj',

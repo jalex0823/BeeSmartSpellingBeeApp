@@ -239,10 +239,10 @@ AVATAR_CATALOG = [
     {
         "id": "superbee",
         "name": "Superbee",
-        "folder": "superbee",
-        "obj_file": "Superbee.obj",
-        "mtl_file": "Superbee.mtl",
-        "texture_file": "Super_Bee_Hero_1018233012.png",
+        "folder": "superbeehero",
+        "obj_file": "SuperheroBee.obj",
+        "mtl_file": "SuperBeeHero.mtl",
+        "texture_file": "SuperheroBee.png",
         "description": "Saving the day with bee powers! Cape included.",
         "variants": ["default"],
         "category": "fantasy"
@@ -437,8 +437,8 @@ def get_avatar_info(avatar_id, variant='default'):
         thumbnail_file = 'RockerBee!.png'
     elif folder == 'seabea':
         thumbnail_file = 'Seabea!.png'
-    elif folder == 'superbee':
-        thumbnail_file = 'Superbee!.png'
+    elif folder == 'superbeehero':
+        thumbnail_file = 'SuperBeeHero!.png'
     elif folder == 'vamp-bee':
         thumbnail_file = 'VampBee!.png'
     elif folder == 'ware-bee':
