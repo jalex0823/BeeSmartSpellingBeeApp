@@ -1,0 +1,81 @@
+{
+  "comparison": {
+    "working": "AlBee",
+    "broken": "BikerBee"
+  },
+  "summary": {
+    "working_issues": 0,
+    "broken_issues": 0,
+    "issue_delta": 0
+  },
+  "mesh_differences": {
+    "working": {
+      "vertices": 252912,
+      "faces": 505830
+    },
+    "broken": {
+      "vertices": 281649,
+      "faces": 563438
+    },
+    "delta": {
+      "vertex_delta": 28737,
+      "face_delta": 57608
+    }
+  },
+  "material_differences": {
+    "working_count": 1,
+    "broken_count": 1,
+    "delta": 0
+  },
+  "texture_differences": {
+    "working_count": 1,
+    "broken_count": 1,
+    "delta": 0,
+    "working_textures": 0,
+    "broken_textures": 0
+  },
+  "diagnostic_findings": [],
+  "suggested_fixes": [],
+  "working_analysis": {
+    "meshes": 1,
+    "materials": 1,
+    "textures": 0,
+    "critical_issues": [],
+    "warnings": [
+      "Missing texture in material 'Material': Bee_Scientist_1019002302_texture.png",
+      "[Material] Missing texture: Bee_Scientist_1019002302_texture.png (Kd)"
+    ],
+    "mesh_details": [
+      {
+        "name": "AlBee",
+        "vertices": 252912,
+        "faces": 505830,
+        "normals": 252823,
+        "tex_coords": 279523,
+        "has_normals": true,
+        "has_texture_coords": true
+      }
+    ]
+  },
+  "broken_analysis": {
+    "meshes": 1,
+    "materials": 1,
+    "textures": 0,
+    "critical_issues": [],
+    "warnings": [
+      "Missing texture in material 'Material': Motorcycle_Buzz_Bee_1018234507_texture.png",
+      "[Material] Missing texture: Motorcycle_Buzz_Bee_1018234507_texture.png (Kd)"
+    ],
+    "mesh_details": [
+      {
+        "name": "BikerBee",
+        "vertices": 281649,
+        "faces": 563438,
+        "normals": 281716,
+        "tex_coords": 313732,
+        "has_normals": true,
+        "has_texture_coords": true
+      }
+    ]
+  }
+}
