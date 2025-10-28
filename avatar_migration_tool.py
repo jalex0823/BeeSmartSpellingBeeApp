@@ -12,21 +12,37 @@ from datetime import datetime
 
 AVATARS_PATH = Path("static/assets/avatars")
 
-# 14 Avatar folders that need migration (after consolidating doctor-bee)
-AVATARS_TO_MIGRATE = [
-    "beedoctor",           # Doctor Bee
-    "beeknight",           # Knight Bee
-    "builderbee",          # Builder Bee
-    "buzzbotbee",          # Buzzbot Bee
-    "buzzhero",            # Buzzhero Bee
-    "detectivebee",        # Detective Bee
-    "explorerbee",         # Explorer Bee
-    "frankenbee",          # Franken Bee
-    "motorcyclebuzzbee",   # Motorcyclebuzz Bee
-    "queenbeemajesty",     # Queen Bee Majesty
-    "spacebeeexplorer",    # Space Bee Explorer
-    "superbeehero",        # Super Bee Hero
-    "seabee",              # Sea Bee
+# 9 Working OBJ-based avatars (NO MIGRATION NEEDED - these work!)
+# This list is now just for reference/documentation purposes
+WORKING_AVATARS = [
+    "al-bee",           # Al Bee
+    "anxious-bee",      # Anxious Bee
+    "mascot-bee",       # Mascot Bee
+    "monster-bee",      # Monster Bee
+    "professor-bee",    # Professor Bee
+    "rocker-bee",       # Rocker Bee
+    "vamp-bee",         # Vamp Bee
+    "ware-bee",         # Ware Bee
+    "zom-bee",          # Zom Bee
+]
+
+# Broken avatars that have been REMOVED (for reference only)
+# These rendered as white blobs and have been deleted from the system
+REMOVED_AVATARS = [
+    "builder-bee",           # Builder Bee - REMOVED
+    "buzzbot-bee",           # Buzzbot Bee - REMOVED
+    "buzzhero-bee",          # Buzzhero Bee - REMOVED
+    "detective-bee",         # Detective Bee - REMOVED
+    "doctor-bee",            # Doctor Bee - REMOVED
+    "explorer-bee",          # Explorer Bee - REMOVED
+    "franken-bee",           # Franken Bee - REMOVED
+    "knight-bee",            # Knight Bee - REMOVED
+    "motorcyclebuzz-bee",    # Motorcyclebuzz Bee - REMOVED
+    "queen-bee",             # Queen Bee Majesty - REMOVED
+    "sea-bee",               # Sea Bee - REMOVED
+    "space-bee",             # Space Bee Explorer - REMOVED
+    "super-bee",             # Super Bee Hero - REMOVED
+    "bee-diva",              # Bee Diva - REMOVED
 ]
 
 def create_backup():
@@ -73,29 +89,25 @@ def analyze_avatars():
         has_obj = any(f.endswith('.obj') for f in file_names)
         has_mtl = any(f.endswith('.mtl') for f in file_names)
         has_glb = any(f.endswith('.glb') for f in file_names)
-        has_texture = any(f.endswith('.png') for f in file_names and 'texture' not in f)
+        has_texture = any(f.endswith('.png') and 'texture' not in f for f in file_names)
         
         folder_name = folder.name
         
-        # Categorize
-        if folder_name in AVATARS_TO_MIGRATE:
-            status = "🔴 NEEDS MIGRATION"
-            analysis["to_migrate"].append({
-                "name": folder_name,
-                "has_obj": has_obj,
-                "has_mtl": has_mtl,
-                "has_glb": has_glb,
-                "has_texture": has_texture,
-                "file_count": len(files)
-            })
+        # Categorize - all current avatars are working OBJ-based models
+        if folder_name in WORKING_AVATARS:
+            status = "� WORKING OBJ"
+            analysis["working"].append(folder_name)
+        elif folder_name in REMOVED_AVATARS:
+            status = "🔴 SHOULD BE REMOVED"
+            analysis["problematic"].append(folder_name)
         elif has_glb:
-            status = "🟢 ALREADY GLB"
+            status = "� GLB FORMAT"
             analysis["working"].append(folder_name)
         elif has_obj and has_mtl:
-            status = "🟡 WORKING OBJ (keep)"
-            analysis["working"].append(folder_name)
+            status = "⚠️ UNKNOWN OBJ"
+            analysis["problematic"].append(folder_name)
         else:
-            status = "⚠️ PROBLEMATIC"
+            status = "❌ INCOMPLETE"
             analysis["problematic"].append(folder_name)
         
         print(f"\n{status}")
@@ -117,40 +129,44 @@ def analyze_avatars():
     return analysis
 
 def list_files_to_delete():
-    """Show which files will be deleted for each avatar"""
+    """Show which files should be deleted (broken avatar folders)"""
     print("\n" + "="*70)
-    print("FILES TO DELETE (OBJ/MTL from migration targets)")
+    print("FOLDERS TO DELETE (Broken Avatars)")
     print("="*70)
     
     deletion_plan = {}
-    total_obj_files = 0
-    total_mtl_files = 0
+    total_folders = 0
     
-    for avatar in AVATARS_TO_MIGRATE:
+    for avatar in REMOVED_AVATARS:
         avatar_path = AVATARS_PATH / avatar
         if not avatar_path.exists():
-            print(f"\n⚠️ {avatar}: Path not found!")
+            print(f"\n✅ {avatar}: Already removed")
             continue
         
-        obj_files = list(avatar_path.glob("*.obj"))
-        mtl_files = list(avatar_path.glob("*.mtl"))
+        all_files = list(avatar_path.glob("*"))
         
-        if obj_files or mtl_files:
+        if all_files:
             deletion_plan[avatar] = {
-                "obj": [f.name for f in obj_files],
-                "mtl": [f.name for f in mtl_files]
+                "files": [f.name for f in all_files],
+                "count": len(all_files)
             }
-            total_obj_files += len(obj_files)
-            total_mtl_files += len(mtl_files)
+            total_folders += 1
+        
+        if all_files:
+            deletion_plan[avatar] = {
+                "files": [f.name for f in all_files],
+                "count": len(all_files)
+            }
+            total_folders += 1
             
-            print(f"\n🗑️ {avatar}/")
-            for obj in obj_files:
-                print(f"   DELETE: {obj.name}")
-            for mtl in mtl_files:
-                print(f"   DELETE: {mtl.name}")
+            print(f"\n🗑️ {avatar}/ ({len(all_files)} files)")
+            for file in all_files[:5]:
+                print(f"   DELETE: {file.name}")
+            if len(all_files) > 5:
+                print(f"   ... and {len(all_files) - 5} more files")
     
     print(f"\n{'='*70}")
-    print(f"TOTAL TO DELETE: {total_obj_files} OBJ files + {total_mtl_files} MTL files")
+    print(f"TOTAL TO DELETE: {total_folders} avatar folders")
     print(f"{'='*70}\n")
     
     return deletion_plan

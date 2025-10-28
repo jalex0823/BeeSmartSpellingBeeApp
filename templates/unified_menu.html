@@ -7827,37 +7827,20 @@
                 return 'academic'; // Books, graduation cap, teaching, gold glow
             }
             
-            // 👷 Professions
-            else if (name.includes('doctor')) {
-                return 'doctor'; // Healing particles, medical cross, green glow
-            } else if (name.includes('detective')) {
-                return 'detective'; // Magnifying glass, clues, mystery purple
-            } else if (name.includes('builder')) {
-                return 'builder'; // Tools, hammers, construction orange
-            }
-            
             // 🎭 Entertainment
             else if (name.includes('rocker')) {
                 return 'rockstar'; // Music notes, lightning, stage lights, pink/purple
-            } else if (name.includes('diva')) {
-                return 'diva'; // Sparkles, stars, glamour, hot pink
             }
             
-            // 🦸 Heroes & Fantasy
-            else if (name.includes('super') || name.includes('hero')) {
-                return 'superhero'; // Cape swoosh, POW!, comic effects, red/blue
-            } else if (name.includes('knight')) {
-                return 'knight'; // Sword clash, shield, medieval silver
-            } else if (name.includes('queen')) {
-                return 'queen'; // Crown, royal gold, majestic purple
-            }
-            
-            // 🚀 Adventure
-            else if (name.includes('explorer')) {
-                return 'explorer'; // Compass, maps, adventure brown/green
-            } else if (name.includes('astro') || name.includes('space')) {
-                return 'space'; // Stars, planets, rockets, dark blue/silver
-            } else if (name.includes('sea') || name.includes('ocean')) {
+            // 🦸 Fantasy
+            else if (name.includes('monster')) {
+                return 'fantasy'; // Spooky effects for fantasy avatars
+            } else if (name.includes('vamp')) {
+                return 'vampire'; // Mysterious effects
+            } else if (name.includes('ware') || name.includes('werewolf')) {
+                return 'werewolf'; // Wild effects
+            } else if (name.includes('zom') || name.includes('zombie')) {
+                return 'zombie'; // Spooky effects
                 return 'ocean'; // Waves, fish, bubbles, aqua blue
             }
             
@@ -7880,15 +7863,6 @@
                 return 'zombie'; // Graveyard, bones, spooky green
             } else if (name.includes('ware') || name.includes('wolf')) {
                 return 'werewolf'; // Full moon, howling, forest brown
-            } else if (name.includes('franken')) {
-                return 'frankenstein'; // Lightning bolts, lab, electric green
-            }
-            
-            // 😎 Cool & Chill
-            else if (name.includes('cool')) {
-                return 'cool'; // Sunglasses sparkle, ice, cyan/white
-            } else if (name.includes('brother') || name.includes('bro')) {
-                return 'brother'; // High-five, yo!, friendly orange
             }
             
             // 😰 Emotions
@@ -9873,94 +9847,53 @@
                 // Remove after animation
                 setTimeout(() => effectOverlay.remove(), 3000);
                 
-                // Avatar-specific effects
+                // Avatar-specific effects (9 working avatars only)
                 switch(avatarId) {
-                    case 'cool-bee':
-                        // Sunglasses sparkle
-                        createSparkles(effectOverlay, '😎', '#00d4ff');
-                        playSound('cool');
+                    case 'al-bee':
+                        // AI sparkles
+                        createSparkles(effectOverlay, '🤖✨', '#00d4ff');
+                        playSound('tech');
                         break;
-                    case 'explorer-bee':
-                        // Compass spin
-                        createSpinningIcon(effectOverlay, '🧭', 1080);
-                        playSound('adventure');
+                    case 'anxious-bee':
+                        // Thought bubbles
+                        createThoughtBubbles(effectOverlay);
+                        playSound('nervous-hmm');
                         break;
-                    case 'rockstar-bee':
-                        // Electric guitar + stage lights
-                        createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00']);
-                        createFloatingIcon(effectOverlay, '🎸', 3);
-                        playSound('guitar-riff');
+                    case 'mascot-bee':
+                        // Classic bee sparkles
+                        createSparkles(effectOverlay, '🐝✨', '#ffd700');
+                        playSound('cheer');
                         break;
-                    case 'doctor-bee':
-                        // Healing particles
-                        createHealingParticles(effectOverlay);
-                        playSound('healing');
-                        break;
-                    case 'scientist-bee':
-                        // Chemistry bubbles
-                        createBubbles(effectOverlay, '⚗️🧪', 10);
-                        playSound('bubbling');
+                    case 'monster-bee':
+                        // Spooky effects
+                        createSparkles(effectOverlay, '👻🎃', '#9400d3');
+                        playSound('spooky');
                         break;
                     case 'professor-bee':
                         // Flying books
                         createFloatingIcon(effectOverlay, '📚📖', 5);
                         playSound('wise-hmm');
                         break;
-                    case 'superhero-bee':
-                        // Cape swoosh
-                        createSwooshEffect(effectOverlay);
-                        playSound('whoosh');
+                    case 'rocker-bee':
+                        // Electric guitar + stage lights
+                        createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00']);
+                        createFloatingIcon(effectOverlay, '🎸', 3);
+                        playSound('guitar-riff');
                         break;
-                    case 'knight-bee':
-                        // Sword slash
-                        createSlashEffect(effectOverlay);
-                        playSound('sword-clang');
+                    case 'vamp-bee':
+                        // Vampire effects
+                        createSparkles(effectOverlay, '🦇🌙', '#8b0000');
+                        playSound('mysterious');
                         break;
-                    case 'robot-bee':
-                        // Digital glitch
-                        createGlitchEffect(container);
-                        playSound('robot-beep');
-                        break;
-                    case 'bee-diva':
-                        // Sparkles and stars
-                        createSparkles(effectOverlay, '✨⭐💫', '#ff69b4');
-                        playSound('fabulous');
-                        break;
-                    case 'queen-bee':
-                        // Crown glow
-                        createGlowEffect(effectOverlay, '#ffd700');
-                        createFloatingIcon(effectOverlay, '👑', 1);
-                        playSound('fanfare');
-                        break;
-                    case 'sea-bee':
-                        // Water splash
-                        createWaterSplash(effectOverlay);
-                        playSound('ocean-waves');
-                        break;
-                    case 'biker-bee':
-                        // Tire tracks and smoke
-                        createSmokeEffect(effectOverlay);
-                        playSound('engine-rev');
-                        break;
-                    case 'builder-bee':
-                        // Hammer sparks
-                        createSparkles(effectOverlay, '🔨🔧⚙️', '#ff8c00');
-                        playSound('hammer');
-                        break;
-                    case 'brother-bee':
-                        // High-five effect
-                        createHighFiveEffect(effectOverlay);
-                        playSound('yo-bro');
-                        break;
-                    case 'killer-bee':
-                        // Lightning storm
+                    case 'ware-bee':
+                        // Werewolf howl
                         createLightningEffect(effectOverlay);
-                        playSound('roar');
+                        playSound('howl');
                         break;
-                    case 'anxious-bee':
-                        // Thought bubbles
-                        createThoughtBubbles(effectOverlay);
-                        playSound('nervous-hmm');
+                    case 'zom-bee':
+                        // Zombie effects
+                        createSparkles(effectOverlay, '🧟‍♂️💀', '#556b2f');
+                        playSound('groan');
                         break;
                     default:
                         // Generic bounce sparkle

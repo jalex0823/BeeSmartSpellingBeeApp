@@ -1,20 +1,17 @@
 """
-3D Bee Avatar Catalog
-Manages the catalog of 13 bee types with male/female variants (26 total avatars)
+3D Bee Avatar Catalog - Cleaned Version
+Manages the catalog of 9 working bee avatars
 
-Dynamic naming: If available, avatar display names are sourced from the
-original render PNG filenames that end with '!' under
-    Avatars/3D Avatar Files/<folder>/*!.png
-We strip the trailing '!' and the .png extension, preserving the author's
-original casing/spaces. This lets you name avatars by renaming the render PNGs.
+Each entry includes folder name and specific file names for obj/mtl/texture
 """
 
 import os
 from datetime import datetime
 from typing import Dict
 
-# Avatar Catalog: All 24 Bee Types
+# Avatar Catalog: 9 Working Bee Types (OBJ-based avatars only)
 # Each entry includes folder name and specific file names for obj/mtl/texture
+# These are the confirmed working avatars with proper OBJ/MTL/texture files
 AVATAR_CATALOG = [
     {
         "id": "al-bee",
@@ -37,127 +34,6 @@ AVATAR_CATALOG = [
         "description": "A little nervous but eager to learn!",
         "variants": ["default"],
         "category": "emotion"
-    },
-    {
-        "id": "astro-bee",
-        "name": "Astro Bee",
-        "folder": "astro-bee",
-        "obj_file": "AstroBee.obj",
-        "mtl_file": "AstroBee.mtl",
-        "texture_file": "SpaceBee_Explorer_1021171329.png",
-        "description": "Space explorer! Ready for intergalactic spelling adventures.",
-        "variants": ["default"],
-        "category": "adventure"
-    },
-    {
-        "id": "biker-bee",
-        "name": "Biker Bee",
-        "folder": "biker-bee",
-        "obj_file": "BikerBee.obj",
-        "mtl_file": "BikerBee.mtl",
-        "texture_file": "Motorcycle_Buzz_Bee_1018234507.png",
-        "description": "Fast and fearless! Motorcycle enthusiast.",
-        "variants": ["default"],
-        "category": "action"
-    },
-    {
-        "id": "brother-bee",
-        "name": "Brother Bee",
-        "folder": "brother-bee",
-        "obj_file": "BrotherBee.obj",
-        "mtl_file": "BrotherBee.mtl",
-        "texture_file": "Buzz_Hero_1022221450.png",
-        "description": "Your reliable bee bro – friendly and helpful!",
-        "variants": ["default"],
-        "category": "classic"
-    },
-    {
-        "id": "builder-bee",
-        "name": "Builder Bee",
-        "folder": "builder-bee",
-        "obj_file": "BuilderBee.obj",
-        "mtl_file": "BuilderBee.mtl",
-        "texture_file": "Builder_Bee_1022223231.png",
-        "description": "Hard hat on! Builds and fixes around the hive.",
-        "variants": ["default"],
-        "category": "profession"
-    },
-    {
-        "id": "cool-bee",
-        "name": "Cool Bee",
-        "folder": "cool-bee",
-        "obj_file": "CoolBee.obj",
-        "mtl_file": "CoolBee.mtl",
-        "texture_file": "Cool_Bee_1022222744.png",
-        "description": "The coolest bee around - always stylish!",
-        "variants": ["default"],
-        "category": "classic"
-    },
-    {
-        "id": "detective-bee",
-        "name": "Detective Bee",
-        "folder": "detective-bee",
-        "obj_file": "DetectiveBee.obj",
-        "mtl_file": "DetectiveBee.mtl",
-        "texture_file": "Detective_Bee_1022222906.png",
-        "description": "Solving word mysteries one clue at a time!",
-        "variants": ["default"],
-        "category": "profession"
-    },
-    {
-        "id": "diva-bee",
-        "name": "Diva Bee",
-        "folder": "diva-bee",
-        "obj_file": "DivaBee.obj",
-        "mtl_file": "DivaBee.mtl",
-        "texture_file": "Bee_Diva_1018233351.png",
-        "description": "Glamorous and fabulous! Star of the hive.",
-        "variants": ["default"],
-        "category": "entertainment"
-    },
-    {
-        "id": "doctor-bee",
-        "name": "Doctor Bee",
-        "folder": "doctor-bee",
-        "obj_file": "DoctorBee.obj",
-        "mtl_file": "DoctorBee.mtl",
-        "texture_file": "Bee_Doctor_1018225148.png",
-        "description": "Here to heal and help! Medical professional bee.",
-        "variants": ["default"],
-        "category": "profession"
-    },
-    {
-        "id": "explorer-bee",
-        "name": "Explorer Bee",
-        "folder": "explorer-bee",
-        "obj_file": "ExplorerBee.obj",
-        "mtl_file": "ExplorerBee.mtl",
-        "texture_file": "Explorer_Bee_1022223832.png",
-        "description": "Adventure awaits! Ready to discover new horizons.",
-        "variants": ["default"],
-        "category": "adventure"
-    },
-    {
-        "id": "franken-bee",
-        "name": "Franken Bee",
-        "folder": "franken-bee",
-        "obj_file": "FrankenBee.obj",
-        "mtl_file": "FrankenBee.mtl",
-        "texture_file": "Frankenbee_1021161641.png",
-        "description": "Spooky but friendly! Perfect for Halloween spelling.",
-        "variants": ["default"],
-        "category": "fantasy"
-    },
-    {
-        "id": "knight-bee",
-        "name": "Knight Bee",
-        "folder": "knight-bee",
-        "obj_file": "KnightBee.obj",
-        "mtl_file": "KnightBee.mtl",
-        "texture_file": "Bee_Knight_1018184515.png",
-        "description": "Brave and noble! Defender of the hive.",
-        "variants": ["default"],
-        "category": "fantasy"
     },
     {
         "id": "mascot-bee",
@@ -193,28 +69,6 @@ AVATAR_CATALOG = [
         "category": "profession"
     },
     {
-        "id": "queen-bee",
-        "name": "Queen Bee",
-        "folder": "queen-bee",
-        "obj_file": "QueenBee.obj",
-        "mtl_file": "QueenBee.mtl",
-        "texture_file": "Queen_Bee_Majesty_1022222156.png",
-        "description": "Royal and majestic! Leader with grace.",
-        "variants": ["default"],
-        "category": "royal"
-    },
-    {
-        "id": "robo-bee",
-        "name": "Robo Bee",
-        "folder": "robo-bee",
-        "obj_file": "RoboBee.obj",
-        "mtl_file": "RoboBee.mtl",
-        "texture_file": "Buzzbot_Bee_1022222436.png",
-        "description": "Futuristic and tech-savvy! Buzzbot to the rescue.",
-        "variants": ["default"],
-        "category": "tech"
-    },
-    {
         "id": "rocker-bee",
         "name": "Rocker Bee",
         "folder": "rocker-bee",
@@ -224,28 +78,6 @@ AVATAR_CATALOG = [
         "description": "Rock and roll! Music-loving bee with attitude.",
         "variants": ["default"],
         "category": "entertainment"
-    },
-    {
-        "id": "seabea",
-        "name": "Seabea",
-        "folder": "seabea",
-        "obj_file": "Seabea.obj",
-        "mtl_file": "Seabea.mtl",
-        "texture_file": "SeaBee_1019002514.png",
-        "description": "Oceanic explorer! Loves underwater adventures.",
-        "variants": ["default"],
-        "category": "adventure"
-    },
-    {
-        "id": "superbee",
-        "name": "Superbee",
-        "folder": "superbeehero",
-        "obj_file": "SuperheroBee.obj",
-        "mtl_file": "SuperBeeHero.mtl",
-        "texture_file": "SuperheroBee.png",
-        "description": "Saving the day with bee powers! Cape included.",
-        "variants": ["default"],
-        "category": "fantasy"
     },
     {
         "id": "vamp-bee",
@@ -284,31 +116,14 @@ AVATAR_CATALOG = [
 
 
 # --- Dynamic name overrides from original '!' PNGs ---------------------------
-# We map 3D folder prefixes to app avatar IDs, then scan each folder for the
-# render PNG whose basename ends with '!'. The label is the basename without '!'.
+# We map 3D folder prefixes to app avatar IDs for the 9 working avatars only
+# The remaining entries point to non-working avatars and have been removed
 
 SOURCE_3D_DIR = os.path.join("Avatars", "3D Avatar Files")
 
 FOLDER_PREFIX_TO_AVATAR_ID = {
-    "Cool_Bee": "cool-bee",
-    "Explorer_Bee": "explorer-bee",
-    "Rockin_Bee": "rockstar-bee",
-    "Bee_Doctor": "doctor-bee",
-    "Bee_Scientist": "scientist-bee",
-    "Professor_Bee": "professor-bee",
-    "Super_Bee_Hero": "superhero-bee",
-    "Bee_Knight": "knight-bee",
-    "Buzzbot_Bee": "robot-bee",
-    "Bee_Diva": "bee-diva",
-    "Queen_Bee_Majesty": "queen-bee",
-    # We consolidate Bee_Majesty to queen-bee as a single catalog entry
-    "Bee_Majesty": "queen-bee",
-    "SeaBee": "sea-bee",
-    "Motorcycle_Buzz_Bee": "biker-bee",
-    "Builder_Bee": "builder-bee",
-    "BrotherBee": "brother-bee",
-    "Buzzing_Menace": "killer-bee",
     "Anxious_Bee": "anxious-bee",
+    "Professor_Bee": "professor-bee",
 }
 
 
@@ -395,50 +210,20 @@ def get_avatar_info(avatar_id, variant='default'):
     texture_file = avatar.get('texture_file', 'texture.png')
     
     # Get thumbnail filename from catalog folder name (e.g., al-bee -> AlBee!.png)
-    # Convert folder name to proper case for thumbnail
+    # Convert folder name to proper case for thumbnail - 9 working avatars only
     folder = avatar.get('folder', avatar_id)
     if folder == 'al-bee':
         thumbnail_file = 'AlBee!.png'
     elif folder == 'anxious-bee':
         thumbnail_file = 'AnxiousBee!.png'
-    elif folder == 'astro-bee':
-        thumbnail_file = 'AstroBee!.png'
-    elif folder == 'biker-bee':
-        thumbnail_file = 'BikerBee!.png'
-    elif folder == 'brother-bee':
-        thumbnail_file = 'BrotherBee!.png'
-    elif folder == 'builder-bee':
-        thumbnail_file = 'BuilderBee!.png'
-    elif folder == 'cool-bee':
-        thumbnail_file = 'CoolBee!.png'
-    elif folder == 'detective-bee':
-        thumbnail_file = 'DetectiveBee!.png'
-    elif folder == 'diva-bee':
-        thumbnail_file = 'DivaBee!.png'
-    elif folder == 'doctor-bee':
-        thumbnail_file = 'DoctorBee!.png'
-    elif folder == 'explorer-bee':
-        thumbnail_file = 'ExplorerBee!.png'
-    elif folder == 'franken-bee':
-        thumbnail_file = 'Frankenbee!.png'
-    elif folder == 'knight-bee':
-        thumbnail_file = 'KnightBee!.png'
     elif folder == 'mascot-bee':
         thumbnail_file = 'MascotBee!.png'
     elif folder == 'monster-bee':
         thumbnail_file = 'MonsterBee!.png'
     elif folder == 'professor-bee':
         thumbnail_file = 'ProfessorBee!.png'
-    elif folder == 'queen-bee':
-        thumbnail_file = 'QueenBee!.png'
-    elif folder == 'robo-bee':
-        thumbnail_file = 'RoboBee!.png'
     elif folder == 'rocker-bee':
         thumbnail_file = 'RockerBee!.png'
-    elif folder == 'seabea':
-        thumbnail_file = 'Seabea!.png'
-    elif folder == 'superbeehero':
-        thumbnail_file = 'SuperBeeHero!.png'
     elif folder == 'vamp-bee':
         thumbnail_file = 'VampBee!.png'
     elif folder == 'ware-bee':
@@ -529,9 +314,9 @@ def validate_avatar(avatar_id, variant='default'):
     return True, "Valid"
 
 
-# Default avatar for new users
+# Default avatar for new users (al-bee is the first working avatar)
 DEFAULT_AVATAR = {
-    'id': 'cool-bee',
+    'id': 'al-bee',
     'variant': 'default'
 }
 
@@ -539,6 +324,7 @@ DEFAULT_AVATAR = {
 def generate_theme_from_title(avatar_name):
     """
     Generate theme attributes based on avatar title/name
+    Only includes themes for the 9 working avatars
     
     Args:
         avatar_name (str): The display name of the avatar
@@ -548,7 +334,7 @@ def generate_theme_from_title(avatar_name):
     """
     name_lower = avatar_name.lower()
     
-    # Theme mapping based on avatar title keywords
+    # Theme mapping for 9 working avatars only
     theme_rules = {
         'al': {
             'primary_color': '#00C9FF',
@@ -567,78 +353,6 @@ def generate_theme_from_title(avatar_name):
             'ui_style': 'soft',
             'animation_style': 'gentle',
             'description_keywords': ['nervous', 'careful', 'trying their best']
-        },
-        'biker': {
-            'primary_color': '#FF6B35',
-            'secondary_color': '#1B1B1B',
-            'accent_color': '#FFD23F',
-            'personality': ['adventurous', 'bold', 'fast'],
-            'ui_style': 'edgy',
-            'animation_style': 'dynamic',
-            'description_keywords': ['fast', 'fearless', 'motorcycle', 'road']
-        },
-        'brother': {
-            'primary_color': '#4A90E2',
-            'secondary_color': '#87CEEB',
-            'accent_color': '#5DADE2',
-            'personality': ['friendly', 'reliable', 'supportive'],
-            'ui_style': 'friendly',
-            'animation_style': 'warm',
-            'description_keywords': ['reliable', 'friendly', 'helpful', 'bro']
-        },
-        'builder': {
-            'primary_color': '#FF8C00',
-            'secondary_color': '#FFD700',
-            'accent_color': '#FFA500',
-            'personality': ['hardworking', 'practical', 'constructive'],
-            'ui_style': 'industrial',
-            'animation_style': 'sturdy',
-            'description_keywords': ['builds', 'construction', 'hard hat', 'work']
-        },
-        'cool': {
-            'primary_color': '#40E0D0',
-            'secondary_color': '#98FB98',
-            'accent_color': '#00CED1',
-            'personality': ['stylish', 'confident', 'trendy'],
-            'ui_style': 'modern',
-            'animation_style': 'smooth',
-            'description_keywords': ['cool', 'stylish', 'trendy', 'awesome']
-        },
-        'diva': {
-            'primary_color': '#FF69B4',
-            'secondary_color': '#FFB6C1',
-            'accent_color': '#FF1493',
-            'personality': ['glamorous', 'confident', 'dramatic'],
-            'ui_style': 'glamorous',
-            'animation_style': 'flamboyant',
-            'description_keywords': ['glamorous', 'fabulous', 'star', 'diva']
-        },
-        'doctor': {
-            'primary_color': '#20B2AA',
-            'secondary_color': '#AFEEEE',
-            'accent_color': '#48CAE4',
-            'personality': ['caring', 'knowledgeable', 'helpful'],
-            'ui_style': 'medical',
-            'animation_style': 'professional',
-            'description_keywords': ['heal', 'medical', 'doctor', 'care']
-        },
-        'explorer': {
-            'primary_color': '#8FBC8F',
-            'secondary_color': '#F0E68C',
-            'accent_color': '#32CD32',
-            'personality': ['adventurous', 'curious', 'brave'],
-            'ui_style': 'adventure',
-            'animation_style': 'exploring',
-            'description_keywords': ['adventure', 'discover', 'explorer', 'journey']
-        },
-        'knight': {
-            'primary_color': '#4169E1',
-            'secondary_color': '#C0C0C0',
-            'accent_color': '#6495ED',
-            'personality': ['brave', 'noble', 'protective'],
-            'ui_style': 'medieval',
-            'animation_style': 'heroic',
-            'description_keywords': ['brave', 'noble', 'defender', 'knight']
         },
         'mascot': {
             'primary_color': '#FFD700',
@@ -667,24 +381,6 @@ def generate_theme_from_title(avatar_name):
             'animation_style': 'thoughtful',
             'description_keywords': ['wise', 'knowledgeable', 'education', 'professor']
         },
-        'queen': {
-            'primary_color': '#FFD700',
-            'secondary_color': '#FF69B4',
-            'accent_color': '#FFA500',
-            'personality': ['royal', 'majestic', 'leadership'],
-            'ui_style': 'royal',
-            'animation_style': 'regal',
-            'description_keywords': ['royal', 'majestic', 'queen', 'leader']
-        },
-        'robo': {
-            'primary_color': '#00FFFF',
-            'secondary_color': '#C0C0C0',
-            'accent_color': '#00CED1',
-            'personality': ['robotic', 'precise', 'futuristic'],
-            'ui_style': 'robotic',
-            'animation_style': 'mechanical',
-            'description_keywords': ['robotic', 'futuristic', 'tech', 'robot']
-        },
         'rocker': {
             'primary_color': '#DC143C',
             'secondary_color': '#1B1B1B',
@@ -693,78 +389,6 @@ def generate_theme_from_title(avatar_name):
             'ui_style': 'rock',
             'animation_style': 'rhythmic',
             'description_keywords': ['rock', 'musical', 'energetic', 'rocker']
-        },
-        'seabea': {
-            'primary_color': '#008B8B',
-            'secondary_color': '#20B2AA',
-            'accent_color': '#00CED1',
-            'personality': ['oceanic', 'adventurous', 'fluid'],
-            'ui_style': 'aquatic',
-            'animation_style': 'flowing',
-            'description_keywords': ['ocean', 'sea', 'underwater', 'aquatic']
-        },
-        'super': {
-            'primary_color': '#FF0000',
-            'secondary_color': '#0000FF',
-            'accent_color': '#FFFF00',
-            'personality': ['heroic', 'powerful', 'protective'],
-            'ui_style': 'superhero',
-            'animation_style': 'heroic',
-            'description_keywords': ['super', 'hero', 'powers', 'cape']
-        },
-        'ninja': {
-            'primary_color': '#2F2F2F',
-            'secondary_color': '#8B0000',
-            'accent_color': '#696969',
-            'personality': ['stealthy', 'agile', 'focused'],
-            'ui_style': 'stealth',
-            'animation_style': 'swift',
-            'description_keywords': ['ninja', 'stealth', 'shadow', 'warrior']
-        },
-        'warrior': {
-            'primary_color': '#B8860B',
-            'secondary_color': '#8B4513',
-            'accent_color': '#DAA520',
-            'personality': ['brave', 'strong', 'fierce'],
-            'ui_style': 'warrior',
-            'animation_style': 'combat',
-            'description_keywords': ['warrior', 'battle', 'brave', 'fighter']
-        },
-        'pirate': {
-            'primary_color': '#8B4513',
-            'secondary_color': '#FFD700',
-            'accent_color': '#DC143C',
-            'personality': ['adventurous', 'bold', 'seafaring'],
-            'ui_style': 'pirate',
-            'animation_style': 'swashbuckling',
-            'description_keywords': ['pirate', 'treasure', 'ship', 'adventure']
-        },
-        'space': {
-            'primary_color': '#4B0082',
-            'secondary_color': '#C0C0C0',
-            'accent_color': '#00BFFF',
-            'personality': ['cosmic', 'futuristic', 'exploratory'],
-            'ui_style': 'cosmic',
-            'animation_style': 'floating',
-            'description_keywords': ['space', 'cosmic', 'galaxy', 'astronaut']
-        },
-        'astro': {
-            'primary_color': '#4B0082',
-            'secondary_color': '#C0C0C0', 
-            'accent_color': '#00BFFF',
-            'personality': ['cosmic', 'exploratory', 'scientific'],
-            'ui_style': 'cosmic',
-            'animation_style': 'floating',
-            'description_keywords': ['astronaut', 'space', 'cosmic', 'stellar']
-        },
-        'franken': {
-            'primary_color': '#228B22',
-            'secondary_color': '#8B4513',
-            'accent_color': '#FF4500',
-            'personality': ['spooky', 'experimental', 'unique'],
-            'ui_style': 'spooky',
-            'animation_style': 'jolting',
-            'description_keywords': ['monster', 'experiment', 'spooky', 'laboratory']
         },
         'ware': {
             'primary_color': '#8B4513',
@@ -792,15 +416,6 @@ def generate_theme_from_title(avatar_name):
             'ui_style': 'vampire',
             'animation_style': 'graceful',
             'description_keywords': ['vampire', 'mysterious', 'night', 'elegant']
-        },
-        'detective': {
-            'primary_color': '#8B4513',
-            'secondary_color': '#2F4F4F',
-            'accent_color': '#DAA520',
-            'personality': ['investigative', 'clever', 'observant'],
-            'ui_style': 'detective',
-            'animation_style': 'investigating',
-            'description_keywords': ['detective', 'mystery', 'investigate', 'clue']
         }
     }
     
