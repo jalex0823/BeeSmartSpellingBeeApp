@@ -10,7 +10,7 @@ from datetime import datetime
 import uuid
 
 # Create battles blueprint
-battles_bp = Blueprint('battles', __name__, url_prefix='/api/battles')
+battles_bp = Blueprint('battles', __name__, url_prefix='/battles')
 
 
 def _session_to_dict(session):
@@ -68,9 +68,8 @@ def list_live_battles():
 
 
 @battles_bp.route("/create", methods=["POST"])
-@login_required
 def create_battle():
-    """Create a new battle session"""
+    """Create a new battle session (allows both authenticated users and guests)"""
     try:
         data = request.get_json() or {}
         
@@ -82,9 +81,9 @@ def create_battle():
         allow_guests = bool(data.get("allow_guests", True))
         grade_range = data.get("grade_range", "").strip()
         
-        # Create battle session
+        # Create battle session (creator_by can be None for guests)
         battle = BattleSession(
-            created_by=current_user.id,
+            created_by=current_user.id if current_user.is_authenticated else None,
             wordset_name=wordset_name,
             mode=mode,
             max_players=max_players,
@@ -97,13 +96,14 @@ def create_battle():
         db.session.add(battle)
         db.session.commit()
         
-        # Auto-join creator
-        creator_player = BattlePlayer(
-            session_id=battle.id,
-            user_id=current_user.id,
-            display_name=current_user.display_name
-        )
-        db.session.add(creator_player)
+        # Auto-join creator (if authenticated)
+        if current_user.is_authenticated:
+            creator_player = BattlePlayer(
+                session_id=battle.id,
+                user_id=current_user.id,
+                display_name=current_user.display_name
+            )
+            db.session.add(creator_player)
         db.session.commit()
         
         # Emit to all clients watching battles

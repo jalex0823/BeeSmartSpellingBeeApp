@@ -1779,7 +1779,7 @@ print("🔧 Registering Battle API...")
 try:
     from battles_api import battles_bp
     app.register_blueprint(battles_bp, url_prefix='/api')
-    print("✅ Battle API registered successfully")
+    print("✅ Battle API registered successfully - Routes at /api/battles/*")
 except Exception as e:
     print(f"⚠️ Battle API registration failed: {e}")
 
@@ -2666,137 +2666,9 @@ def cleanup_expired_battles() -> int:
 
 # --- Battle of the Bees: API Routes -------------------------------------------
 
-@app.route("/api/battles/create", methods=["POST"])
-def api_create_battle():
-    """
-    Create a new Battle of the Bees.
-    Expects JSON or FormData:
-    - battle_name: str (e.g., "Mrs. Smith's Vocabulary Test")
-    - creator_name: str (e.g., "Mrs. Smith")
-    - word_list: optional array of word objects OR use session wordbank
-    - use_current_words: bool (if true, use current session wordbank)
-    """
-    try:
-        # Handle both JSON and FormData
-        if request.is_json:
-            data = request.get_json() or {}
-        else:
-            data = request.form.to_dict()
-
-        # Support both legacy and new frontend payloads
-        # New frontend (battles.html) sends: { name, max_players }
-        # Legacy API expects: { battle_name, creator_name, use_current_words, word_list }
-        battle_name = (data.get("battle_name") or data.get("name") or "").strip()
-        creator_name = (data.get("creator_name") or session.get("battle_creator_name") or "").strip()
-        use_current_words = data.get("use_current_words", False)
-        max_players = int(data.get("max_players", 50))
-        
-        # Validation
-        if not battle_name:
-            return jsonify({
-                "status": "error",
-                "message": "Battle name is required"
-            }), 400
-        
-        if not creator_name:
-            # Try to infer from logged-in user or fallback to generic host
-            try:
-                if current_user.is_authenticated:
-                    creator_name = current_user.display_name or "Host"
-                else:
-                    creator_name = "Host"
-            except Exception:
-                creator_name = "Host"
-        
-        # Get word list
-        word_list = None
-        
-        if use_current_words or "use_current_words" in data:
-            # Use current session wordbank
-            word_list = get_wordbank()
-            if not word_list:
-                return jsonify({
-                    "status": "error",
-                    "message": "No words in session. Please upload or generate words first."
-                }), 400
-        elif "word_list" in data:
-            # Use provided word list
-            word_list = data.get("word_list")
-            if not isinstance(word_list, list) or len(word_list) == 0:
-                return jsonify({
-                    "status": "error",
-                    "message": "Word list must be a non-empty array"
-                }), 400
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "Either provide a word_list or set use_current_words=true"
-            }), 400
-        
-        # Generate unique battle code
-        battle_code = generate_battle_code()
-        
-        # Create battle data structure
-        now = datetime.now()
-        battle_data = {
-            "battle_code": battle_code,
-            "battle_name": battle_name,
-            "creator_name": creator_name,
-            "created_at": now.timestamp(),
-            "expires_at": (now.timestamp() + 86400),  # 24 hours from now
-            "word_list": word_list,
-            "shuffle_seed": random.randint(1000, 9999),  # For synchronized shuffle
-            "players": {},  # Will be populated as players join
-            "status": "active",
-            "max_players": max_players
-        }
-        
-        # Save battle
-        if not save_battle(battle_data):
-            return jsonify({
-                "status": "error",
-                "message": "Failed to save battle data"
-            }), 500
-        
-        print(f"⚔️ Battle created: {battle_code} - {battle_name} by {creator_name}")
-        
-        # Return both legacy and new-frontend friendly shapes
-        return jsonify({
-            "status": "success",
-            "battle_code": battle_code,
-            "battle_name": battle_name,
-            "word_count": len(word_list),
-            "expires_at": battle_data["expires_at"],
-            "message": f"⚔️ Battle of the Bees created! Code: {battle_code}",
-            # New frontend expects ok + battle with .code
-            "ok": True,
-            "battle": {
-                "code": battle_code,
-                "status": "waiting",  # map 'active' -> 'waiting' for UI
-                "is_public": True,
-                "allow_guests": True,
-                "current_players": 0,
-                "max_players": max_players,
-                "grade_range": "",
-                "mode": "standard",
-                "wordset": "Session Words",
-                "created_at": datetime.fromtimestamp(battle_data["created_at"]).isoformat(),
-                "started_at": None,
-                "player_names": []
-            }
-        })
-    
-    except Exception as e:
-        print(f"❌ Error creating battle: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to create battle: {str(e)}"
-        }), 500
-
-@app.route("/api/battles/join", methods=["POST"])
-def api_join_battle():
+# DEPRECATED ROUTE - Moved to battles_api.py blueprint
+# @app.route("/api/battles/join", methods=["POST"])
+def api_join_battle_DEPRECATED():
     """
     Join an existing Battle of the Bees.
     Expects JSON:
@@ -2924,8 +2796,9 @@ def api_join_battle():
             "message": f"Failed to join battle: {str(e)}"
         }), 500
 
-@app.route("/api/battles/<battle_code>/leaderboard", methods=["GET"])
-def api_battle_leaderboard(battle_code):
+# DEPRECATED ROUTE - Moved to battles_api.py blueprint
+# @app.route("/api/battles/<battle_code>/leaderboard", methods=["GET"])
+def api_battle_leaderboard_DEPRECATED(battle_code):
     """
     Get real-time leaderboard for a battle.
     Returns sorted list of players with scores, progress, accuracy.
@@ -2988,8 +2861,9 @@ def api_battle_leaderboard(battle_code):
             "message": f"Failed to get leaderboard: {str(e)}"
         }), 500
 
-@app.route("/api/battles/live", methods=["GET"])
-def api_battles_live():
+# DEPRECATED ROUTE - Moved to battles_api.py blueprint
+# @app.route("/api/battles/live", methods=["GET"])
+def api_battles_live_DEPRECATED():
     """Lightweight battles listing for Battles page without DB/Socket.IO.
     Returns shape expected by templates/battles.html: { ok, battles: [...], stats: {...} }
     """
@@ -3035,8 +2909,9 @@ def api_battles_live():
         print(f"❌ Failed to list live battles: {e}")
         return jsonify({"ok": False, "error": "Failed to load battles"}), 500
 
-@app.route("/api/battles/<battle_code>/progress", methods=["POST"])
-def api_battle_progress(battle_code):
+# DEPRECATED ROUTE - Moved to battles_api.py blueprint
+# @app.route("/api/battles/<battle_code>/progress", methods=["POST"])
+def api_battle_progress_DEPRECATED(battle_code):
     """
     Update player progress after answering a word.
     Expects JSON:
@@ -3157,8 +3032,9 @@ def api_battle_progress(battle_code):
             "message": f"Failed to update progress: {str(e)}"
         }), 500
 
-@app.route("/api/battles/<battle_code>/export", methods=["GET"])
-def api_battle_export(battle_code):
+# DEPRECATED ROUTE - Moved to battles_api.py blueprint
+# @app.route("/api/battles/<battle_code>/export", methods=["GET"])
+def api_battle_export_DEPRECATED(battle_code):
     """
     Export battle results as CSV for teachers to download.
     Returns CSV file with student names, scores, accuracy, time, etc.
