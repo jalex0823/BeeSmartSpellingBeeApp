@@ -129,10 +129,15 @@ function createAvatarElement(avatar, index) {
 // Load GLB 3D model
 function load3DAvatarGLB(avatar, containerId) {
     const container = document.getElementById(containerId);
-    if (!container) return;
+    if (!container) {
+        console.error('Container not found:', containerId);
+        return;
+    }
     
-    const width = container.clientWidth || 120;
-    const height = container.clientHeight || 120;
+    const width = container.clientWidth || 250;
+    const height = container.clientHeight || 250;
+    
+    console.log(`Loading GLB: ${avatar.name}, container: ${width}x${height}`);
     
     // Three.js setup
     const scene = new THREE.Scene();
@@ -158,6 +163,7 @@ function load3DAvatarGLB(avatar, containerId) {
     loader.load(
         modelPath,
         function(gltf) {
+            console.log('GLB loaded successfully:', avatar.name);
             const model = gltf.scene;
             
             // Center and scale model
@@ -201,10 +207,15 @@ function load3DAvatarGLB(avatar, containerId) {
 // Load OBJ 3D model
 function load3DAvatarOBJ(avatar, containerId) {
     const container = document.getElementById(containerId);
-    if (!container) return;
+    if (!container) {
+        console.error('Container not found:', containerId);
+        return;
+    }
     
-    const width = container.clientWidth || 120;
-    const height = container.clientHeight || 120;
+    const width = container.clientWidth || 250;
+    const height = container.clientHeight || 250;
+    
+    console.log(`Loading OBJ: ${avatar.name}, container: ${width}x${height}`);
     
     // Three.js setup
     const scene = new THREE.Scene();
@@ -371,24 +382,32 @@ function updatePreview(avatar) {
     // Load 3D model in preview
     if (previewContainer) {
         // Clear previous preview
-        previewContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #FFD700;">Loading 3D preview...</div>';
+        previewContainer.innerHTML = '<div style="text-align: center; color: #FFD700; font-size: 2rem;">🐝</div>';
         
         // Detect file type
-        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
+        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endswith('.glb'));
         
-        // Create unique container ID for this preview
+        // Create container that fills the circular preview area
         const previewId = 'avatar-preview-3d';
-        previewContainer.innerHTML = `<div id="${previewId}" style="width: 100%; height: 300px;"></div>`;
+        previewContainer.innerHTML = `<div id="${previewId}" style="width: 100%; height: 100%; position: relative;"></div>`;
         
-        // Load 3D model
-        if (isGLB && avatar.obj_file_url) {
-            load3DAvatarGLB(avatar, previewId);
-        } else if (avatar.obj_file_url) {
-            load3DAvatarOBJ(avatar, previewId);
-        } else if (avatar.thumbnail) {
-            // Fallback to large thumbnail
-            previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
-        }
+        // Wait for container to be fully rendered with actual dimensions
+        setTimeout(() => {
+            const innerContainer = document.getElementById(previewId);
+            if (innerContainer) {
+                console.log('Preview container ready:', innerContainer.clientWidth, 'x', innerContainer.clientHeight);
+                
+                // Load 3D model
+                if (isGLB && avatar.obj_file_url) {
+                    load3DAvatarGLB(avatar, previewId);
+                } else if (avatar.obj_file_url) {
+                    load3DAvatarOBJ(avatar, previewId);
+                } else if (avatar.thumbnail) {
+                    // Fallback to large thumbnail
+                    previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
+                }
+            }
+        }, 100);
     }
 }
 
