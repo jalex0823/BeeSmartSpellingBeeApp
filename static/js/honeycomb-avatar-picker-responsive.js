@@ -149,7 +149,7 @@ function createAvatarElement(avatar, index) {
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
-        img.style.borderRadius = '50%';
+        // Remove border-radius, hexagon shape is handled by CSS clip-path
         
         // Track loading progress
         img.onload = () => {
@@ -219,26 +219,28 @@ function load3DAvatarGLB(avatar, containerId) {
             console.log('GLB loaded successfully:', avatar.name);
             const model = gltf.scene;
             
-            // Center and scale model
+            // Center and scale model for full-body display
             const box = new THREE.Box3().setFromObject(model);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2 / maxDim;
+            const scale = 2.5 / maxDim; // Slightly larger scale to show full body
             
             model.position.sub(center);
             model.scale.set(scale, scale, scale);
+            model.position.y = 0; // Center vertically
             
             scene.add(model);
             container.classList.remove('loading');
             
-            // Camera position
-            camera.position.z = 3;
+            // Camera position for full-body view
+            camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
+            camera.lookAt(0, 0, 0);
             
-            // Animation loop
+            // Animation loop with auto-rotation
             function animate() {
                 requestAnimationFrame(animate);
-                model.rotation.y += 0.01;
+                model.rotation.y += 0.01; // Slow rotation to show all angles
                 renderer.render(scene, camera);
             }
             animate();
@@ -249,7 +251,7 @@ function load3DAvatarGLB(avatar, containerId) {
             container.classList.remove('loading');
             // Try loading thumbnail as fallback
             if (avatar.thumbnail) {
-                container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="${avatar.name}">`;
+                container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
             } else {
                 container.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
             }
@@ -328,24 +330,27 @@ function load3DAvatarOBJ(avatar, containerId) {
                     });
                 }
                 
-                // Center and scale
+                // Center and scale for full-body display
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = 2 / maxDim;
+                const scale = 2.5 / maxDim; // Slightly larger scale to show full body
                 
                 object.position.sub(center);
                 object.scale.set(scale, scale, scale);
+                object.position.y = 0; // Center vertically
                 
                 scene.add(object);
                 container.classList.remove('loading');
                 
-                camera.position.z = 3;
+                // Camera position for full-body view
+                camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
+                camera.lookAt(0, 0, 0);
                 
                 function animate() {
                     requestAnimationFrame(animate);
-                    object.rotation.y += 0.01;
+                    object.rotation.y += 0.01; // Slow rotation to show all angles
                     renderer.render(scene, camera);
                 }
                 animate();
@@ -356,7 +361,7 @@ function load3DAvatarOBJ(avatar, containerId) {
                 container.classList.remove('loading');
                 // Try loading thumbnail as fallback
                 if (avatar.thumbnail) {
-                    container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: cover;" alt="${avatar.name}">`;
+                    container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
                 } else {
                     container.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
                 }
