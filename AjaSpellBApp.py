@@ -7620,6 +7620,9 @@ def api_get_avatars():
             avatar_id = avatar.slug
             base_path = f"/static/assets/avatars/{avatar.folder_path}"
             
+            # Detect file type
+            is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+            
             # Build enriched avatar dict with all URLs
             enriched = {
                 'id': avatar_id,
@@ -7627,6 +7630,7 @@ def api_get_avatars():
                 'description': avatar.description,
                 'category': avatar.category,
                 'folder': avatar.folder_path,
+                'is_glb': is_glb,
                 
                 # Legacy flat fields for thumbnails (kept for backward compatibility)
                 'thumbnail': f"{base_path}/{avatar.thumbnail_file}",

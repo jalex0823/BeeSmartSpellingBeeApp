@@ -37,6 +37,7 @@ async function loadAvatars() {
             description: avatar.description,
             category: avatar.category,
             folder_path: avatar.folder,
+            is_glb: avatar.is_glb || false,
             // Store full URLs from API
             obj_file_url: avatar.urls.model_obj,
             mtl_file_url: avatar.urls.model_mtl,
@@ -104,23 +105,27 @@ function createAvatarElement(avatar, index) {
     // Click handler
     div.addEventListener('click', () => selectAvatar(avatar, div));
     
-    // Load 3D model - check if it's a GLB file or OBJ file
-    if (avatar.obj_file) {
-        const isGLB = avatar.obj_file.toLowerCase().endsWith('.glb');
-        console.log(`Loading avatar ${avatar.name}: isGLB=${isGLB}, file=${avatar.obj_file}, url=${avatar.obj_file_url}`);
-        
-        if (isGLB) {
-            load3DAvatarGLB(avatar, `avatar-thumb-${index}`);
-        } else if (avatar.mtl_file) {
-            load3DAvatarOBJ(avatar, `avatar-thumb-${index}`);
-        } else {
-            // Fallback to emoji if no valid model
-            console.warn(`No valid 3D model for ${avatar.name}`);
-            thumbDiv.classList.remove('loading');
-            thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
-        }
+    // Load 3D model - use is_glb flag from API or check file extension
+    const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
+    console.log(`Loading avatar ${avatar.name}: isGLB=${isGLB}, file=${avatar.obj_file}, url=${avatar.obj_file_url}`);
+    
+    if (isGLB && avatar.obj_file_url) {
+        load3DAvatarGLB(avatar, `avatar-thumb-${index}`);
+    } else if (avatar.obj_file_url && avatar.mtl_file_url) {
+        load3DAvatarOBJ(avatar, `avatar-thumb-${index}`);
+    } else if (avatar.thumbnail) {
+        // Fallback to thumbnail image
+        console.log(`Using thumbnail for ${avatar.name}: ${avatar.thumbnail}`);
+        thumbDiv.classList.remove('loading');
+        const img = document.createElement('img');
+        img.src = avatar.thumbnail;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        thumbDiv.appendChild(img);
     } else {
-        console.warn(`No obj_file for ${avatar.name}`);
+        // Fallback to emoji if no valid model
+        console.warn(`No valid 3D model or thumbnail for ${avatar.name}`);
         thumbDiv.classList.remove('loading');
         thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
     }
