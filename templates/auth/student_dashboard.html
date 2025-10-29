@@ -854,53 +854,47 @@
     </div>
 
     <script>
-        // Load user's avatar; if they have selected one, show 3D viewer, else show thumbnail
-        fetch('/api/users/me/avatar')
-            .then(response => response.json())
-            .then(data => {
-                const hasAvatar = data && data.status === 'success' && data.avatar && data.avatar.urls && data.use_mascot === false;
-                const imgWrap = document.getElementById('userAvatarContainer');
-                const imgEl = document.getElementById('userAvatarImg');
-                const viewerWrap = document.getElementById('userAvatar3DWrapper');
+        // Avatar data is pre-loaded from server (no fetch needed!)
+        {% if user_avatar and not use_mascot %}
+        // User has selected an avatar - load 3D viewer immediately
+        const avatarData = {{ user_avatar | tojson }};
+        const imgWrap = document.getElementById('userAvatarContainer');
+        const imgEl = document.getElementById('userAvatarImg');
+        const viewerWrap = document.getElementById('userAvatar3DWrapper');
 
-                if (hasAvatar) {
-                    // Show 3D viewer and load the selected avatar
-                    if (viewerWrap) viewerWrap.style.display = 'block';
-                    if (imgWrap) imgWrap.style.display = 'none';
-                    try {
-                        if (typeof load3DAvatar === 'function') {
-                            // Pass avatar name to the 3D loader
-                            const avatarName = data.avatar.name || data.avatar.avatar_id || 'Your Avatar';
-                            load3DAvatar(data.avatar.avatar_id, avatarName);
-                        } else {
-                            console.warn('3D viewer not available; falling back to image.');
-                            if (imgEl && data.avatar.urls.thumbnail) {
-                                imgEl.src = data.avatar.urls.thumbnail;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Failed to init 3D avatar, using image fallback:', e);
-                        if (viewerWrap) viewerWrap.style.display = 'none';
-                        if (imgWrap) imgWrap.style.display = 'block';
-                        if (imgEl && data.avatar.urls.thumbnail) {
-                            imgEl.src = data.avatar.urls.thumbnail;
-                        }
-                    }
-                } else {
-                    // No selected avatar yet → show mascot thumbnail or user avatar thumbnail if provided
-                    if (viewerWrap) viewerWrap.style.display = 'none';
-                    if (imgWrap) imgWrap.style.display = 'block';
-                    if (imgEl && data && data.avatar && data.avatar.urls && data.avatar.urls.thumbnail) {
-                        imgEl.src = data.avatar.urls.thumbnail;
-                    }
-                    if (imgEl) {
-                        imgEl.onerror = function() { this.src = '/static/assets/avatars/fallback.png'; };
-                    }
+        if (viewerWrap) viewerWrap.style.display = 'block';
+        if (imgWrap) imgWrap.style.display = 'none';
+        
+        try {
+            if (typeof load3DAvatar === 'function') {
+                const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
+                load3DAvatar(avatarData.id, avatarName);
+            } else {
+                console.warn('3D viewer not available; falling back to image.');
+                if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {
+                    imgEl.src = avatarData.urls.thumbnail;
                 }
-            })
-            .catch(error => {
-                console.warn('Could not load user avatar:', error);
-            });
+                if (viewerWrap) viewerWrap.style.display = 'none';
+                if (imgWrap) imgWrap.style.display = 'block';
+            }
+        } catch (e) {
+            console.warn('Failed to init 3D avatar, using image fallback:', e);
+            if (viewerWrap) viewerWrap.style.display = 'none';
+            if (imgWrap) imgWrap.style.display = 'block';
+            if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {
+                imgEl.src = avatarData.urls.thumbnail;
+            }
+        }
+        {% else %}
+        // No selected avatar - show thumbnail/mascot
+        const imgEl = document.getElementById('userAvatarImg');
+        {% if user_avatar and user_avatar.urls and user_avatar.urls.thumbnail %}
+        if (imgEl) imgEl.src = '{{ user_avatar.urls.thumbnail }}';
+        {% endif %}
+        if (imgEl) {
+            imgEl.onerror = function() { this.src = '/static/assets/avatars/fallback.png'; };
+        }
+        {% endif %}
         
         // Add smooth scroll behavior
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

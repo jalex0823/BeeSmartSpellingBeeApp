@@ -5750,6 +5750,15 @@ def student_dashboard():
                 s.avatar_thumb_url = None
         linked_students = students
 
+    # Get current user's avatar data for immediate display (no fetch needed)
+    try:
+        user_avatar_data = current_user.get_avatar_data()
+        use_mascot = current_user.has_selected_avatar() == False
+    except Exception as e:
+        print(f"⚠️ Could not load user avatar data: {e}")
+        user_avatar_data = None
+        use_mascot = True
+
     return render_template('auth/student_dashboard.html',
                          recent_sessions=recent_sessions,
                          total_sessions=total_sessions,
@@ -5759,7 +5768,9 @@ def student_dashboard():
                          recent_badges=recent_badges,
                          total_badges=len(achievements),
                          total_badge_points=total_badge_points,
-                         linked_students=linked_students)
+                         linked_students=linked_students,
+                         user_avatar=user_avatar_data,
+                         use_mascot=use_mascot)
 
 
 @app.route('/api/user/avatar', methods=['POST'], endpoint='api_update_own_avatar')
@@ -6000,11 +6011,22 @@ def parent_dashboard():
         ).scalar()
         family_stats['total_points'] = total_points if total_points else 0
     
+    # Get current user's avatar data for immediate display
+    try:
+        user_avatar_data = current_user.get_avatar_data()
+        use_mascot = current_user.has_selected_avatar() == False
+    except Exception as e:
+        print(f"⚠️ Could not load user avatar data: {e}")
+        user_avatar_data = None
+        use_mascot = True
+    
     from datetime import datetime
     return render_template('parent/dashboard.html',
                          students=students,
                          family_stats=family_stats,
-                         now=datetime.now())
+                         now=datetime.now(),
+                         user_avatar=user_avatar_data,
+                         use_mascot=use_mascot)
 
 
 # =============================
@@ -6572,13 +6594,24 @@ def admin_dashboard():
         'total_battle_participants': 0  # Placeholder until Battle models implemented
     }
     
+    # Get current user's avatar data for immediate display
+    try:
+        user_avatar_data = current_user.get_avatar_data()
+        use_mascot = current_user.has_selected_avatar() == False
+    except Exception as e:
+        print(f"⚠️ Could not load user avatar data: {e}")
+        user_avatar_data = None
+        use_mascot = True
+    
     return render_template('admin/dashboard.html', 
                          user=current_user, 
                          stats=stats,
                          battle_stats=battle_stats,
                          leaderboard=leaderboard,
                          my_students=my_students,
-                         admin_key=my_key)  # Pass teacher_key as admin_key for template
+                         admin_key=my_key,
+                         user_avatar=user_avatar_data,
+                         use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
 
 
 @app.route('/admin/battle-bees')
