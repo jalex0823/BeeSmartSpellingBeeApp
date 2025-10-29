@@ -9375,26 +9375,34 @@
                             
                             if (avatarResponse.ok) {
                                 const avatarData = await avatarResponse.json();
+                                console.log('🔍 Avatar API response:', avatarData);
                                 
-                                if (avatarData.success && avatarData.avatar) {
+                                // API returns 'status' not 'success'
+                                if (avatarData.status === 'success' && avatarData.avatar) {
                                     // User has selected a custom avatar
                                     const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Unknown Avatar';
                                     const folderPath = (avatarData.avatar.folder_path || '').toLowerCase();
-                                    const format = folderPath === 'glb_files' ? '(GLB)' : '(OBJ)';
+                                    const useMascot = avatarData.use_mascot || false;
+                                    
+                                    // Determine format
+                                    let format = '(OBJ)'; // default
+                                    if (folderPath === 'glb_files' || (avatarData.avatar.urls && avatarData.avatar.urls.model_obj && avatarData.avatar.urls.model_obj.toLowerCase().endsWith('.glb'))) {
+                                        format = '(GLB)';
+                                    }
                                     
                                     this.updateCheck(check2, `${avatarName} ${format}`, '✅', 30);
                                     this.updateProgress(30, `🐝 Will load ${avatarName}`);
-                                    console.log('✅ Avatar detected:', avatarName, format);
+                                    console.log('✅ Avatar detected:', avatarName, format, 'useMascot:', useMascot);
                                 } else {
                                     // User hasn't selected an avatar yet
                                     this.updateCheck(check2, 'Default Mascot (OBJ)', '✅', 30);
                                     this.updateProgress(30, '🐝 Default avatar ready');
-                                    console.log('ℹ️ Using default avatar');
+                                    console.log('ℹ️ Using default avatar - no avatar selected');
                                 }
                             } else {
                                 this.updateCheck(check2, 'Default Mascot', '✅', 30);
                                 this.updateProgress(30, '🐝 Using default avatar');
-                                console.warn('⚠️ Avatar API error');
+                                console.warn('⚠️ Avatar API returned non-OK status:', avatarResponse.status);
                             }
                         } catch (fetchError) {
                             console.warn('Avatar fetch failed:', fetchError);
