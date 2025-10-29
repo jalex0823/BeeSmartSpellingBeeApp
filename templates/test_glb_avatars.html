@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐝 GLB Avatar Test - BeeSmart</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #FF8C00;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .avatar-card {
+            background: #f9f9f9;
+            border: 3px solid #FFD700;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .avatar-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.5);
+        }
+        .avatar-thumbnail {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            margin: 0 auto 10px;
+            display: block;
+            background: #000;
+            border-radius: 10px;
+        }
+        .avatar-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0 5px;
+        }
+        .avatar-format {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .format-glb {
+            background: #4CAF50;
+            color: white;
+        }
+        .format-obj {
+            background: #2196F3;
+            color: white;
+        }
+        .stats {
+            background: #fff3cd;
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .stats h2 {
+            margin: 0 0 10px 0;
+            color: #FF8C00;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .stat-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #FFD700;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF8C00;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 24px;
+            color: #FF8C00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐝 GLB Avatar Test 🍯</h1>
+        
+        <div class="stats">
+            <h2>📊 Avatar Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Total Avatars</div>
+                    <div class="stat-value" id="total-count">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">GLB Format</div>
+                    <div class="stat-value" id="glb-count">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">OBJ Format</div>
+                    <div class="stat-value" id="obj-count">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">Loading avatars... 🐝</div>
+        <div id="avatar-grid" class="avatar-grid" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function loadAvatars() {
+            try {
+                const response = await fetch('/api/avatars');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const avatars = data.avatars;
+                    
+                    // Count formats
+                    const glbCount = avatars.filter(a => a.urls.model_obj.toLowerCase().endsWith('.glb')).length;
+                    const objCount = avatars.filter(a => a.urls.model_obj.toLowerCase().endsWith('.obj')).length;
+                    
+                    // Update stats
+                    document.getElementById('total-count').textContent = avatars.length;
+                    document.getElementById('glb-count').textContent = glbCount;
+                    document.getElementById('obj-count').textContent = objCount;
+                    
+                    // Sort: GLB first, then OBJ
+                    avatars.sort((a, b) => {
+                        const aIsGLB = a.urls.model_obj.toLowerCase().endsWith('.glb');
+                        const bIsGLB = b.urls.model_obj.toLowerCase().endsWith('.glb');
+                        if (aIsGLB && !bIsGLB) return -1;
+                        if (!aIsGLB && bIsGLB) return 1;
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    // Display avatars
+                    const grid = document.getElementById('avatar-grid');
+                    grid.innerHTML = avatars.map(avatar => {
+                        const isGLB = avatar.urls.model_obj.toLowerCase().endsWith('.glb');
+                        const formatClass = isGLB ? 'format-glb' : 'format-obj';
+                        const formatText = isGLB ? 'GLB' : 'OBJ';
+                        
+                        return `
+                            <div class="avatar-card">
+                                <img src="${avatar.urls.thumbnail}" 
+                                     alt="${avatar.name}" 
+                                     class="avatar-thumbnail"
+                                     onerror="this.src='/static/assets/avatars/mascot-bee/thumbnail.png'">
+                                <div class="avatar-name">${avatar.name}</div>
+                                <div class="avatar-format ${formatClass}">${formatText}</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                    ${avatar.description}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    grid.style.display = 'grid';
+                } else {
+                    document.getElementById('loading').innerHTML = '❌ Error loading avatars: ' + data.message;
+                }
+            } catch (error) {
+                document.getElementById('loading').innerHTML = '❌ Error: ' + error.message;
+            }
+        }
+        
+        // Load avatars when page loads
+        loadAvatars();
+    </script>
+</body>
+</html>

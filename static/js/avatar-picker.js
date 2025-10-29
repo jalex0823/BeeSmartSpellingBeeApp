@@ -89,8 +89,6 @@ async function loadAvatars() {
             await new Promise(resolve => setTimeout(resolve, 300));
             
             renderAvatarGrid(avatars);
-            // Verify asset naming consistency across OBJ/MTL/Texture
-            verifyAvatarsConsistency(avatars);
         } else {
             console.error('❌ API returned error status');
             if (grid) {
@@ -315,9 +313,16 @@ function updatePreview() {
     if (nameEl) nameEl.textContent = selectedAvatar.name;
     if (descEl) descEl.textContent = selectedAvatar.description;
     
+    // Detect if GLB or OBJ format
+    const isGLB = selectedAvatar.urls?.model_obj && selectedAvatar.urls.model_obj.toLowerCase().endsWith('.glb');
+    
     // Try to render a lightweight 3D preview if THREE loaders are available
     // Fallback to placeholder if not
-    if (window.THREE && THREE.MTLLoader && THREE.OBJLoader && selectedAvatar.urls) {
+    const loaderCheck = isGLB ? 
+        (window.THREE && THREE.GLTFLoader) : 
+        (window.THREE && THREE.MTLLoader && THREE.OBJLoader);
+    
+    if (loaderCheck && selectedAvatar.urls) {
         try {
             // Show loading indicator
             preview.innerHTML = `
@@ -332,13 +337,6 @@ function updatePreview() {
             
             const progressBar = document.getElementById('preview3DProgress');
             const progressText = document.getElementById('preview3DText');
-            let loadProgress = { mtl: 0, obj: 0 };
-            
-            const updateProgress = () => {
-                const totalProgress = Math.round((loadProgress.mtl + loadProgress.obj) / 2);
-                if (progressBar) progressBar.style.width = totalProgress + '%';
-                if (progressText) progressText.textContent = `Loading 3D model... ${totalProgress}%`;
-            };
             
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(45, preview.clientWidth / preview.clientHeight, 0.1, 1000);
@@ -347,9 +345,31 @@ function updatePreview() {
             renderer.setSize(preview.clientWidth, preview.clientHeight);
             renderer.setClearColor(0x000000, 0);
 
-            const ambient = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambient);
-            const dir = new THREE.DirectionalLight(0xffffff, 0.7); dir.position.set(5,5,5); scene.add(dir);
+            const ambient = new THREE.AmbientLight(0xffffff, 1.5); // Brighter ambient light
+            scene.add(ambient);
+            const dir = new THREE.DirectionalLight(0xffffff, 1.5); // Brighter directional light
+            dir.position.set(5, 10, 7.5);
+            scene.add(dir);
             
+            renderer.outputColorSpace = THREE.SRGBColorSpace; // Correct color space for GLB
+            
+            // Add OrbitControls for better interaction (zoom, pan, rotate)
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 1;
+            controls.maxDistance = 10;
+            controls.target.set(0, 0.5, 0);
+            controls.autoRotate = true; // Enable auto-rotation
+            controls.autoRotateSpeed = 1.0; // Adjust speed as needed
+            controls.update();
+            
+            // Stop auto-rotation on user interaction
+            controls.addEventListener('start', () => {
+                controls.autoRotate = false;
+            });
+
             // Mouse controls for rotation and position
             let isDragging = false;
             let previousMousePosition = { x: 0, y: 0 };
@@ -431,36 +451,109 @@ function updatePreview() {
                 renderer.domElement.style.cursor = 'grab';
             });
 
-            const mtlUrl = selectedAvatar.urls.model_mtl;
-            const objUrl = selectedAvatar.urls.model_obj;
-            const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
-            const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
-            const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
-            
-            // Cache-busting: add timestamp to force reload of updated files
             const cacheBuster = Date.now();
-            const mtlFilenameWithCache = `${mtlFilename}?v=${cacheBuster}`;
-            const objFilenameWithCache = `${objFilename}?v=${cacheBuster}`;
-
-            const mtlLoader = new THREE.MTLLoader();
-            mtlLoader.setPath(basePath);
-            if (mtlLoader.setTexturePath) mtlLoader.setTexturePath(basePath);
-            if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
-
-            mtlLoader.load(
-                mtlFilenameWithCache,
-                (materials) => {
-                    materials.preload();
-                    
-                    // Ensure all materials use proper color space and texture settings
-                    Object.values(materials.materials).forEach(mat => {
-                        if (mat.map) {
-                            mat.map.colorSpace = THREE.SRGBColorSpace;
-                            mat.map.needsUpdate = true;
+            let loadProgress = { file: 0 };
+            
+            const updateProgress = () => {
+                if (progressBar) progressBar.style.width = loadProgress.file + '%';
+                if (progressText) progressText.textContent = `Loading 3D model... ${loadProgress.file}%`;
+            };
+            
+            // ========== GLB LOADING ==========
+            if (isGLB) {
+                const glbUrl = selectedAvatar.urls.model_obj;
+                const glbUrlWithCache = `${glbUrl}?v=${cacheBuster}`;
+                
+                const gltfLoader = new THREE.GLTFLoader();
+                gltfLoader.load(
+                    glbUrlWithCache,
+                    (gltf) => {
+                        const object = gltf.scene;
+                        loadProgress.file = 100;
+                        updateProgress();
+                        
+                        // Clear loading indicator and show 3D model
+                        preview.innerHTML = '';
+                        renderer.domElement.style.position = 'relative';
+                        renderer.domElement.style.zIndex = '10';
+                        preview.appendChild(renderer.domElement);
+                        
+                        // Center/scale for preview
+                        const box = new THREE.Box3().setFromObject(object);
+                        const size = box.getSize(new THREE.Vector3()).length();
+                        const center = box.getCenter(new THREE.Vector3());
+                        object.position.sub(center);
+                        const targetSize = 2.2;
+                        object.scale.setScalar(targetSize / size);
+                        
+                        // Fix materials to use SRGB
+                        object.traverse((node) => {
+                            if (node.isMesh) {
+                                const mats = Array.isArray(node.material) ? node.material : [node.material];
+                                mats.forEach(mat => {
+                                    if (mat.map) {
+                                        mat.map.colorSpace = THREE.SRGBColorSpace;
+                                        mat.map.needsUpdate = true;
+                                    }
+                                    mat.transparent = true;
+                                    mat.alphaTest = 0.1;
+                                });
+                            }
+                        });
+                        
+                        scene.add(object);
+                        
+                        // Animation loop with mouse controls
+                        const animate = () => {
+                            requestAnimationFrame(animate);
+                            controls.update(); // Required for damping and auto-rotation
+                            renderer.render(scene, camera);
+                        };
+                        animate();
+                    },
+                    (xhr) => {
+                        // GLB loading progress
+                        if (xhr.lengthComputable) {
+                            loadProgress.file = Math.round((xhr.loaded / xhr.total) * 100);
+                            updateProgress();
                         }
-                        mat.transparent = true;
-                        mat.depthWrite = true;
-                        mat.alphaTest = 0.1;
+                    },
+                    (err) => {
+                        console.warn('3D preview GLB load failed:', err);
+                        showPreviewPlaceholder(preview);
+                    }
+                );
+            }
+            // ========== OBJ LOADING ==========
+            else {
+                const mtlUrl = selectedAvatar.urls.model_mtl;
+                const objUrl = selectedAvatar.urls.model_obj;
+                const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
+                const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
+                const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
+                
+                const mtlFilenameWithCache = `${mtlFilename}?v=${cacheBuster}`;
+                const objFilenameWithCache = `${objFilename}?v=${cacheBuster}`;
+
+                const mtlLoader = new THREE.MTLLoader();
+                mtlLoader.setPath(basePath);
+                if (mtlLoader.setTexturePath) mtlLoader.setTexturePath(basePath);
+                if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
+
+                mtlLoader.load(
+                    mtlFilenameWithCache,
+                    (materials) => {
+                        materials.preload();
+                        
+                        // Ensure all materials use proper color space and texture settings
+                        Object.values(materials.materials).forEach(mat => {
+                            if (mat.map) {
+                                mat.map.colorSpace = THREE.SRGBColorSpace;
+                                mat.map.needsUpdate = true;
+                            }
+                            mat.transparent = true;
+                            mat.depthWrite = true;
+                            mat.alphaTest = 0.1;
                         mat.side = THREE.FrontSide;
                     });
                     
@@ -531,20 +624,7 @@ function updatePreview() {
                     // Animation loop with mouse controls
                     const animate = () => { 
                         requestAnimationFrame(animate); 
-                        
-                        // Apply mouse-controlled rotation
-                        object.rotation.x = rotationX;
-                        object.rotation.y = rotationY;
-                        
-                        // Apply mouse-controlled position
-                        object.position.x = positionX;
-                        object.position.y = positionY;
-                        
-                        // Auto-rotate when not dragging
-                        if (!isDragging) {
-                            rotationY += 0.005;
-                        }
-                        
+                        controls.update(); // Required for damping and auto-rotation
                         renderer.render(scene, camera); 
                     };
                     animate();
@@ -566,6 +646,7 @@ function updatePreview() {
             }, (err) => {
                 console.warn('3D preview MTL load failed:', err); showPreviewPlaceholder(preview);
             });
+            }
         } catch (e) {
             console.warn('3D preview error:', e);
             showPreviewPlaceholder(preview);
@@ -585,42 +666,7 @@ function showPreviewPlaceholder(preview) {
     `;
 }
 
-function setupEventListeners() {
-    // Category filter
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            
-            const category = e.target.dataset.category;
-            filterByCategory(category);
-        });
-    });
-    
-    // Search
-    const searchInput = document.getElementById('avatarSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const filtered = avatars.filter(a => 
-                a.name.toLowerCase().includes(query) ||
-                (a.description && a.description.toLowerCase().includes(query))
-            );
-            renderAvatarGrid(filtered);
-        });
-    }
-    
-    // Select avatar button
-    const selectBtn = document.getElementById('selectAvatarBtn');
-    if (selectBtn) {
-        selectBtn.addEventListener('click', () => {
-            if (selectedAvatar) {
-                saveAvatar(selectedAvatar.id, 'default');
-            }
-        });
-    }
-}
-
+// Category filter
 function filterByCategory(category) {
     if (category === 'all') {
         renderAvatarGrid(avatars);
@@ -628,131 +674,6 @@ function filterByCategory(category) {
         const filtered = avatars.filter(a => a.category === category);
         renderAvatarGrid(filtered);
     }
-}
-
-async function saveAvatar(avatarId, variant) {
-    // Show loading overlay
-    const overlay = document.getElementById('avatarLoadingOverlay');
-    const progressBar = document.getElementById('avatarLoadProgress');
-    const loadingText = document.getElementById('avatarLoadingText');
-    
-    if (!overlay) {
-        alert('Loading overlay not found');
-        return;
-    }
-    
-    overlay.style.display = 'flex';
-    
-    try {
-        // Step 1: Preload 3D assets (20%)
-        if (loadingText) loadingText.textContent = '🐝 Loading 3D model...';
-        if (progressBar) progressBar.style.width = '20%';
-        await preload3DAvatarAssets(avatarId, variant);
-        
-        // Step 2: Save to database (50%)
-        if (loadingText) loadingText.textContent = '💾 Saving your choice...';
-        if (progressBar) progressBar.style.width = '50%';
-        
-        const response = await fetch('/api/users/me/avatar', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                avatar_id: avatarId,
-                variant: variant
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-            // Step 3: Update UI cache (80%)
-            if (loadingText) loadingText.textContent = '✨ Applying your new bee...';
-            if (progressBar) progressBar.style.width = '80%';
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Step 4: Complete (100%)
-            if (loadingText) loadingText.textContent = '🎉 All set!';
-            if (progressBar) progressBar.style.width = '100%';
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Redirect based on context
-            if (window.location.pathname.includes('register')) {
-                // Continue registration flow
-                window.location.href = '/student-dashboard';
-            } else {
-                // Reload to show new avatar (assets already cached)
-                window.location.reload();
-            }
-        } else {
-            overlay.style.display = 'none';
-            alert(data.message || 'Failed to save avatar');
-        }
-    } catch (error) {
-        console.error('Error saving avatar:', error);
-        overlay.style.display = 'none';
-        alert('Error saving avatar. Please try again.');
-    }
-}
-
-async function preload3DAvatarAssets(avatarId, variant) {
-    // Preload 3D model files so they're cached when page reloads
-    return new Promise(async (resolve) => {
-        try {
-            // Find the avatar data
-            const avatar = avatars.find(a => a.id === avatarId);
-            if (!avatar) {
-                resolve(); // No avatar found, skip preload
-                return;
-            }
-            
-            // Use canonical URLs from API if available to ensure consistency
-            const modelUrl = avatar.urls?.model_obj || `/static/assets/avatars/${avatarId}/${capitalizeId(avatarId)}.obj`;
-            const materialUrl = avatar.urls?.model_mtl || `/static/assets/avatars/${avatarId}/${capitalizeId(avatarId)}.mtl`;
-            const textureUrl = avatar.urls?.texture || `/static/assets/avatars/${avatarId}/${capitalizeId(avatarId)}.png`;
-            
-            // Preload files using fetch to cache them
-            const preloadPromises = [
-                fetch(modelUrl).catch(e => console.warn('Model preload failed:', e)),
-                fetch(materialUrl).catch(e => console.warn('Material preload failed:', e)),
-                fetch(textureUrl).catch(e => console.warn('Texture preload failed:', e))
-            ];
-            
-            // Wait for all preloads (or failures)
-            await Promise.allSettled(preloadPromises);
-            
-            console.log(`✅ Preloaded 3D assets for ${avatarId}`);
-            resolve();
-        } catch (error) {
-            console.warn('Asset preload error:', error);
-            resolve(); // Don't block on preload errors
-        }
-    });
-}
-
-function capitalizeId(id) {
-    // Convert kebab-case to PascalCase for filename fallback (e.g., anxious-bee -> AnxiousBee, al-bee -> AlBee)
-    return id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-}
-
-function verifyAvatarsConsistency(list) {
-    const getBase = (url, ext) => url ? url.substring(url.lastIndexOf('/') + 1).replace(new RegExp(`\.${ext}$`, 'i'), '') : '';
-    list.forEach(a => {
-        if (a.urls && a.urls.model_obj && a.urls.model_mtl && a.urls.texture) {
-            const objBase = getBase(a.urls.model_obj, 'obj');
-            const mtlBase = getBase(a.urls.model_mtl, 'mtl');
-            const texBase = getBase(a.urls.texture, (a.urls.texture.match(/\.([a-zA-Z0-9]+)$/) || [,'png'])[1]);
-            const same = objBase === mtlBase && (texBase === objBase || texBase === `${objBase}_texture`);
-            if (same) {
-                console.log(`🧩 Consistency PASS for ${a.id}: ${objBase}`);
-            } else {
-                console.warn(`🧩 Consistency FAIL for ${a.id}: OBJ=${objBase}, MTL=${mtlBase}, TEX=${texBase}`);
-            }
-        } else {
-            console.warn(`ℹ️ Missing URL set for ${a.id}; skipping consistency check`);
-        }
-    });
 }
 
 // Show avatar description popup when clicking on avatar name

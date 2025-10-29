@@ -2,25 +2,25 @@
 <!-- Include this in registration.html and settings/profile page -->
 
 <div class="avatar-picker-container">
-    <h3>Choose Your Bee Avatar</h3>
-    <p class="avatar-subtitle">Select the bee that represents you best!</p>
+    <h3>🐝 Choose Your Bee from the Hive 🍯</h3>
+    <p class="avatar-subtitle">Which bee character will you be today?</p>
     
     <!-- Category Filters -->
     <div class="avatar-categories">
-        <button class="category-btn active" data-category="all">All Bees</button>
-        <button class="category-btn" data-category="classic">Classic</button>
-        <button class="category-btn" data-category="adventure">Adventure</button>
-        <button class="category-btn" data-category="profession">Profession</button>
-        <button class="category-btn" data-category="sports">Sports</button>
-        <button class="category-btn" data-category="arts">Arts</button>
-        <button class="category-btn" data-category="entertainment">Entertainment</button>
-        <button class="category-btn" data-category="fantasy">Fantasy</button>
+        <button class="category-btn active" data-category="all">🏠 All Bees</button>
+        <button class="category-btn" data-category="classic">👑 Classic</button>
+        <button class="category-btn" data-category="adventure">🗺️ Adventure</button>
+        <button class="category-btn" data-category="profession">💼 Profession</button>
+        <button class="category-btn" data-category="sports">⚽ Sports</button>
+        <button class="category-btn" data-category="arts">🎨 Arts</button>
+        <button class="category-btn" data-category="entertainment">🎭 Entertainment</button>
+        <button class="category-btn" data-category="fantasy">✨ Fantasy</button>
     </div>
     
     <!-- Search Bar -->
     <div class="avatar-search">
-        <input type="text" id="avatarSearch" placeholder="Search bees..." autocomplete="off">
-        <span class="search-icon">🔍</span>
+        <input type="text" id="avatarSearch" placeholder="🔍 Search for your bee..." autocomplete="off">
+        <span class="search-icon">�</span>
     </div>
     
     <!-- Avatar Grid (registration-style thumbnails) -->
@@ -44,7 +44,7 @@
             <h5 id="avatarName"></h5>
             <p id="avatarDescription"></p>
             <p style="font-size: 0.75rem; color: #999; margin-top: 0.5rem; font-style: italic;">
-                💡 Drag to rotate • Shift+Drag to move
+                💡 Drag to rotate • Scroll to zoom
             </p>
         </div>
         
@@ -141,23 +141,50 @@
     max-width: 100%;
     box-sizing: border-box;
     margin: 2rem auto;
-    padding: 1.5rem; /* slightly reduced padding to align with smaller cards */
-    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
     border-radius: 24px;
-    box-shadow: 0 8px 24px rgba(255, 140, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(255, 140, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Honeycomb pattern overlay */
+.avatar-picker-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        repeating-linear-gradient(60deg, transparent, transparent 35px, rgba(0,0,0,0.05) 35px, rgba(0,0,0,0.05) 70px),
+        repeating-linear-gradient(120deg, transparent, transparent 35px, rgba(0,0,0,0.05) 35px, rgba(0,0,0,0.05) 70px),
+        repeating-linear-gradient(180deg, transparent, transparent 35px, rgba(0,0,0,0.05) 35px, rgba(0,0,0,0.05) 70px);
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.avatar-picker-container > * {
+    position: relative;
+    z-index: 2;
 }
 
 .avatar-picker-container h3 {
     text-align: center;
-    color: #FF6B00;
+    color: #fff;
     font-size: 2rem;
     margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
 
 .avatar-subtitle {
     text-align: center;
-    color: #8B6914;
+    color: #fff;
     margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
 /* Category Filters */
@@ -171,27 +198,37 @@
 
 .category-btn {
     padding: 0.5rem 1rem;
-    border: 2px solid #FFD700;
-    background: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 600;
     color: #8B6914;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .category-btn:hover {
-    background: #FFE8CC;
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .category-btn.active {
-    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+    background: linear-gradient(135deg, #fff 0%, #FFE8CC 100%);
+    color: #FF6B00;
+    border-color: #fff;
+    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.4);
+    transform: scale(1.08);
 }
 
 /* Search Bar */
+.avatar-search {
+    position: relative;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+/* Search Bar - Honeycomb Theme */
 .avatar-search {
     position: relative;
     margin-bottom: 1rem;
@@ -201,12 +238,21 @@
 .avatar-search input {
     display: block;
     width: 100%;
-    box-sizing: border-box; /* ensure padding and border are included in width */
+    box-sizing: border-box;
     padding: 0.75rem 3rem 0.75rem 1rem;
-    border: 2px solid #FFD700;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
     font-size: 1rem;
     max-width: 100%;
+    transition: all 0.3s ease;
+}
+
+.avatar-search input:focus {
+    outline: none;
+    border-color: #fff;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
 .search-icon {
@@ -217,18 +263,18 @@
     font-size: 1.2rem;
 }
 
-/* Avatar Grid - Enhanced for Better Thumbnail Display */
+/* Avatar Grid - Honeycomb Style */
 .avatar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;
     margin-bottom: 1rem;
-    max-height: 400px;  /* Reduced from 600px to show preview better */
+    max-height: 400px;
     overflow-y: auto;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 16px;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Scrollbar styling for avatar grid */
@@ -237,25 +283,25 @@
 }
 
 .avatar-grid::-webkit-scrollbar-track {
-    background: #FFE8CC;
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
 }
 
 .avatar-grid::-webkit-scrollbar-thumb {
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
     border-radius: 10px;
-    border: 2px solid #FFE8CC;
+    border: 2px solid rgba(0, 0, 0, 0.2);
 }
 
 .avatar-grid::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
 }
 
-.avatar-option{
+.avatar-option {
     position: relative;
     padding: 0.75rem;
-    background: #fff;
-    border: 3px solid #FFE082;
+    background: #000000; /* SOLID BLACK background */
+    border: 3px solid #FFD700;
     border-radius: 16px;
     cursor: pointer;
     text-align: center;
@@ -264,51 +310,58 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.15);
+    justify-content: space-between; /* Change to space-between */
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
-.avatar-option:hover{
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(255, 179, 0, 0.4);
+
+.avatar-option:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6);
+    border-color: #FFA500;
+    background: #1a1a1a; /* Slightly lighter black on hover */
+}
+
+.avatar-option.selected {
     border-color: #FFD700;
-    background: linear-gradient(135deg, #FFFAF0, #FFF6E6);
-}
-.avatar-option.selected{
-    border-color: #FFB300;
-    background: linear-gradient(135deg, #FFE082, #FFD54F);
-    box-shadow: 0 10px 30px rgba(255, 179, 0, 0.5);
+    border-width: 4px;
+    background: #000000;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 10px 30px rgba(255, 179, 0, 0.5);
     transform: scale(1.08);
 }
-.avatar-option.selected::after{
+
+.avatar-option.selected::after {
     content: '✓';
     position: absolute;
     top: 8px;
     right: 8px;
     background: #27AE60;
     color: white;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
-.avatar-option img{
+
+.avatar-option img {
     width: 110px;
     height: 110px;
     object-fit: contain;
     border-radius: 12px;
     margin-bottom: 0.5rem;
+    filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.3));
 }
-.avatar-card-name, .avatar-name{
+
+.avatar-card-name, .avatar-name {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #8B6914;
-    margin-bottom: 0.5rem; /* Space below name, above thumbnail */
-    margin-top: 0; /* No space above */
+    color: #FFD700; /* Gold text on black background */
+    margin-bottom: 0.5rem;
+    margin-top: 0;
     word-wrap: break-word;
     line-height: 1.3;
     overflow: hidden;
@@ -317,14 +370,15 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     width: 100%;
-    min-height: 2.4rem; /* Reserve space for 2 lines */
+    min-height: 2.4rem;
     text-align: center;
-    cursor: pointer;  /* Show it's clickable */
+    cursor: pointer;
     transition: color 0.2s ease;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .avatar-card-name:hover, .avatar-name:hover {
-    color: #FF6B00;  /* Orange highlight on hover */
+    color: #FFA500; /* Orange highlight on hover */
     text-decoration: underline;
 }
 
@@ -475,92 +529,107 @@
 }
 
 
-/* Preview Panel */
+/* Preview Panel - Honeycomb Theme */
 .avatar-preview-panel {
-    background: white;
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px solid #FFD700;
+    border-radius: 16px;
     padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     position: relative;
-    z-index: 1;              /* Lower z-index for preview panel */
+    z-index: 1;
 }
 
 .avatar-preview-3d {
     width: 100%;
     height: 300px;
-    background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+    background: #000000;
+    border: 2px solid #FFA500;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 1rem;
     position: relative;
-    z-index: 1;              /* Ensure preview stays behind buttons */
+    z-index: 1;
+    box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.2);
 }
 
 .placeholder-avatar {
-    position: absolute;      /* Position it in the container */
-    z-index: 1;              /* Behind any loaded 3D models */
+    position: absolute;
+    z-index: 1;
     text-align: center;
-    color: #8B6914;
-    pointer-events: none;    /* Allow clicks to pass through */
+    color: #FFD700;
+    pointer-events: none;
+}
+
+.placeholder-avatar p {
+    color: #FFD700;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .placeholder-avatar .bee-icon {
     font-size: 4rem;
     display: block;
     margin-top: 1rem;
+    filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.5));
 }
 
 /* Avatar Info */
 .avatar-info {
     margin: 1rem 0;
     padding: 1rem;
-    background: #FFF9E6;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 8px;
     text-align: center;
 }
 
 .avatar-info h5 {
-    color: #FF6B00;
+    color: #FFD700;
     margin-bottom: 0.5rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .avatar-info p {
-    color: #8B6914;
+    color: #FFD700;
     font-size: 0.9rem;
 }
+}
 
-/* Action Buttons */
+/* Action Buttons - Honeycomb Theme */
 .avatar-actions {
     margin-top: 1.5rem;
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
     position: relative;
-    z-index: 10;             /* Higher z-index to stay above preview */
+    z-index: 10;
 }
 
 .btn-back-menu {
     flex: 1;
     min-width: 180px;
     padding: 1rem;
-    background: linear-gradient(135deg, #A8E6CF 0%, #7BC8A4 100%);
-    border: 2px solid #5FA777;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
     border-radius: 12px;
-    color: white;
+    color: #FFD700;
     font-size: 1.1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    z-index: 10;             /* Ensure button stays clickable above preview */
+    z-index: 10;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .btn-back-menu:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(127, 200, 164, 0.4);
-    background: linear-gradient(135deg, #7BC8A4 0%, #5FA777 100%);
+    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+    background: rgba(255, 255, 255, 0.3);
+    border-color: #FFD700;
 }
 
 .btn-select-avatar {
@@ -568,23 +637,26 @@
     min-width: 200px;
     padding: 1rem;
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    border: none;
+    border: 2px solid #FFD700;
     border-radius: 12px;
-    color: white;
+    color: #000;
     font-size: 1.1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .btn-select-avatar:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 24px rgba(255, 215, 0, 0.6);
+    background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
 }
 
 .btn-select-avatar:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    filter: grayscale(0.5);
 }
 
 /* Responsive - Enhanced for Better Mobile Display */

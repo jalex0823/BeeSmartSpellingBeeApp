@@ -27,6 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
@@ -10268,195 +10269,189 @@
                         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
                         directionalLight.position.set(5, 5, 5);
                         scene.add(directionalLight);
-                    
-                    // Load user's avatar OBJ model with proper URL handling
-                    const mtlLoader = new THREE.MTLLoader();
-                    
-                    // Get full MTL URL and extract base path for textures
-                    const mtlUrl = avatar.urls.model_mtl;
-                    const objUrl = avatar.urls.model_obj;
-                    
-                    // Extract directory path (everything before the last slash)
-                    const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
-                    
-                    // Extract just the filenames
-                    const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
-                    const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
-                    
-                    console.log('🎨 Avatar loading config:');
-                    console.log('  - Base path:', basePath);
-                    console.log('  - MTL file:', mtlFilename);
-                    console.log('  - OBJ file:', objFilename);
-                    console.log('  - Avatar ID:', avatar.avatar_id);
-                    console.log('  - Avatar.id:', avatar.id);
-                    console.log('  - Avatar Name:', avatar.name);
-                    console.log('  - Full avatar object:', avatar);
-                    console.log('  - Full MTL URL:', mtlUrl);
-                    console.log('  - Full OBJ URL:', objUrl);
-                    
-                    // Set the base path for texture resolution - critical for proper loading!
-                    mtlLoader.setPath(basePath);
-                    
-                    // Set texture path as well (for older MTLLoader versions)
-                    if (mtlLoader.setTexturePath) {
-                        mtlLoader.setTexturePath(basePath);
-                    }
-                    
-                    // Set resource path for better texture handling
-                    if (mtlLoader.setResourcePath) {
-                        mtlLoader.setResourcePath(basePath);
-                    }
-                    
-                    console.log('🎨 MTL Loader configured with base path:', basePath);
-                    
-                    mtlLoader.load(
-                        mtlFilename,
-                        (materials) => {
-                            console.log('✅ Materials loaded successfully for', avatar.avatar_id || avatar.id);
-                            console.log('📦 Materials object:', materials);
-                            window.loadingSystem?.updateProgress(88, '🎨 Textures loaded...');
-                            materials.preload();
+                        
+                        // Get model URLs
+                        const objUrl = avatar.urls.model_obj;
+                        const mtlUrl = avatar.urls.model_mtl;
+                        
+                        console.log('🎨 Avatar loading config:');
+                        console.log('  - OBJ URL:', objUrl);
+                        console.log('  - MTL URL:', mtlUrl);
+                        console.log('  - Avatar ID:', avatar.avatar_id);
+                        console.log('  - Avatar Name:', avatar.name);
+                        
+                        // Detect if this is a GLB file (for new avatars)
+                        const isGLB = objUrl && objUrl.toLowerCase().endsWith('.glb');
+                        
+                        if (isGLB) {
+                            // Load GLB file using GLTFLoader
+                            console.log('🌟 Loading GLB avatar...');
                             
-                            const objLoader = new THREE.OBJLoader();
-                            objLoader.setMaterials(materials);
-                            objLoader.setPath(basePath);
+                            if (typeof THREE.GLTFLoader === 'undefined') {
+                                throw new Error('GLTFLoader not loaded - ensure three-gltf-loader is included');
+                            }
                             
-                            console.log('🐝 Loading OBJ model with materials...');
-                            window.loadingSystem?.updateProgress(90, '🐝 Building 3D model...');
+                            const gltfLoader = new THREE.GLTFLoader();
+                            window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
                             
-                            objLoader.load(objFilename, (object) => {
-                            // Enhanced object positioning and scaling for visibility
-                            
-                            // Disable shadows for performance
-                            object.traverse((child) => { 
-                                if (child.isMesh) { 
-                                    child.castShadow = false;
-                                    child.receiveShadow = false;
-                                } 
-                            });
-                            
-                            // Professional centering and scaling
-                            const box = new THREE.Box3().setFromObject(object);
-                            const size = box.getSize(new THREE.Vector3()).length();
-                            const center = box.getCenter(new THREE.Vector3());
-                            
-                            // Center at origin
-                            object.position.sub(center);
-                            
-                            // Scale to consistent size (tune for visibility)
-                            const targetSize = 2.5;  // Increased for better visibility
-                            object.scale.setScalar(targetSize / size);
-                            
-                            scene.add(object);
-                            
-                            // Static rendering - no auto-animation
-                            let isAnimating = false;
-                            let animationStartTime = 0;
-                            const ANIMATION_DURATION = 800; // ms
-                            
-                            function render() {
-                                requestAnimationFrame(render);
-                                
-                                if (isAnimating) {
-                                    const elapsed = Date.now() - animationStartTime;
-                                    const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+                            gltfLoader.load(
+                                objUrl,
+                                (gltf) => {
+                                    console.log('✅ GLB model loaded successfully');
+                                    const object = gltf.scene;
                                     
-                                    // Bounce animation
-                                    object.rotation.y = Math.sin(progress * Math.PI * 2) * 0.3;
-                                    object.position.y = Math.abs(Math.sin(progress * Math.PI * 4)) * 0.5;
+                                    // Disable shadows for performance
+                                    object.traverse((child) => {
+                                        if (child.isMesh) {
+                                            child.castShadow = false;
+                                            child.receiveShadow = false;
+                                        }
+                                    });
                                     
-                                    if (progress >= 1) {
-                                        // Reset to neutral position
-                                        isAnimating = false;
-                                        object.rotation.y = 0;
-                                        object.position.y = 0;
+                                    // Professional centering and scaling
+                                    const box = new THREE.Box3().setFromObject(object);
+                                    const size = box.getSize(new THREE.Vector3()).length();
+                                    const center = box.getCenter(new THREE.Vector3());
+                                    
+                                    object.position.sub(center);
+                                    const targetSize = 2.5;
+                                    object.scale.setScalar(targetSize / size);
+                                    
+                                    scene.add(object);
+                                    
+                                    // Setup animation and rendering
+                                    setupAvatarAnimation(renderer, scene, camera, container, object, avatar);
+                                    resolveAvatar(true);
+                                },
+                                (xhr) => {
+                                    if (xhr.lengthComputable) {
+                                        const percentComplete = (xhr.loaded / xhr.total) * 100;
+                                        window.loadingSystem?.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
                                     }
+                                },
+                                (error) => {
+                                    console.error('❌ Error loading GLB model:', error);
+                                    rejectAvatar(error);
                                 }
-                                
-                                renderer.render(scene, camera);
-                            }
-                            render();
-                            
-                            // Click handler for themed animation
-                            container.style.cursor = 'pointer';
-                            container.addEventListener('click', () => {
-                                if (!isAnimating) {
-                                    isAnimating = true;
-                                    animationStartTime = Date.now();
-                                    console.log('🐝 Avatar clicked - playing themed animation');
-                                    
-                                    // Play themed effect based on avatar type (use avatar_id from avatar object)
-                                    const avatarId = avatar.avatar_id || avatar.id || 'cool-bee';
-                                    console.log('🎭 Using avatar ID for effect:', avatarId);
-                                    playThemedAvatarEffect(avatarId, container);
-                                }
-                            });
-                            
-                            console.log('✨ User avatar loaded on menu:', avatar.name);
-                            resolveAvatar(true);
-                        }, 
-                        // Progress callback for OBJ loading
-                        (xhr) => {
-                            if (xhr.lengthComputable) {
-                                const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                const displayPercent = Math.floor(percentComplete);
-                                console.log('📦 Model loading:', displayPercent + '%');
-                                // Update loading screen with actual progress
-                                window.loadingSystem?.updateProgress(
-                                    90 + (displayPercent * 0.05), // Map 0-100% to 90-95%
-                                    `🐝 Loading model: ${displayPercent}%`
-                                );
-                            }
-                        },
-                        // Error callback
-                        (error) => {
-                            console.error('❌ Error loading OBJ model:', error);
-                            console.error('   - OBJ URL attempted:', objUrl);
-                            console.error('   - Base path:', basePath);
-                            console.error('   - OBJ filename:', objFilename);
-                            console.error('   - Avatar ID:', avatar.avatar_id || avatar.id);
-                            
-                            // Try to provide helpful error message
-                            if (error.message && error.message.includes('404')) {
-                                console.error('🚨 DIAGNOSIS: 404 Not Found - Check if OBJ file exists at:', basePath + objFilename);
-                            }
-                            
-                            rejectAvatar(error);
-                        });
-                    }, 
-                    // Progress callback for MTL (materials/textures)
-                    (xhr) => {
-                        if (xhr.lengthComputable) {
-                            const percentComplete = (xhr.loaded / xhr.total) * 100;
-                            const displayPercent = Math.floor(percentComplete);
-                            console.log('🎨 Materials loading:', displayPercent + '%');
-                            // Update loading screen with texture progress
-                            window.loadingSystem?.updateProgress(
-                                85 + (displayPercent * 0.03), // Map 0-100% to 85-88%
-                                `🎨 Loading textures: ${displayPercent}%`
                             );
+                        } else {
+                            // Load OBJ/MTL files (original working avatars)
+                            console.log('🎨 Loading OBJ avatar...');
+                            
+                            const mtlLoader = new THREE.MTLLoader();
+                            const basePath = objUrl.substring(0, objUrl.lastIndexOf('/') + 1);
+                            const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
+                            const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
+                            
+                            console.log('  - Base path:', basePath);
+                            console.log('  - MTL file:', mtlFilename);
+                            console.log('  - OBJ file:', objFilename);
+                            
+                            mtlLoader.setPath(basePath);
+                            if (mtlLoader.setTexturePath) mtlLoader.setTexturePath(basePath);
+                            if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
+                            
+                            mtlLoader.load(
+                                mtlFilename,
+                                (materials) => {
+                                    console.log('✅ Materials loaded');
+                                    window.loadingSystem?.updateProgress(88, '🎨 Textures loaded...');
+                                    materials.preload();
+                                    
+                                    const objLoader = new THREE.OBJLoader();
+                                    objLoader.setMaterials(materials);
+                                    objLoader.setPath(basePath);
+                                    
+                                    window.loadingSystem?.updateProgress(90, '🐝 Building 3D model...');
+                                    
+                                    objLoader.load(objFilename, (object) => {
+                                        object.traverse((child) => {
+                                            if (child.isMesh) {
+                                                child.castShadow = false;
+                                                child.receiveShadow = false;
+                                            }
+                                        });
+                                        
+                                        const box = new THREE.Box3().setFromObject(object);
+                                        const size = box.getSize(new THREE.Vector3()).length();
+                                        const center = box.getCenter(new THREE.Vector3());
+                                        
+                                        object.position.sub(center);
+                                        const targetSize = 2.5;
+                                        object.scale.setScalar(targetSize / size);
+                                        
+                                        scene.add(object);
+                                        
+                                        setupAvatarAnimation(renderer, scene, camera, container, object, avatar);
+                                        resolveAvatar(true);
+                                    },
+                                    (xhr) => {
+                                        if (xhr.lengthComputable) {
+                                            const percentComplete = (xhr.loaded / xhr.total) * 100;
+                                            window.loadingSystem?.updateProgress(90 + (percentComplete * 0.05), `🐝 Loading model: ${Math.floor(percentComplete)}%`);
+                                        }
+                                    },
+                                    (error) => {
+                                        console.error('❌ Error loading OBJ model:', error);
+                                        rejectAvatar(error);
+                                    });
+                                },
+                                (xhr) => {
+                                    if (xhr.lengthComputable) {
+                                        const percentComplete = (xhr.loaded / xhr.total) * 100;
+                                        window.loadingSystem?.updateProgress(85 + (percentComplete * 0.03), `🎨 Loading textures: ${Math.floor(percentComplete)}%`);
+                                    }
+                                },
+                                (error) => {
+                                    console.error('❌ Error loading MTL materials:', error);
+                                    rejectAvatar(error);
+                                });
                         }
-                    },
-                    // Error callback for MTL
-                    (error) => {
-                        console.error('❌ Error loading MTL materials:', error);
-                        console.error('   - MTL URL attempted:', mtlUrl);
-                        console.error('   - Base path:', basePath);
-                        console.error('   - MTL filename:', mtlFilename);
-                        console.error('   - Avatar ID:', avatar.avatar_id || avatar.id);
-                        
-                        // Try to provide helpful error message
-                        if (error.message && error.message.includes('404')) {
-                            console.error('🚨 DIAGNOSIS: 404 Not Found - Check if MTL file exists at:', basePath + mtlFilename);
-                        }
-                        
-                        rejectAvatar(error);
-                    });
                     } catch (error) {
                         console.warn('Could not load user avatar 3D:', error);
                         rejectAvatar(error);
                     }
                 });
+            }
+            
+            function setupAvatarAnimation(renderer, scene, camera, container, object, avatar) {
+                // Static rendering with click animation
+                let isAnimating = false;
+                let animationStartTime = 0;
+                const ANIMATION_DURATION = 800;
+                
+                function render() {
+                    requestAnimationFrame(render);
+                    
+                    if (isAnimating) {
+                        const elapsed = Date.now() - animationStartTime;
+                        const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+                        
+                        object.rotation.y = Math.sin(progress * Math.PI * 2) * 0.3;
+                        object.position.y = Math.abs(Math.sin(progress * Math.PI * 4)) * 0.5;
+                        
+                        if (progress >= 1) {
+                            isAnimating = false;
+                            object.rotation.y = 0;
+                            object.position.y = 0;
+                        }
+                    }
+                    
+                    renderer.render(scene, camera);
+                }
+                render();
+                
+                container.style.cursor = 'pointer';
+                container.addEventListener('click', () => {
+                    if (!isAnimating) {
+                        isAnimating = true;
+                        animationStartTime = Date.now();
+                        const avatarId = avatar.avatar_id || avatar.id || 'cool-bee';
+                        playThemedAvatarEffect(avatarId, container);
+                    }
+                });
+                
+                console.log('✨ User avatar loaded:', avatar.name);
             }
             
             async function initDefaultMascot() {

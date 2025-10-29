@@ -5762,10 +5762,35 @@ def student_dashboard():
                          linked_students=linked_students)
 
 
-@app.route('/test/avatar-picker')
+@app.route('/api/user/avatar', methods=['POST'], endpoint='api_update_own_avatar')
 @login_required
-def test_avatar_picker():
-    """Test page for avatar picker with 3D viewer"""
+def api_update_user_avatar_legacy():
+    """API endpoint for a user to update their own avatar. (Legacy)"""
+    data = request.get_json()
+    if not data or 'avatar_id' not in data:
+        return jsonify({'status': 'error', 'message': 'Missing avatar_id in request.'}), 400
+
+    avatar_id = data['avatar_id']
+    
+    # The update_avatar method on the User model handles validation and saving.
+    success, message = current_user.update_avatar(avatar_id)
+    
+    if success:
+        try:
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': message})
+        except Exception as e:
+            db.session.rollback()
+            log_error(f"Database error after updating avatar for user {current_user.id}: {e}")
+            return jsonify({'status': 'error', 'message': 'Database error. Could not save avatar.'}), 500
+    else:
+        return jsonify({'status': 'error', 'message': message}), 400
+
+
+@app.route('/avatar-picker')
+@login_required
+def avatar_picker_page():
+    """Avatar picker page with 3D viewer for choosing your bee character"""
     return render_template('test_avatar_picker.html')
 
 @app.route('/test/api')
@@ -5783,6 +5808,12 @@ def test_avatar_loading():
 def test_single_avatar():
     """Test page for single avatar loading with detailed diagnostics"""
     return render_template('test_single_avatar.html')
+
+
+@app.route('/test/glb-avatars')
+def test_glb_avatars():
+    """Test page for GLB avatar display and verification"""
+    return render_template('test_glb_avatars.html')
 
 
 @app.route('/teacher/dashboard')
@@ -7800,9 +7831,9 @@ def api_get_user_avatar(user_id):
         }), 500
 
 
-@app.route("/api/users/<int:user_id>/avatar", methods=["PUT"])
+@app.route("/api/users/<int:user_id>/avatar", methods=["PUT"], endpoint='api_admin_or_user_update_avatar')
 @login_required
-def api_update_user_avatar(user_id):
+def api_admin_or_user_update_avatar(user_id):
     """Update a user's avatar"""
     try:
         # Check permission - users can only update their own avatar
@@ -8047,7 +8078,7 @@ def api_get_my_avatar():
 @login_required
 def api_update_my_avatar():
     """Update current user's avatar (convenience endpoint)"""
-    return api_update_user_avatar(current_user.id)
+    return api_admin_or_user_update_avatar(current_user.id)
 
 
 @app.route("/api/users/<int:user_id>/avatar/lock", methods=["POST"])
