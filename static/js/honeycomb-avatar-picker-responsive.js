@@ -111,7 +111,8 @@ function createAvatarElement(avatar, index) {
     
     if (isGLB && avatar.obj_file_url) {
         load3DAvatarGLB(avatar, `avatar-thumb-${index}`);
-    } else if (avatar.obj_file_url && avatar.mtl_file_url) {
+    } else if (avatar.obj_file_url) {
+        // Load OBJ - MTL file is optional
         load3DAvatarOBJ(avatar, `avatar-thumb-${index}`);
     } else if (avatar.thumbnail) {
         // Fallback to thumbnail image
@@ -230,21 +231,32 @@ function load3DAvatarOBJ(avatar, containerId) {
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
     
-    // Load OBJ with MTL
-    const mtlLoader = new THREE.MTLLoader();
-    const mtlPath = avatar.mtl_file_url; // Use full URL from API
-    
-    mtlLoader.load(mtlPath, function(materials) {
-        materials.preload();
-        
+    // Function to load OBJ (with or without materials)
+    function loadOBJFile(materials = null) {
         const objLoader = new THREE.OBJLoader();
-        objLoader.setMaterials(materials);
+        if (materials) {
+            objLoader.setMaterials(materials);
+        }
         
         const objPath = avatar.obj_file_url; // Use full URL from API
         
         objLoader.load(
             objPath,
             function(object) {
+                // If no materials provided, apply a default golden material
+                if (!materials) {
+                    const defaultMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0xFFD700,  // Golden color
+                        shininess: 30,
+                        flatShading: false
+                    });
+                    object.traverse(function(child) {
+                        if (child instanceof THREE.Mesh) {
+                            child.material = defaultMaterial;
+                        }
+                    });
+                }
+                
                 // Center and scale
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
@@ -279,7 +291,28 @@ function load3DAvatarOBJ(avatar, containerId) {
                 }
             }
         );
-    });
+    }
+    
+    // Try to load MTL if available, otherwise load OBJ directly
+    if (avatar.mtl_file_url) {
+        const mtlLoader = new THREE.MTLLoader();
+        mtlLoader.load(
+            avatar.mtl_file_url,
+            function(materials) {
+                materials.preload();
+                loadOBJFile(materials);
+            },
+            undefined,
+            function(error) {
+                console.warn('MTL file not found, loading OBJ with default material:', error);
+                loadOBJFile(null); // Load without materials
+            }
+        );
+    } else {
+        // No MTL file specified, load OBJ directly with default material
+        console.log(`Loading OBJ without MTL for ${avatar.name}`);
+        loadOBJFile(null);
+    }
 }
 
 // Select avatar
