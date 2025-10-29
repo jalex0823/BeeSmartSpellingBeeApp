@@ -72,14 +72,20 @@ function updateLoadingProgress(customMessage = null) {
     console.log(`📊 Loading Progress: ${percentage}% (${loadedThumbnails}/${totalThumbnails})`);
     
     // Hide overlay when complete
-    if (loadedThumbnails >= totalThumbnails) {
+    if (loadedThumbnails >= totalThumbnails && totalThumbnails > 0) {
+        console.log('✅ All thumbnails loaded! Hiding overlay...');
         setTimeout(() => {
             const overlay = document.getElementById('avatar-loading-overlay');
             if (overlay) {
-                overlay.classList.add('hidden');
-                console.log('✅ All avatars loaded successfully!');
+                overlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                    console.log('✅ Loading overlay hidden successfully!');
+                }, 500);
             }
-        }, 500);
+        }, 800); // Give users time to see "All Bees Ready!" message
     }
 }
 
