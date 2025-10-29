@@ -7914,6 +7914,75 @@ def api_admin_or_user_update_avatar(user_id):
         }), 500
 
 
+@app.route("/api/avatar/select", methods=["POST"])
+@login_required
+def api_select_avatar():
+    """
+    Simple avatar selection endpoint for the avatar picker
+    Accepts avatar_slug and updates current user's avatar
+    """
+    try:
+        from models import Avatar
+        
+        data = request.get_json()
+        avatar_slug = data.get('avatar_slug')
+        
+        if not avatar_slug:
+            return jsonify({
+                'success': False,
+                'error': 'avatar_slug is required'
+            }), 400
+        
+        # Look up avatar by slug
+        avatar = Avatar.query.filter_by(slug=avatar_slug, is_active=True).first()
+        if not avatar:
+            return jsonify({
+                'success': False,
+                'error': f'Avatar not found: {avatar_slug}'
+            }), 404
+        
+        # Update current user's avatar
+        success, message = current_user.update_avatar(avatar.slug, variant='default')
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': message
+            }), 400
+        
+        # Mark avatar as explicitly selected
+        try:
+            prefs = current_user.preferences or {}
+            prefs['avatar_selected'] = True
+            current_user.preferences = prefs
+        except Exception as e:
+            print(f"⚠️ Could not update preferences: {e}")
+        
+        db.session.commit()
+        
+        print(f"✅ User {current_user.username} selected avatar: {avatar_slug}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Avatar updated to {avatar.name}!',
+            'avatar': {
+                'slug': avatar.slug,
+                'name': avatar.name
+            },
+            'redirect': url_for('student_dashboard')  # Or wherever you want to redirect
+        })
+    
+    except Exception as e:
+        print(f"❌ Error selecting avatar: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 # --- Avatar File Serving from Database -------------------------------------------
 @app.route("/static/assets/avatars/<slug>/<filename>")
 def serve_avatar_file_from_db(slug, filename):
