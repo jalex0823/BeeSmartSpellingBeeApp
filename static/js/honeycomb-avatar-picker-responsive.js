@@ -206,6 +206,10 @@ function load3DAvatarGLB(avatar, containerId) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    // Color management for r128
+    if (typeof THREE.sRGBEncoding !== 'undefined') {
+        renderer.outputEncoding = THREE.sRGBEncoding;
+    }
     
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
@@ -252,6 +256,21 @@ function load3DAvatarGLB(avatar, containerId) {
             model.scale.set(scale, scale, scale);
             model.position.y = 0; // Center vertically
             
+            // Ensure textures use sRGB encoding when applicable
+            model.traverse((node) => {
+                if (node.isMesh) {
+                    const mats = Array.isArray(node.material) ? node.material : [node.material];
+                    mats.forEach(mat => {
+                        if (mat && mat.map && typeof THREE.sRGBEncoding !== 'undefined') {
+                            mat.map.encoding = THREE.sRGBEncoding;
+                            if (mat.map.image) {
+                                mat.map.needsUpdate = true;
+                            }
+                        }
+                    });
+                }
+            });
+
             scene.add(model);
             container.classList.remove('loading');
             
@@ -306,6 +325,10 @@ function load3DAvatarOBJ(avatar, containerId) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    // Color management for r128
+    if (typeof THREE.sRGBEncoding !== 'undefined') {
+        renderer.outputEncoding = THREE.sRGBEncoding;
+    }
     
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
@@ -343,21 +366,6 @@ function load3DAvatarOBJ(avatar, containerId) {
                             child.material = defaultMaterial;
                         }
                     });
-                } else {
-                    // Fix color space for materials with textures
-                    object.traverse((node) => {
-                        if (node.isMesh) {
-                            const mats = Array.isArray(node.material) ? node.material : [node.material];
-                            mats.forEach(mat => {
-                                if (mat.map) {
-                                    mat.map.colorSpace = THREE.SRGBColorSpace;
-                                    mat.map.needsUpdate = true;
-                                }
-                                mat.transparent = true;
-                                mat.alphaTest = 0.1;
-                            });
-                        }
-                    });
                 }
                 
                 // Center and scale for full-body display
@@ -371,6 +379,25 @@ function load3DAvatarOBJ(avatar, containerId) {
                 object.scale.set(scale, scale, scale);
                 object.position.y = 0; // Center vertically
                 
+                // Post-load material/texture adjustments
+                object.traverse((node) => {
+                    if (node.isMesh) {
+                        const mats = Array.isArray(node.material) ? node.material : [node.material];
+                        mats.forEach(mat => {
+                            if (mat) {
+                                if (mat.map && typeof THREE.sRGBEncoding !== 'undefined') {
+                                    mat.map.encoding = THREE.sRGBEncoding;
+                                    if (mat.map.image) {
+                                        mat.map.needsUpdate = true;
+                                    }
+                                }
+                                mat.transparent = true;
+                                mat.alphaTest = 0.1;
+                            }
+                        });
+                    }
+                });
+
                 scene.add(object);
                 container.classList.remove('loading');
                 
@@ -415,10 +442,7 @@ function load3DAvatarOBJ(avatar, containerId) {
                 
                 // Ensure all materials use proper color space
                 Object.values(materials.materials).forEach(mat => {
-                    if (mat.map) {
-                        mat.map.colorSpace = THREE.SRGBColorSpace;
-                        mat.map.needsUpdate = true;
-                    }
+                    // Defer texture updates to after OBJ load to avoid undefined image warnings
                     mat.transparent = true;
                     mat.alphaTest = 0.1;
                 });
