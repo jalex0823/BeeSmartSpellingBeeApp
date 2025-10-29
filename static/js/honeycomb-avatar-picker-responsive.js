@@ -5,6 +5,8 @@
 
 let avatarsData = [];
 let selectedAvatar = null;
+let loadedThumbnails = 0;
+let totalThumbnails = 0;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,6 +19,31 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAvatars();
     setupSearchFilter();
 });
+
+// Update loading progress
+function updateLoadingProgress() {
+    const percentage = Math.round((loadedThumbnails / totalThumbnails) * 100);
+    const progressBar = document.getElementById('loading-progress');
+    const loadingText = document.getElementById('loading-text');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    
+    if (loadingText) {
+        loadingText.textContent = percentage + '%';
+    }
+    
+    // Hide overlay when complete
+    if (loadedThumbnails >= totalThumbnails) {
+        setTimeout(() => {
+            const overlay = document.getElementById('avatar-loading-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+        }, 300);
+    }
+}
 
 // Load avatars from API
 async function loadAvatars() {
@@ -47,11 +74,19 @@ async function loadAvatars() {
             thumbnail: avatar.thumbnail
         }));
         
+        totalThumbnails = avatarsData.length;
+        loadedThumbnails = 0;
+        
         console.log('Loaded avatars:', avatarsData.length);
         renderAvatarGrid();
     } catch (error) {
         console.error('Error loading avatars:', error);
         showError('Failed to load avatars. Please refresh the page.');
+        // Hide loading overlay on error
+        const overlay = document.getElementById('avatar-loading-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
     }
 }
 
@@ -107,7 +142,6 @@ function createAvatarElement(avatar, index) {
     
     // Use 2D thumbnail for fast loading (like original picker)
     // 3D model will load in preview panel when selected
-    thumbDiv.classList.remove('loading');
     
     if (avatar.thumbnail) {
         const img = document.createElement('img');
@@ -116,11 +150,30 @@ function createAvatarElement(avatar, index) {
         img.style.height = '100%';
         img.style.objectFit = 'cover';
         img.style.borderRadius = '50%';
+        
+        // Track loading progress
+        img.onload = () => {
+            thumbDiv.classList.remove('loading');
+            loadedThumbnails++;
+            updateLoadingProgress();
+        };
+        
+        img.onerror = () => {
+            console.warn(`Failed to load thumbnail for ${avatar.name}`);
+            thumbDiv.classList.remove('loading');
+            thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
+            loadedThumbnails++;
+            updateLoadingProgress();
+        };
+        
         thumbDiv.appendChild(img);
     } else {
         // Fallback to emoji if no thumbnail
         console.warn(`No thumbnail for ${avatar.name}`);
+        thumbDiv.classList.remove('loading');
         thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
+        loadedThumbnails++;
+        updateLoadingProgress();
     }
     
     return div;
