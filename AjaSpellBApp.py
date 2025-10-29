@@ -5796,7 +5796,14 @@ def avatar_picker_page():
 @app.route('/honeycomb-picker')
 @login_required
 def honeycomb_avatar_picker():
-    """NEW: Honeycomb-style avatar picker with hexagonal grid layout"""
+    """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)"""
+    timestamp = int(time.time())
+    return render_template('honeycomb_avatar_picker_responsive.html', timestamp=timestamp)
+
+@app.route('/honeycomb-picker-old')
+@login_required
+def honeycomb_avatar_picker_old():
+    """OLD: Original honeycomb picker with absolute positioning"""
     return render_template('honeycomb_avatar_picker.html')
 
 @app.route('/test/api')

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Bee Avatar - BeeSmart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honeycomb-avatar-picker-responsive.css') }}?v={{ timestamp }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+</head>
+<body class="honeycomb-avatar-picker">
+    
+    <!-- Header -->
+    <div class="picker-header">
+        <h1>🐝 Choose Your Bee Avatar 🍯</h1>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="honeycomb-search-container">
+        <input 
+            type="text" 
+            class="honeycomb-search" 
+            placeholder="🔍 Search for your bee..."
+            aria-label="Search avatars"
+        >
+    </div>
+    
+    <!-- Main Content: Grid + Preview -->
+    <div class="honeycomb-content">
+        
+        <!-- Avatar Grid (Responsive CSS Grid) -->
+        <div class="honeycomb-grid-container">
+            <div class="honeycomb-grid">
+                <!-- Avatars will be loaded here by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Preview Panel -->
+        <div class="avatar-preview-panel">
+            <div class="preview-content">
+                <div class="preview-avatar-container">
+                    <!-- Large preview will render here -->
+                </div>
+                <h2 class="preview-name">Select a Bee</h2>
+                <p class="preview-description">Click on any bee to preview and select</p>
+                <button 
+                    class="preview-choose-btn" 
+                    onclick="chooseAvatar()"
+                    style="display: none;"
+                >
+                    Choose This Bee
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/honeycomb-avatar-picker-responsive.js') }}?v={{ timestamp }}"></script>
+</body>
+</html>
