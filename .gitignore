@@ -98,3 +98,11 @@ Documentation/
 # Converted folder (temporary conversion files)
 Converted/
 convert/
+
+# Node / Web tooling
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+dist/
+build/

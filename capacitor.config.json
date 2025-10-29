@@ -1,0 +1,39 @@
+{
+  "appId": "com.beesmart.spelling",
+  "appName": "BeeSmart Spelling",
+  "webDir": "static",
+  "server": {
+    "url": "https://beesmartspellingbeeapp-production.up.railway.app",
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#FFD700",
+      "androidSplashResourceName": "splash",
+      "iosSplashResourceName": "Splash"
+    },
+    "Camera": {
+      "ios": {
+        "enableCameraOverlay": true
+      },
+      "android": {
+        "quality": 90
+      }
+    },
+    "Keyboard": {
+      "resize": "native",
+      "style": "light"
+    }
+  },
+  "cordova": {},
+  "ios": {
+    "contentInset": "automatic",
+    "scheme": "BeeSmart Spelling"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#FFD700"
+  }
+}

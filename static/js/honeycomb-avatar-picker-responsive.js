@@ -441,31 +441,49 @@ function updatePreview(avatar) {
     if (previewContainer) {
         // Clear previous preview
         previewContainer.innerHTML = '<div style="text-align: center; color: #FFD700; font-size: 2rem;">🐝</div>';
-        
-        // Detect file type
-        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
-        
-        // Create container that fills the circular preview area
+
+        // Detect file type from URL (most reliable); keep server-provided flag as hint
+        const modelUrl = (avatar.obj_file_url || '').toLowerCase();
+        const isGLB = modelUrl.endsWith('.glb') || !!avatar.is_glb;
+
+        // Create container that fills the preview area
         const previewId = 'avatar-preview-3d';
         previewContainer.innerHTML = `<div id="${previewId}" style="width: 100%; height: 100%; position: relative;"></div>`;
-        
-        // Wait for container to be fully rendered with actual dimensions
-        setTimeout(() => {
+
+        const loadPreview = () => {
             const innerContainer = document.getElementById(previewId);
-            if (innerContainer) {
-                console.log('Preview container ready:', innerContainer.clientWidth, 'x', innerContainer.clientHeight);
-                
-                // Load 3D model
-                if (isGLB && avatar.obj_file_url) {
-                    load3DAvatarGLB(avatar, previewId);
-                } else if (avatar.obj_file_url) {
-                    load3DAvatarOBJ(avatar, previewId);
-                } else if (avatar.thumbnail) {
-                    // Fallback to large thumbnail
+            if (!innerContainer) return;
+
+            const w = innerContainer.clientWidth;
+            const h = innerContainer.clientHeight;
+            // If the container hasn't laid out yet, try on next frame
+            if (!w || !h) {
+                requestAnimationFrame(loadPreview);
+                return;
+            }
+
+            // If Three.js or loaders are missing, show image fallback
+            if (typeof THREE === 'undefined') {
+                console.warn('Three.js not available; using thumbnail fallback');
+                if (avatar.thumbnail) {
                     previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
                 }
+                return;
             }
-        }, 100);
+
+            // Load 3D model (prefer GLB)
+            if (isGLB && avatar.obj_file_url && typeof THREE.GLTFLoader !== 'undefined') {
+                load3DAvatarGLB(avatar, previewId);
+            } else if (avatar.obj_file_url && typeof THREE.OBJLoader !== 'undefined') {
+                load3DAvatarOBJ(avatar, previewId);
+            } else if (avatar.thumbnail) {
+                // Fallback to large thumbnail
+                previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
+            }
+        };
+
+        // Kick off when DOM has painted
+        requestAnimationFrame(loadPreview);
     }
 }
 
