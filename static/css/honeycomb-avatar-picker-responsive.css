@@ -197,10 +197,10 @@
 .avatar-hex-thumb::before {
     content: '';
     position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
     background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     -webkit-clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);

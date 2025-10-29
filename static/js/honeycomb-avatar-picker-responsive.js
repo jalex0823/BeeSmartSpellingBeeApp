@@ -375,16 +375,29 @@ function load3DAvatarGLB(avatar, containerId) {
             }
             animate();
             
-            // Final update - hide progress indicator
+            // Final update - completely remove loading indicator
             setTimeout(() => {
                 updatePreviewProgress(100, 'Complete!');
-                // Remove loading indicator after brief delay
+                // Clear ALL loading UI elements after brief delay
                 setTimeout(() => {
-                    const loadingDiv = container.querySelector('[style*="flex-direction: column"]');
-                    if (loadingDiv && loadingDiv.parentElement === container) {
-                        loadingDiv.remove();
-                    }
-                }, 500);
+                    // Remove all loading-related divs from container
+                    const loadingElements = container.querySelectorAll('div[style*="flex"], div[style*="loading"]');
+                    loadingElements.forEach(el => {
+                        // Only remove if it's a direct child loading indicator
+                        if (el !== renderer.domElement && el.parentElement === container) {
+                            el.remove();
+                        }
+                    });
+                    
+                    // Also remove by content check
+                    Array.from(container.children).forEach(child => {
+                        if (child.textContent && (child.textContent.includes('Loading') || child.textContent.includes('%'))) {
+                            child.remove();
+                        }
+                    });
+                    
+                    console.log('✅ Loading indicator removed from preview');
+                }, 800);
             }, 300);
         },
         function(xhr) {
