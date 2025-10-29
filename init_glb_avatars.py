@@ -78,7 +78,9 @@ LOCKED_GLB_FILES = {
     'BeeKnight.glb', 'BrotherBee.glb', 'BudaBee.glb', 'BuilderBee.glb',
     'CoolBee.glb', 'CutieBee.glb', 'DetectiveBee.glb', 'DivaBee.glb',
     'DocBee.glb', 'ExplorerBee.glb', 'Frankenbee.glb', 'OBee.glb',
-    'QueenBee.glb', 'RoboBee.glb', 'SeaBee.glb', 'SpaceBee.glb', 'SuperBee.glb'
+    'QueenBee.glb', 'RoboBee.glb', 'SeaBee.glb', 'SpaceBee.glb', 'SuperBee.glb',
+    # Newly added, verified GLB assets
+    'MotorBee.glb', 'HoneyComb.glb'
 }
 
 # 🔒 LOCKED: Avatar name to correct GLB filename mapping
@@ -102,6 +104,11 @@ AVATAR_GLB_MAPPING = {
     'Astro Bee': 'SpaceBee.glb',  # Astro uses same file as Space
     'Super Bee': 'SuperBee.glb'
 }
+# Extend mapping for newly added GLB avatars
+AVATAR_GLB_MAPPING.update({
+    'Motorcycle Bee': 'MotorBee.glb',
+    'HoneyComb': 'HoneyComb.glb'
+})
 
 def validate_glb_files():
     """
@@ -120,7 +127,7 @@ def validate_glb_files():
             current_file = avatar.obj_file
             
             # Check if file is in locked set
-            if current_file not in LOCKED_GLB_FILES and current_file not in ['MotorBee.glb']:
+            if current_file not in LOCKED_GLB_FILES:
                 issues_found.append(f"⚠️ {avatar.name}: {current_file} NOT in locked set")
             
             # Check if file matches correct mapping
@@ -183,12 +190,19 @@ def init_glb_avatars():
                 avatar.folder_path = "glb_files"
                 updated += 1
         
-        # Deactivate motorcycle-bee if it exists (no matching GLB file)
+        # Ensure motorcycle-bee activation reflects filesystem reality
         motorcycle = Avatar.query.filter_by(slug="motorcycle-bee").first()
         if motorcycle and motorcycle.obj_file == "MotorBee.glb":
-            print(f"⚠️ Deactivating motorcycle-bee (file MotorBee.glb not found)")
-            motorcycle.is_active = False
-            updated += 1
+            model_path = os.path.join(app.static_folder, 'assets', 'avatars', 'glb_files', 'MotorBee.glb')
+            if not os.path.exists(model_path):
+                print(f"⚠️ Deactivating motorcycle-bee (file MotorBee.glb not found)")
+                motorcycle.is_active = False
+                updated += 1
+            else:
+                if not motorcycle.is_active:
+                    print(f"✅ Activating motorcycle-bee (MotorBee.glb present)")
+                    motorcycle.is_active = True
+                    updated += 1
         
         if added > 0 or updated > 0:
             db.session.commit()
