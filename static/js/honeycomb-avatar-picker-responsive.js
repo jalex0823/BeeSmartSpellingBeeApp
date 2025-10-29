@@ -666,9 +666,13 @@ function updatePreview(avatar) {
         // Show loading indicator first
         showPreviewLoading(avatar.name);
 
-        // Detect file type from URL (most reliable); keep server-provided flag as hint
+        // Detect file type based on folder_path and URL
+        // GLB avatars are in 'glb_files' folder, OBJ avatars have individual folders
         const modelUrl = (avatar.obj_file_url || '').toLowerCase();
-        const isGLB = modelUrl.endsWith('.glb') || !!avatar.is_glb;
+        const folderPath = (avatar.folder_path || '').toLowerCase();
+        const isGLB = folderPath === 'glb_files' || modelUrl.endsWith('.glb') || !!avatar.is_glb;
+
+        console.log(`🔍 Avatar format detection for ${avatar.name}: folder=${folderPath}, url=${modelUrl}, isGLB=${isGLB}`);
 
         // Create container that fills the preview area
         const previewId = 'avatar-preview-3d';

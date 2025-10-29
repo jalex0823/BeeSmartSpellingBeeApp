@@ -9366,33 +9366,46 @@
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
                     
                     if (isAuthenticated) {
-                        // Authenticated user - check for custom avatar
-                        if (window.userAvatarLoader) {
-                            await window.userAvatarLoader.init();
-                            const hasCustomAvatar = window.userAvatarLoader.userAvatar && 
-                                                  window.userAvatarLoader.userAvatar.urls;
-                            if (hasCustomAvatar) {
-                                const avatarName = window.userAvatarLoader.userAvatar.name || 
-                                                 window.userAvatarLoader.userAvatar.avatar_id;
-                                this.updateCheck(check2, `${avatarName}`, '✅', 30);
-                                this.updateProgress(30, `🎨 Will load ${avatarName}`);
-                                console.log('✅ Custom avatar detected for authenticated user:', avatarName);
+                        // Authenticated user - fetch avatar from API
+                        try {
+                            const avatarResponse = await fetch('/api/users/me/avatar', {
+                                credentials: 'same-origin',
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            
+                            if (avatarResponse.ok) {
+                                const avatarData = await avatarResponse.json();
+                                
+                                if (avatarData.success && avatarData.avatar) {
+                                    // User has selected a custom avatar
+                                    const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Unknown Avatar';
+                                    const folderPath = (avatarData.avatar.folder_path || '').toLowerCase();
+                                    const format = folderPath === 'glb_files' ? '(GLB)' : '(OBJ)';
+                                    
+                                    this.updateCheck(check2, `${avatarName} ${format}`, '✅', 30);
+                                    this.updateProgress(30, `🐝 Will load ${avatarName}`);
+                                    console.log('✅ Avatar detected:', avatarName, format);
+                                } else {
+                                    // User hasn't selected an avatar yet
+                                    this.updateCheck(check2, 'Default Mascot (OBJ)', '✅', 30);
+                                    this.updateProgress(30, '🐝 Default avatar ready');
+                                    console.log('ℹ️ Using default avatar');
+                                }
                             } else {
-                                // User hasn't selected an avatar yet - show as ready to customize
-                                this.updateCheck(check2, 'Cool Bee (Default)', '✅', 30);
-                                this.updateProgress(30, '🐝 Default avatar ready');
-                                console.log('ℹ️ User using default Cool Bee avatar (can customize in avatar picker)');
+                                this.updateCheck(check2, 'Default Mascot', '✅', 30);
+                                this.updateProgress(30, '🐝 Using default avatar');
+                                console.warn('⚠️ Avatar API error');
                             }
-                        } else {
-                            this.updateCheck(check2, 'Avatar System Error', '❌', 30);
-                            this.updateProgress(30, '❌ Avatar loader not available');
-                            console.error('❌ Avatar loader not available for authenticated user');
+                        } catch (fetchError) {
+                            console.warn('Avatar fetch failed:', fetchError);
+                            this.updateCheck(check2, 'Default Mascot', '⚠️', 30);
+                            this.updateProgress(30, '🐝 Using fallback avatar');
                         }
                     } else {
-                        // Guest user - always use MascotBee
-                        this.updateCheck(check2, 'MascotBee (Guest)', '✅', 30);
-                        this.updateProgress(30, '� Will load MascotBee for guest');
-                        console.log('👋 Guest user detected, will use MascotBee');
+                        // Guest user - always use default MascotBee
+                        this.updateCheck(check2, 'Default Mascot (OBJ)', '✅', 30);
+                        this.updateProgress(30, '🐝 Guest using default');
+                        console.log('👋 Guest user detected');
                     }
                 } catch (error) {
                     console.warn('Avatar detection failed:', error);
