@@ -85,7 +85,13 @@
 .honeycomb-avatar-picker {
     width: 100%;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    background: 
+        url('/static/honeycomb bee-themedBg.png'),
+        linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: #FFD700;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     padding: 1rem;

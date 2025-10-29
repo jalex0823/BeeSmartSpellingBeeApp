@@ -12,23 +12,29 @@
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='favicon-96x96.png') }}">
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honeycomb-avatar-picker-responsive.css') }}?v={{ timestamp }}">
+    
+    <!-- Three.js and Loaders -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    
+    <!-- Avatar Theme System (must load before picker) -->
+    <script src="{{ url_for('static', filename='js/avatar-theme-system.js') }}?v={{ timestamp }}"></script>
 </head>
 <body class="honeycomb-avatar-picker">
     
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay with Real-time Progress -->
     <div id="avatar-loading-overlay" class="loading-overlay">
         <div class="loading-content">
             <div class="loading-bee">🐝</div>
-            <h2>Loading Your Bees...</h2>
+            <h2 id="loading-status">Loading Your Bees...</h2>
             <div class="loading-bar">
                 <div id="loading-progress" class="loading-progress"></div>
             </div>
             <p id="loading-text" class="loading-text">0%</p>
+            <p id="loading-detail" style="color: rgba(255, 215, 0, 0.7); font-size: 0.9rem; margin-top: 0.5rem;">Initializing...</p>
         </div>
     </div>
     

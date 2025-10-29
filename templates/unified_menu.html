@@ -9378,9 +9378,10 @@
                                 this.updateProgress(30, `🎨 Will load ${avatarName}`);
                                 console.log('✅ Custom avatar detected for authenticated user:', avatarName);
                             } else {
-                                this.updateCheck(check2, 'Default Mascot', '⚠️', 30);
-                                this.updateProgress(30, '⚠️ Authenticated user missing avatar');
-                                console.log('⚠️ Authenticated user has no custom avatar');
+                                // User hasn't selected an avatar yet - show as ready to customize
+                                this.updateCheck(check2, 'Cool Bee (Default)', '✅', 30);
+                                this.updateProgress(30, '🐝 Default avatar ready');
+                                console.log('ℹ️ User using default Cool Bee avatar (can customize in avatar picker)');
                             }
                         } else {
                             this.updateCheck(check2, 'Avatar System Error', '❌', 30);

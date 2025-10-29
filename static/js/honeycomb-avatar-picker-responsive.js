@@ -1,16 +1,19 @@
 /**
  * Responsive Honeycomb Avatar Picker
  * No absolute positioning - uses CSS Grid
+ * Enhanced with real-time 3D model loading progress
  */
 
 let avatarsData = [];
 let selectedAvatar = null;
 let loadedThumbnails = 0;
 let totalThumbnails = 0;
+let currentLoadingAvatar = null;
+let previewLoadProgress = 0;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, checking Three.js availability...');
+    console.log('🐝 BeeSmart Avatar Picker - Initializing...');
     console.log('THREE available:', typeof THREE !== 'undefined');
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
@@ -20,21 +23,23 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAvatars();
     setupSearchFilter();
 
-    // Safety: hide loading overlay after 8s even if some thumbnails stall
+    // Safety: hide loading overlay after 10s even if some thumbnails stall
     setTimeout(() => {
         const overlay = document.getElementById('avatar-loading-overlay');
         if (overlay && !overlay.classList.contains('hidden')) {
-            console.warn('Hiding loading overlay due to timeout safeguard');
+            console.warn('⚠️ Hiding loading overlay due to timeout safeguard');
             overlay.classList.add('hidden');
         }
-    }, 8000);
+    }, 10000);
 });
 
-// Update loading progress
-function updateLoadingProgress() {
+// Update loading progress with detailed status
+function updateLoadingProgress(customMessage = null) {
     const percentage = Math.round((loadedThumbnails / totalThumbnails) * 100);
     const progressBar = document.getElementById('loading-progress');
     const loadingText = document.getElementById('loading-text');
+    const loadingContent = document.getElementById('loading-status');
+    const loadingDetail = document.getElementById('loading-detail');
     
     if (progressBar) {
         progressBar.style.width = percentage + '%';
@@ -44,14 +49,81 @@ function updateLoadingProgress() {
         loadingText.textContent = percentage + '%';
     }
     
+    // Update loading message
+    if (loadingContent && customMessage) {
+        loadingContent.textContent = customMessage;
+    } else if (loadingContent) {
+        if (percentage < 100) {
+            loadingContent.textContent = `Loading Bee Thumbnails...`;
+        } else {
+            loadingContent.textContent = 'All Bees Ready! 🎉';
+        }
+    }
+    
+    // Update detail text
+    if (loadingDetail) {
+        if (percentage < 100) {
+            loadingDetail.textContent = `${loadedThumbnails} of ${totalThumbnails} avatars loaded`;
+        } else {
+            loadingDetail.textContent = 'Ready to choose your bee!';
+        }
+    }
+    
+    console.log(`📊 Loading Progress: ${percentage}% (${loadedThumbnails}/${totalThumbnails})`);
+    
     // Hide overlay when complete
     if (loadedThumbnails >= totalThumbnails) {
         setTimeout(() => {
             const overlay = document.getElementById('avatar-loading-overlay');
             if (overlay) {
                 overlay.classList.add('hidden');
+                console.log('✅ All avatars loaded successfully!');
             }
-        }, 300);
+        }, 500);
+    }
+}
+
+// Show preview loading indicator
+function showPreviewLoading(avatarName) {
+    const previewContainer = document.querySelector('.preview-avatar-container');
+    if (!previewContainer) return;
+    
+    previewContainer.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #FFD700;">
+            <div style="font-size: 3rem; animation: bounce 1s infinite;">🐝</div>
+            <div style="margin-top: 1rem; font-size: 1.2rem;">Loading ${avatarName}...</div>
+            <div style="width: 80%; height: 8px; background: rgba(255,215,0,0.2); border-radius: 4px; margin-top: 1rem; overflow: hidden;">
+                <div id="preview-load-progress" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s;"></div>
+            </div>
+            <div id="preview-load-text" style="margin-top: 0.5rem; font-size: 0.9rem;">0%</div>
+        </div>
+    `;
+    
+    // Add animation keyframes if not already present
+    if (!document.getElementById('preview-animation-styles')) {
+        const style = document.createElement('style');
+        style.id = 'preview-animation-styles';
+        style.textContent = `
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Update preview loading progress
+function updatePreviewProgress(percentage, message = null) {
+    const progressBar = document.getElementById('preview-load-progress');
+    const progressText = document.getElementById('preview-load-text');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    
+    if (progressText) {
+        progressText.textContent = message || `${Math.round(percentage)}%`;
     }
 }
 
@@ -189,18 +261,19 @@ function createAvatarElement(avatar, index) {
     return div;
 }
 
-// Load GLB 3D model
+// Load GLB 3D model with progress tracking
 function load3DAvatarGLB(avatar, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
-        console.error('Container not found:', containerId);
+        console.error('❌ Container not found:', containerId);
         return;
     }
     
     const width = container.clientWidth || 250;
     const height = container.clientHeight || 250;
     
-    console.log(`Loading GLB: ${avatar.name}, container: ${width}x${height}`);
+    console.log(`🔄 Loading GLB: ${avatar.name}, container: ${width}x${height}`);
+    updatePreviewProgress(10, 'Initializing 3D viewer...');
     
     // Three.js setup
     const scene = new THREE.Scene();
@@ -215,6 +288,8 @@ function load3DAvatarGLB(avatar, containerId) {
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
     
+    updatePreviewProgress(20, 'Setting up lights...');
+    
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
@@ -222,6 +297,8 @@ function load3DAvatarGLB(avatar, containerId) {
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
+    
+    updatePreviewProgress(30, 'Loading 3D model...');
     
     // Load GLB model
     const loader = new THREE.GLTFLoader();
@@ -232,9 +309,9 @@ function load3DAvatarGLB(avatar, containerId) {
             // Use Google's hosted decoders (works cross-origin)
             dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
             loader.setDRACOLoader(dracoLoader);
-            console.log('DRACO loader enabled for GLB decoding');
+            console.log('✅ DRACO loader enabled for GLB decoding');
         } catch (e) {
-            console.warn('Failed to configure DRACOLoader:', e);
+            console.warn('⚠️ Failed to configure DRACOLoader:', e);
         }
     }
     const modelPath = avatar.obj_file_url; // Use full URL from API
@@ -242,7 +319,9 @@ function load3DAvatarGLB(avatar, containerId) {
     loader.load(
         modelPath,
         function(gltf) {
-            console.log('GLB loaded successfully:', avatar.name);
+            console.log('✅ GLB loaded successfully:', avatar.name);
+            updatePreviewProgress(70, 'Processing model...');
+            
             const model = gltf.scene;
             
             // Center and scale model for full-body display
@@ -255,6 +334,8 @@ function load3DAvatarGLB(avatar, containerId) {
             model.position.sub(center);
             model.scale.set(scale, scale, scale);
             model.position.y = 0; // Center vertically
+            
+            updatePreviewProgress(85, 'Applying textures...');
             
             // Ensure textures use sRGB encoding when applicable
             model.traverse((node) => {
@@ -274,6 +355,8 @@ function load3DAvatarGLB(avatar, containerId) {
             scene.add(model);
             container.classList.remove('loading');
             
+            updatePreviewProgress(95, 'Starting animation...');
+            
             // Camera position for full-body view
             camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
             camera.lookAt(0, 0, 0);
@@ -285,17 +368,38 @@ function load3DAvatarGLB(avatar, containerId) {
                 renderer.render(scene, camera);
             }
             animate();
+            
+            // Final update - hide progress indicator
+            setTimeout(() => {
+                updatePreviewProgress(100, 'Complete!');
+                // Remove loading indicator after brief delay
+                setTimeout(() => {
+                    const loadingDiv = container.querySelector('[style*="flex-direction: column"]');
+                    if (loadingDiv && loadingDiv.parentElement === container) {
+                        loadingDiv.remove();
+                    }
+                }, 500);
+            }, 300);
         },
-        undefined,
+        function(xhr) {
+            // Progress callback
+            if (xhr.lengthComputable) {
+                const percentComplete = (xhr.loaded / xhr.total) * 100;
+                const adjustedPercent = 30 + (percentComplete * 0.4); // Map to 30-70% range
+                updatePreviewProgress(adjustedPercent, `Downloading: ${Math.round(percentComplete)}%`);
+                console.log(`📥 Download progress: ${Math.round(percentComplete)}%`);
+            }
+        },
         function(error) {
-            console.error('Error loading GLB:', error);
+            console.error('❌ Error loading GLB:', error);
             container.classList.remove('loading');
             // If GLB fails and OBJ+MTL exist, try OBJ as fallback
             const url = (avatar.obj_file_url || '').toLowerCase();
             const hasObjFallback = url.endsWith('.obj') || (avatar.mtl_file_url && typeof THREE.OBJLoader !== 'undefined');
             if (hasObjFallback) {
-                console.warn('Falling back to OBJ loader for', avatar.name);
-                load3DAvatarOBJ(avatar, containerId);
+                console.warn('⚠️ Falling back to OBJ loader for', avatar.name);
+                updatePreviewProgress(0, 'Retrying with OBJ format...');
+                setTimeout(() => load3DAvatarOBJ(avatar, containerId), 500);
                 return;
             }
             // As last resort, thumbnail fallback
@@ -308,18 +412,19 @@ function load3DAvatarGLB(avatar, containerId) {
     );
 }
 
-// Load OBJ 3D model
+// Load OBJ 3D model with progress tracking
 function load3DAvatarOBJ(avatar, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
-        console.error('Container not found:', containerId);
+        console.error('❌ Container not found:', containerId);
         return;
     }
     
     const width = container.clientWidth || 250;
     const height = container.clientHeight || 250;
     
-    console.log(`Loading OBJ: ${avatar.name}, container: ${width}x${height}`);
+    console.log(`🔄 Loading OBJ: ${avatar.name}, container: ${width}x${height}`);
+    updatePreviewProgress(10, 'Initializing 3D viewer...');
     
     // Three.js setup
     const scene = new THREE.Scene();
@@ -334,6 +439,8 @@ function load3DAvatarOBJ(avatar, containerId) {
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
     
+    updatePreviewProgress(20, 'Setting up lights...');
+    
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
@@ -344,6 +451,8 @@ function load3DAvatarOBJ(avatar, containerId) {
     
     // Function to load OBJ (with or without materials)
     function loadOBJFile(materials = null) {
+        updatePreviewProgress(40, materials ? 'Loading model with materials...' : 'Loading model...');
+        
         const objLoader = new THREE.OBJLoader();
         if (materials) {
             objLoader.setMaterials(materials);
@@ -354,6 +463,9 @@ function load3DAvatarOBJ(avatar, containerId) {
         objLoader.load(
             objPath,
             function(object) {
+                console.log('✅ OBJ loaded successfully:', avatar.name);
+                updatePreviewProgress(70, 'Processing geometry...');
+                
                 // If no materials provided, apply a default golden material
                 if (!materials) {
                     const defaultMaterial = new THREE.MeshPhongMaterial({ 
@@ -368,6 +480,8 @@ function load3DAvatarOBJ(avatar, containerId) {
                     });
                 }
                 
+                updatePreviewProgress(80, 'Centering model...');
+                
                 // Center and scale for full-body display
                 const box = new THREE.Box3().setFromObject(object);
                 const center = box.getCenter(new THREE.Vector3());
@@ -378,6 +492,8 @@ function load3DAvatarOBJ(avatar, containerId) {
                 object.position.sub(center);
                 object.scale.set(scale, scale, scale);
                 object.position.y = 0; // Center vertically
+                
+                updatePreviewProgress(90, 'Applying materials...');
                 
                 // Post-load material/texture adjustments
                 object.traverse((node) => {
@@ -401,6 +517,8 @@ function load3DAvatarOBJ(avatar, containerId) {
                 scene.add(object);
                 container.classList.remove('loading');
                 
+                updatePreviewProgress(95, 'Starting animation...');
+                
                 // Camera position for full-body view
                 camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
                 camera.lookAt(0, 0, 0);
@@ -411,10 +529,29 @@ function load3DAvatarOBJ(avatar, containerId) {
                     renderer.render(scene, camera);
                 }
                 animate();
+                
+                // Final update
+                setTimeout(() => {
+                    updatePreviewProgress(100, 'Complete!');
+                    setTimeout(() => {
+                        const loadingDiv = container.querySelector('[style*="flex-direction: column"]');
+                        if (loadingDiv && loadingDiv.parentElement === container) {
+                            loadingDiv.remove();
+                        }
+                    }, 500);
+                }, 300);
             },
-            undefined,
+            function(xhr) {
+                // Progress callback for OBJ file
+                if (xhr.lengthComputable) {
+                    const percentComplete = (xhr.loaded / xhr.total) * 100;
+                    const adjustedPercent = 40 + (percentComplete * 0.3); // Map to 40-70% range
+                    updatePreviewProgress(adjustedPercent, `Downloading: ${Math.round(percentComplete)}%`);
+                    console.log(`📥 OBJ download progress: ${Math.round(percentComplete)}%`);
+                }
+            },
             function(error) {
-                console.error('Error loading OBJ:', error);
+                console.error('❌ Error loading OBJ:', error);
                 container.classList.remove('loading');
                 // Try loading thumbnail as fallback
                 if (avatar.thumbnail) {
@@ -428,6 +565,8 @@ function load3DAvatarOBJ(avatar, containerId) {
     
     // Try to load MTL if available, otherwise load OBJ directly
     if (avatar.mtl_file_url) {
+        updatePreviewProgress(30, 'Loading materials...');
+        
         const basePath = avatar.mtl_file_url.substring(0, avatar.mtl_file_url.lastIndexOf('/') + 1);
         const mtlFilename = avatar.mtl_file_url.substring(avatar.mtl_file_url.lastIndexOf('/') + 1);
         
@@ -438,6 +577,7 @@ function load3DAvatarOBJ(avatar, containerId) {
         mtlLoader.load(
             mtlFilename,
             function(materials) {
+                console.log('✅ MTL materials loaded for', avatar.name);
                 materials.preload();
                 
                 // Ensure all materials use proper color space
@@ -451,7 +591,7 @@ function load3DAvatarOBJ(avatar, containerId) {
             },
             undefined,
             function(error) {
-                console.warn('MTL file not found, loading OBJ with default material:', error);
+                console.warn('⚠️ MTL file not found, loading OBJ with default material:', error);
                 loadOBJFile(null); // Load without materials
             }
         );
@@ -462,22 +602,49 @@ function load3DAvatarOBJ(avatar, containerId) {
     }
 }
 
-// Select avatar
+// Select avatar with theme activation
 function selectAvatar(avatar, element) {
-    // Remove previous selection
-    document.querySelectorAll('.avatar-hex-position.selected').forEach(el => {
-        el.classList.remove('selected');
+    console.log(`🎯 Avatar selected: ${avatar.name} (${avatar.slug})`);
+    
+    // Remove previous selection and theme classes
+    document.querySelectorAll('.avatar-hex-position.selected, .avatar-hex-position.theme-active').forEach(el => {
+        el.classList.remove('selected', 'theme-active');
+        el.style.boxShadow = '';
+        el.style.borderColor = '';
+        el.style.animation = '';
     });
     
     // Mark as selected
-    element.classList.add('selected');
+    element.classList.add('selected', 'theme-active');
     selectedAvatar = avatar;
+    
+    // Activate avatar theme
+    if (window.avatarThemeManager) {
+        try {
+            const theme = window.avatarThemeManager.activateTheme(avatar.slug, element);
+            console.log(`🎨 Theme activated for ${avatar.name}:`, theme);
+            
+            // Show personality message
+            const personalityMsg = window.avatarThemeManager.getPersonalityMessage(avatar.slug, 'greeting');
+            console.log(`💬 ${avatar.name} says: "${personalityMsg}"`);
+            
+            // Optionally update description with personality message
+            const descEl = document.querySelector('.preview-description');
+            if (descEl && avatar.description) {
+                descEl.textContent = avatar.description + ' - ' + personalityMsg;
+            }
+        } catch (error) {
+            console.warn('⚠️ Theme activation failed:', error);
+        }
+    } else {
+        console.warn('⚠️ Avatar Theme Manager not loaded');
+    }
     
     // Update preview panel
     updatePreview(avatar);
 }
 
-// Update preview panel
+// Update preview panel with loading progress
 function updatePreview(avatar) {
     const previewContent = document.querySelector('.preview-content');
     if (!previewContent) return;
@@ -491,10 +658,13 @@ function updatePreview(avatar) {
     if (descEl) descEl.textContent = avatar.description || 'Choose this amazing bee!';
     if (btnEl) btnEl.style.display = 'block';
     
-    // Load 3D model in preview
+    console.log(`🎨 Previewing avatar: ${avatar.name}`);
+    currentLoadingAvatar = avatar.name;
+    
+    // Load 3D model in preview with loading indicator
     if (previewContainer) {
-        // Clear previous preview
-        previewContainer.innerHTML = '<div style="text-align: center; color: #FFD700; font-size: 2rem;">🐝</div>';
+        // Show loading indicator first
+        showPreviewLoading(avatar.name);
 
         // Detect file type from URL (most reliable); keep server-provided flag as hint
         const modelUrl = (avatar.obj_file_url || '').toLowerCase();
@@ -502,14 +672,26 @@ function updatePreview(avatar) {
 
         // Create container that fills the preview area
         const previewId = 'avatar-preview-3d';
-        previewContainer.innerHTML = `<div id="${previewId}" style="width: 100%; height: 100%; position: relative;"></div>`;
-
+        
         const loadPreview = () => {
             const innerContainer = document.getElementById(previewId);
-            if (!innerContainer) return;
+            if (!innerContainer) {
+                // Re-insert the container if the loading screen replaced it
+                const loadingScreen = previewContainer.querySelector('[style*="flex-direction: column"]');
+                if (loadingScreen) {
+                    const newContainer = document.createElement('div');
+                    newContainer.id = previewId;
+                    newContainer.style.cssText = 'width: 100%; height: 100%; position: absolute; top: 0; left: 0;';
+                    previewContainer.appendChild(newContainer);
+                }
+            }
 
-            const w = innerContainer.clientWidth;
-            const h = innerContainer.clientHeight;
+            const container = document.getElementById(previewId);
+            if (!container) return;
+
+            const w = container.clientWidth || previewContainer.clientWidth;
+            const h = container.clientHeight || previewContainer.clientHeight;
+            
             // If the container hasn't laid out yet, try on next frame
             if (!w || !h) {
                 requestAnimationFrame(loadPreview);
@@ -518,7 +700,7 @@ function updatePreview(avatar) {
 
             // If Three.js or loaders are missing, show image fallback
             if (typeof THREE === 'undefined') {
-                console.warn('Three.js not available; using thumbnail fallback');
+                console.warn('⚠️ Three.js not available; using thumbnail fallback');
                 if (avatar.thumbnail) {
                     previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
                 }
@@ -527,44 +709,95 @@ function updatePreview(avatar) {
 
             // Load 3D model (prefer GLB)
             if (isGLB && avatar.obj_file_url && typeof THREE.GLTFLoader !== 'undefined') {
+                console.log('📦 Loading GLB model:', avatar.name);
                 load3DAvatarGLB(avatar, previewId);
             } else if (avatar.obj_file_url && typeof THREE.OBJLoader !== 'undefined') {
+                console.log('📦 Loading OBJ model:', avatar.name);
                 load3DAvatarOBJ(avatar, previewId);
             } else if (avatar.thumbnail) {
                 // Fallback to large thumbnail
+                console.log('🖼️ Using thumbnail fallback for:', avatar.name);
                 previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
             }
         };
 
-        // Kick off when DOM has painted
-        requestAnimationFrame(loadPreview);
+        // Start loading after a brief delay to show the loading screen
+        setTimeout(loadPreview, 100);
     }
 }
 
-// Choose avatar and redirect
+// Choose avatar and save selection
 function chooseAvatar() {
     if (!selectedAvatar) {
         alert('Please select an avatar first!');
         return;
     }
     
-    // Save selection and redirect
+    console.log(`🎯 User chose avatar: ${selectedAvatar.name} (${selectedAvatar.slug})`);
+    
+    // Disable button during save
+    const btn = document.querySelector('.preview-choose-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+    }
+    
+    // Save selection via API
     fetch('/api/avatar/select', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
         body: JSON.stringify({ avatar_slug: selectedAvatar.slug })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('✅ Avatar selection saved:', data);
+        
         if (data.success) {
-            window.location.href = data.redirect || '/';
+            // Show success message
+            if (btn) {
+                btn.textContent = '✓ Saved!';
+                btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            }
+            
+            // Update user-avatar-loader if available (force refresh)
+            if (window.userAvatarLoader) {
+                console.log('🔄 Refreshing user avatar loader...');
+                window.userAvatarLoader.init().then(() => {
+                    console.log('✅ User avatar loader refreshed');
+                });
+            }
+            
+            // Redirect after brief delay to show success
+            setTimeout(() => {
+                const redirectUrl = data.redirect || '/';
+                console.log(`🔀 Redirecting to: ${redirectUrl}`);
+                window.location.href = redirectUrl;
+            }, 1000);
         } else {
-            alert('Error selecting avatar: ' + (data.error || 'Unknown error'));
+            throw new Error(data.error || 'Unknown error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to select avatar');
+        console.error('❌ Error selecting avatar:', error);
+        alert('Failed to save avatar selection: ' + error.message);
+        
+        // Reset button
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Choose This Bee';
+            btn.style.background = '';
+        }
     });
 }
 

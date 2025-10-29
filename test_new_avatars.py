@@ -31,7 +31,7 @@ def test_avatar_api():
                 thumbnail = avatar['thumbnailUrl']
                 print(f'  ✅ {name} ({slug})')
                 print(f'     📷 Thumbnail: {thumbnail}')
-                found_avatars.append(slug)
+                found_avatars.append(slug)th
         
         print(f'\n🎉 Found {len(found_avatars)}/{len(new_avatar_slugs)} new avatars in API!')
         
