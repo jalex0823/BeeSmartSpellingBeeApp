@@ -13,11 +13,21 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking Three.js availability...');
     console.log('THREE available:', typeof THREE !== 'undefined');
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
+    console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
     console.log('OBJLoader available:', typeof THREE !== 'undefined' && typeof THREE.OBJLoader !== 'undefined');
     console.log('MTLLoader available:', typeof THREE !== 'undefined' && typeof THREE.MTLLoader !== 'undefined');
     
     loadAvatars();
     setupSearchFilter();
+
+    // Safety: hide loading overlay after 8s even if some thumbnails stall
+    setTimeout(() => {
+        const overlay = document.getElementById('avatar-loading-overlay');
+        if (overlay && !overlay.classList.contains('hidden')) {
+            console.warn('Hiding loading overlay due to timeout safeguard');
+            overlay.classList.add('hidden');
+        }
+    }, 8000);
 });
 
 // Update loading progress
@@ -211,6 +221,18 @@ function load3DAvatarGLB(avatar, containerId) {
     
     // Load GLB model
     const loader = new THREE.GLTFLoader();
+    // Attach DRACO loader if available (needed for compressed .glb)
+    if (typeof THREE.DRACOLoader !== 'undefined') {
+        try {
+            const dracoLoader = new THREE.DRACOLoader();
+            // Use Google's hosted decoders (works cross-origin)
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+            loader.setDRACOLoader(dracoLoader);
+            console.log('DRACO loader enabled for GLB decoding');
+        } catch (e) {
+            console.warn('Failed to configure DRACOLoader:', e);
+        }
+    }
     const modelPath = avatar.obj_file_url; // Use full URL from API
     
     loader.load(
@@ -249,7 +271,15 @@ function load3DAvatarGLB(avatar, containerId) {
         function(error) {
             console.error('Error loading GLB:', error);
             container.classList.remove('loading');
-            // Try loading thumbnail as fallback
+            // If GLB fails and OBJ+MTL exist, try OBJ as fallback
+            const url = (avatar.obj_file_url || '').toLowerCase();
+            const hasObjFallback = url.endsWith('.obj') || (avatar.mtl_file_url && typeof THREE.OBJLoader !== 'undefined');
+            if (hasObjFallback) {
+                console.warn('Falling back to OBJ loader for', avatar.name);
+                load3DAvatarOBJ(avatar, containerId);
+                return;
+            }
+            // As last resort, thumbnail fallback
             if (avatar.thumbnail) {
                 container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
             } else {
