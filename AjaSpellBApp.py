@@ -8196,6 +8196,13 @@ print(f"✅ Health check endpoint: /health")
 print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
 
+# Initialize GLB avatars on startup (idempotent)
+try:
+    from init_glb_avatars import init_glb_avatars
+    init_glb_avatars()
+except Exception as e:
+    print(f"⚠️ GLB avatar initialization warning: {e}")
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 Starting development server on port {port} with Socket.IO support...")
