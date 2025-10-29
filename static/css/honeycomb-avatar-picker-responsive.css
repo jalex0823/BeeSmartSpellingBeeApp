@@ -87,7 +87,7 @@
     width: 100%;
     min-height: 100vh;
     background: 
-        url('/static/honeycomb bee-themedBg.png'),
+        url('/static/images/honeycomb-pattern.svg'),
         linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
     background-size: cover;
     background-position: center;
@@ -197,15 +197,15 @@
 .avatar-hex-thumb::before {
     content: '';
     position: absolute;
-    top: -6px;
-    left: -6px;
-    right: -6px;
-    bottom: -6px;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
     background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     -webkit-clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     z-index: -1;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 215, 0, 0.5);
     animation: borderGlow 2s ease-in-out infinite alternate;
 }
 
@@ -306,15 +306,23 @@
 .preview-name {
     font-size: 2rem;
     font-weight: bold;
-    color: #FFD700;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    color: #000000;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.95);
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+    letter-spacing: 1px;
 }
 
 .preview-description {
     font-size: 1.1rem;
-    color: #FFA500;
+    color: #FFD700;
     text-align: center;
     line-height: 1.6;
+    font-weight: 600;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .preview-choose-btn {
