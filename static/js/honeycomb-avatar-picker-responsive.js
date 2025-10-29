@@ -255,6 +255,21 @@ function load3DAvatarOBJ(avatar, containerId) {
                             child.material = defaultMaterial;
                         }
                     });
+                } else {
+                    // Fix color space for materials with textures
+                    object.traverse((node) => {
+                        if (node.isMesh) {
+                            const mats = Array.isArray(node.material) ? node.material : [node.material];
+                            mats.forEach(mat => {
+                                if (mat.map) {
+                                    mat.map.colorSpace = THREE.SRGBColorSpace;
+                                    mat.map.needsUpdate = true;
+                                }
+                                mat.transparent = true;
+                                mat.alphaTest = 0.1;
+                            });
+                        }
+                    });
                 }
                 
                 // Center and scale
@@ -295,11 +310,28 @@ function load3DAvatarOBJ(avatar, containerId) {
     
     // Try to load MTL if available, otherwise load OBJ directly
     if (avatar.mtl_file_url) {
+        const basePath = avatar.mtl_file_url.substring(0, avatar.mtl_file_url.lastIndexOf('/') + 1);
+        const mtlFilename = avatar.mtl_file_url.substring(avatar.mtl_file_url.lastIndexOf('/') + 1);
+        
         const mtlLoader = new THREE.MTLLoader();
+        mtlLoader.setPath(basePath);
+        if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
+        
         mtlLoader.load(
-            avatar.mtl_file_url,
+            mtlFilename,
             function(materials) {
                 materials.preload();
+                
+                // Ensure all materials use proper color space
+                Object.values(materials.materials).forEach(mat => {
+                    if (mat.map) {
+                        mat.map.colorSpace = THREE.SRGBColorSpace;
+                        mat.map.needsUpdate = true;
+                    }
+                    mat.transparent = true;
+                    mat.alphaTest = 0.1;
+                });
+                
                 loadOBJFile(materials);
             },
             undefined,
