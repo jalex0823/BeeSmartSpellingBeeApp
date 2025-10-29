@@ -443,7 +443,7 @@ function updatePreview(avatar) {
         previewContainer.innerHTML = '<div style="text-align: center; color: #FFD700; font-size: 2rem;">🐝</div>';
         
         // Detect file type
-        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endswith('.glb'));
+        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
         
         // Create container that fills the circular preview area
         const previewId = 'avatar-preview-3d';
