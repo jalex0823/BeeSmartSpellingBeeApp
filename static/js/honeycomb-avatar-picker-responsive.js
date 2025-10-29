@@ -105,29 +105,21 @@ function createAvatarElement(avatar, index) {
     // Click handler
     div.addEventListener('click', () => selectAvatar(avatar, div));
     
-    // Load 3D model - use is_glb flag from API or check file extension
-    const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
-    console.log(`Loading avatar ${avatar.name}: isGLB=${isGLB}, file=${avatar.obj_file}, url=${avatar.obj_file_url}`);
+    // Use 2D thumbnail for fast loading (like original picker)
+    // 3D model will load in preview panel when selected
+    thumbDiv.classList.remove('loading');
     
-    if (isGLB && avatar.obj_file_url) {
-        load3DAvatarGLB(avatar, `avatar-thumb-${index}`);
-    } else if (avatar.obj_file_url) {
-        // Load OBJ - MTL file is optional
-        load3DAvatarOBJ(avatar, `avatar-thumb-${index}`);
-    } else if (avatar.thumbnail) {
-        // Fallback to thumbnail image
-        console.log(`Using thumbnail for ${avatar.name}: ${avatar.thumbnail}`);
-        thumbDiv.classList.remove('loading');
+    if (avatar.thumbnail) {
         const img = document.createElement('img');
         img.src = avatar.thumbnail;
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
+        img.style.borderRadius = '50%';
         thumbDiv.appendChild(img);
     } else {
-        // Fallback to emoji if no valid model
-        console.warn(`No valid 3D model or thumbnail for ${avatar.name}`);
-        thumbDiv.classList.remove('loading');
+        // Fallback to emoji if no thumbnail
+        console.warn(`No thumbnail for ${avatar.name}`);
         thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
     }
     
@@ -370,10 +362,34 @@ function updatePreview(avatar) {
     const nameEl = previewContent.querySelector('.preview-name');
     const descEl = previewContent.querySelector('.preview-description');
     const btnEl = previewContent.querySelector('.preview-choose-btn');
+    const previewContainer = previewContent.querySelector('.preview-avatar-container');
     
     if (nameEl) nameEl.textContent = avatar.name;
     if (descEl) descEl.textContent = avatar.description || 'Choose this amazing bee!';
     if (btnEl) btnEl.style.display = 'block';
+    
+    // Load 3D model in preview
+    if (previewContainer) {
+        // Clear previous preview
+        previewContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #FFD700;">Loading 3D preview...</div>';
+        
+        // Detect file type
+        const isGLB = avatar.is_glb || (avatar.obj_file && avatar.obj_file.toLowerCase().endsWith('.glb'));
+        
+        // Create unique container ID for this preview
+        const previewId = 'avatar-preview-3d';
+        previewContainer.innerHTML = `<div id="${previewId}" style="width: 100%; height: 300px;"></div>`;
+        
+        // Load 3D model
+        if (isGLB && avatar.obj_file_url) {
+            load3DAvatarGLB(avatar, previewId);
+        } else if (avatar.obj_file_url) {
+            load3DAvatarOBJ(avatar, previewId);
+        } else if (avatar.thumbnail) {
+            // Fallback to large thumbnail
+            previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
+        }
+    }
 }
 
 // Choose avatar and redirect
