@@ -1,0 +1,312 @@
+/**
+ * Honeycomb Avatar Picker Styles
+ * Beautiful hexagonal grid layout for bee avatar selection
+ */
+
+/* Main container */
+.honeycomb-avatar-picker {
+    width: 100%;
+    min-height: 100vh;
+    background: #0a0a0a;
+    color: #FFD700;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow-x: hidden;
+}
+
+/* Search bar at top */
+.honeycomb-search-container {
+    padding: 2rem;
+    text-align: center;
+}
+
+.honeycomb-search {
+    width: 100%;
+    max-width: 400px;
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #FFD700;
+    border-radius: 25px;
+    color: #FFD700;
+    font-size: 1.1rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.honeycomb-search::placeholder {
+    color: rgba(255, 215, 0, 0.5);
+}
+
+.honeycomb-search:focus {
+    border-color: #FFA500;
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
+}
+
+/* Main grid container with SVG background */
+.honeycomb-grid-wrapper {
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.honeycomb-grid-container {
+    position: relative;
+    width: 900px;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+.honeycomb-background {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+}
+
+/* Individual avatar position containers */
+.avatar-hex-position {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.avatar-hex-position:hover {
+    transform: scale(1.1);
+    z-index: 20;
+}
+
+.avatar-hex-position:hover .avatar-hex-thumb {
+    filter: drop-shadow(0 0 15px rgba(255, 165, 0, 0.8));
+}
+
+/* 3D Avatar thumbnail container */
+.avatar-hex-thumb {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.avatar-hex-thumb canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Avatar name label */
+.avatar-hex-name {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #FFD700;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Selected state */
+.avatar-hex-position.selected {
+    z-index: 30;
+}
+
+.avatar-hex-position.selected .avatar-hex-thumb {
+    box-shadow: 0 0 25px rgba(50, 205, 50, 0.8);
+    border: 3px solid #32CD32;
+}
+
+.avatar-hex-position.selected .avatar-hex-name {
+    color: #32CD32;
+}
+
+/* Green checkmark for selected avatar */
+.avatar-hex-checkmark {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 35px;
+    height: 35px;
+    background: #32CD32;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    box-shadow: 0 0 15px rgba(50, 205, 50, 0.6);
+    animation: checkmarkPop 0.3s ease;
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Preview panel on the right */
+.honeycomb-preview-panel {
+    width: 400px;
+    max-width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    border: 3px solid #FFD700;
+    border-radius: 20px;
+    padding: 2rem;
+    position: sticky;
+    top: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+.preview-avatar-name {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #FFD700;
+    text-align: center;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 6px rgba(255, 165, 0, 0.5);
+}
+
+.preview-avatar-render {
+    width: 100%;
+    height: 350px;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 70%);
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-avatar-render canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.preview-avatar-description {
+    font-size: 1.1rem;
+    color: #FFA500;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.preview-select-button {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border: none;
+    border-radius: 15px;
+    color: #000;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.preview-select-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(255, 165, 0, 0.5);
+}
+
+.preview-select-button:active {
+    transform: translateY(-1px);
+}
+
+/* Loading state */
+.avatar-hex-loading {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .honeycomb-grid-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .honeycomb-preview-panel {
+        position: relative;
+        top: 0;
+        width: 100%;
+        max-width: 600px;
+    }
+}
+
+@media (max-width: 768px) {
+    .honeycomb-grid-container {
+        width: 100%;
+    }
+    
+    .avatar-hex-thumb {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .avatar-hex-name {
+        font-size: 0.75rem;
+    }
+    
+    .preview-avatar-render {
+        height: 250px;
+    }
+}
+
+/* Placeholder when no avatar selected */
+.preview-placeholder {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: rgba(255, 215, 0, 0.5);
+}
+
+.preview-placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+.preview-placeholder-text {
+    font-size: 1.2rem;
+}

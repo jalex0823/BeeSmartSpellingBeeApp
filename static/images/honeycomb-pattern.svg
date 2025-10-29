@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <!-- Hexagon pattern definition -->
+    <pattern id="honeycomb" x="0" y="0" width="200" height="173" patternUnits="userSpaceOnUse">
+      <!-- Background hexagons (decorative) -->
+      <polygon points="150,0 200,43.3 200,129.9 150,173.2 100,129.9 100,43.3" 
+               fill="none" stroke="#3d3416" stroke-width="1" opacity="0.3"/>
+      <polygon points="50,86.6 100,43.3 100,129.9 50,173.2 0,129.9 0,43.3" 
+               fill="none" stroke="#3d3416" stroke-width="1" opacity="0.3"/>
+    </pattern>
+    
+    <!-- Golden gradient for borders -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Dark background -->
+  <rect width="1400" height="1000" fill="#0a0a0a"/>
+  
+  <!-- Honeycomb pattern overlay -->
+  <rect width="1400" height="1000" fill="url(#honeycomb)"/>
+  
+  <!-- Main avatar hexagons with golden borders (7 rows visible) -->
+  
+  <!-- Row 1 (2 hexagons) - Top -->
+  <g id="hex-row-1">
+    <polygon points="150,60 205,95 205,165 150,200 95,165 95,95" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="350,60 405,95 405,165 350,200 295,165 295,95" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 2 (3 hexagons) -->
+  <g id="hex-row-2">
+    <polygon points="50,200 105,235 105,305 50,340 -5,305 -5,235" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="250,200 305,235 305,305 250,340 195,305 195,235" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="450,200 505,235 505,305 450,340 395,305 395,235" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 3 (4 hexagons) -->
+  <g id="hex-row-3">
+    <polygon points="150,340 205,375 205,445 150,480 95,445 95,375" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="350,340 405,375 405,445 350,480 295,445 295,375" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="550,340 605,375 605,445 550,480 495,445 495,375" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="750,340 805,375 805,445 750,480 695,445 695,375" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 4 (5 hexagons) - Center -->
+  <g id="hex-row-4">
+    <polygon points="50,480 105,515 105,585 50,620 -5,585 -5,515" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="250,480 305,515 305,585 250,620 195,585 195,515" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="450,480 505,515 505,585 450,620 395,585 395,515" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="650,480 705,515 705,585 650,620 595,585 595,515" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="850,480 905,515 905,585 850,620 795,585 795,515" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 5 (4 hexagons) -->
+  <g id="hex-row-5">
+    <polygon points="150,620 205,655 205,725 150,760 95,725 95,655" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="350,620 405,655 405,725 350,760 295,725 295,655" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="550,620 605,655 605,725 550,760 495,725 495,655" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="750,620 805,655 805,725 750,760 695,725 695,655" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 6 (3 hexagons) -->
+  <g id="hex-row-6">
+    <polygon points="50,760 105,795 105,865 50,900 -5,865 -5,795" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="250,760 305,795 305,865 250,900 195,865 195,795" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="450,760 505,795 505,865 450,900 395,865 395,795" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Row 7 (2 hexagons) - Bottom -->
+  <g id="hex-row-7">
+    <polygon points="150,900 205,935 205,1005 150,1040 95,1005 95,935" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+    <polygon points="350,900 405,935 405,1005 350,1040 295,1005 295,935" 
+             fill="rgba(0,0,0,0.7)" stroke="url(#goldGradient)" stroke-width="3"/>
+  </g>
+  
+  <!-- Preview panel hexagon (right side) -->
+  <g id="hex-preview">
+    <polygon points="1050,300 1150,350 1150,500 1050,550 950,500 950,350" 
+             fill="rgba(0,0,0,0.8)" stroke="url(#goldGradient)" stroke-width="4"/>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐝 Choose Your Bee Avatar - BeeSmart Spelling</title>
+    
+    <!-- Honeycomb Avatar Picker Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honeycomb-avatar-picker.css') }}">
+    
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+</head>
+<body class="honeycomb-avatar-picker">
+    
+    <!-- Search Bar -->
+    <div class="honeycomb-search-container">
+        <input 
+            type="text" 
+            class="honeycomb-search" 
+            placeholder="Search bees..." 
+            oninput="filterAvatars(this.value)"
+        >
+    </div>
+    
+    <!-- Main Grid and Preview Wrapper -->
+    <div class="honeycomb-grid-wrapper">
+        
+        <!-- Honeycomb Grid Container -->
+        <div class="honeycomb-grid-container">
+            <!-- SVG Background -->
+            <img 
+                src="{{ url_for('static', filename='images/honeycomb-pattern.svg') }}" 
+                alt="Honeycomb Pattern" 
+                class="honeycomb-background"
+            >
+            
+            <!-- Avatar positions will be injected here -->
+            <div id="honeycombGrid" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                <!-- Avatars positioned via JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Preview Panel -->
+        <div class="honeycomb-preview-panel">
+            <div id="previewPanel">
+                <div class="preview-placeholder">
+                    <div class="preview-placeholder-icon">🐝</div>
+                    <div class="preview-placeholder-text">Select a bee avatar to preview</div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Honeycomb Avatar Picker Script -->
+    <script src="{{ url_for('static', filename='js/honeycomb-avatar-picker.js') }}"></script>
+    
+</body>
+</html>

@@ -5793,6 +5793,12 @@ def avatar_picker_page():
     """Avatar picker page with 3D viewer for choosing your bee character"""
     return render_template('test_avatar_picker.html')
 
+@app.route('/honeycomb-picker')
+@login_required
+def honeycomb_avatar_picker():
+    """NEW: Honeycomb-style avatar picker with hexagonal grid layout"""
+    return render_template('honeycomb_avatar_picker.html')
+
 @app.route('/test/api')
 def test_api():
     """Test page for API debugging"""
