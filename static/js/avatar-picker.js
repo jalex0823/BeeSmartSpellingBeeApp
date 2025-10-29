@@ -10,7 +10,6 @@ let viewer3D = null;
 // Load avatars on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadAvatars();
-    setupEventListeners();
 });
 
 async function loadAvatars() {

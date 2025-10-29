@@ -118,11 +118,37 @@ GLB_AVATARS = [
         "description": "Brave knight bee defending the spelling realm!",
         "category": "fantasy",
         "folder_path": "glb_files",
-        "obj_file": "QueenBee.glb",  # Using QueenBee.glb
+        "obj_file": "BeeKnight.glb",  # Fixed: was incorrectly using QueenBee.glb
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/KnightBee!.png",
         "sort_order": 108,
+        "is_active": True
+    },
+    {
+        "slug": "obee",
+        "name": "O'Bee",
+        "description": "The original O'Bee! A classic bee friend.",
+        "category": "classic",
+        "folder_path": "glb_files",
+        "obj_file": "OBee.glb",
+        "mtl_file": None,
+        "texture_file": None,
+        "thumbnail_file": "AvatarThumbnails/OBee!.png",
+        "sort_order": 109,
+        "is_active": True
+    },
+    {
+        "slug": "obee",
+        "name": "O'Bee",
+        "description": "The original O'Bee! A classic bee friend.",
+        "category": "classic",
+        "folder_path": "glb_files",
+        "obj_file": "OBee.glb",
+        "mtl_file": None,
+        "texture_file": None,
+        "thumbnail_file": "AvatarThumbnails/OBee!.png",
+        "sort_order": 109,
         "is_active": True
     },
     {
@@ -135,7 +161,20 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/MotorBee!.png",
-        "sort_order": 109,
+        "sort_order": 110,
+        "is_active": True
+    },
+    {
+        "slug": "motorcycle-bee",
+        "name": "Motorcycle Bee",
+        "description": "Speedy motorcycle-riding bee!",
+        "category": "entertainment",
+        "folder_path": "glb_files",
+        "obj_file": "MotorBee.glb",
+        "mtl_file": None,
+        "texture_file": None,
+        "thumbnail_file": "AvatarThumbnails/MotorBee!.png",
+        "sort_order": 110,
         "is_active": True
     },
     {
@@ -148,7 +187,7 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/QueenBee!.png",
-        "sort_order": 110,
+        "sort_order": 111,
         "is_active": True
     },
     {
@@ -161,7 +200,7 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/RoboBee!.png",
-        "sort_order": 111,
+        "sort_order": 112,
         "is_active": True
     },
     {
@@ -174,7 +213,7 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/SeaBee!.png",
-        "sort_order": 112,
+        "sort_order": 113,
         "is_active": True
     },
     {
@@ -187,7 +226,7 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/AstroBee!.png",  # Using astro thumbnail
-        "sort_order": 113,
+        "sort_order": 114,
         "is_active": True
     },
     {
@@ -200,7 +239,7 @@ GLB_AVATARS = [
         "mtl_file": None,
         "texture_file": None,
         "thumbnail_file": "AvatarThumbnails/SuperBee!.png",
-        "sort_order": 114,
+        "sort_order": 115,
         "is_active": True
     }
 ]
