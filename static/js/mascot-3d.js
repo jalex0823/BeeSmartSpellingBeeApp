@@ -115,12 +115,20 @@ class SmartyBee3D {
             antialias: true 
         });
         this.renderer.setSize(this.options.width, this.options.height);
+        // Ensure fully transparent background so the home page design shows through
+        if (this.renderer && typeof this.renderer.setClearColor === 'function') {
+            this.renderer.setClearColor(0x000000, 0);
+        }
         this.renderer.setPixelRatio(window.devicePixelRatio);
         
         // Make canvas transparent to pointer events so parent div's onclick works
         this.renderer.domElement.style.pointerEvents = 'none';
         
         this.container.appendChild(this.renderer.domElement);
+        // Defensive: canvas inherits transparency explicitly
+        try {
+            this.renderer.domElement.style.background = 'transparent';
+        } catch (e) { /* no-op */ }
     }
 
     setupLighting() {

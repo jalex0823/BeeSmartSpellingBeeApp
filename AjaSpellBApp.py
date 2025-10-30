@@ -7638,7 +7638,13 @@ def speed_round_results():
 # --- 3D Avatar API Routes ----------------------------------------------------
 @app.route("/api/avatars", methods=["GET"])
 def api_get_avatars():
-    """Get the complete avatar catalog with optional filtering, plus canonical asset URLs"""
+    """Get the complete avatar catalog with optional filtering, plus canonical asset URLs.
+
+    Improvements:
+    - Dedupe GLB avatars by canonical slug and choose the most recent file ("latest one")
+    - Generate robust thumbnail URLs by probing common naming variants server-side
+    - Alphabetize the final hive list for stable ordering
+    """
     try:
         from models import Avatar
         import re as _re
@@ -7698,63 +7704,127 @@ def api_get_avatars():
                 'is_premium': avatar.is_premium,
             })
 
-        # Filesystem fallback (e.g., BudaBee.glb, JRockBee.glb)
+    # Filesystem fallback (e.g., BudaBee.glb, JRockBee.glb)
         static_root = os.path.join(app.root_path, 'static', 'assets', 'avatars')
         glb_dir = os.path.join(static_root, 'glb_files')
         thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
         existing_slugs = { item['id'] for item in enriched_avatars }
 
+        def _slug_from_base(base: str) -> str:
+            name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
+            return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
+
+        def _thumbnail_for_base(base: str) -> str:
+            """Probe several common file-naming variants and return the first that exists."""
+            base_path = "/static/assets/avatars/glb_files"
+            variants = []
+            # Preserve given base (likely PascalCase), plus lowercase/uppercase/no-space/hyphen variants
+            raw = base
+            nospace = _re.sub(r'\s+', '', raw)
+            hyphen = _re.sub(r'\s+', '-', raw)
+            lower = nospace.lower()
+            upper = nospace.upper()
+            # Try with exclamation mark first (project convention), then without
+            names = [raw, nospace, hyphen, lower, upper]
+            for n in names:
+                variants.append(f"{base_path}/AvatarThumbnails/{n}!.png")
+            for n in names:
+                variants.append(f"{base_path}/AvatarThumbnails/{n}.png")
+            # Probe filesystem in order
+            for url in variants:
+                cand_fs = os.path.join(thumb_dir, os.path.basename(url))
+                if os.path.exists(cand_fs):
+                    return url
+            # Fallback to generic honeycomb
+            return f"{base_path}/AvatarThumbnails/HoneyComb!.png"
+
+        # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
+        glb_latest: dict = {}
         if os.path.isdir(glb_dir):
             for fname in os.listdir(glb_dir):
                 if not fname.lower().endswith('.glb'):
                     continue
                 base = fname[:-4]
-                name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
-                slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
-
+                slug, name_with_spaces = _slug_from_base(base)
                 if slug in excluded_slugs or slug in existing_slugs:
                     continue
 
-                base_path = "/static/assets/avatars/glb_files"
-                model_url = f"{base_path}/{fname}"
+                file_path = os.path.join(glb_dir, fname)
+                try:
+                    mtime = os.path.getmtime(file_path)
+                except Exception:
+                    mtime = 0
 
-                # Thumbnails
-                thumb_url = None
-                for cand in [
-                    f"{base_path}/AvatarThumbnails/{base}!.png",
-                    f"{base_path}/AvatarThumbnails/{base}.png",
-                ]:
-                    cand_fs = os.path.join(thumb_dir, os.path.basename(cand))
-                    if os.path.exists(cand_fs):
-                        thumb_url = cand
-                        break
-                if not thumb_url:
-                    thumb_url = f"{base_path}/AvatarThumbnails/HoneyComb!.png"
+                prev = glb_latest.get(slug)
+                if not prev or mtime > prev['mtime']:
+                    glb_latest[slug] = {
+                        'fname': fname,
+                        'base': base,
+                        'name': name_with_spaces,
+                        'mtime': mtime,
+                    }
 
-                auto_desc = f"{name_with_spaces} is ready to spell! 🐝"
-                if slug in ('obee', 'o-bee'):
-                    auto_desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+        # If certain GLB slugs exist, prefer them over older OBJ variants with different slugs
+        # Example: if 'j-rock-bee' (from JRockBee.glb) exists, drop legacy 'rocker-bee' DB entry
+        glb_slugs = set(glb_latest.keys())
+        replacement_rules = {
+            'j-rock-bee': ['rocker-bee'],
+        }
+        if glb_slugs:
+            pruned = []
+            to_drop = set()
+            for glb_slug in glb_slugs:
+                for legacy in replacement_rules.get(glb_slug, []):
+                    to_drop.add(legacy)
+            if to_drop:
+                for item in enriched_avatars:
+                    if item.get('id') in to_drop:
+                        continue
+                    pruned.append(item)
+                enriched_avatars = pruned
 
-                enriched_avatars.append({
-                    'id': slug,
-                    'name': name_with_spaces,
-                    'description': auto_desc,
-                    'category': 'classic',
-                    'folder': 'glb_files',
-                    'is_glb': True,
+        # Append latest GLB entries
+        base_path = "/static/assets/avatars/glb_files"
+        for slug, info in glb_latest.items():
+            model_url = f"{base_path}/{info['fname']}"
+            thumb_url = _thumbnail_for_base(info['base'])
+
+            auto_desc = f"{info['name']} is ready to spell! 🐝"
+            if slug in ('obee', 'o-bee'):
+                auto_desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+
+            enriched_avatars.append({
+                'id': slug,
+                'name': info['name'],
+                'description': auto_desc,
+                'category': 'classic',
+                'folder': 'glb_files',
+                'is_glb': True,
+                'thumbnail': thumb_url,
+                'preview': thumb_url,
+                'urls': {
+                    'model_obj': model_url,
+                    'model_mtl': None,
+                    'texture': None,
                     'thumbnail': thumb_url,
                     'preview': thumb_url,
-                    'urls': {
-                        'model_obj': model_url,
-                        'model_mtl': None,
-                        'texture': None,
-                        'thumbnail': thumb_url,
-                        'preview': thumb_url,
-                    },
-                    'unlock_level': 1,
-                    'points_required': 0,
-                    'is_premium': False,
-                })
+                },
+                'unlock_level': 1,
+                'points_required': 0,
+                'is_premium': False,
+            })
+
+        # Final dedupe by slug (in case) and alphabetize for stable hive order
+        seen = set()
+        deduped = []
+        for av in enriched_avatars:
+            if av['id'] in seen:
+                continue
+            seen.add(av['id'])
+            deduped.append(av)
+        deduped.sort(key=lambda a: (a.get('name') or '').lower())
+
+        enriched_avatars = deduped
 
         return jsonify({
             'status': 'success',
@@ -8040,13 +8110,78 @@ def api_select_avatar():
                 'error': 'avatar_slug is required'
             }), 400
         
-        # Look up avatar by slug
+        # Look up avatar by slug; if missing, attempt auto-install from GLB folder
         avatar = Avatar.query.filter_by(slug=avatar_slug, is_active=True).first()
         if not avatar:
-            return jsonify({
-                'success': False,
-                'error': f'Avatar not found: {avatar_slug}'
-            }), 404
+            # Auto-install: search glb_files for a matching slug
+            import re as _re
+            static_root = os.path.join(app.root_path, 'static', 'assets', 'avatars')
+            glb_dir = os.path.join(static_root, 'glb_files')
+            thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
+
+            def _slug_from_base(base: str) -> str:
+                name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
+                return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
+
+            def _thumbnail_for_base(base: str) -> str:
+                base_path = "/static/assets/avatars/glb_files"
+                # Prefer files with "!" first
+                candidates = [
+                    f"{base_path}/AvatarThumbnails/{base}!.png",
+                    f"{base_path}/AvatarThumbnails/{base}.png",
+                ]
+                # Also probe variants with no/alt spacing
+                nospace = _re.sub(r'\s+', '', base)
+                hyphen = _re.sub(r'\s+', '-', base)
+                for v in [nospace, hyphen, nospace.lower(), nospace.upper()]:
+                    candidates.append(f"{base_path}/AvatarThumbnails/{v}!.png")
+                for v in [nospace, hyphen, nospace.lower(), nospace.upper()]:
+                    candidates.append(f"{base_path}/AvatarThumbnails/{v}.png")
+                for url in candidates:
+                    cand_fs = os.path.join(thumb_dir, os.path.basename(url))
+                    if os.path.exists(cand_fs):
+                        return url
+                return f"{base_path}/AvatarThumbnails/HoneyComb!.png"
+
+            installed = False
+            if os.path.isdir(glb_dir):
+                for fname in os.listdir(glb_dir):
+                    if not fname.lower().endswith('.glb'):
+                        continue
+                    base = fname[:-4]
+                    slug, name_with_spaces = _slug_from_base(base)
+                    if slug != avatar_slug:
+                        continue
+                    # Create DB record
+                    thumb_url = _thumbnail_for_base(base)
+                    # Store relative paths inside folder_path
+                    try:
+                        avatar = Avatar(
+                            slug=avatar_slug,
+                            name=name_with_spaces,
+                            description=f"{name_with_spaces} is ready to spell! 🐝",
+                            category='classic',
+                            folder_path='glb_files',
+                            obj_file=fname,
+                            mtl_file=None,
+                            texture_file=None,
+                            thumbnail_file=os.path.join('AvatarThumbnails', os.path.basename(thumb_url)),
+                            sort_order=Avatar.query.count() + 100,
+                            is_active=True,
+                        )
+                        db.session.add(avatar)
+                        db.session.commit()
+                        installed = True
+                        break
+                    except Exception as _e:
+                        db.session.rollback()
+                        print(f"❌ Failed to auto-install avatar '{avatar_slug}': {_e}")
+                        break
+            if not installed or not avatar:
+                return jsonify({
+                    'success': False,
+                    'error': f'Avatar not found: {avatar_slug}'
+                }), 404
         
         # Update current user's avatar
         success, message = current_user.update_avatar(avatar.slug, variant='default')

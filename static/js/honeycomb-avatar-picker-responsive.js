@@ -339,71 +339,13 @@ function createAvatarElement(avatar, index) {
     return div;
 }
 
-// Build a prioritized list of thumbnail URL candidates to handle casing/spacing/"!" issues and missing files
+// Build a minimal, stable set of thumbnail candidates (server now provides robust URLs)
 function buildThumbnailFallbacks(avatar, initialUrl) {
     const candidates = [];
     if (initialUrl) candidates.push(initialUrl);
-
-    try {
-        const folder = (avatar.folder_path || '').toLowerCase();
-        const isGLB = folder === 'glb_files' || (avatar.obj_file_url || '').toLowerCase().endsWith('.glb') || !!avatar.is_glb;
-        const baseThumbDir = isGLB
-            ? '/static/assets/avatars/glb_files/AvatarThumbnails/'
-            : (avatar.thumbnail ? avatar.thumbnail.substring(0, avatar.thumbnail.lastIndexOf('/') + 1) : '');
-
-        const rawName = avatar.name || avatar.slug || '';
-        const noPunct = rawName.replace(/[^A-Za-z0-9 ]/g, '').trim();
-        const noSpaces = noPunct.replace(/\s+/g, '');
-        const titleCase = noSpaces.replace(/([A-Z])/g, ' $1').trim().replace(/\s+/g, '');
-        const lower = noSpaces.toLowerCase();
-        const upper = noSpaces.toUpperCase();
-
-        // Common variants used in our asset folder
-        const nameVariants = new Set([
-            noSpaces,
-            titleCase,
-            lower,
-            upper,
-            rawName.replace(/\s+/g, ''),
-            (rawName || '').replace(/\s+/g, '-')
-        ]);
-
-        // Prefer files with exclamation mark used in thumbnails
-        for (const v of nameVariants) {
-            candidates.push(baseThumbDir + v + '!.png');
-        }
-        // Also try without exclamation mark
-        for (const v of nameVariants) {
-            candidates.push(baseThumbDir + v + '.png');
-        }
-        // Try space-separated form
-        const spaced = (rawName || '').trim();
-        if (spaced) {
-            candidates.push(baseThumbDir + spaced + '!.png');
-            candidates.push(baseThumbDir + spaced + '.png');
-        }
-        // Hyphenated form
-        const hyphen = (rawName || '').trim().replace(/\s+/g, '-');
-        if (hyphen) {
-            candidates.push(baseThumbDir + hyphen + '!.png');
-            candidates.push(baseThumbDir + hyphen + '.png');
-        }
-
-        // Last resort: generic honeycomb thumbnail so we still show something nice
-        candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
-    } catch (e) {
-        // If anything goes wrong, at least use a generic fallback next
-        candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
-    }
-
-    // De-duplicate while preserving order
-    const seen = new Set();
-    return candidates.filter(u => {
-        if (!u) return false;
-        if (seen.has(u)) return false;
-        seen.add(u);
-        return true;
-    });
+    // Single generic fallback keeps logs clean and ensures we always show something
+    candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
+    return candidates;
 }
 
 // Load GLB 3D model with progress tracking
