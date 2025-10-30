@@ -198,15 +198,15 @@
 .avatar-hex-thumb::before {
     content: '';
     position: absolute;
-    top: -22px;   /* Much more profound border */
-    left: -22px;  /* Much more profound border */
-    right: -22px; /* Much more profound border */
-    bottom: -22px;/* Much more profound border */
-    background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+    top: -8px;   /* THICKER HONEYCOMB BORDER - Increased from -2px for authentic beehive look */
+    left: -8px;  /* THICKER HONEYCOMB BORDER */
+    right: -8px; /* THICKER HONEYCOMB BORDER */
+    bottom: -8px;/* THICKER HONEYCOMB BORDER */
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 75%, #FFD700 100%);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     -webkit-clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     z-index: -1;
-    box-shadow: 0 0 48px rgba(255, 215, 0, 0.95), 0 0 120px rgba(255, 215, 0, 0.5);
+    box-shadow: 0 0 48px rgba(255, 215, 0, 0.95), 0 0 120px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 215, 0, 0.3);
     animation: borderGlow 2s ease-in-out infinite alternate;
 }
 
