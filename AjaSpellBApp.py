@@ -570,6 +570,9 @@ print(f"✅ Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50
 if not app.config.get('SECRET_KEY'):
     app.config['SECRET_KEY'] = os.environ.get("SPELLING_APP_SECRET", "dev-secret-change-me")
 
+# Admin registration key - required to register as admin
+ADMIN_REGISTRATION_KEY = os.environ.get("BEESMART_ADMIN_KEY", "BEE-ADMIN-2025-SECURE-KEY")
+
 # Railway Speed Round optimization
 if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
     # Configure Flask session for Railway Speed Round
@@ -4662,11 +4665,40 @@ def api_answer():
                 
                 # Update user stats (if authenticated)
                 level_up_data = None
+                newly_unlocked_avatars = []
                 if current_user.is_authenticated:
                     # 🎯 Check for level up BEFORE updating points
                     old_lifetime_points = current_user.total_lifetime_points or 0
                     new_lifetime_points = old_lifetime_points + total_points
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
+                    
+                    # 🐝 Check for newly unlocked avatars based on honey points
+                    from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+                    old_honey_points = current_user.honey_points or 0
+                    new_honey_points = old_honey_points + total_points
+                    current_user.honey_points = new_honey_points
+                    
+                    purchased_avatars = current_user.purchased_avatars or []
+                    
+                    # Find avatars that were locked before but are now unlocked
+                    for avatar_data in AVATARS_CATALOG:
+                        avatar_id = avatar_data.get('id')
+                        # Check if avatar was locked with old points but unlocked with new points
+                        was_locked = not check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
+                        is_now_unlocked = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                        
+                        if was_locked and is_now_unlocked:
+                            newly_unlocked_avatars.append({
+                                'id': avatar_id,
+                                'name': avatar_data.get('name', avatar_id),
+                                'thumbnail': avatar_data.get('thumbnail', ''),
+                                'unlock_points': avatar_data.get('unlock_points', 0),
+                                'backstory': avatar_data.get('backstory', ''),
+                                'message': f"Congratulations! You've unlocked {avatar_data.get('name')}! 🎉"
+                            })
+                    
+                    if newly_unlocked_avatars:
+                        print(f"🐝 User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
                     
                     # Update stats
                     current_user.total_quizzes_completed = (current_user.total_quizzes_completed or 0) + 1
@@ -4677,7 +4709,7 @@ def api_answer():
                     # 📊 Update GPA and average accuracy
                     current_user.update_gpa_and_accuracy()
                     
-                    print(f"📈 STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
+                    print(f"📈 STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
                     
                     if level_up_data:
                         print(f"🎉 LEVEL UP! {level_up_data['old_level']['tier']} → {level_up_data['new_level']['tier']}")
@@ -4689,6 +4721,11 @@ def api_answer():
                 # Save level up data to session for frontend
                 if level_up_data:
                     state["level_up"] = level_up_data
+                    session[QUIZ_STATE_KEY] = state
+                
+                # Save newly unlocked avatars to session
+                if newly_unlocked_avatars:
+                    state["newly_unlocked_avatars"] = newly_unlocked_avatars
                     session[QUIZ_STATE_KEY] = state
                 
                 # 🔥 CRITICAL: Commit all changes to database
@@ -4725,7 +4762,8 @@ def api_answer():
         },
         "quiz_complete": quiz_complete,
         "badges": badges_unlocked if quiz_complete else [],
-        "level_up": state.get("level_up") if quiz_complete else None
+        "level_up": state.get("level_up") if quiz_complete else None,
+        "newly_unlocked_avatars": state.get("newly_unlocked_avatars", []) if quiz_complete else []
     })
 
 @app.route("/api/save-partial-progress", methods=["POST"])
@@ -5071,8 +5109,19 @@ def register():
             return jsonify({"success": False, "error": "Password must be at least 6 characters"}), 400
 
         # Validate role
-        if role not in ['student', 'teacher', 'parent']:
+        if role not in ['student', 'teacher', 'parent', 'admin']:
             role = 'student'  # Default to student if invalid
+        
+        # Admin registration requires secret key
+        admin_all_access = False
+        if role == 'admin':
+            admin_key = data.get('admin_key', '').strip()
+            if admin_key != ADMIN_REGISTRATION_KEY:
+                return jsonify({
+                    "success": False, 
+                    "error": "Invalid admin registration key. Contact system administrator for admin access."
+                }), 403
+            admin_all_access = True  # Grant admin bypass privileges
 
         # Check if username already exists
         existing_user = User.query.filter_by(username=username).first()
@@ -5093,7 +5142,8 @@ def register():
             role=role,
             grade_level=grade_level if grade_level else None,
             avatar_id=avatar_id,
-            avatar_variant='default'
+            avatar_variant='default',
+            admin_all_access=admin_all_access  # Grant admin bypass if key was validated
             # NOTE: Do NOT set teacher_key for students - it has UNIQUE constraint
             # Students are linked via TeacherStudent table instead (see below)
         )
@@ -7644,10 +7694,22 @@ def api_get_avatars():
     - Dedupe GLB avatars by canonical slug and choose the most recent file ("latest one")
     - Generate robust thumbnail URLs by probing common naming variants server-side
     - Alphabetize the final hive list for stable ordering
+    - Include unlock status based on user's honey points and purchases
     """
     try:
-        from models import Avatar
+        from models import Avatar, User
+        from avatar_catalog import check_avatar_unlocked, AVATARS_CATALOG
         import re as _re
+
+        # Get current user's unlock status
+        user_honey_points = 0
+        purchased_avatars = []
+        is_admin_or_premium = False
+        
+        if current_user.is_authenticated:
+            user_honey_points = current_user.honey_points or 0
+            purchased_avatars = current_user.purchased_avatars or []
+            is_admin_or_premium = current_user.is_admin_or_premium()
 
         # Request filters
         category = request.args.get('category')
@@ -7682,6 +7744,38 @@ def api_get_avatars():
             desc = avatar.description
             if (avatar.slug or '').lower() in ('obee', 'o-bee'):
                 desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+            
+            # Check unlock status from avatar_catalog
+            avatar_slug = avatar.slug
+            catalog_avatar = next((a for a in AVATARS_CATALOG if a['id'] == avatar_slug), None)
+            
+            is_locked = True
+            unlock_message = ""
+            
+            if is_admin_or_premium:
+                # Admins and premium members have access to all avatars
+                is_locked = False
+            elif catalog_avatar:
+                # Check unlock status using avatar_catalog helper
+                is_locked = not check_avatar_unlocked(
+                    avatar_slug, 
+                    user_honey_points, 
+                    purchased_avatars
+                )
+                
+                if is_locked:
+                    # Generate unlock message based on tier
+                    tier = catalog_avatar.get('tier', 'premium')
+                    unlock_points = catalog_avatar.get('unlock_points', 0)
+                    price = catalog_avatar.get('price', 0)
+                    
+                    if tier == 'earn_or_buy':
+                        points_needed = unlock_points - user_honey_points
+                        unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
+                    elif tier == 'premium':
+                        unlock_message = f"Purchase for ${price:.2f}"
+                    else:
+                        unlock_message = "Complete more quizzes to unlock!"
 
             enriched_avatars.append({
                 'id': avatar.slug,
@@ -7702,6 +7796,8 @@ def api_get_avatars():
                 'unlock_level': avatar.unlock_level,
                 'points_required': avatar.points_required,
                 'is_premium': avatar.is_premium,
+                'is_locked': is_locked,
+                'unlock_message': unlock_message,
             })
 
     # Filesystem fallback (e.g., BudaBee.glb, JRockBee.glb)
@@ -7792,6 +7888,37 @@ def api_get_avatars():
             auto_desc = f"{info['name']} is ready to spell! 🐝"
             if slug in ('obee', 'o-bee'):
                 auto_desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+            
+            # Check unlock status for GLB avatars
+            catalog_avatar = next((a for a in AVATARS_CATALOG if a['id'] == slug), None)
+            
+            is_locked = True
+            unlock_message = ""
+            
+            if is_admin_or_premium:
+                is_locked = False
+            elif catalog_avatar:
+                is_locked = not check_avatar_unlocked(
+                    slug, 
+                    user_honey_points, 
+                    purchased_avatars
+                )
+                
+                if is_locked:
+                    tier = catalog_avatar.get('tier', 'premium')
+                    unlock_points = catalog_avatar.get('unlock_points', 0)
+                    price = catalog_avatar.get('price', 0)
+                    
+                    if tier == 'earn_or_buy':
+                        points_needed = unlock_points - user_honey_points
+                        unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
+                    elif tier == 'premium':
+                        unlock_message = f"Purchase for ${price:.2f}"
+                    else:
+                        unlock_message = "Complete more quizzes to unlock!"
+            else:
+                # Not in catalog, assume it's a free avatar
+                is_locked = False
 
             enriched_avatars.append({
                 'id': slug,
@@ -7812,6 +7939,8 @@ def api_get_avatars():
                 'unlock_level': 1,
                 'points_required': 0,
                 'is_premium': False,
+                'is_locked': is_locked,
+                'unlock_message': unlock_message,
             })
 
         # Final dedupe by slug (in case) and alphabetize for stable hive order

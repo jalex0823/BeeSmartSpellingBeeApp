@@ -45,6 +45,13 @@ class User(UserMixin, db.Model):
     avatar_locked = db.Column(db.Boolean, default=False)  # Parental control lock
     avatar_last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # 🍯 Monetization System (Honey Points & IAP)
+    honey_points = db.Column(db.Integer, default=0, index=True)  # Earned in-game currency
+    purchased_avatars = db.Column(db.JSON, default=list)  # List of avatar IDs purchased via IAP
+    purchased_bundles = db.Column(db.JSON, default=list)  # List of bundle IDs purchased
+    premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
+    admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
+    
     # �📊 GPA Tracking
     cumulative_gpa = db.Column(db.Numeric(3, 2), default=0.0)  # 0.00 to 4.00 scale
     average_accuracy = db.Column(db.Numeric(5, 2), default=0.0)  # 0.00 to 100.00%
@@ -173,6 +180,122 @@ class User(UserMixin, db.Model):
             return explicit or non_default
         except Exception:
             return bool(self.avatar_id and self.avatar_id != 'cool-bee')
+    
+    # 🍯 Monetization Helper Methods
+    
+    def is_admin_or_premium(self) -> bool:
+        """Check if user has admin access or premium membership (bypasses monetization)"""
+        return (
+            self.role == 'admin' or 
+            self.admin_all_access or 
+            self.premium_member
+        )
+    
+    def has_avatar_access(self, avatar_id: str) -> tuple[bool, str]:
+        """
+        Check if user can access a specific avatar.
+        
+        Returns:
+            tuple: (can_access: bool, reason: str)
+        """
+        from avatar_catalog import check_avatar_unlocked
+        
+        # Admin/premium users bypass all restrictions
+        if self.is_admin_or_premium():
+            return True, "Admin/Premium access"
+        
+        # Check via monetization system
+        result = check_avatar_unlocked(
+            avatar_id=avatar_id,
+            user_honey_points=self.honey_points or 0,
+            purchased_avatars=self.purchased_avatars or []
+        )
+        
+        return result["unlocked"], result["reason"]
+    
+    def award_honey_points(self, points: int, reason: str = ""):
+        """Award Honey Points to user"""
+        if points > 0:
+            self.honey_points = (self.honey_points or 0) + points
+            # Optional: Log the transaction (could add HoneyPointTransaction model later)
+            return True
+        return False
+    
+    def purchase_avatar(self, avatar_id: str) -> tuple[bool, str]:
+        """
+        Mark an avatar as purchased via IAP.
+        
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        if not self.purchased_avatars:
+            self.purchased_avatars = []
+        
+        if avatar_id in self.purchased_avatars:
+            return False, "Avatar already purchased"
+        
+        self.purchased_avatars.append(avatar_id)
+        return True, f"Avatar {avatar_id} purchased successfully"
+    
+    def purchase_bundle(self, bundle_id: str, included_avatars: list) -> tuple[bool, str]:
+        """
+        Purchase a bundle and unlock all included avatars.
+        
+        Args:
+            bundle_id: Bundle identifier (e.g., 'top_bee_bundle')
+            included_avatars: List of avatar IDs to unlock
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        if not self.purchased_bundles:
+            self.purchased_bundles = []
+        
+        if bundle_id in self.purchased_bundles:
+            return False, "Bundle already purchased"
+        
+        # Add bundle to purchased list
+        self.purchased_bundles.append(bundle_id)
+        
+        # Unlock all avatars in bundle
+        if not self.purchased_avatars:
+            self.purchased_avatars = []
+        
+        new_avatars = [a for a in included_avatars if a not in self.purchased_avatars]
+        self.purchased_avatars.extend(new_avatars)
+        
+        return True, f"Bundle '{bundle_id}' purchased! Unlocked {len(new_avatars)} new avatars"
+    
+    def get_unlocked_avatars(self) -> list:
+        """
+        Get list of all avatar IDs the user has access to.
+        
+        Returns:
+            list: Avatar IDs user can use
+        """
+        from avatar_catalog import AVATAR_CATALOG, get_free_avatars
+        
+        # Admin/premium gets everything
+        if self.is_admin_or_premium():
+            return [a["id"] for a in AVATAR_CATALOG]
+        
+        # Start with free avatars
+        unlocked = [a["id"] for a in get_free_avatars()]
+        
+        # Add purchased avatars
+        if self.purchased_avatars:
+            unlocked.extend(self.purchased_avatars)
+        
+        # Add avatars unlocked via Honey Points
+        honey_points = self.honey_points or 0
+        for avatar in AVATAR_CATALOG:
+            avatar_id = avatar["id"]
+            if avatar_id not in unlocked:
+                required_points = avatar.get("unlock_points", 0)
+                if honey_points >= required_points and not avatar.get("is_default_free", False):
+                    unlocked.append(avatar_id)
+        
+        return list(set(unlocked))  # Remove duplicates
     
     def update_last_login(self, ip_address=None):
         """Update last login timestamp and IP"""

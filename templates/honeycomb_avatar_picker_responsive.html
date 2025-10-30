@@ -60,6 +60,17 @@
             #auth-banner a { padding: 6px 10px !important; font-size: 0.9rem !important; }
             #auth-banner button.auth-banner-close { top: 6px !important; right: 6px !important; width: 28px !important; height: 28px !important; font-size: 1rem !important; }
         }
+        /* Marquee animation for unlock status */
+        .marquee-content {
+            animation: marquee 20s linear infinite;
+        }
+        .marquee-content:hover {
+            animation-play-state: paused;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
     </style>
     <div id="auth-banner" role="alert" aria-live="polite" style="
         margin: 10px auto 16px auto;
@@ -109,7 +120,12 @@
                 white-space: nowrap;
             ">Log In</a>
         {% else %}
-            <span class="auth-banner-text">✅ You’re logged in — pick your favorite bee below!</span>
+            <div class="marquee-container" style="flex: 1; overflow: hidden;">
+                <div id="dynamic-marquee" class="marquee-content" style="display: inline-block; white-space: nowrap;">
+                    <!-- Will be populated by JavaScript with unlock status -->
+                    <span class="banner-message" style="display: inline-block; padding: 0 3rem;">🍯 Loading your hive status...</span>
+                </div>
+            </div>
         {% endif %}
     </div>
     

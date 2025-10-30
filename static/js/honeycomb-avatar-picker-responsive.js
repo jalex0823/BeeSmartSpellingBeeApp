@@ -134,6 +134,57 @@ function updatePreviewProgress(percentage, message = null) {
 }
 
 // Load avatars from API
+// Update dynamic marquee with unlock status
+function updateDynamicMarquee(avatars) {
+    const marquee = document.getElementById('dynamic-marquee');
+    if (!marquee) return;
+    
+    const locked = avatars.filter(a => a.is_locked);
+    const unlocked = avatars.filter(a => !a.is_locked);
+    
+    let messages = [];
+    
+    // Congratulate on unlocked count
+    messages.push(`🎉 You have ${unlocked.length} bees unlocked!`);
+    
+    if (locked.length > 0) {
+        messages.push(`🔒 ${locked.length} more bees available to unlock`);
+        
+        // Find next unlock tier
+        const nextUnlocks = locked
+            .filter(a => a.unlock_message && a.unlock_message.includes('Honey Points'))
+            .sort((a, b) => {
+                const aPoints = parseInt(a.unlock_message.match(/\d+/)?.[0] || '999999');
+                const bPoints = parseInt(b.unlock_message.match(/\d+/)?.[0] || '999999');
+                return aPoints - bPoints;
+            });
+        
+        if (nextUnlocks.length > 0) {
+            const next = nextUnlocks[0];
+            messages.push(`⭐ Next unlock: ${next.name} - ${next.unlock_message}`);
+        }
+        
+        // Count premium avatars
+        const premiumCount = locked.filter(a => 
+            a.unlock_message && a.unlock_message.includes('Purchase')
+        ).length;
+        
+        if (premiumCount > 0) {
+            messages.push(`💎 ${premiumCount} premium bees available for purchase`);
+        }
+    } else {
+        messages.push(`👑 Congratulations! You've unlocked the entire hive!`);
+    }
+    
+    // Create marquee HTML
+    const marqueeHTML = messages.map(msg => 
+        `<span class="banner-message" style="display: inline-block; padding: 0 3rem;">${msg}</span>`
+    ).join('');
+    
+    marquee.innerHTML = marqueeHTML;
+}
+
+// Load avatars from API
 async function loadAvatars() {
     try {
         const response = await fetch('/api/avatars');
@@ -159,7 +210,10 @@ async function loadAvatars() {
             // Also store filenames for detection
             obj_file: avatar.urls.model_obj ? avatar.urls.model_obj.split('/').pop() : null,
             mtl_file: avatar.urls.model_mtl ? avatar.urls.model_mtl.split('/').pop() : null,
-            thumbnail: avatar.thumbnail
+            thumbnail: avatar.thumbnail,
+            // NEW: Lock status from monetization system
+            is_locked: avatar.is_locked || false,
+            unlock_message: avatar.unlock_message || ''
         }));
 
         // Helper: normalize string to a canonical key
@@ -238,7 +292,8 @@ async function loadAvatars() {
         totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
         
-    console.log('Loaded avatars:', avatarsData.length);
+        console.log('Loaded avatars:', avatarsData.length);
+        updateDynamicMarquee(avatarsData);
         renderAvatarGrid();
     } catch (error) {
         console.error('Error loading avatars:', error);
@@ -278,6 +333,13 @@ function createAvatarElement(avatar, index) {
     div.dataset.slug = avatar.slug;
     div.dataset.name = avatar.name;
     div.dataset.description = avatar.description || '';
+    div.dataset.locked = avatar.is_locked ? 'true' : 'false';
+    div.dataset.unlockMessage = avatar.unlock_message || '';
+    
+    // Add locked class if avatar is locked
+    if (avatar.is_locked) {
+        div.classList.add('avatar-locked');
+    }
     
     // Thumbnail container
     const thumbDiv = document.createElement('div');
@@ -289,6 +351,15 @@ function createAvatarElement(avatar, index) {
     checkmark.className = 'avatar-hex-checkmark';
     checkmark.textContent = '✓';
     
+    // Lock icon for locked avatars
+    if (avatar.is_locked) {
+        const lockIcon = document.createElement('div');
+        lockIcon.className = 'avatar-lock-icon';
+        lockIcon.innerHTML = '🔒';
+        lockIcon.title = avatar.unlock_message || 'Complete more quizzes to unlock!';
+        thumbDiv.appendChild(lockIcon);
+    }
+    
     // Avatar name
     const nameDiv = document.createElement('div');
     nameDiv.className = 'avatar-hex-name';
@@ -298,8 +369,23 @@ function createAvatarElement(avatar, index) {
     div.appendChild(thumbDiv);
     div.appendChild(nameDiv);
     
-    // Click handler
-    div.addEventListener('click', () => selectAvatar(avatar, div));
+    // Unlock tooltip
+    if (avatar.is_locked && avatar.unlock_message) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'avatar-unlock-tooltip';
+        tooltip.textContent = avatar.unlock_message;
+        div.appendChild(tooltip);
+    }
+    
+    // Click handler - disabled for locked avatars
+    if (avatar.is_locked) {
+        div.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLockedMessage(avatar);
+        });
+    } else {
+        div.addEventListener('click', () => selectAvatar(avatar, div));
+    }
     
     // Use 2D thumbnail for fast loading (like original picker)
     // 3D model will load in preview panel when selected
@@ -941,3 +1027,29 @@ function filterAvatars(query) {
         }
     });
 }
+
+// Show locked avatar message
+function showLockedMessage(avatar) {
+    const message = avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
+    const modal = document.createElement('div');
+    modal.className = 'locked-avatar-modal';
+    modal.innerHTML = `
+        <div class="locked-modal-content">
+            <button class="locked-modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+            <div class="locked-modal-icon">🔒</div>
+            <h2>${avatar.name} is Locked</h2>
+            <p>${message}</p>
+            <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to unlock more awesome bees!</p>
+            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
