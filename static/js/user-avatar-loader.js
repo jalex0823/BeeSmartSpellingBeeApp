@@ -7,6 +7,7 @@
 class UserAvatarLoader {
     constructor() {
         this.userAvatar = null;
+        this.userAvatarValid = false; // track if we validated the avatar asset URLs
         // Avatar data loaded from API on-demand
         this.avatarMap = {};
         this.avatarDataLoaded = false;
@@ -763,9 +764,11 @@ class UserAvatarLoader {
                     
                     // Validate avatar files exist
                     if (await this.validateAvatarFiles()) {
+                        this.userAvatarValid = true;
                         this.showLoadedState();
                         return true;
                     } else {
+                        this.userAvatarValid = false;
                         throw new Error('Avatar files missing or inaccessible');
                     }
                 }
@@ -774,6 +777,7 @@ class UserAvatarLoader {
             }
         } catch (error) {
             console.warn('⚠️ Could not load user avatar, using default:', error);
+            this.userAvatarValid = false;
             this.showErrorState('mascotBee3D', error);
             
             // Try to load default avatar as fallback
@@ -830,7 +834,8 @@ class UserAvatarLoader {
      * Get the 3D model paths for the user's avatar (or default)
      */
     getAvatarPaths() {
-        if (this.userAvatar && this.userAvatar.urls) {
+        // Only trust user avatar URLs if we've validated them
+        if (this.userAvatarValid && this.userAvatar && this.userAvatar.urls) {
             const obj = this.userAvatar.urls.model_obj;
             const mtl = this.userAvatar.urls.model_mtl;
             const texture = this.userAvatar.urls.texture;
@@ -838,6 +843,12 @@ class UserAvatarLoader {
 
             // If any required OBJ pipeline asset is missing, do NOT return partials
             if (obj && mtl && texture) {
+                // Guard: Some DB records point to GLB-only directories; those aren't valid for OBJ pipeline
+                const looksLikeGlbOnly = [obj, mtl, texture].some(u => /\/glb_files\//.test(u));
+                if (looksLikeGlbOnly) {
+                    console.warn('Detected GLB-only avatar paths; using MascotBee OBJ fallback');
+                    return this.defaultAvatar;
+                }
                 return { obj, mtl, texture, thumbnail };
             }
 
