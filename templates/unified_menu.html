@@ -2924,8 +2924,13 @@
             }
         }
 
-        // Initialize sound system
-        const kidSounds = new KidFriendlySounds();
+    // Initialize sound system
+    const kidSounds = new KidFriendlySounds();
+    // Expose to inline handlers (onclick/onmouseover) which resolve via window scope
+    // Note: global const/let bindings are not attached to window in browsers,
+    // so without this, expressions like `kidSounds.playRandomEffect()` in HTML
+    // event attributes can throw "kidSounds is not defined" and prevent clicks.
+    window.kidSounds = kidSounds;
 
         // Bee Swarm Visual Effects System
         class BeeSwarmEffects {
