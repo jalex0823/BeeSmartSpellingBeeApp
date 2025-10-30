@@ -8529,11 +8529,15 @@ except Exception as e:
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Starting development server on port {port} with Socket.IO support...")
+    # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI
+    debug_env = os.environ.get("FLASK_DEBUG", "0").strip().lower()
+    debug = debug_env in ("1", "true", "yes", "on")
+    print(f"🚀 Starting development server on port {port} with Socket.IO support (debug={'on' if debug else 'off'})...")
     try:
         from app_socketio import socketio
-        socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
+        # Disable reloader to avoid parent-process exit that can confuse task runners
+        socketio.run(app, host="0.0.0.0", port=port, debug=debug, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:
         print(f"⚠️ Failed to start with Socket.IO: {e}")
         print("🔄 Falling back to standard Flask server...")
-        app.run(host="0.0.0.0", port=port, debug=True)
+        app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)

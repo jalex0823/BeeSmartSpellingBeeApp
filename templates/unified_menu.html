@@ -1976,14 +1976,13 @@
             🍯 Filling the honey pot...
         </div>
 
-        <!-- Tap to Start Button (appears when ready) -->
+        <!-- Tap to Start Button (visible but disabled until ready) -->
         <button id="welcomeStartBtn" style="
             margin-top: 1.75rem;
-            display: none;
             padding: 16px 28px; /* bigger button */
             border-radius: 999px;
             border: 0;
-            cursor: pointer;
+            cursor: not-allowed; /* greyed/disabled until ready */
             font-weight: 900;
             font-size: 1.3rem; /* larger text */
             color: #5A2C15;
@@ -1995,7 +1994,10 @@
             display: flex; /* ensure internal content centers */
             align-items: center;
             justify-content: center;
-        ">Tap to Start ✨</button>
+            opacity: 0.55; /* greyed out */
+            filter: grayscale(40%);
+            pointer-events: none; /* not clickable until enabled */
+        " disabled aria-disabled="true">Tap to Start ✨</button>
         
         <!-- System Checks Display -->
         <div id="systemChecks" style="
@@ -2932,6 +2934,19 @@
     // event attributes can throw "kidSounds is not defined" and prevent clicks.
     window.kidSounds = kidSounds;
 
+        // Centralized option selector map for menu tiles (keyboard + programmatic resolution)
+        // Exposed globally so legacy calls can resolve elements consistently
+        window.__optionMap = {
+            manual: '.menu-option[onclick*="manual"]',
+            text: '.menu-option[onclick*="text"]',
+            image: '.menu-option[onclick*="image"]',
+            dictionary: '.menu-option[onclick*="dictionary"]',
+            saved: '.menu-option[onclick*="saved"]',
+            random: '.menu-option[onclick*="random"]',
+            battle: '.menu-option[onclick*="battle"]',
+            speed: '.menu-option[onclick*="speed"]'
+        };
+
         // Bee Swarm Visual Effects System
         class BeeSwarmEffects {
             constructor() {
@@ -3387,6 +3402,21 @@
                 // ensure positioning context for ripple/burst
                 const computed = getComputedStyle(el);
                 if (computed.position === 'static') el.style.position = 'relative';
+
+                // Make tiles keyboard accessible: Enter/Space triggers click
+                if (el.classList.contains('menu-option')) {
+                    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+                    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+                    el.addEventListener('keydown', (e) => {
+                        const isEnter = e.key === 'Enter';
+                        const isSpace = e.key === ' ' || e.code === 'Space';
+                        if (isEnter || isSpace) {
+                            e.preventDefault();
+                            try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
+                            el.click();
+                        }
+                    });
+                }
                 el.addEventListener('pointerdown', (ev) => {
                     try {
                         // Quick pop to feel responsive
@@ -3444,7 +3474,23 @@
                 opt.classList.remove('active');
             });
             
-            // Add active to clicked option
+            // If no element was passed (e.g., programmatic call), resolve it via a canonical map
+            if (!element) {
+                const optionSelectorMap = window.__optionMap || {
+                    manual: '.menu-option[onclick*="manual"]',
+                    text: '.menu-option[onclick*="text"]',
+                    image: '.menu-option[onclick*="image"]',
+                    dictionary: '.menu-option[onclick*="dictionary"]',
+                    saved: '.menu-option[onclick*="saved"]',
+                    random: '.menu-option[onclick*="random"]',
+                    battle: '.menu-option[onclick*="battle"]',
+                    speed: '.menu-option[onclick*="speed"]'
+                };
+                const sel = optionSelectorMap[type];
+                if (sel) element = document.querySelector(sel);
+            }
+
+            // Add active to clicked/resolved option
             if (element) {
                 element.classList.add('active');
             }
@@ -9849,8 +9895,13 @@
                 if (!btn) return;
                 if (btn._wired) return; // idempotent
                 btn._wired = true;
-                // Use flex so label centers perfectly
-                btn.style.display = 'flex';
+                // Enable the button (was visible but disabled during loading)
+                btn.disabled = false;
+                btn.setAttribute('aria-disabled', 'false');
+                btn.style.opacity = '1';
+                btn.style.filter = 'none';
+                btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
                 btn.addEventListener('click', () => this.dismissLoader());
             }
 

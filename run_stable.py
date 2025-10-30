@@ -1,5 +1,5 @@
 """
-Simple server runner using waitress for stable operation
+Simple server runner using waitress for stable operation, honoring PORT env.
 """
 import os
 os.environ['FLASK_DEBUG'] = '0'
@@ -9,14 +9,15 @@ from AjaSpellBApp import app
 if __name__ == '__main__':
     try:
         from waitress import serve
+        port = int(os.environ.get('PORT', 8088))
         print("\n" + "=" * 60)
         print("🚀 Starting BeeSmart with Waitress (Production Server)")
         print("=" * 60)
-        print("📍 Server: http://127.0.0.1:5000")
-        print("📍 Health: http://127.0.0.1:5000/health")
+        print(f"📍 Server: http://127.0.0.1:{port}")
+        print(f"📍 Health: http://127.0.0.1:{port}/health")
         print("=" * 60)
         print("\n🐝 Server is running... Press CTRL+C to stop\n")
-        serve(app, host='0.0.0.0', port=5000, threads=4)
+        serve(app, host='0.0.0.0', port=port, threads=4)
     except ImportError:
         print("⚠️  Waitress not installed. Installing now...")
         import subprocess
