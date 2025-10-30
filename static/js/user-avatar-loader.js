@@ -461,6 +461,11 @@ class UserAvatarLoader {
      * Show error state and attempt 3D MascotBee fallback
      */
     showErrorState(containerId = 'mascotBee3D', error = null) {
+        // Respect page-level directive to avoid any auto rendering on specific pages
+        if (window && window.DISABLE_AUTO_AVATAR_RENDER) {
+            console.log('🚫 Auto avatar render disabled on this page; suppressing fallback/error render');
+            return;
+        }
         const container = document.getElementById(containerId);
         if (container) {
             container.classList.remove('avatar-loading', 'avatar-loaded');
@@ -479,6 +484,10 @@ class UserAvatarLoader {
      * Load 3D MascotBee as fallback when other 3D avatars fail
      */
     load2DFallback(containerId = 'mascotBee3D') {
+        if (window && window.DISABLE_AUTO_AVATAR_RENDER) {
+            console.log('🚫 Auto avatar render disabled on this page; skipping 3D fallback');
+            return;
+        }
         console.log('🔄 Loading 3D MascotBee fallback...');
         
         // Use MascotBee as the default 3D fallback avatar
@@ -507,6 +516,10 @@ class UserAvatarLoader {
      * Returns a Promise to match existing callers.
      */
     loadUserAvatar(avatarId = 'mascot-bee', containerId = 'mascotBee3D') {
+        if (window && window.DISABLE_AUTO_AVATAR_RENDER) {
+            console.log('🚫 Auto avatar render disabled on this page; loadUserAvatar aborted');
+            return Promise.resolve();
+        }
         return new Promise(async (resolve, reject) => {
             try {
                 // Prefer normalized id and map lookup

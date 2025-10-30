@@ -60,6 +60,9 @@
             // Disable distracting floating decorations on the home screen
             // This hides sparkles/fairies and prevents their initialization later.
             window.DISABLE_FLOATING_DECOR = true;
+            // Prevent the avatar loader from auto-rendering into mascotBee3D on this page;
+            // the template will explicitly render the avatar once.
+            window.DISABLE_AUTO_AVATAR_RENDER = true;
             if (!window._originalFetch){
                 window._originalFetch = window.fetch.bind(window);
                 window.fetch = function(resource, init){
@@ -2006,7 +2009,7 @@
                     margin: 2rem auto 0.5rem auto; /* INCREASED: More space above welcome (was 0) */
                     white-space: nowrap;
                     z-index: 35;
-                ">>
+                ">
                     👋 Welcome {% if current_user.is_authenticated %}{{ current_user.display_name or current_user.username or 'User' }}{% else %}NewBee{% endif %}
                 </div>
                 
@@ -10499,7 +10502,9 @@
                             enableInteraction: false, // Disable default interactions
                             idleAnimation: false // No auto-animation
                         });
-                        
+                        // Clear any previous fallback/canvas to prevent double rendering
+                        try { container.innerHTML = ''; } catch (e) {}
+
                         window.mascotBee = new SmartyBee3D('mascotBee3D', avatarOptions);
                         
                         // Add click handler for themed animation (≤800ms as requested)
