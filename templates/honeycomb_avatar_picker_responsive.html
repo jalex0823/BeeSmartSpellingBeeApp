@@ -51,6 +51,67 @@
         <h1 style="margin:0; flex:1; text-align:center; min-width:240px;">🐝 Choose Your Bee Avatar 🍯</h1>
         <div style="width:120px; height:1px; opacity:0;"></div>
     </div>
+
+    <!-- Auth Banner: gentle guidance for guests to log in to customize -->
+    <style>
+        /* Responsive, compact banner adjustments */
+        @media (max-width: 480px) {
+            #auth-banner { padding: 8px 12px !important; gap: 6px !important; font-size: 0.95rem !important; }
+            #auth-banner a { padding: 6px 10px !important; font-size: 0.9rem !important; }
+            #auth-banner button.auth-banner-close { top: 6px !important; right: 6px !important; width: 28px !important; height: 28px !important; font-size: 1rem !important; }
+        }
+    </style>
+    <div id="auth-banner" role="alert" aria-live="polite" style="
+        margin: 10px auto 16px auto;
+        max-width: 980px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 2px dashed rgba(255, 215, 0, 0.6);
+        background: linear-gradient(135deg, rgba(255, 249, 227, 0.95) 0%, rgba(255, 244, 199, 0.9) 100%);
+        color: #5a4000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 700;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(255, 215, 0, 0.18);
+        position: relative;
+    ">
+        <button type="button" class="auth-banner-close" aria-label="Dismiss" title="Dismiss" onclick="(function(){const b=document.getElementById('auth-banner'); if(b) b.remove();})();" style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 215, 0, 0.7);
+            background: rgba(255, 255, 255, 0.7);
+            color: #5a4000;
+            cursor: pointer;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">×</button>
+        {% if not current_user.is_authenticated %}
+            <span class="auth-banner-text">🔐 Please log in to customize your avatar.</span>
+            <a href="/auth/login?next={{ request.path }}" style="
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 10px;
+                border: 2px solid rgba(255, 215, 0, 0.9);
+                background: linear-gradient(135deg, #ffd54f, #ffb300);
+                color: #3b2a00;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                white-space: nowrap;
+            ">Log In</a>
+        {% else %}
+            <span class="auth-banner-text">✅ You’re logged in — pick your favorite bee below!</span>
+        {% endif %}
+    </div>
     
     <!-- Search Bar -->
     <div class="honeycomb-search-container">

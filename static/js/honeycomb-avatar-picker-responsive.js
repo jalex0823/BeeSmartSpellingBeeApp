@@ -854,7 +854,7 @@ function chooseAvatar() {
         btn.textContent = 'Saving...';
     }
     
-    // Save selection via API
+    // Save selection via API (authentication required)
     fetch('/api/avatar/select', {
         method: 'POST',
         headers: { 
@@ -866,9 +866,13 @@ function chooseAvatar() {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || `HTTP ${response.status}`);
-            });
+            // If not authenticated, redirect to login/registration
+            if (response.status === 401 || response.status === 403) {
+                const next = encodeURIComponent(window.location.pathname);
+                window.location.href = `/auth/login?next=${next}`;
+                return Promise.reject(new Error('Authentication required'));
+            }
+            return response.json().then(err => Promise.reject(new Error(err.error || `HTTP ${response.status}`)));
         }
         return response.json();
     })
@@ -902,9 +906,8 @@ function chooseAvatar() {
     })
     .catch(error => {
         console.error('❌ Error selecting avatar:', error);
-        alert('Failed to save avatar selection: ' + error.message);
-        
-        // Reset button
+        // If we got here without redirecting, show a friendly message and reset button
+        alert('Please log in or register to change your avatar.');
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Choose This Bee';

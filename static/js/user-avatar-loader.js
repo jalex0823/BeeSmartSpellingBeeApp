@@ -105,6 +105,10 @@ class UserAvatarLoader {
             texture: '/static/assets/avatars/mascot-bee/MascotBee.png',
             thumbnail: '/static/assets/avatars/mascot-bee/MascotBee!.png'
         };
+
+    // Guests are restricted to MascotBee only. Any legacy guest override in localStorage is ignored.
+    // Keep key name here only to optionally clear old values if present.
+    this.GUEST_AVATAR_KEY = 'guest_avatar_slug';
     }
 
     /**
@@ -779,7 +783,9 @@ class UserAvatarLoader {
             console.warn('⚠️ Could not load user avatar, using default:', error);
             this.userAvatarValid = false;
             this.showErrorState('mascotBee3D', error);
-            
+
+            // Policy: Guests cannot change avatar. Ensure any legacy guest override is cleared.
+            try { localStorage.removeItem(this.GUEST_AVATAR_KEY); } catch(_) {}
             // Try to load default avatar as fallback
             if (await this.validateAvatarFiles(true)) {
                 this.showLoadedState();
@@ -790,6 +796,8 @@ class UserAvatarLoader {
         console.log('ℹ️ Using default MascotBee');
         return false;
     }
+
+    // Guest override methods removed by policy; guests use MascotBee only.
 
     /**
      * Validate that avatar files are accessible
