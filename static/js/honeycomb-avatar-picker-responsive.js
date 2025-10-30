@@ -162,7 +162,31 @@ async function loadAvatars() {
             thumbnail: avatar.thumbnail
         }));
 
-        // Dedupe by slug/name; prefer GLB entries over OBJ when duplicates exist
+        // Helper: normalize string to a canonical key
+        const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+        // Helper: derive a stable "base" key for an avatar regardless of tiny naming variations
+        const baseKeyFor = (av) => {
+            // Prefer explicit slug when present
+            const slugKey = norm(av.slug);
+            if (slugKey) return slugKey;
+            // Fall back to model filename (without extension) if present
+            const modelName = (av.obj_file || '').replace(/\.[^.]+$/,'');
+            if (modelName) return norm(modelName);
+            // Next use thumbnail base name
+            const thumbName = (av.thumbnail || '').split('/').pop().replace(/\.[^.]+$/,'').replace(/!+$/,'');
+            if (thumbName) return norm(thumbName);
+            // Finally, the display name
+            return norm(av.name);
+        };
+
+        // Helper: normalize thumbnail to detect duplicates that point to the same image
+        const normThumb = (url) => {
+            const file = (url || '').split('/').pop();
+            return (file || '').toLowerCase().replace(/!+/g,'');
+        };
+
+        // Dedupe; prefer GLB entries over OBJ when duplicates exist
         const pickPreferGLB = (a, b) => {
             const aIsGlb = (a.folder_path || '').toLowerCase() === 'glb_files' || (a.obj_file_url || '').toLowerCase().endsWith('.glb') || !!a.is_glb;
             const bIsGlb = (b.folder_path || '').toLowerCase() === 'glb_files' || (b.obj_file_url || '').toLowerCase().endsWith('.glb') || !!b.is_glb;
@@ -174,40 +198,30 @@ async function loadAvatars() {
             // Default: keep first
             return a;
         };
-
-    const bySlug = new Map();
-        const byName = new Map();
+        // First pass: group by a canonical base key to collapse visually duplicate avatars
+        const byBase = new Map();
         const duplicates = [];
         for (const avatar of rawAvatars) {
-            const keySlug = (avatar.slug || '').toLowerCase();
-            if (keySlug) {
-                if (!bySlug.has(keySlug)) {
-                    bySlug.set(keySlug, avatar);
-                } else {
-                    const chosen = pickPreferGLB(avatar, bySlug.get(keySlug));
-                    if (chosen !== bySlug.get(keySlug)) {
-                        duplicates.push(keySlug);
-                        bySlug.set(keySlug, chosen);
-                    }
-                }
+            const key = baseKeyFor(avatar);
+            if (!byBase.has(key)) {
+                byBase.set(key, avatar);
             } else {
-                const keyName = (avatar.name || '').toLowerCase();
-                if (!byName.has(keyName)) {
-                    byName.set(keyName, avatar);
-                } else {
-                    const chosen = pickPreferGLB(avatar, byName.get(keyName));
-                    if (chosen !== byName.get(keyName)) {
-                        duplicates.push(keyName);
-                        byName.set(keyName, chosen);
-                    }
+                const chosen = pickPreferGLB(avatar, byBase.get(key));
+                if (chosen !== byBase.get(key)) {
+                    duplicates.push(key);
+                    byBase.set(key, chosen);
                 }
             }
         }
 
-        avatarsData = Array.from(bySlug.values());
-        // Include name-only keyed entries that didn't have slugs
-        for (const [nameKey, av] of byName.entries()) {
-            if (!av.slug) avatarsData.push(av);
+        // Second pass: ensure we don’t keep two entries pointing at the same thumbnail file
+        const seenThumb = new Set();
+        avatarsData = [];
+        for (const av of byBase.values()) {
+            const t = normThumb(av.thumbnail);
+            if (t && seenThumb.has(t)) continue;
+            if (t) seenThumb.add(t);
+            avatarsData.push(av);
         }
         // Enforce kid-safe filter in frontend as well (defense-in-depth)
         const banned = new Set(['anxious-bee','monster-bee']);
@@ -219,9 +233,7 @@ async function loadAvatars() {
             const bn = (b.name || '').toLowerCase();
             return an.localeCompare(bn);
         });
-        if (duplicates.length) {
-            console.log(`🧹 Removed ${duplicates.length} duplicate avatar entries (prefer GLB when available)`);
-        }
+        if (duplicates.length) console.log(`🧹 Collapsed ${duplicates.length} duplicate variants (base/name/slug)`);
         
         totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
