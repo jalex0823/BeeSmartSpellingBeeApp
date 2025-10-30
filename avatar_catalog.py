@@ -23,7 +23,7 @@ AVATAR_CATALOG = [
         "obj_file": "AlBee.obj",
         "mtl_file": "AlBee.mtl",
         "texture_file": "AlBee.png",
-        "description": "Classic bee! Always ready to help with spelling.",
+        "description": "Genius bee with wild hair! Discovered the theory of Bee-lativity: E=MC² (Energy = Mighty Cool Buzzing²)",
         "variants": ["default"],
         "category": "classic"
     },
