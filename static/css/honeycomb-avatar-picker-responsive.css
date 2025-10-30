@@ -86,8 +86,9 @@
 .honeycomb-avatar-picker {
     width: 100%;
     min-height: 100vh;
+    /* Allow runtime override via CSS variable --picker-bg-image */
     background: 
-        url('/static/images/honeycomb-pattern.svg'),
+        var(--picker-bg-image, url('/static/images/honeycomb-pattern.svg')),
         linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
     background-size: cover;
     background-position: center;

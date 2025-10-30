@@ -5809,7 +5809,24 @@ def avatar_picker_page():
 def honeycomb_avatar_picker():
     """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)"""
     timestamp = int(time.time())
-    return render_template('honeycomb_avatar_picker_responsive.html', timestamp=timestamp)
+    # Optional background override via query param `bg`.
+    # Accepts values like '/static/images/my-bg.jpg' or 'images/my-bg.jpg'.
+    bg = request.args.get('bg')
+    if not bg:
+        # Default to the new background image
+        picker_bg_url = url_for('static', filename='images/AvatarPickBg.png')
+    else:
+        if bg.startswith('/static/'):
+            picker_bg_url = bg
+        else:
+            # Normalize to a static-relative path
+            picker_bg_url = url_for('static', filename=bg.lstrip('/'))
+
+    return render_template(
+        'honeycomb_avatar_picker_responsive.html',
+        timestamp=timestamp,
+        picker_bg_url=picker_bg_url
+    )
 
 @app.route('/honeycomb-picker-old')
 @login_required
