@@ -486,7 +486,7 @@ class UserAvatarLoader {
         
         if (this.avatarMap[defaultAvatarType]) {
             console.log('Loading MascotBee 3D model as fallback');
-                    this.loadUserAvatar(defaultAvatarType, containerId)
+            this.loadUserAvatar(defaultAvatarType, containerId)
                 .then(() => {
                     console.log('✅ 3D MascotBee fallback loaded successfully');
                     // Per UI rule: show name only, no counts
@@ -500,6 +500,56 @@ class UserAvatarLoader {
             console.error('❌ MascotBee not found in avatar map, using emergency 2D');
             this.loadEmergency2DFallback(containerId);
         }
+    }
+
+    /**
+     * Render a user avatar (OBJ/MTL) or fallback to MascotBee in the given container.
+     * Returns a Promise to match existing callers.
+     */
+    loadUserAvatar(avatarId = 'mascot-bee', containerId = 'mascotBee3D') {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Prefer normalized id and map lookup
+                const normalizedId = this._normalizeId(avatarId);
+                const data = this.avatarMap[normalizedId] || this.defaultAvatar;
+
+                // Guard: ensure we have OBJ/MTL/texture; if not, force MascotBee
+                const hasAll = data && data.obj && data.mtl && data.texture;
+                const paths = hasAll ? data : this.defaultAvatar;
+
+                // Render via SmartyBee3D (OBJ/MTL renderer)
+                if (typeof window.SmartyBee3D !== 'function') {
+                    console.warn('SmartyBee3D not available, switching to emergency 2D fallback');
+                    this.loadEmergency2DFallback(containerId);
+                    return reject(new Error('SmartyBee3D missing'));
+                }
+
+                // Clear container before re-render
+                const container = document.getElementById(containerId);
+                if (container) {
+                    container.innerHTML = '';
+                }
+
+                // Create the 3D instance
+                // Width/height auto-detect from container when possible
+                const rect = container ? container.getBoundingClientRect() : { width: 200, height: 200 };
+                // eslint-disable-next-line no-new
+                new window.SmartyBee3D(containerId, {
+                    width: Math.max(120, Math.floor(rect.width)),
+                    height: Math.max(120, Math.floor(rect.height)),
+                    modelPath: paths.obj,
+                    mtlPath: paths.mtl,
+                    texturePath: paths.texture,
+                    autoRotate: true,
+                    enableInteraction: true
+                });
+
+                this.showLoadedState(containerId);
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 
     /**
@@ -634,6 +684,50 @@ class UserAvatarLoader {
     }
 
     /**
+     * Lightweight status/toast message helper to avoid undefined method errors.
+     */
+    showStatusMessage(message, type = 'info', timeout = 3000) {
+        try {
+            // If app-level helper exists, delegate
+            if (typeof window.showStatusMessage === 'function') {
+                window.showStatusMessage(message, type, timeout);
+                return;
+            }
+
+            // Minimal inline toast
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${type === 'warning' ? 'rgba(255,152,0,0.95)' : type === 'error' ? 'rgba(244,67,54,0.95)' : 'rgba(76,175,80,0.95)'};
+                color: #fff;
+                padding: 10px 14px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                opacity: 0;
+                transform: translateY(10px);
+                transition: opacity 0.2s ease, transform 0.2s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 200);
+            }, timeout);
+        } catch (e) {
+            console.log(`[${type}] ${message}`);
+        }
+    }
+
+    /**
      * Initialize and fetch user's avatar preference
      */
     async init() {
@@ -685,6 +779,11 @@ class UserAvatarLoader {
      */
     async validateAvatarFiles(useDefault = false) {
         const paths = useDefault ? this.defaultAvatar : this.getAvatarPaths();
+        // Guard against null/undefined paths to avoid "/null" fetches
+        if (!paths || !paths.obj || !paths.mtl || !paths.texture) {
+            console.warn('Avatar paths incomplete, falling back to MascotBee');
+            return false;
+        }
         const filesToCheck = [paths.obj, paths.mtl, paths.texture];
         
         try {
@@ -719,12 +818,18 @@ class UserAvatarLoader {
      */
     getAvatarPaths() {
         if (this.userAvatar && this.userAvatar.urls) {
-            return {
-                obj: this.userAvatar.urls.model_obj,
-                mtl: this.userAvatar.urls.model_mtl,
-                texture: this.userAvatar.urls.texture,
-                thumbnail: this.userAvatar.urls.thumbnail
-            };
+            const obj = this.userAvatar.urls.model_obj;
+            const mtl = this.userAvatar.urls.model_mtl;
+            const texture = this.userAvatar.urls.texture;
+            const thumbnail = this.userAvatar.urls.thumbnail;
+
+            // If any required OBJ pipeline asset is missing, do NOT return partials
+            if (obj && mtl && texture) {
+                return { obj, mtl, texture, thumbnail };
+            }
+
+            // Likely a GLB-only avatar or incomplete record; fall back to MascotBee
+            console.warn('Detected GLB-only or incomplete avatar URLs; using MascotBee OBJ fallback');
         }
         return this.defaultAvatar;
     }

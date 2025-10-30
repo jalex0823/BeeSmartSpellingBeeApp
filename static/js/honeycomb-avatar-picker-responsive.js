@@ -146,7 +146,7 @@ async function loadAvatars() {
             throw new Error('Invalid API response format');
         }
         
-        avatarsData = data.avatars.map(avatar => ({
+        const rawAvatars = data.avatars.map(avatar => ({
             slug: avatar.id,
             name: avatar.name,
             description: avatar.description,
@@ -161,11 +161,62 @@ async function loadAvatars() {
             mtl_file: avatar.urls.model_mtl ? avatar.urls.model_mtl.split('/').pop() : null,
             thumbnail: avatar.thumbnail
         }));
+
+        // Dedupe by slug/name; prefer GLB entries over OBJ when duplicates exist
+        const pickPreferGLB = (a, b) => {
+            const aIsGlb = (a.folder_path || '').toLowerCase() === 'glb_files' || (a.obj_file_url || '').toLowerCase().endsWith('.glb') || !!a.is_glb;
+            const bIsGlb = (b.folder_path || '').toLowerCase() === 'glb_files' || (b.obj_file_url || '').toLowerCase().endsWith('.glb') || !!b.is_glb;
+            if (aIsGlb && !bIsGlb) return a;
+            if (!aIsGlb && bIsGlb) return b;
+            // If both same type, keep the one with a thumbnail
+            if (a.thumbnail && !b.thumbnail) return a;
+            if (!a.thumbnail && b.thumbnail) return b;
+            // Default: keep first
+            return a;
+        };
+
+        const bySlug = new Map();
+        const byName = new Map();
+        const duplicates = [];
+        for (const avatar of rawAvatars) {
+            const keySlug = (avatar.slug || '').toLowerCase();
+            if (keySlug) {
+                if (!bySlug.has(keySlug)) {
+                    bySlug.set(keySlug, avatar);
+                } else {
+                    const chosen = pickPreferGLB(avatar, bySlug.get(keySlug));
+                    if (chosen !== bySlug.get(keySlug)) {
+                        duplicates.push(keySlug);
+                        bySlug.set(keySlug, chosen);
+                    }
+                }
+            } else {
+                const keyName = (avatar.name || '').toLowerCase();
+                if (!byName.has(keyName)) {
+                    byName.set(keyName, avatar);
+                } else {
+                    const chosen = pickPreferGLB(avatar, byName.get(keyName));
+                    if (chosen !== byName.get(keyName)) {
+                        duplicates.push(keyName);
+                        byName.set(keyName, chosen);
+                    }
+                }
+            }
+        }
+
+        avatarsData = Array.from(bySlug.values());
+        // Include name-only keyed entries that didn't have slugs
+        for (const [nameKey, av] of byName.entries()) {
+            if (!av.slug) avatarsData.push(av);
+        }
+        if (duplicates.length) {
+            console.log(`🧹 Removed ${duplicates.length} duplicate avatar entries (prefer GLB when available)`);
+        }
         
         totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
         
-        console.log('Loaded avatars:', avatarsData.length);
+    console.log('Loaded avatars:', avatarsData.length);
         renderAvatarGrid();
     } catch (error) {
         console.error('Error loading avatars:', error);

@@ -110,6 +110,47 @@ AVATAR_GLB_MAPPING.update({
     'HoneyComb': 'HoneyComb.glb'
 })
 
+# Friendly alias names seen in UI/content that should map to the same GLBs
+AVATAR_GLB_MAPPING.update({
+    # Aliases -> canonical files
+    'Buzzbot Bee': 'RoboBee.glb',
+    'Buzzhero Bee': 'SuperBee.glb',
+    'Super Bee Hero': 'SuperBee.glb',
+    'Space Bee Explorer': 'SpaceBee.glb',
+    'Queen Bee Majesty': 'QueenBee.glb',
+    'Motorcyclebuzz Bee': 'MotorBee.glb',
+})
+
+# Thumbnail mapping to ensure GLB avatars have proper thumbnails
+THUMBNAIL_MAPPING = {
+    'Knight Bee': 'AvatarThumbnails/KnightBee!.png',
+    'Brother Bee': 'AvatarThumbnails/BrotherBee!.png',
+    'BudaBee': 'AvatarThumbnails/BudaBee!.png',
+    'Builder Bee': 'AvatarThumbnails/BuilderBee!.png',
+    'Cool Bee': 'AvatarThumbnails/CoolBee!.png',
+    'Cutie Bee': 'AvatarThumbnails/CutieBee!.png',
+    'Detective Bee': 'AvatarThumbnails/DetectiveBee!.png',
+    'Diva Bee': 'AvatarThumbnails/DivaBee!.png',
+    'Doctor Bee': 'AvatarThumbnails/DoctorBee!.png',
+    'Explorer Bee': 'AvatarThumbnails/ExplorerBee!.png',
+    'Franken Bee': 'AvatarThumbnails/Frankenbee!.png',
+    "O'Bee": 'AvatarThumbnails/OBee!.png',
+    'Queen Bee': 'AvatarThumbnails/QueenBee!.png',
+    'Robo Bee': 'AvatarThumbnails/RoboBee!.png',
+    'Sea Bee': 'AvatarThumbnails/SeaBee!.png',
+    'Space Bee': 'AvatarThumbnails/SpaceBee!.png',
+    'Astro Bee': 'AvatarThumbnails/SpaceBee!.png',
+    'Super Bee': 'AvatarThumbnails/SuperBee!.png',
+    'Motorcycle Bee': 'AvatarThumbnails/MotorBee!.png',
+    'Motorcyclebuzz Bee': 'AvatarThumbnails/MotorBee!.png',
+    'HoneyComb': 'AvatarThumbnails/HoneyComb!.png',
+    'Buzzbot Bee': 'AvatarThumbnails/RoboBee!.png',
+    'Buzzhero Bee': 'AvatarThumbnails/SuperBee!.png',
+    'Super Bee Hero': 'AvatarThumbnails/SuperBee!.png',
+    'Space Bee Explorer': 'AvatarThumbnails/SpaceBee!.png',
+    'Queen Bee Majesty': 'AvatarThumbnails/QueenBee!.png',
+}
+
 def validate_glb_files():
     """
     🔒 VALIDATION: Ensure all GLB avatars point to correct files
@@ -136,6 +177,17 @@ def validate_glb_files():
                 # Auto-fix the issue
                 avatar.obj_file = correct_file
                 fixes_applied.append(f"✅ Fixed {avatar.name}: {current_file} → {correct_file}")
+
+            # Ensure GLB avatars live in glb_files folder
+            if avatar.folder_path != 'glb_files':
+                avatar.folder_path = 'glb_files'
+                fixes_applied.append(f"✅ Moved {avatar.name} to glb_files folder")
+
+            # Ensure thumbnail is set to AvatarThumbnails if missing or non-standard
+            expected_thumb = THUMBNAIL_MAPPING.get(avatar.name)
+            if expected_thumb and avatar.thumbnail_file != expected_thumb:
+                avatar.thumbnail_file = expected_thumb
+                fixes_applied.append(f"✅ Set thumbnail for {avatar.name} → {expected_thumb}")
         
         if fixes_applied:
             db.session.commit()
@@ -188,6 +240,19 @@ def init_glb_avatars():
                 print(f"🔧 Correcting {slug}: {avatar.obj_file} -> {correct_file}")
                 avatar.obj_file = correct_file
                 avatar.folder_path = "glb_files"
+                updated += 1
+
+        # Enforce GLB mapping (including aliases) across all avatars by display name
+        all_avatars = Avatar.query.all()
+        for avatar in all_avatars:
+            correct_file = AVATAR_GLB_MAPPING.get(avatar.name)
+            if correct_file and avatar.obj_file != correct_file:
+                print(f"🔧 Aligning {avatar.name}: {avatar.obj_file} -> {correct_file}")
+                avatar.obj_file = correct_file
+                avatar.folder_path = 'glb_files'
+                thumb = THUMBNAIL_MAPPING.get(avatar.name)
+                if thumb:
+                    avatar.thumbnail_file = thumb
                 updated += 1
         
         # Ensure motorcycle-bee activation reflects filesystem reality
