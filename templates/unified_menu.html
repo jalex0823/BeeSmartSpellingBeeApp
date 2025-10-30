@@ -10489,49 +10489,32 @@
                 container.style.visibility = 'visible';
                 container.style.opacity = '1';
                 
-                if (typeof SmartyBee3D !== 'undefined') {
-                    try {
-                        // Wait for avatar loader to fetch user's avatar
-                        await window.userAvatarLoader.init();
-                        
-                        // Get avatar options from loader - UPDATED dimensions to match container
-                        const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-                            width: 160,  // FIXED: Match container width (was 250)
-                            height: 120, // FIXED: Match container height (was 250)
-                            autoRotate: false,
-                            enableInteraction: false, // Disable default interactions
-                            idleAnimation: false // No auto-animation
-                        });
-                        // Clear any previous fallback/canvas to prevent double rendering
-                        try { container.innerHTML = ''; } catch (e) {}
+                try {
+                    // Always fetch the current user's avatar first
+                    await window.userAvatarLoader.init();
 
-                        window.mascotBee = new SmartyBee3D('mascotBee3D', avatarOptions);
-                        
-                        // Add click handler for themed animation (≤800ms as requested)
-                        container.style.cursor = 'pointer';
-                        container.addEventListener('click', () => {
-                            if (window.mascotBee && window.mascotBee.playAnimation) {
-                                console.log('🐝 Mascot clicked - playing themed animation');
-                                window.mascotBee.playAnimation('bounce', { duration: 800 });
-                                
-                                // Play themed effect based on avatar type
-                                const avatarId = window.userAvatarLoader ? 
-                                    window.userAvatarLoader.getAvatarId() : 'cool-bee';
-                                playThemedAvatarEffect(avatarId, container);
-                            }
-                        });
-                        
-                        const avatarId = window.userAvatarLoader.getAvatarId();
-                        console.log(`✨ Mascot Bee initialized (static) on menu page with avatar: ${avatarId}`);
-                    } catch (error) {
-                        console.warn('Could not initialize 3D mascot:', error);
-                        // Show fallback emoji bee if 3D fails
-                        container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>';
-                    }
-                } else {
-                    console.warn('3D mascot library not loaded, showing fallback bee');
-                    // Show fallback emoji bee if 3D library not loaded
-                    container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0; animation: bounce 2s infinite;">🐝</div>';
+                    // Clear any previous fallback/canvas to prevent double rendering
+                    try { container.innerHTML = ''; } catch (e) {}
+
+                    // Use the unified loader that supports GLB and OBJ
+                    const avatar = window.userAvatarLoader.userAvatar;
+                    const ok = await initUserAvatar3D(avatar);
+                    if (!ok) throw new Error('initUserAvatar3D returned false');
+
+                    // Add click handler for themed animation (≤800ms)
+                    container.style.cursor = 'pointer';
+                    container.addEventListener('click', () => {
+                        const avatarId = window.userAvatarLoader ? 
+                            window.userAvatarLoader.getAvatarId() : 'cool-bee';
+                        playThemedAvatarEffect(avatarId, container);
+                    });
+
+                    const avatarId = window.userAvatarLoader.getAvatarId();
+                    console.log(`✨ Menu avatar initialized with GLB/OBJ support for: ${avatarId}`);
+                } catch (error) {
+                    console.warn('Could not initialize user avatar, falling back to default mascot:', error);
+                    try { await initDefaultMascot(); }
+                    catch(e){ container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>'; }
                 }
             }
             
