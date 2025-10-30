@@ -1,12 +1,21 @@
 """
 3D Bee Avatar Catalog
-Manages the catalog of 13 bee types with male/female variants (26 total avatars)
+Manages the catalog of 24 bee avatars with monetization tiers
+
+Monetization Tiers:
+- DEFAULT_FREE: Available during registration (5 avatars)
+- EARN_OR_BUY: Unlock with Honey Points or purchase (5 avatars)
+- PREMIUM: Top-tier avatars with higher unlock requirements (12 avatars)
+- MASCOT: Default for guests/unregistered users (1 avatar)
+- ANXIOUS: Special emotion category (1 avatar)
 
 Dynamic naming: If available, avatar display names are sourced from the
 original render PNG filenames that end with '!' under
     Avatars/3D Avatar Files/<folder>/*!.png
 We strip the trailing '!' and the .png extension, preserving the author's
 original casing/spaces. This lets you name avatars by renaming the render PNGs.
+
+Note: Admin users and premium accounts can override unlock requirements.
 """
 
 import os
@@ -14,7 +23,7 @@ from datetime import datetime
 from typing import Dict
 
 # Avatar Catalog: All 24 Bee Types
-# Each entry includes folder name and specific file names for obj/mtl/texture
+# Each entry includes folder name, specific file names, and monetization data
 AVATAR_CATALOG = [
     {
         "id": "al-bee",
@@ -25,7 +34,12 @@ AVATAR_CATALOG = [
         "texture_file": "AlBee.png",
         "description": "Genius bee with wild hair! Discovered the theory of Bee-lativity: E=MC² (Energy = Mighty Cool Buzzing²)",
         "variants": ["default"],
-        "category": "classic"
+        "category": "classic",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 20000,
+        "price": 1.99
     },
     {
         "id": "anxious-bee",
@@ -36,7 +50,12 @@ AVATAR_CATALOG = [
         "texture_file": "AnxiousBee.png",
         "description": "A little nervous but eager to learn!",
         "variants": ["default"],
-        "category": "emotion"
+        "category": "emotion",
+        "tier": "special",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 5000,
+        "price": 0.99
     },
     {
         "id": "astro-bee",
@@ -47,7 +66,12 @@ AVATAR_CATALOG = [
         "texture_file": "SpaceBee_Explorer_1021171329.png",
         "description": "Buzz Aldrin's cousin! First bee on the moon. 'One small buzz for bee, one giant leap for spelling!'",
         "variants": ["default"],
-        "category": "adventure"
+        "category": "adventure",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 18000,
+        "price": 1.99
     },
     {
         "id": "biker-bee",
@@ -58,7 +82,12 @@ AVATAR_CATALOG = [
         "texture_file": "Motorcycle_Buzz_Bee_1018234507.png",
         "description": "Born to Bee Wild! Rides a Harley-Davidson Honey-Hog. Spells at 100mph with wind in the wings!",
         "variants": ["default"],
-        "category": "action"
+        "category": "action",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 15000,
+        "price": 1.99
     },
     {
         "id": "brother-bee",
@@ -69,7 +98,12 @@ AVATAR_CATALOG = [
         "texture_file": "Buzz_Hero_1022221450.png",
         "description": "Your reliable bee bro – friendly and helpful!",
         "variants": ["default"],
-        "category": "classic"
+        "category": "classic",
+        "tier": "default_free",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "builder-bee",
@@ -80,7 +114,12 @@ AVATAR_CATALOG = [
         "texture_file": "Builder_Bee_1022223231.png",
         "description": "Hard hat on! Builds and fixes around the hive.",
         "variants": ["default"],
-        "category": "profession"
+        "category": "profession",
+        "tier": "default_free",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "cool-bee",
@@ -91,7 +130,12 @@ AVATAR_CATALOG = [
         "texture_file": "Cool_Bee_1022222744.png",
         "description": "The coolest bee around - always stylish!",
         "variants": ["default"],
-        "category": "classic"
+        "category": "classic",
+        "tier": "default_free",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "detective-bee",
@@ -102,7 +146,12 @@ AVATAR_CATALOG = [
         "texture_file": "Detective_Bee_1022222906.png",
         "description": "Elementary, my dear Wats-bee! Solving word mysteries with magnifying glass and deductive buzzing.",
         "variants": ["default"],
-        "category": "profession"
+        "category": "profession",
+        "tier": "default_free",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "diva-bee",
@@ -113,7 +162,12 @@ AVATAR_CATALOG = [
         "texture_file": "Bee_Diva_1018233351.png",
         "description": "Glamorous and fabulous! The Bee-yoncé of the hive. Born to spell, born to shine!",
         "variants": ["default"],
-        "category": "entertainment"
+        "category": "entertainment",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 12000,
+        "price": 1.99
     },
     {
         "id": "doctor-bee",
@@ -124,7 +178,12 @@ AVATAR_CATALOG = [
         "texture_file": "Bee_Doctor_1018225148.png",
         "description": "Here to heal and help! Medical professional bee.",
         "variants": ["default"],
-        "category": "profession"
+        "category": "profession",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 2000,
+        "price": 0.99
     },
     {
         "id": "explorer-bee",
@@ -135,7 +194,12 @@ AVATAR_CATALOG = [
         "texture_file": "Explorer_Bee_1022223832.png",
         "description": "Adventure awaits! Ready to discover new horizons.",
         "variants": ["default"],
-        "category": "adventure"
+        "category": "adventure",
+        "tier": "default_free",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "franken-bee",
@@ -146,7 +210,12 @@ AVATAR_CATALOG = [
         "texture_file": "Frankenbee_1021161641.png",
         "description": "Created in Dr. Franken-sting's laboratory! Spells by lightning power. 'It's alive... and spelling!'",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 25000,
+        "price": 2.99
     },
     {
         "id": "knight-bee",
@@ -157,7 +226,12 @@ AVATAR_CATALOG = [
         "texture_file": "Bee_Knight_1018184515.png",
         "description": "Brave and noble! Defender of the hive.",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 4000,
+        "price": 0.99
     },
     {
         "id": "mascot-bee",
@@ -168,7 +242,12 @@ AVATAR_CATALOG = [
         "texture_file": "MascotBee.png",
         "description": "The original BeeSmart mascot! Cheerful and encouraging.",
         "variants": ["default"],
-        "category": "classic"
+        "category": "classic",
+        "tier": "mascot",
+        "is_default_free": True,
+        "is_purchasable": False,
+        "unlock_points": 0,
+        "price": 0.00
     },
     {
         "id": "monster-bee",
@@ -179,7 +258,12 @@ AVATAR_CATALOG = [
         "texture_file": "MonsterBee.png",
         "description": "Not scary, just misunderstood! Friendly monster bee.",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 6000,
+        "price": 0.99
     },
     {
         "id": "professor-bee",
@@ -190,7 +274,12 @@ AVATAR_CATALOG = [
         "texture_file": "ProfessorBee.png",
         "description": "Wise and knowledgeable! The scholarly bee.",
         "variants": ["default"],
-        "category": "profession"
+        "category": "profession",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 22000,
+        "price": 2.99
     },
     {
         "id": "queen-bee",
@@ -201,7 +290,12 @@ AVATAR_CATALOG = [
         "texture_file": "Queen_Bee_Majesty_1022222156.png",
         "description": "Royal and majestic! Leader with grace.",
         "variants": ["default"],
-        "category": "royal"
+        "category": "royal",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 28000,
+        "price": 2.99
     },
     {
         "id": "robo-bee",
@@ -212,7 +306,12 @@ AVATAR_CATALOG = [
         "texture_file": "Buzzbot_Bee_1022222436.png",
         "description": "Buzzbot 3000! Programmed with 1 million words. Runs on honey-powered circuits. *BEEP* Spelling complete!",
         "variants": ["default"],
-        "category": "tech"
+        "category": "tech",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 30000,
+        "price": 2.99
     },
     {
         "id": "rocker-bee",
@@ -223,7 +322,12 @@ AVATAR_CATALOG = [
         "texture_file": "RockerBee.png",
         "description": "Rock and roll! Lead singer of The Bee-tles. Spells to the rhythm of electric guitar!",
         "variants": ["default"],
-        "category": "entertainment"
+        "category": "entertainment",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 8000,
+        "price": 0.99
     },
     {
         "id": "seabea",
@@ -234,7 +338,12 @@ AVATAR_CATALOG = [
         "texture_file": "SeaBee_1019002514.png",
         "description": "Navy SeaBee! Construction battalion of the ocean. Can build words underwater! 'We Build, We Fight, We Spell!'",
         "variants": ["default"],
-        "category": "adventure"
+        "category": "adventure",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 10000,
+        "price": 0.99
     },
     {
         "id": "superbee",
@@ -245,7 +354,12 @@ AVATAR_CATALOG = [
         "texture_file": "SuperheroBee.png",
         "description": "Saving the day with bee powers! Cape included.",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 26000,
+        "price": 2.99
     },
     {
         "id": "vamp-bee",
@@ -256,7 +370,12 @@ AVATAR_CATALOG = [
         "texture_file": "VampBee.png",
         "description": "Count Bee-cula from Transyl-hive-nia! Spells words, not blood. 'I vant to spell your vords!'",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 24000,
+        "price": 2.99
     },
     {
         "id": "ware-bee",
@@ -267,7 +386,12 @@ AVATAR_CATALOG = [
         "texture_file": "WareBee.png",
         "description": "Were-bee of London! Howls at the full moon and spells by moonlight. Transforms during spelling tests!",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 27000,
+        "price": 2.99
     },
     {
         "id": "zom-bee",
@@ -278,9 +402,90 @@ AVATAR_CATALOG = [
         "texture_file": "ZomBee.png",
         "description": "The Walking Buzzed! Craves BRAINS... brainy words, that is. Undead but spelling well!",
         "variants": ["default"],
-        "category": "fantasy"
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 25000,
+        "price": 2.99
     }
 ]
+
+# --- Monetization Constants & Helpers ----------------------------------------
+
+# Bundle Pricing
+BUNDLE_PRICING = {
+    "top_bee_bundle": {
+        "name": "Top Bee Bundle",
+        "description": "Unlocks all Top Avatars instantly",
+        "price": 9.99,
+        "includes_tiers": ["premium"]
+    },
+    "ultimate_hive_bundle": {
+        "name": "Ultimate Hive Bundle",
+        "description": "Unlocks every avatar in the app",
+        "price": 14.99,
+        "includes_tiers": ["earn_or_buy", "premium", "special"]
+    }
+}
+
+# Helper functions for monetization tiers
+def get_free_avatars():
+    """Returns list of avatars available during registration (default_free)"""
+    return [a for a in AVATAR_CATALOG if a.get("is_default_free", False)]
+
+def get_earn_or_buy_avatars():
+    """Returns list of avatars in earn-or-buy tier"""
+    return [a for a in AVATAR_CATALOG if a.get("tier") == "earn_or_buy"]
+
+def get_premium_avatars():
+    """Returns list of premium tier avatars"""
+    return [a for a in AVATAR_CATALOG if a.get("tier") == "premium"]
+
+def get_avatars_by_tier(tier):
+    """Returns avatars filtered by tier (default_free, earn_or_buy, premium, mascot, special)"""
+    return [a for a in AVATAR_CATALOG if a.get("tier") == tier]
+
+def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None):
+    """
+    Check if user has unlocked an avatar via points or purchase.
+    Admin users bypass all checks via their user profile.
+    
+    Args:
+        avatar_id: The avatar ID to check
+        user_honey_points: User's current Honey Points balance
+        purchased_avatars: List of avatar IDs user has purchased
+        
+    Returns:
+        dict with keys: unlocked (bool), reason (str), required_points (int), price (float)
+    """
+    if purchased_avatars is None:
+        purchased_avatars = []
+    
+    avatar = next((a for a in AVATAR_CATALOG if a["id"] == avatar_id), None)
+    if not avatar:
+        return {"unlocked": False, "reason": "Avatar not found", "required_points": 0, "price": 0}
+    
+    # Default free avatars are always unlocked
+    if avatar.get("is_default_free", False):
+        return {"unlocked": True, "reason": "Free avatar", "required_points": 0, "price": 0}
+    
+    # Check if purchased
+    if avatar_id in purchased_avatars:
+        return {"unlocked": True, "reason": "Purchased", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+    
+    # Check Honey Points
+    required_points = avatar.get("unlock_points", 0)
+    if user_honey_points >= required_points:
+        return {"unlocked": True, "reason": "Earned via Honey Points", "required_points": required_points, "price": avatar.get("price", 0)}
+    
+    # Not unlocked
+    return {
+        "unlocked": False, 
+        "reason": f"Requires {required_points - user_honey_points} more Honey Points or ${avatar.get('price', 0):.2f}",
+        "required_points": required_points,
+        "price": avatar.get("price", 0)
+    }
 
 
 # --- Dynamic name overrides from original '!' PNGs ---------------------------
