@@ -644,6 +644,9 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
+            z-index: 200 !important;  /* CRITICAL: Ensure tiles are above all decorative elements */
+            pointer-events: auto !important;  /* CRITICAL: Ensure tiles receive clicks */
+            outline: 3px dashed rgba(0, 255, 0, 0.5) !important;  /* DIAGNOSTIC: Visual confirmation of clickable zone */
         }
 
         /* Tiny badge for counts on tiles (e.g., Saved Lists) */
@@ -2163,7 +2166,7 @@
                      - Guest users: Always show MascotBee 
                      - Authenticated users: Show their selected profile avatar 
                      - Profile avatars are assigned during registration -->
-                <div id="mascotBee3D" style="cursor: pointer;" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+                <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!"></div>
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
@@ -3398,6 +3401,7 @@
         // ===== Kid-friendly Click FX =====
         function installClickFx(){
             const clickable = Array.from(document.querySelectorAll('.menu-option, .action-btn'));
+            console.log('🐝 installClickFx: Found ' + clickable.length + ' clickable elements');
             clickable.forEach(el => {
                 // ensure positioning context for ripple/burst
                 const computed = getComputedStyle(el);
@@ -3405,6 +3409,7 @@
 
                 // Make tiles keyboard accessible: Enter/Space triggers click
                 if (el.classList.contains('menu-option')) {
+                    console.log('🎯 Setting up tile:', el.className, 'onclick:', el.onclick ? 'present' : 'missing');
                     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
                     if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
                     el.addEventListener('keydown', (e) => {
@@ -3412,12 +3417,14 @@
                         const isSpace = e.key === ' ' || e.code === 'Space';
                         if (isEnter || isSpace) {
                             e.preventDefault();
+                            console.log('⌨️ Keyboard activated tile:', el.className);
                             try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
                             el.click();
                         }
                     });
                 }
                 el.addEventListener('pointerdown', (ev) => {
+                    console.log('🖱️ pointerdown on element:', el.className);
                     try {
                         // Quick pop to feel responsive
                         el.classList.add('press-pop');
