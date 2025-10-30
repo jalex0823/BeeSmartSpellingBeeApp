@@ -45,7 +45,7 @@ AVATAR_CATALOG = [
         "obj_file": "AstroBee.obj",
         "mtl_file": "AstroBee.mtl",
         "texture_file": "SpaceBee_Explorer_1021171329.png",
-        "description": "Space explorer! Ready for intergalactic spelling adventures.",
+        "description": "Buzz Aldrin's cousin! First bee on the moon. 'One small buzz for bee, one giant leap for spelling!'",
         "variants": ["default"],
         "category": "adventure"
     },
@@ -56,7 +56,7 @@ AVATAR_CATALOG = [
         "obj_file": "BikerBee.obj",
         "mtl_file": "BikerBee.mtl",
         "texture_file": "Motorcycle_Buzz_Bee_1018234507.png",
-        "description": "Fast and fearless! Motorcycle enthusiast.",
+        "description": "Born to Bee Wild! Rides a Harley-Davidson Honey-Hog. Spells at 100mph with wind in the wings!",
         "variants": ["default"],
         "category": "action"
     },
@@ -100,7 +100,7 @@ AVATAR_CATALOG = [
         "obj_file": "DetectiveBee.obj",
         "mtl_file": "DetectiveBee.mtl",
         "texture_file": "Detective_Bee_1022222906.png",
-        "description": "Solving word mysteries one clue at a time!",
+        "description": "Elementary, my dear Wats-bee! Solving word mysteries with magnifying glass and deductive buzzing.",
         "variants": ["default"],
         "category": "profession"
     },
@@ -111,7 +111,7 @@ AVATAR_CATALOG = [
         "obj_file": "DivaBee.obj",
         "mtl_file": "DivaBee.mtl",
         "texture_file": "Bee_Diva_1018233351.png",
-        "description": "Glamorous and fabulous! Star of the hive.",
+        "description": "Glamorous and fabulous! The Bee-yoncé of the hive. Born to spell, born to shine!",
         "variants": ["default"],
         "category": "entertainment"
     },
@@ -144,7 +144,7 @@ AVATAR_CATALOG = [
         "obj_file": "FrankenBee.obj",
         "mtl_file": "FrankenBee.mtl",
         "texture_file": "Frankenbee_1021161641.png",
-        "description": "Spooky but friendly! Perfect for Halloween spelling.",
+        "description": "Created in Dr. Franken-sting's laboratory! Spells by lightning power. 'It's alive... and spelling!'",
         "variants": ["default"],
         "category": "fantasy"
     },
@@ -210,7 +210,7 @@ AVATAR_CATALOG = [
         "obj_file": "RoboBee.obj",
         "mtl_file": "RoboBee.mtl",
         "texture_file": "Buzzbot_Bee_1022222436.png",
-        "description": "Futuristic and tech-savvy! Buzzbot to the rescue.",
+        "description": "Buzzbot 3000! Programmed with 1 million words. Runs on honey-powered circuits. *BEEP* Spelling complete!",
         "variants": ["default"],
         "category": "tech"
     },
@@ -221,7 +221,7 @@ AVATAR_CATALOG = [
         "obj_file": "RockerBee.obj",
         "mtl_file": "RockerBee.mtl",
         "texture_file": "RockerBee.png",
-        "description": "Rock and roll! Music-loving bee with attitude.",
+        "description": "Rock and roll! Lead singer of The Bee-tles. Spells to the rhythm of electric guitar!",
         "variants": ["default"],
         "category": "entertainment"
     },
@@ -232,7 +232,7 @@ AVATAR_CATALOG = [
         "obj_file": "Seabea.obj",
         "mtl_file": "Seabea.mtl",
         "texture_file": "SeaBee_1019002514.png",
-        "description": "Oceanic explorer! Loves underwater adventures.",
+        "description": "Navy SeaBee! Construction battalion of the ocean. Can build words underwater! 'We Build, We Fight, We Spell!'",
         "variants": ["default"],
         "category": "adventure"
     },
@@ -254,7 +254,7 @@ AVATAR_CATALOG = [
         "obj_file": "VampBee.obj",
         "mtl_file": "VampBee.mtl",
         "texture_file": "VampBee.png",
-        "description": "Spooky vampire bee! Perfect for Halloween.",
+        "description": "Count Bee-cula from Transyl-hive-nia! Spells words, not blood. 'I vant to spell your vords!'",
         "variants": ["default"],
         "category": "fantasy"
     },
@@ -265,7 +265,7 @@ AVATAR_CATALOG = [
         "obj_file": "WareBee.obj",
         "mtl_file": "WareBee.mtl",
         "texture_file": "WareBee.png",
-        "description": "Howling good at spelling! Werewolf bee.",
+        "description": "Were-bee of London! Howls at the full moon and spells by moonlight. Transforms during spelling tests!",
         "variants": ["default"],
         "category": "fantasy"
     },
@@ -276,7 +276,7 @@ AVATAR_CATALOG = [
         "obj_file": "ZomBee.obj",
         "mtl_file": "ZomBee.mtl",
         "texture_file": "ZomBee.png",
-        "description": "Brainy zombie bee! Loves learning words.",
+        "description": "The Walking Buzzed! Craves BRAINS... brainy words, that is. Undead but spelling well!",
         "variants": ["default"],
         "category": "fantasy"
     }
