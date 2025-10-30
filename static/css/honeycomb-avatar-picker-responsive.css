@@ -198,15 +198,15 @@
 .avatar-hex-thumb::before {
     content: '';
     position: absolute;
-    top: -14px;   /* Thicker border */
-    left: -14px;  /* Thicker border */
-    right: -14px; /* Thicker border */
-    bottom: -14px;/* Thicker border */
+    top: -22px;   /* Much more profound border */
+    left: -22px;  /* Much more profound border */
+    right: -22px; /* Much more profound border */
+    bottom: -22px;/* Much more profound border */
     background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     -webkit-clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     z-index: -1;
-    box-shadow: 0 0 28px rgba(255, 215, 0, 0.95), 0 0 60px rgba(255, 215, 0, 0.55);
+    box-shadow: 0 0 48px rgba(255, 215, 0, 0.95), 0 0 120px rgba(255, 215, 0, 0.5);
     animation: borderGlow 2s ease-in-out infinite alternate;
 }
 
@@ -306,24 +306,19 @@
 
 .preview-name {
     font-size: 2rem;
-    font-weight: bold;
-    color: #000000;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.95);
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
-    letter-spacing: 1px;
+    font-weight: 800;
+    color: #121212; /* Darker for contrast on bright backgrounds */
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.25), 0 3px 12px rgba(0, 0, 0, 0.35);
+    letter-spacing: 0.5px;
 }
 
 .preview-description {
-    font-size: 1.1rem;
-    color: #FFD700;
+    font-size: 1.05rem;
+    color: #222; /* Darken for better readability */
     text-align: center;
-    line-height: 1.6;
+    line-height: 1.5;
     font-weight: 600;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+    text-shadow: 0 1px 2px rgba(255,255,255,0.25), 0 1px 4px rgba(0,0,0,0.3);
 }
 
 .preview-choose-btn {

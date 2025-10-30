@@ -254,6 +254,25 @@ const AVATAR_THEMES = {
     }
 };
 
+// Add themes for new GLB avatars to ensure consistent styling
+AVATAR_THEMES['buda-bee'] = {
+    primary: '#DAA520',
+    secondary: '#B8860B',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #F6E27A 0%, #DAA520 100%)',
+    borderGlow: '0 0 40px rgba(255, 215, 0, 1)',
+    personality: 'zen'
+};
+
+AVATAR_THEMES['jrock-bee'] = {
+    primary: '#8B00FF',
+    secondary: '#000000',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #0f0f0f 0%, #4b0082 100%)',
+    borderGlow: '0 0 40px rgba(139, 0, 255, 0.9)',
+    personality: 'rockstar'
+};
+
 // Avatar Theme Manager Class
 class AvatarThemeManager {
     constructor() {

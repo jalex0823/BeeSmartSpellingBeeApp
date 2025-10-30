@@ -175,7 +175,7 @@ async function loadAvatars() {
             return a;
         };
 
-        const bySlug = new Map();
+    const bySlug = new Map();
         const byName = new Map();
         const duplicates = [];
         for (const avatar of rawAvatars) {
@@ -209,6 +209,16 @@ async function loadAvatars() {
         for (const [nameKey, av] of byName.entries()) {
             if (!av.slug) avatarsData.push(av);
         }
+        // Enforce kid-safe filter in frontend as well (defense-in-depth)
+        const banned = new Set(['anxious-bee','monster-bee']);
+        avatarsData = avatarsData.filter(av => !banned.has((av.slug||'').toLowerCase()));
+
+        // Alphabetize by display name for a friendlier picker
+        avatarsData.sort((a, b) => {
+            const an = (a.name || '').toLowerCase();
+            const bn = (b.name || '').toLowerCase();
+            return an.localeCompare(bn);
+        });
         if (duplicates.length) {
             console.log(`🧹 Removed ${duplicates.length} duplicate avatar entries (prefer GLB when available)`);
         }
@@ -284,7 +294,10 @@ function createAvatarElement(avatar, index) {
     
     if (avatar.thumbnail) {
         const img = document.createElement('img');
-        img.src = avatar.thumbnail;
+        // Intelligent thumbnail loading with fallbacks for filename/casing/punctuation mismatches
+        const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
+        let candidateIdx = 0;
+        img.src = fallbackCandidates[candidateIdx];
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'cover';
@@ -298,7 +311,15 @@ function createAvatarElement(avatar, index) {
         };
         
         img.onerror = () => {
-            console.warn(`Failed to load thumbnail for ${avatar.name}`);
+            // Try next fallback if available
+            candidateIdx++;
+            if (candidateIdx < fallbackCandidates.length) {
+                const next = fallbackCandidates[candidateIdx];
+                console.warn(`Thumbnail failed for ${avatar.name}, retrying with fallback: ${next}`);
+                img.src = next;
+                return;
+            }
+            console.warn(`Failed to load any thumbnail variant for ${avatar.name}`);
             thumbDiv.classList.remove('loading');
             thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
             loadedThumbnails++;
@@ -316,6 +337,73 @@ function createAvatarElement(avatar, index) {
     }
     
     return div;
+}
+
+// Build a prioritized list of thumbnail URL candidates to handle casing/spacing/"!" issues and missing files
+function buildThumbnailFallbacks(avatar, initialUrl) {
+    const candidates = [];
+    if (initialUrl) candidates.push(initialUrl);
+
+    try {
+        const folder = (avatar.folder_path || '').toLowerCase();
+        const isGLB = folder === 'glb_files' || (avatar.obj_file_url || '').toLowerCase().endsWith('.glb') || !!avatar.is_glb;
+        const baseThumbDir = isGLB
+            ? '/static/assets/avatars/glb_files/AvatarThumbnails/'
+            : (avatar.thumbnail ? avatar.thumbnail.substring(0, avatar.thumbnail.lastIndexOf('/') + 1) : '');
+
+        const rawName = avatar.name || avatar.slug || '';
+        const noPunct = rawName.replace(/[^A-Za-z0-9 ]/g, '').trim();
+        const noSpaces = noPunct.replace(/\s+/g, '');
+        const titleCase = noSpaces.replace(/([A-Z])/g, ' $1').trim().replace(/\s+/g, '');
+        const lower = noSpaces.toLowerCase();
+        const upper = noSpaces.toUpperCase();
+
+        // Common variants used in our asset folder
+        const nameVariants = new Set([
+            noSpaces,
+            titleCase,
+            lower,
+            upper,
+            rawName.replace(/\s+/g, ''),
+            (rawName || '').replace(/\s+/g, '-')
+        ]);
+
+        // Prefer files with exclamation mark used in thumbnails
+        for (const v of nameVariants) {
+            candidates.push(baseThumbDir + v + '!.png');
+        }
+        // Also try without exclamation mark
+        for (const v of nameVariants) {
+            candidates.push(baseThumbDir + v + '.png');
+        }
+        // Try space-separated form
+        const spaced = (rawName || '').trim();
+        if (spaced) {
+            candidates.push(baseThumbDir + spaced + '!.png');
+            candidates.push(baseThumbDir + spaced + '.png');
+        }
+        // Hyphenated form
+        const hyphen = (rawName || '').trim().replace(/\s+/g, '-');
+        if (hyphen) {
+            candidates.push(baseThumbDir + hyphen + '!.png');
+            candidates.push(baseThumbDir + hyphen + '.png');
+        }
+
+        // Last resort: generic honeycomb thumbnail so we still show something nice
+        candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
+    } catch (e) {
+        // If anything goes wrong, at least use a generic fallback next
+        candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
+    }
+
+    // De-duplicate while preserving order
+    const seen = new Set();
+    return candidates.filter(u => {
+        if (!u) return false;
+        if (seen.has(u)) return false;
+        seen.add(u);
+        return true;
+    });
 }
 
 // Load GLB 3D model with progress tracking
@@ -429,26 +517,11 @@ function load3DAvatarGLB(avatar, containerId) {
             // Final update - completely remove loading indicator
             setTimeout(() => {
                 updatePreviewProgress(100, 'Complete!');
-                // Clear ALL loading UI elements after brief delay
+                // Ensure ALL loading UI is removed once rendering is ready
                 setTimeout(() => {
-                    // Remove all loading-related divs from container
-                    const loadingElements = container.querySelectorAll('div[style*="flex"], div[style*="loading"]');
-                    loadingElements.forEach(el => {
-                        // Only remove if it's a direct child loading indicator
-                        if (el !== renderer.domElement && el.parentElement === container) {
-                            el.remove();
-                        }
-                    });
-                    
-                    // Also remove by content check
-                    Array.from(container.children).forEach(child => {
-                        if (child.textContent && (child.textContent.includes('Loading') || child.textContent.includes('%'))) {
-                            child.remove();
-                        }
-                    });
-                    
+                    clearPreviewLoading(container, renderer.domElement);
                     console.log('✅ Loading indicator removed from preview');
-                }, 800);
+                }, 500);
             }, 300);
         },
         function(xhr) {
@@ -603,12 +676,7 @@ function load3DAvatarOBJ(avatar, containerId) {
                 // Final update
                 setTimeout(() => {
                     updatePreviewProgress(100, 'Complete!');
-                    setTimeout(() => {
-                        const loadingDiv = container.querySelector('[style*="flex-direction: column"]');
-                        if (loadingDiv && loadingDiv.parentElement === container) {
-                            loadingDiv.remove();
-                        }
-                    }, 500);
+                    setTimeout(() => clearPreviewLoading(container, renderer.domElement), 300);
                 }, 300);
             },
             function(xhr) {
@@ -670,6 +738,22 @@ function load3DAvatarOBJ(avatar, containerId) {
         console.log(`Loading OBJ without MTL for ${avatar.name}`);
         loadOBJFile(null);
     }
+}
+
+// Remove any loading UI from the preview container, keeping the WebGL canvas intact
+function clearPreviewLoading(container, canvasEl) {
+    if (!container) return;
+    Array.from(container.children).forEach(child => {
+        // Keep the actual renderer canvas; remove everything else that looks like loading UI
+        if (canvasEl && child === canvasEl) return;
+        const text = (child.textContent || '').toLowerCase();
+        const isLoading = text.includes('loading') || /\d+%/.test(text);
+        const styleStr = (child.getAttribute && child.getAttribute('style')) || '';
+        const looksLikeLoader = styleStr.includes('flex') || styleStr.includes('column');
+        if (isLoading || looksLikeLoader) {
+            child.remove();
+        }
+    });
 }
 
 // Select avatar with theme activation

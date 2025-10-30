@@ -26,7 +26,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from PIL import Image
-from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_
+from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 
 # Database imports
 from config import get_config
@@ -7641,52 +7641,51 @@ def api_get_avatars():
     """Get the complete avatar catalog with optional filtering, plus canonical asset URLs"""
     try:
         from models import Avatar
-        
-        # Check if filtering by category or search
+        import re as _re
+
+        # Request filters
         category = request.args.get('category')
         search_query = request.args.get('search')
 
-        # Query database for avatars (removed slow population check)
+        # Kid-safe exclusions
+        excluded_slugs = {'anxious-bee', 'monster-bee'}
+
+        # Base query
         query = Avatar.query.filter_by(is_active=True)
-        
+        if excluded_slugs:
+            query = query.filter(~Avatar.slug.in_(list(excluded_slugs)))
         if category:
             query = query.filter_by(category=category)
-        
         if search_query:
-            search_pattern = f"%{search_query}%"
+            pattern = f"%{search_query}%"
             query = query.filter(
                 db.or_(
-                    Avatar.name.ilike(search_pattern),
-                    Avatar.description.ilike(search_pattern),
-                    Avatar.slug.ilike(search_pattern)
+                    Avatar.name.ilike(pattern),
+                    Avatar.description.ilike(pattern),
+                    Avatar.slug.ilike(pattern)
                 )
             )
-        
+
         avatars = query.order_by(Avatar.sort_order, Avatar.name).all()
 
-        # Enrich each avatar with thumbnail/preview and canonical 3D asset URLs
+        # Enrichment
         enriched_avatars = []
         for avatar in avatars:
-            avatar_id = avatar.slug
             base_path = f"/static/assets/avatars/{avatar.folder_path}"
-            
-            # Detect file type
             is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
-            
-            # Build enriched avatar dict with all URLs
-            enriched = {
-                'id': avatar_id,
+            desc = avatar.description
+            if (avatar.slug or '').lower() in ('obee', 'o-bee'):
+                desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+
+            enriched_avatars.append({
+                'id': avatar.slug,
                 'name': avatar.name,
-                'description': avatar.description,
+                'description': desc,
                 'category': avatar.category,
                 'folder': avatar.folder_path,
                 'is_glb': is_glb,
-                
-                # Legacy flat fields for thumbnails (kept for backward compatibility)
                 'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
                 'preview': f"{base_path}/{avatar.thumbnail_file}",
-                
-                # Canonical URLs bundle expected by front-end picker and validation scripts
                 'urls': {
                     'model_obj': f"{base_path}/{avatar.obj_file}",
                     'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
@@ -7694,14 +7693,68 @@ def api_get_avatars():
                     'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
                     'preview': f"{base_path}/{avatar.thumbnail_file}",
                 },
-                
-                # Additional metadata
                 'unlock_level': avatar.unlock_level,
                 'points_required': avatar.points_required,
                 'is_premium': avatar.is_premium,
-            }
+            })
 
-            enriched_avatars.append(enriched)
+        # Filesystem fallback (e.g., BudaBee.glb, JRockBee.glb)
+        static_root = os.path.join(app.root_path, 'static', 'assets', 'avatars')
+        glb_dir = os.path.join(static_root, 'glb_files')
+        thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
+        existing_slugs = { item['id'] for item in enriched_avatars }
+
+        if os.path.isdir(glb_dir):
+            for fname in os.listdir(glb_dir):
+                if not fname.lower().endswith('.glb'):
+                    continue
+                base = fname[:-4]
+                name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
+                slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
+
+                if slug in excluded_slugs or slug in existing_slugs:
+                    continue
+
+                base_path = "/static/assets/avatars/glb_files"
+                model_url = f"{base_path}/{fname}"
+
+                # Thumbnails
+                thumb_url = None
+                for cand in [
+                    f"{base_path}/AvatarThumbnails/{base}!.png",
+                    f"{base_path}/AvatarThumbnails/{base}.png",
+                ]:
+                    cand_fs = os.path.join(thumb_dir, os.path.basename(cand))
+                    if os.path.exists(cand_fs):
+                        thumb_url = cand
+                        break
+                if not thumb_url:
+                    thumb_url = f"{base_path}/AvatarThumbnails/HoneyComb!.png"
+
+                auto_desc = f"{name_with_spaces} is ready to spell! 🐝"
+                if slug in ('obee', 'o-bee'):
+                    auto_desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+
+                enriched_avatars.append({
+                    'id': slug,
+                    'name': name_with_spaces,
+                    'description': auto_desc,
+                    'category': 'classic',
+                    'folder': 'glb_files',
+                    'is_glb': True,
+                    'thumbnail': thumb_url,
+                    'preview': thumb_url,
+                    'urls': {
+                        'model_obj': model_url,
+                        'model_mtl': None,
+                        'texture': None,
+                        'thumbnail': thumb_url,
+                        'preview': thumb_url,
+                    },
+                    'unlock_level': 1,
+                    'points_required': 0,
+                    'is_premium': False,
+                })
 
         return jsonify({
             'status': 'success',
