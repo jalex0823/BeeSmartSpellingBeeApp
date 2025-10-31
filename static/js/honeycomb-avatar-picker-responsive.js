@@ -187,17 +187,38 @@ function updateDynamicMarquee(avatars) {
 // Load avatars from API
 async function loadAvatars() {
     try {
-        const response = await fetch('/api/avatars');
-        if (!response.ok) throw new Error('Failed to load avatars');
+        const response = await fetch('/api/avatars', { credentials: 'same-origin' });
+        if (!response.ok) {
+            let bodySnippet = '';
+            try {
+                bodySnippet = (await response.text()).slice(0, 500);
+            } catch (_) { /* ignore */ }
+            console.error('🐞 Avatar API non-OK response', {
+                status: response.status,
+                contentType: response.headers.get('content-type') || '',
+                preview: bodySnippet
+            });
+            throw new Error(`Failed to load avatars (HTTP ${response.status})`);
+        }
         
         const data = await response.json();
         
-        // API returns {status: 'success', avatars: [...]}
-        if (data.status !== 'success' || !data.avatars) {
+        // API returns {status: 'success', avatars: [...]} in current app
+        // Be tolerant to older shapes like an array directly
+        let apiAvatars = null;
+        if (Array.isArray(data)) {
+            apiAvatars = data;
+        } else if (data && Array.isArray(data.avatars)) {
+            apiAvatars = data.avatars;
+        } else if (data && data.status === 'success' && data.data && Array.isArray(data.data)) {
+            apiAvatars = data.data;
+        }
+        if (!apiAvatars) {
+            console.error('🐞 Unexpected avatar API payload shape', data);
             throw new Error('Invalid API response format');
         }
         
-        const rawAvatars = data.avatars.map(avatar => ({
+        const rawAvatars = apiAvatars.map(avatar => ({
             slug: avatar.id,
             name: avatar.name,
             description: avatar.description,
@@ -205,12 +226,12 @@ async function loadAvatars() {
             folder_path: avatar.folder,
             is_glb: avatar.is_glb || false,
             // Store full URLs from API
-            obj_file_url: avatar.urls.model_obj,
-            mtl_file_url: avatar.urls.model_mtl,
+            obj_file_url: avatar.urls ? avatar.urls.model_obj : avatar.model_obj_url || avatar.obj_file_url,
+            mtl_file_url: avatar.urls ? avatar.urls.model_mtl : avatar.model_mtl_url || avatar.mtl_file_url,
             // Also store filenames for detection
-            obj_file: avatar.urls.model_obj ? avatar.urls.model_obj.split('/').pop() : null,
-            mtl_file: avatar.urls.model_mtl ? avatar.urls.model_mtl.split('/').pop() : null,
-            thumbnail: avatar.thumbnail,
+            obj_file: (avatar.urls && avatar.urls.model_obj ? avatar.urls.model_obj : (avatar.model_obj_url || avatar.obj_file_url || '')).split('/').pop() || null,
+            mtl_file: (avatar.urls && avatar.urls.model_mtl ? avatar.urls.model_mtl : (avatar.model_mtl_url || avatar.mtl_file_url || '')).split('/').pop() || null,
+            thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
             // NEW: Lock status from monetization system
             is_locked: avatar.is_locked || false,
             unlock_message: avatar.unlock_message || ''
@@ -297,7 +318,8 @@ async function loadAvatars() {
         renderAvatarGrid();
     } catch (error) {
         console.error('Error loading avatars:', error);
-        showError('Failed to load avatars. Please refresh the page.');
+        const msg = (error && error.message) ? error.message : 'Failed to load avatars. Please refresh the page.';
+        showError(msg);
         // Hide loading overlay on error
         const overlay = document.getElementById('avatar-loading-overlay');
         if (overlay) {

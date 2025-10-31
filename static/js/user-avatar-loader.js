@@ -118,7 +118,7 @@ class UserAvatarLoader {
     async verifyDatabaseConnection() {
         try {
             console.log('🔍 Verifying avatar database connection...');
-            const response = await fetch('/api/avatars?category=classic');
+            const response = await fetch('/api/avatars?category=classic', { credentials: 'same-origin' });
             if (response.ok) {
                 this.dbConnectionVerified = true;
                 console.log('✅ Avatar database connection verified');
@@ -145,23 +145,30 @@ class UserAvatarLoader {
         
         try {
             console.log('📡 Loading avatar catalog from database API...');
-            const response = await fetch('/api/avatars');
+            const response = await fetch('/api/avatars', { credentials: 'same-origin' });
             if (!response.ok) {
                 throw new Error(`API returned ${response.status}`);
             }
             
             const data = await response.json();
-            const avatars = data.avatars || [];
+            let avatars = [];
+            if (Array.isArray(data)) {
+                avatars = data;
+            } else if (data && Array.isArray(data.avatars)) {
+                avatars = data.avatars;
+            } else if (data && data.status === 'success' && Array.isArray(data.data)) {
+                avatars = data.data;
+            }
             console.log(`✅ Loaded ${avatars.length} avatars from database`);
             
             // Convert API response to avatarMap format
             avatars.forEach(avatar => {
                 const id = avatar.id;
                 this.avatarMap[id] = {
-                    obj: avatar.urls?.model_obj || avatar.model_obj_url,
-                    mtl: avatar.urls?.model_mtl || avatar.model_mtl_url,
-                    texture: avatar.urls?.texture || avatar.texture_url,
-                    thumbnail: avatar.urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail
+                    obj: (avatar.urls ? avatar.urls.model_obj : (avatar.model_obj_url || avatar.obj_file_url)),
+                    mtl: (avatar.urls ? avatar.urls.model_mtl : (avatar.model_mtl_url || avatar.mtl_file_url)),
+                    texture: (avatar.urls ? avatar.urls.texture : avatar.texture_url),
+                    thumbnail: (avatar.urls ? avatar.urls.thumbnail : (avatar.thumbnail_url || avatar.thumbnail))
                 };
             });
             

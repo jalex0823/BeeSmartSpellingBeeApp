@@ -7697,8 +7697,19 @@ def api_get_avatars():
     - Include unlock status based on user's honey points and purchases
     """
     try:
-        from models import Avatar, User
-        from avatar_catalog import check_avatar_unlocked, AVATARS_CATALOG
+        # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
+        try:
+            from models import Avatar, User
+        except Exception as _imp_err:
+            print(f"⚠️ Avatar model import failed, falling back to filesystem-only avatars: {_imp_err}")
+            Avatar = None  # type: ignore
+        try:
+            from avatar_catalog import check_avatar_unlocked, AVATARS_CATALOG
+        except Exception as _cat_err:
+            print(f"⚠️ Avatar catalog import failed, disabling unlock checks: {_cat_err}")
+            AVATARS_CATALOG = []  # type: ignore
+            def check_avatar_unlocked(*_args, **_kwargs):
+                return True  # Treat as unlocked if catalog unavailable
         import re as _re
 
         # Get current user's unlock status
@@ -7728,87 +7739,91 @@ def api_get_avatars():
         # Kid-safe exclusions
         excluded_slugs = {'anxious-bee', 'monster-bee'}
 
-        # Base query
-        query = Avatar.query.filter_by(is_active=True)
-        if excluded_slugs:
-            query = query.filter(~Avatar.slug.in_(list(excluded_slugs)))
-        if category:
-            query = query.filter_by(category=category)
-        if search_query:
-            pattern = f"%{search_query}%"
-            query = query.filter(
-                db.or_(
-                    Avatar.name.ilike(pattern),
-                    Avatar.description.ilike(pattern),
-                    Avatar.slug.ilike(pattern)
-                )
-            )
-
-        avatars = query.order_by(Avatar.sort_order, Avatar.name).all()
-
-        # Enrichment
+        # Base query (optional - skip if Avatar model unavailable)
         enriched_avatars = []
-        for avatar in avatars:
-            base_path = f"/static/assets/avatars/{avatar.folder_path}"
-            is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
-            desc = avatar.description
-            if (avatar.slug or '').lower() in ('obee', 'o-bee'):
-                desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
-            
-            # Check unlock status from avatar_catalog
-            avatar_slug = avatar.slug
-            catalog_avatar = next((a for a in AVATARS_CATALOG if a['id'] == avatar_slug), None)
-            
-            is_locked = True
-            unlock_message = ""
-            
-            if is_admin_or_premium:
-                # Admins and premium members have access to all avatars
-                is_locked = False
-            elif catalog_avatar:
-                # Check unlock status using avatar_catalog helper
-                is_locked = not check_avatar_unlocked(
-                    avatar_slug, 
-                    user_honey_points, 
-                    purchased_avatars
-                )
-                
-                if is_locked:
-                    # Generate unlock message based on tier
-                    tier = catalog_avatar.get('tier', 'premium')
-                    unlock_points = catalog_avatar.get('unlock_points', 0)
-                    price = catalog_avatar.get('price', 0)
-                    
-                    if tier == 'earn_or_buy':
-                        points_needed = unlock_points - user_honey_points
-                        unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
-                    elif tier == 'premium':
-                        unlock_message = f"Purchase for ${price:.2f}"
-                    else:
-                        unlock_message = "Complete more quizzes to unlock!"
+        if Avatar is not None:
+            try:
+                query = Avatar.query.filter_by(is_active=True)
+                if excluded_slugs:
+                    query = query.filter(~Avatar.slug.in_(list(excluded_slugs)))
+                if category:
+                    query = query.filter_by(category=category)
+                if search_query:
+                    pattern = f"%{search_query}%"
+                    query = query.filter(
+                        db.or_(
+                            Avatar.name.ilike(pattern),
+                            Avatar.description.ilike(pattern),
+                            Avatar.slug.ilike(pattern)
+                        )
+                    )
 
-            enriched_avatars.append({
-                'id': avatar.slug,
-                'name': avatar.name,
-                'description': desc,
-                'category': avatar.category,
-                'folder': avatar.folder_path,
-                'is_glb': is_glb,
-                'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
-                'preview': f"{base_path}/{avatar.thumbnail_file}",
-                'urls': {
-                    'model_obj': f"{base_path}/{avatar.obj_file}",
-                    'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-                    'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-                    'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
-                    'preview': f"{base_path}/{avatar.thumbnail_file}",
-                },
-                'unlock_level': avatar.unlock_level,
-                'points_required': avatar.points_required,
-                'is_premium': avatar.is_premium,
-                'is_locked': is_locked,
-                'unlock_message': unlock_message,
-            })
+                avatars = query.order_by(Avatar.sort_order, Avatar.name).all()
+
+                # Enrichment
+                for avatar in avatars:
+                    base_path = f"/static/assets/avatars/{avatar.folder_path}"
+                    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+                    desc = avatar.description
+                    if (avatar.slug or '').lower() in ('obee', 'o-bee'):
+                        desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
+
+                    # Check unlock status from avatar_catalog
+                    avatar_slug = avatar.slug
+                    catalog_avatar = next((a for a in AVATARS_CATALOG if a['id'] == avatar_slug), None)
+
+                    is_locked = True
+                    unlock_message = ""
+
+                    if is_admin_or_premium:
+                        # Admins and premium members have access to all avatars
+                        is_locked = False
+                    elif catalog_avatar:
+                        # Check unlock status using avatar_catalog helper
+                        is_locked = not check_avatar_unlocked(
+                            avatar_slug,
+                            user_honey_points,
+                            purchased_avatars
+                        )
+
+                        if is_locked:
+                            # Generate unlock message based on tier
+                            tier = catalog_avatar.get('tier', 'premium')
+                            unlock_points = catalog_avatar.get('unlock_points', 0)
+                            price = catalog_avatar.get('price', 0)
+
+                            if tier == 'earn_or_buy':
+                                points_needed = unlock_points - user_honey_points
+                                unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
+                            elif tier == 'premium':
+                                unlock_message = f"Purchase for ${price:.2f}"
+                            else:
+                                unlock_message = "Complete more quizzes to unlock!"
+
+                    enriched_avatars.append({
+                        'id': avatar.slug,
+                        'name': avatar.name,
+                        'description': desc,
+                        'category': avatar.category,
+                        'folder': avatar.folder_path,
+                        'is_glb': is_glb,
+                        'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
+                        'preview': f"{base_path}/{avatar.thumbnail_file}",
+                        'urls': {
+                            'model_obj': f"{base_path}/{avatar.obj_file}",
+                            'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+                            'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+                            'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
+                            'preview': f"{base_path}/{avatar.thumbnail_file}",
+                        },
+                        'unlock_level': avatar.unlock_level,
+                        'points_required': avatar.points_required,
+                        'is_premium': avatar.is_premium,
+                        'is_locked': is_locked,
+                        'unlock_message': unlock_message,
+                    })
+            except Exception as _db_err:
+                print(f"⚠️ Avatar DB query failed, continuing with filesystem-only avatars: {_db_err}")
 
     # Filesystem fallback (e.g., BudaBee.glb, JRockBee.glb)
         static_root = os.path.join(app.root_path, 'static', 'assets', 'avatars')
