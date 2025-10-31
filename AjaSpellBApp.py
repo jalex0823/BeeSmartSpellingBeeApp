@@ -7707,9 +7707,19 @@ def api_get_avatars():
         is_admin_or_premium = False
         
         if current_user.is_authenticated:
-            user_honey_points = current_user.honey_points or 0
-            purchased_avatars = current_user.purchased_avatars or []
-            is_admin_or_premium = current_user.is_admin_or_premium()
+            # Safe access with fallbacks for newly migrated fields
+            user_honey_points = getattr(current_user, 'honey_points', 0) or 0
+            purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
+            
+            # Check if user has admin_all_access method
+            if hasattr(current_user, 'is_admin_or_premium'):
+                try:
+                    is_admin_or_premium = current_user.is_admin_or_premium()
+                except Exception:
+                    # Fallback to role check
+                    is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
+            else:
+                is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
 
         # Request filters
         category = request.args.get('category')
