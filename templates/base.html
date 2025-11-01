@@ -605,6 +605,19 @@
                     try { browser.open({ url: href }); } catch(_) {}
                 }
             }, true);
+
+            // Handle deep links (universal/app links) when app is launched from a URL
+            try {
+                const App = window.Capacitor && (window.Capacitor.App || (window.Capacitor.Plugins && window.Capacitor.Plugins.App));
+                if (App && App.addListener) {
+                    App.addListener('appUrlOpen', (data) => {
+                        if (data && data.url) {
+                            // Navigate webview to the incoming URL so the web app routes correctly
+                            try { window.location.href = data.url; } catch(_) {}
+                        }
+                    });
+                }
+            } catch(_) {}
         })();
     </script>
 </body>

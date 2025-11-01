@@ -2334,6 +2334,16 @@ def health_check():
 def service_worker():
     return send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
 
+# Well-known endpoints for app links / universal links
+@app.route('/.well-known/apple-app-site-association')
+def aasa_file():
+    # Served without .json extension and with JSON content
+    return send_from_directory('static/.well-known', 'apple-app-site-association', mimetype='application/json')
+
+@app.route('/.well-known/assetlinks.json')
+def assetlinks_file():
+    return send_from_directory('static/.well-known', 'assetlinks.json', mimetype='application/json')
+
 @app.route("/db/migrate-avatar-columns")
 def migrate_avatar_columns():
     """Migration endpoint to add avatar columns to existing users table"""
