@@ -38,4 +38,12 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Camera for taking photos of worksheets/books to extract words -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Microphone for voice spelling input -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Storage/library for selecting or saving images (adjust for API level) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Backwards compatibility for older devices (< API 33) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 </manifest>
