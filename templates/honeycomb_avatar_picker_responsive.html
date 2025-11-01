@@ -28,7 +28,19 @@
     <!-- Loading Overlay with Real-time Progress -->
     <div id="avatar-loading-overlay" class="loading-overlay">
         <div class="loading-content">
-            <div class="loading-bee">🐝</div>
+            <!-- Replace bee emoji with Trademarked brand logo -->
+            <img 
+                class="loading-logo"
+                src="{{ url_for('static', filename='images/LogoBee&WordingTM.png') }}?v={{ timestamp }}"
+                alt="BeeSmart Spelling App™ logo"
+                style="
+                    width: clamp(240px, 55vw, 560px);
+                    height: auto;
+                    margin-bottom: 16px;
+                    filter: drop-shadow(0 6px 18px rgba(0,0,0,0.35));
+                    image-rendering: -webkit-optimize-contrast;
+                "
+            />
             <h2 id="loading-status">Loading Your Bees...</h2>
             <div class="loading-bar">
                 <div id="loading-progress" class="loading-progress"></div>
