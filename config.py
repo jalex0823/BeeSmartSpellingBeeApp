@@ -65,6 +65,13 @@ class Config:
         MAIL_PORT = 465 if MAIL_USE_SSL else 587
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    # Prefer explicit default sender; fallback to username if not provided
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME
+    # Optional friendly display name (e.g., "BeeSmart Spelling Bee")
+    MAIL_FROM_NAME = os.environ.get('MAIL_FROM_NAME') or 'BeeSmart Spelling Bee'
+
+    # Optional: public base URL for absolute links in emails
+    APP_BASE_URL = os.environ.get('APP_BASE_URL')
 
 
 class DevelopmentConfig(Config):

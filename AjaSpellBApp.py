@@ -899,8 +899,14 @@ def send_reset_email(recipient_email: str, reset_url: str) -> bool:
 
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = username
+        # Prefer configured default sender (e.g., Contact@beesmartspelling.app)
+        default_sender = app.config.get('MAIL_DEFAULT_SENDER') or username
+        from_name = app.config.get('MAIL_FROM_NAME')
+        msg['From'] = f"{from_name} <{default_sender}>" if from_name and default_sender else (default_sender or '')
         msg['To'] = recipient_email
+        # Ensure reply goes to the branded address
+        if default_sender:
+            msg['Reply-To'] = default_sender
         msg.attach(MIMEText((text_body or ''), 'plain', 'utf-8'))
         if html_body:
             msg.attach(MIMEText(html_body, 'html', 'utf-8'))
@@ -913,7 +919,9 @@ def send_reset_email(recipient_email: str, reset_url: str) -> bool:
                 smtp.starttls()
         if username and password:
             smtp.login(username, password)
-        smtp.sendmail(username, [recipient_email], msg.as_string())
+        # Envelope sender should match the default sender when available
+        envelope_from = default_sender or username
+        smtp.sendmail(envelope_from, [recipient_email], msg.as_string())
         smtp.quit()
         print(f"📧 Reset email sent to {recipient_email}")
         return True
@@ -979,8 +987,13 @@ def send_welcome_email(recipient_email: str, account_username: str, role: str, t
 
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = smtp_username
+        # Prefer configured default sender (e.g., Contact@beesmartspelling.app)
+        default_sender = app.config.get('MAIL_DEFAULT_SENDER') or smtp_username
+        from_name = app.config.get('MAIL_FROM_NAME')
+        msg['From'] = f"{from_name} <{default_sender}>" if from_name and default_sender else (default_sender or '')
         msg['To'] = recipient_email
+        if default_sender:
+            msg['Reply-To'] = default_sender
         # Always include text part
         msg.attach(MIMEText((text_body or ''), 'plain', 'utf-8'))
         # Include html if available
@@ -995,7 +1008,8 @@ def send_welcome_email(recipient_email: str, account_username: str, role: str, t
                 smtp.starttls()
         if smtp_username and smtp_password:
             smtp.login(smtp_username, smtp_password)
-        smtp.sendmail(smtp_username, [recipient_email], msg.as_string())
+        envelope_from = default_sender or smtp_username
+        smtp.sendmail(envelope_from, [recipient_email], msg.as_string())
         smtp.quit()
         print(f"📧 Welcome email sent to {recipient_email}")
         return True
