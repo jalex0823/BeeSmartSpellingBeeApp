@@ -1867,8 +1867,8 @@
                 0 0 18px rgba(255, 165, 0, 0.65),
                 0 2px 12px rgba(0, 0, 0, 0.2);
             -webkit-text-stroke: 0.5px rgba(90, 44, 21, 0.25);
-            width: clamp(360px, 94vw, 720px); /* align width with the main card */
-    ">Welcome to BeeSmart</div>
+        width: clamp(360px, 94vw, 720px); /* align width with the main card */
+    ">Welcome!</div>
 
         <!-- Sticky voice status banner -->
         <div id="voiceReadyBanner" style="
@@ -1892,7 +1892,7 @@
         ">🎤 Voice input ready</div>
         <!-- Brand Logo with TM (replaces emoji bee) -->
         <img
-            src="{{ url_for('static', filename='BeeSmartTitle.png') }}"
+            src="{{ url_for('static', filename='BeeSmartLogoTransparent.png') }}"
             alt="BeeSmart Spelling Bee Application™ logo"
             style="
                 width: clamp(260px, 65vw, 560px);
@@ -2244,8 +2244,8 @@
                     ✨ Click on me to see what I do! ✨
                 </div>
                 
-                <!-- Text-only logo -->
-                <img src="/static/BeeSmartTitle.png" alt="BeeSmart Logo" />
+                <!-- Brand logo (transparent background) -->
+                <img src="{{ url_for('static', filename='BeeSmartLogoTransparent.png') }}" alt="BeeSmart Logo" />
                 
                 <!-- Website URL Badge -->
                 <div style="margin-top: 12px; font-size: 16px; font-weight: 600; color: #FF6B00; font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;">

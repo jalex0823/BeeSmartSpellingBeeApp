@@ -216,16 +216,11 @@ sendResetBtn.addEventListener('click', async ()=>{
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ identifier })
     });
-    // Always show generic success to prevent account enumeration
-    successAlert.textContent = 'If an account exists for that email or username, we\'ll send reset instructions.';
-    successAlert.style.display = 'block';
-    toggleForgotPanel(false);
-    resetIdentifier.value = '';
+    // Redirect to a generic confirmation page (prevents account enumeration)
+    window.location.href = "{{ url_for('forgot_confirmation_page') }}";
   }catch(_e){
-    // Even on network error, avoid revealing existence; provide gentle retry
-    successAlert.textContent = 'If an account exists for that email or username, we\'ll send reset instructions.';
-    successAlert.style.display = 'block';
-    toggleForgotPanel(false);
+    // On network error, still route to generic confirmation page to avoid enumeration
+    window.location.href = "{{ url_for('forgot_confirmation_page') }}";
   } finally {
     sendResetBtn.disabled = false;
     sendResetBtn.textContent = 'Send reset link';

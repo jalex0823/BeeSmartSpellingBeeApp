@@ -1078,6 +1078,84 @@ def _add_rate_hit(identifier: str, ip: str):
 DEV_RESET_TOKEN_CACHE: Dict[int, str] = {}  # user_id -> last raw token
 
 
+# --- Contact form email -----------------------------------------------------
+def send_contact_email(from_name: str, from_email: str, topic: str, subject: str, message: str) -> bool:
+    """Send a contact form submission to the configured inbox.
+
+    - From header uses the branded sender (MAIL_FROM_NAME + MAIL_DEFAULT_SENDER)
+    - Reply-To is set to the user's provided email so replies go to them
+    - Recipient defaults to CONTACT_INBOX or MAIL_DEFAULT_SENDER
+    """
+    server = app.config.get('MAIL_SERVER')
+    smtp_username = app.config.get('MAIL_USERNAME')
+    smtp_password = app.config.get('MAIL_PASSWORD')
+    port = app.config.get('MAIL_PORT') or 587
+    use_tls = app.config.get('MAIL_USE_TLS', True)
+    use_ssl = app.config.get('MAIL_USE_SSL', False)
+
+    inbox = app.config.get('CONTACT_INBOX') or app.config.get('MAIL_DEFAULT_SENDER') or smtp_username
+    if not inbox:
+        # Dev fallback: log only if no SMTP configuration or inbox set
+        print(f"📮 [DEV] Contact form received (no SMTP configured)\nFrom: {from_name} <{from_email}>\nTopic: {topic}\nSubject: {subject}\nMessage: {message}")
+        return True
+
+    email_subject = f"Contact: {subject or '(no subject)'}" + (f" · {topic}" if topic else "")
+    text_body = (
+        f"From: {from_name} <{from_email}>\n"
+        f"Topic: {topic}\n"
+        f"Subject: {subject}\n\n"
+        f"{message}\n"
+    )
+    html_body = (
+        f"<p><strong>From:</strong> {from_name} &lt;{from_email}&gt;</p>"
+        f"<p><strong>Topic:</strong> {topic}</p>"
+        f"<p><strong>Subject:</strong> {subject}</p>"
+        f"<hr>"
+        f"<pre style='white-space:pre-wrap;font-family:system-ui,Segoe UI,Arial,sans-serif'>{message}</pre>"
+    )
+
+    # Dev preview if server/user/pass not set
+    if not server or not smtp_username or not smtp_password:
+        preview = text_body.replace('\n', ' ')
+        print(f"📮 [DEV] Would send contact email to {inbox}: {preview}")
+        return True
+
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = email_subject
+        default_sender = app.config.get('MAIL_DEFAULT_SENDER') or smtp_username
+        from_name_conf = app.config.get('MAIL_FROM_NAME') or 'BeeSmart Spelling Bee'
+        msg['From'] = f"{from_name_conf} <{default_sender}>" if default_sender else from_name_conf
+        msg['To'] = inbox
+        # Make replies go back to the user's email
+        if from_email:
+            msg['Reply-To'] = from_email
+        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+        if use_ssl:
+            smtp = smtplib.SMTP_SSL(server, port)
+        else:
+            smtp = smtplib.SMTP(server, port)
+            if use_tls:
+                smtp.starttls()
+        if smtp_username and smtp_password:
+            smtp.login(smtp_username, smtp_password)
+        envelope_from = default_sender or smtp_username
+        smtp.sendmail(envelope_from, [inbox], msg.as_string())
+        smtp.quit()
+        print(f"📮 Contact email delivered to {inbox} (reply-to {from_email})")
+        return True
+    except Exception as e:
+        app.logger.warning(f"contact email send error: {e}")
+        return False
+
+
+
 # --- Config ------------------------------------------------------------------
 DATA_KEY = "wordbank_v1"
 QUIZ_STATE_KEY = "quiz_state_v1"
@@ -5461,6 +5539,97 @@ def reset_password_page():
         db.session.rollback()
         return jsonify(generic)
 
+
+# Generic confirmation page after requesting a password reset
+@app.route('/auth/forgot-confirmation', methods=['GET'])
+def forgot_confirmation_page():
+    try:
+        return render_template('auth/forgot_confirmation.html')
+    except Exception as e:
+        app.logger.warning(f"render forgot-confirmation error: {e}")
+        # Render a minimal inline message if template missing
+        return (
+            "<html><body><h1>Check your email</h1>"
+            "<p>If an account exists for the info you entered, we'll send reset instructions.</p>"
+            f"<p><a href='{url_for('login')}'>Back to Sign In</a></p>"
+            "</body></html>",
+            200,
+            {"Content-Type": "text/html; charset=utf-8"}
+        )
+
+@app.route('/api/contact', methods=['GET', 'POST'])
+def api_contact():
+    """Accept contact form submissions and send to support inbox.
+
+    Supports JSON (application/json), form-encoded (POST), and query-string (GET) submissions.
+    Always responds with a generic success message or redirects to a confirmation page to avoid leaking data.
+    """
+    # Extract fields from JSON, form, or query string
+    data = request.get_json(silent=True) or {}
+    if request.method == 'POST' and not data:
+        data = request.form
+    if request.method == 'GET' and not data:
+        data = request.args
+
+    from_name = (data.get('name') or data.get('from_name') or '').strip()
+    from_email = (data.get('email') or data.get('from_email') or '').strip()
+    topic = (data.get('topic') or '').strip()
+    subject = (data.get('subject') or '').strip()
+    message = (data.get('message') or data.get('body') or '').strip()
+
+    # Minimal anti-abuse: simple rate-limit by email/ip
+    identifier = from_email or (from_name or 'anon')
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    try:
+        if _is_rate_limited(identifier, ip):
+            return jsonify({"success": True, "message": "Thanks! We've received your message."})
+        _add_rate_hit(identifier, ip)
+    except Exception:
+        pass
+
+    # Require at least a message; email optional but recommended for replies
+    if message:
+        send_contact_email(from_name or 'Anonymous', from_email, topic, subject, message)
+
+    # If this came from a browser (GET or form), redirect to confirmation page
+    wants_html = (request.method == 'GET') or ('text/html' in request.headers.get('Accept', '')) or bool(request.form)
+    if wants_html:
+        return redirect(url_for('contact_confirmation_page'))
+    return jsonify({"success": True, "message": "Thanks! We've received your message."})
+
+
+@app.route('/contact/confirmation', methods=['GET'])
+def contact_confirmation_page():
+    try:
+        return render_template('contact_confirmation.html')
+    except Exception as e:
+        app.logger.warning(f"render contact-confirmation error: {e}")
+        return (
+            "<html><body><h1>Thanks!</h1><p>Your message has been received. We'll be in touch.</p>"
+            f"<p><a href='{url_for('home')}'>Back to Home</a></p>"
+            "</body></html>",
+            200,
+            {"Content-Type": "text/html; charset=utf-8"}
+        )
+
+@app.route('/contact.html', methods=['GET'])
+def contact_html_page():
+    """Compatibility handler if a static contact.html is linked with query params.
+    If query params include a message, treat as submission and redirect to confirmation.
+    Otherwise, route users to the help page if available, or home.
+    """
+    args = request.args
+    if args.get('message') or args.get('subject'):
+        # Treat as a submission passthrough
+        try:
+            return api_contact()
+        except Exception:
+            return redirect(url_for('contact_confirmation_page'))
+    # No submission — send to help page if present
+    try:
+        return redirect(url_for('help_page'))
+    except Exception:
+        return redirect(url_for('home'))
 
 # Dev-only endpoint: fetch last raw reset token for a user (by username/email)
 @app.route('/dev/peek-reset-token')
