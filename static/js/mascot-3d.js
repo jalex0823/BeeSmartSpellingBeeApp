@@ -115,6 +115,19 @@ class SmartyBee3D {
             antialias: true 
         });
         this.renderer.setSize(this.options.width, this.options.height);
+        // Ensure correct color space and tone mapping so colors don't look washed out
+        try {
+            if (typeof this.renderer.outputColorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+                this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+            } else if (typeof this.renderer.outputEncoding !== 'undefined' && THREE.sRGBEncoding) {
+                // Back-compat for older Three.js builds
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+            }
+            if (typeof THREE.ACESFilmicToneMapping !== 'undefined') {
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.0;
+            }
+        } catch (e) { /* no-op */ }
         // Ensure fully transparent background so the home page design shows through
         if (this.renderer && typeof this.renderer.setClearColor === 'function') {
             this.renderer.setClearColor(0x000000, 0);
@@ -151,7 +164,100 @@ class SmartyBee3D {
         const mtlLoader = new THREE.MTLLoader();
         const objLoader = new THREE.OBJLoader();
 
-        // Resolve base and filenames
+        // New: GLB support using GLTFLoader when a .glb is provided
+        // Accept either explicit options.glbPath or a modelPath ending with .glb/.gltf
+        try {
+            const explicitGlb = this.options.glbPath;
+            const inferredGlb = (this.options.modelPath && /\.(glb|gltf)(\?.*)?$/i.test(this.options.modelPath)) ? this.options.modelPath : null;
+            const glbPath = explicitGlb || inferredGlb;
+            if (glbPath) {
+                if (typeof THREE.GLTFLoader === 'undefined') {
+                    console.error('GLTFLoader not loaded. Cannot render GLB. Falling back to OBJ pipeline if available.');
+                } else {
+                    const cacheBuster = Date.now();
+                    const glbUrl = glbPath + (glbPath.includes('?') ? `&v=${cacheBuster}` : `?v=${cacheBuster}`);
+                    const gltfLoader = new THREE.GLTFLoader();
+                    console.log('🐝 Loading GLB model:', glbUrl);
+                    gltfLoader.load(
+                        glbUrl,
+                        (gltf) => {
+                            try {
+                                const object = gltf.scene || gltf.scenes?.[0];
+                                if (!object) throw new Error('GLB contained no scene');
+                                // Ensure GLB textures use sRGB for correct color
+                                try {
+                                    object.traverse((node) => {
+                                        if (node.isMesh) {
+                                            const mats = Array.isArray(node.material) ? node.material : [node.material];
+                                            mats.forEach((mat) => {
+                                                if (mat && mat.map) {
+                                                    if (typeof mat.map.colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+                                                        mat.map.colorSpace = THREE.SRGBColorSpace;
+                                                    } else if (typeof mat.map.encoding !== 'undefined' && THREE.sRGBEncoding) {
+                                                        mat.map.encoding = THREE.sRGBEncoding;
+                                                    }
+                                                    mat.map.needsUpdate = true;
+                                                }
+                                                if (mat) mat.needsUpdate = true;
+                                            });
+                                        }
+                                    });
+                                } catch (e) { /* best-effort */ }
+                                // Center/scale like OBJ path
+                                const box = new THREE.Box3().setFromObject(object);
+                                const center = box.getCenter(new THREE.Vector3());
+                                const size = box.getSize(new THREE.Vector3());
+                                const maxDim = Math.max(size.x, size.y, size.z);
+                                const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
+                                const scale = (3 * scaleMultiplier) / (maxDim || 1);
+                                object.scale.set(scale, scale, scale);
+                                object.position.x = -center.x * scale;
+                                object.position.y = -center.y * scale;
+                                object.position.z = -center.z * scale;
+
+                                this.bee = object;
+                                this.scene.add(object);
+
+                                // Offset up a bit to avoid bottom clipping
+                                object.position.y += 0.35;
+
+                                const maxScaledDim = (maxDim || 1) * scale;
+                                this.camera.position.z = maxScaledDim * 1.8;
+                                this.camera.position.y = maxScaledDim * 0.15;
+                                this.camera.lookAt(0, 0, 0);
+                                this.camera.updateProjectionMatrix();
+
+                                if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
+                                    this.renderer.setScissorTest(false);
+                                }
+
+                                console.log('✅ GLB model loaded successfully');
+                                window.mascotBeeLoaded = true;
+                            } catch (e) {
+                                console.error('❌ Error processing GLB scene:', e);
+                                this.addFallbackBee();
+                            }
+                        },
+                        (xhr) => {
+                            if (xhr && xhr.total) {
+                                const pct = (xhr.loaded / xhr.total) * 100;
+                                console.log(`Loading GLB: ${pct.toFixed(0)}%`);
+                            }
+                        },
+                        (error) => {
+                            console.error('❌ Error loading GLB model:', error);
+                            // Continue to OBJ/MTL pipeline below as fallback
+                        }
+                    );
+                    // If GLB branch was taken, return so we don't run OBJ logic
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('GLB detection/initialization failed, falling back to OBJ:', e);
+        }
+
+    // Resolve base and filenames (OBJ/MTL path)
         let base, mtlPath, objPath, texPath, mtlFilename, objFilename;
         
         // Check if absolute paths are provided
@@ -176,10 +282,10 @@ class SmartyBee3D {
             objFilename = objPath.substring(objPath.lastIndexOf('/') + 1);
         }
 
-        console.log('🐝 Loading 3D model from:', base);
-        console.log('   MTL:', mtlFilename);
-        console.log('   OBJ:', objFilename);
-        console.log('   Texture:', texPath);
+    console.log('🐝 Loading 3D model from:', base);
+    console.log('   MTL:', mtlFilename);
+    console.log('   OBJ:', objFilename);
+    console.log('   Texture:', texPath);
         
         // Cache-busting: add timestamp to force reload of updated files
         const cacheBuster = Date.now();
@@ -206,6 +312,15 @@ class SmartyBee3D {
                     texPathWithCache,
                     (texture) => {
                         console.log('✅ Texture loaded, applying to materials');
+                        // Use sRGB for textures so colors are vivid and not washed out
+                        try {
+                            if (typeof texture.colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+                                texture.colorSpace = THREE.SRGBColorSpace;
+                            } else if (typeof texture.encoding !== 'undefined' && THREE.sRGBEncoding) {
+                                texture.encoding = THREE.sRGBEncoding;
+                            }
+                            texture.needsUpdate = true;
+                        } catch (e) { /* no-op */ }
                         // Apply texture to all materials in the MTL
                         for (const materialName in materials.materials) {
                             const material = materials.materials[materialName];

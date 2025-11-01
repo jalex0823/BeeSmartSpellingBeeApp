@@ -161,14 +161,18 @@ class UserAvatarLoader {
             }
             console.log(`✅ Loaded ${avatars.length} avatars from database`);
             
-            // Convert API response to avatarMap format
+            // Convert API response to avatarMap format (prefer GLB when available)
             avatars.forEach(avatar => {
                 const id = avatar.id;
+                const urls = avatar.urls || avatar;
+                const modelObj = urls?.model_obj || avatar.model_obj_url || avatar.obj_file_url;
+                const isGlb = typeof modelObj === 'string' && /\.(glb|gltf)(\?.*)?$/i.test(modelObj);
                 this.avatarMap[id] = {
-                    obj: (avatar.urls ? avatar.urls.model_obj : (avatar.model_obj_url || avatar.obj_file_url)),
-                    mtl: (avatar.urls ? avatar.urls.model_mtl : (avatar.model_mtl_url || avatar.mtl_file_url)),
-                    texture: (avatar.urls ? avatar.urls.texture : avatar.texture_url),
-                    thumbnail: (avatar.urls ? avatar.urls.thumbnail : (avatar.thumbnail_url || avatar.thumbnail))
+                    glb: isGlb ? modelObj : undefined,
+                    obj: isGlb ? undefined : modelObj,
+                    mtl: urls?.model_mtl || avatar.model_mtl_url || avatar.mtl_file_url,
+                    texture: urls?.texture || avatar.texture_url,
+                    thumbnail: urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail
                 };
             });
             
@@ -354,6 +358,7 @@ class UserAvatarLoader {
      * Get file type from URL for validation logging
      */
     getFileType(url) {
+        if (/(\.glb|\.gltf)(\?.*)?$/i.test(url)) return 'glb';
         if (url.endsWith('.obj')) return 'model';
         if (url.endsWith('.mtl')) return 'material';
         if (url.endsWith('.png')) return url.includes('!') ? 'thumbnail' : 'texture';
@@ -538,11 +543,19 @@ class UserAvatarLoader {
                 const normalizedId = this._normalizeId(avatarId);
                 const data = this.avatarMap[normalizedId] || this.defaultAvatar;
 
-                // Guard: ensure we have OBJ/MTL/texture; if not, force MascotBee
-                const hasAll = data && data.obj && data.mtl && data.texture;
-                const paths = hasAll ? data : this.defaultAvatar;
+                // Prefer GLB when available, otherwise require full OBJ set
+                let paths = null;
+                if (data && data.glb) {
+                    paths = { glb: data.glb };
+                } else if (data && data.obj && data.mtl && data.texture) {
+                    paths = { obj: data.obj, mtl: data.mtl, texture: data.texture };
+                } else {
+                    // Try resolving from live user avatar URLs
+                    const resolved = this.getAvatarPaths();
+                    paths = resolved?.glb ? { glb: resolved.glb } : (resolved?.obj ? resolved : this.defaultAvatar);
+                }
 
-                // Render via SmartyBee3D (OBJ/MTL renderer)
+                // Render via SmartyBee3D (GLB preferred)
                 if (typeof window.SmartyBee3D !== 'function') {
                     console.warn('SmartyBee3D not available, switching to emergency 2D fallback');
                     this.loadEmergency2DFallback(containerId);
@@ -558,16 +571,28 @@ class UserAvatarLoader {
                 // Create the 3D instance
                 // Width/height auto-detect from container when possible
                 const rect = container ? container.getBoundingClientRect() : { width: 200, height: 200 };
-                // eslint-disable-next-line no-new
-                new window.SmartyBee3D(containerId, {
+                const baseOpts = {
                     width: Math.max(120, Math.floor(rect.width)),
                     height: Math.max(120, Math.floor(rect.height)),
-                    modelPath: paths.obj,
-                    mtlPath: paths.mtl,
-                    texturePath: paths.texture,
                     autoRotate: true,
                     enableInteraction: true
-                });
+                };
+
+                // eslint-disable-next-line no-new
+                if (paths.glb) {
+                    new window.SmartyBee3D(containerId, {
+                        ...baseOpts,
+                        glbPath: paths.glb,
+                        modelPath: paths.glb
+                    });
+                } else {
+                    new window.SmartyBee3D(containerId, {
+                        ...baseOpts,
+                        modelPath: paths.obj,
+                        mtlPath: paths.mtl,
+                        texturePath: paths.texture
+                    });
+                }
 
                 this.showLoadedState(containerId);
                 resolve();
@@ -811,9 +836,29 @@ class UserAvatarLoader {
      */
     async validateAvatarFiles(useDefault = false) {
         const paths = useDefault ? this.defaultAvatar : this.getAvatarPaths();
-        // Guard against null/undefined paths to avoid "/null" fetches
-        if (!paths || !paths.obj || !paths.mtl || !paths.texture) {
-            console.warn('Avatar paths incomplete, falling back to MascotBee');
+        if (!paths) {
+            console.warn('Avatar paths missing');
+            return false;
+        }
+
+        // GLB-first validation: only need the .glb file
+        if (paths.glb) {
+            try {
+                const res = await fetch(paths.glb, { method: 'HEAD' });
+                if (!res.ok) {
+                    console.error('❌ GLB file not accessible:', paths.glb, res.status);
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error('❌ GLB validation error:', e);
+                return false;
+            }
+        }
+
+        // OBJ pipeline fallback (legacy)
+        if (!paths.obj || !paths.mtl || !paths.texture) {
+            console.warn('OBJ avatar paths incomplete, validation failed');
             return false;
         }
         const filesToCheck = [paths.obj, paths.mtl, paths.texture];
@@ -849,27 +894,30 @@ class UserAvatarLoader {
      * Get the 3D model paths for the user's avatar (or default)
      */
     getAvatarPaths() {
-        // Only trust user avatar URLs if we've validated them
-        if (this.userAvatarValid && this.userAvatar && this.userAvatar.urls) {
-            const obj = this.userAvatar.urls.model_obj;
-            const mtl = this.userAvatar.urls.model_mtl;
-            const texture = this.userAvatar.urls.texture;
-            const thumbnail = this.userAvatar.urls.thumbnail;
-
-            // If any required OBJ pipeline asset is missing, do NOT return partials
-            if (obj && mtl && texture) {
-                // Guard: Some DB records point to GLB-only directories; those aren't valid for OBJ pipeline
-                const looksLikeGlbOnly = [obj, mtl, texture].some(u => /\/glb_files\//.test(u));
-                if (looksLikeGlbOnly) {
-                    console.warn('Detected GLB-only avatar paths; using MascotBee OBJ fallback');
-                    return this.defaultAvatar;
-                }
-                return { obj, mtl, texture, thumbnail };
+        // Prefer userAvatar.urls when present; support GLB stored in model_obj
+        const u = this.userAvatar?.urls || null;
+        if (u && typeof u.model_obj === 'string') {
+            const modelUrl = u.model_obj;
+            const isGlb = /\.(glb|gltf)(\?.*)?$/i.test(modelUrl) || /\/glb_files\//i.test(modelUrl);
+            const thumbnail = u.thumbnail;
+            if (isGlb) {
+                return { glb: modelUrl, thumbnail };
             }
-
-            // Likely a GLB-only avatar or incomplete record; fall back to MascotBee
-            console.warn('Detected GLB-only or incomplete avatar URLs; using MascotBee OBJ fallback');
+            // Legacy OBJ pipeline (only if all required parts exist)
+            if (u.model_mtl && u.texture) {
+                return { obj: u.model_obj, mtl: u.model_mtl, texture: u.texture, thumbnail };
+            }
         }
+
+        // If avatarMap has an entry (e.g., after catalog load or alias), attempt GLB first
+        const id = this.getAvatarId();
+        const mapped = this.avatarMap[id];
+        if (mapped) {
+            if (mapped.glb) return { glb: mapped.glb, thumbnail: mapped.thumbnail };
+            if (mapped.obj && mapped.mtl && mapped.texture) return mapped;
+        }
+
+        // Fallback to MascotBee OBJ default
         return this.defaultAvatar;
     }
 
@@ -878,6 +926,14 @@ class UserAvatarLoader {
      */
     getAvatarOptions(additionalOptions = {}) {
         const paths = this.getAvatarPaths();
+        if (paths.glb) {
+            // Explicit glbPath preferred; also set modelPath to glb for inference fallback
+            return {
+                glbPath: paths.glb,
+                modelPath: paths.glb,
+                ...additionalOptions
+            };
+        }
         return {
             modelPath: paths.obj,
             mtlPath: paths.mtl,

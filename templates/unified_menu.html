@@ -2205,20 +2205,25 @@
                     max-width: clamp(240px, 60vw, 520px);
                     margin: 0 auto 8px auto;
                 ">
+                    <!-- Use quiz-style compact square with soft drop-shadow for vivid look -->
                     <div class="preview-avatar-container" style="
-                        width: 100%;
-                        height: clamp(180px, 38vw, 300px);
-                        background: transparent;                 /* transparent instead of black */
-                        border: 0;                               /* remove golden frame entirely */
-                        border-radius: 0;                        /* no rounded corners */
-                        box-shadow: none;                        /* no glow */
+                        width: 160px;                     /* match quiz container */
+                        height: 160px;                    /* match quiz container */
+                        background: transparent;
+                        border: 0;
+                        border-radius: 0;
+                        box-shadow: none;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         overflow: visible;
                         position: relative;
+                        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35)); /* same as quiz */
+                        transform: translateY(-6px);
                     ">
-                        <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!"></div>
+                        <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!" style="
+                            width: 100%; height: 100%; position: relative;
+                        "></div>
                     </div>
                 </div>
                 
