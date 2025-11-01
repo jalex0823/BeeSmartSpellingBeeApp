@@ -2329,6 +2329,11 @@ def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
     return jsonify({"status": "ok", "version": "1.6"}), 200
 
+# PWA service worker - serve from root scope so it controls the whole app
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
+
 @app.route("/db/migrate-avatar-columns")
 def migrate_avatar_columns():
     """Migration endpoint to add avatar columns to existing users table"""
