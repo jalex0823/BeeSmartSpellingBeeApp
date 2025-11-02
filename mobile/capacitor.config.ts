@@ -1,8 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
-// Minimal Capacitor config pointing to the hosted web app.
-// Note: You still need to `npm i -D @capacitor/cli @capacitor/core` in this folder
-// and run `npx cap init` to create native projects.
+// BeeSmart Spelling Bee - Capacitor Configuration
+// This connects your mobile app to the Railway backend
 
 const config: CapacitorConfig = {
   appId: 'app.beesmartspelling',
@@ -10,10 +9,26 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   bundledWebRuntime: false,
   server: {
+    // Production Railway URL
     url: 'https://beesmartspelling.app',
     cleartext: false,
     androidScheme: 'https'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#FFD700',
+      showSpinner: false,
+      androidScaleType: 'CENTER_CROP',
+      splashFullScreen: true,
+      splashImmersive: false
+    },
+    StatusBar: {
+      style: 'light',
+      backgroundColor: '#FFD700'
+    }
   }
 };
 
 export default config;
+

@@ -1,28 +1,142 @@
 # Mobile Wrapping – BeeSmart Spelling App
 
-This folder contains the configuration and steps to wrap the Flask web app for the Apple App Store and Google Play using Capacitor.
+This folder contains everything needed to package the BeeSmart Spelling Bee Flask app for the Google Play Store using Capacitor.
 
-## Approach
-- Keep the Python/Flask app hosted (Railway in prod).
-- Wrap the site in a high‑performance WebView using Capacitor.
-- Add native integrations (camera/microphone permissions, file picker) via Web APIs or Capacitor plugins if needed.
-- Leverage the PWA baseline (manifest + service worker) for installability and offline caching.
+## 🚀 Quick Start
+
+**After Android Studio installation completes:**
+
+```powershell
+cd "c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile"
+.\quick-start.ps1
+```
+
+The interactive wizard guides you through:
+1. Keystore generation
+2. Signing configuration
+3. Building release packages
+
+See **STATUS.txt** for current setup status.
+
+---
+
+## 📋 Documentation Files
+
+- **STATUS.txt** - Current setup status and next steps
+- **QUICK_REFERENCE.md** - Command cheat sheet
+- **SETUP_COMPLETE.md** - Detailed configuration summary
+- **ANDROID_PACKAGING_GUIDE.md** (in parent folder) - Complete guide
+- **STORE_CHECKLIST.md** - Play Store submission checklist
+- **BRANDING.md** - Asset requirements
+
+---
+
+## 🎯 Configuration
+
+- **App Name:** BeeSmart Spelling Bee
+- **App ID:** app.beesmartspelling
+- **Backend URL:** https://beesmartspelling.app
+- **Version:** 1.0.0 (versionCode 1)
+- **Approach:** Capacitor WebView wrapper pointing to Railway
+
+---
+
+## ⚡ Automation Scripts
+
+All scripts are ready to use:
+
+### `quick-start.ps1` - Interactive Setup Wizard
+Complete packaging workflow with menu system.
+
+### `setup-keystore.ps1` - Keystore Generation
+One-time setup to create Android signing key.
+
+### `setup-signing.ps1` - Configure Signing
+One-time setup to configure release signing.
+
+### `build-release.ps1` - Automated Build
+Build release AAB or APK with optional version updates.
+
+**Examples:**
+```powershell
+# Build Play Store AAB
+.\build-release.ps1
+
+# Build test APK
+.\build-release.ps1 -BuildAPK
+
+# Build with version update
+.\build-release.ps1 -VersionName "1.0.1" -VersionCode 2
+```
+
+---
+
+## 🏗️ Architecture
+
+### Web App (Flask/Python)
+- Hosted on Railway: https://beesmartspelling.app
+- PostgreSQL database
+- Full web UI with PWA support
+
+### Mobile App (Capacitor)
+- Native Android wrapper
+- WebView loads Railway URL
+- Native integrations: Camera, Microphone, StatusBar
+- Splash screen and app icons
+- Play Store ready
+
+---
+
+## 📁 Project Structure
+
+```
+mobile/
+├── android/              # Android Studio project
+│   ├── app/
+│   │   └── build.gradle  # Build config (signing configured ✅)
+│   ├── .gitignore        # Updated ✅
+│   ├── upload-keystore.jks        # Created by setup-keystore.ps1
+│   └── keystore.properties        # Created by setup-signing.ps1
+├── capacitor.config.ts   # App config (configured ✅)
+├── package.json          # Dependencies
+├── quick-start.ps1       # Interactive wizard ✅
+├── setup-keystore.ps1    # Keystore generator ✅
+├── setup-signing.ps1     # Signing config ✅
+├── build-release.ps1     # Build automation ✅
+├── STATUS.txt            # Current status
+├── QUICK_REFERENCE.md    # Commands
+├── SETUP_COMPLETE.md     # Configuration details
+├── STORE_CHECKLIST.md    # Submission checklist
+└── README.md            # This file
+```
+
+---
+
+## 🔐 Security
+
+### Protected Files (in .gitignore)
+- `android/upload-keystore.jks` - Signing key
+- `android/keystore.properties` - Credentials
+- Any `.keystore` files
+
+### Safe to Commit
+- All PowerShell scripts
+- Configuration files
+- Documentation
+
+---
 
 ## Prerequisites
-- Node.js 18+
-- Xcode (for iOS build), CocoaPods installed
-- Android Studio + Android SDK (for Android build)
-- Apple Developer account + Play Console account
 
-## IDs and Names
-- App Name: BeeSmart Spelling Bee
-- Bundle ID (suggested): app.beesmartspelling
-- Android Application ID (suggested): app.beesmartspelling
-- Website: https://beesmartspelling.app
+- ✅ Node.js 18+ (installed)
+- ✅ Capacitor configured
+- ⏳ Android Studio + Android SDK (downloading)
+- ⏳ Java JDK (for keytool)
+- ⏳ Google Play Console account
 
-## Steps
+---
 
-1) Initialize Capacitor
+## Manual Setup Steps (if not using quick-start.ps1)
 
 ```bash
 npm init -y

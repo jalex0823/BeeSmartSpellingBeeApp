@@ -24,7 +24,10 @@ class UserAvatarLoader {
             'superbee': 'superbee',
             'vampbee': 'vamp-bee',
             'warebee': 'ware-bee',
-            'zombee': 'zom-bee'
+            'zombee': 'zom-bee',
+            // New GLB aliases
+            'buzzbee': 'buzz-bee',
+            'selfiebee': 'selfie-bee'
         };
         
         // Quick DB connection check instead of loading all avatars
@@ -92,6 +95,15 @@ class UserAvatarLoader {
                 mtl: '/static/assets/avatars/zom-bee/ZomBee.mtl',
                 texture: '/static/assets/avatars/zom-bee/ZomBee.png',
                 thumbnail: '/static/assets/avatars/zom-bee/ZomBee!.png'
+            },
+            // New GLB avatars (served from /static/assets/avatars/glb_files)
+            'buzz-bee': {
+                glb: '/static/assets/avatars/glb_files/BuzzBee.glb',
+                thumbnail: '/static/assets/avatars/glb_files/AvatarThumbnails/CutieBee!.png'
+            },
+            'selfie-bee': {
+                glb: '/static/assets/avatars/glb_files/SelfieBee.glb',
+                thumbnail: '/static/assets/avatars/glb_files/AvatarThumbnails/CutieBee!.png'
             }
         };
         
@@ -445,7 +457,9 @@ class UserAvatarLoader {
             'rocker-bee': 'Rocker Bee',
             'vamp-bee': 'Vamp Bee',
             'ware-bee': 'Ware Bee',
-            'zom-bee': 'Zom Bee'
+            'zom-bee': 'Zom Bee',
+            'buzz-bee': 'Buzz Bee',
+            'selfie-bee': 'Selfie Bee'
         };
         return (this.userAvatar?.name) || mapping[id] || 'Bee Avatar';
     }

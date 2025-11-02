@@ -602,6 +602,21 @@
         .fairy { display: none !important; }
         /* Hide any inline decorative elements using the sparkleFloat animation */
         [style*="sparkleFloat"] { display: none !important; }
+
+        /* Site-wide home page override: remove shimmer/pulse/glow animations */
+        body.home-no-shimmer *,
+        body.home-no-shimmer *::before,
+        body.home-no-shimmer *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+        /* Hide the interactive caption when shimmer/effects are disabled */
+        body.home-no-shimmer #mascotCaption { display: none !important; }
+        /* Also hide any bee swarm visuals if present */
+        body.home-no-shimmer .bee-swarm-container,
+        body.home-no-shimmer .flying-bee { display: none !important; }
+        /* Ensure attention pulses are disabled */
+        body.home-no-shimmer .pulse-attention { animation: none !important; }
         
         #mascotCaption:hover {
             color: #FFB347;
@@ -1659,7 +1674,7 @@
         }
     </style>
 </head>
-<body>
+<body class="home-no-shimmer">
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
@@ -8184,68 +8199,91 @@
 
         // Determine theme and character-specific actions based on avatar name
         function getAvatarTheme(avatarName) {
-            const name = avatarName.toLowerCase();
-            
-            // 🎭 Character-specific themes with unique personalities (ALL 24+ AVATARS)
-            
-            // 🌟 MASCOT BEE - THE STAR! Rainbow, confetti, celebration!
-            if (name.includes('mascot')) {
-                return 'mascot-star'; // BIGGEST SHOW - Rainbow, confetti, fireworks!
-            }
-            
+            const name = (avatarName || '').toLowerCase();
+
+            // 🌟 Mascot special
+            if (name.includes('mascot')) return 'mascot-star';
+
             // 🧪 Science & Academic
-            else if (name.includes('al-bee') || name.includes('albee')) {
-                return 'einstein'; // Science, math, E=mc², equations, blue glow
-            } else if (name.includes('professor')) {
-                return 'academic'; // Books, graduation cap, teaching, gold glow
-            }
-            
-            // 🎭 Entertainment
-            else if (name.includes('rocker')) {
-                return 'rockstar'; // Music notes, lightning, stage lights, pink/purple
-            }
-            
-            // 🦸 Fantasy
-            else if (name.includes('monster')) {
-                return 'fantasy'; // Spooky effects for fantasy avatars
-            } else if (name.includes('vamp')) {
-                return 'vampire'; // Mysterious effects
-            } else if (name.includes('ware') || name.includes('werewolf')) {
-                return 'werewolf'; // Wild effects
-            } else if (name.includes('zom') || name.includes('zombie')) {
-                return 'zombie'; // Spooky effects
-                return 'ocean'; // Waves, fish, bubbles, aqua blue
-            }
-            
+            if (name.includes('al-bee') || name.includes('albee')) return 'einstein';
+            if (name.includes('professor')) return 'academic';
+
+            // 🎸 Music/Stage
+            if (name.includes('rocker') || name.includes('jrock') || name.includes('rock')) return 'rockstar';
+
             // 🤖 Tech
-            else if (name.includes('robo') || name.includes('bot')) {
-                return 'robot'; // Digital glitch, circuits, neon cyan
-            }
-            
+            if (name.includes('robo') || name.includes('bot')) return 'robot';
+
             // 🏍️ Action
-            else if (name.includes('biker') || name.includes('motor')) {
-                return 'biker'; // Tire tracks, smoke, speed lines, black/chrome
+            if (name.includes('biker') || name.includes('motor')) return 'biker';
+
+            // 👑 Royal/Medieval
+            if (name.includes('knight')) return 'knight';
+            if (name.includes('queen')) return 'queen';
+
+            // 🔍 Professions / Roles
+            if (name.includes('detective')) return 'detective';
+            if (name.includes('doctor') || name.includes('doc')) return 'doctor';
+            if (name.includes('builder')) return 'builder';
+
+            // 🌍 Adventure / Travel / Space / Ocean
+            if (name.includes('explorer')) return 'explorer';
+            if (name.includes('space') || name.includes('astro')) return 'space';
+            if (name.includes('sea') || name.includes('ocean')) return 'ocean';
+
+            // 🧟 Spooky/Fantasy
+            if (name.includes('monster')) return 'monster';
+            if (name.includes('franken')) return 'frankenstein';
+            if (name.includes('vamp')) return 'vampire';
+            if (name.includes('zom') || name.includes('zombie')) return 'zombie';
+            if (name.includes('ware') || name.includes('werewolf') || name.includes('wolf')) return 'werewolf';
+
+            // 🌟 Personality / Archetypes
+            if (name.includes('diva') || name.includes('cutie')) return 'diva';
+            if (name.includes('super')) return 'superhero';
+            if (name.includes('cool') || name.includes('buda') || name.includes('obee')) return 'cool';
+            if (name.includes('selfie')) return 'diva';
+            if (name.includes('buzz')) return 'mascot';
+            if (name.includes('brother')) return 'brother';
+            if (name.includes('anxious')) return 'nervous';
+
+            // 🍯 Honeycomb variant → use mascot effects
+            if (name.includes('honeycomb')) return 'mascot';
+
+            // 🅾️ O-Bee and all others → generic happy
+            return 'happy';
+        }
+
+        // Determine if the current avatar has a non-generic themed movement
+        function hasThemedMovement(theme) {
+            // Any theme other than 'happy' is considered themed
+            return !!theme && theme !== 'happy';
+        }
+
+        // Show/hide the interactive caption based on current avatar/theme and shimmer mode
+        async function updateMascotCaptionVisibility() {
+            const caption = document.getElementById('mascotCaption');
+            if (!caption) return;
+
+            // Hide if shimmer/effects are globally disabled on home page
+            if (document.body && document.body.classList.contains('home-no-shimmer')) {
+                caption.style.display = 'none';
+                return;
             }
-            
-            // 👻 Spooky/Fantasy
-            else if (name.includes('monster')) {
-                return 'monster'; // Dark clouds, moon, scary stuff, purple
-            } else if (name.includes('vamp')) {
-                return 'vampire'; // Bats, gothic elements, crimson red
-            } else if (name.includes('zom')) {
-                return 'zombie'; // Graveyard, bones, spooky green
-            } else if (name.includes('ware') || name.includes('wolf')) {
-                return 'werewolf'; // Full moon, howling, forest brown
-            }
-            
-            // 😰 Emotions
-            else if (name.includes('anxious')) {
-                return 'nervous'; // Sweat drops, worried, yellow
-            }
-            
-            // 🐝 Default - Happy cheerful bee
-            else {
-                return 'happy'; // Generic happy bee effects, yellow glow
+
+            // Default to hidden until we know
+            caption.style.display = 'none';
+            try {
+                const info = await getCurrentAvatarInfo();
+                const name = (info && info.name) ? info.name : 'mascot-bee';
+                const theme = getAvatarTheme(name);
+                if (hasThemedMovement(theme)) {
+                    caption.style.display = '';
+                } else {
+                    caption.style.display = 'none';
+                }
+            } catch (e) {
+                caption.style.display = 'none';
             }
         }
 
@@ -8291,8 +8329,35 @@
                     case 'academic':
                         playAcademicAudio(audioContext);
                         break;
+                    case 'knight':
+                        playKnightAudio(audioContext);
+                        break;
+                    case 'queen':
+                        playQueenAudio(audioContext);
+                        break;
+                    case 'detective':
+                        playDetectiveAudio(audioContext);
+                        break;
+                    case 'doctor':
+                        playDoctorAudio(audioContext);
+                        break;
+                    case 'builder':
+                        playBuilderAudio(audioContext);
+                        break;
+                    case 'explorer':
+                        playExplorerAudio(audioContext);
+                        break;
+                    case 'space':
+                        playSpaceAudio(audioContext);
+                        break;
+                    case 'ocean':
+                        playOceanAudio(audioContext);
+                        break;
                     case 'monster':
                         playMonsterAudio(audioContext);
+                        break;
+                    case 'frankenstein':
+                        playFrankensteinAudio(audioContext);
                         break;
                     case 'vampire':
                         playVampireAudio(audioContext);
@@ -8306,8 +8371,30 @@
                     case 'rockstar':
                         playRockstarAudio(audioContext);
                         break;
+                    case 'robot':
+                        playRobotAudio(audioContext);
+                        break;
+                    case 'biker':
+                        playBikerAudio(audioContext);
+                        break;
+                    case 'diva':
+                        playDivaAudio(audioContext);
+                        break;
+                    case 'superhero':
+                        playSuperheroAudio(audioContext);
+                        break;
+                    case 'cool':
+                        playCoolAudio(audioContext);
+                        break;
+                    case 'brother':
+                        playBrotherAudio(audioContext);
+                        break;
                     case 'nervous':
                         playNervousAudio(audioContext);
+                        break;
+                    case 'mascot':
+                    case 'mascot-star':
+                        playMascotAudio(audioContext);
                         break;
                     default:
                         playMascotAudio(audioContext);
@@ -8807,6 +8894,209 @@
             });
         }
 
+        // Knight theme (trumpet-like fanfare)
+        function playKnightAudio(audioContext) {
+            const notes = [392, 440, 523, 587];
+            notes.forEach((f, i) => {
+                const osc = audioContext.createOscillator();
+                const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type = 'square'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.2);
+                g.gain.setValueAtTime(0.12, audioContext.currentTime + i*0.2);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.2 + 0.25);
+                osc.start(audioContext.currentTime + i*0.2); osc.stop(audioContext.currentTime + i*0.2 + 0.25);
+            });
+        }
+
+        // Queen theme (harp-like arpeggio)
+        function playQueenAudio(audioContext) {
+            const arpeggio = [659, 784, 988, 1319];
+            arpeggio.forEach((f, i) => {
+                const osc = audioContext.createOscillator();
+                const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.18);
+                g.gain.setValueAtTime(0.1, audioContext.currentTime + i*0.18);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.18 + 0.3);
+                osc.start(audioContext.currentTime + i*0.18); osc.stop(audioContext.currentTime + i*0.18 + 0.3);
+            });
+        }
+
+        // Detective theme (bass pulse + click)
+        function playDetectiveAudio(audioContext) {
+            const osc = audioContext.createOscillator();
+            const g = audioContext.createGain();
+            osc.connect(g); g.connect(audioContext.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(110, audioContext.currentTime);
+            g.gain.setValueAtTime(0.15, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc.start(audioContext.currentTime); osc.stop(audioContext.currentTime + 0.5);
+            setTimeout(()=>{
+                const click = audioContext.createOscillator(); const cg = audioContext.createGain();
+                click.connect(cg); cg.connect(audioContext.destination);
+                click.type='square'; click.frequency.setValueAtTime(3000, audioContext.currentTime);
+                cg.gain.setValueAtTime(0.08, audioContext.currentTime);
+                cg.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.06);
+                click.start(audioContext.currentTime); click.stop(audioContext.currentTime + 0.06);
+            }, 180);
+        }
+
+        // Doctor theme (monitor beeps)
+        function playDoctorAudio(audioContext) {
+            [880, 880].forEach((f, i)=>{
+                const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type='sine'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.25);
+                g.gain.setValueAtTime(0.12, audioContext.currentTime + i*0.25);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.25 + 0.1);
+                osc.start(audioContext.currentTime + i*0.25); osc.stop(audioContext.currentTime + i*0.25 + 0.1);
+            });
+        }
+
+        // Builder theme (hammer taps)
+        function playBuilderAudio(audioContext) {
+            [220, 330, 220].forEach((f, i)=>{
+                const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type='square'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.18);
+                g.gain.setValueAtTime(0.14, audioContext.currentTime + i*0.18);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.18 + 0.12);
+                osc.start(audioContext.currentTime + i*0.18); osc.stop(audioContext.currentTime + i*0.18 + 0.12);
+            });
+        }
+
+        // Explorer theme (drum thumps)
+        function playExplorerAudio(audioContext) {
+            [120, 100, 140].forEach((f, i)=>{
+                const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type='sine'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.2);
+                g.gain.setValueAtTime(0.16, audioContext.currentTime + i*0.2);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.2 + 0.15);
+                osc.start(audioContext.currentTime + i*0.2); osc.stop(audioContext.currentTime + i*0.2 + 0.15);
+            });
+        }
+
+        // Space theme (sci‑fi gliss + ping)
+        function playSpaceAudio(audioContext) {
+            const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+            osc.connect(g); g.connect(audioContext.destination);
+            osc.type='sawtooth'; osc.frequency.setValueAtTime(400, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.6);
+            g.gain.setValueAtTime(0.12, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+            osc.start(audioContext.currentTime); osc.stop(audioContext.currentTime + 0.6);
+            setTimeout(()=>{
+                const ping = audioContext.createOscillator(); const pg = audioContext.createGain();
+                ping.connect(pg); pg.connect(audioContext.destination);
+                ping.type='sine'; ping.frequency.setValueAtTime(1200, audioContext.currentTime);
+                pg.gain.setValueAtTime(0.08, audioContext.currentTime);
+                pg.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                ping.start(audioContext.currentTime); ping.stop(audioContext.currentTime + 0.2);
+            }, 300);
+        }
+
+        // Ocean theme (wave + bubble plop)
+        function playOceanAudio(audioContext) {
+            const wave = audioContext.createOscillator(); const wg = audioContext.createGain();
+            const lfo = audioContext.createOscillator(); const lfog = audioContext.createGain();
+            lfo.connect(lfog); lfog.connect(wave.frequency); wave.connect(wg); wg.connect(audioContext.destination);
+            wave.type='sine'; wave.frequency.setValueAtTime(80, audioContext.currentTime);
+            lfo.type='sine'; lfo.frequency.setValueAtTime(0.4, audioContext.currentTime); lfog.gain.setValueAtTime(20, audioContext.currentTime);
+            wg.gain.setValueAtTime(0.1, audioContext.currentTime);
+            wg.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.0);
+            lfo.start(audioContext.currentTime); wave.start(audioContext.currentTime);
+            lfo.stop(audioContext.currentTime + 1.0); wave.stop(audioContext.currentTime + 1.0);
+            setTimeout(()=>{
+                const bubble = audioContext.createOscillator(); const bg = audioContext.createGain();
+                bubble.connect(bg); bg.connect(audioContext.destination);
+                bubble.type='triangle'; bubble.frequency.setValueAtTime(600, audioContext.currentTime);
+                bg.gain.setValueAtTime(0.06, audioContext.currentTime);
+                bg.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                bubble.start(audioContext.currentTime); bubble.stop(audioContext.currentTime + 0.15);
+            }, 300);
+        }
+
+        // Frankenstein theme (electric zaps)
+        function playFrankensteinAudio(audioContext) {
+            [3000, 2000, 2500].forEach((f, i)=>{
+                const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type='square'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.12);
+                g.gain.setValueAtTime(0.12, audioContext.currentTime + i*0.12);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.12 + 0.1);
+                osc.start(audioContext.currentTime + i*0.12); osc.stop(audioContext.currentTime + i*0.12 + 0.1);
+            });
+        }
+
+        // Robot theme (digital beeps)
+        function playRobotAudio(audioContext) {
+            [600, 900, 1200].forEach((f, i)=>{
+                const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+                osc.connect(g); g.connect(audioContext.destination);
+                osc.type='square'; osc.frequency.setValueAtTime(f, audioContext.currentTime + i*0.1);
+                g.gain.setValueAtTime(0.08, audioContext.currentTime + i*0.1);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.1 + 0.1);
+                osc.start(audioContext.currentTime + i*0.1); osc.stop(audioContext.currentTime + i*0.1 + 0.1);
+            });
+        }
+
+        // Biker theme (engine rev)
+        function playBikerAudio(audioContext) {
+            const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+            osc.connect(g); g.connect(audioContext.destination);
+            osc.type='sawtooth'; osc.frequency.setValueAtTime(80, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.5);
+            g.gain.setValueAtTime(0.15, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+            osc.start(audioContext.currentTime); osc.stop(audioContext.currentTime + 0.6);
+        }
+
+        // Diva theme (gliss)
+        function playDivaAudio(audioContext) {
+            const osc = audioContext.createOscillator(); const g = audioContext.createGain();
+            osc.connect(g); g.connect(audioContext.destination);
+            osc.type='triangle'; osc.frequency.setValueAtTime(500, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1500, audioContext.currentTime + 0.4);
+            g.gain.setValueAtTime(0.1, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.45);
+            osc.start(audioContext.currentTime); osc.stop(audioContext.currentTime + 0.45);
+        }
+
+        // Superhero (heroic brass hits)
+        function playSuperheroAudio(audioContext) {
+            [261, 392, 523].forEach((f, i)=>{
+                const o = audioContext.createOscillator(); const g = audioContext.createGain();
+                o.connect(g); g.connect(audioContext.destination);
+                o.type='square'; o.frequency.setValueAtTime(f, audioContext.currentTime + i*0.15);
+                g.gain.setValueAtTime(0.12, audioContext.currentTime + i*0.15);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.15 + 0.25);
+                o.start(audioContext.currentTime + i*0.15); o.stop(audioContext.currentTime + i*0.15 + 0.25);
+            });
+        }
+
+        // Cool theme (chill blip)
+        function playCoolAudio(audioContext) {
+            const o = audioContext.createOscillator(); const g = audioContext.createGain();
+            o.connect(g); g.connect(audioContext.destination);
+            o.type='sine'; o.frequency.setValueAtTime(440, audioContext.currentTime);
+            g.gain.setValueAtTime(0.12, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            o.start(audioContext.currentTime); o.stop(audioContext.currentTime + 0.2);
+        }
+
+        // Brother theme (friendly two-tone)
+        function playBrotherAudio(audioContext) {
+            [523, 659].forEach((f, i)=>{
+                const o = audioContext.createOscillator(); const g = audioContext.createGain();
+                o.connect(g); g.connect(audioContext.destination);
+                o.type='sine'; o.frequency.setValueAtTime(f, audioContext.currentTime + i*0.15);
+                g.gain.setValueAtTime(0.1, audioContext.currentTime + i*0.15);
+                g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i*0.15 + 0.18);
+                o.start(audioContext.currentTime + i*0.15); o.stop(audioContext.currentTime + i*0.15 + 0.18);
+            });
+        }
+
         // Create character-specific particle effects
         function createThemeParticles(container, theme) {
             const particleConfigs = {
@@ -9088,6 +9378,10 @@
             }
             
             console.log('✅ Mascot rotation show complete!');
+            // Update caption visibility based on avatar/theme rules
+            if (typeof updateMascotCaptionVisibility === 'function') {
+                updateMascotCaptionVisibility();
+            }
         }
         
         function performSpinShow(mascot) {
@@ -10244,6 +10538,11 @@
             function playThemedAvatarEffect(avatarId, container) {
                 console.log('🎭 Playing themed effect for:', avatarId);
                 
+                // Skip decorative effects when shimmer is disabled on home page
+                if (document.body && document.body.classList.contains('home-no-shimmer')) {
+                    return;
+                }
+                
                 // Create effect overlay
                 const effectOverlay = document.createElement('div');
                 effectOverlay.style.cssText = `
@@ -10945,11 +11244,17 @@
                         if (window.userAvatarLoader) {
                             window.userAvatarLoader.showLoadedState();
                         }
+                        if (typeof updateMascotCaptionVisibility === 'function') {
+                            updateMascotCaptionVisibility();
+                        }
                     } else {
                         await initDefaultMascot();
                         console.log('✅ Default mascot refreshed');
                         if (window.userAvatarLoader) {
                             window.userAvatarLoader.showLoadedState();
+                        }
+                        if (typeof updateMascotCaptionVisibility === 'function') {
+                            updateMascotCaptionVisibility();
                         }
                     }
                 } catch (error) {
@@ -11039,6 +11344,10 @@
             
             // Start monitoring when page loads
             monitorAvatarLoading();
+            // Decide whether to show the interactive caption based on the current avatar
+            if (typeof updateMascotCaptionVisibility === 'function') {
+                updateMascotCaptionVisibility();
+            }
         });
         
         // 🎪 DUPLICATE REMOVED - Using enhanced horizontal fly-by animation defined earlier

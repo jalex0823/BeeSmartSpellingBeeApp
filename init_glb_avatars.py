@@ -80,7 +80,9 @@ LOCKED_GLB_FILES = {
     'DocBee.glb', 'ExplorerBee.glb', 'Frankenbee.glb', 'OBee.glb',
     'QueenBee.glb', 'RoboBee.glb', 'SeaBee.glb', 'SpaceBee.glb', 'SuperBee.glb',
     # Newly added, verified GLB assets
-    'MotorBee.glb', 'HoneyComb.glb'
+    'MotorBee.glb', 'HoneyComb.glb',
+    # New: BuzzBee & SelfieBee
+    'BuzzBee.glb', 'SelfieBee.glb'
 }
 
 # 🔒 LOCKED: Avatar name to correct GLB filename mapping
@@ -102,7 +104,10 @@ AVATAR_GLB_MAPPING = {
     'Sea Bee': 'SeaBee.glb',
     'Space Bee': 'SpaceBee.glb',
     'Astro Bee': 'SpaceBee.glb',  # Astro uses same file as Space
-    'Super Bee': 'SuperBee.glb'
+    'Super Bee': 'SuperBee.glb',
+    # New: Buzz & Selfie
+    'Buzz Bee': 'BuzzBee.glb',
+    'Selfie Bee': 'SelfieBee.glb'
 }
 # Extend mapping for newly added GLB avatars
 AVATAR_GLB_MAPPING.update({
@@ -149,7 +154,40 @@ THUMBNAIL_MAPPING = {
     'Super Bee Hero': 'AvatarThumbnails/SuperBee!.png',
     'Space Bee Explorer': 'AvatarThumbnails/SpaceBee!.png',
     'Queen Bee Majesty': 'AvatarThumbnails/QueenBee!.png',
+    # New entries: provisional thumbnails for Buzz & Selfie
+    'Buzz Bee': 'AvatarThumbnails/CutieBee!.png',
+    'Selfie Bee': 'AvatarThumbnails/CutieBee!.png',
 }
+
+# Extend seed list with new GLB avatars (Buzz & Selfie)
+GLB_AVATARS.extend([
+    {
+        "slug": "buzz-bee",
+        "name": "Buzz Bee",
+        "description": "The friendly buzzing mascot bee!",
+        "category": "classic",
+        "folder_path": "glb_files",
+        "obj_file": "BuzzBee.glb",
+        "mtl_file": None,
+        "texture_file": None,
+        "thumbnail_file": "AvatarThumbnails/CutieBee!.png",
+        "sort_order": 101,
+        "is_active": True
+    },
+    {
+        "slug": "selfie-bee",
+        "name": "Selfie Bee",
+        "description": "Picture-perfect bee with diva flair!",
+        "category": "entertainment",
+        "folder_path": "glb_files",
+        "obj_file": "SelfieBee.glb",
+        "mtl_file": None,
+        "texture_file": None,
+        "thumbnail_file": "AvatarThumbnails/CutieBee!.png",
+        "sort_order": 102,
+        "is_active": True
+    }
+])
 
 def validate_glb_files():
     """

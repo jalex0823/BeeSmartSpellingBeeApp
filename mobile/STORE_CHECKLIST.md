@@ -78,6 +78,36 @@ This checklist captures everything needed to submit to the Apple App Store and G
 - Build Targets: iOS deployment target (e.g., 13+), Android minSdk/targetSdk (Capacitor default OK)
 - Networking: HTTPS only (androidScheme https; cleartext disabled)
 
+## App Links / Universal Links
+- Domain: https://beesmartspelling.app
+- iOS (Universal Links)
+  - Associated Domains entitlement: applinks:beesmartspelling.app
+  - AASA file served at: /.well-known/apple-app-site-association
+    - appID format: TEAMID.app.beesmartspelling
+    - Update TEAMID in `static/.well-known/apple-app-site-association`
+  - Verify:
+    - https://beesmartspelling.app/.well-known/apple-app-site-association returns JSON with 200
+    - On device: install build, tap a link to your domain → should open app
+- Android (App Links)
+  - Package: app.beesmartspelling
+  - Intent filter present in AndroidManifest for https://beesmartspelling.app/* (autoVerify=true)
+  - assetlinks.json served at: /.well-known/assetlinks.json
+    - Update SHA-256 fingerprint in `static/.well-known/assetlinks.json`
+    - Optional helper: `python tools/update_assetlinks.py --package app.beesmartspelling --sha256 "AB:CD:...:EF"`
+  - Get SHA-256 fingerprint (choose one):
+    - From Play Console: Setup → App Integrity → App signing certificate → SHA-256
+    - From keystore (PowerShell):
+      ```powershell
+      keytool -list -v -keystore "C:\path\to\upload-keystore.jks" -alias upload -storepass YOUR_PASS
+      ```
+    - From .cer/.pem (PowerShell + OpenSSL):
+      ```powershell
+      openssl x509 -in C:\path\to\cert.pem -noout -fingerprint -sha256 | % { $_.Split('=')[1] } | % { $_.Replace('-',':') }
+      ```
+  - Verify:
+    - https://beesmartspelling.app/.well-known/assetlinks.json returns JSON with 200
+    - Upload a signed build to Internal testing; Play should verify App Links automatically (check Release → App integrity → App Links)
+
 ## Pre-Submission QA
 - Camera flow works on device
 - Microphone flow works on device
