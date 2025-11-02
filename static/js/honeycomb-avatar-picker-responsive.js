@@ -10,6 +10,8 @@ let loadedThumbnails = 0;
 let totalThumbnails = 0;
 let currentLoadingAvatar = null;
 let previewLoadProgress = 0;
+// Current user's honey points from API
+let currentUserHoneyPoints = 0;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -143,6 +145,10 @@ function updateDynamicMarquee(avatars) {
     const unlocked = avatars.filter(a => !a.is_locked);
     
     let messages = [];
+    // Honey Points hint
+    if (typeof currentUserHoneyPoints === 'number') {
+        messages.push(`🍯 You have ${Number(currentUserHoneyPoints).toLocaleString()} Honey Points`);
+    }
     
     // Congratulate on unlocked count
     messages.push(`🎉 You have ${unlocked.length} bees unlocked!`);
@@ -184,6 +190,29 @@ function updateDynamicMarquee(avatars) {
     marquee.innerHTML = marqueeHTML;
 }
 
+// Compute a consistent locked message based on user points and avatar tier
+function computeLockedMessage(avatar) {
+    const tier = avatar.tier;
+    const price = (typeof avatar.price === 'number') ? avatar.price : null;
+    const hasPointsTier = (typeof avatar.unlock_points === 'number' && avatar.unlock_points > 0);
+    const isPremiumOnly = (tier === 'premium') || (price && !hasPointsTier);
+
+    if (hasPointsTier && !isPremiumOnly) {
+        const remaining = Math.max(avatar.unlock_points - (currentUserHoneyPoints || 0), 0);
+        if (remaining > 0) {
+            let msg = `You need ${remaining.toLocaleString()} more Honey Points to unlock this bee.`;
+            if (price && tier === 'earn_or_buy') {
+                msg += ` Or purchase for $${Number(price).toFixed(2)}.`;
+            }
+            return msg;
+        }
+        return 'You have enough Honey Points to unlock this bee! Try selecting again.';
+    } else if (isPremiumOnly && price) {
+        return `Purchase for $${Number(price).toFixed(2)}.`;
+    }
+    return avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
+}
+
 // Load avatars from API
 async function loadAvatars() {
     try {
@@ -202,6 +231,11 @@ async function loadAvatars() {
         }
         
         const data = await response.json();
+        // Capture current user's honey points if provided
+        if (data && typeof data.user_honey_points === 'number') {
+            currentUserHoneyPoints = data.user_honey_points;
+            console.log('🍯 Current user honey points:', currentUserHoneyPoints);
+        }
         
         // API returns {status: 'success', avatars: [...]} in current app
         // Be tolerant to older shapes like an array directly
@@ -234,7 +268,11 @@ async function loadAvatars() {
             thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
             // NEW: Lock status from monetization system
             is_locked: avatar.is_locked || false,
-            unlock_message: avatar.unlock_message || ''
+            unlock_message: avatar.unlock_message || '',
+            // NEW: Numeric unlock info for computing remaining points
+            unlock_points: typeof avatar.unlock_points === 'number' ? avatar.unlock_points : null,
+            tier: avatar.tier || null,
+            price: typeof avatar.price === 'number' ? avatar.price : null,
         }));
 
         // Helper: normalize string to a canonical key
@@ -378,7 +416,7 @@ function createAvatarElement(avatar, index) {
         const lockIcon = document.createElement('div');
         lockIcon.className = 'avatar-lock-icon';
         lockIcon.innerHTML = '🔒';
-        lockIcon.title = avatar.unlock_message || 'Complete more quizzes to unlock!';
+        lockIcon.title = computeLockedMessage(avatar);
         thumbDiv.appendChild(lockIcon);
     }
     
@@ -392,10 +430,10 @@ function createAvatarElement(avatar, index) {
     div.appendChild(nameDiv);
     
     // Unlock tooltip
-    if (avatar.is_locked && avatar.unlock_message) {
+    if (avatar.is_locked) {
         const tooltip = document.createElement('div');
         tooltip.className = 'avatar-unlock-tooltip';
-        tooltip.textContent = avatar.unlock_message;
+        tooltip.textContent = computeLockedMessage(avatar);
         div.appendChild(tooltip);
     }
     
@@ -1052,7 +1090,8 @@ function filterAvatars(query) {
 
 // Show locked avatar message
 function showLockedMessage(avatar) {
-    const message = avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
+    // Use the unified computation for consistency across UI
+    const message = computeLockedMessage(avatar);
     const modal = document.createElement('div');
     modal.className = 'locked-avatar-modal';
     modal.innerHTML = `

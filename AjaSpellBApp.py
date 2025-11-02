@@ -9,6 +9,7 @@ if sys.platform == "win32":
 
 import csv
 import os
+import shutil
 import re
 import json
 import time
@@ -27,6 +28,7 @@ from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from PIL import Image
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
+from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 
 # Database imports
 from config import get_config
@@ -198,6 +200,32 @@ BADGE_METADATA = {
         'points': 50
     }
 }
+
+# ------------------------------
+# Public policy pages
+# ------------------------------
+
+# Ensure Flask app object exists before any route decorators are applied
+# Some routes are defined early in this module; define `app` up-front to avoid NameError at import time.
+print("🔧 Creating Flask app (early)...")
+try:
+    app  # type: ignore[name-defined]
+except NameError:
+    app = Flask(__name__)
+
+def _safe_template(name):
+    """Small helper to render a template if present without crashing the app."""
+    try:
+        return render_template(name)
+    except Exception:
+        # Minimal inline fallback so /privacy never 500s even if template missing
+        return "<html><head><meta charset='utf-8'><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>BeeSmart Spelling Bee privacy policy.</p></body></html>"
+
+
+@app.route("/privacy")
+def privacy_page():
+    """Public privacy policy page required for Play Console disclosures."""
+    return _safe_template("privacy.html")
 
 def load_dictionary_cache():
     """Load cached dictionary entries from JSON file"""
@@ -526,6 +554,71 @@ def validate_wordbank_definitions(wordbank: List[Dict]) -> tuple[bool, str]:
     return True, ""
 
 
+# ---------------------------------
+# Upload helpers used by saved-list
+# ---------------------------------
+def _normalize_for_compare(word: str) -> str:
+    """Normalize a word for deduplication: lowercase and remove non-alphanumerics."""
+    if not word:
+        return ""
+    return re.sub(r"[^0-9a-z]+", "", word.lower())
+
+
+def deduplicate_words(words: List[Dict | str]) -> List[Dict]:
+    """Dedupe words using normalization rules; preserve first occurrence and existing metadata.
+    Accepts a list of strings or dicts with at least a 'word' key; returns a list of dicts.
+    """
+    seen = set()
+    result: List[Dict] = []
+    for item in words:
+        if isinstance(item, dict):
+            w = (item.get("word") or "").strip()
+            key = _normalize_for_compare(w)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            result.append({
+                "word": w,
+                "sentence": (item.get("sentence") or "").strip(),
+                "hint": (item.get("hint") or "").strip(),
+            })
+        else:
+            w = (str(item) or "").strip()
+            key = _normalize_for_compare(w)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            result.append({"word": w, "sentence": "", "hint": ""})
+    return result
+
+
+def enrich_with_definitions(words: List[Dict]) -> List[Dict]:
+    """Ensure each record has kid-friendly text without revealing spelling.
+    Uses get_word_info() to build a sentence if missing; leaves existing values intact.
+    """
+    enriched: List[Dict] = []
+    for rec in words:
+        w = (rec.get("word") or "").strip()
+        sentence = (rec.get("sentence") or "").strip()
+        hint = (rec.get("hint") or "").strip()
+        if not sentence:
+            try:
+                # get_word_info returns a definition + blanked example; use as the quiz sentence
+                sentence = get_word_info(w)
+            except Exception:
+                sentence = "Listen carefully and spell _____ correctly."
+        enriched.append({"word": w, "sentence": sentence, "hint": hint})
+    return enriched
+
+
+def log_error(message: str):
+    """Lightweight error logger used in a few endpoints; safe even if app.logger isn't available."""
+    try:
+        app.logger.error(message)  # type: ignore[attr-defined]
+    except Exception:
+        logging.getLogger(__name__).error(message)
+
+
 def build_phonetic_spelling(word: str) -> str:
     """Create a friendly spelled-out version of a word (e.g., B E E)."""
     if not word:
@@ -559,7 +652,40 @@ except Exception:  # pragma: no cover
 # ============================================================================
 
 print("🔧 Creating Flask app...")
-app = Flask(__name__)
+# `app` may already be created above to satisfy early decorators; avoid reassigning
+try:
+    app  # type: ignore[name-defined]
+except NameError:
+    app = Flask(__name__)
+# --- Avatar GLB sync helper ---
+def _sync_glb_avatars():
+    """Copy any new GLB avatars dropped in Avatars/3D Avatar Files into the served static folder.
+    This lets newly uploaded .glb files become available at /static/assets/avatars/glb_files/ without manual moves.
+    Safe to run on startup; copies only when destination is missing or source is newer.
+    """
+    try:
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        src_dir = os.path.join(project_root, 'Avatars', '3D Avatar Files')
+        dst_dir = os.path.join(project_root, 'static', 'assets', 'avatars', 'glb_files')
+        if not os.path.isdir(src_dir):
+            return
+        os.makedirs(dst_dir, exist_ok=True)
+        for name in os.listdir(src_dir):
+            if not name.lower().endswith('.glb'):
+                continue
+            src = os.path.join(src_dir, name)
+            dst = os.path.join(dst_dir, name)
+            try:
+                if not os.path.exists(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
+                    shutil.copy2(src, dst)
+                    print(f"[avatar-sync] Copied GLB: {name}")
+            except Exception as e:
+                print(f"[avatar-sync] Skip {name}: {e}")
+    except Exception as e:
+        print(f"[avatar-sync] Error: {e}")
+
+# Run sync at startup
+_sync_glb_avatars()
 
 # Load configuration from config.py (includes database settings)
 print("🔧 Loading configuration...")
@@ -1076,84 +1202,6 @@ def _add_rate_hit(identifier: str, ip: str):
 
 # --- Dev-only reset token capture -------------------------------------------
 DEV_RESET_TOKEN_CACHE: Dict[int, str] = {}  # user_id -> last raw token
-
-
-# --- Contact form email -----------------------------------------------------
-def send_contact_email(from_name: str, from_email: str, topic: str, subject: str, message: str) -> bool:
-    """Send a contact form submission to the configured inbox.
-
-    - From header uses the branded sender (MAIL_FROM_NAME + MAIL_DEFAULT_SENDER)
-    - Reply-To is set to the user's provided email so replies go to them
-    - Recipient defaults to CONTACT_INBOX or MAIL_DEFAULT_SENDER
-    """
-    server = app.config.get('MAIL_SERVER')
-    smtp_username = app.config.get('MAIL_USERNAME')
-    smtp_password = app.config.get('MAIL_PASSWORD')
-    port = app.config.get('MAIL_PORT') or 587
-    use_tls = app.config.get('MAIL_USE_TLS', True)
-    use_ssl = app.config.get('MAIL_USE_SSL', False)
-
-    inbox = app.config.get('CONTACT_INBOX') or app.config.get('MAIL_DEFAULT_SENDER') or smtp_username
-    if not inbox:
-        # Dev fallback: log only if no SMTP configuration or inbox set
-        print(f"📮 [DEV] Contact form received (no SMTP configured)\nFrom: {from_name} <{from_email}>\nTopic: {topic}\nSubject: {subject}\nMessage: {message}")
-        return True
-
-    email_subject = f"Contact: {subject or '(no subject)'}" + (f" · {topic}" if topic else "")
-    text_body = (
-        f"From: {from_name} <{from_email}>\n"
-        f"Topic: {topic}\n"
-        f"Subject: {subject}\n\n"
-        f"{message}\n"
-    )
-    html_body = (
-        f"<p><strong>From:</strong> {from_name} &lt;{from_email}&gt;</p>"
-        f"<p><strong>Topic:</strong> {topic}</p>"
-        f"<p><strong>Subject:</strong> {subject}</p>"
-        f"<hr>"
-        f"<pre style='white-space:pre-wrap;font-family:system-ui,Segoe UI,Arial,sans-serif'>{message}</pre>"
-    )
-
-    # Dev preview if server/user/pass not set
-    if not server or not smtp_username or not smtp_password:
-        preview = text_body.replace('\n', ' ')
-        print(f"📮 [DEV] Would send contact email to {inbox}: {preview}")
-        return True
-
-    try:
-        import smtplib
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = email_subject
-        default_sender = app.config.get('MAIL_DEFAULT_SENDER') or smtp_username
-        from_name_conf = app.config.get('MAIL_FROM_NAME') or 'BeeSmart Spelling Bee'
-        msg['From'] = f"{from_name_conf} <{default_sender}>" if default_sender else from_name_conf
-        msg['To'] = inbox
-        # Make replies go back to the user's email
-        if from_email:
-            msg['Reply-To'] = from_email
-        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-
-        if use_ssl:
-            smtp = smtplib.SMTP_SSL(server, port)
-        else:
-            smtp = smtplib.SMTP(server, port)
-            if use_tls:
-                smtp.starttls()
-        if smtp_username and smtp_password:
-            smtp.login(smtp_username, smtp_password)
-        envelope_from = default_sender or smtp_username
-        smtp.sendmail(envelope_from, [inbox], msg.as_string())
-        smtp.quit()
-        print(f"📮 Contact email delivered to {inbox} (reply-to {from_email})")
-        return True
-    except Exception as e:
-        app.logger.warning(f"contact email send error: {e}")
-        return False
-
 
 
 # --- Config ------------------------------------------------------------------
@@ -5572,80 +5620,6 @@ def forgot_confirmation_page():
             {"Content-Type": "text/html; charset=utf-8"}
         )
 
-@app.route('/api/contact', methods=['GET', 'POST'])
-def api_contact():
-    """Accept contact form submissions and send to support inbox.
-
-    Supports JSON (application/json), form-encoded (POST), and query-string (GET) submissions.
-    Always responds with a generic success message or redirects to a confirmation page to avoid leaking data.
-    """
-    # Extract fields from JSON, form, or query string
-    data = request.get_json(silent=True) or {}
-    if request.method == 'POST' and not data:
-        data = request.form
-    if request.method == 'GET' and not data:
-        data = request.args
-
-    from_name = (data.get('name') or data.get('from_name') or '').strip()
-    from_email = (data.get('email') or data.get('from_email') or '').strip()
-    topic = (data.get('topic') or '').strip()
-    subject = (data.get('subject') or '').strip()
-    message = (data.get('message') or data.get('body') or '').strip()
-
-    # Minimal anti-abuse: simple rate-limit by email/ip
-    identifier = from_email or (from_name or 'anon')
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    try:
-        if _is_rate_limited(identifier, ip):
-            return jsonify({"success": True, "message": "Thanks! We've received your message."})
-        _add_rate_hit(identifier, ip)
-    except Exception:
-        pass
-
-    # Require at least a message; email optional but recommended for replies
-    if message:
-        send_contact_email(from_name or 'Anonymous', from_email, topic, subject, message)
-
-    # If this came from a browser (GET or form), redirect to confirmation page
-    wants_html = (request.method == 'GET') or ('text/html' in request.headers.get('Accept', '')) or bool(request.form)
-    if wants_html:
-        return redirect(url_for('contact_confirmation_page'))
-    return jsonify({"success": True, "message": "Thanks! We've received your message."})
-
-
-@app.route('/contact/confirmation', methods=['GET'])
-def contact_confirmation_page():
-    try:
-        return render_template('contact_confirmation.html')
-    except Exception as e:
-        app.logger.warning(f"render contact-confirmation error: {e}")
-        return (
-            "<html><body><h1>Thanks!</h1><p>Your message has been received. We'll be in touch.</p>"
-            f"<p><a href='{url_for('home')}'>Back to Home</a></p>"
-            "</body></html>",
-            200,
-            {"Content-Type": "text/html; charset=utf-8"}
-        )
-
-@app.route('/contact.html', methods=['GET'])
-def contact_html_page():
-    """Compatibility handler if a static contact.html is linked with query params.
-    If query params include a message, treat as submission and redirect to confirmation.
-    Otherwise, route users to the help page if available, or home.
-    """
-    args = request.args
-    if args.get('message') or args.get('subject'):
-        # Treat as a submission passthrough
-        try:
-            return api_contact()
-        except Exception:
-            return redirect(url_for('contact_confirmation_page'))
-    # No submission — send to help page if present
-    try:
-        return redirect(url_for('help_page'))
-    except Exception:
-        return redirect(url_for('home'))
-
 # Dev-only endpoint: fetch last raw reset token for a user (by username/email)
 @app.route('/dev/peek-reset-token')
 def dev_peek_reset_token():
@@ -7910,7 +7884,7 @@ def api_get_avatars():
                 return True  # Treat as unlocked if catalog unavailable
         import re as _re
 
-        # Get current user's unlock status
+    # Get current user's unlock status
         user_honey_points = 0
         purchased_avatars = []
         is_admin_or_premium = False
@@ -7972,6 +7946,9 @@ def api_get_avatars():
 
                     is_locked = True
                     unlock_message = ""
+                    unlock_points_val = None
+                    tier_val = None
+                    price_val = None
 
                     if is_admin_or_premium:
                         # Admins and premium members have access to all avatars
@@ -7989,6 +7966,11 @@ def api_get_avatars():
                             tier = catalog_avatar.get('tier', 'premium')
                             unlock_points = catalog_avatar.get('unlock_points', 0)
                             price = catalog_avatar.get('price', 0)
+
+                            # expose raw values for frontend computation
+                            unlock_points_val = unlock_points
+                            tier_val = tier
+                            price_val = price
 
                             if tier == 'earn_or_buy':
                                 points_needed = unlock_points - user_honey_points
@@ -8019,6 +8001,10 @@ def api_get_avatars():
                         'is_premium': avatar.is_premium,
                         'is_locked': is_locked,
                         'unlock_message': unlock_message,
+                        # expose numeric unlock info when available
+                        'unlock_points': unlock_points_val,
+                        'tier': tier_val,
+                        'price': price_val,
                     })
             except Exception as _db_err:
                 print(f"⚠️ Avatar DB query failed, continuing with filesystem-only avatars: {_db_err}")
@@ -8117,6 +8103,9 @@ def api_get_avatars():
             
             is_locked = True
             unlock_message = ""
+            unlock_points_val = None
+            tier_val = None
+            price_val = None
             
             if is_admin_or_premium:
                 is_locked = False
@@ -8131,6 +8120,10 @@ def api_get_avatars():
                     tier = catalog_avatar.get('tier', 'premium')
                     unlock_points = catalog_avatar.get('unlock_points', 0)
                     price = catalog_avatar.get('price', 0)
+                    # expose raw values for frontend computation
+                    unlock_points_val = unlock_points
+                    tier_val = tier
+                    price_val = price
                     
                     if tier == 'earn_or_buy':
                         points_needed = unlock_points - user_honey_points
@@ -8164,6 +8157,10 @@ def api_get_avatars():
                 'is_premium': False,
                 'is_locked': is_locked,
                 'unlock_message': unlock_message,
+                # expose numeric unlock info when available
+                'unlock_points': unlock_points_val,
+                'tier': tier_val,
+                'price': price_val,
             })
 
         # Final dedupe by slug (in case) and alphabetize for stable hive order
@@ -8181,7 +8178,9 @@ def api_get_avatars():
         return jsonify({
             'status': 'success',
             'avatars': enriched_avatars,
-            'total': len(enriched_avatars)
+            'total': len(enriched_avatars),
+            # include current user honey points for client-side computations
+            'user_honey_points': user_honey_points
         })
 
     except Exception as e:
