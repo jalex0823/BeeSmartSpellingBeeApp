@@ -4551,6 +4551,52 @@ def check_badges(state, wb):
     
     return badges_earned
 
+def check_newly_unlocked_avatars(old_honey_points, new_honey_points):
+    """
+    Check if user unlocked any new avatars by comparing old vs new honey points.
+    Returns list of newly unlocked avatar objects with name, slug, description, thumbnail.
+    """
+    try:
+        from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+        from models import Avatar
+        
+        newly_unlocked = []
+        
+        for avatar_config in AVATARS_CATALOG:
+            avatar_slug = avatar_config.get('id')
+            if not avatar_slug:
+                continue
+            
+            # Check if avatar was locked before but unlocked now
+            old_status = check_avatar_unlocked(avatar_slug, old_honey_points, [])
+            new_status = check_avatar_unlocked(avatar_slug, new_honey_points, [])
+            
+            # Skip if was already unlocked or still locked
+            if old_status.get('unlocked') or not new_status.get('unlocked'):
+                continue
+            
+            # Get avatar details from database
+            avatar = Avatar.query.filter_by(slug=avatar_slug, is_active=True).first()
+            if not avatar:
+                continue
+            
+            # Build thumbnail URL
+            base_path = f"/static/assets/avatars/{avatar.folder_path}"
+            thumbnail_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
+            
+            newly_unlocked.append({
+                'slug': avatar.slug,
+                'name': avatar.name,
+                'description': avatar.description or f'{avatar.name} is now available!',
+                'thumbnail': thumbnail_url
+            })
+        
+        return newly_unlocked
+    
+    except Exception as e:
+        print(f"⚠️ Error checking newly unlocked avatars: {e}")
+        return []
+
 @app.route("/api/answer", methods=["POST"])
 def api_answer():
     """

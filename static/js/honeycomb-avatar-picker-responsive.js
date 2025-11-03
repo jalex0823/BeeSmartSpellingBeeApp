@@ -904,20 +904,45 @@ function selectAvatar(avatar, element) {
 function updatePreview(avatar) {
     const previewContent = document.querySelector('.preview-content');
     if (!previewContent) return;
-    
+
     const nameEl = previewContent.querySelector('.preview-name');
     const descEl = previewContent.querySelector('.preview-description');
     const btnEl = previewContent.querySelector('.preview-choose-btn');
     const previewContainer = previewContent.querySelector('.preview-avatar-container');
-    
+
     if (nameEl) nameEl.textContent = avatar.name;
     if (descEl) descEl.textContent = avatar.description || 'Choose this amazing bee!';
-    if (btnEl) btnEl.style.display = 'block';
     
+    // Add or update unlock message for locked avatars
+    let unlockMsgEl = previewContent.querySelector('.preview-unlock-message');
+    if (avatar.is_locked) {
+        const message = computeLockedMessage(avatar);
+        if (!unlockMsgEl) {
+            unlockMsgEl = document.createElement('div');
+            unlockMsgEl.className = 'preview-unlock-message';
+            // Insert after description
+            if (descEl && descEl.nextSibling) {
+                descEl.parentNode.insertBefore(unlockMsgEl, descEl.nextSibling);
+            } else if (descEl) {
+                descEl.parentNode.appendChild(unlockMsgEl);
+            }
+        }
+        unlockMsgEl.textContent = message;
+        unlockMsgEl.style.display = 'block';
+        
+        // Hide choose button for locked avatars
+        if (btnEl) btnEl.style.display = 'none';
+    } else {
+        // Remove unlock message for unlocked avatars
+        if (unlockMsgEl) {
+            unlockMsgEl.style.display = 'none';
+        }
+        // Show choose button for unlocked avatars
+        if (btnEl) btnEl.style.display = 'block';
+    }
+
     console.log(`🎨 Previewing avatar: ${avatar.name}`);
-    currentLoadingAvatar = avatar.name;
-    
-    // Load 3D model in preview with loading indicator
+    currentLoadingAvatar = avatar.name;    // Load 3D model in preview with loading indicator
     if (previewContainer) {
         // Show loading indicator first
         showPreviewLoading(avatar.name);
