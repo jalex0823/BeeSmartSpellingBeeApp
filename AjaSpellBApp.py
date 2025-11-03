@@ -8022,9 +8022,20 @@ def api_get_avatars():
         def _thumbnail_for_base(base: str) -> str:
             """Probe several common file-naming variants and return the first that exists."""
             base_path = "/static/assets/avatars/glb_files"
+            
+            # Manual mapping for known mismatches (GLB filename -> thumbnail filename)
+            thumb_map = {
+                'SpaceBee': 'AstroBee',
+                'DocBee': 'DoctorBee',
+                'Frankenbee': 'FrankenBee',
+            }
+            
+            # If there's a mapping, use the mapped name instead
+            thumb_base = thumb_map.get(base, base)
+            
             variants = []
             # Preserve given base (likely PascalCase), plus lowercase/uppercase/no-space/hyphen variants
-            raw = base
+            raw = thumb_base
             nospace = _re.sub(r'\s+', '', raw)
             hyphen = _re.sub(r'\s+', '-', raw)
             lower = nospace.lower()
