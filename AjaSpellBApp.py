@@ -2206,7 +2206,12 @@ def upload_to_saved_list():
 def home():
     import time
     timestamp = str(int(time.time()))
-    return render_template("unified_menu.html", timestamp=timestamp)
+    # Force fresh HTML to avoid stale cached effects on the index page
+    from flask import make_response
+    html = render_template("unified_menu.html", timestamp=timestamp)
+    resp = make_response(html)
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 @app.route("/test")
 def test_page():
@@ -7883,6 +7888,20 @@ def api_get_avatars():
             def check_avatar_unlocked(*_args, **_kwargs):
                 return True  # Treat as unlocked if catalog unavailable
         import re as _re
+        
+        # Helper: append a cache-busting query using file mtime if available
+        def _cachebust_url(url: str) -> str:
+            try:
+                # Convert URL like /static/../Foo.png to filesystem path
+                rel = url.lstrip('/')
+                fs_path = os.path.join(app.root_path, rel)
+                if os.path.exists(fs_path):
+                    ts = int(os.path.getmtime(fs_path))
+                    sep = '&' if '?' in url else '?'
+                    return f"{url}{sep}v={ts}"
+            except Exception:
+                pass
+            return url
 
     # Get current user's unlock status
         user_honey_points = 0
@@ -7980,6 +7999,10 @@ def api_get_avatars():
                             else:
                                 unlock_message = "Complete more quizzes to unlock!"
 
+                    # Build thumb/preview with cache-busting
+                    thumb_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
+                    thumb_cb = _cachebust_url(thumb_url) if thumb_url else None
+
                     enriched_avatars.append({
                         'id': avatar.slug,
                         'name': avatar.name,
@@ -7987,14 +8010,14 @@ def api_get_avatars():
                         'category': avatar.category,
                         'folder': avatar.folder_path,
                         'is_glb': is_glb,
-                        'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
-                        'preview': f"{base_path}/{avatar.thumbnail_file}",
+                        'thumbnail': thumb_cb,
+                        'preview': thumb_cb,
                         'urls': {
                             'model_obj': f"{base_path}/{avatar.obj_file}",
                             'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
                             'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-                            'thumbnail': f"{base_path}/{avatar.thumbnail_file}",
-                            'preview': f"{base_path}/{avatar.thumbnail_file}",
+                            'thumbnail': thumb_cb,
+                            'preview': thumb_cb,
                         },
                         'unlock_level': avatar.unlock_level,
                         'points_required': avatar.points_required,
@@ -8125,11 +8148,12 @@ def api_get_avatars():
                     pruned.append(item)
                 enriched_avatars = pruned
 
-        # Append latest GLB entries
+    # Append latest GLB entries
         base_path = "/static/assets/avatars/glb_files"
         for slug, info in glb_latest.items():
             model_url = f"{base_path}/{info['fname']}"
             thumb_url = _thumbnail_for_base(info['base'])
+            thumb_cb = _cachebust_url(thumb_url)
 
             auto_desc = f"{info['name']} is ready to spell! 🐝"
             if slug in ('obee', 'o-bee'):
@@ -8180,14 +8204,14 @@ def api_get_avatars():
                 'category': 'classic',
                 'folder': 'glb_files',
                 'is_glb': True,
-                'thumbnail': thumb_url,
-                'preview': thumb_url,
+                'thumbnail': thumb_cb,
+                'preview': thumb_cb,
                 'urls': {
                     'model_obj': model_url,
                     'model_mtl': None,
                     'texture': None,
-                    'thumbnail': thumb_url,
-                    'preview': thumb_url,
+                    'thumbnail': thumb_cb,
+                    'preview': thumb_cb,
                 },
                 'unlock_level': 1,
                 'points_required': 0,
@@ -8199,6 +8223,38 @@ def api_get_avatars():
                 'tier': tier_val,
                 'price': price_val,
             })
+
+        # Post-process: fix any DB-provided thumbnails that point to the generic HoneyComb
+        # by probing for a better match on disk using the slug or GLB base.
+        def _maybe_fix_thumbnail(av: dict) -> None:
+            try:
+                url = av.get('thumbnail') or ''
+                fname = os.path.basename(url)
+                is_generic = fname.lower().startswith('honeycomb')
+                exists = os.path.exists(os.path.join(thumb_dir, fname)) if fname else False
+                if exists and not is_generic:
+                    return
+                # Derive a base name from the GLB filename if available, else from slug
+                model_url = (av.get('urls') or {}).get('model_obj') or ''
+                base_guess = ''
+                if model_url.lower().endswith('.glb'):
+                    base_guess = os.path.splitext(os.path.basename(model_url))[0]
+                if not base_guess:
+                    slug_val = av.get('id') or ''
+                    parts = [p for p in _re.split(r'[^a-zA-Z0-9]+', slug_val) if p]
+                    base_guess = ''.join(s.capitalize() for s in parts)
+                if base_guess:
+                    fixed = _thumbnail_for_base(base_guess)
+                    av['thumbnail'] = fixed
+                    av['preview'] = fixed
+                    if 'urls' in av:
+                        av['urls']['thumbnail'] = fixed
+                        av['urls']['preview'] = fixed
+            except Exception:
+                pass
+
+        for _av in enriched_avatars:
+            _maybe_fix_thumbnail(_av)
 
         # Final dedupe by slug (in case) and alphabetize for stable hive order
         seen = set()
