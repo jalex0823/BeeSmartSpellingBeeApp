@@ -504,8 +504,7 @@ function createAvatarElement(avatar, index) {
 function buildThumbnailFallbacks(avatar, initialUrl) {
     const candidates = [];
     if (initialUrl) candidates.push(initialUrl);
-    // Single generic fallback keeps logs clean and ensures we always show something
-    candidates.push('/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png');
+    // STRICT mode: do not use generic fallbacks to avoid misrepresentation
     return candidates;
 }
 

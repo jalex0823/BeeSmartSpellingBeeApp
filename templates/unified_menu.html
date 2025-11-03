@@ -662,9 +662,8 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
-            z-index: 200 !important;  /* CRITICAL: Ensure tiles are above all decorative elements */
-            pointer-events: auto !important;  /* CRITICAL: Ensure tiles receive clicks */
-            outline: 3px dashed rgba(0, 255, 0, 0.5) !important;  /* DIAGNOSTIC: Visual confirmation of clickable zone */
+            z-index: 200 !important;  /* Ensure tiles are above decorative elements */
+            pointer-events: auto !important;
         }
 
         /* Tiny badge for counts on tiles (e.g., Saved Lists) */
@@ -724,6 +723,11 @@
                 box-shadow: 0 16px 36px var(--tile-hover-shadow), 0 0 28px rgba(255, 255, 255, 0.25);
             }
         }
+
+        /* Home page: disable ALL tile hover/fx when shimmer is off */
+        body.home-no-shimmer .menu-option { animation: none !important; transition: none !important; transform: none !important; box-shadow: 0 10px 22px var(--tile-shadow) !important; }
+        body.home-no-shimmer .menu-option::before { display: none !important; }
+        body.home-no-shimmer .menu-option:hover { transform: none !important; box-shadow: 0 10px 22px var(--tile-shadow) !important; animation: none !important; }
 
         .menu-option.active {
             border-color: rgba(255, 255, 255, 0.95);
