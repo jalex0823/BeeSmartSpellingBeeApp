@@ -1247,7 +1247,9 @@ def get_or_create_guest_user():
             email=f"{guest_username}@beesmart.guest",
             role="guest",
             is_active=True,
-            email_verified=False
+            email_verified=False,
+            avatar_id="mascot-bee",  # Always use free mascot for guests
+            avatar_variant="default"
         )
         guest_user.set_password(str(uuid.uuid4()))  # Random password (user can't login)
         
