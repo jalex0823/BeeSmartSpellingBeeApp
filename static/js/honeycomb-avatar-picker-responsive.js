@@ -611,7 +611,7 @@ function load3DAvatarGLB(avatar, containerId) {
             // Animation loop with auto-rotation
             function animate() {
                 requestAnimationFrame(animate);
-                model.rotation.y += 0.01; // Slow rotation to show all angles
+                model.rotation.y += 0.003; // Slow rotation to show all angles
                 renderer.render(scene, camera);
             }
             animate();
@@ -770,7 +770,7 @@ function load3DAvatarOBJ(avatar, containerId) {
                 
                 function animate() {
                     requestAnimationFrame(animate);
-                    object.rotation.y += 0.01; // Slow rotation to show all angles
+                    object.rotation.y += 0.003; // Slow rotation to show all angles
                     renderer.render(scene, camera);
                 }
                 animate();
@@ -1115,4 +1115,5 @@ function showLockedMessage(avatar) {
         }
     });
 }
+
 
