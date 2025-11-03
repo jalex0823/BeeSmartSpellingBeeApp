@@ -8020,19 +8020,23 @@ def api_get_avatars():
             return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
 
         def _thumbnail_for_base(base: str) -> str:
-            """Probe several common file-naming variants and return the first that exists."""
+            """Probe several common file-naming variants and return the first that exists.
+
+            Enhanced to handle reversed token names (BeeKnight -> KnightBee) and known synonyms.
+            """
             base_path = "/static/assets/avatars/glb_files"
-            
+
             # Manual mapping for known mismatches (GLB filename -> thumbnail filename)
             thumb_map = {
                 'SpaceBee': 'AstroBee',
                 'DocBee': 'DoctorBee',
                 'Frankenbee': 'FrankenBee',
+                'BeeKnight': 'KnightBee',
             }
-            
+
             # If there's a mapping, use the mapped name instead
             thumb_base = thumb_map.get(base, base)
-            
+
             variants = []
             # Preserve given base (likely PascalCase), plus lowercase/uppercase/no-space/hyphen variants
             raw = thumb_base
@@ -8040,8 +8044,15 @@ def api_get_avatars():
             hyphen = _re.sub(r'\s+', '-', raw)
             lower = nospace.lower()
             upper = nospace.upper()
+
+            # Reversed token variant (BeeKnight -> KnightBee)
+            tokens = _re.sub(r'(?<!^)([A-Z])', r' \1', raw).split()
+            reversed_join = ''.join(list(reversed(tokens))) if len(tokens) > 1 else ''
+
             # Try with exclamation mark first (project convention), then without
             names = [raw, nospace, hyphen, lower, upper]
+            if reversed_join:
+                names.extend([reversed_join, reversed_join.lower(), reversed_join.upper()])
             for n in names:
                 variants.append(f"{base_path}/AvatarThumbnails/{n}!.png")
             for n in names:
@@ -8051,6 +8062,21 @@ def api_get_avatars():
                 cand_fs = os.path.join(thumb_dir, os.path.basename(url))
                 if os.path.exists(cand_fs):
                     return url
+
+            # Last-chance: scan the thumbnails directory for a close normalized match
+            def _norm(s: str) -> str:
+                return _re.sub(r'[^a-z0-9]+', '-', (s or '').lower()).strip('-')
+            try:
+                if os.path.isdir(thumb_dir):
+                    wants = { _norm(n) for n in names }
+                    for fname in os.listdir(thumb_dir):
+                        if not fname.lower().endswith('.png'):
+                            continue
+                        stem = _re.sub(r'!+|\.png$', '', fname, flags=_re.IGNORECASE)
+                        if _norm(stem) in wants:
+                            return f"{base_path}/AvatarThumbnails/{fname}"
+            except Exception:
+                pass
             # Fallback to generic honeycomb
             return f"{base_path}/AvatarThumbnails/HoneyComb!.png"
 
@@ -8487,22 +8513,53 @@ def api_select_avatar():
 
             def _thumbnail_for_base(base: str) -> str:
                 base_path = "/static/assets/avatars/glb_files"
+                # Manual mapping for known mismatches
+                thumb_map = {
+                    'SpaceBee': 'AstroBee',
+                    'DocBee': 'DoctorBee',
+                    'Frankenbee': 'FrankenBee',
+                    'BeeKnight': 'KnightBee',
+                }
+                thumb_base = thumb_map.get(base, base)
+
                 # Prefer files with "!" first
                 candidates = [
-                    f"{base_path}/AvatarThumbnails/{base}!.png",
-                    f"{base_path}/AvatarThumbnails/{base}.png",
+                    f"{base_path}/AvatarThumbnails/{thumb_base}!.png",
+                    f"{base_path}/AvatarThumbnails/{thumb_base}.png",
                 ]
-                # Also probe variants with no/alt spacing
-                nospace = _re.sub(r'\s+', '', base)
-                hyphen = _re.sub(r'\s+', '-', base)
-                for v in [nospace, hyphen, nospace.lower(), nospace.upper()]:
+                # Also probe variants with no/alt spacing and reversed tokens
+                nospace = _re.sub(r'\s+', '', thumb_base)
+                hyphen = _re.sub(r'\s+', '-', thumb_base)
+                tokens = _re.sub(r'(?<!^)([A-Z])', r' \1', thumb_base).split()
+                rev = ''.join(list(reversed(tokens))) if len(tokens) > 1 else ''
+                name_variants = [nospace, hyphen, nospace.lower(), nospace.upper()]
+                if rev:
+                    name_variants.extend([rev, rev.lower(), rev.upper()])
+                for v in name_variants:
                     candidates.append(f"{base_path}/AvatarThumbnails/{v}!.png")
-                for v in [nospace, hyphen, nospace.lower(), nospace.upper()]:
+                for v in name_variants:
                     candidates.append(f"{base_path}/AvatarThumbnails/{v}.png")
+
                 for url in candidates:
                     cand_fs = os.path.join(thumb_dir, os.path.basename(url))
                     if os.path.exists(cand_fs):
                         return url
+
+                # Directory scan fallback by normalized stem
+                def _norm(s: str) -> str:
+                    return _re.sub(r'[^a-z0-9]+', '-', (s or '').lower()).strip('-')
+                try:
+                    if os.path.isdir(thumb_dir):
+                        wants = { _norm(v) for v in [thumb_base] + name_variants }
+                        for fname in os.listdir(thumb_dir):
+                            if not fname.lower().endswith('.png'):
+                                continue
+                            stem = _re.sub(r'!+|\.png$', '', fname, flags=_re.IGNORECASE)
+                            if _norm(stem) in wants:
+                                return f"{base_path}/AvatarThumbnails/{fname}"
+                except Exception:
+                    pass
+
                 return f"{base_path}/AvatarThumbnails/HoneyComb!.png"
 
             installed = False
