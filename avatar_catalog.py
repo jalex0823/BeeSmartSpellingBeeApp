@@ -60,10 +60,10 @@ AVATAR_CATALOG = [
     {
         "id": "astro-bee",
         "name": "Astro Bee",
-        "folder": "astro-bee",
-        "obj_file": "AstroBee.obj",
-        "mtl_file": "AstroBee.mtl",
-        "texture_file": "SpaceBee_Explorer_1021171329.png",
+        "folder": "glb_files",
+        "obj_file": "SpaceBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
         "description": "Buzz Aldrin's cousin! First bee on the moon. 'One small buzz for bee, one giant leap for spelling!'",
         "variants": ["default"],
         "category": "adventure",
@@ -120,6 +120,22 @@ AVATAR_CATALOG = [
         "is_purchasable": False,
         "unlock_points": 0,
         "price": 0.00
+    },
+    {
+        "id": "buzz-bee",
+        "name": "Buzz Bee",
+        "folder": "glb_files",
+        "obj_file": "BuzzBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Always buzzing with energy and enthusiasm!",
+        "variants": ["default"],
+        "category": "classic",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 3000,
+        "price": 0.99
     },
     {
         "id": "cool-bee",
@@ -220,10 +236,10 @@ AVATAR_CATALOG = [
     {
         "id": "knight-bee",
         "name": "Knight Bee",
-        "folder": "knight-bee",
-        "obj_file": "KnightBee.obj",
-        "mtl_file": "KnightBee.mtl",
-        "texture_file": "Bee_Knight_1018184515.png",
+        "folder": "glb_files",
+        "obj_file": "BeeKnight.glb",
+        "mtl_file": "",
+        "texture_file": "",
         "description": "Brave and noble! Defender of the hive.",
         "variants": ["default"],
         "category": "fantasy",
@@ -327,6 +343,22 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 8000,
+        "price": 0.99
+    },
+    {
+        "id": "selfie-bee",
+        "name": "Selfie Bee",
+        "folder": "glb_files",
+        "obj_file": "SelfieBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Say cheese! Always ready for the perfect selfie!",
+        "variants": ["default"],
+        "category": "entertainment",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 5000,
         "price": 0.99
     },
     {
@@ -602,12 +634,23 @@ def get_avatar_info(avatar_id, variant='default'):
     # Get thumbnail filename from catalog folder name (e.g., al-bee -> AlBee!.png)
     # Convert folder name to proper case for thumbnail
     folder = avatar.get('folder', avatar_id)
-    if folder == 'al-bee':
+    
+    # GLB avatars use AvatarThumbnails subfolder
+    if folder == 'glb_files':
+        if avatar_id == 'astro-bee':
+            thumbnail_file = 'AvatarThumbnails/AstroBee!.png'
+        elif avatar_id == 'buzz-bee':
+            thumbnail_file = 'AvatarThumbnails/BuzzBee!.png'
+        elif avatar_id == 'knight-bee':
+            thumbnail_file = 'AvatarThumbnails/KnightBee!.png'
+        elif avatar_id == 'selfie-bee':
+            thumbnail_file = 'AvatarThumbnails/SelfieBee!.png'
+        else:
+            thumbnail_file = 'AvatarThumbnails/thumbnail.png'  # fallback
+    elif folder == 'al-bee':
         thumbnail_file = 'AlBee!.png'
     elif folder == 'anxious-bee':
         thumbnail_file = 'AnxiousBee!.png'
-    elif folder == 'astro-bee':
-        thumbnail_file = 'AstroBee!.png'
     elif folder == 'biker-bee':
         thumbnail_file = 'BikerBee!.png'
     elif folder == 'brother-bee':
@@ -626,8 +669,6 @@ def get_avatar_info(avatar_id, variant='default'):
         thumbnail_file = 'ExplorerBee!.png'
     elif folder == 'franken-bee':
         thumbnail_file = 'Frankenbee!.png'
-    elif folder == 'knight-bee':
-        thumbnail_file = 'KnightBee!.png'
     elif folder == 'mascot-bee':
         thumbnail_file = 'MascotBee!.png'
     elif folder == 'monster-bee':

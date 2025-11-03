@@ -610,6 +610,9 @@
             animation: none !important;
             transition: none !important;
         }
+        /* Extra guard: explicitly disable floating/hover effects for the main card */
+        body.home-no-shimmer .content-card { animation: none !important; transition: none !important; transform: none !important; }
+        body.home-no-shimmer .content-card:hover { transform: none !important; box-shadow: 0 18px 45px rgba(255, 170, 200, 0.32) !important; }
         /* Hide the interactive caption when shimmer/effects are disabled */
         body.home-no-shimmer #mascotCaption { display: none !important; }
         /* Also hide any bee swarm visuals if present */
@@ -1867,7 +1870,7 @@
         box-sizing: border-box;
         z-index: 10000;
         transition: opacity 0.5s ease, visibility 0.5s ease;
-    ">
+    " 
         <!-- Welcome Title -->
         <div id="welcomeTitle" style="
             margin: 8px auto 24px;

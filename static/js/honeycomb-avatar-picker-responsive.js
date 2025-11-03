@@ -327,13 +327,16 @@ async function loadAvatars() {
             }
         }
 
-        // Second pass: ensure we don’t keep two entries pointing at the same thumbnail file
+        // Second pass: avoid keeping multiple entries pointing at the same thumbnail file,
+        // but NEVER collapse distinct avatars that use our generic fallback thumbnail
         const seenThumb = new Set();
         avatarsData = [];
         for (const av of byBase.values()) {
             const t = normThumb(av.thumbnail);
-            if (t && seenThumb.has(t)) continue;
-            if (t) seenThumb.add(t);
+            // Treat these as generic fallback thumbnails; don't dedupe on them
+            const isGenericThumb = t === 'honeycomb!.png' || t === 'honeycomb.png';
+            if (t && !isGenericThumb && seenThumb.has(t)) continue;
+            if (t && !isGenericThumb) seenThumb.add(t);
             avatarsData.push(av);
         }
         // Enforce kid-safe filter in frontend as well (defense-in-depth)
