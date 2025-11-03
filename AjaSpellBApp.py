@@ -8902,6 +8902,47 @@ try:
 except Exception as e:
     print(f"⚠️ GLB avatar initialization warning: {e}")
 
+# Validate and fix avatar thumbnail paths on EVERY startup
+try:
+    with app.app_context():
+        all_avatars = Avatar.query.filter_by(is_active=True).all()
+        fixed_count = 0
+        
+        for avatar in all_avatars:
+            if not avatar.thumbnail_file:
+                continue
+                
+            current_thumb = avatar.thumbnail_file
+            expected_thumb = None
+            
+            # GLB avatars MUST have AvatarThumbnails/ prefix
+            if avatar.folder_path == 'glb_files':
+                filename = os.path.basename(current_thumb)
+                if not current_thumb.startswith('AvatarThumbnails/'):
+                    expected_thumb = f'AvatarThumbnails/{filename}'
+            
+            # OBJ avatars MUST NOT have AvatarThumbnails/ prefix
+            elif current_thumb.startswith('AvatarThumbnails/'):
+                expected_thumb = os.path.basename(current_thumb)
+            
+            # Fix if needed
+            if expected_thumb and expected_thumb != current_thumb:
+                avatar.thumbnail_file = expected_thumb
+                fixed_count += 1
+        
+        if fixed_count > 0:
+            db.session.commit()
+            print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
+        else:
+            print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
+            
+except Exception as e:
+    print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+    try:
+        db.session.rollback()
+    except:
+        pass
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI
