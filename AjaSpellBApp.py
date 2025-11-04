@@ -5337,7 +5337,12 @@ def api_build_dictionary():
 def register():
     """User registration page"""
     if request.method == 'GET':
-        return render_template('auth/register.html')
+        # Expose configurable registration fee to template (UI disclosure only for now)
+        try:
+            reg_fee = float(os.environ.get('REGISTRATION_FEE_USD', '4.99'))
+        except Exception:
+            reg_fee = 4.99
+        return render_template('auth/register.html', registration_fee_usd=reg_fee)
 
     # Handle registration form submission
     data = request.get_json() if request.is_json else request.form

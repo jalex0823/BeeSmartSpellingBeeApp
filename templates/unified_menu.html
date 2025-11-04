@@ -2349,6 +2349,8 @@
                 <!-- Guest-only Avatar Carousel (calm, accessible) -->
                 <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
                     <div class="avatar-slide">
+                        <!-- Progressive 3D canvas (shown when available) -->
+                        <div id="guestAvatar3D" style="display:none; position:relative; width: 240px; height: 180px; margin: 0 auto;"></div>
                         <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
@@ -8413,7 +8415,7 @@
             // Guests: always show a static caption inviting them to register
             if (!isAuthenticated) {
                 caption.style.display = '';
-                caption.innerHTML = '🐝 Register to unlock your very own <strong>Bee Avatar</strong> — it\'s free! <a href="/auth/register" style="text-decoration:underline; color:#FF6B00;">Register</a>';
+                caption.innerHTML = '🐝 Register to unlock your very own <strong>Bee Avatar</strong> and full features. <a href="/auth/register" style="text-decoration:underline; color:#FF6B00;">Register</a>';
                 caption.setAttribute('role', 'link');
                 caption.setAttribute('tabindex', '0');
                 caption.onclick = () => { window.location.href = '/auth/register'; };
@@ -8477,6 +8479,174 @@
             }
         }
 
+        // Guest-only 3D avatar carousel (progressive enhancement using GLB + Three.js)
+        function initGuestAvatar3DCarousel() {
+            try {
+                const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+                if (isAuthenticated) return false;
+                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
+                if (!window.WebGLRenderingContext) return false;
+                // Respect reduced motion and low-memory devices
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+                if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
+
+                const wrap = document.getElementById('guestAvatarCarousel');
+                const nameEl = document.getElementById('guestAvatarName');
+                const imgEl = document.getElementById('guestAvatarSlide');
+                const canvasWrap = document.getElementById('guestAvatar3D');
+                if (!wrap || !nameEl || !canvasWrap) return false;
+
+                // Prioritized + pool of GLB avatars
+                const base = '/static/assets/avatars/glb_files';
+                const priority = [
+                    { name: 'Super Bee', file: 'SuperBee.glb' },
+                    { name: 'Queen Bee', file: 'QueenBee.glb' },
+                    { name: 'J‑Rock Bee', file: 'JRockBee.glb' },
+                    { name: 'Knight Bee', file: 'BeeKnight.glb' }
+                ];
+                const pool = [
+                    { name: 'Brother Bee', file: 'BrotherBee.glb' },
+                    { name: 'Buda Bee', file: 'BudaBee.glb' },
+                    { name: 'Builder Bee', file: 'BuilderBee.glb' },
+                    { name: 'Buzz Bee', file: 'BuzzBee.glb' },
+                    { name: 'Cool Bee', file: 'CoolBee.glb' },
+                    { name: 'Cutie Bee', file: 'CutieBee.glb' },
+                    { name: 'Detective Bee', file: 'DetectiveBee.glb' },
+                    { name: 'Diva Bee', file: 'DivaBee.glb' },
+                    { name: 'Doc Bee', file: 'DocBee.glb' },
+                    { name: 'Explorer Bee', file: 'ExplorerBee.glb' },
+                    { name: 'Franken Bee', file: 'Frankenbee.glb' },
+                    { name: 'HoneyComb Bee', file: 'HoneyComb.glb' },
+                    { name: 'Motor Bee', file: 'MotorBee.glb' },
+                    { name: 'O‑Bee', file: 'OBee.glb' },
+                    { name: 'Robo Bee', file: 'RoboBee.glb' },
+                    { name: 'Sea Bee', file: 'SeaBee.glb' },
+                    { name: 'Selfie Bee', file: 'SelfieBee.glb' },
+                    { name: 'Singer Bee', file: 'SingerBee.glb' },
+                    { name: 'Space Bee', file: 'SpaceBee.glb' }
+                ];
+
+                // Build candidate list: 4 priority + random others up to 8 total
+                const wantTotal = 8;
+                const exclude = new Set(priority.map(p => p.file));
+                const leftovers = pool.filter(p => !exclude.has(p.file));
+                for (let i = leftovers.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [leftovers[i], leftovers[j]] = [leftovers[j], leftovers[i]];
+                }
+                const candidates = priority.concat(leftovers.slice(0, Math.max(0, wantTotal - priority.length)));
+
+                // Three.js scene setup
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(45, 240/180, 0.1, 1000);
+                camera.position.set(0, 0.5, 3.0);
+                camera.lookAt(new THREE.Vector3(0, 0.1, 0));
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+                renderer.setSize(240, 180);
+                renderer.setClearColor(0x000000, 0);
+
+                const canvas = renderer.domElement;
+                canvas.style.position = 'absolute';
+                canvas.style.top = '50%';
+                canvas.style.left = '50%';
+                canvas.style.transform = 'translate(-50%, -50%)';
+                canvas.style.pointerEvents = 'none';
+                canvasWrap.appendChild(canvas);
+
+                // Lights
+                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+                dir.position.set(4, 6, 6);
+                scene.add(dir);
+
+                const loader = new THREE.GLTFLoader();
+                let current = null;
+                let idx = 0;
+                let disposed = false;
+
+                function disposeObject(obj) {
+                    try {
+                        obj.traverse((child) => {
+                            if (child.isMesh) {
+                                if (child.geometry) child.geometry.dispose();
+                                if (child.material) {
+                                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                                    else child.material.dispose();
+                                }
+                            }
+                        });
+                    } catch (_) {}
+                }
+
+                function loadNext() {
+                    const item = candidates[idx % candidates.length];
+                    idx++;
+                    nameEl.textContent = item.name;
+                    // Hide PNG fallback and show 3D canvas
+                    if (imgEl) imgEl.style.display = 'none';
+                    canvasWrap.style.display = 'block';
+                    wrap.style.display = 'block';
+
+                    loader.load(
+                        `${base}/${item.file}`,
+                        (gltf) => {
+                            // Remove previous
+                            if (current) {
+                                scene.remove(current);
+                                disposeObject(current);
+                                current = null;
+                            }
+                            const obj = gltf.scene;
+                            // Cheap scale/center
+                            obj.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = false; } });
+                            const box = new THREE.Box3().setFromObject(obj);
+                            const size = box.getSize(new THREE.Vector3()).length();
+                            const center = box.getCenter(new THREE.Vector3());
+                            obj.position.sub(center);
+                            obj.scale.setScalar(2.4 / (size || 1));
+                            scene.add(obj);
+                            current = obj;
+                        },
+                        undefined,
+                        (err) => {
+                            // On error, just skip to PNG fallback later
+                            console.warn('GLB load failed for guest carousel:', err);
+                        }
+                    );
+                }
+
+                // Gentle rotation
+                function tick() {
+                    if (disposed) return;
+                    requestAnimationFrame(tick);
+                    if (current) {
+                        current.rotation.y += 0.004;
+                    }
+                    renderer.render(scene, camera);
+                }
+                tick();
+
+                // Start and rotate every ~4s
+                loadNext();
+                window._guest3DTimer = setInterval(loadNext, 4000);
+
+                // Cleanup on unload
+                window.addEventListener('beforeunload', () => {
+                    disposed = true;
+                    try { clearInterval(window._guest3DTimer); } catch(_){}
+                    if (current) { disposeObject(current); }
+                    try { renderer.dispose(); } catch(_){}
+                }, { once: true });
+
+                return true;
+            } catch (e) {
+                console.warn('Guest 3D carousel unavailable, falling back to PNG:', e);
+                return false;
+            }
+        }
+
         // Guest-only avatar carousel (uses available thumbnails; gracefully skips missing ones)
         function initGuestAvatarCarousel() {
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
@@ -8489,17 +8659,59 @@
 
             // Candidate thumbnails (will skip missing files automatically)
             const base = '/static/assets/avatars/glb_files/AvatarThumbnails';
-            // Hand-picked, kid-favorite lineup (files exist in AvatarThumbnails)
-            const candidates = [
-                { name: 'Mascot Bee', file: 'MascotBee!.png' },
-                { name: 'Diva Bee', file: 'DivaBee!.png' },
-                { name: 'Rocker Bee', file: 'RockerBee!.png' },
-                { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
-                { name: 'Robo Bee', file: 'RoboBee!.png' },
+            // Priority picks per request
+            const priority = [
+                { name: 'Super Bee', file: 'SuperBee!.png' },
                 { name: 'Queen Bee', file: 'QueenBee!.png' },
-                { name: 'Space Bee', file: 'SpaceBee!.png' },
+                { name: 'J‑Rock Bee', file: 'JRockBee!.png' },
                 { name: 'Knight Bee', file: 'BeeKnight!.png' }
             ];
+
+            // Full pool available in repo (pngs only)
+            const pool = [
+                { name: 'Al Bee', file: 'AlBee!.png' },
+                { name: 'Brother Bee', file: 'BrotherBee!.png' },
+                { name: 'Buda Bee', file: 'BudaBee!.png' },
+                { name: 'Builder Bee', file: 'BuilderBee!.png' },
+                { name: 'Buzz Bee', file: 'BuzzBee!.png' },
+                { name: 'Cool Bee', file: 'CoolBee!.png' },
+                { name: 'Cutie Bee', file: 'CutieBee!.png' },
+                { name: 'Detective Bee', file: 'DetectiveBee!.png' },
+                { name: 'Diva Bee', file: 'DivaBee!.png' },
+                { name: 'Doc Bee', file: 'DocBee!.png' },
+                { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
+                { name: 'Franken Bee', file: 'FrankenBee!.png' },
+                { name: 'HoneyComb Bee', file: 'HoneyComb!.png' },
+                { name: 'J‑Rock Bee', file: 'JRockBee!.png' },
+                { name: 'Mascot Bee', file: 'MascotBee!.png' },
+                { name: 'Motor Bee', file: 'MotorBee!.png' },
+                { name: 'O‑Bee', file: 'OBee!.png' },
+                { name: 'Professor Bee', file: 'ProfessorBee!.png' },
+                { name: 'Queen Bee', file: 'QueenBee!.png' },
+                { name: 'Robo Bee', file: 'RoboBee!.png' },
+                { name: 'Rocker Bee', file: 'RockerBee!.png' },
+                { name: 'Sea Bee', file: 'SeaBee!.png' },
+                { name: 'Selfie Bee', file: 'SelfieBee!.png' },
+                { name: 'Singer Bee', file: 'SingerBee!.png' },
+                { name: 'Space Bee', file: 'SpaceBee!.png' },
+                { name: 'Super Bee', file: 'SuperBee!.png' },
+                { name: 'Vamp Bee', file: 'VampBee!.png' },
+                { name: 'Ware Bee', file: 'WareBee!.png' },
+                { name: 'Zom Bee', file: 'ZomBee!.png' }
+            ];
+
+            // Build final candidate list: 4 priority + random others up to 8 total
+            const wantTotal = 8;
+            const excludeFiles = new Set(priority.map(p => p.file));
+            const leftovers = pool.filter(p => !excludeFiles.has(p.file));
+            // Shuffle leftovers
+            for (let i = leftovers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [leftovers[i], leftovers[j]] = [leftovers[j], leftovers[i]];
+            }
+            const needed = Math.max(0, wantTotal - priority.length);
+            const randomRest = leftovers.slice(0, needed);
+            const candidates = priority.concat(randomRest);
 
             const loaded = [];
             let remaining = candidates.length;
@@ -10728,8 +10940,16 @@
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
 
-            // Initialize guest avatar carousel (guests only)
-            try { if (typeof initGuestAvatarCarousel === 'function') initGuestAvatarCarousel(); } catch (e) { /* no-op */ }
+            // Initialize guest avatar carousel (guests only) — prefer 3D when available
+            try {
+                let used3D = false;
+                if (typeof initGuestAvatar3DCarousel === 'function') {
+                    used3D = !!initGuestAvatar3DCarousel();
+                }
+                if (!used3D && typeof initGuestAvatarCarousel === 'function') {
+                    initGuestAvatarCarousel();
+                }
+            } catch (e) { /* no-op */ }
             
             // FORCE CONTAINER DIMENSIONS - Override any library changes
             setTimeout(() => {

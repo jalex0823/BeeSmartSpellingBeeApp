@@ -213,7 +213,30 @@
     <div class="card-body">
       <div id="alert-container"></div>
 
+      <!-- Registration Fee Disclosure -->
+      <div aria-live="polite" style="
+        margin-bottom: 1rem;
+        padding: 0.9rem 1rem;
+        background: linear-gradient(135deg, #FFF3E0, #FFFDE7);
+        border: 2px solid #FFCC80;
+        border-radius: 12px;
+        color: #5A2C15;
+      ">
+        <div style="font-weight: 800; color:#E65100; margin-bottom: 0.35rem;">
+          💳 Registration is a paid account
+        </div>
+        <div style="font-size: 0.95rem;">
+          One‑time registration fee: <strong>${{ (registration_fee_usd or 4.99) | round(2) }}</strong> to unlock avatar creation and full app features.
+        </div>
+      </div>
+
       <form id="registerForm" method="POST" action="{{ url_for('register') }}">
+        <div class="consent-row" style="justify-content:flex-start; margin-top: 0;">
+          <label for="feeConsent">
+            <input type="checkbox" id="feeConsent" name="fee_consent" required>
+            <span>I understand registration requires a one‑time payment to unlock features.</span>
+          </label>
+        </div>
         <!-- CSRF removed (not configured in app) -->
         <div class="form-group">
           <label for="username">Username <span class="required">*</span></label>
@@ -336,7 +359,7 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary" id="submitBtn">Create Account <span class="spinner"></span></button>
+        <button type="submit" class="btn-primary" id="submitBtn" disabled>Create Account <span class="spinner"></span></button>
       </form>
 
       <div class="signin-link">Already have an account? <a href="{{ url_for('login') }}">Sign in here</a></div>
@@ -457,6 +480,16 @@ updateFieldsBasedOnRole(); // Initialize on page load
 const registerForm = document.getElementById('registerForm');
 const submitBtn = document.getElementById('submitBtn');
 const alertContainer = document.getElementById('alert-container');
+const feeConsent = document.getElementById('feeConsent');
+
+// Enable submit only when fee consent is checked
+if (feeConsent) {
+  const updateSubmitState = () => {
+    submitBtn.disabled = !feeConsent.checked;
+  };
+  feeConsent.addEventListener('change', updateSubmitState);
+  updateSubmitState();
+}
 
 registerForm.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -476,7 +509,8 @@ registerForm.addEventListener('submit', async function(e) {
         email: document.getElementById('email').value.trim(),
         grade_level: document.getElementById('grade').value,
         teacher_key: document.getElementById('teacher_key').value.trim(),
-        avatar_id: document.getElementById('selected_avatar').value  // Fixed: was 'avatar', should be 'avatar_id'
+    avatar_id: document.getElementById('selected_avatar').value,  // Fixed: was 'avatar', should be 'avatar_id'
+    fee_consent: !!(document.getElementById('feeConsent')?.checked)
     };
     
     console.log('📝 Form data:', { ...formPayload, password: '***' });
