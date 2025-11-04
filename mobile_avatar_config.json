@@ -1,0 +1,387 @@
+{
+  "version": "2.1.0",
+  "last_updated": "2025-11-03",
+  "default_locked_price": 0.99,
+  "currency": "USD",
+  "avatar_system": {
+    "total_avatars": 24,
+    "free_count": 6,
+    "earn_or_buy_count": 7,
+    "premium_count": 11,
+    "special_count": 1
+  },
+  "avatars": {
+    "free": [
+      {
+        "id": "mascot-bee",
+        "name": "Mascot Bee",
+        "category": "classic",
+        "tier": "mascot",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "The original BeeSmart mascot! Cheerful and encouraging.",
+        "sku": null
+      },
+      {
+        "id": "brother-bee",
+        "name": "Brother Bee",
+        "category": "classic",
+        "tier": "default_free",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "Your reliable bee bro — friendly and helpful!",
+        "sku": null
+      },
+      {
+        "id": "builder-bee",
+        "name": "Builder Bee",
+        "category": "profession",
+        "tier": "default_free",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "Hard hat on! Builds and fixes around the hive.",
+        "sku": null
+      },
+      {
+        "id": "cool-bee",
+        "name": "Cool Bee",
+        "category": "classic",
+        "tier": "default_free",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "The coolest bee around - always stylish!",
+        "sku": null
+      },
+      {
+        "id": "detective-bee",
+        "name": "Detective Bee",
+        "category": "profession",
+        "tier": "default_free",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "Elementary, my dear Wats-bee! Solving word mysteries.",
+        "sku": null
+      },
+      {
+        "id": "explorer-bee",
+        "name": "Explorer Bee",
+        "category": "adventure",
+        "tier": "default_free",
+        "unlock_points": 0,
+        "price": 0.0,
+        "is_default_free": true,
+        "is_purchasable": false,
+        "description": "Adventure awaits! Ready to discover new horizons.",
+        "sku": null
+      }
+    ],
+    "earn_or_buy": [
+      {
+        "id": "doctor-bee",
+        "name": "Doctor Bee",
+        "category": "profession",
+        "tier": "earn_or_buy",
+        "unlock_points": 2000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Here to heal and help! Medical professional bee.",
+        "sku": "com.beesmart.avatar.doctor_bee"
+      },
+      {
+        "id": "buzz-bee",
+        "name": "Buzz Bee",
+        "category": "classic",
+        "tier": "earn_or_buy",
+        "unlock_points": 3000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Always buzzing with energy and enthusiasm!",
+        "sku": "com.beesmart.avatar.buzz_bee"
+      },
+      {
+        "id": "knight-bee",
+        "name": "Knight Bee",
+        "category": "fantasy",
+        "tier": "earn_or_buy",
+        "unlock_points": 4000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Brave and noble! Defender of the hive.",
+        "sku": "com.beesmart.avatar.knight_bee"
+      },
+      {
+        "id": "selfie-bee",
+        "name": "Selfie Bee",
+        "category": "entertainment",
+        "tier": "earn_or_buy",
+        "unlock_points": 5000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Say cheese! Always ready for the perfect selfie!",
+        "sku": "com.beesmart.avatar.selfie_bee"
+      },
+      {
+        "id": "monster-bee",
+        "name": "Monster Bee",
+        "category": "fantasy",
+        "tier": "earn_or_buy",
+        "unlock_points": 6000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Not scary, just misunderstood! Friendly monster bee.",
+        "sku": "com.beesmart.avatar.monster_bee"
+      },
+      {
+        "id": "rocker-bee",
+        "name": "Rocker Bee",
+        "category": "entertainment",
+        "tier": "earn_or_buy",
+        "unlock_points": 8000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Rock and roll! Lead singer of The Bee-tles.",
+        "sku": "com.beesmart.avatar.rocker_bee"
+      },
+      {
+        "id": "seabea",
+        "name": "Seabea",
+        "category": "adventure",
+        "tier": "earn_or_buy",
+        "unlock_points": 10000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Navy SeaBee! Construction battalion of the ocean.",
+        "sku": "com.beesmart.avatar.seabea"
+      }
+    ],
+    "premium": [
+      {
+        "id": "diva-bee",
+        "name": "Diva Bee",
+        "category": "entertainment",
+        "tier": "premium",
+        "unlock_points": 12000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "The Bee-yoncé of the hive! Born to spell, born to shine!",
+        "sku": "com.beesmart.avatar.diva_bee"
+      },
+      {
+        "id": "biker-bee",
+        "name": "Biker Bee",
+        "category": "action",
+        "tier": "premium",
+        "unlock_points": 15000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Born to Bee Wild! Rides a Harley-Davidson Honey-Hog.",
+        "sku": "com.beesmart.avatar.biker_bee"
+      },
+      {
+        "id": "astro-bee",
+        "name": "Astro Bee",
+        "category": "adventure",
+        "tier": "premium",
+        "unlock_points": 18000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Buzz Aldrin's cousin! First bee on the moon.",
+        "sku": "com.beesmart.avatar.astro_bee"
+      },
+      {
+        "id": "al-bee",
+        "name": "Al Bee",
+        "category": "classic",
+        "tier": "premium",
+        "unlock_points": 20000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Genius bee! Discovered E=MC² (Mighty Cool Buzzing²)",
+        "sku": "com.beesmart.avatar.al_bee"
+      },
+      {
+        "id": "professor-bee",
+        "name": "Professor Bee",
+        "category": "profession",
+        "tier": "premium",
+        "unlock_points": 22000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Wise and knowledgeable! The scholarly bee.",
+        "sku": "com.beesmart.avatar.professor_bee"
+      },
+      {
+        "id": "vamp-bee",
+        "name": "Vamp Bee",
+        "category": "fantasy",
+        "tier": "premium",
+        "unlock_points": 24000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Count Bee-cula! 'I vant to spell your vords!'",
+        "sku": "com.beesmart.avatar.vamp_bee"
+      },
+      {
+        "id": "franken-bee",
+        "name": "Franken Bee",
+        "category": "fantasy",
+        "tier": "premium",
+        "unlock_points": 25000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Created by Dr. Franken-sting! Spells by lightning power.",
+        "sku": "com.beesmart.avatar.franken_bee"
+      },
+      {
+        "id": "zom-bee",
+        "name": "Zom Bee",
+        "category": "fantasy",
+        "tier": "premium",
+        "unlock_points": 25000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "The Walking Buzzed! Craves brainy words.",
+        "sku": "com.beesmart.avatar.zom_bee"
+      },
+      {
+        "id": "superbee",
+        "name": "Superbee",
+        "category": "fantasy",
+        "tier": "premium",
+        "unlock_points": 26000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Saving the day with bee powers! Cape included.",
+        "sku": "com.beesmart.avatar.superbee"
+      },
+      {
+        "id": "ware-bee",
+        "name": "Ware Bee",
+        "category": "fantasy",
+        "tier": "premium",
+        "unlock_points": 27000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Were-bee of London! Howls at the full moon.",
+        "sku": "com.beesmart.avatar.ware_bee"
+      },
+      {
+        "id": "queen-bee",
+        "name": "Queen Bee",
+        "category": "royal",
+        "tier": "premium",
+        "unlock_points": 28000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Royal and majestic! Leader with grace.",
+        "sku": "com.beesmart.avatar.queen_bee"
+      },
+      {
+        "id": "robo-bee",
+        "name": "Robo Bee",
+        "category": "tech",
+        "tier": "premium",
+        "unlock_points": 30000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "Buzzbot 3000! Honey-powered circuits.",
+        "sku": "com.beesmart.avatar.robo_bee"
+      }
+    ],
+    "special": [
+      {
+        "id": "anxious-bee",
+        "name": "Anxious Bee",
+        "category": "emotion",
+        "tier": "special",
+        "unlock_points": 5000,
+        "price": 0.99,
+        "is_default_free": false,
+        "is_purchasable": true,
+        "description": "A little nervous but eager to learn!",
+        "sku": "com.beesmart.avatar.anxious_bee"
+      }
+    ]
+  },
+  "points_earning": {
+    "correct_first_try": 100,
+    "correct_second_try": 50,
+    "correct_third_try": 25,
+    "speed_bonus_under_5s": 25,
+    "no_hint_bonus": 25,
+    "streak_bonus_10plus": 100
+  },
+  "badge_bonuses": {
+    "perfect_game": 500,
+    "speed_demon": 200,
+    "persistent_learner": 150,
+    "hot_streak": 100,
+    "comeback_kid": 100,
+    "honey_hunter": 75,
+    "early_bird": 50
+  },
+  "in_app_purchases": {
+    "platform": {
+      {
+        "version": 1,
+        "currency": "USD",
+        "default_locked_price": 0.99,
+        "premium_199_ids": [
+          "al-bee",
+          "astro-bee",
+          "biker-bee",
+          "diva-bee",
+          "superbee",
+          "queen-bee",
+          "robo-bee",
+          "ware-bee",
+          "zom-bee"
+        ],
+        "earn_or_buy_points": {
+          "doctor-bee": 2000,
+          "knight-bee": 4000,
+          "monster-bee": 6000,
+          "rocker-bee": 8000,
+          "seabea": 10000
+        }
+      }
+        "sku_ios": "com.beesmart.bundle.ultimate_hive",
+        "sku_android": "com.beesmart.bundle.ultimate_hive"
+      }
+    }
+  },
+  "admin_settings": {
+    "bypass_unlocks_for_admins": true,
+    "teacher_can_gift_avatars": true,
+    "parent_can_gift_avatars": true
+  }
+}

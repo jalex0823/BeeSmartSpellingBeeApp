@@ -39,7 +39,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 20000,
-        "price": 1.99
+        "price": 0.99
     },
     {
         "id": "anxious-bee",
@@ -71,7 +71,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 18000,
-        "price": 1.99
+        "price": 0.99
     },
     {
         "id": "biker-bee",
@@ -87,7 +87,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 15000,
-        "price": 1.99
+        "price": 0.99
     },
     {
         "id": "brother-bee",
@@ -183,7 +183,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 12000,
-        "price": 1.99
+        "price": 0.99
     },
     {
         "id": "doctor-bee",
@@ -231,7 +231,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 25000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "knight-bee",
@@ -295,7 +295,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 22000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "queen-bee",
@@ -311,7 +311,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 28000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "robo-bee",
@@ -327,7 +327,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 30000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "rocker-bee",
@@ -391,7 +391,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 26000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "vamp-bee",
@@ -407,7 +407,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 24000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "ware-bee",
@@ -423,7 +423,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 27000,
-        "price": 2.99
+        "price": 0.99
     },
     {
         "id": "zom-bee",
@@ -439,7 +439,7 @@ AVATAR_CATALOG = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 25000,
-        "price": 2.99
+        "price": 0.99
     }
 ]
 
@@ -597,6 +597,51 @@ try:
                 a['name'] = _dynamic_names[a['id']]
 except Exception as _e:  # non-fatal
     pass
+
+# --- Pricing and Points Overrides -------------------------------------------
+# Business rule (2025-11-03):
+# - All locked avatars default to $0.99 unless explicitly listed otherwise
+# - Premium set priced at $1.99 each (or bundle):
+#   al-bee, astro-bee, biker-bee, diva-bee, superbee, queen-bee,
+#   robo-bee, ware-bee, zom-bee
+# - Earn-or-buy tiers ensure the following point thresholds:
+#   doctor-bee=2000, knight-bee=4000, monster-bee=6000,
+#   rocker-bee=8000, seabea=10000
+
+DEFAULT_LOCKED_PRICE = 0.99
+PREMIUM_199_IDS = {
+    "al-bee",
+    "astro-bee",
+    "biker-bee",
+    "diva-bee",
+    "superbee",
+    "queen-bee",
+    "robo-bee",
+    "ware-bee",
+    "zom-bee",
+}
+
+EARN_OR_BUY_POINTS = {
+    "doctor-bee": 2000,
+    "knight-bee": 4000,
+    "monster-bee": 6000,
+    "rocker-bee": 8000,
+    "seabea": 10000,
+}
+
+# Apply pricing/points policy programmatically to guarantee consistency
+for a in AVATAR_CATALOG:
+    # Skip completely free defaults
+    if not a.get("is_default_free", False):
+        # Default price for all locked avatars
+        a["price"] = DEFAULT_LOCKED_PRICE
+    # Premium set at $1.99
+    if a.get("id") in PREMIUM_199_IDS:
+        a["price"] = 1.99
+    # Enforce earn-or-buy point thresholds where applicable
+    if a.get("id") in EARN_OR_BUY_POINTS:
+        a["unlock_points"] = EARN_OR_BUY_POINTS[a["id"]]
+
 
 
 def get_avatar_catalog():
