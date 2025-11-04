@@ -2733,13 +2733,13 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
-                <button type="button" class="action-btn secondary" onclick="exportWordList()" title="💾 Save your word list with definitions">
+                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title="💾 Save your word list with definitions">
                     💾 Export List
                 </button>
-                <button type="button" class="action-btn secondary" onclick="importWordList()" title="📥 Load a previously saved CSV word list">
+                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); importWordList();" title="📥 Load a previously saved CSV word list">
                     📥 Import CSV File
                 </button>
-                <button type="button" class="action-btn secondary" onclick="clearAll()" title="🗑️ Start fresh with a new word list">
+                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); clearAll();" title="🗑️ Start fresh with a new word list">
                     🧹 Start Fresh
                 </button>
                 

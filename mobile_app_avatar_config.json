@@ -1,0 +1,223 @@
+{
+  "avatar_unlock_system": {
+    "version": "1.0",
+    "last_updated": "2025-11-03",
+    "description": "Avatar unlock configuration for BeeSmart Spelling Bee mobile app - ensures consistency with web version"
+  },
+  "unlock_methods": {
+    "honey_points": "Earn points through quiz completion, badges, and achievements",
+    "purchase": "Direct purchase with real money (in-app purchase)",
+    "bee_key": "Enter unlock codes from promotions or purchases"
+  },
+  "avatars": {
+    "free_avatars": [
+      {
+        "id": "mascot-bee",
+        "name": "Mascot Bee",
+        "description": "The original BeeSmart mascot! Cheerful and encouraging.",
+        "tier": "mascot",
+        "unlock_points": 0,
+        "purchase_price": null,
+        "is_purchasable": false,
+        "is_default_free": true,
+        "category": "classic",
+        "files": {
+          "obj": "/static/assets/avatars/mascot-bee/MascotBee.obj",
+          "mtl": "/static/assets/avatars/mascot-bee/MascotBee.mtl",
+          "texture": "/static/assets/avatars/mascot-bee/MascotBee.png",
+          "thumbnail": "/static/assets/avatars/mascot-bee/MascotBee!.png"
+        }
+      }
+    ],
+    "earn_or_buy_avatars": [
+      {
+        "id": "busy-bee",
+        "name": "Busy Bee",
+        "description": "Hardworking bee with briefcase - always ready to spell!",
+        "tier": "earn_or_buy",
+        "unlock_points": 250,
+        "purchase_price": 0.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "classic",
+        "sku": "com.beesmart.avatar.busybee"
+      },
+      {
+        "id": "queen-bee",
+        "name": "Queen Bee",
+        "description": "Royal bee with crown - rule the spelling kingdom!",
+        "tier": "earn_or_buy",
+        "unlock_points": 500,
+        "purchase_price": 1.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "classic",
+        "sku": "com.beesmart.avatar.queenbee"
+      },
+      {
+        "id": "bumble-bee",
+        "name": "Bumble Bee",
+        "description": "Classic fuzzy bumble bee - warm and friendly!",
+        "tier": "earn_or_buy",
+        "unlock_points": 750,
+        "purchase_price": 1.49,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "classic",
+        "sku": "com.beesmart.avatar.bumblebee"
+      },
+      {
+        "id": "honey-bee",
+        "name": "Honey Bee",
+        "description": "Golden honey collector - sweet success!",
+        "tier": "earn_or_buy",
+        "unlock_points": 1000,
+        "purchase_price": 1.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "classic",
+        "sku": "com.beesmart.avatar.honeybee"
+      },
+      {
+        "id": "spelling-bee",
+        "name": "Spelling Bee",
+        "description": "Scholar bee with glasses - master of words!",
+        "tier": "earn_or_buy",
+        "unlock_points": 1500,
+        "purchase_price": 2.49,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "classic",
+        "sku": "com.beesmart.avatar.spellingbee"
+      },
+      {
+        "id": "super-bee",
+        "name": "Super Bee",
+        "description": "Superhero bee with cape - spelling champion!",
+        "tier": "earn_or_buy",
+        "unlock_points": 2000,
+        "purchase_price": 2.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "hero",
+        "sku": "com.beesmart.avatar.superbee"
+      },
+      {
+        "id": "ninja-bee",
+        "name": "Ninja Bee",
+        "description": "Stealthy ninja bee - master of stealth spelling!",
+        "tier": "earn_or_buy",
+        "unlock_points": 2500,
+        "purchase_price": 2.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "hero",
+        "sku": "com.beesmart.avatar.ninjabee"
+      },
+      {
+        "id": "robo-bee",
+        "name": "Robo Bee",
+        "description": "Futuristic robot bee - precision spelling!",
+        "tier": "earn_or_buy",
+        "unlock_points": 3000,
+        "purchase_price": 3.49,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "sci-fi",
+        "sku": "com.beesmart.avatar.robobee"
+      }
+    ],
+    "premium_avatars": [
+      {
+        "id": "wizard-bee",
+        "name": "Wizard Bee",
+        "description": "Magical wizard bee - spellcasting master!",
+        "tier": "premium",
+        "unlock_points": 5000,
+        "purchase_price": null,
+        "is_purchasable": false,
+        "is_default_free": false,
+        "category": "fantasy",
+        "note": "Points only - cannot be purchased"
+      },
+      {
+        "id": "pirate-bee",
+        "name": "Pirate Bee",
+        "description": "Swashbuckling pirate bee - treasure hunter!",
+        "tier": "premium",
+        "unlock_points": 7500,
+        "purchase_price": null,
+        "is_purchasable": false,
+        "is_default_free": false,
+        "category": "adventure",
+        "note": "Points only - cannot be purchased"
+      },
+      {
+        "id": "astronaut-bee",
+        "name": "Astronaut Bee",
+        "description": "Space explorer bee - reach for the stars!",
+        "tier": "premium",
+        "unlock_points": 10000,
+        "purchase_price": null,
+        "is_purchasable": false,
+        "is_default_free": false,
+        "category": "sci-fi",
+        "note": "Points only - cannot be purchased"
+      }
+    ],
+    "special_avatars": [
+      {
+        "id": "bee-diva",
+        "name": "Bee Diva",
+        "description": "Glamorous diva bee - fabulous and fashionable!",
+        "tier": "special",
+        "unlock_points": null,
+        "purchase_price": 4.99,
+        "is_purchasable": true,
+        "is_default_free": false,
+        "category": "vip",
+        "sku": "com.beesmart.avatar.beediva",
+        "note": "Purchase only - VIP exclusive"
+      }
+    ]
+  },
+  "point_earning_guide": {
+    "quiz_completion": {
+      "correct_answer": 10,
+      "first_try_bonus": 5,
+      "speed_bonus": "1-10 (based on speed)",
+      "hint_penalty": -2
+    },
+    "badges": {
+      "perfect_game": 500,
+      "speed_demon": 200,
+      "persistent_learner": 150,
+      "hot_streak": 100,
+      "comeback_kid": 100,
+      "honey_hunter": 75,
+      "early_bird": 50
+    },
+    "daily_activities": {
+      "first_quiz_of_day": 25,
+      "streak_day_2": 10,
+      "streak_day_3": 15,
+      "streak_day_7": 50,
+      "streak_day_30": 200
+    }
+  },
+  "level_progression": {
+    "busy_bee": {"min_points": 0, "max_points": 499, "icon": "🐝"},
+    "flower_flyer": {"min_points": 500, "max_points": 1499, "icon": "🌸"},
+    "honey_collector": {"min_points": 1500, "max_points": 2999, "icon": "🍯"},
+    "spelling_star": {"min_points": 3000, "max_points": 4999, "icon": "⭐"},
+    "word_wizard": {"min_points": 5000, "max_points": 9999, "icon": "🧙"},
+    "queen_bee": {"min_points": 10000, "max_points": null, "icon": "👑"}
+  },
+  "app_integration_notes": {
+    "in_app_purchases": "Use Google Play Billing Library v5+ for in-app purchases",
+    "local_storage": "Cache avatar unlock status locally to reduce API calls",
+    "sync_frequency": "Sync with server on app launch and after each quiz completion",
+    "offline_mode": "Allow quiz play offline, sync points when connection restored",
+    "promo_codes": "Implement bee-key system for promotional unlocks"
+  }
+}
