@@ -2102,7 +2102,15 @@
 
         /* Keep System Checks moderately narrow but tall across displays */
         @media (min-width: 1024px) {
-            #systemChecks { width: 720px !important; }
+            /* Make system checks area larger and more readable on desktop */
+            #systemChecks { 
+                width: 880px !important; 
+                min-height: 480px; /* ensures area isn't too short on large screens */
+                padding: 1.75rem 1.5rem; /* a touch more breathing room */
+            }
+            #systemChecks #checksList {
+                font-size: 1.2rem; /* bump text size for visibility */
+            }
         }
         
         @keyframes loadingTextPulse {
@@ -2117,6 +2125,17 @@
         @keyframes startPulse {
             0%, 100% { transform: scale(1); box-shadow: 0 10px 24px rgba(255, 170, 0, 0.35); }
             50% { transform: scale(1.05); box-shadow: 0 12px 28px rgba(255, 170, 0, 0.5); }
+        }
+
+        /* Flash the start button once all systems are ready (safe < 3Hz) */
+        @keyframes readyFlash {
+            0%   { transform: scale(1);   filter: none; box-shadow: 0 10px 24px rgba(255,170,0,0.35); }
+            50%  { transform: scale(1.04); filter: brightness(1.1); box-shadow: 0 16px 36px rgba(255,170,0,0.65); }
+            100% { transform: scale(1);   filter: none; box-shadow: 0 10px 24px rgba(255,170,0,0.35); }
+        }
+
+        #welcomeStartBtn.ready-flash {
+            animation: readyFlash 1s ease-in-out infinite !important; /* override disabled pulse */
         }
 
         /* Welcome title per-letter entrance */
@@ -10271,6 +10290,11 @@
                 btn.style.filter = 'none';
                 btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
+                // Replace the subtle disabled pulse with a celebratory ready flash
+                try { btn.classList.add('ready-flash'); } catch (e) { /* no-op */ }
+                // Fallback override in case inline animation persists
+                btn.style.animation = 'readyFlash 1s ease-in-out infinite';
+                btn.setAttribute('title', 'All systems ready — tap to start!');
                 btn.addEventListener('click', () => this.dismissLoader());
             }
 
