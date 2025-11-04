@@ -2353,8 +2353,8 @@
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
                     <div class="carousel-cta">
-                        <span class="cta-text">Join the hive — create your Bee Avatar</span>
-                        <a class="register-button" href="/auth/register" aria-label="Register to create your Bee Avatar">Register free</a>
+                        <span class="cta-text">Join the hive — pick your Bee style!</span>
+                        <a class="register-button" href="/auth/register" aria-label="Register to create your Bee Avatar">Create my avatar</a>
                     </div>
                 </div>
                 {% endif %}
@@ -8489,15 +8489,16 @@
 
             // Candidate thumbnails (will skip missing files automatically)
             const base = '/static/assets/avatars/glb_files/AvatarThumbnails';
+            // Hand-picked, kid-favorite lineup (files exist in AvatarThumbnails)
             const candidates = [
-                { name: 'Mascot Bee', file: 'MascotBee.png' },
-                { name: 'Diva Bee', file: 'DivaBee.png' },
-                { name: 'Rocker Bee', file: 'RockerBee.png' },
-                { name: 'Knight Bee', file: 'KnightBee.png' },
-                { name: 'Explorer Bee', file: 'ExplorerBee.png' },
-                { name: 'Robot Bee', file: 'RobotBee.png' },
-                { name: 'Queen Bee', file: 'QueenBee.png' },
-                { name: 'Space Bee', file: 'SpaceBee.png' }
+                { name: 'Mascot Bee', file: 'MascotBee!.png' },
+                { name: 'Diva Bee', file: 'DivaBee!.png' },
+                { name: 'Rocker Bee', file: 'RockerBee!.png' },
+                { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
+                { name: 'Robo Bee', file: 'RoboBee!.png' },
+                { name: 'Queen Bee', file: 'QueenBee!.png' },
+                { name: 'Space Bee', file: 'SpaceBee!.png' },
+                { name: 'Knight Bee', file: 'BeeKnight!.png' }
             ];
 
             const loaded = [];
