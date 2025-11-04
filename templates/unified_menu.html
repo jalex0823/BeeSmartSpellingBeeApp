@@ -617,8 +617,12 @@
         /* Extra guard: explicitly disable floating/hover effects for the main card */
         body.home-no-shimmer .content-card { animation: none !important; transition: none !important; transform: none !important; }
         body.home-no-shimmer .content-card:hover { transform: none !important; box-shadow: 0 18px 45px rgba(255, 170, 200, 0.32) !important; }
-        /* Hide the interactive caption when shimmer/effects are disabled */
-        body.home-no-shimmer #mascotCaption { display: none !important; }
+        /* When shimmer/effects are disabled, keep the caption visible but static */
+        body.home-no-shimmer #mascotCaption { 
+            display: block !important; 
+            animation: none !important; 
+            opacity: 1 !important;
+        }
         /* Also hide any bee swarm visuals if present */
         body.home-no-shimmer .bee-swarm-container,
         body.home-no-shimmer .flying-bee { display: none !important; }
@@ -2337,9 +2341,23 @@
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                " onclick="playMascotShow()">
+                " onclick="handleMascotCaptionClick()">
                     ✨ Click on me to see what I do! ✨
                 </div>
+
+                {% if not current_user.is_authenticated %}
+                <!-- Guest-only Avatar Carousel (calm, accessible) -->
+                <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
+                    <div class="avatar-slide">
+                        <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
+                        <div class="avatar-name" id="guestAvatarName"></div>
+                    </div>
+                    <div class="carousel-cta">
+                        <span class="cta-text">Join the hive — create your Bee Avatar</span>
+                        <a class="register-button" href="/auth/register" aria-label="Register to create your Bee Avatar">Register free</a>
+                    </div>
+                </div>
+                {% endif %}
                 
                 
                 <!-- Website URL Badge -->
@@ -8379,24 +8397,38 @@
             return !!theme && theme !== 'happy';
         }
 
-        // Show/hide the interactive caption based on current avatar/theme and shimmer mode
+        // Show a friendly upsell for guests; keep an interactive hint for signed-in users
         async function updateMascotCaptionVisibility() {
             const caption = document.getElementById('mascotCaption');
             if (!caption) return;
 
-            // Hide if shimmer/effects are globally disabled on home page
+            // Remove any animation when shimmer is disabled
             if (document.body && document.body.classList.contains('home-no-shimmer')) {
-                caption.style.display = 'none';
+                try { caption.style.animation = 'none'; } catch (e) { /* no-op */ }
+            }
+
+            // Auth state injected earlier by the template (window.IS_AUTH)
+            const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+
+            // Guests: always show a static caption inviting them to register
+            if (!isAuthenticated) {
+                caption.style.display = '';
+                caption.innerHTML = '🐝 Register to unlock your very own <strong>Bee Avatar</strong> — it\'s free! <a href="/auth/register" style="text-decoration:underline; color:#FF6B00;">Register</a>';
+                caption.setAttribute('role', 'link');
+                caption.setAttribute('tabindex', '0');
+                caption.onclick = () => { window.location.href = '/auth/register'; };
+                caption.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = '/auth/register'; } };
                 return;
             }
 
-            // Default to hidden until we know
+            // Signed-in: show caption only when avatar has themed movements
             caption.style.display = 'none';
             try {
                 const info = await getCurrentAvatarInfo();
                 const name = (info && info.name) ? info.name : 'mascot-bee';
                 const theme = getAvatarTheme(name);
                 if (hasThemedMovement(theme)) {
+                    caption.textContent = '✨ Click on me to see what I do! ✨';
                     caption.style.display = '';
                 } else {
                     caption.style.display = 'none';
@@ -8433,6 +8465,81 @@
             setTimeout(() => {
                 container.classList.remove(`avatar-effect-${theme}`);
             }, duration);
+        }
+
+        // Caption click behavior: play show for signed-in, go to register for guests
+        function handleMascotCaptionClick() {
+            const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+            if (isAuthenticated) {
+                if (typeof playMascotShow === 'function') playMascotShow();
+            } else {
+                window.location.href = '/auth/register';
+            }
+        }
+
+        // Guest-only avatar carousel (uses available thumbnails; gracefully skips missing ones)
+        function initGuestAvatarCarousel() {
+            const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+            if (isAuthenticated) return; // show only for guests
+
+            const wrap = document.getElementById('guestAvatarCarousel');
+            const imgEl = document.getElementById('guestAvatarSlide');
+            const nameEl = document.getElementById('guestAvatarName');
+            if (!wrap || !imgEl || !nameEl) return;
+
+            // Candidate thumbnails (will skip missing files automatically)
+            const base = '/static/assets/avatars/glb_files/AvatarThumbnails';
+            const candidates = [
+                { name: 'Mascot Bee', file: 'MascotBee.png' },
+                { name: 'Diva Bee', file: 'DivaBee.png' },
+                { name: 'Rocker Bee', file: 'RockerBee.png' },
+                { name: 'Knight Bee', file: 'KnightBee.png' },
+                { name: 'Explorer Bee', file: 'ExplorerBee.png' },
+                { name: 'Robot Bee', file: 'RobotBee.png' },
+                { name: 'Queen Bee', file: 'QueenBee.png' },
+                { name: 'Space Bee', file: 'SpaceBee.png' }
+            ];
+
+            const loaded = [];
+            let remaining = candidates.length;
+            const onDone = () => {
+                if (loaded.length === 0) {
+                    // Fallback to mascot logo if nothing loaded
+                    imgEl.src = '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee.png';
+                    nameEl.textContent = 'Bee Avatar';
+                    imgEl.classList.add('is-visible');
+                    wrap.style.display = 'block';
+                    return;
+                }
+
+                let idx = 0;
+                const show = () => {
+                    const item = loaded[idx % loaded.length];
+                    imgEl.classList.remove('is-visible');
+                    // small delay to let opacity drop before swap
+                    setTimeout(() => {
+                        imgEl.src = item.url;
+                        imgEl.alt = item.name + ' thumbnail';
+                        nameEl.textContent = item.name;
+                        imgEl.classList.add('is-visible');
+                    }, 120);
+                    idx++;
+                };
+
+                wrap.style.display = 'block';
+                show();
+                // Calm rotation
+                window._guestCarouselTimer = setInterval(show, 2800);
+            };
+
+            // Preload candidates and collect ones that resolve
+            candidates.forEach(c => {
+                const testImg = new Image();
+                const url = `${base}/${c.file}`;
+                testImg.onload = () => { loaded.push({ name: c.name, url }); if (--remaining === 0) onDone(); };
+                testImg.onerror = () => { if (--remaining === 0) onDone(); };
+                testImg.src = url;
+            });
         }
 
         // Play character-specific audio effects
@@ -10619,6 +10726,9 @@
             
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
+
+            // Initialize guest avatar carousel (guests only)
+            try { if (typeof initGuestAvatarCarousel === 'function') initGuestAvatarCarousel(); } catch (e) { /* no-op */ }
             
             // FORCE CONTAINER DIMENSIONS - Override any library changes
             setTimeout(() => {
