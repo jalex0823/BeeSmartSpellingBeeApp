@@ -2723,7 +2723,7 @@
                 </div>
 
                 <!-- Upload Image -->
-                <div class="menu-option theme-ocean" onclick="kidSounds.playRandomEffect(); selectOption('image', this)" onmouseover="kidSounds.playSoftClick()" title="📷 Take a photo of a book page or worksheet and we'll find the words for you!">
+                <div id="tileImageUpload" class="menu-option theme-ocean" onclick="kidSounds.playRandomEffect(); selectOption('image', this)" onmouseover="kidSounds.playSoftClick()" title="📷 Take a photo of a book page or worksheet and we'll find the words for you!">
                     <div class="option-icon">📷</div>
                     <div class="option-title">Upload Image</div>
                     <div class="option-description">Extract words from photos</div>
@@ -2731,7 +2731,7 @@
                 </div>
 
                 <!-- Dictionary Search -->
-                <div class="menu-option theme-sunshine" onclick="kidSounds.playRandomEffect(); selectOption('dictionary', this)" onmouseover="kidSounds.playHappyDing()" title="🔍 Look up any word to learn its meaning and add it to your spelling practice!">
+                <div id="tileDictionary" class="menu-option theme-sunshine" onclick="kidSounds.playRandomEffect(); selectOption('dictionary', this)" onmouseover="kidSounds.playHappyDing()" title="🔍 Look up any word to learn its meaning and add it to your spelling practice!">
                     <div class="option-icon">🔍</div>
                     <div class="option-title">Dictionary Search</div>
                     <div class="option-description">Look up word definitions</div>
@@ -2739,7 +2739,7 @@
                 </div>
 
                 <!-- Saved Word Lists -->
-                <div class="menu-option theme-lavender" onclick="kidSounds.playRandomEffect(); selectOption('saved', this)" onmouseover="kidSounds.playBuzz()" title="📚 Access your previously saved spelling lists and continue practicing!">
+                <div id="tileSavedLists" class="menu-option theme-lavender" onclick="kidSounds.playRandomEffect(); selectOption('saved', this)" onmouseover="kidSounds.playBuzz()" title="📚 Access your previously saved spelling lists and continue practicing!">
                     <span id="savedListsBadge" class="option-badge" style="display:none;">0</span>
                     <div class="option-icon">📚</div>
                     <div class="option-title">Saved Word Lists</div>
@@ -2756,7 +2756,7 @@
                 </div>
 
                 <!-- Battle of the Bees -->
-                <div class="menu-option theme-battle" onclick="kidSounds.playRandomEffect(); selectOption('battle', this)" onmouseover="kidSounds.playHappyDing()" title="⚔️ Compete with classmates in an epic spelling battle!">
+                <div id="tileBattle" class="menu-option theme-battle" onclick="kidSounds.playRandomEffect(); selectOption('battle', this)" onmouseover="kidSounds.playHappyDing()" title="⚔️ Compete with classmates in an epic spelling battle!">
                     <div class="option-icon">⚔️</div>
                     <div class="option-title">Battle of the Bees</div>
                     <div class="option-description">Compete with friends & classmates!</div>
@@ -3458,6 +3458,27 @@
                         title: '🔒 Speed Round (Members Only)',
                         message: 'Create a free account to play Speed Round. Timed challenges, score history, and rewards are unlocked when you register.',
                         buttonText: 'Register to play'
+                    });
+
+                    const savedTile = document.getElementById('tileSavedLists');
+                    lockMenuTile(savedTile, {
+                        title: '🔒 Saved Lists (Members Only)',
+                        message: 'Create a free account to save and reuse your word lists across devices.',
+                        buttonText: 'Register to save lists'
+                    });
+
+                    const battleTile = document.getElementById('tileBattle');
+                    lockMenuTile(battleTile, {
+                        title: '🔒 Battle of the Bees (Members Only)',
+                        message: 'Register to join spelling battles with classmates and track your wins!',
+                        buttonText: 'Register to battle'
+                    });
+
+                    const imageTile = document.getElementById('tileImageUpload');
+                    lockMenuTile(imageTile, {
+                        title: '🔒 Image Upload (Members Only)',
+                        message: 'Image word capture is a members-only feature. Create a free account to unlock and use photo-to-words (OCR).',
+                        buttonText: 'Register to unlock'
                     });
                 }
             } catch (e) { /* no-op */ }
@@ -11500,6 +11521,11 @@
                         title: 'Doctor Bee',
                         tagline: 'Fixes sick words and heals typos.',
                         story: 'Doctor Bee prescribes the right letters, adds careful commas, and sends wobbly words home feeling better.'
+                    },
+                    'doc-bee': {
+                        title: 'Doc Bee',
+                        tagline: 'Fixes sick words and heals typos.',
+                        story: 'Doc Bee prescribes the right letters, adds careful commas, and sends wobbly words home feeling better.'
                     },
                     'explorer-bee': {
                         title: 'Explorer Bee',

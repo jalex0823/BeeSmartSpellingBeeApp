@@ -1933,6 +1933,9 @@ except Exception as e:
 def list_saved_wordlists():
     """Return the current user's saved word lists (persisted; not cleared by /api/clear)."""
     try:
+        # Guests are not allowed to use Saved Lists API
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required to use Saved Lists", "auth_required": True}), 403
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -1967,6 +1970,9 @@ def list_saved_wordlists():
 def save_current_wordlist():
     """Persist the current in-session wordbank to the database with a user-provided name."""
     try:
+        # Guests are not allowed to save lists
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required to save lists", "auth_required": True}), 403
         payload = request.get_json(silent=True) or {}
         list_name = (payload.get("list_name") or "").strip()
         description = (payload.get("description") or "").strip()
@@ -2027,6 +2033,9 @@ def save_current_wordlist():
 def load_saved_wordlist():
     """Load a saved list into the current session and initialize quiz state."""
     try:
+        # Guests are not allowed to load lists
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required to load saved lists", "auth_required": True}), 403
         payload = request.get_json(silent=True) or {}
         list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
         if not list_id:
@@ -2080,6 +2089,9 @@ def load_saved_wordlist():
 @app.route("/api/saved-lists/delete", methods=["POST"])  # small, optional helper
 def delete_saved_wordlist():
     try:
+        # Guests are not allowed to delete lists
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required to delete saved lists", "auth_required": True}), 403
         payload = request.get_json(silent=True) or {}
         list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
         if not list_id:
@@ -2289,6 +2301,7 @@ def quiz_page():
     return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
 
 @app.route("/battle/<battle_code>")
+@login_required
 def battle_page(battle_code):
     """
     Individual battle page for Battle of the Bees.
@@ -2364,6 +2377,7 @@ def admin_guide():
         return render_template("guide.html", content=html_content, title="BeeSmart Administrator Guide")
 
 @app.route("/battles")
+@login_required
 def battles_list():
     """Battle of the Bees - Live battles listing page"""
     timestamp = int(time.time())
@@ -3673,6 +3687,9 @@ def api_upload():
                 elif ext == ".pdf":
                     rows = parse_pdf(content)
                 elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
+                    # Guests cannot use OCR-based image upload
+                    if not current_user.is_authenticated:
+                        return jsonify({"error": "Login required for image uploads (OCR)", "auth_required": True}), 403
                     rows = parse_image_ocr(content)
             else:
                 # Fallback: attempt CSV, then TXT, then DOCX, then PDF
@@ -5126,6 +5143,34 @@ def api_dictionary_lookup():
     
     if not word:
         return jsonify({"error": "No word provided"}), 400
+
+    # Guest quota: small free allowance per day
+    try:
+        if not current_user.is_authenticated:
+            QUOTA_KEY = "guest_dict_quota_v1"
+            quota = session.get(QUOTA_KEY) or {}
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if quota.get("date") != today:
+                quota = {"date": today, "count": 0, "limit": 5}
+            limit = int(quota.get("limit", 5))
+            count = int(quota.get("count", 0))
+            if count >= limit:
+                reset_at = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+                return jsonify({
+                    "ok": False,
+                    "error": "Guest dictionary lookups limit reached. Please register to continue.",
+                    "auth_required": True,
+                    "limit": limit,
+                    "reset_date": reset_at
+                }), 403
+            else:
+                quota["count"] = count + 1
+                quota["date"] = today
+                session[QUOTA_KEY] = quota
+                session.modified = True
+    except Exception:
+        # Non-fatal if quota logic fails
+        pass
     
     definition = get_word_info(word)
     phonetic_spelling = build_phonetic_spelling(word)
@@ -8091,11 +8136,24 @@ def api_get_avatars():
             return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
 
         def _thumbnail_for_base(base: str):
-            """STRICT mapping: require exact {base}!.png; return None if missing."""
+            """Prefer exact {base}!.png; for known legacy names, try an alias before giving up."""
             base_path = "/static/assets/avatars/glb_files"
+            # 1) strict
             candidate = f"{base_path}/AvatarThumbnails/{base}!.png"
             cand_fs = os.path.join(thumb_dir, f"{base}!.png")
-            return candidate if os.path.exists(cand_fs) else None
+            if os.path.exists(cand_fs):
+                return candidate
+            # 2) known aliases (e.g., DoctorBee -> DocBee consolidated to DocBee)
+            aliases = {
+                'DocBee': 'DoctorBee',
+            }
+            alias = aliases.get(base)
+            if alias:
+                alias_candidate = f"{base_path}/AvatarThumbnails/{alias}!.png"
+                alias_fs = os.path.join(thumb_dir, f"{alias}!.png")
+                if os.path.exists(alias_fs):
+                    return alias_candidate
+            return None
 
         # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
         glb_latest: dict = {}
@@ -8128,6 +8186,8 @@ def api_get_avatars():
         glb_slugs = set(glb_latest.keys())
         replacement_rules = {
             'j-rock-bee': ['rocker-bee'],
+            # Prefer concise GLB slug 'doc-bee' over legacy DB slug 'doctor-bee'
+            'doc-bee': ['doctor-bee'],
         }
         if glb_slugs:
             pruned = []
