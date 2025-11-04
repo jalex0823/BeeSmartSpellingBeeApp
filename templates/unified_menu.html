@@ -3480,6 +3480,15 @@
                         message: 'Image word capture is a members-only feature. Create a free account to unlock and use photo-to-words (OCR).',
                         buttonText: 'Register to unlock'
                     });
+                } else {
+                    // Registered users: ensure everything is unlocked visually
+                    document.querySelectorAll('.menu-option.locked').forEach(tile => {
+                        try {
+                            tile.classList.remove('locked');
+                            tile.removeAttribute('data-locked');
+                            // No need to restore onclick because locks are only applied for guests
+                        } catch(_) {}
+                    });
                 }
             } catch (e) { /* no-op */ }
         }

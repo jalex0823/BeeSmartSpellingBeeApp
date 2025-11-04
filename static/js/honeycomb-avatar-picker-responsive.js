@@ -354,9 +354,11 @@ async function loadAvatars() {
         totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
         
-        console.log('Loaded avatars:', avatarsData.length);
-        updateDynamicMarquee(avatarsData);
-        renderAvatarGrid();
+    console.log('Loaded avatars:', avatarsData.length);
+    updateDynamicMarquee(avatarsData);
+    renderAvatarGrid();
+    // Show a celebratory modal if new avatars have become unlocked since last visit
+    maybeShowNewlyUnlockedModal(avatarsData);
     } catch (error) {
         console.error('Error loading avatars:', error);
         const msg = (error && error.message) ? error.message : 'Failed to load avatars. Please refresh the page.';
@@ -373,6 +375,41 @@ function showError(message) {
     const gridContainer = document.querySelector('.honeycomb-grid');
     if (gridContainer) {
         gridContainer.innerHTML = `<div style="color: #FFD700; text-align: center; padding: 2rem; grid-column: 1/-1;">${message}</div>`;
+    }
+}
+
+// Detect newly unlocked avatars and show unlock modal (uses avatar-unlock-notification.js)
+function maybeShowNewlyUnlockedModal(avatars) {
+    try {
+        if (!Array.isArray(avatars) || avatars.length === 0) return;
+        const storageKey = 'bee_unlocked_slugs_v1';
+        const prev = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const currentUnlocked = avatars.filter(a => !a.is_locked).map(a => (a.slug || '').toLowerCase());
+        const prevSet = new Set((prev || []).map(s => String(s).toLowerCase()));
+        const newly = currentUnlocked.filter(s => !prevSet.has(s));
+        // Update storage immediately to avoid repeated modals
+        localStorage.setItem(storageKey, JSON.stringify(currentUnlocked));
+        if (newly.length === 0) return;
+        // Build avatar objects for the modal (first few only to reduce noise)
+        const bySlug = new Map();
+        avatars.forEach(a => bySlug.set((a.slug||'').toLowerCase(), a));
+        const unlockedObjs = newly.slice(0, 3).map(slug => {
+            const a = bySlug.get(slug);
+            return {
+                name: a?.name || slug,
+                slug: a?.slug || slug,
+                description: a?.description || '',
+                thumbnail: a?.thumbnail || ''
+            };
+        });
+        if (window.showAvatarUnlockNotification) {
+            // Slight delay to ensure grid is visible before overlay
+            setTimeout(() => window.showAvatarUnlockNotification(unlockedObjs), 600);
+        } else {
+            console.log('🎉 Newly unlocked avatars:', unlockedObjs.map(x => x.name));
+        }
+    } catch (err) {
+        console.warn('Failed to show newly unlocked avatar modal:', err);
     }
 }
 

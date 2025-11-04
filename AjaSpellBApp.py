@@ -8144,15 +8144,19 @@ def api_get_avatars():
             if os.path.exists(cand_fs):
                 return candidate
             # 2) known aliases (e.g., DoctorBee -> DocBee consolidated to DocBee)
-            aliases = {
-                'DocBee': 'DoctorBee',
+            # Support multiple alias candidates per base to handle spacing/hyphenation variants
+            aliases: dict[str, list[str] | str] = {
+                'DocBee': ['DoctorBee'],
+                'FrankenBee': ['Franken Bee', 'Franken-Bee'],
             }
-            alias = aliases.get(base)
-            if alias:
-                alias_candidate = f"{base_path}/AvatarThumbnails/{alias}!.png"
-                alias_fs = os.path.join(thumb_dir, f"{alias}!.png")
-                if os.path.exists(alias_fs):
-                    return alias_candidate
+            alias_val = aliases.get(base)
+            if alias_val:
+                alias_list = alias_val if isinstance(alias_val, (list, tuple)) else [alias_val]
+                for alias in alias_list:
+                    alias_candidate = f"{base_path}/AvatarThumbnails/{alias}!.png"
+                    alias_fs = os.path.join(thumb_dir, f"{alias}!.png")
+                    if os.path.exists(alias_fs):
+                        return alias_candidate
             return None
 
         # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
