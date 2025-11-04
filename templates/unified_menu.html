@@ -52,6 +52,10 @@
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     <!-- User Avatar Loader -->
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+    <!-- Auth flag for front-end gating -->
+    <script>
+        window.IS_AUTH = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+    </script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
@@ -664,6 +668,20 @@
             box-shadow: 0 10px 22px var(--tile-shadow);
             z-index: 200 !important;  /* Ensure tiles are above decorative elements */
             pointer-events: auto !important;
+        }
+
+        /* Locked (guest) state for tiles */
+        .menu-option.locked {
+            filter: grayscale(35%);
+            opacity: 0.85;
+            position: relative;
+        }
+        .menu-option.locked::after {
+            content: '🔒';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 1.1rem;
         }
 
         /* Tiny badge for counts on tiles (e.g., Saved Lists) */
@@ -2746,7 +2764,7 @@
                 </div>
 
                 <!-- Speed Round Challenge -->
-                <div class="menu-option theme-lightning" onclick="kidSounds.playRandomEffect(); selectOption('speed', this)" onmouseover="kidSounds.playSoftClick()" title="⚡ Race against time in a fast-paced spelling challenge!">
+                <div id="tileSpeedRound" class="menu-option theme-lightning" onclick="kidSounds.playRandomEffect(); selectOption('speed', this)" onmouseover="kidSounds.playSoftClick()" title="⚡ Race against time in a fast-paced spelling challenge!">
                     <div class="option-icon">⚡</div>
                     <div class="option-title">Speed Round Challenge</div>
                     <div class="option-description">Race against time! Earn bonus points!</div>
@@ -3395,6 +3413,28 @@
             } catch (e) { /* no-op */ }
         }
 
+        // Helper: lock a menu tile for guests and show an upsell on click
+        function lockMenuTile(tile, { title = '🔒 Locked Feature', message = 'Create a free account to unlock this feature.', buttonText = 'Register now' } = {}) {
+            if (!tile) return;
+            try {
+                tile.classList.add('locked');
+                tile.setAttribute('data-locked', '1');
+                tile.setAttribute('title', message.replace(/<[^>]*>/g,'').trim());
+                // Remove inline onclick to prevent original action
+                tile.setAttribute('onclick', '');
+                // Replace with upsell modal
+                tile.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof openFriendlyInfoModal === 'function') {
+                        openFriendlyInfoModal({ title, message: message + '\n\n• Track progress\n• Save word lists\n• Unlock Speed Round & Battles', buttonText });
+                    } else {
+                        alert(title + '\n\n' + message);
+                    }
+                }, { once: false });
+            } catch (e) { console.warn('Lock tile failed', e); }
+        }
+
         // Initialize page components on load
         function initializePage() {
             // Kick off the welcome title animation early
@@ -3409,6 +3449,18 @@
 
             // Install kid-friendly click FX on main actions
             installClickFx();
+
+            // Gate certain features for guests
+            try {
+                if (!window.IS_AUTH) {
+                    const speedTile = document.getElementById('tileSpeedRound');
+                    lockMenuTile(speedTile, {
+                        title: '🔒 Speed Round (Members Only)',
+                        message: 'Create a free account to play Speed Round. Timed challenges, score history, and rewards are unlocked when you register.',
+                        buttonText: 'Register to play'
+                    });
+                }
+            } catch (e) { /* no-op */ }
         }
         
         if (document.readyState === 'loading') {
