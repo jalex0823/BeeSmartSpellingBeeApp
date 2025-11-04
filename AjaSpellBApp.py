@@ -2657,6 +2657,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
 
 # --- Routes: API -------------------------------------------------------------
 @app.route("/api/random-words", methods=["POST"])
+@login_required
 def api_random_words():
     """
     Generate a random word list based on difficulty level.
@@ -2680,7 +2681,7 @@ def api_random_words():
                 "message": "Count must be between 1 and 50"
             }), 400
         
-        # Generate random words
+        # Generate random words (authenticated users only)
         try:
             random_words = get_random_words_by_difficulty(difficulty, count)
             

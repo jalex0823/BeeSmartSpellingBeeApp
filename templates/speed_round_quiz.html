@@ -647,11 +647,12 @@ function selectBestFemaleVoice() {
     const voices = speechSynthesis.getVoices();
     console.log('🎤 Speed Round: Analyzing', voices.length, 'available voices for best female selection');
     
-    // iOS-specific override: lock to stable, female Apple voices when available
-    if (isIOS() && voices.length) {
+    // Apple override: prefer stable, natural female Apple voices when available (iOS + macOS Safari)
+    const isAppleSafari = /Apple Computer/.test(navigator.vendor || '') && /Safari/.test(navigator.userAgent || '') && !/Chrome/.test(navigator.userAgent || '');
+    if ((isIOS() || isAppleSafari) && voices.length) {
         const iosPreferred = [
             // US first
-            'samantha', 'siri', 'ava', 'olivia',
+            'samantha', 'siri', 'siri voice', 'ava', 'olivia',
             // Other English regions as fallbacks
             'victoria', 'karen', 'moira', 'tessa'
         ];
@@ -675,6 +676,7 @@ function selectBestFemaleVoice() {
         .map(voice => {
             let score = 0;
             const name = voice.name.toLowerCase();
+            const uri = (voice.voiceURI || '').toLowerCase();
             
             // Language preference (US English gets highest priority)
             if (voice.lang === 'en-US') score += 100;
@@ -697,6 +699,14 @@ function selectBestFemaleVoice() {
             if (name.includes('premium')) score += 60;
             if (name.includes('neural')) score += 60;
             
+            // Apple Siri family detection (prioritize female variants)
+            if (uri.includes('com.apple') || name.includes('siri')) {
+                score += 60; // base boost for Apple voices
+                if (name.includes('siri')) score += 40;
+                // Prefer likely female variants
+                if (name.includes('female') || name.includes('voice 2') || name.includes('voice 4')) score += 40;
+            }
+
             // Known high-quality female voices (ordered by naturalness)
             const premiumVoices = {
                 'samantha': 90,     // macOS - very natural
@@ -1300,6 +1310,19 @@ function pronounceWord() {
 
     if (!('speechSynthesis' in window)) {
         status.textContent = '🔇 Speech not supported';
+        // Fallback: unlock input and start timer immediately
+        try {
+            const spellInput = document.getElementById('spellInput');
+            const submitBtn = document.getElementById('submitBtn');
+            if (spellInput) {
+                spellInput.disabled = false;
+                spellInput.placeholder = 'Type your answer...';
+                spellInput.focus();
+            }
+            if (submitBtn) submitBtn.disabled = false;
+            wordStartTime = Date.now();
+            startTimer();
+        } catch (_) {}
         return;
     }
 
@@ -1326,6 +1349,34 @@ function pronounceWord() {
             status.textContent = '🎙️ Speaking';
         }
 
+        // Visualizer state + robust start/unlock fallback for Safari/macOS
+        let answerPhaseStarted = false;
+        const startAnswerPhase = () => {
+            if (answerPhaseStarted) return;
+            answerPhaseStarted = true;
+            try {
+                const spellInput = document.getElementById('spellInput');
+                const submitBtn = document.getElementById('submitBtn');
+                if (spellInput) {
+                    spellInput.disabled = false;
+                    spellInput.placeholder = 'Type your answer...';
+                    spellInput.focus();
+                }
+                if (submitBtn) submitBtn.disabled = false;
+                wordStartTime = Date.now();
+                startTimer();
+            } catch (_) {}
+        };
+
+        // Estimate a safe max duration for TTS and set a fallback
+        const estimatedDurationMs = Math.min(6000, 1200 + Math.max(phrase.length, word.length) * 60);
+        const ttsSafetyTimer = setTimeout(() => {
+            console.warn('⏱️ TTS onend not fired in time; unlocking answer phase via safety fallback');
+            visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+            status.textContent = '🐝 Ready';
+            startAnswerPhase();
+        }, estimatedDurationMs);
+
         // Visualizer state
         utterance.onstart = () => {
             visualizer.classList.add('speaking');
@@ -1334,38 +1385,16 @@ function pronounceWord() {
         utterance.onend = () => {
             visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
             status.textContent = '🐝 Ready';
-            
-            // Unlock input after word is pronounced
-            const spellInput = document.getElementById('spellInput');
-            const submitBtn = document.getElementById('submitBtn');
-            if (spellInput) {
-                spellInput.disabled = false;
-                spellInput.placeholder = "Type your answer...";
-                spellInput.focus(); // Auto-focus for faster typing
-            }
-            if (submitBtn) {
-                submitBtn.disabled = false;
-            }
-            
-            // NOW start the timer (synchronized with answer bar opening)
-            wordStartTime = Date.now();
-            startTimer();
+            clearTimeout(ttsSafetyTimer);
+            // Unlock input + start timer
+            startAnswerPhase();
         };
         utterance.onerror = () => {
             visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
             status.textContent = '⚠️ Voice error';
-            
+            clearTimeout(ttsSafetyTimer);
             // Unlock input even on error (fair play)
-            const spellInput = document.getElementById('spellInput');
-            const submitBtn = document.getElementById('submitBtn');
-            if (spellInput) {
-                spellInput.disabled = false;
-                spellInput.placeholder = "Type your answer...";
-                spellInput.focus();
-            }
-            if (submitBtn) {
-                submitBtn.disabled = false;
-            }
+            startAnswerPhase();
         };
 
         // Natural pauses and word pulses with 150ms word spacing

@@ -624,15 +624,16 @@ class MagicalSpellingBee {
             const isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             return isAppleMobile || isIPadOS;
         };
+        const isAppleSafari = /Apple Computer/.test(navigator.vendor || '') && /Safari/.test(navigator.userAgent || '') && !/Chrome/.test(navigator.userAgent || '');
         
         if (voices.length === 0) {
             console.log('⚠️ No voices available yet');
             return null;
         }
         
-        // iOS-specific override: choose stable, natural female voices first
-        if (isIOS()) {
-            const preferred = ['samantha', 'siri', 'ava', 'olivia', 'victoria', 'karen', 'moira', 'tessa'];
+        // Apple override: choose stable, natural female voices first (iOS + macOS Safari)
+        if (isIOS() || isAppleSafari) {
+            const preferred = ['samantha', 'siri', 'siri voice', 'ava', 'olivia', 'victoria', 'karen', 'moira', 'tessa'];
             const lower = n => (n || '').toLowerCase();
             for (const name of preferred) {
                 const v = voices.find(v => v.lang.startsWith('en-US') && lower(v.name).includes(name));
@@ -648,6 +649,7 @@ class MagicalSpellingBee {
         // Quality scoring system for voice selection
         const scoreVoice = (voice) => {
             let score = 0;
+            const uri = (voice.voiceURI || '').toLowerCase();
             
             // Base quality assessment
             if (voice.quality === 'high' || voice.quality === 'enhanced') score += 50;
@@ -657,6 +659,14 @@ class MagicalSpellingBee {
             const premiumNames = ['samantha', 'alex', 'victoria', 'aria', 'jenny', 'nova', 'hazel', 'karen', 'ava'];
             if (premiumNames.some(name => voice.name.toLowerCase().includes(name))) {
                 score += 40;
+            }
+
+            // Apple Siri family detection (prioritize likely female variants)
+            const lname = (voice.name || '').toLowerCase();
+            if (uri.includes('com.apple') || lname.includes('siri')) {
+                score += 50;
+                if (lname.includes('siri')) score += 30;
+                if (lname.includes('female') || lname.includes('voice 2') || lname.includes('voice 4')) score += 30;
             }
             
             // Language preference

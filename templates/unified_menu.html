@@ -2748,7 +2748,7 @@
                 </div>
 
                 <!-- Random Play -->
-                <div class="menu-option theme-random" onclick="kidSounds.playRandomEffect(); selectOption('random', this)" onmouseover="kidSounds.playPop()" title="🎲 Let the app pick random words for you based on difficulty!">
+                <div id="tileRandom" class="menu-option theme-random" onclick="kidSounds.playRandomEffect(); selectOption('random', this)" onmouseover="kidSounds.playPop()" title="🎲 Let the app pick random words for you based on difficulty!">
                     <div class="option-icon">🎲</div>
                     <div class="option-title">Random Play</div>
                     <div class="option-description">AI picks 10 words by difficulty level</div>
@@ -3457,6 +3457,13 @@
                     lockMenuTile(speedTile, {
                         title: '🔒 Speed Round (Members Only)',
                         message: 'Create a free account to play Speed Round. Timed challenges, score history, and rewards are unlocked when you register.',
+                        buttonText: 'Register to play'
+                    });
+
+                    const randomTile = document.getElementById('tileRandom');
+                    lockMenuTile(randomTile, {
+                        title: '🔒 Random Play (Members Only)',
+                        message: 'Create a free account to play Random Play. We\'ll generate fun, level-appropriate words just for you and track your progress.',
                         buttonText: 'Register to play'
                     });
 
