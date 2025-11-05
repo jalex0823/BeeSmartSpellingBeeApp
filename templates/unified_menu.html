@@ -11016,6 +11016,16 @@
                         updateAvatarSystemStatus();
                     }
                 }, 100);
+
+                // Inform loading screen of unified avatar mode
+                try {
+                    const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
+                    if (mode === 'guest') {
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Guest — Carousel preview enabled; tap to register.');
+                    } else {
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Registered — Rendering your selected avatar.');
+                    }
+                } catch(_) {}
                 
             } catch (preloadError) {
                 console.error('❌ Avatar preload failed:', preloadError);
@@ -11138,6 +11148,15 @@
             
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
+
+            // Final sanity: reflect actual container visibility in logs
+            try {
+                const guestWrap = document.getElementById('guestAvatarCarousel');
+                const mascot = document.getElementById('mascotBee3D');
+                const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
+                const visible = (el) => !!(el && el.offsetParent !== null && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden');
+                console.log('[AvatarDisplay] mode=%s visible: carousel=%s mascot=%s', mode, visible(guestWrap), visible(mascot));
+            } catch(_) {}
 
             // Initialize guest avatar carousel (guests only) — prefer 3D when available
             try {
@@ -12230,7 +12249,13 @@
                 statusBadge.style.display = 'block';
                 statusBadge.style.backgroundColor = health.color;
                 statusBadge.style.color = 'white';
-                statusText.textContent = health.text;
+                // Add mode hint to badge text (guest carousel vs registered avatar)
+                try {
+                    const mode = (window.IS_AUTH === true) ? 'Registered' : 'Guest';
+                    statusText.textContent = `${health.text} · ${mode}`;
+                } catch(_) {
+                    statusText.textContent = health.text;
+                }
                 
                 // Add pulsing animation for issues
                 if (health.status !== 'healthy') {
@@ -12259,6 +12284,14 @@
                 return;
             }
             
+            // Diagnostics for unified display
+            const mode = (window.IS_AUTH === true) ? 'Registered (single avatar)' : 'Guest (carousel)';
+            const guestWrap = document.getElementById('guestAvatarCarousel');
+            const mascot = document.getElementById('mascotBee3D');
+            const isVisible = (el) => !!(el && el.offsetParent !== null && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden');
+            const visCarousel = isVisible(guestWrap) ? 'Visible' : 'Hidden';
+            const visMascot = isVisible(mascot) ? 'Visible' : 'Hidden';
+
             let detailsHTML = `
                 <div style="text-align: left; font-family: monospace; font-size: 12px;">
                     <h3>🐝 Avatar System Status Report</h3>
@@ -12266,6 +12299,10 @@
                     <p><strong>Success Rate:</strong> ${statusReport.details.successRate}</p>
                     <p><strong>Working Avatars:</strong> ${statusReport.details.workingAvatars}/${statusReport.details.totalAvatars}</p>
                     <p><strong>Fallback System:</strong> ${statusReport.details.fallbackStatus}</p>
+                    <hr>
+                    <p><strong>Display Mode:</strong> ${mode}</p>
+                    <p><strong>Carousel:</strong> ${visCarousel}</p>
+                    <p><strong>User Avatar Container:</strong> ${visMascot}</p>
             `;
             
             if (statusReport.failedList.length > 0) {
