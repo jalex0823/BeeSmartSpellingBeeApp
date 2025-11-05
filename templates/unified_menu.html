@@ -2510,6 +2510,21 @@
                 " onclick="showAvatarInfoModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAvatarInfoModal();}" tabindex="0" role="button" aria-label="Learn about your avatar" title="Click to learn about your avatar">
                     <span id="avatarStatusText">Checking...</span>
                 </div>
+
+                <!-- Battles Status Badge (registered users only; shown when checked) -->
+                <div id="battleStatusBadge" style="
+                    display: none;
+                    margin: 4px auto 8px;
+                    padding: 4px 10px;
+                    background: rgba(0, 0, 0, 0.06);
+                    border-radius: 999px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-align: center;
+                    letter-spacing: 0.2px;
+                    color: #5A2C15;
+                    width: fit-content;
+                " aria-live="polite"></div>
                 
                 <!-- Avatar Refresh Button (hidden by default, shows if avatar fails) -->
                 <button id="avatarRefreshBtn" style="
@@ -3685,8 +3700,8 @@
             } catch (e) { console.warn('Lock tile failed', e); }
         }
 
-        // Initialize page components on load
-        function initializePage() {
+    // Initialize page components on load
+    function initializePage() {
             // Kick off the welcome title animation early
             animateWelcomeTitleOnce();
             showRandomBeeQuote();
@@ -3747,12 +3762,36 @@
                         } catch(_) {}
                     });
 
+                    // Helper to set/update the Battles status badge text and visibility
+                    function setBattleStatusBadge({ online, count }){
+                        try {
+                            const badge = document.getElementById('battleStatusBadge');
+                            if (!badge) return;
+                            if (!online) {
+                                badge.textContent = '⚪ Battles offline · coming soon';
+                                badge.style.display = 'block';
+                                return;
+                            }
+                            const n = typeof count === 'number' ? count : 0;
+                            if (n > 0) {
+                                badge.textContent = '🟢 Battles online · ' + n + ' live ' + (n === 1 ? 'room' : 'rooms');
+                            } else {
+                                badge.textContent = '🟢 Battles online · lobby open';
+                            }
+                            badge.style.display = 'block';
+                        } catch(_) {}
+                    }
+
                     // Check Battle availability; if API not available, grey out with "Coming soon" modal
                     (async function checkBattleAvailability(){
                         try {
                             const resp = await fetch('/api/battles/live', { method: 'GET' });
                             if (!resp.ok) throw new Error('Battle API unavailable');
-                            // ok: leave tile enabled
+                            // ok: leave tile enabled and populate badge
+                            let data = [];
+                            try { data = await resp.json(); } catch(_) { data = []; }
+                            const list = Array.isArray(data) ? data : (Array.isArray(data && data.battles) ? data.battles : []);
+                            setBattleStatusBadge({ online: true, count: list.length });
                         } catch (e) {
                             const battleTile = document.getElementById('tileBattle');
                             lockMenuTile(battleTile, {
@@ -3760,8 +3799,28 @@
                                 message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! 🐝',
                                 buttonText: 'Got it'
                             });
+                            setBattleStatusBadge({ online: false, count: 0 });
                         }
                     })();
+
+                    // Light polling to keep the badge fresh (only when tab is visible)
+                    let __battleBadgePoll;
+                    const __poll = async () => {
+                        if (document.hidden) return; // respect battery and CPU
+                        try {
+                            const resp = await fetch('/api/battles/live', { method: 'GET', cache: 'no-store' });
+                            if (!resp.ok) { setBattleStatusBadge({ online: false, count: 0 }); return; }
+                            let data = [];
+                            try { data = await resp.json(); } catch(_) { data = []; }
+                            const list = Array.isArray(data) ? data : (Array.isArray(data && data.battles) ? data.battles : []);
+                            setBattleStatusBadge({ online: true, count: list.length });
+                        } catch(_) {
+                            setBattleStatusBadge({ online: false, count: 0 });
+                        }
+                    };
+                    // Start after first check; poll every 60s
+                    __battleBadgePoll = setInterval(__poll, 60000);
+                    document.addEventListener('visibilitychange', () => { if (!document.hidden) __poll(); });
                 }
             } catch (e) { /* no-op */ }
         }
@@ -8799,7 +8858,8 @@
                 scene.add(dir);
 
                 const loader = new THREE.GLTFLoader();
-                let current = null;
+                let currentGroup = null;   // currently visible group (model + podium)
+                let outgoingGroup = null;  // group being faded out
                 let idx = 0;
                 let disposed = false;
 
@@ -8817,11 +8877,88 @@
                     } catch (_) {}
                 }
 
+                // Helpers to manage smooth crossfades on arbitrary GLTF graphs
+                function setTransparentRecursive(obj, enabled){
+                    obj.traverse((child)=>{
+                        if (child.isMesh) {
+                            if (Array.isArray(child.material)) child.material.forEach(m => m.transparent = enabled);
+                            else if (child.material) child.material.transparent = enabled;
+                        }
+                    });
+                }
+                function setOpacityRecursive(obj, opacity){
+                    obj.traverse((child)=>{
+                        if (child.isMesh) {
+                            if (Array.isArray(child.material)) child.material.forEach(m => { m.opacity = opacity; });
+                            else if (child.material) child.material.opacity = opacity;
+                        }
+                    });
+                }
+
+                function easeInOutCubic(t){
+                    return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+                }
+
+                function createPodiumMesh(radius){
+                    // Subtle honey-gold disc to ground the model visually
+                    const r = Math.max(0.18, Math.min(0.7, radius));
+                    const geo = new THREE.CylinderGeometry(r, r, 0.02, 48);
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: 0xF6D365, // soft honey
+                        metalness: 0.1,
+                        roughness: 0.7,
+                        emissive: 0xFFC76B,
+                        emissiveIntensity: 0.08
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.receiveShadow = false;
+                    mesh.castShadow = false;
+                    return mesh;
+                }
+
+                function animateCrossfade(oldGroup, newGroup, duration){
+                    const D = Math.max(300, duration || 650);
+                    const start = performance.now();
+                    function step(now){
+                        if (disposed) return;
+                        const t = Math.min(1, (now - start)/D);
+                        const e = easeInOutCubic(t);
+                        if (newGroup){
+                            setOpacityRecursive(newGroup, e);
+                            newGroup.position.y = (1 - e) * -0.04; // lift in slightly
+                            const s = 0.97 + 0.03*e; // scale up subtly
+                            newGroup.scale.setScalar(s);
+                        }
+                        if (oldGroup){
+                            setOpacityRecursive(oldGroup, 1 - e);
+                            oldGroup.position.y = e * 0.04; // float away
+                            const s2 = 1.0 + 0.02*e; // tiny overscale as it leaves
+                            oldGroup.scale.setScalar(s2);
+                        }
+                        if (t < 1){
+                            requestAnimationFrame(step);
+                        } else {
+                            // Finalize
+                            if (oldGroup){
+                                scene.remove(oldGroup);
+                                disposeObject(oldGroup);
+                                if (outgoingGroup === oldGroup) outgoingGroup = null;
+                            }
+                            if (newGroup){
+                                // Normalize transforms for steady rotation post-fade
+                                newGroup.position.y = 0;
+                                newGroup.scale.setScalar(1);
+                            }
+                        }
+                    }
+                    requestAnimationFrame(step);
+                }
+
                 function loadNext() {
                     const item = candidates[idx % candidates.length];
                     idx++;
-                    // Begin fade out
-                    try { wrap.style.opacity = '0'; wrap.style.transform = 'translateY(2px)'; } catch(_) {}
+                    // Begin micro wrap easing (kept subtle to avoid double-fade feel)
+                    try { wrap.style.transform = 'translateY(2px)'; } catch(_) {}
                     nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
                     if (imgEl) imgEl.style.display = 'none';
@@ -8831,24 +8968,49 @@
                     loader.load(
                         `${base}/${item.file}`,
                         (gltf) => {
-                            // Remove previous
-                            if (current) {
-                                scene.remove(current);
-                                disposeObject(current);
-                                current = null;
+                            // Hand off previous as outgoing
+                            if (currentGroup) {
+                                outgoingGroup = currentGroup;
                             }
-                            const obj = gltf.scene;
-                            // Cheap scale/center
-                            obj.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = false; } });
-                            const box = new THREE.Box3().setFromObject(obj);
-                            const size = box.getSize(new THREE.Vector3()).length();
-                            const center = box.getCenter(new THREE.Vector3());
-                            obj.position.sub(center);
-                            obj.scale.setScalar(2.4 / (size || 1));
-                            scene.add(obj);
-                            current = obj;
-                            // Fade back in after swap
-                            setTimeout(() => { try { wrap.style.opacity = '1'; wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 50);
+
+                            const model = gltf.scene;
+                            // Prepare model visuals
+                            model.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = false; } });
+
+                            // Center and scale consistently into the 240x180 viewport
+                            const box0 = new THREE.Box3().setFromObject(model);
+                            const size = box0.getSize(new THREE.Vector3()).length();
+                            const center = box0.getCenter(new THREE.Vector3());
+                            model.position.sub(center);
+                            const uniformScale = 2.4 / (size || 1);
+                            model.scale.setScalar(uniformScale);
+
+                            // Recompute bounds after centering/scaling to place the podium
+                            const box1 = new THREE.Box3().setFromObject(model);
+                            const widthXZ = Math.max(box1.max.x - box1.min.x, box1.max.z - box1.min.z);
+                            const podiumRadius = widthXZ * 0.45; // proportional to footprint
+                            const podium = createPodiumMesh(podiumRadius);
+                            // Place podium just below model base
+                            const baseY = box1.min.y - 0.01; // tiny offset
+                            podium.position.set(0, baseY - 0.01, 0);
+
+                            // Wrap group for unified transforms and opacity control
+                            const group = new THREE.Group();
+                            group.add(model);
+                            group.add(podium);
+                            // Start invisible and slightly lowered for lift-in
+                            setTransparentRecursive(group, true);
+                            setOpacityRecursive(group, 0);
+                            group.position.y = -0.04;
+                            group.scale.setScalar(0.97);
+
+                            scene.add(group);
+                            currentGroup = group;
+
+                            // Crossfade between outgoing and current
+                            animateCrossfade(outgoingGroup, currentGroup, 700);
+                            // Restore wrap transform after a tick
+                            setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
                         },
                         undefined,
                         (err) => {
@@ -8862,9 +9024,8 @@
                 function tick() {
                     if (disposed) return;
                     requestAnimationFrame(tick);
-                    if (current) {
-                        current.rotation.y += 0.004;
-                    }
+                    if (currentGroup) currentGroup.rotation.y += 0.004;
+                    if (outgoingGroup) outgoingGroup.rotation.y += 0.004;
                     renderer.render(scene, camera);
                 }
                 tick();

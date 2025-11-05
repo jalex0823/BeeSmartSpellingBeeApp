@@ -105,6 +105,7 @@ Data deletion: Users or parents can request deletion
 - Vertical shimmer removed on home (prevents mobile whiteouts); body overlays and pseudo‑elements disabled under home‑no‑shimmer guard
  - Guest carousel polish: increased spacing between items and smooth, reduced‑motion‑respecting transitions  
  - Registered avatar display standardized to the high‑quality carousel container (240×180) for consistent 3D fidelity
+ - Guest carousel refinement: eased crossfade between avatars with subtle lift/float easing and a thin honey‑gold podium/base beneath each model for visual grounding
 
 ---
 
@@ -167,7 +168,7 @@ Test Steps
 4) Try OCR upload using a worksheet photo  
 5) Verify health endpoints: `/health` and `/health/iap`  
 6) Native IAP (mock/permissive): purchase and restore subscription and one avatar SKU  
-7) Home UI polish: as a guest, observe increased spacing and smooth fades in the avatar carousel; as a registered user, confirm the avatar renders in the same 240×180 container for consistent quality
+7) Home UI polish: as a guest, observe increased spacing plus fluid crossfades (subtle lift-in/float-out) and the honey‑gold podium under each avatar; as a registered user, confirm the avatar renders in the same 240×180 container for consistent quality
 
 IAP Review Aids  
 - Subscription SKU (env): `PRODUCT_SUBSCRIPTION_FULL_ID` (default `beesmart.sub.full_monthly`)  
