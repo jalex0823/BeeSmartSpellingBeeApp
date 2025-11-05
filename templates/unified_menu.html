@@ -55,6 +55,123 @@
     <!-- Auth flag for front-end gating -->
     <script>
         window.IS_AUTH = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+        window.IS_PREMIUM = {{ (is_premium|default(false)) | tojson }};
+        window.REG_BILLING_MODE = {{ (registration_billing_mode or 'subscription') | tojson }};
+        // Expose subscription SKU for native wrappers (if provided by server)
+    window.SUBSCRIPTION_SKU = {{ (subscription_product_id if subscription_product_id is defined else None) | tojson }};
+        // Price hint for banners
+        window.subscription_monthly_usd = {{ (subscription_monthly_usd or 4.49) | tojson }};
+    </script>
+    <script>
+        // If running inside a native wrapper that exposes BeeSmartIAP, attempt restore once a day
+        document.addEventListener('DOMContentLoaded', function(){
+            try {
+                if (window.IS_AUTH && window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') {
+                    const KEY = 'iap_restore_last';
+                    const DAY = 24*60*60*1000;
+                    let last = 0;
+                    try { last = parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch(e) { last = 0; }
+                    if (!last || (Date.now() - last) > DAY) {
+                        Promise.resolve()
+                            .then(() => window.BeeSmartIAP.getOwnedProducts())
+                            .then((skus) => {
+                                if (Array.isArray(skus) && skus.length) {
+                                    const platform = (window.BeeSmartIAP.platform || (/iPhone|iPad|Mac/i.test(navigator.userAgent) ? 'apple' : (/Android/i.test(navigator.userAgent) ? 'google' : 'web'))).toLowerCase();
+                                    return fetch('/api/iap/restore', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ platform, product_ids: skus })
+                                    });
+                                }
+                            })
+                            .then(() => { try { localStorage.setItem(KEY, String(Date.now())); } catch(e){} })
+                            .catch(() => { try { localStorage.setItem(KEY, String(Date.now())); } catch(e){} });
+                    }
+                }
+            } catch (e) { /* no-op */ }
+        });
+    </script>
+    <script>
+        // Optional native purchase glue: if a user is already signed-in and a native BeeSmartIAP
+        // bridge is present, intercept subscription CTAs to purchase and immediately verify
+        document.addEventListener('DOMContentLoaded', function(){
+            try {
+                const sku = window.SUBSCRIPTION_SKU;
+                if (!sku) return; // no SKU provided
+                const anchors = document.querySelectorAll('a.register-button, a[data-subscribe="1"]');
+                anchors.forEach(function(a){
+                    a.addEventListener('click', async function(ev){
+                        try {
+                            // Only intercept if user is authenticated (verification requires login)
+                            if (!window.IS_AUTH) return; // let navigation to /auth/register happen for guests
+                            if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return;
+                            ev.preventDefault();
+                            const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
+                                ? String(window.BeeSmartIAP.platform).toLowerCase()
+                                : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
+                            const result = await Promise.resolve(window.BeeSmartIAP.purchase(sku));
+                            const body = {
+                                product_id: sku,
+                                transaction_id: result && (result.transaction_id || result.transactionId || null),
+                                purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+                                payload: result && result.payload ? result.payload : (result || {})
+                            };
+                            const resp = await fetch(`/api/iap/verify/${platform}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(body)
+                            });
+                            const data = await resp.json().catch(()=>({}));
+                            if (resp.ok && data && data.success) {
+                                // Entitlements applied; redirect to dashboard/home
+                                window.location.href = '/';
+                            } else {
+                                // Fallback to register route if something failed
+                                window.location.href = a.getAttribute('href') || '/auth/register';
+                            }
+                        } catch (e) {
+                            // Fail open to default nav
+                            try { window.location.href = a.getAttribute('href') || '/auth/register'; } catch(_) {}
+                        }
+                    }, { capture: true });
+                });
+            } catch (e) { /* no-op */ }
+        });
+    </script>
+    <script>
+        // Post-login trial banner for native wrappers (and web fallbacks)
+        // Shows only if: user is signed-in, not premium, billing mode is subscription, and banner not dismissed.
+        document.addEventListener('DOMContentLoaded', function(){
+            try {
+                const dismissedKey = 'trial_banner_dismissed_v1';
+                if (!window.IS_AUTH) return;
+                if (window.IS_PREMIUM) return;
+                if ((window.REG_BILLING_MODE || 'subscription') !== 'subscription') return;
+                try { if (localStorage.getItem(dismissedKey) === '1') return; } catch(e) {}
+
+                const fee = (typeof window.subscription_monthly_usd !== 'undefined') ? window.subscription_monthly_usd : null;
+                const price = (fee && !isNaN(fee)) ? Number(fee).toFixed(2) : null;
+                const trialDays = {{ (subscription_trial_days or 0) | int }};
+                const ctaText = trialDays > 0 ? `Start ${trialDays}\u2011day Free Trial` : 'Start Subscription';
+
+                const bar = document.createElement('div');
+                bar.setAttribute('role', 'region');
+                bar.setAttribute('aria-label', 'Subscription Offer');
+                bar.style.cssText = `position:sticky; top:0; z-index:1000; background:linear-gradient(135deg,#FFF3E0,#FFFDE7); border-bottom:2px solid #FFCC80; color:#5A2C15; padding:10px 12px; display:flex; align-items:center; justify-content:center; gap:12px;`;
+                bar.innerHTML = `
+                    <span style="font-weight:800; color:#E65100;">Unlock Premium</span>
+                    <span style="font-size:0.95rem;">${trialDays > 0 ? `Free trial ${trialDays} days` : ''} ${price ? `\u2014 $${price}/month` : ''}</span>
+                    <a href="/auth/register" data-subscribe="1" style="padding:6px 12px; background:#4FC3F7; color:white; border-radius:10px; text-decoration:none; font-weight:800; border:2px solid rgba(255,255,255,0.6);">${ctaText}</a>
+                    <button type="button" aria-label="Dismiss" title="Dismiss" style="background:transparent; border:0; font-size:18px; margin-left:6px; cursor:pointer; color:#8B6B3A;">×</button>
+                `;
+                const closeBtn = bar.querySelector('button');
+                closeBtn.addEventListener('click', function(){
+                    try { localStorage.setItem(dismissedKey, '1'); } catch(e) {}
+                    bar.remove();
+                });
+                document.body.prepend(bar);
+            } catch(e) { /* no-op */ }
+        });
     </script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
@@ -78,6 +195,40 @@
                 };
             }
             // Detect any legacy calls by monkey patching FormData send (best-effort)
+        })();
+    </script>
+    <script>
+        // Developer helper: if ?iap_mock=1 is present in the URL, create a simple BeeSmartIAP mock
+        // This allows quick manual testing of purchase→verify without a native wrapper.
+        (function(){
+            try {
+                const params = new URLSearchParams(location.search);
+                if (params.get('iap_mock') !== '1') return;
+                if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return; // don't override native
+                const guessPlatform = (/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web');
+                window.BeeSmartIAP = {
+                    platform: guessPlatform,
+                    async getOwnedProducts(){
+                        try {
+                            const sku = window.SUBSCRIPTION_SKU || 'beesmart.sub.full_monthly';
+                            // Return active sub for quick restore tests when ?iap_owned=1
+                            return (new URLSearchParams(location.search).get('iap_owned') === '1') ? [sku] : [];
+                        } catch(e){ return []; }
+                    },
+                    async purchase(productId){
+                        // Simulate a short delay and return a dummy transaction
+                        await new Promise(r => setTimeout(r, 400));
+                        const id = 'mock_' + Math.random().toString(36).slice(2);
+                        const token = 'mocktok_' + Math.random().toString(36).slice(2);
+                        return {
+                            transactionId: id,
+                            purchaseToken: token,
+                            payload: { mock: true, productId, platform: guessPlatform }
+                        };
+                    }
+                };
+                console.log('[IAP MOCK] window.BeeSmartIAP enabled');
+            } catch(e) { /* no-op */ }
         })();
     </script>
     <style>
@@ -2356,7 +2507,22 @@
                     </div>
                     <div class="carousel-cta">
                         <span class="cta-text">Join the hive — pick your Bee style!</span>
-                        <a class="register-button" href="/auth/register" aria-label="Register to create your Bee Avatar">Create my avatar</a>
+                        <a class="register-button" href="/auth/register" aria-label="Start your free trial and create your Bee Avatar" data-subscribe="1">
+                            {% if (subscription_trial_days or 0) | int > 0 %}
+                                Start {{ subscription_trial_days | int }}‑day Free Trial
+                            {% else %}
+                                Start now
+                            {% endif %}
+                        </a>
+                        {% if (registration_billing_mode or 'subscription') == 'subscription' %}
+                        <div style="font-size: 0.8rem; color:#5A2C15; margin-top: 0.35rem;">
+                            {% if (subscription_trial_days or 0) | int > 0 %}
+                                Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled during trial.
+                            {% else %}
+                                ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -2632,7 +2798,7 @@
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 215, 0, 0.4)'">
                                     🔑 Sign In
                                 </a>
-                                <a href="/auth/register" style="
+                                <a href="/auth/register" data-subscribe="1" style="
                                     padding: 0.8rem 2rem;
                                     background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 100%);
                                     color: white;
@@ -2646,8 +2812,21 @@
                                     border: 3px solid rgba(135, 206, 235, 0.6);
                                 " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(135, 206, 235, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(135, 206, 235, 0.4)'">
-                                    ✨ Register
+                                    {% if (subscription_trial_days or 0) | int > 0 %}
+                                        ✨ Start {{ subscription_trial_days | int }}‑day Free Trial
+                                    {% else %}
+                                        ✨ Register
+                                    {% endif %}
                                 </a>
+                                {% if (registration_billing_mode or 'subscription') == 'subscription' %}
+                                <div style="margin-top: 0.4rem; font-size: 0.8rem; color:#5A2C15;">
+                                    {% if (subscription_trial_days or 0) | int > 0 %}
+                                        Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled during trial.
+                                    {% else %}
+                                        ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                             </div>
                             <div style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
                                 Or continue as guest (progress won't be saved)

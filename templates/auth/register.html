@@ -198,6 +198,15 @@
 {% endblock %}
 
 {% block content %}
+<script>
+  // Expose subscription SKU for native wrappers on the registration page too
+  window.SUBSCRIPTION_SKU = "{{ subscription_product_id|default('', true) }}";
+  if (!window.SUBSCRIPTION_SKU) { try { window.SUBSCRIPTION_SKU = null; } catch(e){} }
+  // Optional: expose auth flag (always false here until registration succeeds)
+  window.IS_AUTH = false;
+  // Billing mode hint for client logic
+  window.REG_BILLING_MODE = "{{ (registration_billing_mode or 'subscription') | e }}";
+</script>
 <div class="page-center">
   <!-- Back to Main Menu Button -->
   <a href="/" class="btn-back-to-menu" id="backToMenuBtn" style="position: fixed; top: 20px; left: 20px; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #9E9E9E, #757575); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1000; display: flex; align-items: center; gap: 0.5rem;">
@@ -213,7 +222,7 @@
     <div class="card-body">
       <div id="alert-container"></div>
 
-      <!-- Registration Fee Disclosure -->
+      <!-- Registration Billing Disclosure -->
       <div aria-live="polite" style="
         margin-bottom: 1rem;
         padding: 0.9rem 1rem;
@@ -225,16 +234,42 @@
         <div style="font-weight: 800; color:#E65100; margin-bottom: 0.35rem;">
           💳 Registration is a paid account
         </div>
+        {% if (registration_billing_mode or 'subscription') == 'subscription' %}
+        <div style="font-size: 0.95rem;">
+          {% if (subscription_trial_days or 0) | int > 0 %}
+            Start your <strong>{{ subscription_trial_days | int }}‑day free trial</strong>, then <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong>.
+            <span style="display:block; margin-top:0.25rem; color:#7A4A2A;">After the trial, your subscription auto‑renews and you’ll be charged unless you cancel during the trial period.</span>
+          {% elif (subscription_intro_price_usd is not none) and ((subscription_intro_months or 0) | int > 0) %}
+            Intro price: <strong>${{ subscription_intro_price_usd | round(2) }}/month</strong> for the first {{ subscription_intro_months | int }} month{{ 's' if (subscription_intro_months | int) != 1 else '' }}, then <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong>. Cancel anytime.
+          {% else %}
+            Monthly subscription: <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong> for full access and avatar creation. Cancel anytime in your App Store settings.
+          {% endif %}
+        </div>
+        <div style="font-size: 0.8rem; color:#7A4A2A; margin-top:0.35rem;">
+          Manage or cancel any time in your Apple App Store or Google Play account settings.
+        </div>
+        {% else %}
         <div style="font-size: 0.95rem;">
           One‑time registration fee: <strong>${{ (registration_fee_usd or 4.99) | round(2) }}</strong> to unlock avatar creation and full app features.
         </div>
+        {% endif %}
       </div>
 
       <form id="registerForm" method="POST" action="{{ url_for('register') }}">
         <div class="consent-row" style="justify-content:flex-start; margin-top: 0;">
           <label for="feeConsent">
             <input type="checkbox" id="feeConsent" name="fee_consent" required>
+            {% if (registration_billing_mode or 'subscription') == 'subscription' %}
+            <span>
+              {% if (subscription_trial_days or 0) | int > 0 %}
+                I agree to start a {{ subscription_trial_days | int }}‑day free trial and be charged <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong> after the trial unless I cancel during the trial period.
+              {% else %}
+                I agree to the monthly subscription billed by Apple/Google to access BeeSmart features.
+              {% endif %}
+            </span>
+            {% else %}
             <span>I understand registration requires a one‑time payment to unlock features.</span>
+            {% endif %}
           </label>
         </div>
         <!-- CSRF removed (not configured in app) -->
@@ -376,14 +411,14 @@
         line-height: 1.6;
       ">
         <div style="font-weight: 700; margin-bottom: 0.5rem; color: #FF8C00; font-size: 1rem;">
-          🍯 What You'll Get:
+          🍯 Premium Benefits:
         </div>
         <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-          <li><strong>Honey Points System</strong> - Earn points for speed, accuracy, and streaks! 🍯</li>
-          <li><strong>7 Achievement Badges</strong> - From Perfect Spelling Bee to Speed Demon! 🏆</li>
-          <li><strong>Level Progression</strong> - Rise from Busy Bee (0 pts) to Queen Bee (10,000+ pts)! 👑</li>
-          <li><strong>Report Card</strong> - Track your progress with detailed statistics! 📊</li>
-          <li><strong>Battle of the Bees</strong> - Compete with friends in spelling challenges! ⚔️</li>
+          <li><strong>Unlimited practice & Random Play</strong> — no limits on learning sessions</li>
+          <li><strong>Full 3D Avatar Shop</strong> — unlock and customize with premium bees and bundles</li>
+          <li><strong>Honey Points & Badges</strong> — earn rewards for speed and accuracy 🍯🏆</li>
+          <li><strong>Progress Reports</strong> — GPA, accuracy, streaks, and more 📊</li>
+          <li><strong>Battle of the Bees</strong> — friendly competitions and challenges ⚔️</li>
         </ul>
         <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed #FFD700;">
           <div style="font-size: 0.85rem; color: #8B4513; margin-bottom: 0.5rem;">
@@ -530,7 +565,9 @@ registerForm.addEventListener('submit', async function(e) {
         const data = await response.json();
         console.log('📦 Response data:', data);
         
-        if (data.success) {
+    if (data.success) {
+      // The backend auto-logs in the user on success
+      window.IS_AUTH = true;
             showAlert('success', data.message || '🎉 Account created successfully! Welcome to BeeSmart! 🐝');
             createConfetti();
             playSuccessSound();
@@ -540,11 +577,43 @@ registerForm.addEventListener('submit', async function(e) {
                 setTimeout(() => {
                     showKeyModal(data.teacher_key, formPayload.role);
                 }, 1000);
-            } else {
-                setTimeout(() => {
-                    window.location.href = data.redirect || '{{ url_for("home") }}';
-                }, 2500);
-            }
+      } else {
+        // Optional: if running inside a native wrapper with IAP, offer to start the subscription now
+        const tryNativePurchase = async () => {
+          try {
+            const sku = window.SUBSCRIPTION_SKU;
+            const isSub = (window.REG_BILLING_MODE || 'subscription') === 'subscription';
+            if (!isSub || !sku) return false;
+            if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
+            // Gentle confirm to avoid accidental purchase prompt
+            const proceed = confirm('Start your BeeSmart subscription now? You can manage or cancel in your App Store settings.');
+            if (!proceed) return false;
+            const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
+              ? String(window.BeeSmartIAP.platform).toLowerCase()
+              : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
+            const result = await Promise.resolve(window.BeeSmartIAP.purchase(sku));
+            const body = {
+              product_id: sku,
+              transaction_id: result && (result.transaction_id || result.transactionId || null),
+              purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+              payload: result && result.payload ? result.payload : (result || {})
+            };
+            const resp = await fetch(`/api/iap/verify/${platform}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const json = await resp.json().catch(()=>({}));
+            return !!(resp.ok && json && json.success);
+          } catch (err) {
+            return false;
+          }
+        };
+        setTimeout(async () => {
+          const ok = await tryNativePurchase();
+          window.location.href = (data.redirect || '{{ url_for("home") }}');
+        }, 1200);
+      }
         } else {
             showAlert('error', data.error || data.message || 'Registration failed. Please try again.');
             submitBtn.disabled = false;

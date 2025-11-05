@@ -63,6 +63,7 @@ class User(UserMixin, db.Model):
     quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')
     word_mastery = db.relationship('WordMastery', backref='user', lazy=True, cascade='all, delete-orphan')
     achievements = db.relationship('Achievement', backref='user', lazy=True, cascade='all, delete-orphan')
+    purchase_records = db.relationship('PurchaseRecord', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         """Hash and set user password"""
@@ -1012,3 +1013,26 @@ class Avatar(db.Model):
     
     def __repr__(self):
         return f'<Avatar {self.slug} - {self.name}>'
+
+
+class PurchaseRecord(db.Model):
+    """IAP purchase log for Apple/Google/Web verifications"""
+    __tablename__ = 'purchase_records'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True, nullable=False)
+
+    platform = db.Column(db.String(20), index=True)  # 'apple' | 'google' | 'web'
+    product_id = db.Column(db.String(150), index=True, nullable=False)
+    status = db.Column(db.String(30), index=True, default='pending')  # pending|verified|failed|refunded
+
+    transaction_id = db.Column(db.String(200), index=True)
+    purchase_token = db.Column(db.String(300), index=True)
+
+    raw_payload = db.Column(db.JSON, default=dict)
+
+    purchased_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<PurchaseRecord user={self.user_id} product={self.product_id} platform={self.platform} status={self.status}>"

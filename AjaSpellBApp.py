@@ -37,7 +37,7 @@ from models import WordList, WordListItem
 from models import PasswordResetToken
 from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
-from models import Avatar, BattleSession
+from models import Avatar, BattleSession, PurchaseRecord
 
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
@@ -329,6 +329,206 @@ def get_railway_speed_round_engine_options():
             }
         }
     return {}
+
+# ----------------------------------------------------------------------------
+# In-App Purchases (Apple/Google) – server-side verification stubs and mapping
+# ----------------------------------------------------------------------------
+
+IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1') in ('1', 'true', 'True', 'yes')
+IAP_VERIFICATION_MODE = os.getenv('IAP_VERIFICATION_MODE', 'mock' if IAP_MOCK_MODE else 'live_strict').strip().lower()
+
+# Product -> entitlement mapping (override via env if needed)
+PRODUCT_MAP = {
+    # Full unlock (premium membership)
+    os.getenv('PRODUCT_FULL_UNLOCK_ID', 'beesmart.full_unlock'): {
+        'type': 'premium'
+    },
+    # Monthly subscription full access (maps to premium entitlement; renewal handled by store)
+    os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly'): {
+        'type': 'premium', 'subscription': True
+    },
+    # Individual avatar unlocks
+    os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee'): {
+        'type': 'avatar', 'avatar_id': 'superbee'
+    },
+    os.getenv('PRODUCT_AVATAR_QUEEN_ID', 'beesmart.avatar.queen'): {
+        'type': 'avatar', 'avatar_id': 'queen-bee'
+    },
+    os.getenv('PRODUCT_AVATAR_KNIGHT_ID', 'beesmart.avatar.knight'): {
+        'type': 'avatar', 'avatar_id': 'knight-bee'
+    },
+    os.getenv('PRODUCT_AVATAR_ROCKER_ID', 'beesmart.avatar.rocker'): {
+        'type': 'avatar', 'avatar_id': 'rocker-bee'
+    },
+    # Example bundle
+    os.getenv('PRODUCT_BUNDLE_TOP_ID', 'beesmart.bundle.top'): {
+        'type': 'bundle', 'bundle_id': 'top_bee_bundle',
+        'avatars': ['superbee', 'queen-bee', 'knight-bee', 'rocker-bee']
+    },
+}
+
+
+def _apply_entitlement(user: User, product_id: str) -> dict:
+    """Apply entitlements for a product to the given user. Idempotent.
+    Returns a dict summary of changes.
+    """
+    mapping = PRODUCT_MAP.get(product_id)
+    result = {"applied": False, "details": {}}
+    if not mapping:
+        return result
+
+    if mapping.get('type') == 'premium':
+        if not user.premium_member:
+            user.premium_member = True
+            result["applied"] = True
+        result["details"] = {"premium_member": True}
+        return result
+
+    if mapping.get('type') == 'avatar':
+        avatar_id = mapping.get('avatar_id')
+        if avatar_id:
+            # Ensure purchased_avatars list
+            if not user.purchased_avatars:
+                user.purchased_avatars = []
+            if avatar_id not in user.purchased_avatars:
+                user.purchased_avatars.append(avatar_id)
+                result["applied"] = True
+            result["details"] = {"unlocked_avatar": avatar_id}
+        return result
+
+    if mapping.get('type') == 'bundle':
+        bundle_id = mapping.get('bundle_id')
+        avatars = mapping.get('avatars', [])
+        if not user.purchased_bundles:
+            user.purchased_bundles = []
+        if bundle_id and bundle_id not in user.purchased_bundles:
+            user.purchased_bundles.append(bundle_id)
+            # Unlock avatars
+            if not user.purchased_avatars:
+                user.purchased_avatars = []
+            new_ones = 0
+            for a in avatars:
+                if a not in user.purchased_avatars:
+                    user.purchased_avatars.append(a)
+                    new_ones += 1
+            result["applied"] = True
+            result["details"] = {"bundle": bundle_id, "unlocked_count": new_ones}
+        else:
+            result["details"] = {"bundle": bundle_id, "unlocked_count": 0}
+        return result
+
+    return result
+
+
+# ----------------------------
+# IAP verification (scaffolds)
+# ----------------------------
+def _verify_with_store_apple(data: dict) -> tuple[bool, str, dict]:
+    """Scaffold for App Store Server API verification.
+    Env (planned):
+      - APPLE_ISSUER_ID
+      - APPLE_KEY_ID
+      - APPLE_PRIVATE_KEY (PEM) or APPLE_PRIVATE_KEY_PATH
+      - APPLE_APP_BUNDLE_ID
+      - APPLE_ENV ("Sandbox" | "Production")
+      - IAP_LIVE_ACCEPT_BASIC (optional: accept basic checks only for dev)
+    """
+    # Basic presence checks
+    product_id = (data or {}).get('product_id')
+    payload = (data or {}).get('payload') or {}
+    txn = (data or {}).get('transaction_id') or (payload.get('transactionId'))
+
+    # Require product mapping to exist
+    if product_id not in PRODUCT_MAP:
+        return False, 'unknown_product', {'reason': 'product_id not in PRODUCT_MAP'}
+
+    # Require some form of transaction evidence
+    if not (txn or payload):
+        return False, 'missing_transaction', {'reason': 'no transaction_id or payload provided'}
+
+    # Check configuration availability
+    has_conf = all(os.getenv(k) for k in ('APPLE_ISSUER_ID', 'APPLE_KEY_ID')) and (
+        os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_PATH')
+    )
+    if not has_conf:
+        if os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1', 'true', 'True', 'yes'):
+            return True, 'basic_accepted_unverified', {'note': 'APPLE_* env not fully configured'}
+        return False, 'apple_verification_not_configured', {}
+
+    # Attempt live verification if module available
+    try:
+        from iap_verification import verify_apple_purchase  # type: ignore
+        ok, status, details = verify_apple_purchase(data)
+        if ok:
+            return True, status, details
+        # If strict, propagate failure; if permissive and basic acceptance allowed, accept
+        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
+            return True, f'permissive_{status}', details
+        return False, status, details
+    except Exception as e:
+        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
+            return True, f'permissive_exception: {e}', {}
+        return False, f'apple_verifier_unavailable: {e}', {}
+
+
+def _verify_with_store_google(data: dict) -> tuple[bool, str, dict]:
+    """Scaffold for Google Play Developer API verification.
+    Env (planned):
+      - GOOGLE_PLAY_SERVICE_ACCOUNT (JSON string) or GOOGLE_PLAY_SERVICE_ACCOUNT_PATH
+      - GOOGLE_PLAY_PACKAGE_NAME
+      - IAP_LIVE_ACCEPT_BASIC (optional: accept basic checks only for dev)
+    """
+    product_id = (data or {}).get('product_id')
+    purchase_token = (data or {}).get('purchase_token') or ((data or {}).get('payload') or {}).get('purchaseToken')
+
+    if product_id not in PRODUCT_MAP:
+        return False, 'unknown_product', {'reason': 'product_id not in PRODUCT_MAP'}
+    if not purchase_token:
+        return False, 'missing_purchase_token', {'reason': 'no purchase_token provided'}
+
+    has_conf = bool(os.getenv('GOOGLE_PLAY_PACKAGE_NAME')) and (
+        os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT') or os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT_PATH')
+    )
+    if not has_conf:
+        if os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1', 'true', 'True', 'yes'):
+            return True, 'basic_accepted_unverified', {'note': 'GOOGLE_* env not fully configured'}
+        return False, 'google_verification_not_configured', {}
+
+    # Attempt live verification if module available
+    try:
+        from iap_verification import verify_google_purchase  # type: ignore
+        ok, status, details = verify_google_purchase(data)
+        if ok:
+            return True, status, details
+        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
+            return True, f'permissive_{status}', details
+        return False, status, details
+    except Exception as e:
+        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
+            return True, f'permissive_exception: {e}', {}
+        return False, f'google_verifier_unavailable: {e}', {}
+
+
+def _verify_with_store(platform: str, payload: dict) -> tuple[bool, str, dict]:
+    """Verify purchase with Apple/Google based on env-driven mode.
+    Returns (ok, status_message, details)
+    Modes:
+      - IAP_MOCK=1                 → always succeed with mock
+      - IAP_VERIFICATION_MODE=live_strict (default when mock off)
+      - IAP_VERIFICATION_MODE=live_permissive (accept if basic checks pass)
+    """
+    if IAP_MOCK_MODE or IAP_VERIFICATION_MODE == 'mock':
+        return True, 'mock_verified', {'mock': True}
+
+    try:
+        if platform == 'apple':
+            return _verify_with_store_apple(payload)
+        elif platform == 'google':
+            return _verify_with_store_google(payload)
+        else:
+            return False, 'unsupported_platform', {}
+    except Exception as e:
+        return False, f'verification_error: {e}', {}
 
 def generate_smart_fallback(word):
     """Generate an educational challenge for words not found via API."""
@@ -2222,7 +2422,46 @@ def home():
     timestamp = str(int(time.time()))
     # Force fresh HTML to avoid stale cached effects on the index page
     from flask import make_response
-    html = render_template("unified_menu.html", timestamp=timestamp)
+    # Pass subscription messaging to home for guest upsell
+    billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
+    try:
+        monthly_fee = float(os.environ.get('SUBSCRIPTION_MONTHLY_USD', '4.49'))
+    except Exception:
+        monthly_fee = 4.49
+    try:
+        trial_days = int(os.environ.get('SUBSCRIPTION_TRIAL_DAYS', '7'))
+    except Exception:
+        trial_days = 7
+    try:
+        intro_price = os.environ.get('SUBSCRIPTION_INTRO_PRICE_USD')
+        intro_price = float(intro_price) if intro_price is not None and intro_price != '' else None
+    except Exception:
+        intro_price = None
+    try:
+        intro_months = int(os.environ.get('SUBSCRIPTION_INTRO_MONTHS', '0'))
+    except Exception:
+        intro_months = 0
+    try:
+        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly')
+    except Exception:
+        subscription_product_id = 'beesmart.sub.full_monthly'
+    # Determine premium state for signed-in users (for trial banner logic)
+    try:
+        from flask_login import current_user as _cu
+        is_premium = bool(getattr(_cu, 'is_authenticated', False) and getattr(_cu, 'premium_member', False))
+    except Exception:
+        is_premium = False
+    html = render_template(
+        "unified_menu.html",
+        timestamp=timestamp,
+        registration_billing_mode=billing_mode,
+        subscription_monthly_usd=monthly_fee,
+        subscription_trial_days=trial_days,
+        subscription_intro_price_usd=intro_price,
+        subscription_intro_months=intro_months,
+        subscription_product_id=subscription_product_id,
+        is_premium=is_premium
+    )
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store, max-age=0"
     return resp
@@ -2397,6 +2636,71 @@ def magical_quiz_page():
 def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
     return jsonify({"status": "ok", "version": "1.6"}), 200
+
+@app.route("/health/iap")
+def health_iap():
+    """IAP health and configuration status for ops visibility."""
+    try:
+        mock = IAP_MOCK_MODE
+        mode = (os.getenv('IAP_VERIFICATION_MODE') or ('mock' if mock else 'live_strict')).strip().lower()
+
+        # Apple config
+        apple_missing = []
+        apple_keys = {
+            'APPLE_ISSUER_ID': os.getenv('APPLE_ISSUER_ID'),
+            'APPLE_KEY_ID': os.getenv('APPLE_KEY_ID'),
+            'APPLE_APP_BUNDLE_ID': os.getenv('APPLE_APP_BUNDLE_ID'),
+        }
+        for k, v in apple_keys.items():
+            if not v:
+                apple_missing.append(k)
+        has_priv = bool(os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_PATH'))
+        if not has_priv:
+            apple_missing.append('APPLE_PRIVATE_KEY or APPLE_PRIVATE_KEY_PATH')
+        apple_configured = (len(apple_missing) == 0)
+        try:
+            import jwt  # noqa: F401
+            import requests  # noqa: F401
+            import cryptography  # noqa: F401
+            apple_deps_ok = True
+        except Exception:
+            apple_deps_ok = False
+
+        # Google config
+        google_missing = []
+        if not os.getenv('GOOGLE_PLAY_PACKAGE_NAME'):
+            google_missing.append('GOOGLE_PLAY_PACKAGE_NAME')
+        if not (os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT') or os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT_PATH')):
+            google_missing.append('GOOGLE_PLAY_SERVICE_ACCOUNT or GOOGLE_PLAY_SERVICE_ACCOUNT_PATH')
+        google_configured = (len(google_missing) == 0)
+        try:
+            from google.oauth2 import service_account  # noqa: F401
+            from googleapiclient.discovery import build  # noqa: F401
+            google_deps_ok = True
+        except Exception:
+            google_deps_ok = False
+
+        return jsonify({
+            "status": "ok",
+            "version": "1.6",
+            "iap": {
+                "mock": bool(mock),
+                "verification_mode": mode,
+                "apple": {
+                    "configured": apple_configured,
+                    "missing": apple_missing,
+                    "deps_ok": apple_deps_ok,
+                    "env": (os.getenv('APPLE_ENV') or 'Production')
+                },
+                "google": {
+                    "configured": google_configured,
+                    "missing": google_missing,
+                    "deps_ok": google_deps_ok
+                }
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 # PWA service worker - serve from root scope so it controls the whole app
 @app.route('/service-worker.js')
@@ -5330,6 +5634,124 @@ def api_build_dictionary():
 
 
 # ============================================================================
+# IAP ROUTES (Apple / Google) — verification + restore
+# ============================================================================
+
+def _entitlements_summary(user: User) -> dict:
+    try:
+        unlocked = user.get_unlocked_avatars()
+    except Exception:
+        unlocked = []
+    return {
+        "premium_member": bool(getattr(user, 'premium_member', False)),
+        "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []),
+        "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []),
+        "unlocked_avatars": unlocked,
+    }
+
+
+@app.route('/api/iap/verify/<platform>', methods=['POST'])
+@login_required
+def api_iap_verify(platform):
+    """Verify a purchase from App Store / Play Billing and apply entitlements.
+    Request JSON:
+      { product_id, transaction_id, purchase_token, payload }
+    """
+    platform = (platform or '').lower().strip()
+    if platform not in ('apple', 'google', 'web'):
+        return jsonify({"success": False, "error": "Unsupported platform"}), 400
+
+    data = request.get_json(silent=True) or {}
+    product_id = data.get('product_id')
+    transaction_id = data.get('transaction_id')
+    purchase_token = data.get('purchase_token')
+    payload = data.get('payload', {})
+
+    if not product_id:
+        return jsonify({"success": False, "error": "Missing product_id"}), 400
+
+    # Create purchase record (pending)
+    rec = PurchaseRecord(
+        user_id=current_user.id,
+        platform=platform,
+        product_id=product_id,
+        status='pending',
+        transaction_id=transaction_id,
+        purchase_token=purchase_token,
+        raw_payload=payload or {}
+    )
+    db.session.add(rec)
+    db.session.flush()  # get rec.id
+
+    ok, status_msg, details = _verify_with_store(platform, data)
+    if not ok:
+        rec.status = 'failed'
+        rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details}
+        db.session.commit()
+        return jsonify({"success": False, "error": status_msg, "record_id": rec.id}), 400
+
+    # Apply entitlements idempotently
+    apply_res = _apply_entitlement(current_user, product_id)
+    rec.status = 'verified'
+    rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details, 'apply_result': apply_res}
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+
+    return jsonify({
+        "success": True,
+        "message": "Purchase verified",
+        "record_id": rec.id,
+        "entitlements": _entitlements_summary(current_user)
+    })
+
+
+@app.route('/api/iap/restore', methods=['POST'])
+@login_required
+def api_iap_restore():
+    """Restore entitlements from a list of product IDs (client-side provenience).
+    This is helpful when a user reinstalls or switches devices; the platform
+    client should pre-validate owned purchases and send the product IDs here.
+    """
+    data = request.get_json(silent=True) or {}
+    product_ids = data.get('product_ids') or []
+    platform = (data.get('platform') or 'apple').lower()
+    if not isinstance(product_ids, list) or not product_ids:
+        return jsonify({"success": False, "error": "product_ids must be a non-empty list"}), 400
+
+    applied = []
+    for pid in product_ids:
+        res = _apply_entitlement(current_user, pid)
+        if res.get('applied'):
+            applied.append({"product_id": pid, **res})
+        # Log a record for traceability (status verified via restore)
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform=platform,
+            product_id=pid,
+            status='verified',
+            transaction_id=None,
+            purchase_token=None,
+            raw_payload={'restore': True}
+        )
+        db.session.add(rec)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+
+    return jsonify({
+        "success": True,
+        "applied": applied,
+        "entitlements": _entitlements_summary(current_user)
+    })
+
+
+# ============================================================================
 # AUTHENTICATION ROUTES (User Login/Registration)
 # ============================================================================
 
@@ -5337,12 +5759,46 @@ def api_build_dictionary():
 def register():
     """User registration page"""
     if request.method == 'GET':
-        # Expose configurable registration fee to template (UI disclosure only for now)
+        # Expose configurable registration pricing to template
+        billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
+        # Legacy one-time fee support (fallback)
         try:
-            reg_fee = float(os.environ.get('REGISTRATION_FEE_USD', '4.99'))
+            one_time_fee = float(os.environ.get('REGISTRATION_FEE_USD', '4.99'))
         except Exception:
-            reg_fee = 4.99
-        return render_template('auth/register.html', registration_fee_usd=reg_fee)
+            one_time_fee = 4.99
+        # Monthly subscription fee (default lower than typical $4.99)
+        try:
+            monthly_fee = float(os.environ.get('SUBSCRIPTION_MONTHLY_USD', '4.49'))
+        except Exception:
+            monthly_fee = 4.49
+        # Optional: free trial days and intro pricing
+        try:
+            trial_days = int(os.environ.get('SUBSCRIPTION_TRIAL_DAYS', '7'))
+        except Exception:
+            trial_days = 7
+        try:
+            intro_price = os.environ.get('SUBSCRIPTION_INTRO_PRICE_USD')
+            intro_price = float(intro_price) if intro_price is not None and intro_price != '' else None
+        except Exception:
+            intro_price = None
+        try:
+            intro_months = int(os.environ.get('SUBSCRIPTION_INTRO_MONTHS', '0'))
+        except Exception:
+            intro_months = 0
+        try:
+            subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly')
+        except Exception:
+            subscription_product_id = 'beesmart.sub.full_monthly'
+        return render_template(
+            'auth/register.html',
+            registration_fee_usd=one_time_fee,
+            subscription_monthly_usd=monthly_fee,
+            registration_billing_mode=billing_mode,
+            subscription_trial_days=trial_days,
+            subscription_intro_price_usd=intro_price,
+            subscription_intro_months=intro_months,
+            subscription_product_id=subscription_product_id
+        )
 
     # Handle registration form submission
     data = request.get_json() if request.is_json else request.form
