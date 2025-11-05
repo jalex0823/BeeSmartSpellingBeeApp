@@ -8895,14 +8895,27 @@
                     });
                 }
 
+                function setDepthWriteRecursive(obj, depthWrite){
+                    obj.traverse((child)=>{
+                        if (child.isMesh) {
+                            if (Array.isArray(child.material)) child.material.forEach(m => { if (m) m.depthWrite = depthWrite; });
+                            else if (child.material) child.material.depthWrite = depthWrite;
+                        }
+                    });
+                }
+
+                function setRenderOrderRecursive(obj, order){
+                    obj.traverse((child)=>{ child.renderOrder = order; });
+                }
+
                 function easeInOutCubic(t){
                     return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
                 }
 
                 function createPodiumMesh(radius){
                     // Subtle honey-gold disc to ground the model visually
-                    const r = Math.max(0.18, Math.min(0.7, radius));
-                    const geo = new THREE.CylinderGeometry(r, r, 0.02, 48);
+                    const r = Math.max(0.22, Math.min(0.8, radius));
+                    const geo = new THREE.CylinderGeometry(r, r, 0.04, 64);
                     const mat = new THREE.MeshStandardMaterial({
                         color: 0xF6D365, // soft honey
                         metalness: 0.1,
@@ -8910,10 +8923,29 @@
                         emissive: 0xFFC76B,
                         emissiveIntensity: 0.08
                     });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.receiveShadow = false;
-                    mesh.castShadow = false;
-                    return mesh;
+                    const base = new THREE.Mesh(geo, mat);
+                    base.receiveShadow = false;
+                    base.castShadow = false;
+
+                    // Subtle rim for visibility on light backgrounds
+                    const rimGeo = new THREE.TorusGeometry(r * 1.02, r * 0.04 * 0.25, 16, 72);
+                    const rimMat = new THREE.MeshStandardMaterial({
+                        color: 0xE9A64D,
+                        metalness: 0.2,
+                        roughness: 0.6,
+                        emissive: 0xD98C3F,
+                        emissiveIntensity: 0.05
+                    });
+                    const rim = new THREE.Mesh(rimGeo, rimMat);
+                    rim.rotation.x = Math.PI / 2;
+                    rim.position.y = 0.021; // slightly above the top cap
+                    rim.receiveShadow = false;
+                    rim.castShadow = false;
+
+                    const group = new THREE.Group();
+                    group.add(base);
+                    group.add(rim);
+                    return group;
                 }
 
                 function animateCrossfade(oldGroup, newGroup, duration){
@@ -8948,6 +8980,11 @@
                                 // Normalize transforms for steady rotation post-fade
                                 newGroup.position.y = 0;
                                 newGroup.scale.setScalar(1);
+                                // Restore opaque materials to avoid transparent sorting artifacts
+                                setOpacityRecursive(newGroup, 1);
+                                setTransparentRecursive(newGroup, false);
+                                setDepthWriteRecursive(newGroup, true);
+                                setRenderOrderRecursive(newGroup, 0);
                             }
                         }
                     }
@@ -8971,6 +9008,11 @@
                             // Hand off previous as outgoing
                             if (currentGroup) {
                                 outgoingGroup = currentGroup;
+                                // Prepare outgoing for fade-out to avoid depth popping
+                                setTransparentRecursive(outgoingGroup, true);
+                                setOpacityRecursive(outgoingGroup, 1);
+                                setDepthWriteRecursive(outgoingGroup, false);
+                                setRenderOrderRecursive(outgoingGroup, 0);
                             }
 
                             const model = gltf.scene;
@@ -9001,6 +9043,8 @@
                             // Start invisible and slightly lowered for lift-in
                             setTransparentRecursive(group, true);
                             setOpacityRecursive(group, 0);
+                            setDepthWriteRecursive(group, true);
+                            setRenderOrderRecursive(group, 1);
                             group.position.y = -0.04;
                             group.scale.setScalar(0.97);
 
@@ -9030,9 +9074,9 @@
                 }
                 tick();
 
-                // Start and rotate every ~4s
+                // Start and rotate every ~4.5s (gives headroom for crossfade)
                 loadNext();
-                window._guest3DTimer = setInterval(loadNext, 4000);
+                window._guest3DTimer = setInterval(loadNext, 4500);
 
                 // Click anywhere on the carousel to prompt registration/login
                 try {
