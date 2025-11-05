@@ -8580,6 +8580,28 @@
             const mascot = window.mascotBee || window.mascotBeePreloaded;
             const mascotContainer = document.getElementById('mascotBee3D');
             
+            // If a registered user's custom avatar is active, route to the themed effect system
+            try {
+                if (window.userAvatarLoader && window.userAvatarLoader.userAvatar && mascotContainer) {
+                    const avatarId = (typeof window.userAvatarLoader.getAvatarId === 'function')
+                        ? window.userAvatarLoader.getAvatarId()
+                        : (window.userAvatarLoader.userAvatar.avatar_id || 'cool-bee');
+                    // Fire the themed overlay effects immediately
+                    if (typeof playThemedAvatarEffect === 'function') {
+                        playThemedAvatarEffect(avatarId, mascotContainer);
+                    }
+                    // Also play theme audio based on avatar name for parity
+                    const avatarName = window.userAvatarLoader.userAvatar.name || '';
+                    const theme = getAvatarTheme(avatarName);
+                    try { playThemeAudio(theme); } catch(_) {}
+                    // Reset show state after a short showcase window
+                    setTimeout(() => {
+                        resetMascotShow(mascotContainer, caption);
+                    }, 2000);
+                    return; // Do not run legacy mascot rotation path
+                }
+            } catch(_) {}
+
             if (!mascot || !mascot.model) {
                 console.log('⚠️ Mascot not available for show, using fallback effects');
                 playFallbackRotationShow(mascotContainer);
@@ -8633,51 +8655,52 @@
         // Determine theme and character-specific actions based on avatar name
         function getAvatarTheme(avatarName) {
             const name = (avatarName || '').toLowerCase();
+            const simplified = name.replace(/[\s_\-!]+/g, ''); // collapse spaces, underscores, hyphens, and punctuation
 
             // 🌟 Mascot special
             if (name.includes('mascot')) return 'mascot-star';
 
             // 🧪 Science & Academic
-            if (name.includes('al-bee') || name.includes('albee')) return 'einstein';
-            if (name.includes('professor')) return 'academic';
+            if (name.includes('al bee') || name.includes('al-bee') || simplified.includes('albee')) return 'einstein';
+            if (name.includes('professor') || simplified.includes('professorbee')) return 'academic';
 
             // 🎸 Music/Stage
-            if (name.includes('rocker') || name.includes('jrock') || name.includes('rock')) return 'rockstar';
+            if (name.includes('rocker') || name.includes('j‑rock') || name.includes('jrock') || simplified.includes('jrockbee') || name.includes('rock')) return 'rockstar';
 
             // 🤖 Tech
-            if (name.includes('robo') || name.includes('bot')) return 'robot';
+            if (name.includes('robo') || name.includes('bot') || simplified.includes('robobee')) return 'robot';
 
             // 🏍️ Action
-            if (name.includes('biker') || name.includes('motor')) return 'biker';
+            if (name.includes('biker') || name.includes('motor') || simplified.includes('motorbee')) return 'biker';
 
             // 👑 Royal/Medieval
-            if (name.includes('knight')) return 'knight';
-            if (name.includes('queen')) return 'queen';
+            if (name.includes('knight') || simplified.includes('beeknight')) return 'knight';
+            if (name.includes('queen') || simplified.includes('queenbee')) return 'queen';
 
             // 🔍 Professions / Roles
-            if (name.includes('detective')) return 'detective';
-            if (name.includes('doctor') || name.includes('doc')) return 'doctor';
-            if (name.includes('builder')) return 'builder';
+            if (name.includes('detective') || simplified.includes('detectivebee')) return 'detective';
+            if (name.includes('doctor') || name.includes('doc') || simplified.includes('docbee')) return 'doctor';
+            if (name.includes('builder') || simplified.includes('builderbee')) return 'builder';
 
             // 🌍 Adventure / Travel / Space / Ocean
-            if (name.includes('explorer')) return 'explorer';
-            if (name.includes('space') || name.includes('astro')) return 'space';
-            if (name.includes('sea') || name.includes('ocean')) return 'ocean';
+            if (name.includes('explorer') || simplified.includes('explorerbee')) return 'explorer';
+            if (name.includes('space') || name.includes('astro') || simplified.includes('spacebee')) return 'space';
+            if (name.includes('sea') || name.includes('ocean') || simplified.includes('seabee')) return 'ocean';
 
             // 🧟 Spooky/Fantasy
-            if (name.includes('monster')) return 'monster';
+            if (name.includes('monster') || simplified.includes('monsterbee')) return 'monster';
             if (name.includes('franken')) return 'frankenstein';
-            if (name.includes('vamp')) return 'vampire';
-            if (name.includes('zom') || name.includes('zombie')) return 'zombie';
-            if (name.includes('ware') || name.includes('werewolf') || name.includes('wolf')) return 'werewolf';
+            if (name.includes('vamp') || simplified.includes('vampbee')) return 'vampire';
+            if (name.includes('zom') || name.includes('zombie') || simplified.includes('zombee')) return 'zombie';
+            if (name.includes('ware') || name.includes('werewolf') || name.includes('wolf') || simplified.includes('warebee')) return 'werewolf';
 
             // 🌟 Personality / Archetypes
-            if (name.includes('diva') || name.includes('cutie')) return 'diva';
+            if (name.includes('diva') || name.includes('cutie') || simplified.includes('selfiebee')) return 'diva';
             if (name.includes('super')) return 'superhero';
-            if (name.includes('cool') || name.includes('buda') || name.includes('obee')) return 'cool';
+            if (name.includes('cool') || name.includes('buda') || name.includes('obee') || simplified.includes('coolbee')) return 'cool';
             if (name.includes('selfie')) return 'diva';
-            if (name.includes('buzz')) return 'mascot';
-            if (name.includes('brother')) return 'brother';
+            if (name.includes('buzz') || simplified.includes('buzzbee')) return 'mascot';
+            if (name.includes('brother') || simplified.includes('brotherbee')) return 'brother';
             if (name.includes('anxious')) return 'nervous';
 
             // 🍯 Honeycomb variant → use mascot effects

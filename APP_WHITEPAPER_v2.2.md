@@ -106,6 +106,7 @@ Data deletion: Users or parents can request deletion
  - Guest carousel polish: increased spacing between items and smooth, reduced‑motion‑respecting transitions  
  - Registered avatar display standardized to the high‑quality carousel container (240×180) for consistent 3D fidelity
  - Guest carousel refinement: eased crossfade between avatars with subtle lift/float easing and a thin honey‑gold podium/base beneath each model for visual grounding
+ - Registered avatars: restored per‑avatar “Click Here” themed animations (e.g., Al Bee → science effects), adapted for online use with graceful fallbacks; audio optional and non‑blocking
 
 ---
 
@@ -168,7 +169,7 @@ Test Steps
 4) Try OCR upload using a worksheet photo  
 5) Verify health endpoints: `/health` and `/health/iap`  
 6) Native IAP (mock/permissive): purchase and restore subscription and one avatar SKU  
-7) Home UI polish: as a guest, observe increased spacing plus fluid crossfades (subtle lift-in/float-out) and the honey‑gold podium under each avatar; as a registered user, confirm the avatar renders in the same 240×180 container for consistent quality
+7) Home UI polish: as a guest, observe increased spacing plus fluid crossfades (subtle lift-in/float-out) and the honey‑gold podium under each avatar; as a registered user, confirm the avatar renders in the same 240×180 container and triggers a theme‑specific animation on click (e.g., Al Bee → science equations/sparks)
 
 IAP Review Aids  
 - Subscription SKU (env): `PRODUCT_SUBSCRIPTION_FULL_ID` (default `beesmart.sub.full_monthly`)  
