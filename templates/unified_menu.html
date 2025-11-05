@@ -691,10 +691,10 @@
             margin: 0 auto;
         }
         
-        /* FINAL CONTAINER SIZE - Clean optimized dimensions */
+        /* FINAL CONTAINER SIZE - Clean optimized dimensions (match guest carousel 240x180) */
         div#mascotBee3D {
-            width: 160px !important;
-            height: 120px !important;
+            width: 240px !important;
+            height: 180px !important;
             margin: 0 auto 1.2rem auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
@@ -791,6 +791,47 @@
         #mascotCaption:hover {
             color: #FFB347;
             transform: scale(1.1);
+        }
+
+        /* Guest avatar carousel: spacing + smooth transitions */
+        .guest-avatar-carousel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px; /* add breathing room to avoid mashed look */
+            padding: 8px 0;
+            margin: 8px 0 12px;
+            transition: opacity 380ms ease, transform 380ms ease;
+        }
+        .guest-avatar-carousel .avatar-slide {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        /* Ensure PNG fallback matches 3D canvas size and has a soft card look */
+        #guestAvatarSlide {
+            width: 240px;
+            height: 180px;
+            object-fit: contain;
+            border-radius: 16px;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+            opacity: 0;
+            transition: opacity 360ms ease;
+            background: rgba(255,255,255,0.5);
+        }
+        #guestAvatarSlide.is-visible { opacity: 1; }
+        .guest-avatar-carousel .avatar-name {
+            font-weight: 800;
+            color: #5A2C15;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .guest-avatar-carousel .carousel-cta {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
         
         .logo-section img {
@@ -2432,21 +2473,21 @@
                     max-width: clamp(240px, 60vw, 520px);
                     margin: 0 auto 8px auto;
                 ">
-                    <!-- Use quiz-style compact square with soft drop-shadow for vivid look -->
+                    <!-- Use carousel-matched aspect with soft drop-shadow for vivid look -->
                     <div class="preview-avatar-container" style="
-                        width: 160px;                     /* match quiz container */
-                        height: 160px;                    /* match quiz container */
+                        width: 240px;                     /* match guest carousel width */
+                        height: 180px;                    /* match guest carousel height */
                         background: transparent;
                         border: 0;
-                        border-radius: 0;
+                        border-radius: 16px;
                         box-shadow: none;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         overflow: visible;
                         position: relative;
-                        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35)); /* same as quiz */
-                        transform: translateY(-6px);
+                        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
+                        transform: translateY(-4px);
                     ">
                         <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!" style="
                             width: 100%; height: 100%; position: relative;
@@ -8669,7 +8710,7 @@
         }
 
         // Guest-only 3D avatar carousel (progressive enhancement using GLB + Three.js)
-        function initGuestAvatar3DCarousel() {
+    function initGuestAvatar3DCarousel() {
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
@@ -8684,6 +8725,8 @@
                 const imgEl = document.getElementById('guestAvatarSlide');
                 const canvasWrap = document.getElementById('guestAvatar3D');
                 if (!wrap || !nameEl || !canvasWrap) return false;
+        // Smooth fade between avatars
+        try { wrap.style.transition = 'opacity 360ms ease, transform 360ms ease'; } catch(_) {}
 
                 // Prioritized + pool of GLB avatars
                 const base = '/static/assets/avatars/glb_files';
@@ -8772,6 +8815,8 @@
                 function loadNext() {
                     const item = candidates[idx % candidates.length];
                     idx++;
+                    // Begin fade out
+                    try { wrap.style.opacity = '0'; wrap.style.transform = 'translateY(2px)'; } catch(_) {}
                     nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
                     if (imgEl) imgEl.style.display = 'none';
@@ -8797,6 +8842,8 @@
                             obj.scale.setScalar(2.4 / (size || 1));
                             scene.add(obj);
                             current = obj;
+                            // Fade back in after swap
+                            setTimeout(() => { try { wrap.style.opacity = '1'; wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 50);
                         },
                         undefined,
                         (err) => {
