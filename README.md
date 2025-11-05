@@ -6,6 +6,14 @@
 
 A Flask-based spelling quiz application that supports uploading word banks in various formats (CSV, TXT, DOCX, PDF).
 
+## Product & Store Docs
+
+- Whitepaper (current): [APP_WHITEPAPER_v2.2.md](./APP_WHITEPAPER_v2.2.md)
+- Whitepaper (archive): [APP_WHITEPAPER_v2.1.md](./APP_WHITEPAPER_v2.1.md)
+- IAP Developer Guide: [IAP_DEVELOPER_GUIDE.md](./IAP_DEVELOPER_GUIDE.md)
+- Native IAP Bridge: [NATIVE_IAP_BRIDGE.md](./NATIVE_IAP_BRIDGE.md)
+- Avatar SKUs CSV (for App Store/Play Console): [store/avatar_skus.csv](./store/avatar_skus.csv)
+
 ## Features
 
 - Upload word banks in multiple formats
