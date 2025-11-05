@@ -2407,7 +2407,8 @@
             justify-content: center;
             z-index: 100;
             overflow: visible;
-            pointer-events: none; /* prevent overlay from blocking menu tiles */
+            /* Allow clicking the avatar to trigger its show/effects */
+            pointer-events: auto;
         }
 
         /* keep canvas filling the space and perfectly centered */
@@ -2491,6 +2492,7 @@
                     ">
                         <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!" style="
                             width: 100%; height: 100%; position: relative;
+                            cursor: pointer;
                         "></div>
                     </div>
                 </div>
@@ -11497,10 +11499,9 @@
             function playThemedAvatarEffect(avatarId, container) {
                 console.log('🎭 Playing themed effect for:', avatarId);
                 
-                // Skip decorative effects when shimmer is disabled on home page
-                if (document.body && document.body.classList.contains('home-no-shimmer')) {
-                    return;
-                }
+                // Respect reduced-motion but do not fully block the effect; we'll keep it lightweight
+                const reducedMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+                                      (document.body && document.body.classList.contains('home-no-shimmer'));
                 
                 // Create effect overlay
                 const effectOverlay = document.createElement('div');
@@ -11518,7 +11519,7 @@
                 container.appendChild(effectOverlay);
                 
                 // Remove after animation
-                setTimeout(() => effectOverlay.remove(), 3000);
+                setTimeout(() => effectOverlay.remove(), reducedMotion ? 1500 : 3000);
                 
                 // Avatar-specific effects (9 working avatars only)
                 switch(avatarId) {
@@ -11569,9 +11570,20 @@
                         playSound('groan');
                         break;
                     default:
-                        // Generic bounce sparkle
+                        // Generic bounce sparkle (fewer particles in reduced mode)
                         createSparkles(effectOverlay, '✨', '#ffeb3b');
                         break;
+                }
+                
+                // In reduced mode, also provide a quick, low-cost pulse on the container for clear feedback
+                if (reducedMotion) {
+                    try {
+                        container.style.transition = 'transform 180ms ease';
+                        container.style.transform += ' scale(1.02)';
+                        setTimeout(() => {
+                            container.style.transform = container.style.transform.replace(' scale(1.02)', '');
+                        }, 200);
+                    } catch (_) {}
                 }
             }
             
