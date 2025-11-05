@@ -38,6 +38,7 @@ from models import PasswordResetToken
 from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
 from models import Avatar, BattleSession, PurchaseRecord
+from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
 
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
@@ -366,6 +367,12 @@ PRODUCT_MAP = {
         'avatars': ['superbee', 'queen-bee', 'knight-bee', 'rocker-bee']
     },
 }
+
+# Extend product map with all avatar SKUs → avatar entitlements
+try:
+    PRODUCT_MAP.update(build_product_entitlements())
+except Exception as _e:
+    print(f"WARN: Failed to load avatar product entitlements: {_e}")
 
 
 def _apply_entitlement(user: User, product_id: str) -> dict:
@@ -2451,6 +2458,12 @@ def home():
         is_premium = bool(getattr(_cu, 'is_authenticated', False) and getattr(_cu, 'premium_member', False))
     except Exception:
         is_premium = False
+    # Expose avatar SKUs to client (native wrappers / UI can use this list)
+    try:
+        avatar_product_ids = AVATAR_SKUS
+    except Exception:
+        avatar_product_ids = {}
+
     html = render_template(
         "unified_menu.html",
         timestamp=timestamp,
@@ -2460,7 +2473,8 @@ def home():
         subscription_intro_price_usd=intro_price,
         subscription_intro_months=intro_months,
         subscription_product_id=subscription_product_id,
-        is_premium=is_premium
+        is_premium=is_premium,
+        avatar_product_ids=avatar_product_ids
     )
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store, max-age=0"

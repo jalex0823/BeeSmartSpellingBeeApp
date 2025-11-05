@@ -61,6 +61,8 @@
         window.REG_BILLING_MODE = {{ (registration_billing_mode or 'subscription') | tojson }};
         // Expose subscription SKU for native wrappers (if provided by server)
     window.SUBSCRIPTION_SKU = {{ (subscription_product_id if subscription_product_id is defined else None) | tojson }};
+    // Expose per-avatar SKUs map for native wrappers / purchase UI
+    window.AVATAR_SKUS = {{ (avatar_product_ids if avatar_product_ids is defined else {}) | tojson }};
         // Price hint for banners
         window.subscription_monthly_usd = {{ (subscription_monthly_usd or 4.49) | tojson }};
     </script>
@@ -669,11 +671,7 @@
             background: none !important;
         }
         
-        @keyframes shimmer {
-            0% { left: -100%; }
-            50% { left: 100%; }
-            100% { left: 100%; }
-        }
+        /* Removed shimmer keyframes to prevent accidental reactivation */
         
         /* Logo section at top of card */
         .logo-section {
@@ -766,6 +764,14 @@
         body.home-no-shimmer *::after {
             animation: none !important;
             transition: none !important;
+        }
+        /* Also disable body pseudo-elements which aren't matched by *::before/after */
+        body.home-no-shimmer::before,
+        body.home-no-shimmer::after {
+            animation: none !important;
+            transition: none !important;
+            display: none !important;
+            content: none !important;
         }
         /* Extra guard: explicitly disable floating/hover effects for the main card */
         body.home-no-shimmer .content-card { animation: none !important; transition: none !important; transform: none !important; }
