@@ -52,6 +52,8 @@
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     <!-- User Avatar Loader -->
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+    <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}"></script>
     <!-- Auth flag for front-end gating -->
     <script>
         window.IS_AUTH = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
@@ -2414,7 +2416,8 @@
                     filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
                 " />
                 
-                <!-- 3D Avatar Display: reuse picker preview container but with NO border/background -->
+                {% if current_user.is_authenticated %}
+                <!-- 3D Avatar Display (registered users only): reuse picker preview container but with NO border/background -->
                 <div class="avatar-preview-panel" style="
                     background: transparent;   /* override picker panel bg */
                     border: 0;                 /* no outer panel border */
@@ -2495,6 +2498,7 @@
                 " onclick="handleMascotCaptionClick()">
                     ✨ Click on me to see what I do! ✨
                 </div>
+                {% endif %}
 
                 {% if not current_user.is_authenticated %}
                 <!-- Guest-only Avatar Carousel (calm, accessible) -->
@@ -8811,6 +8815,14 @@
                 loadNext();
                 window._guest3DTimer = setInterval(loadNext, 4000);
 
+                // Click anywhere on the carousel to prompt registration/login
+                try {
+                    wrap.style.cursor = 'pointer';
+                    wrap.addEventListener('click', function(){
+                        window.location.href = '/auth/register';
+                    });
+                } catch(_) {}
+
                 // Cleanup on unload
                 window.addEventListener('beforeunload', () => {
                     disposed = true;
@@ -8922,6 +8934,14 @@
                 show();
                 // Calm rotation
                 window._guestCarouselTimer = setInterval(show, 2800);
+
+                // Click anywhere on the carousel to prompt registration/login
+                try {
+                    wrap.style.cursor = 'pointer';
+                    wrap.addEventListener('click', function(){
+                        window.location.href = '/auth/register';
+                    });
+                } catch(_) {}
             };
 
             // Preload candidates and collect ones that resolve
