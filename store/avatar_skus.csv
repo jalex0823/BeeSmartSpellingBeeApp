@@ -1,0 +1,39 @@
+product_id,avatar_id,display_name,price_usd,purchasable,tier,source
+com.beesmart.avatar.al-bee,al-bee,Al Bee,1.99,True,premium,catalog
+com.beesmart.avatar.anxious-bee,anxious-bee,Anxious Bee,0.99,True,special,catalog
+com.beesmart.avatar.astro-bee,astro-bee,Astro Bee,1.99,True,premium,catalog
+com.beesmart.avatar.bee-knight,bee-knight,Bee Knight,,True,,extra
+com.beesmart.avatar.biker-bee,biker-bee,Biker Bee,1.99,True,premium,catalog
+com.beesmart.avatar.brother-bee,brother-bee,Brother Bee,0.0,False,default_free,catalog
+com.beesmart.avatar.buda-bee,buda-bee,Buda Bee,,True,,extra
+com.beesmart.avatar.builder-bee,builder-bee,Builder Bee,0.0,False,default_free,catalog
+com.beesmart.avatar.buzz-bee,buzz-bee,Buzz Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.cool-bee,cool-bee,Cool Bee,0.0,False,default_free,catalog
+com.beesmart.avatar.cutie-bee,cutie-bee,Cutie Bee,,True,,extra
+com.beesmart.avatar.detective-bee,detective-bee,Detective Bee,0.0,False,default_free,catalog
+com.beesmart.avatar.diva-bee,diva-bee,Diva Bee,1.99,True,premium,catalog
+com.beesmart.avatar.doc-bee,doc-bee,Doc Bee,,True,,extra
+com.beesmart.avatar.doctor-bee,doctor-bee,Doctor Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.explorer-bee,explorer-bee,Explorer Bee,0.0,False,default_free,catalog
+com.beesmart.avatar.franken-bee,franken-bee,Franken Bee,0.99,True,premium,catalog
+com.beesmart.avatar.honey-comb,honey-comb,Honey Comb,,True,,extra
+com.beesmart.avatar.jrock-bee,jrock-bee,Jrock Bee,,True,,extra
+com.beesmart.avatar.knight-bee,knight-bee,Knight Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.mascot-bee,mascot-bee,Mascot Bee,0.0,False,mascot,catalog
+com.beesmart.avatar.monster-bee,monster-bee,Monster Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.motor-bee,motor-bee,Motor Bee,,True,,extra
+com.beesmart.avatar.obee,obee,Obee,,True,,extra
+com.beesmart.avatar.professor-bee,professor-bee,Professor Bee,0.99,True,premium,catalog
+com.beesmart.avatar.queen-bee,queen-bee,Queen Bee,1.99,True,premium,catalog
+com.beesmart.avatar.robo-bee,robo-bee,Robo Bee,1.99,True,premium,catalog
+com.beesmart.avatar.rocker-bee,rocker-bee,Rocker Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.sea-bee,sea-bee,Sea Bee,,True,,extra
+com.beesmart.avatar.seabea,seabea,Seabea,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.selfie-bee,selfie-bee,Selfie Bee,0.99,True,earn_or_buy,catalog
+com.beesmart.avatar.singer-bee,singer-bee,Singer Bee,,True,,extra
+com.beesmart.avatar.space-bee,space-bee,Space Bee,,True,,extra
+com.beesmart.avatar.super-bee,super-bee,Super Bee,,True,,extra
+com.beesmart.avatar.superbee,superbee,Superbee,1.99,True,premium,catalog
+com.beesmart.avatar.vamp-bee,vamp-bee,Vamp Bee,0.99,True,premium,catalog
+com.beesmart.avatar.ware-bee,ware-bee,Ware Bee,1.99,True,premium,catalog
+com.beesmart.avatar.zom-bee,zom-bee,Zom Bee,1.99,True,premium,catalog
