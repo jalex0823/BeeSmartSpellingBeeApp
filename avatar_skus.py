@@ -52,7 +52,8 @@ def _slugify_avatar_name(name: str) -> str:
 
 
 def _sku_prefix() -> str:
-    return os.getenv('AVATAR_SKU_PREFIX', 'beesmart.avatar')
+    # Use reverse-domain style by default for App Store/Play best practices
+    return os.getenv('AVATAR_SKU_PREFIX', 'com.beesmart.avatar')
 
 
 def sku_for_slug(avatar_slug: str) -> str:
