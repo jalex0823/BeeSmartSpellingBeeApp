@@ -3746,6 +3746,22 @@
                             // No need to restore onclick because locks are only applied for guests
                         } catch(_) {}
                     });
+
+                    // Check Battle availability; if API not available, grey out with "Coming soon" modal
+                    (async function checkBattleAvailability(){
+                        try {
+                            const resp = await fetch('/api/battles/live', { method: 'GET' });
+                            if (!resp.ok) throw new Error('Battle API unavailable');
+                            // ok: leave tile enabled
+                        } catch (e) {
+                            const battleTile = document.getElementById('tileBattle');
+                            lockMenuTile(battleTile, {
+                                title: '⏳ Battle of the Bees',
+                                message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! 🐝',
+                                buttonText: 'Got it'
+                            });
+                        }
+                    })();
                 }
             } catch (e) { /* no-op */ }
         }
@@ -5243,7 +5259,7 @@
             }
         }
 
-        function createBattle() {
+    function createBattle() {
             console.log('🎯 createBattle() called');
             const battleName = document.getElementById('battleName')?.value?.trim();
             const creatorName = document.getElementById('creatorName')?.value?.trim();
@@ -5288,9 +5304,9 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    battle_name: battleName,
-                    creator_name: creatorName,
-                    use_current_words: true
+                    wordset_name: battleName,
+                    is_public: true,
+                    allow_guests: true
                 })
             })
             .then(response => {
@@ -5306,12 +5322,10 @@
                         console.warn('Loading system hide failed:', e);
                     }
                 }
-
-                if (data.status === 'success') {
+                if (data && (data.ok === true || data.status === 'success')) {
                     closeBattleModal();
-                    
-                    // Store battle code for teacher
-                    const battleCode = data.battle_code;
+                    // Read battle code from response
+                    const battleCode = (data.battle && data.battle.code) ? data.battle.code : (data.battle_code || '');
                     
                     // Show success with battle code and redirect option
                     openFriendlyInfoModal({
@@ -5325,7 +5339,7 @@
                                     ⏰ Battle lasts for 24 hours<br/>
                                     👥 Students enter their name when joining
                                 </p>
-                                <button onclick="window.location.href='/battle/${battleCode}'" style="
+                                <button onclick="window.location.href='/battles'" style="
                                     margin-top: 1.5rem;
                                     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
                                     color: white;
@@ -5337,7 +5351,7 @@
                                     cursor: pointer;
                                     box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
                                 ">
-                                    👀 View Leaderboard & Track Students
+                                    👀 View Battles
                                 </button>
                             </div>
                         `,
@@ -5366,7 +5380,7 @@
             });
         }
 
-        function joinBattle() {
+    function joinBattle() {
             const battleCode = document.getElementById('battleCode').value.trim().toUpperCase();
             const playerName = document.getElementById('playerName').value.trim();
 
@@ -5398,15 +5412,12 @@
             }
 
             // Join battle
-            fetch('/api/battles/join', {
+            fetch(`/api/battles/${encodeURIComponent(battleCode)}/join`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    battle_code: battleCode,
-                    player_name: playerName
-                })
+                body: JSON.stringify({ name: playerName })
             })
             .then(response => response.json())
             .then(data => {
@@ -5418,26 +5429,24 @@
                     }
                 }
 
-                if (data.status === 'success') {
+                if (data && (data.ok === true || data.status === 'success')) {
                     closeBattleModal();
-                    
-                    // Store battle info
-                    const battleCode = data.battle_code;
-                    const playerName = data.player_name;
+                    // Store battle info (use local inputs / response code)
+                    const joinedCode = data.code || battleCode;
                     
                     // Store battle info in sessionStorage for quiz page
-                    sessionStorage.setItem('battle_code', battleCode);
+                    sessionStorage.setItem('battle_code', joinedCode);
                     sessionStorage.setItem('battle_player_name', playerName);
                     
                     // Update Start Quiz button
-                    const startBtn = document.getElementById('startQuizBtn');
+                    const startBtn = document.getElementById('startQuizBtn') || document.getElementById('welcomeStartBtn');
                     if (startBtn) {
                         startBtn.disabled = false;
                         startBtn.classList.remove('waiting-to-play');
                         startBtn.classList.add('ready-to-play');
-                        startBtn.innerHTML = `⚔️ Start Battle (${data.word_count} words)`;
+                        startBtn.innerHTML = `⚔️ Start Battle`;
                         // Update onclick to pass battle parameters
-                        startBtn.onclick = () => window.location.href = `/quiz?battle_code=${battleCode}&player_name=${encodeURIComponent(playerName)}`;
+                        startBtn.onclick = () => window.location.href = `/quiz?battle_code=${joinedCode}&player_name=${encodeURIComponent(playerName)}`;
                     }
                     
                     // Show success with options
@@ -5445,14 +5454,10 @@
                         title: `⚔️ Welcome, ${playerName}!`,
                         message: `
                             <div style="text-align: center;">
-                                <p style="margin-bottom: 1rem;">You've joined "${data.battle_name}"</p>
-                                <div style="background: rgba(255,140,0,0.1); padding: 1rem; border-radius: 10px; margin: 1rem 0;">
-                                    👥 <strong>${data.player_count}</strong> players in battle<br/>
-                                    📚 <strong>${data.word_count}</strong> words to spell
-                                </div>
-                                <p style="margin-top: 1rem; font-size: 0.95rem;">Choose what to do next:</p>
+                                <p style="margin-bottom: 1rem;">You're in! Battle Code: <strong>${joinedCode}</strong></p>
+                                <p style="margin-top: 0.5rem; font-size: 0.95rem;">Choose what to do next:</p>
                                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; flex-wrap: wrap;">
-                                    <button onclick="window.location.href='/quiz?battle_code=${battleCode}&player_name=${encodeURIComponent(playerName)}'" style="
+                                    <button onclick="window.location.href='/quiz?battle_code=${joinedCode}&player_name=${encodeURIComponent(playerName)}'" style="
                                         background: linear-gradient(135deg, #FF4500 0%, #DC143C 100%);
                                         color: white;
                                         border: none;
@@ -5465,7 +5470,7 @@
                                     ">
                                         🐝 Start Spelling Now!
                                     </button>
-                                    <button onclick="window.location.href='/battle/${battleCode}'" style="
+                                    <button onclick="window.location.href='/battles'" style="
                                         background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
                                         color: white;
                                         border: none;
@@ -5476,7 +5481,7 @@
                                         cursor: pointer;
                                         box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
                                     ">
-                                        � View Leaderboard
+                                        👀 View Battles
                                     </button>
                                 </div>
                             </div>
