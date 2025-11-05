@@ -2490,7 +2490,7 @@
                         filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
                         transform: translateY(-4px);
                     ">
-                        <div id="mascotBee3D" onclick="playMascotShow()" title="Click me to see what I do!" style="
+                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="
                             width: 100%; height: 100%; position: relative;
                             cursor: pointer;
                         "></div>
@@ -2559,7 +2559,7 @@
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                " onclick="handleMascotCaptionClick()">
+                " onclick="handleMascotCaptionClick(event)">
                     ✨ Click on me to see what I do! ✨
                 </div>
                 {% endif %}
@@ -8564,7 +8564,7 @@
         // ✨🐝 MASCOT INTERACTIVE SHOW - Fun animations, sounds, and explosions! 🎉💥
         let mascotShowPlaying = false;
         
-        function playMascotShow() {
+        function playMascotShow(evt) {
             // Prevent multiple shows from playing simultaneously
             if (mascotShowPlaying) return;
             mascotShowPlaying = true;
@@ -8581,6 +8581,14 @@
             // Get mascot bee and container
             const mascot = window.mascotBee || window.mascotBeePreloaded;
             const mascotContainer = document.getElementById('mascotBee3D');
+
+            // Quick tap ripple feedback at click location (or center)
+            try {
+                const rect = mascotContainer?.getBoundingClientRect();
+                const x = (evt && rect) ? (evt.clientX - rect.left) : (rect ? rect.width / 2 : 80);
+                const y = (evt && rect) ? (evt.clientY - rect.top) : (rect ? rect.height / 2 : 60);
+                if (mascotContainer) createTapRipple(mascotContainer, x, y);
+            } catch(_) {}
             
             // If a registered user's custom avatar is active, route to the themed effect system
             try {
@@ -8789,10 +8797,10 @@
         }
 
         // Caption click behavior: play show for signed-in, go to register for guests
-        function handleMascotCaptionClick() {
+        function handleMascotCaptionClick(evt) {
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
             if (isAuthenticated) {
-                if (typeof playMascotShow === 'function') playMascotShow();
+                if (typeof playMascotShow === 'function') playMascotShow(evt);
             } else {
                 window.location.href = '/auth/register';
             }
@@ -11688,6 +11696,45 @@
                     container.appendChild(particle);
                 }
                 addKeyframes(`@keyframes heal-rise { to { transform: translateY(-250px); opacity: 0; } }`);
+            }
+
+            // Tap ripple feedback
+            function createTapRipple(container, x, y) {
+                try {
+                    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    const ripple = document.createElement('span');
+                    ripple.style.cssText = `
+                        position: absolute;
+                        pointer-events: none;
+                        left: 0; top: 0;
+                        width: 100%; height: 100%;
+                        overflow: hidden;
+                        z-index: 12;
+                    `;
+                    const dot = document.createElement('span');
+                    const size = 220; // big enough to cover container
+                    dot.style.cssText = `
+                        position: absolute;
+                        left: ${x - size/2}px; top: ${y - size/2}px;
+                        width: ${size}px; height: ${size}px;
+                        border-radius: 9999px;
+                        background: radial-gradient(circle, rgba(255,215,0,0.35) 0%, rgba(255,165,0,0.25) 35%, rgba(255,165,0,0.0) 70%);
+                        transform: scale(0.2);
+                        opacity: 0.85;
+                        ${reduced ? 'transition: opacity 200ms ease;' : 'animation: tap-ripple 420ms ease-out forwards;'}
+                    `;
+                    ripple.appendChild(dot);
+                    container.style.position = container.style.position || 'relative';
+                    container.appendChild(ripple);
+
+                    if (reduced) {
+                        setTimeout(() => { dot.style.opacity = '0'; }, 120);
+                        setTimeout(() => { ripple.remove(); }, 240);
+                    } else {
+                        addKeyframes(`@keyframes tap-ripple { to { transform: scale(1.0); opacity: 0; } }`);
+                        setTimeout(() => { ripple.remove(); }, 480);
+                    }
+                } catch (_) { /* ignore */ }
             }
             
             function createBubbles(container, emoji, count) {
