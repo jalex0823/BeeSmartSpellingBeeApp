@@ -107,6 +107,7 @@ Data deletion: Users or parents can request deletion
  - Registered avatar display standardized to the high‑quality carousel container (240×180) for consistent 3D fidelity
  - Guest carousel refinement: eased crossfade between avatars with subtle lift/float easing and a thin honey‑gold podium/base beneath each model for visual grounding
  - Registered avatars: restored per‑avatar “Click Here” themed animations (e.g., Al Bee → science effects), adapted for online use with graceful fallbacks; audio optional and non‑blocking
+ - Quiz celebrations: on correct answers, trigger persona‑themed overlays with confetti and a short, non‑blocking sound stinger; respects reduced‑motion, in‑app mute, and includes a user toggle
 
 ---
 
@@ -129,6 +130,13 @@ Example unlock guidelines (subject to catalog pricing):
 - Free defaults for registered users: Cool Bee, Builder Bee, Brother Bee, Detective Bee  
 
 Restore: Supported via native bridges; server applies entitlements idempotently.
+
+Teacher/Parent bundle keys (distribution)
+- Purpose: allow schools/families to unlock curated avatar bundles without going through the stores (e.g., classroom packs, family packs)
+- Redemption: authenticated users redeem a one‑time key in the Parent/Teacher dashboards; server applies entitlements idempotently
+- Storage: development keys live in `avatar_bundles.py`; production should store keys server‑side (DB or KMS/secret env) with usage tracking (issued, redeemed_by, redeemed_at, expiry)
+- Security: keys are normalized and never embedded in the client; server is the source of truth for entitlements
+- UX: success message lists unlocked avatars and updates avatar picker immediately
 
 ---
 
@@ -177,6 +185,7 @@ IAP Review Aids
 - Server endpoints:  
   - Verify: `POST /api/iap/verify/<platform>` (apple|google|web)  
   - Restore: `POST /api/iap/restore`  
+  - Bundle redeem: `POST /api/bundles/redeem` (auth required)
 - Modes:  
   - `IAP_MOCK=1` → accept all (dev)  
   - `IAP_VERIFICATION_MODE=live_strict` → real store validation  
@@ -185,6 +194,13 @@ IAP Review Aids
 
 Security/Reset (dev‑only utilities)  
 - Password reset test helpers and a dev peek endpoint can be enabled for E2E only; disabled in production by default.
+
+Bundle‑key redemption (dashboard)
+- Sign in as a Teacher account (`teacher_demo` above)  
+- Open the Teacher Dashboard and locate “Redeem Avatar Bundle Key”  
+- Use any development key defined in `avatar_bundles.py` under `REDEEMABLE_KEYS` (dev only) and press Redeem  
+- Confirm success messaging, and verify avatars from the redeemed bundle are unlocked in the avatar picker  
+- Note: in production, keys are stored server‑side and may be single‑use with expiry/limits
 
 ---
 
@@ -207,6 +223,12 @@ Security/Reset (dev‑only utilities)
 - Generate/update `store/avatar_skus.csv` when catalog changes  
 - CI smoke: periodically check `/health` and `/health/iap`
 
+Bundle keys: operations & QA  
+- Add admin UI and backend to generate/revoke bundle keys, set limits/expiry, and track consumption  
+- Migrate dev keys to DB‑backed storage with audit logs (issued_by, redeemed_by, timestamps, IP)  
+- Add automated tests for `/api/bundles/redeem` covering valid, invalid, expired, and idempotent redemption  
+- Enhance dashboard UX to list which avatars were unlocked after redemption
+
 ---
 
 ## 12. Technical Appendix (IAP + Avatars)
@@ -217,6 +239,34 @@ Security/Reset (dev‑only utilities)
   - Premium → `premium_member=true`  
   - Avatar purchase → adds to `User.purchased_avatars`  
   - Bundle → adds to `User.purchased_bundles` and unlocks included avatars  
+  - Bundle keys (teacher/parent distribution) → POST `/api/bundles/redeem` (auth required) applies a pre-defined bundle idempotently. UI: Parent/Teacher dashboards provide a "Redeem Avatar Bundle Key" field.
+  - Dynamic BeeKeys (admin-generated 4‑packs) → Admins create on-demand bundles (`POST /api/admin/bee-keys/generate`) producing a unique bundle with 4 avatars + tracked key; redemptions audited (IP + user-agent).
+  
+  Endpoint details (bundle key redemption)
+  - Method: `POST /api/bundles/redeem` (auth required)
+  - Request JSON:
+    ```json
+    { "key": "YOUR-BUNDLE-KEY-HERE" }
+    ```
+  - Success (200):
+    ```json
+    {
+      "ok": true,
+      "bundle_id": "classroom_starter_pack",
+      "unlocked_avatars": ["cool-bee", "builder-bee", "brother-bee"],
+      "purchased_bundles": ["classroom_starter_pack", "family_fun_pack"],
+      "purchased_avatars": ["cool-bee", "builder-bee", "brother-bee", "detective-bee"]
+    }
+    ```
+  - Error (400/404 examples):
+    ```json
+    { "ok": false, "error": "invalid_key" }
+    ```
+    ```json
+    { "ok": false, "error": "bundle_not_found" }
+    ```
+  - Notes: keys are normalized server‑side; redemption is idempotent; production deployments should back keys with a database and audit logs
+  - Dynamic BeeKeys: generated bundles (prefix `beekey_`) are resolved from database if not in static catalog; each redemption creates a trace row for compliance/analytics
 - Frontend exposure:  
   - `window.SUBSCRIPTION_SKU` for subscription  
   - `window.AVATAR_SKUS` map for per‑avatar products  

@@ -448,6 +448,18 @@
             </div>
         </div>
 
+        <!-- Redeem Bundle Key -->
+        <div class="content-section" style="max-width: 720px; margin: 0 auto 2rem auto;">
+            <div class="section-header" style="justify-content:center;">
+                <h2 class="section-title">🎁 Redeem Avatar Bundle Key</h2>
+            </div>
+            <div style="display:flex; gap: 0.75rem; flex-wrap: wrap; justify-content:center;">
+                <input id="bundleKeyInput" type="text" class="search-bar" placeholder="Enter bundle key (e.g., BEE-CLASS-STARTER-1)" style="flex:1; min-width:280px; max-width: 460px;">
+                <button class="btn btn-secondary" onclick="redeemBundleKey()" style="white-space:nowrap;">✨ Redeem</button>
+            </div>
+            <div id="bundleRedeemMsg" style="margin-top:0.75rem; text-align:center; font-weight:600;"></div>
+        </div>
+
         <!-- My Avatar Section -->
         <div class="content-section" style="max-width: 400px; margin: 0 auto 2rem auto;">
             <h2 class="section-title" style="text-align: center; margin-bottom: 1.5rem;">✨ My Avatar</h2>
@@ -684,6 +696,39 @@
                 }, index * 100);
             });
         });
+
+        async function redeemBundleKey(){
+            const input = document.getElementById('bundleKeyInput');
+            const msg = document.getElementById('bundleRedeemMsg');
+            msg.textContent = '';
+            msg.style.color = '#333';
+            const key = (input.value || '').trim();
+            if(!key){
+                msg.textContent = 'Please enter a key.';
+                msg.style.color = '#F44336';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/bundles/redeem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success){
+                    msg.textContent = (data && data.error) ? data.error : 'Could not redeem key.';
+                    msg.style.color = '#F44336';
+                    return;
+                }
+                const count = Number(data.unlocked_count || 0);
+                msg.textContent = `Success: ${data.bundle_name || data.bundle_id} unlocked${count ? ` (+${count} avatars)` : ''}.`;
+                msg.style.color = '#2e7d32';
+                input.value = '';
+            } catch (e){
+                msg.textContent = 'Network error while redeeming key.';
+                msg.style.color = '#F44336';
+            }
+        }
         
         // Load parent's 3D avatar from their account
         (async function() {

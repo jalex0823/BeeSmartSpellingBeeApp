@@ -1036,3 +1036,128 @@ class PurchaseRecord(db.Model):
 
     def __repr__(self):
         return f"<PurchaseRecord user={self.user_id} product={self.product_id} platform={self.platform} status={self.status}>"
+
+
+class BundleKey(db.Model):
+    """Database-managed avatar bundle distribution keys.
+
+    Allows admin to issue time/usage-limited bundle keys that unlock bundles.
+    Supersedes static dev keys in avatar_bundles.py when present.
+    """
+    __tablename__ = 'bundle_keys'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key_raw = db.Column(db.String(80), nullable=False)  # Original form with dashes
+    key_norm = db.Column(db.String(80), nullable=False, unique=True, index=True)  # Uppercase, no spaces
+    bundle_id = db.Column(db.String(100), nullable=False, index=True)
+
+    max_uses = db.Column(db.Integer, default=1)  # 1 = single-use; >1 multi-use classroom key
+    uses_count = db.Column(db.Integer, default=0)
+
+    expires_at = db.Column(db.DateTime, index=True)
+    status = db.Column(db.String(20), default='active', index=True)  # active|revoked|expired|exhausted
+
+    issued_by = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)  # Admin who created
+    redeemed_by = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)  # Last user who redeemed (single-use)
+    redeemed_at = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def is_expired(self):
+        return bool(self.expires_at and datetime.utcnow() > self.expires_at)
+
+    def can_redeem(self):
+        if self.status != 'active':
+            return False, 'status_not_active'
+        if self.is_expired():
+            return False, 'expired'
+        if self.uses_count >= (self.max_uses or 1):
+            return False, 'key_exhausted'
+        return True, 'ok'
+
+    def apply_use(self, user_id: int):
+        self.uses_count = (self.uses_count or 0) + 1
+        self.redeemed_by = user_id
+        self.redeemed_at = datetime.utcnow()
+        # Transition status if single-use exhausted
+        if self.uses_count >= (self.max_uses or 1):
+            self.status = 'exhausted'
+
+    @staticmethod
+    def normalize(raw: str) -> str:
+        return (raw or '').replace(' ', '').upper()
+
+    @staticmethod
+    def generate(bundle_id: str, prefix: str = 'BEE') -> tuple[str, str]:
+        """Generate a human-readable key and its normalized form."""
+        rand = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        year = datetime.utcnow().year
+        key_raw = f"{prefix}-{bundle_id[:6].upper()}-{year}-{rand}".replace('--', '-')
+        return key_raw, BundleKey.normalize(key_raw)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key_raw': self.key_raw,
+            'bundle_id': self.bundle_id,
+            'max_uses': self.max_uses,
+            'uses_count': self.uses_count,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'status': self.status,
+            'redeemed_by': self.redeemed_by,
+            'redeemed_at': self.redeemed_at.isoformat() if self.redeemed_at else None,
+        }
+
+    def __repr__(self):
+        return f"<BundleKey {self.key_raw} bundle={self.bundle_id} status={self.status} uses={self.uses_count}/{self.max_uses}>"
+
+
+class DynamicBundle(db.Model):
+    """Admin-defined dynamic bundles (BeeKey packs) linking a generated bundle_id to avatar list."""
+    __tablename__ = 'dynamic_bundles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    bundle_id = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    avatars = db.Column(db.JSON, default=list)  # list of avatar slugs
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+
+    def to_dict(self):
+        return {
+            'bundle_id': self.bundle_id,
+            'name': self.name,
+            'avatars': self.avatars or [],
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+    def __repr__(self):
+        return f"<DynamicBundle {self.bundle_id} avatars={len(self.avatars or [])}>"
+
+
+class BundleKeyRedemption(db.Model):
+    """Trace each redemption event for auditing and analytics."""
+    __tablename__ = 'bundle_key_redemptions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    bundle_key_id = db.Column(db.Integer, db.ForeignKey('bundle_keys.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    bundle_id = db.Column(db.String(120), index=True)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(300))
+    redeemed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'bundle_key_id': self.bundle_key_id,
+            'user_id': self.user_id,
+            'bundle_id': self.bundle_id,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'redeemed_at': self.redeemed_at.isoformat() if self.redeemed_at else None
+        }
+
+    def __repr__(self):
+        return f"<BundleKeyRedemption key={self.bundle_key_id} user={self.user_id} bundle={self.bundle_id}>"

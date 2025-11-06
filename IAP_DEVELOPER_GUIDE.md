@@ -13,6 +13,7 @@
  ## Environment Variables
  
  - `PRODUCT_SUBSCRIPTION_FULL_ID`: SKU for monthly subscription (default `beesmart.sub.full_monthly`). Exposed to JS as `window.SUBSCRIPTION_SKU`.
+ - `AVATAR_SKU_PREFIX`: Prefix for per-avatar product IDs (default `com.beesmart.avatar`). Example final product id: `com.beesmart.avatar.queen-bee`.
 
 ## Enabling Live Verification
 
@@ -91,6 +92,21 @@ All endpoints require the user to be logged in (session cookie). Responses are J
   - 200 Response:
     - `{ success: true, applied: [...], entitlements }`
 
+- Bundle key redemption (teacher/parent distribution)
+  - POST `/api/bundles/redeem`
+  - Body:
+    - `key` (string, required) — case-insensitive; spaces ignored
+  - Behavior:
+    - Looks up the pre-issued key → bundle id
+    - Applies bundle entitlements idempotently (adds to `purchased_bundles` and unlocks included avatars)
+    - Logs a `PurchaseRecord` with `{ platform: 'web', product_id: 'bundle:<id>' }`
+  - 200 Response:
+    - `{ success: true, bundle_id, bundle_name, unlocked_count, entitlements }`
+  - 4xx/5xx Response examples:
+    - `{ success: false, error: "Missing key" }`
+    - `{ success: false, error: "Invalid key" }`
+    - `{ success: false, error: "Redemption unavailable" }` (no keys loaded)
+
 
 ## Entitlements
 
@@ -105,6 +121,66 @@ The entitlements summary returned by both endpoints includes:
 - `purchased_avatars` (array)
 - `purchased_bundles` (array)
 - `unlocked_avatars` (array): convenience view that includes free + purchased + earned-by-points avatars
+
+### Bundle Keys (DB-managed)
+
+In addition to static dev keys in `avatar_bundles.py`, production deployments can issue database-managed bundle keys via the admin API:
+
+- Model: `BundleKey` (`models.BundleKey`) with fields: `key_raw`, `key_norm`, `bundle_id`, `max_uses`, `uses_count`, `expires_at`, `status`, timestamps.
+- Status values: `active`, `revoked`, `expired`, `exhausted`.
+- Admin Endpoints:
+  - `GET /api/admin/bundle-keys` → list (max 250 newest)
+  - `POST /api/admin/bundle-keys` → create `{ bundle_id, max_uses=1, expires_days=0 }`
+  - `POST /api/admin/bundle-keys/<id>/revoke` → revoke active key
+- Redemption flow (`POST /api/bundles/redeem`): Lookup DB key first (enforce expiry/usage) then fallback to legacy in-memory keys. Response includes `source: db|legacy`.
+- Single-use keys (`max_uses=1`) automatically transition to `exhausted` after first successful redemption.
+- Multi-use classroom keys can set `max_uses > 1`.
+- Expiry: set `expires_days` > 0 during creation; server calculates `expires_at`.
+
+### BeeKey Dynamic 4‑Pack Generation
+
+Admins can mint on-demand “BeeKeys” that define a dynamic bundle of exactly 4 avatars:
+
+- Endpoint: `POST /api/admin/bee-keys/generate`
+  - Body: `{ name?: str, avatar_ids?: [str...], max_uses?: int=1, expires_days?: int=0 }`
+  - If `avatar_ids` omitted, server randomly selects 4 distinct active avatars.
+  - Creates a `DynamicBundle` row (`bundle_id` like `beekey_<shortid>`) and a `BundleKey` referencing it.
+  - Response: `{ success, bundle: { bundle_id, name, avatars[] }, bundle_key: {...} }`
+- Redemption automatically recognizes dynamic bundles (not in static catalog) and uses their avatar list.
+- Auditing: each successful redemption writes a `BundleKeyRedemption` record with IP + user agent.
+- Inspect redemptions: `GET /api/admin/bundle-keys/<id>/redemptions` (most recent 200).
+
+Example generate:
+```json
+{
+  "name": "STEM Starter",
+  "avatar_ids": ["queen-bee", "superbee", "knight-bee", "rocker-bee"],
+  "max_uses": 25,
+  "expires_days": 60
+}
+```
+Response excerpt:
+```json
+{
+  "success": true,
+  "bundle": { "bundle_id": "beekey_a1b2c3d4", "avatars": ["queen-bee","superbee","knight-bee","rocker-bee"] },
+  "bundle_key": { "key_raw": "BEEKEY-BEEKEY-2025-Z1X2C3", "max_uses": 25, "status": "active" }
+}
+```
+
+Example create (admin):
+```json
+{ "bundle_id": "classroom_starter_pack", "max_uses": 10, "expires_days": 30 }
+```
+Example list response excerpt:
+```json
+{
+  "success": true,
+  "bundle_keys": [
+    { "key_raw": "BEE-CLASSR-2025-1A2B3C", "bundle_id": "classroom_starter_pack", "max_uses": 10, "uses_count": 0, "status": "active" }
+  ]
+}
+```
 
 
 ## Product → Entitlement mapping
@@ -123,6 +199,22 @@ Defined in `AjaSpellBApp.py` as `PRODUCT_MAP` and overridable via env vars. Defa
   - `PRODUCT_BUNDLE_TOP_ID` (default: `beesmart.bundle.top`) → unlocks `superbee`, `queen-bee`, `knight-bee`, `rocker-bee`
 
 Add new SKUs by extending `PRODUCT_MAP` or setting env vars in your deployment.
+
+### Avatar SKUs
+
+- Default format: `<prefix>.<avatar-slug>` where `prefix = AVATAR_SKU_PREFIX` (defaults to `com.beesmart.avatar`).
+- Slugs are derived from catalog ids or filenames (CamelCase → kebab-case, punctuation stripped).
+- Server automatically merges all avatar SKUs into `PRODUCT_MAP` at startup via `avatar_skus.build_product_entitlements()`.
+- Frontend gets a map as `window.AVATAR_SKUS = { '<avatar-slug>': '<product_id>' }`.
+
+Generate a CSV for store setup:
+
+```
+# From repo root
+PYTHONPATH=. python3 scripts/dump_avatar_skus.py > store/avatar_skus.csv
+```
+
+This produces columns: `product_id,avatar_id,display_name,price_usd,purchasable,tier,source`.
 
 
 ## Verification modes
@@ -212,6 +304,18 @@ To restore, POST to `/api/iap/restore` with:
   "product_ids": ["beesmart.full_unlock", "beesmart.avatar.superbee"]
 }
 ```
+
+Bundle redemption quick check (dev):
+
+1) Ensure the server is running (e.g., `PORT=5050`)
+2) Log in with a demo teacher account (`teacher_demo` / `REVIEW-ONLY`)
+3) POST to `/api/bundles/redeem` with a dev key from `avatar_bundles.py` (e.g., `BEE-CLASS-STARTER-1`)
+
+Example request:
+```json
+{ "key": "BEE-CLASS-STARTER-1" }
+```
+Expect `{ success: true, bundle_id: "classroom_starter_pack", ... }` and unlocked avatars reflected in the entitlements.
 
 
 ## Roadmap to production verification

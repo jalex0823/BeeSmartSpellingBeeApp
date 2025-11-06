@@ -602,6 +602,10 @@
                     <span>⏭</span>
                     <span>Skip</span>
                 </button>
+                <button class="btn-speed" id="effectsBtn" style="background: linear-gradient(135deg, #FFD54F, #FFB300); color: #5A2C15; border: 3px solid #FFA000;">
+                    <span>✨</span>
+                    <span id="effectsBtnLabel">Effects On</span>
+                </button>
                 <button class="btn-speed" onclick="window.location.href='/'" style="background: linear-gradient(135deg, #9E9E9E, #757575);">
                     <span>🏠</span>
                     <span>Menu</span>
@@ -965,6 +969,22 @@ function setupEventListeners() {
     
     // Skip button
     addButtonHandler('skipBtn', () => submitAnswer(true), 'skip');
+
+    // Effects toggle button
+    try {
+        const syncLabel = () => {
+            const on = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+            const lbl = document.getElementById('effectsBtnLabel');
+            if (lbl) lbl.textContent = on ? 'Effects On' : 'Effects Off';
+        };
+        syncLabel();
+        addButtonHandler('effectsBtn', () => {
+            const current = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+            window.QuizCelebrations?.setEnabled && window.QuizCelebrations.setEnabled(!current);
+            syncLabel();
+            try { window.BeeSmart?.showToast(!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled', 'success'); } catch(_){}
+        }, 'button');
+    } catch(_) { }
     
     // Enter key to submit
     const spellInput = document.getElementById('spellInput');
@@ -1530,6 +1550,14 @@ async function submitAnswer(isSkip = false) {
 function showFeedback(isCorrect, points, correctSpelling) {
     try { window.BeeVoiceViz?.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
 
+    // Persona celebration on correct answers (confetti + themed bits + short stinger)
+    if (isCorrect) {
+        try {
+            const container = document.querySelector('.speed-quiz-container') || document.body;
+            window.QuizCelebrations?.celebrateCorrect(container, { sound: true });
+        } catch (_) { /* no-op */ }
+    }
+
     // Speak a short friendly feedback phrase (kept brief for speed round pacing)
     const congrats = [
         'Great job!',
@@ -1745,6 +1773,7 @@ window.addEventListener('error', (event) => {
 });
 // ------- end of main Speed Round logic -------
 </script>
+<!-- celebrations loaded globally via base.html -->
 
 <!-- Optimized Wavy Blue Voice Visualizer (matching Quiz style) -->
 <script>

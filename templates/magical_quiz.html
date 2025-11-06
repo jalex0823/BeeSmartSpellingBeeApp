@@ -388,6 +388,9 @@
             <button class="quiz-btn speak-btn" id="muteBtn" title="Toggle audio feedback">
                 🔊 Audio On
             </button>
+            <button class="quiz-btn refresh-lists-btn" id="effectsBtn" title="Toggle visual celebrations">
+                ✨ Effects On
+            </button>
         </div>
     </div>
     
@@ -497,11 +500,6 @@ class MagicalSpellingBee {
         }
     }
 
-        };
-        this.initializeEventListeners();
-        this.loadWordList();
-    }
-    
     initializeEventListeners() {
         document.getElementById('useListBtn').addEventListener('click', () => this.loadWordList());
         document.getElementById('deleteListBtn').addEventListener('click', () => this.deleteList());
@@ -512,6 +510,21 @@ class MagicalSpellingBee {
         document.getElementById('resetBtn').addEventListener('click', () => this.resetQuiz());
         document.getElementById('audioBtn').addEventListener('click', () => this.playAudio());
         document.getElementById('muteBtn').addEventListener('click', () => this.toggleAudio());
+        // Effects toggle
+        const effectsBtn = document.getElementById('effectsBtn');
+        if (effectsBtn) {
+            const syncEffectsLabel = () => {
+                const on = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+                effectsBtn.textContent = on ? '✨ Effects On' : '✨ Effects Off';
+            };
+            syncEffectsLabel();
+            effectsBtn.addEventListener('click', () => {
+                const current = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+                window.QuizCelebrations?.setEnabled && window.QuizCelebrations.setEnabled(!current);
+                syncEffectsLabel();
+                this.showStatus((!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled'), 'info');
+            });
+        }
         
         // Enter key to submit
         document.getElementById('spellingInput').addEventListener('keypress', (e) => {
@@ -598,6 +611,11 @@ class MagicalSpellingBee {
                     this.stats.streak++;
                     this.playCorrectSound(); // Play success sound
                     this.showStatus(`✅ Correct! "${data.expected}"`, 'success');
+                    // Quiz celebration: persona-themed bits + confetti (sound already played here)
+                    try {
+                        const container = document.querySelector('.quiz-main-container') || document.body;
+                        window.QuizCelebrations?.celebrateCorrect(container, { sound: false });
+                    } catch (_) { /* no-op */ }
                     setTimeout(() => {
                         this.currentWordIndex++;
                         this.showCurrentWord();
@@ -878,4 +896,5 @@ document.addEventListener('DOMContentLoaded', () => {
     new MagicalSpellingBee();
 });
 </script>
+<!-- celebrations loaded globally via base.html -->
 {% endblock %}

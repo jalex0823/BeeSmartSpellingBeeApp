@@ -37,8 +37,13 @@ from models import WordList, WordListItem
 from models import PasswordResetToken
 from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
-from models import Avatar, BattleSession, PurchaseRecord
+from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
 from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
+try:
+    from avatar_bundles import BUNDLE_CATALOG, REDEEMABLE_KEYS  # Optional: bundle catalog + redeemable keys
+except Exception:
+    BUNDLE_CATALOG = {}
+    REDEEMABLE_KEYS = {}
 
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
@@ -373,6 +378,24 @@ try:
     PRODUCT_MAP.update(build_product_entitlements())
 except Exception as _e:
     print(f"WARN: Failed to load avatar product entitlements: {_e}")
+
+# Extend product map with bundle catalog → bundle entitlements
+try:
+    if BUNDLE_CATALOG:
+        for _bundle_id, _cfg in BUNDLE_CATALOG.items():
+            pid = f"bundle:{_bundle_id}"
+            if pid not in PRODUCT_MAP:
+                PRODUCT_MAP[pid] = {
+                    'type': 'bundle',
+                    'bundle_id': _bundle_id,
+                    'avatars': list(_cfg.get('avatars', []) or [])
+                }
+        try:
+            print(f"✅ Bundle catalog loaded: {len(BUNDLE_CATALOG)} bundles; keys available: {len(REDEEMABLE_KEYS) if isinstance(REDEEMABLE_KEYS, dict) else 0}")
+        except Exception:
+            pass
+except Exception as _e:
+    print(f"WARN: Failed to load bundle entitlements: {_e}")
 
 
 def _apply_entitlement(user: User, product_id: str) -> dict:
@@ -5765,6 +5788,286 @@ def api_iap_restore():
     })
 
 
+# ----------------------------------------------------------------------------
+# Bundle Key Redemption (Teacher/Parent distributed keys)
+# ----------------------------------------------------------------------------
+@app.route('/api/bundles/redeem', methods=['POST'])
+@login_required
+def api_bundles_redeem():
+    """Redeem a special bundle key to unlock a set of avatars.
+    Request JSON: { key: string }
+    Response: { success, bundle_id, bundle_name, unlocked_count, entitlements }
+    Notes:
+      - Idempotent: re-redeeming an already applied bundle won't duplicate unlocks
+      - Keys are matched case-insensitively and with whitespace trimmed
+    """
+    data = request.get_json(silent=True) or {}
+    raw_key = (data.get('key') or '').strip()
+    if not raw_key:
+        return jsonify({"success": False, "error": "Missing key"}), 400
+
+    if not isinstance(REDEEMABLE_KEYS, dict) or not REDEEMABLE_KEYS:
+        return jsonify({"success": False, "error": "Redemption unavailable"}), 503
+
+    norm_key = re.sub(r"\s+", "", raw_key).upper()
+    bundle_id = None
+    bundle_name = None
+    avatars = []
+    source = 'legacy'
+    bundle_key_row = None
+
+    # 1) Prefer DB-managed bundle key if exists
+    try:
+        bundle_key_row = BundleKey.query.filter_by(key_norm=norm_key).first()
+    except Exception:
+        bundle_key_row = None
+
+    if bundle_key_row:
+        source = 'db'
+        can, reason = bundle_key_row.can_redeem()
+        if not can:
+            return jsonify({"success": False, "error": reason}), 400
+        bundle_id = bundle_key_row.bundle_id
+    else:
+        # 2) Fallback to legacy in-memory map
+        bundle_id = REDEEMABLE_KEYS.get(norm_key)
+        if not bundle_id:
+            return jsonify({"success": False, "error": "Invalid key"}), 400
+
+    # Resolve bundle config: prefer dynamic bundle when present
+    bundle_cfg = (BUNDLE_CATALOG or {}).get(bundle_id) or {}
+    if not bundle_cfg:
+        try:
+            dyn = DynamicBundle.query.filter_by(bundle_id=bundle_id).first()
+            if dyn:
+                bundle_cfg = { 'name': dyn.name, 'avatars': list(dyn.avatars or []) }
+        except Exception:
+            pass
+    avatars = list(bundle_cfg.get('avatars', []) or [])
+    bundle_name = bundle_cfg.get('name') or bundle_id
+
+    product_id = f"bundle:{bundle_id}"
+    if product_id not in PRODUCT_MAP:
+        PRODUCT_MAP[product_id] = { 'type': 'bundle', 'bundle_id': bundle_id, 'avatars': avatars }
+
+    res = _apply_entitlement(current_user, product_id)
+
+    # If DB key, record usage now (after successful entitlement attempt)
+    if bundle_key_row:
+        try:
+            bundle_key_row.apply_use(current_user.id)
+            db.session.add(bundle_key_row)
+            # trace redemption
+            trace = BundleKeyRedemption(
+                bundle_key_id=bundle_key_row.id,
+                user_id=current_user.id,
+                bundle_id=bundle_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:300]
+            )
+            db.session.add(trace)
+        except Exception:
+            pass
+
+    # Log a record for traceability
+    try:
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform='web',
+            product_id=product_id,
+            status='verified',
+            transaction_id=None,
+            purchase_token=None,
+            raw_payload={'redeemed_key': norm_key, 'bundle_id': bundle_id, 'apply_result': res}
+        )
+        db.session.add(rec)
+    except Exception:
+        pass
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+
+    return jsonify({
+        "success": True,
+        "bundle_id": bundle_id,
+        "bundle_name": bundle_name,
+        "source": source,
+        "unlocked_count": int((res or {}).get('details', {}).get('unlocked_count') or 0),
+        "entitlements": _entitlements_summary(current_user)
+    })
+
+
+# ----------------------------------------------------------------------------
+# Admin: Bundle Key Management (DB-managed keys)
+# ----------------------------------------------------------------------------
+@app.route('/api/admin/bundle-keys', methods=['GET'])
+@login_required
+def api_admin_bundle_keys_list():
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    try:
+        _ensure_db_initialized()
+        rows = BundleKey.query.order_by(BundleKey.created_at.desc()).limit(250).all()
+        return jsonify({
+            "success": True,
+            "bundle_keys": [r.to_dict() for r in rows]
+        })
+    except Exception as e:
+        app.logger.error(f"bundle key list error: {e}")
+        return jsonify({"success": False, "error": "list_failed"}), 500
+
+
+@app.route('/api/admin/bundle-keys', methods=['POST'])
+@login_required
+def api_admin_bundle_keys_create():
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    bundle_id = (data.get('bundle_id') or '').strip()
+    max_uses = int(data.get('max_uses') or 1)
+    expires_days = int(data.get('expires_days') or 0)
+    if not bundle_id:
+        return jsonify({"success": False, "error": "missing_bundle_id"}), 400
+    if max_uses < 1:
+        max_uses = 1
+    if bundle_id not in (BUNDLE_CATALOG or {}):
+        return jsonify({"success": False, "error": "unknown_bundle"}), 400
+    key_raw, key_norm = BundleKey.generate(bundle_id)
+    expires_at = None
+    if expires_days > 0:
+        try:
+            expires_at = datetime.utcnow() + timedelta(days=expires_days)
+        except Exception:
+            expires_at = None
+    row = BundleKey(
+        key_raw=key_raw,
+        key_norm=key_norm,
+        bundle_id=bundle_id,
+        max_uses=max_uses,
+        expires_at=expires_at,
+        issued_by=current_user.id
+    )
+    try:
+        db.session.add(row)
+        db.session.commit()
+        return jsonify({"success": True, "bundle_key": row.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"create_failed: {e}"}), 500
+
+
+@app.route('/api/admin/bee-keys/generate', methods=['POST'])
+@login_required
+def api_admin_bee_keys_generate():
+    """Generate a dynamic 4-avatar BeeKey pack and associated bundle key.
+
+    Body JSON: { avatar_ids?: [str,...], max_uses?: int, expires_days?: int, name?: str }
+    - If avatar_ids omitted: pick 4 random active avatars (distinct)
+    - Creates DynamicBundle then BundleKey
+    Response: { success, bundle, bundle_key }
+    """
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    avatar_ids = data.get('avatar_ids') or []
+    max_uses = int(data.get('max_uses') or 1)
+    expires_days = int(data.get('expires_days') or 0)
+    name = (data.get('name') or '').strip() or 'BeeKey Pack'
+
+    # Collect active avatars (exclude defaults if desired)
+    try:
+        active_avatars = [a.slug for a in Avatar.get_all_active()]
+    except Exception:
+        active_avatars = []
+
+    if not avatar_ids:
+        # Choose 4 random distinct avatars
+        import random
+        random.shuffle(active_avatars)
+        avatar_ids = active_avatars[:4]
+    else:
+        # Validate requested avatar ids exist
+        avatar_ids = [aid for aid in avatar_ids if aid in active_avatars]
+    avatar_ids = avatar_ids[:4]
+    if len(avatar_ids) < 1:
+        return jsonify({"success": False, "error": "no_valid_avatars"}), 400
+
+    # Generate bundle_id
+    import uuid
+    bundle_uuid = str(uuid.uuid4())[:8]
+    bundle_id = f"beekey_{bundle_uuid}".lower()
+
+    dyn = DynamicBundle(
+        bundle_id=bundle_id,
+        name=name,
+        avatars=avatar_ids,
+        created_by=current_user.id
+    )
+
+    key_raw, key_norm = BundleKey.generate(bundle_id, prefix='BEEKEY')
+    expires_at = None
+    if expires_days > 0:
+        try:
+            expires_at = datetime.utcnow() + timedelta(days=expires_days)
+        except Exception:
+            expires_at = None
+    bkey = BundleKey(
+        key_raw=key_raw,
+        key_norm=key_norm,
+        bundle_id=bundle_id,
+        max_uses=max_uses,
+        expires_at=expires_at,
+        issued_by=current_user.id
+    )
+    try:
+        db.session.add(dyn)
+        db.session.add(bkey)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "bundle": dyn.to_dict(),
+            "bundle_key": bkey.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"generate_failed: {e}"}), 500
+
+
+@app.route('/api/admin/bundle-keys/<int:key_id>/redemptions', methods=['GET'])
+@login_required
+def api_admin_bundle_key_redemptions(key_id: int):
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    try:
+        _ensure_db_initialized()
+        rows = BundleKeyRedemption.query.filter_by(bundle_key_id=key_id).order_by(BundleKeyRedemption.redeemed_at.desc()).limit(200).all()
+        return jsonify({"success": True, "redemptions": [r.to_dict() for r in rows]})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"list_failed: {e}"}), 500
+
+
+@app.route('/api/admin/bundle-keys/<int:key_id>/revoke', methods=['POST'])
+@login_required
+def api_admin_bundle_key_revoke(key_id: int):
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    try:
+        row = BundleKey.query.filter_by(id=key_id).first()
+        if not row:
+            return jsonify({"success": False, "error": "not_found"}), 404
+        if row.status != 'active':
+            return jsonify({"success": False, "error": "already_inactive"}), 400
+        row.status = 'revoked'
+        db.session.commit()
+        return jsonify({"success": True, "bundle_key": row.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"revoke_failed: {e}"}), 500
+
+
 # ============================================================================
 # AUTHENTICATION ROUTES (User Login/Registration)
 # ============================================================================
@@ -7423,6 +7726,7 @@ def admin_dashboard():
                          leaderboard=leaderboard,
                          my_students=my_students,
                          admin_key=my_key,
+                         BUNDLE_CATALOG=BUNDLE_CATALOG or {},
                          user_avatar=user_avatar_data,
                          use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
 
