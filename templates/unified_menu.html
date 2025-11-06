@@ -765,6 +765,12 @@
             animation: none !important;
             transition: none !important;
         }
+        /* Exception: allow animations inside explicitly marked containers */
+        body.home-no-shimmer .allow-anim,
+        body.home-no-shimmer .allow-anim * {
+            animation: initial !important;
+            transition: initial !important;
+        }
         /* Also disable body pseudo-elements which aren't matched by *::before/after */
         body.home-no-shimmer::before,
         body.home-no-shimmer::after {
@@ -11523,6 +11529,7 @@
                     z-index: 10;
                     overflow: hidden;
                 `;
+                effectOverlay.classList.add('allow-anim');
                 container.style.position = 'relative';
                 container.appendChild(effectOverlay);
                 
@@ -11711,6 +11718,7 @@
                         overflow: hidden;
                         z-index: 12;
                     `;
+                    ripple.classList.add('allow-anim');
                     const dot = document.createElement('span');
                     const size = 220; // big enough to cover container
                     dot.style.cssText = `
@@ -11723,6 +11731,7 @@
                         opacity: 0.85;
                         ${reduced ? 'transition: opacity 200ms ease;' : 'animation: tap-ripple 420ms ease-out forwards;'}
                     `;
+                    dot.classList.add('allow-anim');
                     ripple.appendChild(dot);
                     container.style.position = container.style.position || 'relative';
                     container.appendChild(ripple);
