@@ -11503,11 +11503,39 @@
                     console.log('🚀 Starting deferred 3D avatar load...');
                     window.deferredAvatarLoad().then(() => {
                         console.log('✅ Deferred avatar load completed');
+                        // After 3D is mounted, ensure our click capture layer is present
+                        try { ensureAvatarClickCapture(); } catch(_) {}
                     }).catch(err => {
                         console.error('❌ Deferred avatar load failed:', err);
                     });
                 }
             }, 100); // Start after page load animation completes
+
+            // Ensure clicks always reach our handler, regardless of inner canvases or overlays
+            function ensureAvatarClickCapture() {
+                const container = document.getElementById('mascotBee3D');
+                if (!container) return;
+                container.style.pointerEvents = 'auto';
+                container.style.position = container.style.position || 'relative';
+                container.style.zIndex = '150';
+
+                let layer = document.getElementById('mascotClickLayer');
+                if (!layer) {
+                    layer = document.createElement('div');
+                    layer.id = 'mascotClickLayer';
+                    layer.classList.add('allow-anim');
+                    layer.style.cssText = `
+                        position: absolute; inset: 0; z-index: 200; pointer-events: auto; background: transparent; cursor: pointer;
+                    `;
+                    // Use capture phase so we win over internal handlers
+                    layer.addEventListener('click', (e) => { try { playMascotShow(e); } catch(_) {} }, true);
+                    layer.addEventListener('touchstart', (e) => { try { playMascotShow(e.touches && e.touches[0] ? e.touches[0] : e); } catch(_) {} }, { passive: true, capture: true });
+                    container.appendChild(layer);
+                }
+            }
+
+            // Also run once at DOM ready in case 3D is already present
+            try { document.addEventListener('DOMContentLoaded', () => ensureAvatarClickCapture()); } catch(_) {}
             
             // Themed avatar effects system
             function playThemedAvatarEffect(avatarId, container) {
