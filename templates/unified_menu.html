@@ -11564,11 +11564,13 @@
                 // Remove after animation
                 setTimeout(() => effectOverlay.remove(), reducedMotion ? 1500 : 3000);
                 
-                // Avatar-specific effects (9 working avatars only)
+                // Avatar-specific effects (expanded personas)
                 switch(avatarId) {
                     case 'al-bee':
-                        // AI sparkles
+                        // AI + Science: equations burst + tech sparkles + electric arc
+                        createEquationBurst(effectOverlay, 10);
                         createSparkles(effectOverlay, '🤖✨', '#00d4ff');
+                        createElectricArc(effectOverlay);
                         playSound('tech');
                         break;
                     case 'anxious-bee':
@@ -11587,14 +11589,16 @@
                         playSound('spooky');
                         break;
                     case 'professor-bee':
-                        // Flying books
+                        // Books + equations chalk
                         createFloatingIcon(effectOverlay, '📚📖', 5);
+                        createEquationBurst(effectOverlay, 8);
                         playSound('wise-hmm');
                         break;
                     case 'rocker-bee':
-                        // Electric guitar + stage lights
+                        // Electric guitar + stage lights + stage shake
                         createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00']);
                         createFloatingIcon(effectOverlay, '🎸', 3);
+                        quickShake(effectOverlay.parentElement || container);
                         playSound('guitar-riff');
                         break;
                     case 'vamp-bee':
@@ -11611,6 +11615,35 @@
                         // Zombie effects
                         createSparkles(effectOverlay, '🧟‍♂️💀', '#556b2f');
                         playSound('groan');
+                        break;
+                    case 'knight-bee':
+                        createFloatingIcon(effectOverlay, '🛡️⚔️', 4);
+                        createShieldGlint(effectOverlay);
+                        playSound('clang');
+                        break;
+                    case 'queen-bee':
+                        createFloatingIcon(effectOverlay, '👑✨', 6);
+                        createSparkles(effectOverlay, '💛', '#ffd700');
+                        playSound('chime');
+                        break;
+                    case 'selfie-bee':
+                        cameraFlashes(effectOverlay, 5);
+                        playSound('camera');
+                        break;
+                    case 'explorer-bee':
+                        createFloatingIcon(effectOverlay, '🧭🗺️', 5);
+                        footprints(effectOverlay);
+                        playSound('step');
+                        break;
+                    case 'space-bee':
+                        starfield(effectOverlay, 20);
+                        createFloatingIcon(effectOverlay, '🛰️', 2);
+                        playSound('space');
+                        break;
+                    case 'biker-bee':
+                    case 'motorcycle-bee':
+                        speedLines(effectOverlay);
+                        playSound('engine');
                         break;
                     default:
                         // Generic bounce sparkle (fewer particles in reduced mode)
@@ -11733,10 +11766,93 @@
                 addKeyframes(`@keyframes heal-rise { to { transform: translateY(-250px); opacity: 0; } }`);
             }
 
+            // Persona helpers
+            function createEquationBurst(container, count) {
+                const symbols = ['E=mc²','π','√','Σ','Δ','λ','∞'];
+                for (let i=0;i<count;i++){
+                    const eq = document.createElement('div');
+                    eq.textContent = symbols[i % symbols.length];
+                    eq.classList.add('allow-anim');
+                    eq.style.cssText = `position:absolute; left:${10+Math.random()*80}%; top:${60+Math.random()*30}%; font-weight:700; color:#00bcd4; font-size:${14+Math.random()*10}px; animation: eq-pop ${0.9+Math.random()*0.6}s ease-out forwards;`;
+                    container.appendChild(eq);
+                }
+                addKeyframes(`@keyframes eq-pop { to { transform: translateY(-80px) scale(1.2); opacity: 0; } }`);
+            }
+
+            function createElectricArc(container){
+                for(let i=0;i<3;i++){
+                    const arc=document.createElement('div');
+                    arc.classList.add('allow-anim');
+                    arc.style.cssText=`position:absolute; left:${20+Math.random()*60}%; top:${10+Math.random()*60}%; width:2px; height:${80+Math.random()*60}px; background:linear-gradient(${Math.random()*360}deg,#00e5ff,#b388ff); filter:drop-shadow(0 0 6px #00e5ff); transform-origin:center; animation: arc-flash 350ms ease-in-out ${i*90}ms;`;
+                    container.appendChild(arc);
+                }
+                addKeyframes(`@keyframes arc-flash { 50% { opacity:1; } to { opacity:0; transform: scaleY(0.4); } }`);
+            }
+
+            function quickShake(el){
+                if(!el) return;
+                el.classList.add('allow-anim');
+                el.style.animation = 'shake-quick 260ms ease-in-out';
+                setTimeout(()=>{ try{ el.style.animation=''; }catch(_){} },300);
+                addKeyframes(`@keyframes shake-quick { 10%{transform:translateX(-2px)} 20%{transform:translateX(2px)} 30%{transform:translateX(-2px)} 40%{transform:translateX(2px)} to{transform:none} }`);
+            }
+
+            function createShieldGlint(container){
+                const glint=document.createElement('div');
+                glint.classList.add('allow-anim');
+                glint.style.cssText='position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; background:linear-gradient(60deg, transparent 40%, rgba(255,255,255,0.8) 50%, transparent 60%); transform:translateX(-120%); animation: glint-move 550ms ease-out forwards;';
+                container.appendChild(glint);
+                addKeyframes(`@keyframes glint-move { to { transform: translateX(120%); opacity:0; } }`);
+            }
+
+            function cameraFlashes(container, count){
+                for(let i=0;i<count;i++){
+                    const flash=document.createElement('div');
+                    flash.classList.add('allow-anim');
+                    flash.style.cssText=`position:absolute; inset:0; background:radial-gradient(circle, rgba(255,255,255,0.9), rgba(255,255,255,0)); opacity:0; animation: flash-pop 420ms ease-out ${i*90}ms;`;
+                    container.appendChild(flash);
+                }
+                addKeyframes(`@keyframes flash-pop { 10%{opacity:1} to {opacity:0} }`);
+            }
+
+            function footprints(container){
+                for(let i=0;i<6;i++){
+                    const fp=document.createElement('div');
+                    fp.textContent='👣';
+                    fp.classList.add('allow-anim');
+                    fp.style.cssText=`position:absolute; left:${15+i*12}%; bottom:0; font-size:18px; opacity:0.9; animation: fp-walk 900ms ease-out ${i*90}ms forwards;`;
+                    container.appendChild(fp);
+                }
+                addKeyframes(`@keyframes fp-walk { to { transform: translate(10px, -80px) rotate(-8deg); opacity:0; } }`);
+            }
+
+            function starfield(container, count){
+                for(let i=0;i<count;i++){
+                    const star=document.createElement('div');
+                    star.textContent='✦';
+                    star.classList.add('allow-anim');
+                    star.style.cssText=`position:absolute; left:${Math.random()*100}%; top:${Math.random()*100}%; color:#bbdefb; font-size:${10+Math.random()*10}px; opacity:0.8; animation: star-fade ${800+Math.random()*400}ms ease-out ${i*20}ms forwards;`;
+                    container.appendChild(star);
+                }
+                addKeyframes(`@keyframes star-fade { to { transform: translateY(-20px); opacity: 0; } }`);
+            }
+
+            function speedLines(container){
+                for(let i=0;i<12;i++){
+                    const line=document.createElement('div');
+                    line.classList.add('allow-anim');
+                    line.style.cssText=`position:absolute; left:${Math.random()*100}%; top:${Math.random()*100}%; width:2px; height:${30+Math.random()*60}px; background:linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0)); filter: blur(0.5px); transform: translateY(-50px); animation: speed-drop 380ms ease-out ${i*20}ms forwards;`;
+                    container.appendChild(line);
+                }
+                addKeyframes(`@keyframes speed-drop { to { transform: translateY(40px); opacity: 0; } }`);
+            }
+
             // Tap ripple feedback
             function createTapRipple(container, x, y) {
                 try {
                     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    // Prefer rendering on the click layer (above canvas)
+                    const host = document.getElementById('mascotClickLayer') || container;
                     const ripple = document.createElement('span');
                     ripple.style.cssText = `
                         position: absolute;
@@ -11744,7 +11860,7 @@
                         left: 0; top: 0;
                         width: 100%; height: 100%;
                         overflow: hidden;
-                        z-index: 12;
+                        z-index: 250;
                     `;
                     ripple.classList.add('allow-anim');
                     const dot = document.createElement('span');
@@ -11761,8 +11877,8 @@
                     `;
                     dot.classList.add('allow-anim');
                     ripple.appendChild(dot);
-                    container.style.position = container.style.position || 'relative';
-                    container.appendChild(ripple);
+                    host.style.position = host.style.position || 'relative';
+                    host.appendChild(ripple);
 
                     if (reduced) {
                         setTimeout(() => { dot.style.opacity = '0'; }, 120);
