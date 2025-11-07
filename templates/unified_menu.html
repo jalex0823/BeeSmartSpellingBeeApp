@@ -8823,6 +8823,10 @@
                 if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
                 if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
 
+                // Prevent multiple initialization
+                if (window._guest3DCarouselInitialized) return false;
+                window._guest3DCarouselInitialized = true;
+
                 const wrap = document.getElementById('guestAvatarCarousel');
                 const nameEl = document.getElementById('guestAvatarName');
                 const imgEl = document.getElementById('guestAvatarSlide');
@@ -9144,6 +9148,10 @@
         function initGuestAvatarCarousel() {
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
             if (isAuthenticated) return; // show only for guests
+
+            // Prevent multiple initialization
+            if (window._guestCarouselInitialized) return;
+            window._guestCarouselInitialized = true;
 
             // Clean up any existing timer first
             if (window._guestCarouselTimer) {
@@ -11468,12 +11476,30 @@
 
             // Initialize guest avatar carousel (guests only) — prefer 3D when available
             try {
+                // Reset on fresh page load (not navigation) to allow re-initialization
+                if (performance && performance.navigation && performance.navigation.type === 1) {
+                    // Page was refreshed, reset flags
+                    window._avatarCarouselSystemInitialized = false;
+                    window._guest3DCarouselInitialized = false;
+                    window._guestCarouselInitialized = false;
+                }
+                
+                // Prevent multiple initialization of the entire carousel system
+                if (window._avatarCarouselSystemInitialized) {
+                    console.log('[Avatar] Carousel system already initialized, skipping');
+                    return;
+                }
+                window._avatarCarouselSystemInitialized = true;
+                console.log('[Avatar] Initializing carousel system...');
+                
                 // Clean up any existing timers first to prevent doubles
                 if (window._guest3DTimer) {
+                    console.log('[Avatar] Clearing existing 3D timer');
                     clearInterval(window._guest3DTimer);
                     window._guest3DTimer = null;
                 }
                 if (window._guestCarouselTimer) {
+                    console.log('[Avatar] Clearing existing 2D timer');
                     clearInterval(window._guestCarouselTimer);
                     window._guestCarouselTimer = null;
                 }
@@ -11481,11 +11507,15 @@
                 let used3D = false;
                 if (typeof initGuestAvatar3DCarousel === 'function') {
                     used3D = !!initGuestAvatar3DCarousel();
+                    console.log('[Avatar] 3D carousel initialized:', used3D);
                 }
                 if (!used3D && typeof initGuestAvatarCarousel === 'function') {
                     initGuestAvatarCarousel();
+                    console.log('[Avatar] 2D carousel initialized as fallback');
                 }
-            } catch (e) { /* no-op */ }
+            } catch (e) { 
+                console.error('[Avatar] Carousel initialization error:', e);
+            }
             
             // FORCE CONTAINER DIMENSIONS - Override any library changes
             setTimeout(() => {
