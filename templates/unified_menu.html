@@ -9128,7 +9128,7 @@
                 // Cleanup on unload
                 window.addEventListener('beforeunload', () => {
                     disposed = true;
-                    try { clearInterval(window._guest3DTimer); } catch(_){}
+                    try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){}
                     if (current) { disposeObject(current); }
                     try { renderer.dispose(); } catch(_){}
                 }, { once: true });
@@ -9144,6 +9144,12 @@
         function initGuestAvatarCarousel() {
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
             if (isAuthenticated) return; // show only for guests
+
+            // Clean up any existing timer first
+            if (window._guestCarouselTimer) {
+                clearInterval(window._guestCarouselTimer);
+                window._guestCarouselTimer = null;
+            }
 
             const wrap = document.getElementById('guestAvatarCarousel');
             const imgEl = document.getElementById('guestAvatarSlide');
@@ -11462,6 +11468,16 @@
 
             // Initialize guest avatar carousel (guests only) — prefer 3D when available
             try {
+                // Clean up any existing timers first to prevent doubles
+                if (window._guest3DTimer) {
+                    clearInterval(window._guest3DTimer);
+                    window._guest3DTimer = null;
+                }
+                if (window._guestCarouselTimer) {
+                    clearInterval(window._guestCarouselTimer);
+                    window._guestCarouselTimer = null;
+                }
+                
                 let used3D = false;
                 if (typeof initGuestAvatar3DCarousel === 'function') {
                     used3D = !!initGuestAvatar3DCarousel();
