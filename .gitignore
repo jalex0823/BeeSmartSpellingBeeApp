@@ -106,3 +106,11 @@ yarn-error.log*
 pnpm-lock.yaml
 dist/
 build/
+
+# Large media not required in git
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+static/videos/
