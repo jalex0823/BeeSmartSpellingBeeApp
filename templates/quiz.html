@@ -7,11 +7,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
 <style>
+    /* Ensure scrolling is allowed on quiz page */
+    body { overflow-y: auto !important; }
+    html { overscroll-behavior: contain; }
     .quiz-container {
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        padding: 1.5rem 1rem 5rem;
+        padding: 1.5rem 1rem 6.5rem; /* extra bottom padding so fixed submit not overlapped */
         position: relative;
     }
     
@@ -471,7 +474,7 @@
         top: 50%; /* Center vertically on jar */
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 3rem; /* Larger for visibility */
+        font-size: 3.2rem; /* Slightly larger for visibility */
         font-weight: 900;
         color: #5d4100;
         text-shadow: 
@@ -600,12 +603,24 @@
         }
         
         .timer-number {
-            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
+            font-size: 2.8rem; /* Maintain strong visibility on mobile */
         }
         
         .timer-label {
             font-size: 0.7rem;
         }
+    }
+
+    /* Sticky submit button so it never requires scroll on mobile/desktop */
+    #submitButton.sticky-submit {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: clamp(240px, 80%, 520px);
+        z-index: 1600;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+        border-radius: 32px;
     }
 
     /* Voice Controls */
@@ -986,6 +1001,7 @@
     /* Voice visualizer layer */
     .morph-content .voice-visualizer {
         position: relative;
+        z-index: 1; /* ensure timer can sit on top */
         opacity: 1;
         transform: scale(1);
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
@@ -998,6 +1014,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) scale(0.85); /* Center and scale */
+        z-index: 5; /* above visualizer */
         opacity: 0;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: none;
@@ -2963,7 +2980,7 @@
             </button>
             
             <!-- Quiz Action Buttons -->
-            <button type="button" class="action-btn primary" id="submitButton">
+            <button type="button" class="action-btn primary sticky-submit" id="submitButton">
                 Submit Answer
             </button>
             <button type="button" class="action-btn secondary" id="getHintButton">
@@ -4993,7 +5010,8 @@ class QuizManager {
             await this.pronounceWord({ refresh: true });
             
             // Then announce timer start and actually start the timer
-            if (this.timerEnabled && this.quizStarted) {
+            // Start whenever timer is enabled (remove extra gating to prevent input lock)
+            if (this.timerEnabled) {
                 await this.announceAndStartTimer();
             }
             
@@ -5893,7 +5911,7 @@ class QuizManager {
             
             // ⏱️ Announce and start timer AFTER word announcement completes
             // Input will be enabled when timer starts
-            if (this.timerEnabled && this.quizStarted) {
+            if (this.timerEnabled) {
                 await this.announceAndStartTimer();
             } else {
                 // If timer is disabled, enable input immediately
