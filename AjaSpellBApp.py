@@ -18,6 +18,7 @@ import threading
 import uuid
 import logging
 from datetime import datetime, timedelta, timezone
+import socket
 import secrets
 import hashlib
 from typing import List, Dict, Optional
@@ -9838,11 +9839,33 @@ except Exception as e:
     except:
         pass
 
+def _is_port_free(p: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind(("0.0.0.0", p))
+            return True
+    except OSError:
+        return False
+
+def _pick_port(default_port: int) -> int:
+    candidates = [default_port, 5051, 8080, 5500]
+    for p in candidates:
+        if _is_port_free(p):
+            return p
+    # As last resort, ask OS for an ephemeral free port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("0.0.0.0", 0))
+        return s.getsockname()[1]
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    env_port = int(os.environ.get("PORT", 5000))
+    port = _pick_port(env_port)
     # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI
     debug_env = os.environ.get("FLASK_DEBUG", "0").strip().lower()
     debug = debug_env in ("1", "true", "yes", "on")
+    if port != env_port:
+        print(f"⚠️ Port {env_port} in use or unavailable; switching to {port}.")
     print(f"🚀 Starting development server on port {port} with Socket.IO support (debug={'on' if debug else 'off'})...")
     try:
         from app_socketio import socketio
@@ -9851,4 +9874,13 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"⚠️ Failed to start with Socket.IO: {e}")
         print("🔄 Falling back to standard Flask server...")
-        app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
+        try:
+            app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
+        except OSError as oe:
+            if getattr(oe, 'errno', None) == 48 or 'Address already in use' in str(oe):
+                # Try another port automatically
+                new_port = _pick_port(port + 1)
+                print(f"⚠️ Port {port} busy; retrying on {new_port}...")
+                app.run(host="0.0.0.0", port=new_port, debug=debug, use_reloader=False)
+            else:
+                raise
