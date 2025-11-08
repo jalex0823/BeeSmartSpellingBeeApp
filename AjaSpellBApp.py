@@ -2463,7 +2463,7 @@ def home():
     <style>body{font-family:Arial,sans-serif;padding:2rem;text-align:center}
     img{max-width:260px;margin:1rem auto;display:block}</style></head>
     <body>
-      <img src='/static/images/LogoBee&WordingTM.png' alt='BeeSmart Logo'>
+    <img src='/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' alt='BeeSmart Logo'>
       <p>Loading BeeSmart… If not redirected, <a href='/app'>click here</a>.</p>
       <script>try{window.location.replace('/app')}catch(e){}</script>
     </body></html>"""
@@ -2542,7 +2542,7 @@ def __test_home():
         <h1>BeeSmart Test Home ✅</h1>
         <p>If you can see this, Flask routing works. Root path blockage likely external.</p>
         <p>Timestamp: %s</p>
-        <img src='/static/images/LogoBee&WordingTM.png' alt='Logo' style='max-width:300px;'>
+    <img src='/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' alt='Logo' style='max-width:300px;'>
         </body></html>""" % (int(time.time()))
         resp = make_response(body)
         resp.headers["Cache-Control"] = "no-store, max-age=0"
