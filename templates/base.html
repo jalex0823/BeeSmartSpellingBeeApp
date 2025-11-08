@@ -25,26 +25,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
-        <script>
-                // Attempt to use new crest; fallback to legacy LogoBee if missing.
-                (function(){
-                    const primary = '/static/images/BeeSmartCrestLogo1.png?v=20251107';
-                    const fallback = '/static/images/LogoBee&WordingTM.png';
-                    window.BeeSmartBrand = { logoPath: primary };
-                    try {
-                        const imgTest = new Image();
-                        imgTest.onload = function(){ /* crest exists */ };
-                        imgTest.onerror = function(){
-                            window.BeeSmartBrand.logoPath = fallback;
-                            // swap any crest-logo elements already in DOM
-                            document.querySelectorAll('img.crest-logo').forEach(i=>{ i.src = fallback; });
-                        };
-                        imgTest.src = primary;
-                    } catch(_) {
-                        window.BeeSmartBrand.logoPath = fallback;
-                    }
-                })();
-        </script>
+            <script>
+                    // Simple global logo path (new logo). Replace file with your new image to update everywhere.
+                    window.BeeSmartBrand = { logoPath: '/static/images/LogoBee&WordingTM.png?v=20251107' };
+            </script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -321,7 +305,7 @@
 
     <!-- Global Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-        <img src="/static/images/BeeSmartCrestLogo1.png" alt="BeeSmart Crest Logo" class="crest-logo" decoding="async" onerror="this.onerror=null; this.src='/static/images/LogoBee&WordingTM.png';" />
+        <img src="/static/images/LogoBee&WordingTM.png" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
         <h1>Preparing Magic...</h1>
         <div class="checks" id="loadingChecks" aria-live="polite">
             <h2>System Checks</h2>
