@@ -23,7 +23,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
-    <script>window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartCrestLogo1.png?v=20251107' };</script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
+    <script>window.BeeSmartBrand = { logoPath: '/static/images/LogoBee&WordingTM.png?v=20251107' };</script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -34,6 +35,7 @@
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
     </script>
+    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
     <script>
         (function(){
@@ -56,17 +58,32 @@
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}"></script>
-    <!-- Auth flag for front-end gating -->
+    <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
+    {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
+    {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
+    {% set _billing_mode = (registration_billing_mode or 'subscription') %}
+    {% set _subscription_sku = subscription_product_id if subscription_product_id is defined else '' %}
+    {% set _subscription_monthly = (subscription_monthly_usd or 4.49) %}
     <script>
-        window.IS_AUTH = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
-        window.IS_PREMIUM = {{ (is_premium|default(false)) | tojson }};
-        window.REG_BILLING_MODE = {{ (registration_billing_mode or 'subscription') | tojson }};
-        // Expose subscription SKU for native wrappers (if provided by server)
-    window.SUBSCRIPTION_SKU = {{ (subscription_product_id if subscription_product_id is defined else None) | tojson }};
-    // Expose per-avatar SKUs map for native wrappers / purchase UI
-    window.AVATAR_SKUS = {{ (avatar_product_ids if avatar_product_ids is defined else {}) | tojson }};
-        // Price hint for banners
-        window.subscription_monthly_usd = {{ (subscription_monthly_usd or 4.49) | tojson }};
+        (function(){
+            var root = document.documentElement;
+            var isAuth = '{{ _is_auth }}' === 'true';
+            var isPremium = '{{ _is_premium }}' === 'true';
+            var billingMode = '{{ _billing_mode }}';
+            var subscriptionSku = '{{ _subscription_sku }}';
+            var subscriptionMonthly = '{{ _subscription_monthly }}';
+            root.setAttribute('data-is-auth', isAuth ? '1':'0');
+            root.setAttribute('data-is-premium', isPremium ? '1':'0');
+            root.setAttribute('data-billing-mode', billingMode);
+            root.setAttribute('data-subscription-sku', subscriptionSku);
+            root.setAttribute('data-subscription-monthly-usd', subscriptionMonthly);
+            window.AVATAR_SKUS = {{ (avatar_product_ids if avatar_product_ids is defined else {}) | tojson }};
+            window.IS_AUTH = isAuth;
+            window.IS_PREMIUM = isPremium;
+            window.REG_BILLING_MODE = billingMode || 'subscription';
+            window.SUBSCRIPTION_SKU = subscriptionSku || null;
+            window.subscription_monthly_usd = parseFloat(subscriptionMonthly || '4.49') || 4.49;
+        })();
     </script>
     <script>
         // If running inside a native wrapper that exposes BeeSmartIAP, attempt restore once a day
@@ -1916,6 +1933,17 @@
     </style>
 </head>
 <body class="home-no-shimmer">
+    <!-- Injected global loading overlay (since this template does not extend base.html) -->
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks">
+    <img src="/static/images/LogoBee&WordingTM.png" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
+        <h1>Preparing Magic...</h1>
+        <div class="checks" id="loadingChecks" aria-live="polite">
+            <h2>System Checks</h2>
+        </div>
+        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true">Tap to Start</button>
+        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
+        <div class="footer-note">All systems must pass before starting for the best experience.</div>
+    </div>
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
@@ -2148,7 +2176,7 @@
         ">🎤 Voice input ready</div>
         <!-- Brand Logo with TM (replaces emoji bee) -->
         <img
-            src="/static/images/BeeSmartCrestLogo1.png?v=20251107"
+            src="/static/images/LogoBee&WordingTM.png?v=20251107"
             alt="BeeSmart Spelling Bee Application™ logo"
             style="
                 width: clamp(260px, 65vw, 560px);
@@ -2464,7 +2492,7 @@
                 </div>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <img src="/static/images/BeeSmartCrestLogo1.png?v=20251107" alt="BeeSmart Crest Logo" style="
+                <img src="/static/images/LogoBee&WordingTM.png?v=20251107" alt="BeeSmart Logo" style="
                     width: clamp(180px, 40vw, 320px);
                     height: auto;
                     margin: 6px auto 8px;

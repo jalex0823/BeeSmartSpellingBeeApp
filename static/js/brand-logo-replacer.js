@@ -4,7 +4,7 @@
  */
 (function(){
   const FALLBACK = '/static/images/LogoBee&WordingTM.png';
-  const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/images/BeeSmartCrestLogo1.png';
+  const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/images/LogoBee&WordingTM.png';
   const LEGACY_PATTERNS = [
     /BeeSmartLogo(?:2)?\.(png|jpg|svg)/i,
     /BeeSmartTitle\.(png|jpg|svg)/i,

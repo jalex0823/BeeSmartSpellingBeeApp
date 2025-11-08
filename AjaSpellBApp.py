@@ -2451,9 +2451,30 @@ def upload_to_saved_list():
 # --- Routes: UI --------------------------------------------------------------
 @app.route("/")
 def home():
+    """Ultra-light shell for root path that immediately forwards to /app.
+
+    This avoids any unexpected middleware or template interactions tied to the root
+    and guarantees a quick render with a 200, then a client redirect to the app.
+    """
+    from flask import make_response
+    body = """<!doctype html><html><head><meta charset='utf-8'>
+    <title>BeeSmart</title><meta http-equiv='refresh' content='0;url=/app'>
+    <meta name='robots' content='noindex'>
+    <style>body{font-family:Arial,sans-serif;padding:2rem;text-align:center}
+    img{max-width:260px;margin:1rem auto;display:block}</style></head>
+    <body>
+      <img src='/static/images/LogoBee&WordingTM.png' alt='BeeSmart Logo'>
+      <p>Loading BeeSmart… If not redirected, <a href='/app'>click here</a>.</p>
+      <script>try{window.location.replace('/app')}catch(e){}</script>
+    </body></html>"""
+    resp = make_response(body)
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
+
+@app.route("/app")
+def app_home():
     import time
     timestamp = str(int(time.time()))
-    # Force fresh HTML to avoid stale cached effects on the index page
     from flask import make_response
     # Pass subscription messaging to home for guest upsell
     billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
@@ -2504,6 +2525,39 @@ def home():
     )
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
+
+@app.route("/__test_home")
+def __test_home():
+    """Ultra-minimal home variant for debugging blank/403 issues.
+
+    Returns plain HTML without template logic to isolate external middleware / WAF
+    interference. If this returns 200 while `/` returns 403, the blockage is not
+    in Flask route code but an upstream rule targeting the root path specifically.
+    """
+    try:
+        from flask import make_response
+        body = """<!doctype html><html><head><title>BeeSmart Test Home</title></head>
+        <body style='font-family:Arial,sans-serif;padding:2rem;'>
+        <h1>BeeSmart Test Home ✅</h1>
+        <p>If you can see this, Flask routing works. Root path blockage likely external.</p>
+        <p>Timestamp: %s</p>
+        <img src='/static/images/LogoBee&WordingTM.png' alt='Logo' style='max-width:300px;'>
+        </body></html>""" % (int(time.time()))
+        resp = make_response(body)
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        return resp
+    except Exception as e:
+        return f"Test home error: {e}", 500
+
+@app.after_request
+def _debug_root_status(resp):
+    """Log status codes for root path to aid 403 diagnostics without altering response."""
+    try:
+        if request.path == '/':
+            print(f"DEBUG AFTER_REQUEST / status={resp.status_code}")
+    except Exception:
+        pass
     return resp
 
 @app.route("/test")
