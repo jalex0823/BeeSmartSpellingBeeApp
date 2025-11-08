@@ -3,6 +3,7 @@
  * If window.BeeSmartBrand.logoPath is set, uses that; otherwise falls back to BeeSmartCrestLogo1.png.
  */
 (function(){
+  const FALLBACK = '/static/images/LogoBee&WordingTM.png';
   const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/images/BeeSmartCrestLogo1.png';
   const LEGACY_PATTERNS = [
     /BeeSmartLogo(?:2)?\.(png|jpg|svg)/i,
@@ -71,6 +72,17 @@
 
   function run(){ swapImages(); swapFavicons(); swapBackgrounds(); }
 
+  // Ensure the crest target actually exists; if not, switch to fallback immediately
+  function verifyTargetThenRun(){
+    try {
+      const tester = new Image();
+      tester.onload = function(){ run(); installObserver(); };
+      tester.onerror = function(){ try { if (window.BeeSmartBrand) window.BeeSmartBrand.logoPath = FALLBACK; } catch(_){}
+        run(); installObserver(); };
+      tester.src = TARGET;
+    } catch(_){ run(); installObserver(); }
+  }
+
   function installObserver(){
     try {
       const obs = new MutationObserver((mutations)=>{
@@ -91,6 +103,6 @@
   }
 
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){ run(); installObserver(); });
-  } else { run(); installObserver(); }
+    document.addEventListener('DOMContentLoaded', function(){ verifyTargetThenRun(); });
+  } else { verifyTargetThenRun(); }
 })();

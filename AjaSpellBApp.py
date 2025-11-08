@@ -794,7 +794,9 @@ def _normalize_for_compare(word: str) -> str:
     return re.sub(r"[^0-9a-z]+", "", word.lower())
 
 
-def deduplicate_words(words: List[Dict | str]) -> List[Dict]:
+from typing import Union  # ensure Union available for Python <3.10 compatibility
+
+def deduplicate_words(words: List[Union[Dict, str]]) -> List[Dict]:
     """Dedupe words using normalization rules; preserve first occurrence and existing metadata.
     Accepts a list of strings or dicts with at least a 'word' key; returns a list of dicts.
     """
@@ -8925,7 +8927,8 @@ def api_get_avatars():
                 return candidate
             # 2) known aliases (e.g., DoctorBee -> DocBee consolidated to DocBee)
             # Support multiple alias candidates per base to handle spacing/hyphenation variants
-            aliases: dict[str, list[str] | str] = {
+            # Python 3.9 compatibility: use typing.Union instead of PEP 604 (|) unions
+            aliases: Dict[str, Union[List[str], str]] = {
                 'DocBee': ['DoctorBee'],
                 'FrankenBee': ['Franken Bee', 'Franken-Bee'],
             }
