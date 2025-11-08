@@ -27,6 +27,21 @@
         img.src = TARGET;
         if(!img.alt || !/logo/i.test(img.alt)) img.alt = 'BeeSmart Logo';
       }
+      // Handle srcset as well
+      const srcset = img.getAttribute('srcset');
+      if (matchesLegacy(srcset)) {
+        img.setAttribute('data-old-srcset', srcset);
+        img.setAttribute('srcset', TARGET);
+      }
+    });
+
+    // <picture><source> tags
+    document.querySelectorAll('source[srcset]').forEach(source => {
+      const ss = source.getAttribute('srcset');
+      if (matchesLegacy(ss)) {
+        source.setAttribute('data-old-srcset', ss);
+        source.setAttribute('srcset', TARGET);
+      }
     });
   }
 
@@ -39,9 +54,43 @@
     });
   }
 
-  function run(){ swapImages(); swapFavicons(); }
+  function swapBackgrounds(){
+    // Inline background-image styles only (avoid touching stylesheets)
+    document.querySelectorAll('[style*="background"]').forEach(el => {
+      const style = el.getAttribute('style') || '';
+      if (matchesLegacy(style)) {
+        el.setAttribute('data-old-bg', style);
+        // Replace any url(...) occurrences that match legacy with TARGET
+        const updated = style.replace(/url\(([^)]+)\)/gi, (m, p1) => {
+          return matchesLegacy(p1) ? `url(${TARGET})` : m;
+        });
+        el.setAttribute('style', updated);
+      }
+    });
+  }
+
+  function run(){ swapImages(); swapFavicons(); swapBackgrounds(); }
+
+  function installObserver(){
+    try {
+      const obs = new MutationObserver((mutations)=>{
+        let shouldRun = false;
+        for (const m of mutations) {
+          if (m.type === 'attributes') {
+            const name = m.attributeName || '';
+            if (name === 'src' || name === 'srcset' || name === 'style' || name === 'href') {
+              shouldRun = true; break;
+            }
+          }
+          if (m.type === 'childList' && (m.addedNodes && m.addedNodes.length)) { shouldRun = true; break; }
+        }
+        if (shouldRun) run();
+      });
+      obs.observe(document.documentElement || document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src','srcset','style','href'] });
+    } catch(_) {}
+  }
 
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', run);
-  } else { run(); }
+    document.addEventListener('DOMContentLoaded', function(){ run(); installObserver(); });
+  } else { run(); installObserver(); }
 })();
