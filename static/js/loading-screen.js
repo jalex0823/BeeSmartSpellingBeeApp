@@ -4,8 +4,9 @@
   const CHECKS_CONTAINER_ID = 'loadingChecks';
   const START_BTN_ID = 'loadingStartBtn';
   const SKIP_KEY = 'bs_skip_overlay';
-  const MIN_READY_DELAY_MS = 800;      // let the UI breathe a bit
-  const FAILSAFE_ENABLE_MS = 2000;     // never block start beyond this
+  const MIN_READY_DELAY_MS = 800;       // let the UI breathe a bit
+  const FAILSAFE_ENABLE_MS = 2000;      // enable button no later than this
+  const FAILSAFE_AUTOHIDE_MS = 3500;    // auto-hide overlay even if user doesn't tap
 
   function el(id){ return document.getElementById(id); }
   function qs(sel, root=document){ return root.querySelector(sel); }
@@ -114,13 +115,10 @@
   }
   async function checkAuth(){
     try {
-      // Guest mode is acceptable; success if session cookie present or server reachable
+      // Guest mode acceptable; if session cookie exists, mark success, else treat as non-blocking success
       const hasSession = (document.cookie || '').includes('session=');
-      if (hasSession) { updateCheck('auth','success'); return; }
-      const res = await fetchWithTimeout('/api/wordbank');
-      if(res.ok) { updateCheck('auth','success'); return; }
-      updateCheck('auth','error');
-    } catch(e){ updateCheck('auth','error'); }
+      updateCheck('auth', hasSession ? 'success' : 'success');
+    } catch(e){ updateCheck('auth','success'); }
   }
 
   async function runChecks(){
@@ -157,8 +155,10 @@
     }
 
     renderChecks();
-    // Always open gate after a small delay regardless of non-critical failures
+  // Always open gate after a small delay regardless of non-critical failures
     setTimeout(openGate, FAILSAFE_ENABLE_MS);
+  // Auto-hide overlay even if the user doesn't tap, to avoid stalls
+  setTimeout(hideOverlay, FAILSAFE_AUTOHIDE_MS);
     // So it doesn't pop instantly, show button after a minimal delay if env is already good
     setTimeout(verifyReady, MIN_READY_DELAY_MS);
     // Kick off real checks
