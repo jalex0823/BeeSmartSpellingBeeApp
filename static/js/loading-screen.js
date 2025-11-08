@@ -4,6 +4,8 @@
   const CHECKS_CONTAINER_ID = 'loadingChecks';
   const START_BTN_ID = 'loadingStartBtn';
   const SKIP_KEY = 'bs_skip_overlay';
+  const MIN_READY_DELAY_MS = 800;      // let the UI breathe a bit
+  const FAILSAFE_ENABLE_MS = 2000;     // never block start beyond this
 
   function el(id){ return document.getElementById(id); }
   function qs(sel, root=document){ return root.querySelector(sel); }
@@ -20,7 +22,8 @@
 
   const checks = [
     { id:'env', label:'Environment ready', status:'pending' },
-    { id:'dictionary', label:'Dictionary cache warmed', status:'pending' },
+    // Dictionary is bundled in-app; this is a non-blocking informational check
+    { id:'dictionary', label:'Dictionary (built-in)', status:'pending' },
     { id:'avatars', label:'Avatars prepared', status:'pending' },
     { id:'quiz', label:'Quiz engine primed', status:'pending' },
     { id:'auth', label:'Session ready', status:'pending' }
@@ -50,11 +53,19 @@
     verifyReady();
   }
 
-  function verifyReady(){
-    const allOk = checks.every(c => c.status === 'success');
+  let gateOpened = false;
+  function openGate(){
+    if (gateOpened) return true;
+    gateOpened = true;
     const btn = el(START_BTN_ID);
-    if(btn){ btn.disabled = !allOk; if(allOk) btn.classList.add('pulse-btn'); }
-    return allOk;
+    if (btn) { btn.disabled = false; btn.classList.add('pulse-btn'); }
+    return true;
+  }
+  function verifyReady(){
+    // So we don't block on non-critical checks, allow gate open if env is OK or after failsafe timer
+    const envOk = checks.find(c=>c.id==='env')?.status === 'success';
+    if (envOk) return openGate();
+    return gateOpened;
   }
 
   async function fetchWithTimeout(url, opts={}, timeoutMs=3000){
@@ -77,12 +88,8 @@
     } catch(e){ updateCheck('env','error'); }
   }
   async function checkDictionary(){
-    try {
-      const res = await fetchWithTimeout('/api/wordbank');
-      if(!res.ok) throw new Error('wordbank not ok');
-      await res.json().catch(()=>({}));
-      updateCheck('dictionary','success');
-    } catch(e){ updateCheck('dictionary','error'); }
+    // Dictionary is bundled into the app; mark as success without network calls
+    updateCheck('dictionary','success');
   }
   async function checkAvatars(){
     try {
@@ -150,16 +157,20 @@
     }
 
     renderChecks();
+    // Always open gate after a small delay regardless of non-critical failures
+    setTimeout(openGate, FAILSAFE_ENABLE_MS);
+    // So it doesn't pop instantly, show button after a minimal delay if env is already good
+    setTimeout(verifyReady, MIN_READY_DELAY_MS);
     // Kick off real checks
     runChecks().then(()=>{
-      // If everything is green and user hasn't clicked yet, allow auto-enable
+      // If environment is fine, ensure the button is enabled now
       verifyReady();
     });
 
     const btn = el(START_BTN_ID);
     if(btn){
       btn.addEventListener('click', function(){
-        if(btn.disabled) return;
+        if(btn.disabled) return; // unlikely with gate
         try { localStorage.setItem(SKIP_KEY, '1'); } catch(_){ }
         hideOverlay();
         // Accessibility: move focus to first focusable element in main
