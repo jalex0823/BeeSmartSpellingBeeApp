@@ -4004,8 +4004,8 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            // Speak a friendly prompt and the word twice
-            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+            // Speak a friendly prompt and the word once (removed duplicate echo)
+            const phrase = `Spell the word ${data.word}.`;
             const rate = data.rate || 0.92; // Use provided rate or default
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
@@ -4136,8 +4136,14 @@ class QuizManager {
         this.isAnswering = false;
         this.lastPronounceData = null;
         this.currentWordData = null;
-        this.totalWords = 0;
-        this.quizStarted = false;
+    this.totalWords = 0;
+    this.quizStarted = false;
+    // Local UI counters (kept in sync from backend responses)
+    this.correctCount = 0;
+    this.incorrectCount = 0;
+    // Configurable speech sequence tuning
+    this.skipWordPreface = localStorage.getItem('skipWordPreface') === 'true';
+    this.pronounceBusy = false; // guard against rapid pronounce spam
         
         // ⏱️ Countdown Timer Settings (Updated to 60s with auto-advance)
         this.timerEnabled = true; // Can be toggled in settings
@@ -5090,7 +5096,7 @@ class QuizManager {
         return durations[this.timerMode] || 60; // Default to 60s
     }
     
-    handleTimerExpired() {
+    async handleTimerExpired() {
         console.log('⏰ Timer expired! Auto-advancing to next word...');
         
         // Mark as incorrect/missed
@@ -5105,6 +5111,23 @@ class QuizManager {
         
         // Speak the timeout message
         this.speakAnnouncement('Times up! Moving to the next word.');
+
+        // Record timeout as incorrect with backend to advance server-side index
+        try {
+            const resp = await fetch('/api/answer', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_input: '',
+                    method: 'timeout',
+                    elapsed_ms: (this.getTimerDuration() * 1000) || 0
+                })
+            });
+            console.log('⏱️ Timeout recorded with backend status:', resp.status);
+        } catch (e) {
+            console.warn('⚠️ Failed to record timeout with backend:', e);
+        }
         
         // Update stats display
         this.updateScoreDisplay({
@@ -5832,33 +5855,27 @@ class QuizManager {
 
             // Announce the word like a real spelling bee, then pronounce it
             if (questionNumber === 1) {
-                // First word already announced in intro
                 await this.pronounceWord({ refresh: true });
             } else {
-                // If this is the last word, announce it before giving the word
-                if (this.totalWords && questionNumber === this.totalWords) {
+                if (this.totalWords && questionNumber === this.totalWords && !this.skipWordPreface) {
                     const namePart = (this.studentName || '').trim();
                     const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                     await this.speakAnnouncement(preface);
                 }
-                // Subsequent words: consistent phrasing for clarity
-                const phrase = `Your next word is: ${data.word}`;
-                await this.speakAnnouncement(phrase);
-                
-                // Brief visual pause between phases, then auto‑pronounce
-                {
+                if (!this.skipWordPreface) {
+                    const phrase = `Your next word is: ${data.word}`;
+                    await this.speakAnnouncement(phrase);
                     const visualizer = document.getElementById('voiceVisualizer');
                     const status = document.getElementById('voiceStatus');
                     if (visualizer && status) {
                         visualizer.classList.add('pausing');
                         status.textContent = '⏸️ Pause...';
                     }
-                    await new Promise(r => setTimeout(r, 500));
+                    await new Promise(r => setTimeout(r, 350));
                     if (visualizer && status) {
                         visualizer.classList.remove('pausing');
                     }
                 }
-                
                 await this.pronounceWord();
             }
 
@@ -6095,6 +6112,11 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
+            if (this.pronounceBusy) {
+                console.log('🔁 Pronounce ignored (busy)');
+                return;
+            }
+            this.pronounceBusy = true;
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
@@ -6122,6 +6144,7 @@ class QuizManager {
                             visualizer.classList.remove('speaking');
                             status.textContent = '🐝 Ready';
                         }
+                        this.pronounceBusy = false;
                         resolve();
                     };
                     // Prefer delight handler when available, otherwise speak directly
@@ -6130,20 +6153,21 @@ class QuizManager {
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                            const phrase = `Spell the word ${data.word}.`;
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word ${data.word}.`;
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word ${data.word}.`;
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
             } else {
                 console.warn('No word data available for pronunciation');
+                this.pronounceBusy = false;
             }
         } catch (error) {
             console.error('Unable to pronounce word:', error);
@@ -6155,6 +6179,7 @@ class QuizManager {
                 visualizer.classList.remove('speaking');
                 status.textContent = '🐝 Ready';
             }
+            this.pronounceBusy = false;
         }
     }
 
