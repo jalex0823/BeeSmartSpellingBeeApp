@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
+    <script>window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartCrestLogo1.png?v=20251107' };</script>
+    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
@@ -2146,7 +2148,7 @@
         ">🎤 Voice input ready</div>
         <!-- Brand Logo with TM (replaces emoji bee) -->
         <img
-            src="{{ url_for('static', filename='images/LogoBee&WordingTM.png') }}"
+            src="/static/images/BeeSmartCrestLogo1.png?v=20251107"
             alt="BeeSmart Spelling Bee Application™ logo"
             style="
                 width: clamp(260px, 65vw, 560px);
@@ -2462,7 +2464,7 @@
                 </div>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <img src="{{ url_for('static', filename='images/LogoBee&WordingTM.png') }}" alt="BeeSmart Logo™" style="
+                <img src="/static/images/BeeSmartCrestLogo1.png?v=20251107" alt="BeeSmart Crest Logo" style="
                     width: clamp(180px, 40vw, 320px);
                     height: auto;
                     margin: 6px auto 8px;
