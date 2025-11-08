@@ -4975,10 +4975,16 @@ class QuizManager {
                 definition: data.definition || ''
             };
 
-            // DISABLE input until timer starts
-            document.getElementById('spellingInput').disabled = true;
-            document.getElementById('spellingInput').value = '';
-            document.getElementById('spellingInput').placeholder = 'Wait for timer...';
+            // ENABLE input immediately (no wait for timer)
+            (function(){
+                const si = document.getElementById('spellingInput');
+                if (si) {
+                    si.disabled = false;
+                    si.value = '';
+                    si.placeholder = 'Type your answer...';
+                    si.focus();
+                }
+            })();
 
             // If this first question is also the last, announce that explicitly
             if (data.total && questionNumber === data.total) {
@@ -5897,11 +5903,12 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // DISABLE input until timer starts
+            // ENABLE input immediately (no wait for timer)
             const spellingInput = document.getElementById('spellingInput');
-            spellingInput.disabled = true;
+            spellingInput.disabled = false;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Wait for timer...';
+            spellingInput.placeholder = 'Type your answer...';
+            spellingInput.focus();
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
