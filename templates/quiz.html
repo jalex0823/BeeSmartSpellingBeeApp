@@ -3262,7 +3262,7 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.92) {
+    speakWord(word, onEndCallback = null, rate = null) {
         if (!word || !('speechSynthesis' in window)) {
             if (onEndCallback) onEndCallback();
             return;
@@ -3272,9 +3272,12 @@ class BeeSoundboard {
         
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.35;
-            utterance.rate = rate; // Use provided rate instead of fixed 0.92
-            utterance.volume = 0.9;
+            // Natural quiz pacing; allow optional external override via window.QUIZ_TTS_* vars.
+            const QUIZ_TTS_RATE = (window.QUIZ_TTS_RATE || 1.0);
+            const QUIZ_TTS_PITCH = (window.QUIZ_TTS_PITCH || 1.0);
+            utterance.pitch = QUIZ_TTS_PITCH;
+            utterance.rate = (rate === null ? QUIZ_TTS_RATE : rate);
+            utterance.volume = 1.0;
             utterance.text = word;
             
             // Visualizer elements
@@ -4423,9 +4426,11 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.0;  // Normal speed for US English
-                utterance.pitch = 1.1;
-                utterance.volume = 0.85;
+                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
+                const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
+                utterance.rate = QUIZ_TTS_RATE;
+                utterance.pitch = QUIZ_TTS_PITCH;
+                utterance.volume = 1.0;
                 
                 // Cache the selected voice to ensure consistency using enhanced selection
                 if (!this.cachedVoice) {
@@ -4696,9 +4701,11 @@ class QuizManager {
                     // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
                     speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(introMessage);
-                    utterance.rate = 0.95;
-                    utterance.pitch = 1.1;
-                    utterance.volume = 0.9;
+                    const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
+                    const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
+                    utterance.rate = QUIZ_TTS_RATE;
+                    utterance.pitch = QUIZ_TTS_PITCH;
+                    utterance.volume = 1.0;
                     
                     utterance.onend = () => {
                         console.log('✅ iOS intro voice completed successfully');
@@ -6154,9 +6161,11 @@ class QuizManager {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = rate;
-                utterance.pitch = 1.0;
-                utterance.volume = 0.9;
+                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || rate || 1.0;
+                const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
+                utterance.rate = QUIZ_TTS_RATE;
+                utterance.pitch = QUIZ_TTS_PITCH;
+                utterance.volume = 1.0;
                 
                 // Use the same female voice selection as other speech methods
                 if (this.cachedVoice) {

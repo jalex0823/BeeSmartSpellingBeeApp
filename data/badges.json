@@ -1,0 +1,51 @@
+{
+  "perfect_game": {
+    "icon": "🌟",
+    "name": "Perfect Game",
+    "description": "100% accuracy, no hints, no mistakes",
+    "rarity": "epic",
+    "points": 500
+  },
+  "speed_demon": {
+    "icon": "⚡",
+    "name": "Speed Demon",
+    "description": "Average answer time < 10 seconds",
+    "rarity": "rare",
+    "points": 200
+  },
+  "persistent_learner": {
+    "icon": "📚",
+    "name": "Persistent Learner",
+    "description": "Complete 50+ words in one session",
+    "rarity": "rare",
+    "points": 150
+  },
+  "hot_streak": {
+    "icon": "🔥",
+    "name": "Hot Streak",
+    "description": "10+ correct answers in a row",
+    "rarity": "common",
+    "points": 100
+  },
+  "comeback_kid": {
+    "icon": "🎯",
+    "name": "Comeback Kid",
+    "description": "Succeed after multiple wrong attempts",
+    "rarity": "rare",
+    "points": 100
+  },
+  "honey_hunter": {
+    "icon": "🍯",
+    "name": "Honey Hunter",
+    "description": "Use hints wisely (< 20% of words)",
+    "rarity": "common",
+    "points": 75
+  },
+  "early_bird": {
+    "icon": "🐝",
+    "name": "Early Bird",
+    "description": "Complete quiz in under 5 minutes",
+    "rarity": "common",
+    "points": 50
+  }
+}

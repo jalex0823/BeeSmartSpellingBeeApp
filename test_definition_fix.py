@@ -68,15 +68,25 @@ with app.test_client() as client:
     # Get wordbank data
     response = client.get('/api/wordbank')
     if response.status_code == 200:
-        wordbank = response.get_json()
+        # /api/wordbank returns a list of word dicts directly (not a wrapper object)
+        try:
+            wordbank = response.get_json()
+        except Exception:
+            print("  ❌ Failed to parse JSON wordbank response")
+            wordbank = []
         print(f"  ✅ Got wordbank with {len(wordbank)} words")
-        
-        for word_rec in wordbank[:3]:
+
+        # Safely iterate first 3 word dicts if shape matches
+        sample = wordbank[:3] if isinstance(wordbank, list) else []
+        for word_rec in sample:
+            if not isinstance(word_rec, dict):
+                print("    ❌ Unexpected item (not dict), skipping")
+                continue
             word = word_rec.get('word', 'N/A')
             sentence = word_rec.get('sentence', 'N/A')[:70]
             print(f"\n    [{word}]")
             print(f"      sentence: {sentence}...")
-            
+
             # Check for placeholders
             if "A placeholder definition" in sentence:
                 print(f"      ❌ FAILED: Contains placeholder!")

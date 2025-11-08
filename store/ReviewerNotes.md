@@ -16,7 +16,7 @@ Add final credentials in the App Store Connect and Play Console private notes. I
 4) Try OCR: import a sample worksheet image and confirm words are added
 
 ## Networking and Availability
-- Health endpoint: https://beesmartspelling.app/health (returns version v1.6)
+- Health endpoint: https://beesmartspelling.app/health (returns version v1.7)
 - Please ensure the server is reachable during review hours.
 
 ## Permissions Rationale

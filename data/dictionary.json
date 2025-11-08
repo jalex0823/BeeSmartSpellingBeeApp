@@ -596,12 +596,35 @@
       "pos": "noun",
       "source": "api",
       "created": "2025-10-24T21:24:58.869133"
+    },
+    "running": {
+      "definition": "To move swiftly",
+      "example": "The children are _____ at the playground",
+      "phonetic": "/ˈɹʌnɪŋ/",
+      "pos": "verb",
+      "source": "api",
+      "created": "2025-11-08T13:53:20.798623"
+    },
+    "happy": {
+      "definition": "A happy event, thing, person, etc",
+      "example": "The teacher explained what _____ means to the class",
+      "phonetic": "/ˈhæpiː/",
+      "pos": "noun",
+      "source": "api",
+      "created": "2025-11-08T13:53:21.235236"
+    },
+    "example: she sang the song with great _____ and made everyone smile.": {
+      "definition": "Practice spelling this 68-letter word",
+      "example": "Listen carefully and spell _____ correctly",
+      "source": "generic_fallback",
+      "note": "Definition not available - focus on correct spelling",
+      "created": "2025-11-08T14:54:43.098892"
     }
   },
   "stats": {
-    "total_words": 76,
+    "total_words": 79,
     "api_calls": 0,
     "cache_hits": 0
   },
-  "last_updated": "2025-10-24T21:24:58.870881"
+  "last_updated": "2025-11-08T14:54:43.102990"
 }
