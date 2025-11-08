@@ -281,64 +281,17 @@
                 <a href="/auth/logout" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 600; transition: transform 0.2s;">
                     🚪 Logout
                 </a>
-                <!-- Bundle Keys Management (DB) -->
+                <!-- BeeKey Request Information -->
                 <div style="width: 100%; text-align: left; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
                     <h3 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; display:flex; align-items:center; gap:0.5rem;">
-                        🎁 Bundle Keys
-                        <a href="https://github.com/jalex0823/BeeSmartSpellingBeeApp/blob/main/BEEKEY_INFO_AND_PACKS.md" target="_blank" rel="noopener" style="font-size:0.8rem; font-weight:600; color:#2563eb; text-decoration:underline;">Docs</a>
+                        🎁 Request BeeKeys
                     </h3>
-                    <div style="margin: 0.25rem 0 0.75rem 0; color: #555; font-size: 0.9rem;">BeeKeys are generated packs of 4 avatars. Create a key, share the code, and track redemptions.</div>
-                    <div style="display: grid; gap: 0.5rem; grid-template-columns: 1fr 1fr 1fr auto; align-items: end;">
-                        <div>
-                            <label style="display:block; font-size: 0.8rem; color: #555;">Bundle</label>
-                            <select id="bk-bundle" style="width: 100%; padding: 0.5rem;">
-                                {% for bid, cfg in BUNDLE_CATALOG.items() %}
-                                  <option value="{{ bid }}">{{ cfg.name or bid }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size: 0.8rem; color: #555;">Max uses</label>
-                            <input id="bk-uses" type="number" min="1" value="1" style="width: 100%; padding: 0.5rem;" />
-                        </div>
-                        <div>
-                            <label style="display:block; font-size: 0.8rem; color: #555;">Expires (days)</label>
-                            <input id="bk-exp" type="number" min="0" value="0" style="width: 100%; padding: 0.5rem;" />
-                        </div>
-                        <button id="bk-create" class="copy-btn" style="padding: 0.6rem 1rem;">Create</button>
+                    <div style="margin: 0.25rem 0 0.75rem 0; color: #555; font-size: 0.9rem;">
+                        BeeKeys unlock special avatar packs for your students or family. To request a BeeKey pack, please contact us through the form on our website.
                     </div>
-                    <div style="margin-top: 0.75rem; background: #fff; border: 1px dashed #ddd; padding: 0.75rem; border-radius: 8px;">
-                        <div style="display:flex; gap:0.5rem; align-items: end;">
-                            <div style="flex:2">
-                                <label style="display:block; font-size: 0.8rem; color: #555;">BeeKey Pack Name</label>
-                                <input id="pk-name" type="text" placeholder="BeeKey Pack" style="width:100%; padding:0.5rem" />
-                            </div>
-                            <div style="flex:3">
-                                <label style="display:block; font-size: 0.8rem; color: #555;">Avatar IDs (comma-separated, optional)</label>
-                                <input id="pk-avatars" type="text" placeholder="queen-bee, superbee, knight-bee, rocker-bee" style="width:100%; padding:0.5rem" />
-                            </div>
-                            <div style="flex:none">
-                                <button id="pk-generate" class="copy-btn" style="padding: 0.6rem 1rem;">Generate BeeKey (4-pack)</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="bk-msg" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
-                    <div style="max-height: 220px; overflow: auto; margin-top: 0.5rem;">
-                        <table style="width:100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background:#f3f4f6;">
-                                    <th style="padding:0.5rem; text-align:left;">Key</th>
-                                    <th style="padding:0.5rem; text-align:left;">Bundle</th>
-                                    <th style="padding:0.5rem; text-align:center;">Uses</th>
-                                    <th style="padding:0.5rem; text-align:center;">Status</th>
-                                    <th style="padding:0.5rem; text-align:center;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bk-list">
-                                <!-- populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
+                    <a href="https://beesmartspelling.app/contact" target="_blank" rel="noopener" style="display: inline-block; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                        📧 Request BeeKey Pack
+                    </a>
                 </div>
             </div>
             <div style="margin-top: 0.875rem;">
@@ -359,79 +312,8 @@
 </div>
 
         <script>
-        async function loadBundleKeys(){
-            const res = await fetch('/api/admin/bundle-keys');
-            const data = await res.json();
-            const list = document.getElementById('bk-list');
-            if(!list) return;
-            list.innerHTML='';
-            if(!data.success){ list.innerHTML = `<tr><td colspan=5 style="padding:0.75rem; color:#b91c1c;">Failed to load keys</td></tr>`; return; }
-            for(const r of (data.bundle_keys||[])){
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style=\"padding:0.5rem; font-family:monospace;\">${r.key_raw}</td>
-                    <td style=\"padding:0.5rem;\">${r.bundle_id}</td>
-                    <td style=\"padding:0.5rem; text-align:center;\">${r.uses_count}/${r.max_uses}</td>
-                    <td style=\"padding:0.5rem; text-align:center;\">${r.status}</td>
-                    <td style=\"padding:0.5rem; text-align:center;\">
-                        <button data-id=\"${r.id}\" class=\"bk-revoke\" ${r.status!=='active'?'disabled':''}>Revoke</button>
-                    </td>`;
-                list.appendChild(tr);
-            }
-            for(const btn of document.querySelectorAll('.bk-revoke')){
-                btn.addEventListener('click', async (e)=>{
-                    const id = e.currentTarget.getAttribute('data-id');
-                    const resp = await fetch(`/api/admin/bundle-keys/${id}/revoke`, { method:'POST' });
-                    const body = await resp.json();
-                    const msg = document.getElementById('bk-msg');
-                    if(body.success){ msg.textContent = 'Key revoked'; msg.style.color = '#065f46'; loadBundleKeys(); }
-                    else { msg.textContent = body.error || 'Revoke failed'; msg.style.color = '#991b1b'; }
-                });
-            }
-        }
-        document.addEventListener('DOMContentLoaded', ()=>{
-            const createBtn = document.getElementById('bk-create');
-            if(createBtn){
-                createBtn.addEventListener('click', async ()=>{
-                    const bundle_id = document.getElementById('bk-bundle').value;
-                    const max_uses = parseInt(document.getElementById('bk-uses').value||'1',10);
-                    const expires_days = parseInt(document.getElementById('bk-exp').value||'0',10);
-                    const resp = await fetch('/api/admin/bundle-keys', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ bundle_id, max_uses, expires_days }) });
-                    const body = await resp.json();
-                    const msg = document.getElementById('bk-msg');
-                    if(body.success){
-                        msg.textContent = `Created: ${body.bundle_key.key_raw}`;
-                        msg.style.color = '#065f46';
-                        loadBundleKeys();
-                    } else {
-                        msg.textContent = body.error || 'Create failed';
-                        msg.style.color = '#991b1b';
-                    }
-                });
-            }
-                    const genBtn = document.getElementById('pk-generate');
-                    if(genBtn){
-                        genBtn.addEventListener('click', async ()=>{
-                            const name = document.getElementById('pk-name').value || 'BeeKey Pack';
-                            const avatarsRaw = document.getElementById('pk-avatars').value || '';
-                            const max_uses = parseInt(document.getElementById('bk-uses').value||'1',10);
-                            const expires_days = parseInt(document.getElementById('bk-exp').value||'0',10);
-                            const avatar_ids = avatarsRaw.split(',').map(s=>s.trim()).filter(Boolean);
-                            const resp = await fetch('/api/admin/bee-keys/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, avatar_ids, max_uses, expires_days }) });
-                            const body = await resp.json();
-                            const msg = document.getElementById('bk-msg');
-                            if(body.success){
-                                msg.textContent = `BeeKey created: ${body.bundle_key.key_raw} → ${body.bundle.bundle_id}`;
-                                msg.style.color = '#065f46';
-                                loadBundleKeys();
-                            } else {
-                                msg.textContent = body.error || 'Generate failed';
-                                msg.style.color = '#991b1b';
-                            }
-                        });
-                    }
-            loadBundleKeys();
-        });
+        // BeeKey generation is handled through the website contact form
+        // No admin generation UI needed
         </script>
 
 <style>

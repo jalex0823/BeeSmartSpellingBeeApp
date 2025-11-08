@@ -6126,6 +6126,7 @@ def register():
     email = data.get('email', '').strip()
     grade_level = data.get('grade_level', '')
     teacher_key = data.get('teacher_key', '').strip()
+    beekey = data.get('beekey', '').strip()  # New: BeeKey for avatar pack redemption
     avatar_id = data.get('avatar_id', 'mascot-bee').strip()  # Default to mascot-bee
     role = data.get('role', 'student').strip().lower()  # Get role from form (student, teacher, parent)
 
@@ -6238,6 +6239,95 @@ def register():
         # Auto-login after registration
         login_user(new_user, remember=True)
 
+        # Redeem BeeKey if provided
+        beekey_result = None
+        if beekey:
+            try:
+                norm_beekey = re.sub(r"\s+", "", beekey).upper()
+                
+                # Try DB-managed BeeKey first
+                bundle_key_row = BundleKey.query.filter_by(key_norm=norm_beekey).first()
+                bundle_id = None
+                bundle_name = None
+                avatars = []
+                source = 'legacy'
+                
+                if bundle_key_row:
+                    source = 'db'
+                    can, reason = bundle_key_row.can_redeem()
+                    if can:
+                        bundle_id = bundle_key_row.bundle_id
+                    else:
+                        beekey_result = {"success": False, "error": f"BeeKey invalid or expired: {reason}"}
+                else:
+                    # Fallback to legacy in-memory keys
+                    if isinstance(REDEEMABLE_KEYS, dict):
+                        bundle_id = REDEEMABLE_KEYS.get(norm_beekey)
+                
+                if bundle_id and not beekey_result:
+                    # Resolve bundle config
+                    bundle_cfg = (BUNDLE_CATALOG or {}).get(bundle_id) or {}
+                    if not bundle_cfg:
+                        try:
+                            dyn = DynamicBundle.query.filter_by(bundle_id=bundle_id).first()
+                            if dyn:
+                                bundle_cfg = {'name': dyn.name, 'avatars': list(dyn.avatars or [])}
+                        except Exception:
+                            pass
+                    
+                    avatars = list(bundle_cfg.get('avatars', []) or [])
+                    bundle_name = bundle_cfg.get('name') or bundle_id
+                    
+                    # Apply entitlement
+                    product_id = f"bundle:{bundle_id}"
+                    if product_id not in PRODUCT_MAP:
+                        PRODUCT_MAP[product_id] = {'type': 'bundle', 'bundle_id': bundle_id, 'avatars': avatars}
+                    
+                    res = _apply_entitlement(new_user, product_id)
+                    
+                    # Record DB key usage if applicable
+                    if bundle_key_row:
+                        try:
+                            bundle_key_row.apply_use(new_user.id)
+                            db.session.add(bundle_key_row)
+                            trace = BundleKeyRedemption(
+                                bundle_key_id=bundle_key_row.id,
+                                user_id=new_user.id,
+                                bundle_id=bundle_id,
+                                ip_address=request.remote_addr,
+                                user_agent=request.headers.get('User-Agent', '')[:300]
+                            )
+                            db.session.add(trace)
+                        except Exception as e:
+                            print(f"⚠️ Failed to record BeeKey usage: {e}")
+                    
+                    # Log purchase record
+                    try:
+                        rec = PurchaseRecord(
+                            user_id=new_user.id,
+                            platform='web',
+                            product_id=product_id,
+                            status='verified',
+                            transaction_id=None,
+                            purchase_token=None,
+                            raw_payload={'redeemed_key': norm_beekey, 'bundle_id': bundle_id, 'apply_result': res}
+                        )
+                        db.session.add(rec)
+                    except Exception as e:
+                        print(f"⚠️ Failed to log purchase record: {e}")
+                    
+                    try:
+                        db.session.commit()
+                        beekey_result = {"success": True, "bundle_id": bundle_id, "bundle_name": bundle_name, "source": source}
+                    except Exception as e:
+                        db.session.rollback()
+                        beekey_result = {"success": False, "error": f"Failed to save BeeKey redemption: {str(e)}"}
+                elif not beekey_result:
+                    beekey_result = {"success": False, "error": "Invalid BeeKey"}
+            except Exception as e:
+                print(f"⚠️ BeeKey redemption error: {e}")
+                beekey_result = {"success": False, "error": str(e)}
+
         # Send welcome email asynchronously (best-effort) if email provided
         if new_user.email:
             def _send_async():
@@ -6254,6 +6344,10 @@ def register():
         if linked_to_admin and admin_name:
             message += f"\n\n✅ You've been linked to {admin_name}'s dashboard for progress tracking!"
         
+        # Add BeeKey redemption confirmation if successful
+        if beekey_result and beekey_result.get('success'):
+            message += f"\n\n🎁 BeeKey redeemed! You've unlocked the '{beekey_result.get('bundle_name', 'Special Pack')}' avatar pack!"
+        
         # Determine redirect based on role
         if role == 'teacher':
             redirect_url = url_for('teacher_dashboard')
@@ -6269,6 +6363,10 @@ def register():
             "linked_to_admin": linked_to_admin,
             "admin_name": admin_name if linked_to_admin else None
         }
+        
+        # Include BeeKey result in response
+        if beekey_result:
+            response_data["beekey"] = beekey_result
         
         # Include the generated key in response for teachers/parents
         if generated_key:
