@@ -114,9 +114,14 @@ function renderHoneycombGrid(avatarsToRender) {
         thumbDiv.id = `hex-thumb-${avatar.id}`;
         
         // Name label
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'avatar-hex-name';
-        nameDiv.textContent = avatar.name;
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'avatar-hex-name';
+    nameDiv.textContent = avatar.name;
+    // Accessibility + tooltip for optional label hiding scenarios
+    nameDiv.setAttribute('title', avatar.name);
+    hexContainer.setAttribute('aria-label', avatar.name);
+    hexContainer.setAttribute('role', 'button');
+    hexContainer.setAttribute('tabindex', '0');
         
         hexContainer.appendChild(thumbDiv);
         hexContainer.appendChild(nameDiv);
@@ -240,7 +245,7 @@ function updatePreview() {
     }
     
     preview.innerHTML = `
-        <div class="preview-avatar-name">${selectedAvatar.name}</div>
+        <div class="preview-avatar-name" title="${selectedAvatar.name}">${selectedAvatar.name}</div>
         <div class="preview-avatar-render" id="previewRender"></div>
         <div class="preview-avatar-description">${selectedAvatar.description || 'A wonderful bee companion!'}</div>
         <button class="preview-select-button" onclick="saveSelectedAvatar()">

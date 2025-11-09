@@ -340,6 +340,16 @@
         </div>
 
         <div class="form-group">
+          <label for="beekey">BeeKey Pack Code <span class="optional">(optional)</span></label>
+          <input type="text" id="beekey" name="beekey" placeholder="BEE-PACK-2025-XXXX" maxlength="50" style="text-transform: uppercase;">
+          <div class="teacher-info-box">
+            <strong>🎁 Got a BeeKey?</strong> 
+            If your teacher or school gave you a special BeeKey code (like <code>BEE-SCIENCE-2025-ABC123</code>), enter it here! 
+            This will unlock a special pack of avatars just for you. ✨
+          </div>
+        </div>
+
+        <div class="form-group">
           <label>Choose Your Bee Avatar 🐝 <span class="required">*</span></label>
           <div class="avatar-selection-container">
             <div class="avatar-grid" id="avatarGrid"></div>
@@ -544,8 +554,9 @@ registerForm.addEventListener('submit', async function(e) {
         email: document.getElementById('email').value.trim(),
         grade_level: document.getElementById('grade').value,
         teacher_key: document.getElementById('teacher_key').value.trim(),
-    avatar_id: document.getElementById('selected_avatar').value,  // Fixed: was 'avatar', should be 'avatar_id'
-    fee_consent: !!(document.getElementById('feeConsent')?.checked)
+        beekey: document.getElementById('beekey').value.trim(),  // New: BeeKey for avatar pack
+        avatar_id: document.getElementById('selected_avatar').value,  // Fixed: was 'avatar', should be 'avatar_id'
+        fee_consent: !!(document.getElementById('feeConsent')?.checked)
     };
     
     console.log('📝 Form data:', { ...formPayload, password: '***' });
@@ -569,6 +580,19 @@ registerForm.addEventListener('submit', async function(e) {
       // The backend auto-logs in the user on success
       window.IS_AUTH = true;
             showAlert('success', data.message || '🎉 Account created successfully! Welcome to BeeSmart! 🐝');
+            
+            // Show BeeKey redemption confirmation if applicable
+            if (data.beekey && data.beekey.success) {
+                console.log('🎁 BeeKey redeemed:', data.beekey);
+                // Show additional success message about BeeKey
+                const bundleName = data.beekey.bundle_name || 'Special Pack';
+                const beeKeyMsg = document.createElement('div');
+                beeKeyMsg.className = 'alert alert-success';
+                beeKeyMsg.style.marginTop = '1rem';
+                beeKeyMsg.textContent = `🎁 Awesome! You've unlocked the "${bundleName}" avatar pack!`;
+                document.getElementById('alert-container').appendChild(beeKeyMsg);
+            }
+            
             createConfetti();
             playSuccessSound();
             

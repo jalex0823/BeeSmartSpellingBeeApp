@@ -105,7 +105,8 @@
 
 /* Avatar name label */
 .avatar-hex-name {
-    margin-top: 0.5rem;
+    /* Increase vertical separation from the avatar base/podium */
+    margin-top: 0.75rem;
     font-size: 0.9rem;
     font-weight: 600;
     color: #FFD700;
@@ -278,6 +279,8 @@
     
     .avatar-hex-name {
         font-size: 0.75rem;
+        /* Maintain a bit of breathing room on small screens */
+        margin-top: 0.6rem;
     }
     
     .preview-avatar-render {

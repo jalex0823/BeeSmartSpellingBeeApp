@@ -1,12 +1,12 @@
 {
-  "name": "BeeSmart Spelling Bee",
+  "name": "BeeSmart Spelling App",
   "short_name": "BeeSmart",
-  "description": "A kid-friendly spelling practice app with uploads, quizzes, avatars, and dictionary help.",
-  "start_url": "/?source=pwa",
+  "description": "Spelling practice with friendly avatars and quizzes.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FFF8DC",
+  "background_color": "#0a0a0a",
   "theme_color": "#FFD700",
   "icons": [
     {
@@ -19,7 +19,13 @@
       "src": "/static/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/maskable-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -19,12 +19,16 @@ Note: Admin users and premium accounts can override unlock requirements.
 """
 
 import os
+import json
+from pathlib import Path
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Optional
 
 # Avatar Catalog: All 24 Bee Types
 # Each entry includes folder name, specific file names, and monetization data
-AVATAR_CATALOG = [
+# Inline catalog (legacy). Can be externalized to data/avatar_catalog.json.
+# To avoid disruption, we keep this as the fallback unless USE_EXTERNAL_AVATAR_CATALOG=1.
+AVATAR_CATALOG: List[Dict] = [
     {
         "id": "al-bee",
         "name": "Al Bee",
@@ -462,21 +466,74 @@ BUNDLE_PRICING = {
 }
 
 # Helper functions for monetization tiers
+_CATALOG_LOADED: Optional[List[Dict]] = None
+_CATALOG_SOURCE: str = "inline"
+
+def _load_external_catalog() -> Optional[List[Dict]]:
+    """Attempt to load avatar catalog from JSON file.
+    Returns list if successful, else None. Non-fatal on errors."""
+    catalog_path = Path("data/avatar_catalog.json")
+    if not catalog_path.exists():
+        return None
+    try:
+        with catalog_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return data
+    except Exception as e:
+        if os.environ.get("APP_DEBUG_STARTUP"):
+            print(f"⚠️ External avatar catalog load failed: {e}")
+    return None
+
+def get_avatar_catalog() -> List[Dict]:
+    """Public accessor with lazy loading and optional external override.
+    Usage: from avatar_catalog import get_avatar_catalog instead of AVATAR_CATALOG for future-proofing.
+    """
+    global _CATALOG_LOADED, _CATALOG_SOURCE
+    if _CATALOG_LOADED is not None:
+        return _CATALOG_LOADED
+    use_external_flag = os.environ.get("USE_EXTERNAL_AVATAR_CATALOG", "0").strip().lower() in ("1", "true", "yes", "on")
+    if use_external_flag:
+        external = _load_external_catalog()
+        if external:
+            _CATALOG_LOADED = external
+            _CATALOG_SOURCE = "external-json"
+            if os.environ.get("APP_DEBUG_STARTUP"):
+                print(f"📦 Loaded avatar catalog from JSON ({len(external)} entries)")
+            return _CATALOG_LOADED
+        else:
+            if os.environ.get("APP_DEBUG_STARTUP"):
+                print("↩️ Falling back to inline avatar catalog (external not available)")
+    # Fallback to inline
+    _CATALOG_LOADED = AVATAR_CATALOG
+    return _CATALOG_LOADED
+
+def export_avatar_catalog_json(target: Optional[str] = None) -> Path:
+    """Utility: write current effective catalog to JSON for future externalization.
+    Does nothing unless explicitly invoked (low-risk)."""
+    effective = get_avatar_catalog()
+    out_path = Path(target) if target else Path("data/avatar_catalog.json")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(effective, f, indent=2)
+    print(f"📝 Exported avatar catalog ({len(effective)} entries) to {out_path}")
+    return out_path
+
 def get_free_avatars():
     """Returns list of avatars available during registration (default_free)"""
-    return [a for a in AVATAR_CATALOG if a.get("is_default_free", False)]
+    return [a for a in get_avatar_catalog() if a.get("is_default_free", False)]
 
 def get_earn_or_buy_avatars():
     """Returns list of avatars in earn-or-buy tier"""
-    return [a for a in AVATAR_CATALOG if a.get("tier") == "earn_or_buy"]
+    return [a for a in get_avatar_catalog() if a.get("tier") == "earn_or_buy"]
 
 def get_premium_avatars():
     """Returns list of premium tier avatars"""
-    return [a for a in AVATAR_CATALOG if a.get("tier") == "premium"]
+    return [a for a in get_avatar_catalog() if a.get("tier") == "premium"]
 
 def get_avatars_by_tier(tier):
     """Returns avatars filtered by tier (default_free, earn_or_buy, premium, mascot, special)"""
-    return [a for a in AVATAR_CATALOG if a.get("tier") == tier]
+    return [a for a in get_avatar_catalog() if a.get("tier") == tier]
 
 def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None):
     """

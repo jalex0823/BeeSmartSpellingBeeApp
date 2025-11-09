@@ -744,8 +744,12 @@ class MagicalSpellingBee {
                 
                 // Create utterance
                 const utterance = new SpeechSynthesisUtterance(currentWord.word);
-                utterance.rate = 0.8; // Slower for spelling practice
-                utterance.pitch = 1.0;
+                // Natural spoken pace for quiz (distinct from Speed Round's slightly elevated rate/pitch)
+                // If a global override is ever set (window.QUIZ_TTS_RATE), prefer it.
+                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;   // 1.0 = browser default “natural”
+                const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0; // Keep neutral pitch for clarity
+                utterance.rate = QUIZ_TTS_RATE;
+                utterance.pitch = QUIZ_TTS_PITCH;
                 utterance.volume = 1.0;
                 utterance.lang = 'en-US';
                 

@@ -1,15 +1,15 @@
-from flask import Flask
+"""Simple sanity check using the app's built-in /health endpoint via test client.
 
-app = Flask(__name__)
+Avoids binding to port 5000 (which may already be in use during CI/dev).
+"""
+from AjaSpellBApp import app
 
-@app.route('/')
-def home():
-    return 'Flask is working!'
-
-@app.route('/health')
-def health():
-    return {'status': 'ok', 'message': 'Simple Flask test server'}
-
-if __name__ == '__main__':
-    print("Starting simple Flask test server on http://127.0.0.1:5000")
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+with app.test_client() as c:
+    r = c.get('/health')
+    print('Status:', r.status_code)
+    try:
+        print('JSON:', r.get_json())
+    except Exception:
+        print('Body:', r.data[:200])
+    if r.status_code != 200:
+        raise SystemExit(1)

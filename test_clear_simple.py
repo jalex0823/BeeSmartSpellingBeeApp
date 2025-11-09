@@ -1,35 +1,23 @@
-import urllib.request
-import urllib.error
-import json
+"""Test /api/clear endpoint using Flask test client rather than external HTTP.
 
-# Test clear API without authorization
-print("Testing /api/clear without authorization...")
-try:
-    data = json.dumps({}).encode('utf-8')
-    req = urllib.request.Request(
-        'http://127.0.0.1:5000/api/clear',
-        data=data,
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    response = urllib.request.urlopen(req)
-    result = json.loads(response.read().decode('utf-8'))
-    print(f"❌ Unexpected success: {result}")
-except urllib.error.HTTPError as e:
-    error_data = json.loads(e.read().decode('utf-8'))
-    print(f"✅ Expected error (status {e.status}): {error_data}")
+The endpoint requires a confirmation payload; first send empty data (expect 400/403), then valid confirmation.
+"""
+from AjaSpellBApp import app
 
-print("\nTesting /api/clear with authorization...")
-try:
-    data = json.dumps({"confirmed": True}).encode('utf-8')
-    req = urllib.request.Request(
-        'http://127.0.0.1:5000/api/clear',
-        data=data,
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    response = urllib.request.urlopen(req)
-    result = json.loads(response.read().decode('utf-8'))
-    print(f"✅ Success: {result}")
-except Exception as e:
-    print(f"❌ Error: {e}")
+with app.test_client() as c:
+    print("Testing /api/clear without confirmation...")
+    r = c.post('/api/clear', json={})
+    if r.status_code in (400, 403):
+        print(f"✅ Expected rejection status={r.status_code}")
+    else:
+        print(f"❌ Unexpected status without confirmation: {r.status_code}")
+        print('Body:', r.data[:200])
+
+    print("\nTesting /api/clear with confirmation...")
+    r2 = c.post('/api/clear', json={"confirmed": True})
+    if r2.status_code == 200:
+        resp = r2.get_json(silent=True) or {}
+        print(f"✅ Success: cleared_count={resp.get('cleared_count','?')}")
+    else:
+        print(f"❌ Error status: {r2.status_code}")
+        print('Body:', r2.data[:200])

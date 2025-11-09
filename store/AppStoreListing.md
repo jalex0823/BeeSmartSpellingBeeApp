@@ -40,7 +40,7 @@ spelling, kids, vocabulary, phonics, education, quiz, practice, classroom, teach
   2. Start quiz and try voice input
   3. Request a hint (no answer reveal)
   4. Try OCR with a sample worksheet photo
-- Server health: https://beesmartspelling.app/health (v1.6)
+- Server health: https://beesmartspelling.app/health (v1.7)
 
 ## Required URLs
 - Privacy Policy: https://beesmartspelling.app/privacy

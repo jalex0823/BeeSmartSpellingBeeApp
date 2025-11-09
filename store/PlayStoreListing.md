@@ -33,4 +33,4 @@ Why families and teachers choose BeeSmart:
 
 ## Reviewer Notes
 - Demo accounts and steps: same as App Store listing
-- Health endpoint: https://beesmartspelling.app/health (v1.6)
+- Health endpoint: https://beesmartspelling.app/health (v1.7)

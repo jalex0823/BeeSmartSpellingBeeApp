@@ -2429,6 +2429,35 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            background: transparent !important; /* Ensure full transparency */
+            position: relative;
+        }
+
+        /* Subtle shimmer highlight (can be disabled with prefers-reduced-motion) */
+        .logo-section::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: linear-gradient(115deg, rgba(255,255,255,0.0) 25%, rgba(255,255,255,0.12) 38%, rgba(255,255,255,0.0) 50%, rgba(255,255,255,0.0) 60%, rgba(255,255,255,0.14) 72%, rgba(255,255,255,0.0) 85%);
+            background-size: 240% 240%;
+            mix-blend-mode: overlay;
+            animation: logoShimmer 6.5s ease-in-out infinite;
+            border-radius: 12px;
+        }
+
+        @keyframes logoShimmer {
+            0% { background-position: 180% 0%; opacity: 0; }
+            10% { opacity: 1; }
+            45% { background-position: 80% 100%; opacity: 1; }
+            60% { background-position: 40% 60%; opacity: 0.9; }
+            75% { background-position: 0% 30%; opacity: 0.4; }
+            90% { background-position: -40% 0%; opacity: 0; }
+            100% { background-position: -60% 0%; opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .logo-section::after { animation: none; opacity: 0; }
         }
 
         /* 3. Optimized container - adopt picker preview sizing; the 3D canvas fills the frame */
@@ -2469,7 +2498,7 @@
     <!-- Main container -->
     <div class="main-container">
         <!-- Single unified card with logo and menu -->
-        <div class="content-card">
+    <div class="content-card menu-card">
             <!-- Logo at top of card -->
             <section class="logo-section">
                 <!-- Dynamic Welcome Badge positioned ABOVE avatar -->
@@ -2498,6 +2527,7 @@
                     margin: 6px auto 8px;
                     display: block;
                     filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
+                    background: transparent !important;
                 " />
                 
                 {% if current_user.is_authenticated %}
@@ -2639,7 +2669,7 @@
                 
                 <!-- Version badge below website -->
                 <div id="versionBadge" style="margin-top: 8px; font-size: 11px; color: rgba(0,0,0,0.4); font-family: monospace; letter-spacing: 0.5px;">
-                    v2.1
+                    v1.6
                 </div>
                 
                 <!-- Sound Toggle Button -->
@@ -3050,7 +3080,7 @@
                 <!-- Upload Text File -->
                 <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title="📄 Upload your word list from a text file, CSV, or paste words directly!">
                     <div class="option-icon">📄</div>
-                    <div class="option-title">Upload Text File</div>
+                    <div class="option-title">Upload Word List</div>
                     <div class="option-description">Plain text, CSV, comma/space separated, Word docs</div>
                     <div class="kid-tip">📝 Perfect for spelling lists from school!</div>
                 </div>
@@ -3066,7 +3096,7 @@
                 <!-- Upload Image -->
                 <div id="tileImageUpload" class="menu-option theme-ocean" onclick="kidSounds.playRandomEffect(); selectOption('image', this)" onmouseover="kidSounds.playSoftClick()" title="📷 Take a photo of a book page or worksheet and we'll find the words for you!">
                     <div class="option-icon">📷</div>
-                    <div class="option-title">Upload Image</div>
+                    <div class="option-title">Extract from Image</div>
                     <div class="option-description">Extract words from photos</div>
                     <div class="kid-tip">📚 Magic word finder from pictures!</div>
                 </div>
@@ -3909,28 +3939,106 @@
 
         // Cache buster: 2025-10-14-v3 (force refresh)
         (function(){
-            const V='v2.1-'+Date.now();
+            const V='v1.6-'+Date.now();
             console.log('BeeSmart App JavaScript loaded -', V);
             // Update version badge below logo instead of top corner
             const versionBadge = document.getElementById('versionBadge');
             if (versionBadge) {
-                versionBadge.textContent = 'v2.1 (build: ' + Date.now().toString().slice(-6) + ')';
+                versionBadge.textContent = 'v1.6';
             }
             // Install fetch override to detect any legacy /upload usage
             if(!window.__uploadPatched){
                 window.__uploadPatched=true;
                 const ofetch=window.fetch.bind(window);
                 window.fetch=function(resource, init){
-                    let url=typeof resource==='string'?resource:(resource && resource.url)||'';
-                    if(/\/upload(?![a-z])/i.test(url) && !/\/api\/upload/.test(url)){
-                        console.warn('[PATCH] Rewriting legacy /upload -> /api/upload', url);
-                        url=url.replace('/upload','/api/upload');
-                        if(typeof resource==='string'){ resource=url; }
-                        else { resource=new Request(url, resource); }
-                    }
+                    try {
+                        let url=typeof resource==='string'?resource:(resource && resource.url)||'';
+                        // Only rewrite EXACT legacy '/upload' (optionally with query), not '/api/upload-*' or other paths
+                        const origin = (typeof location!=='undefined' ? location.origin : '');
+                        const u = new URL(url, origin);
+                        if(u.pathname==='/upload'){
+                            const old=url;
+                            u.pathname='/api/upload';
+                            url=u.toString().replace(origin,'');
+                            console.warn('[PATCH] Rewriting legacy /upload -> /api/upload', old,'=>',url);
+                            if(typeof resource==='string'){ resource=url; }
+                            else { resource=new Request(url, resource); }
+                        }
+                    } catch(_e) { /* ignore parse issues */ }
                     return ofetch(resource, init);
                 }
             }
+            
+            // MOBILE WORD LIST PERSISTENCE (Capacitor WebView localStorage bridge)
+            // If the session wordbank is empty but we have a cached user list, rehydrate automatically.
+            // This addresses the case where the mobile WebView clears cookies/sessions between app runs.
+            async function attemptWordbankRehydrate(){
+                try {
+                    // Quick kill switch: set localStorage 'beesmart_disable_restore' to '1' to skip rehydrate
+                    if (localStorage.getItem('beesmart_disable_restore') === '1') {
+                        console.log('⏹️ Wordbank rehydrate disabled by localStorage flag.');
+                        return;
+                    }
+                    const cacheKey = 'beesmart_last_user_word_list_v1';
+                    const cached = localStorage.getItem(cacheKey);
+                    if(!cached){ return; }
+                    if(window.__wordbankRestored){ return; } // avoid repeat in same runtime
+                    const parsed = JSON.parse(cached);
+                    if(!parsed || !Array.isArray(parsed.words) || parsed.words.length===0){ return; }
+
+                    // Check current server wordbank; don't overwrite if anything is present
+                    const wbResp = await fetch('/api/wordbank?_rehydrate='+Date.now(), {cache:'no-store', credentials:'same-origin'});
+                    const wbData = await wbResp.json();
+                    const count = (wbData && (wbData.count || (wbData.words && wbData.words.length) || 0)) || 0;
+                    const usingDefault = !!(wbData && wbData.using_default);
+                    if(count > 0 && !usingDefault){ return; }
+
+                    console.log('🔄 Attempting mobile wordbank rehydrate from localStorage with', parsed.words.length, 'words');
+                    const restoreResp = await fetch('/api/upload-manual-words', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},
+                        credentials:'same-origin',
+                        body: JSON.stringify({words: parsed.words.slice(0, 500)})
+                    });
+                    const restoreData = await restoreResp.json();
+                    if(restoreData && restoreData.ok){
+                        window.__wordbankRestored=true;
+                        console.log('✅ Mobile wordbank rehydrate success:', restoreData.count, 'words');
+                        const btn=document.getElementById('startQuizBtn');
+                        if(btn){
+                            btn.disabled=false;
+                            btn.removeAttribute('disabled');
+                            btn.innerHTML=`🚀 Start Quiz (${restoreData.count} words)`;
+                            btn.classList.add('ready-to-play');
+                            btn.classList.remove('waiting-to-play');
+                            btn.style.opacity='1';
+                            btn.style.cursor='pointer';
+                            btn.style.pointerEvents='auto';
+                        }
+                        if (typeof showSuccessMessage==='function'){
+                            showSuccessMessage(`Restored ${restoreData.count} saved words! 🐝`);
+                        }
+                    } else {
+                        console.warn('⚠️ Wordbank rehydrate failed:', restoreData);
+                    }
+                } catch(err){
+                    console.warn('⚠️ Wordbank rehydrate error:', err);
+                }
+            }
+            // Defer until window load to avoid blocking first paint; then wait a tick for cookies
+            window.addEventListener('load', () => setTimeout(attemptWordbankRehydrate, 150));
+
+            // Hook into successful manual/file/image uploads to persist list locally for future restores
+            function persistUploadedWords(words){
+                try {
+                    if(!Array.isArray(words) || words.length===0){return;}
+                    const normalized = words.map(w => (typeof w==='string'? w : (w && w.word))).filter(Boolean).slice(0, 500);
+                    const payload = { words: normalized, savedAt: Date.now() };
+                    localStorage.setItem('beesmart_last_user_word_list_v1', JSON.stringify(payload));
+                    console.log('💾 Persisted word list locally for mobile restore:', payload.words.length);
+                } catch(e){ console.warn('Persist save failed', e); }
+            }
+            window.persistUploadedWords = persistUploadedWords;
         })();
 
         // Saved Lists count badge helpers
@@ -4240,6 +4348,8 @@
                     ];
                     const message = messages[Math.floor(Math.random() * messages.length)];
                     showSuccessMessage(message);
+                    // Persist the user's list locally for mobile rehydration
+                    try { if (window.persistUploadedWords) { window.persistUploadedWords(words); } } catch(_){}
                     
                     // Enable Start Quiz button IMMEDIATELY (mobile fix)
                     if (data.count > 0) {
@@ -6415,6 +6525,9 @@
                         ];
                         const message = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
                         showSuccessMessage(message);
+                        // Persist latest word list for mobile restore (fetch enriched list)
+                        try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
+                            .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
                     // Enable Start Quiz button IMMEDIATELY (mobile fix)
                     if (data.count > 0) {
@@ -6583,6 +6696,9 @@
                         ];
                         const message = magicMessages[Math.floor(Math.random() * magicMessages.length)];
                         showSuccessMessage(message);
+                        // Persist latest word list for mobile restore (fetch enriched list)
+                        try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
+                            .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
                         // Enable Start Quiz button IMMEDIATELY (mobile fix)
                         if (data.count > 0) {
@@ -7542,8 +7658,11 @@
                 // Small delay for iOS to process cancellation
                 setTimeout(() => {
                     const utterance = new SpeechSynthesisUtterance(word);
-                    utterance.rate = 0.8; // Slower for clarity
-                    utterance.pitch = 1.1; // Slightly higher pitch for kid-friendly sound
+                    // Natural default pacing with optional global override (dictionary context)
+                    const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
+                    const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
+                    utterance.rate = QUIZ_TTS_RATE;
+                    utterance.pitch = QUIZ_TTS_PITCH;
                     utterance.volume = 1.0;
                     
                     // Select British English Female voice
