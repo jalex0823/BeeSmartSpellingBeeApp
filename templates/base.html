@@ -311,9 +311,9 @@
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
 
-    <!-- Global Loading Overlay -->
+    <!-- Global Loading Overlay (canonical loader: crest + system checks) -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
+        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
         <h1>Preparing Magic...</h1>
         <div class="checks" id="loadingChecks" aria-live="polite">
             <h2>System Checks</h2>
@@ -534,18 +534,7 @@
             showError: (message) => window.toast?.error(message)
         };
     </script>
-    <script>
-        // Ensure only one global loading overlay exists (remove duplicates from legacy templates)
-        document.addEventListener('DOMContentLoaded', () => {
-            const overlays = Array.from(document.querySelectorAll('#loadingOverlay'));
-            if (overlays.length > 1) {
-                // Keep the first (assumed canonical) and remove the rest
-                overlays.slice(1).forEach(o => {
-                    try { o.parentElement && o.parentElement.removeChild(o); } catch(e) {}
-                });
-            }
-        });
-    </script>
+    <!-- Duplicate overlay cleanup not needed since base no longer injects an overlay -->
     
     <!-- Three.js for 3D Mascot -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

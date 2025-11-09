@@ -2118,13 +2118,13 @@
 
     <!-- Magical background effects -->
     <!-- Honey Pot Loading Screen -->
-    <div id="honeyLoader" style="
+    <div id="honeyLoader" data-disabled="true" style="
         position: fixed;
         inset: 0;
         width: 100%;
         height: 100%;
         background: radial-gradient(circle at 50% 35%, #fff8e3 0%, #ffe8b3 45%, #ffd86a 75%, #ffcb3a 100%);
-        display: flex;
+        display: none; /* disabled: use canonical loadingOverlay */
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
