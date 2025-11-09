@@ -3320,8 +3320,8 @@ class BeeSoundboard {
         
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            // Natural quiz pacing; allow optional external override via window.QUIZ_TTS_* vars.
-            const QUIZ_TTS_RATE = (window.QUIZ_TTS_RATE || 1.0);
+            // Natural quiz pacing at 0.85 for clear, non-robotic speech; allow optional external override via window.QUIZ_TTS_* vars.
+            const QUIZ_TTS_RATE = (window.QUIZ_TTS_RATE || 0.85);
             const QUIZ_TTS_PITCH = (window.QUIZ_TTS_PITCH || 1.0);
             utterance.pitch = QUIZ_TTS_PITCH;
             utterance.rate = (rate === null ? QUIZ_TTS_RATE : rate);
@@ -4386,20 +4386,21 @@ class QuizManager {
                 if (name.includes('neural')) score += 60;
                 
                 // Known high-quality female voices (ordered by naturalness)
+                // macOS Samantha is TOP priority - most natural sounding
                 const premiumVoices = {
-                    'samantha': 90,     // macOS - very natural
-                    'alex': 85,         // macOS - excellent quality
-                    'victoria': 80,     // Windows - natural sounding
-                    'zira': 75,         // Windows - clear and natural
-                    'aria': 85,         // Modern Windows neural
-                    'jenny': 85,        // Modern neural voice
-                    'nova': 80,         // Modern neural voice
-                    'allison': 70,      // Traditional but good
-                    'ava': 70,          // Traditional but good
+                    'samantha': 120,    // macOS - BEST natural female voice
+                    'alex': 85,         // macOS - excellent quality (male but included for fallback)
+                    'victoria': 85,     // Windows - natural sounding
+                    'aria': 90,         // Modern Windows neural
+                    'jenny': 90,        // Modern neural voice
+                    'nova': 85,         // Modern neural voice
+                    'zira': 80,         // Windows - clear and natural
+                    'allison': 75,      // Traditional but good
+                    'ava': 75,          // Traditional but good
+                    'karen': 70,        // Traditional macOS female
                     'joanna': 65,       // Amazon Polly style
                     'susan': 60,        // Traditional
-                    'karen': 55,        // Traditional
-                    'moira': 50         // Traditional Irish
+                    'moira': 55         // Traditional Irish
                 };
                 
                 // Check for premium voice names
@@ -4480,7 +4481,7 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
+                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 0.85;
                 const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
                 utterance.rate = QUIZ_TTS_RATE;
                 utterance.pitch = QUIZ_TTS_PITCH;
@@ -4755,7 +4756,7 @@ class QuizManager {
                     // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
                     speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(introMessage);
-                    const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
+                    const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 0.85;
                     const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
                     utterance.rate = QUIZ_TTS_RATE;
                     utterance.pitch = QUIZ_TTS_PITCH;
@@ -6251,12 +6252,12 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = 0.85) {
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || rate || 1.0;
+                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || rate || 0.85;
                 const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
                 utterance.rate = QUIZ_TTS_RATE;
                 utterance.pitch = QUIZ_TTS_PITCH;
