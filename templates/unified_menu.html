@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
-    <script>window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' };</script>
+    <script>window.BeeSmartBrand = { logoPath: "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" };</script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1935,7 +1935,7 @@
 <body class="home-no-shimmer">
     <!-- Injected global loading overlay (since this template does not extend base.html) -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
         <h1>Preparing Magic...</h1>
         <div class="checks" id="loadingChecks" aria-live="polite">
             <h2>System Checks</h2>
@@ -2176,7 +2176,7 @@
         ">🎤 Voice input ready</div>
         <!-- Brand Logo with TM (replaces emoji bee) -->
         <img
-            src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108"
+            src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}"
             alt="BeeSmart Spelling Bee Application™ logo"
             style="
                 width: clamp(260px, 65vw, 560px);
@@ -2521,7 +2521,7 @@
                 </div>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" style="
+                <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" style="
                     width: clamp(180px, 40vw, 320px);
                     height: auto;
                     margin: 6px auto 8px;

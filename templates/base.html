@@ -34,8 +34,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
             <script>
-                    // Simple global logo path (new logo). Replace file with your new image to update everywhere.
-                    window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' };
+                // Global logo path now points to new crest logo (served from static root)
+                window.BeeSmartBrand = { logoPath: "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" };
             </script>
     
     <!-- Modern CSS Framework -->
@@ -313,7 +313,7 @@
 
     <!-- Global Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
         <h1>Preparing Magic...</h1>
         <div class="checks" id="loadingChecks" aria-live="polite">
             <h2>System Checks</h2>
