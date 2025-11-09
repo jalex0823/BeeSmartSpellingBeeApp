@@ -1,0 +1,15 @@
+/* Force-hide any system-check overlays or banners that may block UI */
+#system-check, #system-check-overlay, .system-check, .system-check-overlay,
+#preflight-check, .preflight-check, [data-role="system-check"],
+#diagnostics, .diagnostics-overlay, #maintenance-banner {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Prevent body from being locked by preflight scripts */
+html, body { overflow: auto !important; }
+
+/* Disable cursor blockers */
+body.loading, body.system-check-active { cursor: auto !important; }

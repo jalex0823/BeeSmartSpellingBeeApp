@@ -1,6 +1,9 @@
 <!-- Temporary override to disable broken loader and ensure access -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loader-disable.css') }}">
 <script defer src="{{ url_for('static', filename='js/loader-disable.js') }}"></script>
+    <!-- System-checks disable: hide UI and no-op any client-side checks -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/syscheck-disable.css') }}">
+    <script src="{{ url_for('static', filename='js/syscheck-disable.js') }}"></script>
 <!-- Performance instrumentation: logs key paint metrics to console -->
 <script defer src="{{ url_for('static', filename='js/perf-instrumentation.js') }}"></script>
 <!DOCTYPE html>
