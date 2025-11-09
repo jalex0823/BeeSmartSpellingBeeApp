@@ -1,9 +1,9 @@
-<!-- Temporary override to disable broken loader and ensure access -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/loader-disable.css') }}">
-<script defer src="{{ url_for('static', filename='js/loader-disable.js') }}"></script>
-    <!-- System-checks disable: hide UI and no-op any client-side checks -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/syscheck-disable.css') }}">
-    <script src="{{ url_for('static', filename='js/syscheck-disable.js') }}"></script>
+    <!-- New honeycomb loader assets -->
+    
+    <!-- New Honeycomb Loader & Home styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-home.css') }}">
+    <script defer src="{{ url_for('static', filename='js/honey-loader.js') }}"></script>
 <!-- Performance instrumentation: logs key paint metrics to console -->
 <script defer src="{{ url_for('static', filename='js/perf-instrumentation.js') }}"></script>
 <!DOCTYPE html>
@@ -163,15 +163,26 @@
             }
         }
         
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-        
+        <body
+            {% if session.get('theme') %} data-theme="{{ session.get('theme') }}"{% endif %}
+            class="{{ ' '.join(body_classes) }}"
+            data-env="{{ config_env }}"
+            data-version="{{ app_version }}"
+            data-user-auth="{{ '1' if current_user.is_authenticated else '0' }}"
+            data-user-role="{{ current_user.role if current_user.is_authenticated else 'anon' }}"
+            data-fast-boot="{{ '1' if fast_boot else '0' }}"
+        >
+            <!-- Honeycomb Loader Overlay -->
+            <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
+                <div class="loader-logo-wrapper">
+                    <img id="loaderLogo" src="{{ url_for('static', filename='img/logo.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
+                    <div id="loaderProgressOverlay" role="status">
+                        <div id="loaderPercentText">0%</div>
+                        <div id="loaderProcessName">Initializing BeeSmart…</div>
+                        <div id="loaderStatusDetail">Loading core modules…</div>
+                    </div>
+                </div>
+            </div>
 
         
         /* Main Container */
@@ -315,6 +326,17 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- New Honeycomb Loader -->
+    <div id="bee-honey-loader" aria-label="Loading application" role="status">
+        <div class="honeycomb-bg"></div>
+        <div class="loader-center">
+            <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="loader-logo" />
+            <div class="loader-progress-wrapper">
+                <div class="loader-progress-bar"><div class="loader-progress-fill" id="loaderProgressFill"></div></div>
+                <div class="loader-progress-text" id="loaderProgressText">0%</div>
+            </div>
+        </div>
+    </div>
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>

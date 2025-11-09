@@ -1,19 +1,4 @@
-﻿"""
-Temporary override: ensure root (/) goes straight to the unified menu.
-This bypasses any splash/loader until it's fixed.
-"""
-try:
-    from flask import render_template
-    # Only add the route if it's not already registered
-    # Flask doesn't expose a direct has-route API; we guard by name.
-    if 'home_root_direct' not in globals():
-        @app.route('/')
-        def home_root_direct():
-            return render_template('unified_menu.html')
-except Exception:
-    # If app or Flask isn't ready in this module context, skip quietly
-    # (the loader disable ensures UI isn't blocked anyway).
-    pass
+﻿HOME_PREVIEW_ENABLED = True  # feature flag for new honey home page preview
 # -*- coding: utf-8 -*-
 import sys
 import io
@@ -87,7 +72,8 @@ print(f"📍 Working directory: {os.getcwd()}")
 print("="*70)
 
 # Fast-boot mode: skip heavy startup checks/initializers that can delay first load
-FAST_BOOT = os.getenv('FAST_BOOT', '1').strip().lower() in ('1', 'true', 'yes', 'on')
+# Default is OFF to run full system checks prior to entering the home page.
+FAST_BOOT = os.getenv('FAST_BOOT', '0').strip().lower() in ('1', 'true', 'yes', 'on')
 if FAST_BOOT:
     print("⚡ FAST_BOOT=on → Skipping heavy startup checks to unblock app load")
 else:
@@ -242,6 +228,16 @@ try:
     app  # type: ignore[name-defined]
 except NameError:
     app = Flask(__name__)
+
+# Reliable, post-app-creation lightweight routes
+@app.route('/')
+def home_root_direct():
+    return render_template('unified_menu.html')
+
+if HOME_PREVIEW_ENABLED:
+    @app.route('/home_preview')
+    def home_preview():
+        return render_template('honey_home.html')
 
 def _safe_template(name):
     """Small helper to render a template if present without crashing the app."""
@@ -907,11 +903,9 @@ except Exception:  # pragma: no cover
 # FLASK APP INITIALIZATION WITH DATABASE & AUTHENTICATION
 # ============================================================================
 
-print("🔧 Creating Flask app...")
-# `app` may already be created above to satisfy early decorators; avoid reassigning
-try:
-    app  # type: ignore[name-defined]
-except NameError:
+print("🔧 Creating Flask app (main init)...")
+# Preserve existing app if earlier created; do NOT overwrite to keep early routes.
+if 'app' not in globals():
     app = Flask(__name__)
 # --- Avatar GLB sync helper ---
 def _sync_glb_avatars():

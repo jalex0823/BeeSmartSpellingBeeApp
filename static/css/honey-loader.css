@@ -1,0 +1,66 @@
+/* Honeycomb Loader Styles */
+#appHoneyLoader {
+  position: fixed;
+  inset: 0;
+  background: #000 url('/static/images/backgrounds/honeycombbg3.png') center/cover no-repeat fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Nunito', 'Helvetica Neue', Arial, sans-serif;
+  transition: opacity 0.5s ease;
+}
+#appHoneyLoader.hidden { opacity:0; pointer-events:none; }
+
+/* Honeycomb cells removed for new design using static background image */
+
+.loader-logo-wrapper { position: relative; width: 200px; height: 200px; }
+.loader-logo-wrapper img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25)); }
+
+#loaderProgressOverlay {
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(3px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  font-size:1.05rem;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.7);
+  border: 3px solid rgba(255,255,255,0.28);
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+#loaderPercentText {
+  font-size: 3.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  transition: opacity .3s ease;
+}
+#loaderProcessName {
+  margin-top: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 213, 64, 0.9);
+}
+#loaderStatusDetail {
+  margin-top: 4px;
+  font-size: .85rem;
+  opacity: .8;
+}
+
+/* Deprecated status/detail classes replaced by new semantic IDs */
+
+/* Accessibility: reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .honey-cell { animation:none; }
+  #loaderPercentFill { animation:none; }
+}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}BeeSmart Home Preview{% endblock %}
+{% block body %}
+<div id="honeyHome" class="honey-home-wrapper">
+    <div class="honey-home-center">
+        <img class="honey-home-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'" />
+        <div class="honey-home-overlay">
+            <div class="honey-home-appname">BeeSmart <span class="sub">Spelling Bee</span></div>
+            <div class="honey-home-section">Application</div>
+            <div class="honey-home-section alt">Avatars</div>
+            <div class="honey-home-actions">
+                <a class="btn btn-primary" href="{{ url_for('unified_menu') }}">Enter App</a>
+                {% if current_user.is_authenticated %}
+                <a class="btn btn-secondary" href="{{ url_for('logout') }}">Logout</a>
+                {% else %}
+                <a class="btn btn-secondary" href="{{ url_for('login') }}">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
