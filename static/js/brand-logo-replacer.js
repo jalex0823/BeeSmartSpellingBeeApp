@@ -4,8 +4,8 @@
  */
 (function(){
   // Fallback now set to the new branding asset only; remove legacy auto substitution.
-  const FALLBACK = '/static/images/BeeSmartSpellingBeeApplication.png';
-  const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/images/BeeSmartSpellingBeeApplication.png';
+  const FALLBACK = '/static/BeeSmartCrestLogo1.png';
+  const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/BeeSmartCrestLogo1.png';
   const LEGACY_PATTERNS = [
     /BeeSmartLogo(?:2)?\.(png|jpg|svg)/i,
     /BeeSmartTitle\.(png|jpg|svg)/i,
