@@ -171,6 +171,7 @@
             data-user-auth="{{ '1' if current_user.is_authenticated else '0' }}"
             data-user-role="{{ current_user.role if current_user.is_authenticated else 'anon' }}"
             data-fast-boot="{{ '1' if fast_boot else '0' }}"
+            data-autoload-target="{{ url_for('home_root_direct') }}"
         >
             <!-- Honeycomb Loader Overlay -->
             <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
