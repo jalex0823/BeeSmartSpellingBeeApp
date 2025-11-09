@@ -232,7 +232,7 @@ except NameError:
 # Reliable, post-app-creation lightweight routes
 @app.route('/')
 def home_root_direct():
-    """Primary application landing page: go straight into the app."""
+    """Primary application landing page: shows loader then auto-redirects to app."""
     return render_template('unified_menu.html')
 
 # Optional legacy preview alias retained (can be removed later)

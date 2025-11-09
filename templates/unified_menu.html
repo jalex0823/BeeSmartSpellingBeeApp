@@ -1,6 +1,3 @@
-<!-- Ensure loader never blocks this page -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/loader-disable.css') }}">
-<script defer src="{{ url_for('static', filename='js/loader-disable.js') }}"></script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,10 +20,13 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
     
+    <!-- New Honeycomb Loader -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
+    <script defer src="{{ url_for('static', filename='js/honey-loader.js') }}"></script>
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
     <script>window.BeeSmartBrand = { logoPath: "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" };</script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
@@ -38,7 +38,6 @@
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
     </script>
-    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
     <script>
         (function(){
@@ -1936,7 +1935,18 @@
     </style>
 </head>
 <body class="home-no-shimmer">
-    <!-- Remove duplicate global loading overlay to avoid two loaders; honeyLoader below is canonical -->
+    <!-- Honeycomb Loader -->
+    <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
+        <div class="loader-logo-wrapper">
+            <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
+            <div id="loaderProgressOverlay" role="status">
+                <div id="loaderPercentText">0%</div>
+                <div id="loaderProcessName">Initializing BeeSmart…</div>
+                <div id="loaderStatusDetail">Loading core modules…</div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
