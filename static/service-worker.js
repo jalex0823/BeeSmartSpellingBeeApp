@@ -1,5 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
-const CACHE_VERSION = 'beesmart-v1.0.0';
+// Bump this to force clients to refresh cached assets after important fixes
+const CACHE_VERSION = 'beesmart-v1.1.0-2025-11-08';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
