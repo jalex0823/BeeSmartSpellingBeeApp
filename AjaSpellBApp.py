@@ -86,6 +86,13 @@ print(f"📍 Platform: {sys.platform}")
 print(f"📍 Working directory: {os.getcwd()}")
 print("="*70)
 
+# Fast-boot mode: skip heavy startup checks/initializers that can delay first load
+FAST_BOOT = os.getenv('FAST_BOOT', '1').strip().lower() in ('1', 'true', 'yes', 'on')
+if FAST_BOOT:
+    print("⚡ FAST_BOOT=on → Skipping heavy startup checks to unblock app load")
+else:
+    print("⚙️ FAST_BOOT=off → Running full startup checks")
+
 # Dictionary API with robust error handling
 try:
     from dictionary_api import dictionary_api
@@ -933,8 +940,11 @@ def _sync_glb_avatars():
     except Exception as e:
         print(f"[avatar-sync] Error: {e}")
 
-# Run sync at startup
-_sync_glb_avatars()
+# Run sync at startup (skipped in FAST_BOOT)
+if not FAST_BOOT:
+    _sync_glb_avatars()
+else:
+    print("⏭️ Skipping GLB avatar sync at startup (FAST_BOOT)")
 
 # Load configuration from config.py (includes database settings)
 print("🔧 Loading configuration...")
@@ -10081,52 +10091,58 @@ print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
 
 # Initialize GLB avatars on startup (idempotent)
-try:
-    from init_glb_avatars import init_glb_avatars
-    init_glb_avatars()
-except Exception as e:
-    print(f"⚠️ GLB avatar initialization warning: {e}")
-
-# Validate and fix avatar thumbnail paths on EVERY startup
-try:
-    with app.app_context():
-        all_avatars = Avatar.query.filter_by(is_active=True).all()
-        fixed_count = 0
-        
-        for avatar in all_avatars:
-            if not avatar.thumbnail_file:
-                continue
-                
-            current_thumb = avatar.thumbnail_file
-            expected_thumb = None
-            
-            # GLB avatars MUST have AvatarThumbnails/ prefix
-            if avatar.folder_path == 'glb_files':
-                filename = os.path.basename(current_thumb)
-                if not current_thumb.startswith('AvatarThumbnails/'):
-                    expected_thumb = f'AvatarThumbnails/{filename}'
-            
-            # OBJ avatars MUST NOT have AvatarThumbnails/ prefix
-            elif current_thumb.startswith('AvatarThumbnails/'):
-                expected_thumb = os.path.basename(current_thumb)
-            
-            # Fix if needed
-            if expected_thumb and expected_thumb != current_thumb:
-                avatar.thumbnail_file = expected_thumb
-                fixed_count += 1
-        
-        if fixed_count > 0:
-            db.session.commit()
-            print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
-        else:
-            print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
-            
-except Exception as e:
-    print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+if not FAST_BOOT:
     try:
-        db.session.rollback()
-    except:
-        pass
+        from init_glb_avatars import init_glb_avatars
+        init_glb_avatars()
+    except Exception as e:
+        print(f"⚠️ GLB avatar initialization warning: {e}")
+else:
+    print("⏭️ Skipping init_glb_avatars() at startup (FAST_BOOT)")
+
+# Validate and fix avatar thumbnail paths on EVERY startup (skipped in FAST_BOOT)
+if not FAST_BOOT:
+    try:
+        with app.app_context():
+            all_avatars = Avatar.query.filter_by(is_active=True).all()
+            fixed_count = 0
+            
+            for avatar in all_avatars:
+                if not avatar.thumbnail_file:
+                    continue
+                    
+                current_thumb = avatar.thumbnail_file
+                expected_thumb = None
+                
+                # GLB avatars MUST have AvatarThumbnails/ prefix
+                if avatar.folder_path == 'glb_files':
+                    filename = os.path.basename(current_thumb)
+                    if not current_thumb.startswith('AvatarThumbnails/'):
+                        expected_thumb = f'AvatarThumbnails/{filename}'
+                
+                # OBJ avatars MUST NOT have AvatarThumbnails/ prefix
+                elif current_thumb.startswith('AvatarThumbnails/'):
+                    expected_thumb = os.path.basename(current_thumb)
+                
+                # Fix if needed
+                if expected_thumb and expected_thumb != current_thumb:
+                    avatar.thumbnail_file = expected_thumb
+                    fixed_count += 1
+            
+            if fixed_count > 0:
+                db.session.commit()
+                print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
+            else:
+                print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
+                
+    except Exception as e:
+        print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+else:
+    print("⏭️ Skipping avatar thumbnail validation at startup (FAST_BOOT)")
 
 def _is_port_free(p: int) -> bool:
     try:
