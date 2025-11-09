@@ -39,7 +39,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
             <script>
                 // Global logo path now points to new crest logo (served from static root)
@@ -341,19 +340,6 @@
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
-    <!-- Global Loading Overlay (original crest + system checks loader restored) -->
-    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
-        <h1>Preparing Magic...</h1>
-        <div class="checks" id="loadingChecks" aria-live="polite">
-            <h2>System Checks</h2>
-            <!-- Dynamic check items inserted by loading-screen.js -->
-        </div>
-    <button id="loadingStartBtn" disabled aria-disabled="true" aria-label="Tap to start once ready">Tap to Start</button>
-        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
-        <div class="footer-note">All systems must pass before starting for the best experience.</div>
-    </div>
-    
     <!-- Main Content -->
     <main class="container">
         {% block content %}{% endblock %}
@@ -670,7 +656,6 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
 
     <!-- PWA Service Worker Registration -->
