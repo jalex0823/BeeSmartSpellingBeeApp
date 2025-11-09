@@ -15,7 +15,21 @@
     if (status) { processName.textContent = status; }
   }
   function setDetail(msg){ if(detailText) detailText.textContent = msg; }
-  function finish(){ done = true; setProgress(100, 'Ready'); setDetail(''); setTimeout(()=>{ el.classList.add('hidden'); }, 250); }
+  function finish(){
+    done = true;
+    setProgress(100, 'Ready');
+    setDetail('');
+    setTimeout(()=>{
+      const target = document.body && document.body.dataset ? document.body.dataset.autoloadTarget : null;
+      if (target) {
+        // Navigate automatically to the main page when a target is provided
+        window.location.replace(target);
+      } else {
+        // Otherwise just hide the overlay
+        el.classList.add('hidden');
+      }
+    }, 250);
+  }
 
   // Expose a small API other scripts can call
   window.SystemChecks = window.SystemChecks || {};

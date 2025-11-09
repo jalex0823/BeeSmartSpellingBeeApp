@@ -162,29 +162,6 @@
             }
         }
         
-        <body
-            {% if session.get('theme') %} data-theme="{{ session.get('theme') }}"{% endif %}
-            class="{{ ' '.join(body_classes) }}"
-            data-env="{{ config_env }}"
-            data-version="{{ app_version }}"
-            data-user-auth="{{ '1' if current_user.is_authenticated else '0' }}"
-            data-user-role="{{ current_user.role if current_user.is_authenticated else 'anon' }}"
-            data-fast-boot="{{ '1' if fast_boot else '0' }}"
-            data-autoload-target="{{ url_for('home_root_direct') }}"
-        >
-            <!-- Honeycomb Loader Overlay -->
-            <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
-                <div class="loader-logo-wrapper">
-                    <img id="loaderLogo" src="{{ url_for('static', filename='img/logo.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
-                    <div id="loaderProgressOverlay" role="status">
-                        <div id="loaderPercentText">0%</div>
-                        <div id="loaderProcessName">Initializing BeeSmart…</div>
-                        <div id="loaderStatusDetail">Loading core modules…</div>
-                    </div>
-                </div>
-            </div>
-
-        
         /* Main Container */
         .container {
             max-width: 1200px;
@@ -325,15 +302,23 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- New Honeycomb Loader -->
-    <div id="bee-honey-loader" aria-label="Loading application" role="status">
-        <div class="honeycomb-bg"></div>
-        <div class="loader-center">
-            <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="loader-logo" />
-            <div class="loader-progress-wrapper">
-                <div class="loader-progress-bar"><div class="loader-progress-fill" id="loaderProgressFill"></div></div>
-                <div class="loader-progress-text" id="loaderProgressText">0%</div>
+<body
+    {% if session.get('theme') %} data-theme="{{ session.get('theme') }}"{% endif %}
+    data-env="{{ config_env }}"
+    data-version="{{ app_version }}"
+    data-user-auth="{{ '1' if current_user.is_authenticated else '0' }}"
+    data-user-role="{{ current_user.role if current_user.is_authenticated else 'anon' }}"
+    data-fast-boot="{{ '1' if fast_boot else '0' }}"
+    data-autoload-target="{{ url_for('home_root_direct') }}"
+>
+    <!-- Honeycomb Loader -->
+    <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
+        <div class="loader-logo-wrapper">
+            <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
+            <div id="loaderProgressOverlay" role="status">
+                <div id="loaderPercentText">0%</div>
+                <div id="loaderProcessName">Initializing BeeSmart…</div>
+                <div id="loaderStatusDetail">Loading core modules…</div>
             </div>
         </div>
     </div>
