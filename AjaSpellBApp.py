@@ -232,8 +232,8 @@ except NameError:
 # Reliable, post-app-creation lightweight routes
 @app.route('/')
 def home_root_direct():
-    """Primary application landing page: Honeycomb home screen."""
-    return render_template('honey_home.html')
+    """Primary application landing page: go straight into the app."""
+    return render_template('unified_menu.html')
 
 # Optional legacy preview alias retained (can be removed later)
 @app.route('/home_preview')
