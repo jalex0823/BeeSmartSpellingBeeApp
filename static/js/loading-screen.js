@@ -1,8 +1,9 @@
 // Loading Screen Manager
 (function(){
-  const OVERLAY_ID = 'loadingOverlay';
-  const CHECKS_CONTAINER_ID = 'loadingChecks';
-  const START_BTN_ID = 'loadingStartBtn';
+  // Support both historical honeyLoader and newer loadingOverlay + IDs
+  const OVERLAY_ID = document.getElementById('loadingOverlay') ? 'loadingOverlay' : (document.getElementById('honeyLoader') ? 'honeyLoader' : 'loadingOverlay');
+  const CHECKS_CONTAINER_ID = document.getElementById('loadingChecks') ? 'loadingChecks' : (document.getElementById('checksList') ? 'checksList' : 'loadingChecks');
+  const START_BTN_ID = document.getElementById('loadingStartBtn') ? 'loadingStartBtn' : (document.getElementById('welcomeStartBtn') ? 'welcomeStartBtn' : 'loadingStartBtn');
   const SKIP_KEY = 'bs_skip_overlay';
   const MIN_READY_DELAY_MS = 800;       // let the UI breathe a bit
   const FAILSAFE_ENABLE_MS = 2000;      // enable button no later than this

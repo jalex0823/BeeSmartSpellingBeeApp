@@ -311,18 +311,7 @@
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
 
-    <!-- Global Loading Overlay (canonical loader: crest + system checks) -->
-    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
-        <h1>Preparing Magic...</h1>
-        <div class="checks" id="loadingChecks" aria-live="polite">
-            <h2>System Checks</h2>
-            <!-- Dynamic check items inserted by loading-screen.js -->
-        </div>
-        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready">Tap to Start</button>
-        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
-        <div class="footer-note">All systems must pass before starting for the best experience.</div>
-    </div>
+    <!-- Loader removed: unified_menu honeyLoader is now the sole experience -->
     
     <!-- Main Content -->
     <main class="container">
