@@ -1,13 +1,13 @@
 {
-  "appId": "com.beesmart.spellingbee",
-  "appName": "BeeSmart Spelling Bee",
-  "webDir": "www",
+  "appId": "com.beesmart.spelling",
+  "appName": "BeeSmart Spelling",
+  "webDir": "static",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://beesmart.up.railway.app",
-    "cleartext": false,
+    "url": "https://beesmartspellingbeeapp-production.up.railway.app",
+    "cleartext": true,
     "allowNavigation": [
-      "beesmart.up.railway.app",
+      "beesmartspellingbeeapp-production.up.railway.app",
       "*.railway.app"
     ]
   },
