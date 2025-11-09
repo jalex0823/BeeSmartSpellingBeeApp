@@ -534,6 +534,18 @@
             showError: (message) => window.toast?.error(message)
         };
     </script>
+    <script>
+        // Ensure only one global loading overlay exists (remove duplicates from legacy templates)
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlays = Array.from(document.querySelectorAll('#loadingOverlay'));
+            if (overlays.length > 1) {
+                // Keep the first (assumed canonical) and remove the rest
+                overlays.slice(1).forEach(o => {
+                    try { o.parentElement && o.parentElement.removeChild(o); } catch(e) {}
+                });
+            }
+        });
+    </script>
     
     <!-- Three.js for 3D Mascot -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
