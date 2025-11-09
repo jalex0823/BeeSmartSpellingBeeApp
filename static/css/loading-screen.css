@@ -3,7 +3,8 @@
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at 50% 35%, #fff8e3 0%, #ffe6fa 45%, #ffd1f7 75%, #ffc5f5 100%);
+  /* Neutral / gold honey theme replacing pink */
+  background: radial-gradient(circle at 50% 35%, #fff8e3 0%, #ffe8b3 45%, #ffd86a 75%, #ffcb3a 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,7 +22,7 @@
   max-width: 340px;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  filter: drop-shadow(0 8px 24px rgba(255,105,180,0.35));
+  filter: drop-shadow(0 8px 24px rgba(255, 200, 60, 0.35));
   animation: crestFloat 5.5s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -37,7 +38,7 @@
   margin: 1.2rem 0 0.75rem;
   font-weight: 800;
   letter-spacing: 1px;
-  background: linear-gradient(90deg,#ff8fb1,#ffb347,#ffd54f);
+  background: linear-gradient(90deg,#ffb347,#ffd54f,#ffe58e);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
