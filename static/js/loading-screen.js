@@ -1,7 +1,7 @@
 // Loading Screen Manager
 (function(){
   // Support both historical honeyLoader and newer loadingOverlay + IDs
-  const OVERLAY_ID = document.getElementById('loadingOverlay') ? 'loadingOverlay' : (document.getElementById('honeyLoader') ? 'honeyLoader' : 'loadingOverlay');
+    const overlay = document.getElementById('loadingOverlay') || document.getElementById('honeyLoader');
   const CHECKS_CONTAINER_ID = document.getElementById('loadingChecks') ? 'loadingChecks' : (document.getElementById('checksList') ? 'checksList' : 'loadingChecks');
   const START_BTN_ID = document.getElementById('loadingStartBtn') ? 'loadingStartBtn' : (document.getElementById('welcomeStartBtn') ? 'welcomeStartBtn' : 'loadingStartBtn');
   const SKIP_KEY = 'bs_skip_overlay';
@@ -133,9 +133,11 @@
     ]);
   }
 
-  function hideOverlay(){
-    const ov = el(OVERLAY_ID); if(!ov) return;
-    ov.classList.add('hidden');
+    function hideOverlay(){
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+      }
   }
 
   function init(){
