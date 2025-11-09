@@ -2300,9 +2300,21 @@ def load_saved_wordlist():
         if not rows:
             return jsonify({"ok": False, "error": "This list has no items"}), 400
 
-        # Load into session for quiz use
+        # Explicitly clear any previous quiz state BEFORE loading new words to avoid stale stats
+        if session.get(QUIZ_STATE_KEY):
+            print(f"DEBUG /api/saved-lists/load: Clearing previous quiz state for session_id={session.get('session_id')}")
+            session.pop(QUIZ_STATE_KEY, None)
+            session.modified = True
+
+        # Load into session for quiz use (not marked as user upload so defaults like skip_default_load remain consistent)
         set_wordbank(rows, is_user_upload=False)
+        # Re-initialize quiz state with fresh order & counters
         init_quiz_state()
+        # Safety: ensure new quiz state reflects new word count
+        fresh_state = get_quiz_state()
+        if fresh_state and len(fresh_state.get("order", [])) != len(rows):
+            print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
+            init_quiz_state()
 
         return jsonify({
             "ok": True,
@@ -7199,7 +7211,7 @@ def parent_dashboard():
                          family_stats=family_stats,
                          now=datetime.now(),
                          user_avatar=user_avatar_data,
-                         use_mascot=use_mascot)
+                          use_mascot=use_mascot)
 
 
 # =============================
@@ -8485,6 +8497,7 @@ def api_speed_round_next():
             'hint': hint_text if 'hint_text' in locals() else '',
             'current_index': current_index + 1,  # 1-based for display
             'total_words': len(words),
+            'remaining': max(0, len(words) - (current_index + 1)),
             'time_per_word': round_data.get('config', {}).get('time_per_word', 10),
             'current_streak': round_data.get('current_streak', 0),
             'total_points': round_data.get('total_points', 0)
@@ -8548,6 +8561,10 @@ def api_speed_round_start():
             'speed_bonuses': 0,
             'word_history': []  # Track each word's performance
         }
+
+        # Harden persistence (mirrors quiz endpoints)
+        session.permanent = True
+        session.modified = True
         
         print(f"🎯 Speed Round started: {len(words)} words, {difficulty}, {time_per_word}s/word")
         
@@ -8642,16 +8659,18 @@ def api_speed_round_answer():
         }
         speed_round['word_history'].append(word_record)
         
-        # Move to next word
-        speed_round['current_index'] += 1
+        # Move to next word (guard against overshoot)
+        if speed_round['current_index'] < len(words):
+            speed_round['current_index'] += 1
         
         # Check if round is complete
         is_complete = speed_round['current_index'] >= len(words)
-        
-        # Update session
+
+        # Update session (keep inside try block)
         session['speed_round'] = speed_round
+        session.permanent = True
         session.modified = True
-        
+
         return jsonify({
             'is_correct': is_correct,
             'correct_spelling': correct_spelling,
@@ -8660,7 +8679,9 @@ def api_speed_round_answer():
             'total_points': speed_round['total_points'],
             'current_streak': speed_round['current_streak'],
             'time_taken': round(time_taken, 2),
-            'complete': is_complete
+            'complete': is_complete,
+            'next_index': (speed_round['current_index'] + 1) if not is_complete else None,
+            'remaining': max(0, len(words) - speed_round['current_index'])
         })
         
     except Exception as e:
@@ -9611,27 +9632,61 @@ def api_get_current_user():
     try:
         # Check if user is authenticated
         if current_user.is_authenticated:
-            return jsonify({
+            # Live stats may have been updated by the latest quiz completion; ensure we have most recent GPA/accuracy
+            try:
+                # Lightweight refresh (won't recalc heavy aggregates but ensures derived fields are present)
+                if hasattr(current_user, 'update_gpa_and_accuracy'):
+                    current_user.update_gpa_and_accuracy()
+            except Exception as _e:
+                print(f"WARNING /api/users/me: Failed to auto-refresh GPA/accuracy: {_e}")
+
+            resp = jsonify({
                 'status': 'success',
                 'authenticated': True,
                 'user': {
                     'id': current_user.id,
                     'username': current_user.username,
-                    'display_name': current_user.display_name,
-                    'email': current_user.email if hasattr(current_user, 'email') else None,
-                    'role': current_user.role if hasattr(current_user, 'role') else 'student'
+                    'display_name': getattr(current_user, 'display_name', current_user.username),
+                    'email': getattr(current_user, 'email', None),
+                    'role': getattr(current_user, 'role', 'student'),
+                    # ✅ Extended real-time progress fields
+                    'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
+                    'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
+                    'honey_points': getattr(current_user, 'honey_points', 0),
+                    'cumulative_gpa': getattr(current_user, 'cumulative_gpa', 0.0),
+                    'average_accuracy': getattr(current_user, 'average_accuracy', 0.0),
+                    'best_grade': getattr(current_user, 'best_grade', None),
+                    'best_streak': getattr(current_user, 'best_streak', 0)
                 }
             })
+            try:
+                resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            except Exception:
+                pass
+            return resp
         else:
             # Guest user
-            return jsonify({
+            resp = jsonify({
                 'status': 'success',
                 'authenticated': False,
                 'user': {
                     'display_name': 'NewBee',
-                    'role': 'guest'
+                    'role': 'guest',
+                    # Provide consistent shape for frontend consumption
+                    'total_quizzes_completed': 0,
+                    'total_lifetime_points': 0,
+                    'honey_points': 0,
+                    'cumulative_gpa': 0.0,
+                    'average_accuracy': 0.0,
+                    'best_grade': None,
+                    'best_streak': 0
                 }
             })
+            try:
+                resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            except Exception:
+                pass
+            return resp
     except Exception as e:
         print(f"❌ Error fetching current user: {e}")
         return jsonify({
@@ -9643,6 +9698,170 @@ def api_get_current_user():
                 'role': 'guest'
             }
         }), 500
+
+
+@app.route("/api/users/stats", methods=["GET"])
+def api_get_user_stats():
+    """Lightweight endpoint for polling cumulative stats (GPA, accuracy, points, streaks)."""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({
+                'status': 'success',
+                'authenticated': False,
+                'stats': {
+                    'cumulative_gpa': 0.0,
+                    'average_accuracy': 0.0,
+                    'total_lifetime_points': 0,
+                    'total_quizzes_completed': 0,
+                    'best_streak': 0,
+                    'best_grade': None,
+                    'current_speed_round_streak': 0
+                }
+            })
+
+        # Refresh GPA & accuracy including speed rounds
+        try:
+            if hasattr(current_user, 'update_gpa_and_accuracy'):
+                current_user.update_gpa_and_accuracy()
+                db.session.commit()
+        except Exception as _e:
+            print(f"WARNING /api/users/stats: refresh failed: {_e}")
+
+        sr = session.get('speed_round') or {}
+        current_sr_streak = sr.get('current_streak', 0) if sr.get('active') else 0
+
+        resp = jsonify({
+            'status': 'success',
+            'authenticated': True,
+            'stats': {
+                'cumulative_gpa': float(getattr(current_user, 'cumulative_gpa', 0.0) or 0.0),
+                'average_accuracy': float(getattr(current_user, 'average_accuracy', 0.0) or 0.0),
+                'total_lifetime_points': int(getattr(current_user, 'total_lifetime_points', 0) or 0),
+                'total_quizzes_completed': int(getattr(current_user, 'total_quizzes_completed', 0) or 0),
+                'best_streak': int(getattr(current_user, 'best_streak', 0) or 0),
+                'best_grade': getattr(current_user, 'best_grade', None),
+                'current_speed_round_streak': int(current_sr_streak or 0)
+            }
+        })
+        try:
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        except Exception:
+            pass
+        return resp
+    except Exception as e:
+        print(f"❌ Error /api/users/stats: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Cross-role stats endpoints for viewing other users (teacher/parent/admin)
+# ---------------------------------------------------------------------------
+def _build_stats_payload_for_user(u: User) -> Dict[str, object]:
+    """Internal helper to build a stats payload identical to /api/users/stats for any user.
+    Performs a lightweight GPA/accuracy refresh before reading fields.
+    """
+    try:
+        if hasattr(u, 'update_gpa_and_accuracy'):
+            u.update_gpa_and_accuracy()
+    except Exception as _e:
+        print(f"WARNING _build_stats_payload_for_user: refresh failed for user_id={u.id}: {_e}")
+    return {
+        'cumulative_gpa': float(getattr(u, 'cumulative_gpa', 0.0) or 0.0),
+        'average_accuracy': float(getattr(u, 'average_accuracy', 0.0) or 0.0),
+        'total_lifetime_points': int(getattr(u, 'total_lifetime_points', 0) or 0),
+        'total_quizzes_completed': int(getattr(u, 'total_quizzes_completed', 0) or 0),
+        'best_streak': int(getattr(u, 'best_streak', 0) or 0),
+        'best_grade': getattr(u, 'best_grade', None)
+    }
+
+def _is_authorized_to_view_user(target: User) -> bool:
+    """Return True if current_user is allowed to view target user's stats.
+    Rules:
+      * Admins can view everyone
+      * The user themselves can view their own stats
+      * Teachers/Parents can view students they are linked to via TeacherStudent
+    """
+    if not current_user.is_authenticated:
+        return False
+    if current_user.role == 'admin':
+        return True
+    if current_user.id == target.id:
+        return True
+    if current_user.role in ('teacher', 'parent'):
+        try:
+            link = TeacherStudent.query.filter_by(
+                teacher_user_id=current_user.id,
+                student_id=target.id,
+                is_active=True
+            ).first()
+            if link:
+                return True
+        except Exception as _e:
+            print(f"WARNING _is_authorized_to_view_user: link check failed: {_e}")
+    return False
+
+@app.route("/api/users/<int:user_id>/stats", methods=["GET"])
+def api_get_specific_user_stats(user_id: int):
+    """Return stats for a specific user (used by teacher/parent/admin dashboards for polling)."""
+    try:
+        target = User.query.get(user_id)
+        if not target:
+            return jsonify({'status': 'error', 'message': 'User not found'}), 404
+        if not _is_authorized_to_view_user(target):
+            return jsonify({'status': 'error', 'message': 'Forbidden'}), 403
+        payload = _build_stats_payload_for_user(target)
+        resp = jsonify({'status': 'success', 'user_id': user_id, 'stats': payload})
+        try:
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        except Exception:
+            pass
+        return resp
+    except Exception as e:
+        print(f"❌ Error /api/users/<id>/stats: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to build stats'}), 500
+
+@app.route("/api/users/stats/batch", methods=["GET"])
+def api_get_batch_user_stats():
+    """Batch stats endpoint: /api/users/stats/batch?ids=1,2,3
+    Returns a dict keyed by user id for authorized targets.
+    Unauthorized targets are omitted (or optionally reported)."""
+    try:
+        ids_param = request.args.get('ids', '')
+        if not ids_param.strip():
+            return jsonify({'status': 'error', 'message': 'No ids provided'}), 400
+        raw_ids = [p.strip() for p in ids_param.split(',') if p.strip()]
+        # Coerce to ints, ignore invalid
+        id_list = []
+        for r in raw_ids:
+            try:
+                id_list.append(int(r))
+            except ValueError:
+                continue
+        if not id_list:
+            return jsonify({'status': 'error', 'message': 'No valid ids'}), 400
+        users = User.query.filter(User.id.in_(id_list)).all()
+        response_map = {}
+        unauthorized = []
+        for u in users:
+            if _is_authorized_to_view_user(u):
+                response_map[u.id] = _build_stats_payload_for_user(u)
+            else:
+                unauthorized.append(u.id)
+        result = {
+            'status': 'success',
+            'results': response_map
+        }
+        if unauthorized:
+            result['unauthorized'] = unauthorized
+        resp = jsonify(result)
+        try:
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        except Exception:
+            pass
+        return resp
+    except Exception as e:
+        print(f"❌ Error /api/users/stats/batch: {e}")
+        return jsonify({'status': 'error', 'message': 'Batch stats failed'}), 500
 
 
 @app.route("/api/users/me/avatar", methods=["GET"])

@@ -1,0 +1,836 @@
+[
+  {
+    "word": "casa",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Edificio para habitar. Vivienda donde vive una persona o familia.",
+      "english_spanish": [
+        "house",
+        "home",
+        "building where people live"
+      ],
+      "spanish_english": "casa → house, home"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "house",
+          "home",
+          "building where people live"
+        ],
+        "spanish_definition": "Edificio para habitar. Vivienda donde vive una persona o familia.",
+        "examples": [
+          {
+            "text": "Vivo en una casa grande."
+          },
+          {
+            "text": "Mi casa tiene tres habitaciones."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "perro",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Mamífero doméstico carnívoro de la familia de los cánidos. Animal de compañía.",
+      "english_spanish": [
+        "dog",
+        "canine"
+      ],
+      "spanish_english": "perro → dog"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "dog",
+          "canine"
+        ],
+        "spanish_definition": "Mamífero doméstico carnívoro de la familia de los cánidos.",
+        "examples": [
+          {
+            "text": "Mi perro es muy amigable."
+          },
+          {
+            "text": "El perro ladra mucho."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "gato",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Mamífero carnívoro de la familia de los félidos. Animal doméstico pequeño.",
+      "english_spanish": [
+        "cat",
+        "feline"
+      ],
+      "spanish_english": "gato → cat"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "cat",
+          "feline"
+        ],
+        "spanish_definition": "Mamífero carnívoro de la familia de los félidos.",
+        "examples": [
+          {
+            "text": "El gato está durmiendo."
+          },
+          {
+            "text": "Tengo dos gatos en casa."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "agua",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Sustancia líquida sin olor, color ni sabor que forma los mares, lagos y ríos.",
+      "english_spanish": [
+        "water"
+      ],
+      "spanish_english": "agua → water"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "water"
+        ],
+        "spanish_definition": "Sustancia líquida sin olor, color ni sabor.",
+        "examples": [
+          {
+            "text": "Necesito beber agua."
+          },
+          {
+            "text": "El agua está fría."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "sol",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Estrella luminosa centro del sistema solar. Luz y calor que emite.",
+      "english_spanish": [
+        "sun",
+        "sunlight"
+      ],
+      "spanish_english": "sol → sun"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "sun",
+          "sunlight"
+        ],
+        "spanish_definition": "Estrella luminosa centro del sistema solar.",
+        "examples": [
+          {
+            "text": "El sol brilla hoy."
+          },
+          {
+            "text": "Me gusta tomar el sol."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "luna",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Satélite natural de la Tierra. Cuerpo celeste que gira alrededor de la Tierra.",
+      "english_spanish": [
+        "moon"
+      ],
+      "spanish_english": "luna → moon"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "moon"
+        ],
+        "spanish_definition": "Satélite natural de la Tierra.",
+        "examples": [
+          {
+            "text": "La luna está llena esta noche."
+          },
+          {
+            "text": "Miro la luna desde mi ventana."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "libro",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Conjunto de hojas de papel impresas y unidas. Obra literaria o científica.",
+      "english_spanish": [
+        "book"
+      ],
+      "spanish_english": "libro → book"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "book"
+        ],
+        "spanish_definition": "Conjunto de hojas de papel impresas y unidas.",
+        "examples": [
+          {
+            "text": "Leo un libro interesante."
+          },
+          {
+            "text": "Este libro es muy largo."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "mesa",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Mueble con superficie plana sostenida por una o varias patas. Se usa para comer o trabajar.",
+      "english_spanish": [
+        "table",
+        "desk"
+      ],
+      "spanish_english": "mesa → table, desk"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "table",
+          "desk"
+        ],
+        "spanish_definition": "Mueble con superficie plana sostenida por una o varias patas.",
+        "examples": [
+          {
+            "text": "La comida está en la mesa."
+          },
+          {
+            "text": "Compré una mesa nueva."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "silla",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Asiento individual con respaldo, generalmente con cuatro patas.",
+      "english_spanish": [
+        "chair",
+        "seat"
+      ],
+      "spanish_english": "silla → chair, seat"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "chair",
+          "seat"
+        ],
+        "spanish_definition": "Asiento individual con respaldo.",
+        "examples": [
+          {
+            "text": "Siéntate en la silla."
+          },
+          {
+            "text": "Necesitamos más sillas."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "puerta",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Abertura en una pared para entrar o salir. Pieza que cierra esta abertura.",
+      "english_spanish": [
+        "door",
+        "gate",
+        "entrance"
+      ],
+      "spanish_english": "puerta → door, gate"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "door",
+          "gate",
+          "entrance"
+        ],
+        "spanish_definition": "Abertura en una pared para entrar o salir.",
+        "examples": [
+          {
+            "text": "Cierra la puerta, por favor."
+          },
+          {
+            "text": "La puerta está abierta."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "ventana",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Abertura en una pared para dar luz y ventilación. Generalmente con vidrio.",
+      "english_spanish": [
+        "window"
+      ],
+      "spanish_english": "ventana → window"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "window"
+        ],
+        "spanish_definition": "Abertura en una pared para dar luz y ventilación.",
+        "examples": [
+          {
+            "text": "Abre la ventana."
+          },
+          {
+            "text": "Miro por la ventana."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "árbol",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Planta leñosa de tronco elevado que se ramifica a cierta altura del suelo.",
+      "english_spanish": [
+        "tree"
+      ],
+      "spanish_english": "árbol → tree"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "tree"
+        ],
+        "spanish_definition": "Planta leñosa de tronco elevado que se ramifica.",
+        "examples": [
+          {
+            "text": "El árbol es muy alto."
+          },
+          {
+            "text": "Hay muchos árboles en el parque."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "flor",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Parte de la planta que contiene los órganos de reproducción. Generalmente colorida y aromática.",
+      "english_spanish": [
+        "flower",
+        "blossom"
+      ],
+      "spanish_english": "flor → flower, blossom"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "flower",
+          "blossom"
+        ],
+        "spanish_definition": "Parte de la planta que contiene los órganos de reproducción.",
+        "examples": [
+          {
+            "text": "Esta flor es hermosa."
+          },
+          {
+            "text": "Compré flores para mi madre."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "niño",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Persona de corta edad. Ser humano en la etapa de la niñez (masculino).",
+      "english_spanish": [
+        "boy",
+        "child (male)"
+      ],
+      "spanish_english": "niño → boy, child"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "boy",
+          "child (male)"
+        ],
+        "spanish_definition": "Persona de corta edad (masculino).",
+        "examples": [
+          {
+            "text": "El niño juega en el parque."
+          },
+          {
+            "text": "Es un niño muy inteligente."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "niña",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Persona de corta edad. Ser humano en la etapa de la niñez (femenino).",
+      "english_spanish": [
+        "girl",
+        "child (female)"
+      ],
+      "spanish_english": "niña → girl, child"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "girl",
+          "child (female)"
+        ],
+        "spanish_definition": "Persona de corta edad (femenino).",
+        "examples": [
+          {
+            "text": "La niña lee un libro."
+          },
+          {
+            "text": "Es una niña muy bonita."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "hombre",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Ser humano adulto de sexo masculino. Persona del género masculino.",
+      "english_spanish": [
+        "man",
+        "male adult"
+      ],
+      "spanish_english": "hombre → man"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "man",
+          "male adult"
+        ],
+        "spanish_definition": "Ser humano adulto de sexo masculino.",
+        "examples": [
+          {
+            "text": "Ese hombre es mi padre."
+          },
+          {
+            "text": "El hombre trabaja mucho."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "mujer",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Ser humano adulto de sexo femenino. Persona del género femenino.",
+      "english_spanish": [
+        "woman",
+        "female adult"
+      ],
+      "spanish_english": "mujer → woman"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "woman",
+          "female adult"
+        ],
+        "spanish_definition": "Ser humano adulto de sexo femenino.",
+        "examples": [
+          {
+            "text": "Esa mujer es mi profesora."
+          },
+          {
+            "text": "La mujer es muy amable."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "día",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Período de 24 horas. Tiempo que dura la claridad del sol.",
+      "english_spanish": [
+        "day",
+        "daytime"
+      ],
+      "spanish_english": "día → day"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "day",
+          "daytime"
+        ],
+        "spanish_definition": "Período de 24 horas. Tiempo de claridad del sol.",
+        "examples": [
+          {
+            "text": "Hoy es un buen día."
+          },
+          {
+            "text": "Trabajo todo el día."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "noche",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Período de oscuridad entre el atardecer y el amanecer. Tiempo sin luz solar.",
+      "english_spanish": [
+        "night",
+        "nighttime",
+        "evening"
+      ],
+      "spanish_english": "noche → night"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "night",
+          "nighttime",
+          "evening"
+        ],
+        "spanish_definition": "Período de oscuridad entre el atardecer y el amanecer.",
+        "examples": [
+          {
+            "text": "Buenas noches."
+          },
+          {
+            "text": "La noche es tranquila."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "tiempo",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Duración de las cosas. Magnitud física que mide el transcurrir de los acontecimientos. También: condiciones atmosféricas.",
+      "english_spanish": [
+        "time",
+        "weather"
+      ],
+      "spanish_english": "tiempo → time, weather"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "time",
+          "weather"
+        ],
+        "spanish_definition": "Duración de las cosas. Condiciones atmosféricas.",
+        "examples": [
+          {
+            "text": "No tengo tiempo ahora."
+          },
+          {
+            "text": "El tiempo está hermoso hoy."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "amor",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Sentimiento intenso de afecto y cariño hacia otra persona. Inclinación emocional profunda.",
+      "english_spanish": [
+        "love",
+        "affection"
+      ],
+      "spanish_english": "amor → love"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "love",
+          "affection"
+        ],
+        "spanish_definition": "Sentimiento intenso de afecto y cariño.",
+        "examples": [
+          {
+            "text": "El amor es importante."
+          },
+          {
+            "text": "Te quiero con todo mi amor."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "vida",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Estado de actividad de los seres orgánicos. Existencia desde el nacimiento hasta la muerte.",
+      "english_spanish": [
+        "life",
+        "existence"
+      ],
+      "spanish_english": "vida → life"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "life",
+          "existence"
+        ],
+        "spanish_definition": "Estado de actividad de los seres orgánicos.",
+        "examples": [
+          {
+            "text": "La vida es bella."
+          },
+          {
+            "text": "Disfruto mi vida."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "trabajo",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Actividad que realiza una persona. Esfuerzo físico o mental para realizar algo. Empleo u ocupación.",
+      "english_spanish": [
+        "work",
+        "job",
+        "labor"
+      ],
+      "spanish_english": "trabajo → work, job"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "work",
+          "job",
+          "labor"
+        ],
+        "spanish_definition": "Actividad o esfuerzo para realizar algo. Empleo.",
+        "examples": [
+          {
+            "text": "Voy al trabajo todos los días."
+          },
+          {
+            "text": "Mi trabajo es interesante."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "escuela",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Establecimiento donde se imparte educación. Institución para la enseñanza.",
+      "english_spanish": [
+        "school"
+      ],
+      "spanish_english": "escuela → school"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "school"
+        ],
+        "spanish_definition": "Establecimiento donde se imparte educación.",
+        "examples": [
+          {
+            "text": "Los niños van a la escuela."
+          },
+          {
+            "text": "Mi escuela es grande."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "familia",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Grupo de personas relacionadas por parentesco. Conjunto de padres e hijos.",
+      "english_spanish": [
+        "family"
+      ],
+      "spanish_english": "familia → family"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "family"
+        ],
+        "spanish_definition": "Grupo de personas relacionadas por parentesco.",
+        "examples": [
+          {
+            "text": "Amo a mi familia."
+          },
+          {
+            "text": "Mi familia es muy grande."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "amigo",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Persona con quien se tiene una relación de afecto y confianza. Compañero cercano.",
+      "english_spanish": [
+        "friend (male)",
+        "buddy"
+      ],
+      "spanish_english": "amigo → friend"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "friend (male)",
+          "buddy"
+        ],
+        "spanish_definition": "Persona con quien se tiene una relación de afecto.",
+        "examples": [
+          {
+            "text": "Él es mi mejor amigo."
+          },
+          {
+            "text": "Tengo muchos amigos."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "comida",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Sustancia que se consume para nutrirse. Alimento. También: acción de comer.",
+      "english_spanish": [
+        "food",
+        "meal"
+      ],
+      "spanish_english": "comida → food, meal"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "food",
+          "meal"
+        ],
+        "spanish_definition": "Sustancia que se consume para nutrirse.",
+        "examples": [
+          {
+            "text": "La comida está deliciosa."
+          },
+          {
+            "text": "Necesito comprar comida."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "word": "ciudad",
+    "lang": "Spanish",
+    "pos": "noun",
+    "definitions": {
+      "spanish_spanish": "Conjunto de edificios y calles habitados por numerosas personas. Población grande.",
+      "english_spanish": [
+        "city",
+        "town"
+      ],
+      "spanish_english": "ciudad → city, town"
+    },
+    "senses": [
+      {
+        "glosses": [
+          "city",
+          "town"
+        ],
+        "spanish_definition": "Conjunto de edificios y calles habitados por numerosas personas.",
+        "examples": [
+          {
+            "text": "Vivo en una ciudad grande."
+          },
+          {
+            "text": "Esta ciudad es hermosa."
+          }
+        ]
+      }
+    ]
+  }
+]

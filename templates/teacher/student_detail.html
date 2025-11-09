@@ -10,7 +10,7 @@
     .header{display:flex;gap:1.25rem;align-items:center;background:#fff;border-radius:16px;padding:1.25rem 1.5rem;box-shadow:0 8px 24px rgba(0,0,0,0.08);margin-bottom:1.25rem}
     .avatar{width:76px;height:76px;border-radius:12px;background:#fafafa;border:1px solid #eee;object-fit:cover}
     .title h1{margin:0;font-size:1.6rem}
-    .title p{margin:0.2rem 0 0;color:#667}
+  .title p{margin:0.2rem 0 0;color:#667}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
     .card{background:#fff;border-radius:14px;padding:1rem 1.1rem;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
     .card h3{margin:.2rem 0 1rem;font-size:1.05rem}
@@ -41,7 +41,7 @@
       <img class="avatar" alt="Avatar" src="{{ (avatar.urls.thumbnail if avatar and avatar.urls) or (avatar.thumbnail_url if avatar) or url_for('static', filename='assets/avatars/cool-bee/thumbnail.png') }}">
       <div class="title">
         <h1>{{ student.display_name }}</h1>
-        <p>Grade: {{ student.grade_level or 'N/A' }} • Points: {{ student.total_lifetime_points or 0 }} • Best Streak: {{ student.best_streak or 0 }}</p>
+  <p>Grade: {{ student.grade_level or 'N/A' }} • Points: <span id="detail-points">{{ student.total_lifetime_points or 0 }}</span> • Best Streak: <span id="detail-best-streak">{{ student.best_streak or 0 }}</span></p>
       </div>
     </div>
 
@@ -49,9 +49,9 @@
       <div class="card">
         <h3>Overview</h3>
         <div class="stats">
-          <div class="stat"><div class="val">{{ total_quizzes|format_number }}</div><div>Quizzes</div></div>
-          <div class="stat"><div class="val">{{ '%.0f'|format(avg_accuracy) }}%</div><div>Avg Accuracy</div></div>
-          <div class="stat"><div class="val">{{ student.cumulative_gpa or 0 }}</div><div>GPA</div></div>
+          <div class="stat"><div id="detail-quizzes" class="val">{{ total_quizzes|format_number }}</div><div>Quizzes</div></div>
+          <div class="stat"><div id="detail-accuracy" class="val">{{ '%.0f'|format(avg_accuracy) }}%</div><div>Avg Accuracy</div></div>
+          <div class="stat"><div id="detail-gpa" class="val">{{ student.cumulative_gpa or 0 }}</div><div>GPA</div></div>
         </div>
         <div style="margin-top:1rem">
           <div><strong>Avatar:</strong> {{ avatar.name if avatar else student.avatar_id }}</div>
@@ -129,5 +129,28 @@
       </div>
     </div>
   </div>
+  <script>
+    // Live polling to refresh this student's stats
+    (function(){
+      const studentId = {{ student.id }};
+      function numberWithCommas(x){ try { return Number(x||0).toLocaleString(); } catch { return x; } }
+      async function poll(){
+        try{
+          const resp = await fetch(`/api/users/${studentId}/stats`, { headers:{'Accept':'application/json'} });
+          const body = await resp.json();
+          if(!resp.ok || body.status!=='success') return;
+          const s = body.stats||{};
+          const q = document.getElementById('detail-quizzes'); if(q) q.textContent = numberWithCommas(s.total_quizzes_completed||0);
+          const a = document.getElementById('detail-accuracy'); if(a) a.textContent = `${Math.round(s.average_accuracy||0)}%`;
+          const g = document.getElementById('detail-gpa'); if(g) g.textContent = (s.cumulative_gpa||0).toFixed ? (s.cumulative_gpa).toFixed(2) : s.cumulative_gpa;
+          const p = document.getElementById('detail-points'); if(p) p.textContent = numberWithCommas(s.total_lifetime_points||0);
+          const bs = document.getElementById('detail-best-streak'); if(bs) bs.textContent = numberWithCommas(s.best_streak||0);
+        }catch(e){ /* silent */ }
+      }
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); });
+      setInterval(poll, 12000);
+      window.addEventListener('load', poll);
+    })();
+  </script>
 </body>
 </html>

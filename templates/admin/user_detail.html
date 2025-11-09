@@ -163,6 +163,28 @@
 <style>
 .detail-card {
     background: white;
+// Live polling: keep this user's stats fresh while admin has the page open
+(function(){
+    const userId = {{ target_user.id }};
+    function numberWithCommas(x){ try { return Number(x||0).toLocaleString(); } catch { return x; } }
+    function setText(selector, text){ const el = document.querySelector(selector); if(el) el.textContent = text; }
+    async function poll(){
+        try{
+            const resp = await fetch(`/api/users/${userId}/stats`, { headers:{'Accept':'application/json'} });
+            const body = await resp.json();
+            if(!resp.ok || body.status!=='success') return;
+            const s = body.stats||{};
+            setText('.stats-grid .stat-box:nth-child(1) .stat-value', numberWithCommas(s.total_quizzes_completed||0));
+            // We don't have words_attempted in this endpoint; leave as-is for now
+            setText('.stats-grid .stat-box:nth-child(4) .stat-value', `${Math.round(s.average_accuracy||0)}%`);
+            setText('.stats-grid .stat-box:nth-child(6) .stat-value', numberWithCommas(s.best_streak||0));
+            setText('.stats-grid .stat-box:nth-child(7) .stat-value', numberWithCommas(s.total_lifetime_points||0));
+        }catch(e){ /* silent */ }
+    }
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); });
+    setInterval(poll, 12000);
+    window.addEventListener('load', poll);
+})();
     border-radius: 12px;
     padding: 2rem;
     margin-bottom: 1.5rem;

@@ -314,20 +314,32 @@ class User(UserMixin, db.Model):
     
     def update_gpa_and_accuracy(self):
         """
-        Calculate and update cumulative GPA and average accuracy from all completed quizzes.
-        GPA Scale: A+ = 4.0, A = 4.0, A- = 3.7, B+ = 3.3, B = 3.0, B- = 2.7, 
+        Calculate and update cumulative GPA and average accuracy from all completed activities.
+        Includes: standard QuizSession records and SpeedRoundScore results.
+        GPA Scale: A+ = 4.0, A = 4.0, A- = 3.7, B+ = 3.3, B = 3.0, B- = 2.7,
                    C+ = 2.3, C = 2.0, C- = 1.7, D+ = 1.3, D = 1.0, D- = 0.7, F = 0.0
         """
+        # Collect completed quiz sessions
         completed_sessions = QuizSession.query.filter_by(
             user_id=self.id,
             completed=True
         ).all()
-        
-        if not completed_sessions:
-            self.cumulative_gpa = 0.0
-            self.average_accuracy = 0.0
-            return
-        
+
+        # Collect in-progress (incomplete) quiz sessions with some activity
+        try:
+            incomplete_sessions = QuizSession.query.filter_by(
+                user_id=self.id,
+                completed=False
+            ).all()
+        except Exception:
+            incomplete_sessions = []
+
+        # Collect speed round scores (treated as sessions for GPA/accuracy)
+        try:
+            speed_scores = SpeedRoundScore.query.filter_by(user_id=self.id).all()
+        except Exception:
+            speed_scores = []
+
         # Grade to GPA mapping
         grade_to_gpa = {
             'A+': 4.0, 'A': 4.0, 'A-': 3.7,
@@ -336,35 +348,109 @@ class User(UserMixin, db.Model):
             'D+': 1.3, 'D': 1.0, 'D-': 0.7,
             'F': 0.0
         }
-        
-        total_gpa_points = 0
-        total_accuracy = 0
-        valid_sessions = 0
-        best_gpa = 0.0
-        
+
+        def grade_from_accuracy(acc: float) -> str:
+            acc_val = acc or 0.0
+            if acc_val >= 97:
+                return 'A+'
+            elif acc_val >= 93:
+                return 'A'
+            elif acc_val >= 90:
+                return 'A-'
+            elif acc_val >= 87:
+                return 'B+'
+            elif acc_val >= 83:
+                return 'B'
+            elif acc_val >= 80:
+                return 'B-'
+            elif acc_val >= 77:
+                return 'C+'
+            elif acc_val >= 73:
+                return 'C'
+            elif acc_val >= 70:
+                return 'C-'
+            elif acc_val >= 67:
+                return 'D+'
+            elif acc_val >= 63:
+                return 'D'
+            elif acc_val >= 60:
+                return 'D-'
+            else:
+                return 'F'
+
+        total_gpa_points = 0.0
+        total_accuracy = 0.0
+        valid_activities = 0
+        best_gpa = -1.0
+
+        # Fold in standard quiz sessions (completed)
         for session in completed_sessions:
+            if session.accuracy_percentage is not None:
+                acc = float(session.accuracy_percentage)
+                total_accuracy += acc
             if session.grade:
                 gpa_value = grade_to_gpa.get(session.grade, 0.0)
-                total_gpa_points += gpa_value
-                valid_sessions += 1
-                
-                # Track best grade
-                if gpa_value > best_gpa:
-                    best_gpa = gpa_value
-                    self.best_grade = session.grade
-            
-            if session.accuracy_percentage:
-                total_accuracy += float(session.accuracy_percentage)
-        
+            else:
+                # Derive from accuracy if grade missing
+                acc = float(session.accuracy_percentage or 0.0)
+                gpa_value = grade_to_gpa.get(grade_from_accuracy(acc), 0.0)
+            total_gpa_points += gpa_value
+            valid_activities += 1
+            if gpa_value > best_gpa:
+                best_gpa = gpa_value
+                self.best_grade = session.grade or grade_from_accuracy(float(session.accuracy_percentage or 0.0))
+
+        # Fold in in-progress sessions (derive provisional accuracy/grade)
+        for s in incomplete_sessions:
+            # Determine attempted words (exclude skipped by default)
+            try:
+                correct = int(s.correct_count or 0)
+                incorrect = int(s.incorrect_count or 0)
+                attempted = correct + incorrect
+            except Exception:
+                correct = 0
+                attempted = 0
+            if attempted <= 0:
+                # If no real attempts yet, skip from GPA/accuracy aggregation
+                continue
+            acc = round((correct / attempted) * 100.0, 2)
+            total_accuracy += acc
+            letter = grade_from_accuracy(acc)
+            gpa_value = grade_to_gpa.get(letter, 0.0)
+            total_gpa_points += gpa_value
+            valid_activities += 1
+            if gpa_value > best_gpa:
+                best_gpa = gpa_value
+                # best_grade can come from provisional too
+                self.best_grade = letter
+
+        # Fold in speed round scores
+        for sr in speed_scores:
+            acc = sr.accuracy_percentage or 0.0
+            total_accuracy += float(acc)
+            letter = grade_from_accuracy(float(acc))
+            gpa_value = grade_to_gpa.get(letter, 0.0)
+            total_gpa_points += gpa_value
+            valid_activities += 1
+            if gpa_value > best_gpa:
+                best_gpa = gpa_value
+                self.best_grade = letter
+
         # Calculate averages
-        if valid_sessions > 0:
-            self.cumulative_gpa = round(total_gpa_points / valid_sessions, 2)
-            self.average_accuracy = round(total_accuracy / valid_sessions, 2)
-        
-        # Update best streak
-        session_streaks = [s.max_streak for s in completed_sessions if s.max_streak]
-        if session_streaks:
-            self.best_streak = max(session_streaks)
+        if valid_activities > 0:
+            self.cumulative_gpa = round(total_gpa_points / valid_activities, 2)
+            self.average_accuracy = round(total_accuracy / valid_activities, 2)
+        else:
+            self.cumulative_gpa = 0.0
+            self.average_accuracy = 0.0
+
+        # Update best streak across completed, in-progress, and speed rounds
+        session_streaks = [s.max_streak for s in completed_sessions if getattr(s, 'max_streak', None)]
+        session_streaks += [s.max_streak for s in incomplete_sessions if getattr(s, 'max_streak', None)]
+        speed_streaks = [s.longest_streak for s in speed_scores if getattr(s, 'longest_streak', None)]
+        all_streaks = session_streaks + speed_streaks
+        if all_streaks:
+            self.best_streak = max(all_streaks)
     
     def __repr__(self):
         return f'<User {self.username} ({self.role})>'

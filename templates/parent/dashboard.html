@@ -431,19 +431,19 @@
 
             <div class="stat-card">
                 <div class="stat-icon">📝</div>
-                <div class="stat-value">{{ family_stats.total_quizzes|format_number }}</div>
+                <div class="stat-value" id="family-total-quizzes">{{ family_stats.total_quizzes|format_number }}</div>
                 <div class="stat-label">Total Quizzes</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon">📊</div>
-                <div class="stat-value">{{ "%.0f"|format(family_stats.avg_accuracy) }}%</div>
+                <div class="stat-value" id="family-avg-accuracy">{{ "%.0f"|format(family_stats.avg_accuracy) }}%</div>
                 <div class="stat-label">Family Accuracy</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon">🏆</div>
-                <div class="stat-value">{{ family_stats.total_points|format_number }}</div>
+                <div class="stat-value" id="family-total-points">{{ family_stats.total_points|format_number }}</div>
                 <div class="stat-label">Total Points</div>
             </div>
         </div>
@@ -508,7 +508,7 @@
                     </thead>
                     <tbody>
                         {% for student in students %}
-                        <tr>
+                        <tr data-student-id="{{ student.id }}">
                             <td>
                                 {% if student.avatar_thumb_url %}
                                     <img src="{{ student.avatar_thumb_url }}" alt="avatar" style="width:36px;height:36px;border-radius:8px;border:1px solid #eee;object-fit:cover;">
@@ -518,11 +518,11 @@
                             </td>
                             <td><strong>{{ student.display_name }}</strong></td>
                             <td>{{ student.grade_level or 'N/A' }}</td>
-                            <td>{{ student.total_quizzes_completed|format_number or 0 }}</td>
+                            <td><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
                             <td>
                                 {% set accuracy = student.avg_accuracy or 0 %}
                                 <div class="accuracy-bar">
-                                    <div class="accuracy-fill 
+                                    <div id="student-{{ student.id }}-acc-bar" class="accuracy-fill 
                                         {% if accuracy >= 90 %}accuracy-excellent
                                         {% elif accuracy >= 80 %}accuracy-good
                                         {% elif accuracy >= 70 %}accuracy-fair
@@ -531,9 +531,9 @@
                                         style="width: {{ accuracy }}%;">
                                     </div>
                                 </div>
-                                <span>{{ "%.0f"|format(accuracy) }}%</span>
+                                <span id="student-{{ student.id }}-acc-text">{{ "%.0f"|format(accuracy) }}%</span>
                             </td>
-                            <td><strong>{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
+                            <td><strong id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
                             <td>
                                 {% if student.last_login %}
                                     {{ student.last_login.strftime('%b %d') }}
@@ -766,6 +766,62 @@
                 console.warn('Error loading parent avatar:', error);
                 avatarContainer.innerHTML = '<div style="font-size: 5rem; text-align: center;">🐝</div>';
             }
+        })();
+    </script>
+    <script>
+        // Dynamic polling for family stats (children linked to parent)
+        (function(){
+            function numberWithCommas(x){
+                try { return Number(x||0).toLocaleString(); } catch { return x; }
+            }
+            function updateRow(id, data){
+                const q = document.getElementById(`student-${id}-quizzes`);
+                if(q) q.textContent = numberWithCommas(data.total_quizzes_completed||0);
+                const p = document.getElementById(`student-${id}-points`);
+                if(p) p.textContent = numberWithCommas(data.total_lifetime_points||0);
+                const acc = Math.round((data.average_accuracy||0));
+                const accText = document.getElementById(`student-${id}-acc-text`);
+                if(accText) accText.textContent = `${acc}%`;
+                const bar = document.getElementById(`student-${id}-acc-bar`);
+                if(bar){
+                    bar.style.width = `${acc}%`;
+                    bar.classList.remove('accuracy-excellent','accuracy-good','accuracy-fair','accuracy-poor','accuracy-fail');
+                    if(acc>=90) bar.classList.add('accuracy-excellent');
+                    else if(acc>=80) bar.classList.add('accuracy-good');
+                    else if(acc>=70) bar.classList.add('accuracy-fair');
+                    else if(acc>=60) bar.classList.add('accuracy-poor');
+                    else bar.classList.add('accuracy-fail');
+                }
+            }
+            async function pollFamily(){
+                const rows = Array.from(document.querySelectorAll('tr[data-student-id]'));
+                if(rows.length===0) return;
+                const ids = rows.map(r=>r.getAttribute('data-student-id')).join(',');
+                try{
+                    const resp = await fetch(`/api/users/stats/batch?ids=${ids}`, { headers:{'Accept':'application/json'} });
+                    const body = await resp.json();
+                    if(!resp.ok || body.status!=='success') return;
+                    const results = body.results||{};
+                    let totalQuizzes = 0, totalPoints=0, accSum=0, count=0;
+                    for(const [id, stats] of Object.entries(results)){
+                        updateRow(id, stats);
+                        totalQuizzes += Number(stats.total_quizzes_completed||0);
+                        totalPoints += Number(stats.total_lifetime_points||0);
+                        accSum += Number(stats.average_accuracy||0);
+                        count += 1;
+                    }
+                    const avgAcc = count? Math.round(accSum/count) : 0;
+                    const elQ = document.getElementById('family-total-quizzes');
+                    if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
+                    const elP = document.getElementById('family-total-points');
+                    if(elP) elP.textContent = numberWithCommas(totalPoints);
+                    const elA = document.getElementById('family-avg-accuracy');
+                    if(elA) elA.textContent = `${avgAcc}%`;
+                }catch(e){ /* silent */ }
+            }
+            document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollFamily(); });
+            setInterval(pollFamily, 12000);
+            window.addEventListener('load', pollFamily);
         })();
     </script>
 </body>

@@ -2743,10 +2743,10 @@
                                         Grade
                                     </div>
                                     <div style="font-size: 1.8rem; font-weight: 700; color: #9C27B0; margin-bottom: 0.2rem;">
-                                        {{ current_user.cumulative_gpa|gpa_to_grade }} 🎓
+                                        <span id="stats-grade-letter">{{ current_user.cumulative_gpa|gpa_to_grade }}</span> 🎓
                                     </div>
                                     <div style="font-size: 0.75rem; color: #8B4513; font-weight: 500;">
-                                        GPA: {{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa and current_user.cumulative_gpa != None else "0.00" }}
+                                        GPA: <span id="stats-gpa-value">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa and current_user.cumulative_gpa != None else "0.00" }}</span>
                                     </div>
                                 </div>
                                 
@@ -2763,7 +2763,7 @@
                                         Points
                                     </div>
                                     <div style="font-size: 1.4rem; font-weight: 700; color: #FF8C00; margin-bottom: 0.2rem;">
-                                        {{ current_user.total_lifetime_points|format_number or 0 }} 🏆
+                                        <span id="stats-points">{{ current_user.total_lifetime_points|format_number or 0 }}</span> 🏆
                                     </div>
                                     <div style="font-size: 0.75rem; color: #8B4513; font-weight: 500; opacity: 0;">
                                         &nbsp;
@@ -2783,7 +2783,7 @@
                                         Quizzes
                                     </div>
                                     <div style="font-size: 1.4rem; font-weight: 700; color: #4CAF50; margin-bottom: 0.2rem;">
-                                        {{ current_user.total_quizzes_completed|format_number or 0 }} 📝
+                                        <span id="stats-quizzes">{{ current_user.total_quizzes_completed|format_number or 0 }}</span> 📝
                                     </div>
                                     <div style="font-size: 0.75rem; color: #8B4513; font-weight: 500; opacity: 0;">
                                         &nbsp;
@@ -2803,13 +2803,51 @@
                                         Accuracy
                                     </div>
                                     <div style="font-size: 1.4rem; font-weight: 700; color: #2196F3; margin-bottom: 0.2rem;">
-                                        {{ "%.1f"|format(current_user.average_accuracy|float) if current_user.average_accuracy and current_user.average_accuracy != None else "0.0" }}% 🎯
+                                        <span id="stats-accuracy">{{ "%.1f"|format(current_user.average_accuracy|float) if current_user.average_accuracy and current_user.average_accuracy != None else "0.0" }}</span>% 🎯
                                     </div>
                                     <div style="font-size: 0.75rem; color: #8B4513; font-weight: 500; opacity: 0;">
                                         &nbsp;
                                     </div>
                                 </div>
-                            </div>
+                                                        </div>
+                                                        <script>
+                                                        (function(){
+                                                            function $(id){return document.getElementById(id);}    
+                                                            function gradeFromGpa(g){
+                                                                var v = Number(g)||0;
+                                                                if(v>=3.97) return 'A+';
+                                                                if(v>=3.85) return 'A';
+                                                                if(v>=3.70) return 'A-';
+                                                                if(v>=3.30) return 'B+';
+                                                                if(v>=3.00) return 'B';
+                                                                if(v>=2.70) return 'B-';
+                                                                if(v>=2.30) return 'C+';
+                                                                if(v>=2.00) return 'C';
+                                                                if(v>=1.70) return 'C-';
+                                                                if(v>=1.30) return 'D+';
+                                                                if(v>=1.00) return 'D';
+                                                                if(v>=0.70) return 'D-';
+                                                                return 'F';
+                                                            }
+                                                            async function updateStats(){
+                                                                try{
+                                                                    const r = await fetch('/api/users/stats', {cache:'no-store'});
+                                                                    if(!r.ok) return; 
+                                                                    const d = await r.json();
+                                                                    if(d.status!=='success' || !d.authenticated) return;
+                                                                    const s = d.stats||{};
+                                                                    if($('stats-gpa-value')) $('stats-gpa-value').textContent = Number(s.cumulative_gpa||0).toFixed(2);
+                                                                    const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
+                                                                    if($('stats-grade-letter')) $('stats-grade-letter').textContent = letter;
+                                                                    if($('stats-points')) $('stats-points').textContent = (s.total_lifetime_points||0).toLocaleString();
+                                                                    if($('stats-quizzes')) $('stats-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
+                                                                    if($('stats-accuracy')) $('stats-accuracy').textContent = Number(s.average_accuracy||0).toFixed(1);
+                                                                }catch(e){ /* silent */ }
+                                                            }
+                                                            updateStats();
+                                                            setInterval(updateStats, 12000);
+                                                        })();
+                                                        </script>
                             
                             <!-- Teacher/Parent Access Key Display -->
                             {% if current_user.role in ['teacher', 'parent', 'admin'] and current_user.teacher_key %}

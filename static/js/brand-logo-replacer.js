@@ -3,8 +3,8 @@
  * If window.BeeSmartBrand.logoPath is set, uses that; otherwise falls back to BeeSmartCrestLogo1.png.
  */
 (function(){
-  // Keep a safe fallback to the existing, committed logo until the new file is present
-  const FALLBACK = '/static/images/LogoBee&WordingTM.png';
+  // Fallback now set to the new branding asset only; remove legacy auto substitution.
+  const FALLBACK = '/static/images/BeeSmartSpellingBeeApplication.png';
   const TARGET = (window.BeeSmartBrand && window.BeeSmartBrand.logoPath) || '/static/images/BeeSmartSpellingBeeApplication.png';
   const LEGACY_PATTERNS = [
     /BeeSmartLogo(?:2)?\.(png|jpg|svg)/i,

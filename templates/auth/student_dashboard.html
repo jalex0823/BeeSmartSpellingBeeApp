@@ -718,42 +718,82 @@
             <!-- Row 1: Points, Quizzes, and Cumulative Grade (prominent) -->
             <div class="stat-card">
                 <div class="stat-icon">🏆</div>
-                <div class="stat-value">{{ current_user.total_lifetime_points or 0 }}</div>
+                <div class="stat-value" id="dash-points">{{ current_user.total_lifetime_points or 0 }}</div>
                 <div class="stat-label">Total Points</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon">📝</div>
-                <div class="stat-value">{{ current_user.total_quizzes_completed or 0 }}</div>
+                <div class="stat-value" id="dash-quizzes">{{ current_user.total_quizzes_completed or 0 }}</div>
                 <div class="stat-label">Quizzes Completed</div>
             </div>
 
             <div class="stat-card stat-highlight">
                 <div class="stat-icon">🎓</div>
-                <div class="stat-value grade-display">{{ current_user.cumulative_gpa|gpa_to_grade }}</div>
+                <div class="stat-value grade-display" id="dash-grade-letter">{{ current_user.cumulative_gpa|gpa_to_grade }}</div>
                 <div class="stat-label">Cumulative Grade</div>
-                <div class="stat-sublabel">GPA: {{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
+                <div class="stat-sublabel">GPA: <span id="dash-gpa">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</span></div>
             </div>
 
             <!-- Row 2: GPA, Accuracy, and Best Streak -->
             <div class="stat-card">
                 <div class="stat-icon">📊</div>
-                <div class="stat-value">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
+                <div class="stat-value" id="dash-gpa-secondary">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
                 <div class="stat-label">GPA (0-4.0)</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon">🎯</div>
-                <div class="stat-value">{{ "%.1f"|format(current_user.average_accuracy|float) if current_user.average_accuracy else "0.0" }}%</div>
+                <div class="stat-value" id="dash-accuracy">{{ "%.1f"|format(current_user.average_accuracy|float) if current_user.average_accuracy else "0.0" }}%</div>
                 <div class="stat-label">Average Accuracy</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-icon">🔥</div>
-                <div class="stat-value">{{ current_user.best_streak or 0 }}</div>
+                <div class="stat-value" id="dash-best-streak">{{ current_user.best_streak or 0 }}</div>
                 <div class="stat-label">Best Streak</div>
             </div>
-        </div>
+                </div>
+                <script>
+                (function(){
+                    function $(id){return document.getElementById(id);}    
+                    function gradeFromGpa(g){
+                        var v = Number(g)||0;
+                        if(v>=3.97) return 'A+';
+                        if(v>=3.85) return 'A';
+                        if(v>=3.70) return 'A-';
+                        if(v>=3.30) return 'B+';
+                        if(v>=3.00) return 'B';
+                        if(v>=2.70) return 'B-';
+                        if(v>=2.30) return 'C+';
+                        if(v>=2.00) return 'C';
+                        if(v>=1.70) return 'C-';
+                        if(v>=1.30) return 'D+';
+                        if(v>=1.00) return 'D';
+                        if(v>=0.70) return 'D-';
+                        return 'F';
+                    }
+                    async function refresh(){
+                        try{
+                            const r = await fetch('/api/users/stats', {cache:'no-store'});
+                            if(!r.ok) return; const d = await r.json();
+                            if(d.status!=='success' || !d.authenticated) return;
+                            const s = d.stats||{};
+                            if($('#dash-points')) $('#dash-points').textContent = (s.total_lifetime_points||0).toLocaleString();
+                            if($('#dash-quizzes')) $('#dash-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
+                            const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
+                            if($('#dash-grade-letter')) $('#dash-grade-letter').textContent = letter;
+                            const gpaText = Number(s.cumulative_gpa||0).toFixed(2);
+                            if($('#dash-gpa')) $('#dash-gpa').textContent = gpaText;
+                            if($('#dash-gpa-secondary')) $('#dash-gpa-secondary').textContent = gpaText;
+                            if($('#dash-accuracy')) $('#dash-accuracy').textContent = Number(s.average_accuracy||0).toFixed(1) + '%';
+                            if($('#dash-best-streak')) $('#dash-best-streak').textContent = s.best_streak||0;
+                        }catch(e){/*silent*/}
+                    }
+                    refresh();
+                    setInterval(refresh, 12000);
+                })();
+                </script>
 
         <!-- 🏆 BADGE SHOWCASE SECTION -->
         <div class="content-section badge-showcase">
