@@ -1,13 +1,12 @@
-// Loading Screen Manager
+// Loading Screen Manager (crest system checks)
 (function(){
-  // Support both historical honeyLoader and newer loadingOverlay + IDs
-    const overlay = document.getElementById('loadingOverlay') || document.getElementById('honeyLoader');
+  const overlay = document.getElementById('loadingOverlay') || document.getElementById('honeyLoader');
   const CHECKS_CONTAINER_ID = document.getElementById('loadingChecks') ? 'loadingChecks' : (document.getElementById('checksList') ? 'checksList' : 'loadingChecks');
-  const START_BTN_ID = document.getElementById('loadingStartBtn') ? 'loadingStartBtn' : (document.getElementById('welcomeStartBtn') ? 'welcomeStartBtn' : 'loadingStartBtn');
+  const START_BTN_ID = 'loadingStartBtn';
   const SKIP_KEY = 'bs_skip_overlay';
-  const MIN_READY_DELAY_MS = 800;       // let the UI breathe a bit
-  const FAILSAFE_ENABLE_MS = 2000;      // enable button no later than this
-  const FAILSAFE_AUTOHIDE_MS = 3500;    // auto-hide overlay even if user doesn't tap
+  const MIN_READY_DELAY_MS = 600;       // brief pause
+  const FAILSAFE_ENABLE_MS = 6000;      // if something stalls, still enable
+  const FAILSAFE_AUTOHIDE_MS = 30000;   // plenty of time to tap
 
   function el(id){ return document.getElementById(id); }
   function qs(sel, root=document){ return root.querySelector(sel); }
@@ -63,10 +62,9 @@
     if (btn) { btn.disabled = false; btn.classList.add('pulse-btn'); }
     return true;
   }
+  function allChecksPassed(){ return checks.every(c=>c.status === 'success'); }
   function verifyReady(){
-    // So we don't block on non-critical checks, allow gate open if env is OK or after failsafe timer
-    const envOk = checks.find(c=>c.id==='env')?.status === 'success';
-    if (envOk) return openGate();
+    if (allChecksPassed()) return openGate();
     return gateOpened;
   }
 
@@ -133,15 +131,16 @@
     ]);
   }
 
-    function hideOverlay(){
-      if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none';
-      }
+  function hideOverlay(){
+    if(!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
+    setTimeout(()=>{ overlay.style.display='none'; },350);
   }
 
   function init(){
-    const ov = el(OVERLAY_ID);
+    const ov = overlay;
     // Provide global API early
     window.LoadingScreenManager = {
       mark: updateCheck,
@@ -158,11 +157,9 @@
     }
 
     renderChecks();
-  // Always open gate after a small delay regardless of non-critical failures
+    // Failsafe enable + optional auto-hide; but prefer user tap
     setTimeout(openGate, FAILSAFE_ENABLE_MS);
-  // Auto-hide overlay even if the user doesn't tap, to avoid stalls
-  setTimeout(hideOverlay, FAILSAFE_AUTOHIDE_MS);
-    // So it doesn't pop instantly, show button after a minimal delay if env is already good
+    setTimeout(hideOverlay, FAILSAFE_AUTOHIDE_MS);
     setTimeout(verifyReady, MIN_READY_DELAY_MS);
     // Kick off real checks
     runChecks().then(()=>{
@@ -171,16 +168,15 @@
     });
 
     const btn = el(START_BTN_ID);
-    if(btn){
-      btn.addEventListener('click', function(){
-        if(btn.disabled) return; // unlikely with gate
-        try { localStorage.setItem(SKIP_KEY, '1'); } catch(_){ }
+    if (btn) {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        try { localStorage.setItem(SKIP_KEY,'1'); } catch(_){ }
         hideOverlay();
-        // Accessibility: move focus to first focusable element in main
         try {
-          const focusable = document.querySelector('main.container')?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-          if(focusable && focusable.length > 0) focusable[0].focus();
-        } catch(_){}
+          const focusable = document.querySelector('main.container')?.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+          if (focusable && focusable.length>0) focusable[0].focus();
+        } catch(_){ }
       });
     }
   }
