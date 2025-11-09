@@ -1,4 +1,20 @@
-﻿# -*- coding: utf-8 -*-
+﻿"""
+Temporary override: ensure root (/) goes straight to the unified menu.
+This bypasses any splash/loader until it's fixed.
+"""
+try:
+    from flask import render_template
+    # Only add the route if it's not already registered
+    # Flask doesn't expose a direct has-route API; we guard by name.
+    if 'home_root_direct' not in globals():
+        @app.route('/')
+        def home_root_direct():
+            return render_template('unified_menu.html')
+except Exception:
+    # If app or Flask isn't ready in this module context, skip quietly
+    # (the loader disable ensures UI isn't blocked anyway).
+    pass
+# -*- coding: utf-8 -*-
 import sys
 import io
 

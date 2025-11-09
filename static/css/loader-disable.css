@@ -1,0 +1,10 @@
+/* loader-disable.css - force-hide broken loader overlay */
+#loading-screen, .loading-screen,
+#app-loader, .app-loader,
+#loader, .loader,
+#splash, .splash,
+#preload, .preload {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

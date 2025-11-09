@@ -1,3 +1,8 @@
+<!-- Temporary override to disable broken loader and ensure access -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/loader-disable.css') }}">
+<script defer src="{{ url_for('static', filename='js/loader-disable.js') }}"></script>
+<!-- Performance instrumentation: logs key paint metrics to console -->
+<script defer src="{{ url_for('static', filename='js/perf-instrumentation.js') }}"></script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
