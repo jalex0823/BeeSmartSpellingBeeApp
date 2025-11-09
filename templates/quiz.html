@@ -5544,16 +5544,24 @@ class QuizManager {
             }
         });
 
-        submitButton.addEventListener('click', () => {
-            try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
-            this.submitAnswer();
-        });
-        spellingInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter' && !this.isAnswering) {
+        // Guard all listeners so a missing element doesn't crash init and silently break other buttons
+        if (submitButton) {
+            submitButton.addEventListener('click', () => {
                 try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
                 this.submitAnswer();
-            }
-        });
+            });
+        } else {
+            console.warn('⚠️ submitButton not found during initialization');
+        }
+
+        if (spellingInput) {
+            spellingInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter' && !this.isAnswering) {
+                    try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
+                    this.submitAnswer();
+                }
+            });
+        }
 
         if (speakButton) {
             speakButton.addEventListener('click', () => {
@@ -5571,14 +5579,18 @@ class QuizManager {
             });
         }
 
-        getHintButton.addEventListener('click', () => {
-            try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
-            this.getDefinition({ refresh: true });
-        });
-        skipButton.addEventListener('click', () => {
-            try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
-            this.skipWord();
-        });
+        if (getHintButton) {
+            getHintButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+                this.getDefinition({ refresh: true });
+            });
+        }
+        if (skipButton) {
+            skipButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
+                this.skipWord();
+            });
+        }
         
         // Retry button
         const retryButton = document.getElementById('retryButton');
@@ -5589,7 +5601,9 @@ class QuizManager {
             });
         }
         
-        restartButton.addEventListener('click', () => this.restartQuiz());
+        if (restartButton) {
+            restartButton.addEventListener('click', () => this.restartQuiz());
+        }
 
         // Voice toggle button
         const voiceToggleBtn = document.getElementById('voiceToggleBtn');
@@ -6469,13 +6483,19 @@ class QuizManager {
                     this.smartyBee.onIncorrectAnswer();
                 }
                 
-                // 🔊 ONLY speak the choice question, nothing else
-                console.log('🔊 Speaking: Would you like to retry?');
-                await this.speakAnnouncement('Would you like to retry this word? You have 10 seconds to choose.');
-                
-                // Start 10-second choice countdown
-                console.log('⏱️ Starting 10-second choice countdown...');
+                // Attach choice listeners & start countdown IMMEDIATELY so user can click without waiting for speech
+                console.log('⏱️ Initializing retry choice UI (listeners + countdown) immediately');
                 this.startRetryChoiceCountdown(correctWord);
+
+                // Fire the speech announcement asynchronously so it doesn't block button usability
+                (async () => {
+                    try {
+                        console.log('🔊 Speaking (async): Would you like to retry?');
+                        await this.speakAnnouncement('Would you like to retry this word? You have 10 seconds to choose.');
+                    } catch (e) {
+                        console.warn('Speech failed for retry choice:', e);
+                    }
+                })();
                 
             } else {
                 // This is either a retry failure OR user already used retry - no more chances
