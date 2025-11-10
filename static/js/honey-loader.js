@@ -22,13 +22,75 @@
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(prefersReduced){ overlay.classList.add('reduced-motion'); }
 
-  // Weighted tasks (sum to 100) – adjust weights to perceived duration
+  // Matrix Rain Animation Setup
+  function initMatrixRain(){
+    let canvas = document.getElementById('matrixCanvas');
+    if(!canvas){
+      canvas = document.createElement('canvas');
+      canvas.id = 'matrixCanvas';
+      canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:2;background:transparent;pointer-events:none;opacity:0.6';
+      overlay.insertBefore(canvas, overlay.firstChild);
+    }
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = Array(columns).fill(1);
+    
+    function drawMatrix(){
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#FFD540'; // BeeSmart yellow
+      ctx.font = fontSize + 'px monospace';
+      
+      for(let i = 0; i < drops.length; i++){
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        
+        ctx.fillText(char, x, y);
+        
+        if(y > canvas.height && Math.random() > 0.975){
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    
+    const matrixInterval = setInterval(drawMatrix, 33);
+    
+    // Cleanup on loader finish
+    document.addEventListener('honeyLoaderFinished', () => {
+      clearInterval(matrixInterval);
+      if(canvas && canvas.parentNode){
+        canvas.style.opacity = '0';
+        setTimeout(() => canvas.remove(), 500);
+      }
+    }, {once: true});
+    
+    // Handle resize
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  }
+  
+  // Start matrix animation
+  initMatrixRain();
+
+  // Weighted tasks reorganized into 3 stages matching Unity design
   const tasks = [
-    { name:'Core',        weight:10, detail:'Preparing interface…',              expected:300,  fn: corePrep },
-    { name:'Health',      weight:20, detail:'Checking system health…',          expected:600,  fn: () => fetchJson('/health') },
-    { name:'Wordbank',    weight:35, detail:'Loading word lists…',              expected:1400, fn: () => fetchJson('/api/wordbank') },
-    { name:'Avatars',     weight:15, detail:'Caching avatars…',                 expected:700,  fn: () => delay(600) },
-    { name:'Definitions', weight:20, detail:'Priming dictionary cache…',        expected:800,  fn: () => delay(500) }
+    // Stage 1: Loading Avatars (0-30%)
+    { name:'Loading Avatars',  weight:30, detail:'Caching avatar models…',        expected:1200, fn: () => Promise.all([fetchJson('/health'), delay(800)]) },
+    // Stage 2: Loading Quizzes (30-70%)
+    { name:'Loading Quizzes',  weight:40, detail:'Preparing quiz content…',       expected:1600, fn: () => fetchJson('/api/wordbank') },
+    // Stage 3: Loading Analytics (70-100%)
+    { name:'Loading Analytics', weight:30, detail:'Initializing analytics…',      expected:1200, fn: () => delay(800) }
   ];
   const totalWeight = tasks.reduce((a,t)=>a+t.weight,0) || 100;
 
