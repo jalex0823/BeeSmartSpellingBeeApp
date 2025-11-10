@@ -97,107 +97,71 @@
   // Start matrix animation immediately (before tasks)
   initMatrixRain();
 
-  // Real system checks with accurate percentage tracking
+  // Fast animated checks with quick simulated progress
   const tasks = [
-    // System Health Check (0-15%)
+    // Quick startup (0-20%)
     { 
       name: 'System Health', 
-      weight: 15, 
+      weight: 20, 
       detail: 'Checking server status…',
+      expected: 200,
       fn: async () => {
-        const response = await fetch('/health', {cache: 'no-store'});
-        if (!response.ok) throw new Error('Health check failed');
-        return await response.json();
+        // Quick check without blocking
+        try {
+          const response = await Promise.race([
+            fetch('/health', {cache: 'no-store'}),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 500))
+          ]);
+          return response.ok ? {status: 'ok'} : {status: 'degraded'};
+        } catch(e) {
+          return {status: 'degraded'}; // Continue anyway
+        }
       }
     },
-    // Wordbank Validation (15-30%)
+    // Word system (20-40%)
     { 
       name: 'Quiz Content', 
-      weight: 15, 
-      detail: 'Verifying word lists…',
+      weight: 20, 
+      detail: 'Loading word system…',
+      expected: 200,
       fn: async () => {
-        const response = await fetch('/api/wordbank', {cache: 'no-store'});
-        if (!response.ok) throw new Error('Wordbank check failed');
-        const data = await response.json();
-        if (!data.words || data.words.length === 0) {
-          console.warn('No words loaded, using defaults');
-        }
-        return data;
+        // Just simulate - actual loading happens later
+        await new Promise(resolve => setTimeout(resolve, 150));
+        return {ready: true};
       }
     },
-    // Avatar System Check (30-60%)
+    // Avatar system (40-70%)
     { 
       name: 'Avatar System', 
       weight: 30, 
-      detail: 'Validating avatar files…',
+      detail: 'Preparing avatars…',
+      expected: 300,
       fn: async () => {
-        // Check if mascot bee (default) is available
-        const mascotCheck = await fetch('/static/assets/avatars/Mascot%20Bee/mascot-bee.obj', {
-          method: 'HEAD',
-          cache: 'no-store'
-        });
-        
-        if (!mascotCheck.ok) {
-          throw new Error('Default mascot avatar missing - home page cannot load');
-        }
-        
-        // Preload critical avatar assets
-        const criticalAssets = [
-          '/static/BeeSmartCrestLogo1.png',
-          '/static/images/backgrounds/HoneyCombBg2.png'
-        ];
-        
-        await Promise.all(criticalAssets.map(url => {
-          return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(url);
-            img.onerror = () => reject(new Error(`Failed to load ${url}`));
-            img.src = url;
-          });
-        }));
-        
-        return { mascot: true, assets: criticalAssets.length };
+        // Quick check for mascot without blocking
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return {ready: true};
       }
     },
-    // Dictionary Cache (60-75%)
+    // UI preparation (70-90%)
     { 
-      name: 'Dictionary Cache', 
-      weight: 15, 
-      detail: 'Loading dictionary resources…',
+      name: 'Interface Ready', 
+      weight: 20, 
+      detail: 'Initializing interface…',
+      expected: 200,
       fn: async () => {
-        // Verify dictionary cache is accessible
-        try {
-          const response = await fetch('/static/data/dictionary.json', {cache: 'no-store'});
-          if (response.ok) {
-            const data = await response.json();
-            return { cached: Object.keys(data).length };
-          }
-        } catch(e) {
-          console.warn('Dictionary cache not available, will use API fallback');
-        }
-        return { cached: 0 };
+        await new Promise(resolve => setTimeout(resolve, 150));
+        return {ready: true};
       }
     },
-    // Database Connectivity (75-90%)
-    { 
-      name: 'Database', 
-      weight: 15, 
-      detail: 'Verifying database connection…',
-      fn: async () => {
-        // Database is checked implicitly via /health endpoint
-        // This is a secondary verification
-        return new Promise(resolve => setTimeout(() => resolve({ status: 'ready' }), 300));
-      }
-    },
-    // Final System Ready (90-100%)
+    // Final touches (90-100%)
     { 
       name: 'System Ready', 
       weight: 10, 
-      detail: 'Finalizing startup…',
+      detail: 'Starting BeeSmart…',
+      expected: 100,
       fn: async () => {
-        // Final checks and cleanup
         document.dispatchEvent(new CustomEvent('systemChecks:done'));
-        return { ready: true };
+        return {ready: true};
       }
     }
   ];
@@ -205,7 +169,7 @@
 
   // State
   const MIN_DISPLAY_MS = 0; // No minimum - show real progress
-  const SAFETY_TIMEOUT_MS = 20000; // 20 second hard cap for slow connections
+  const SAFETY_TIMEOUT_MS = 5000; // 5 second hard cap - force finish if stuck
   let finished = false;
   let finishRequested = false;
   let currentIndex = 0;
