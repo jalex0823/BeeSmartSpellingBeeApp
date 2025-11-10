@@ -24,7 +24,8 @@
   const jitter = LOW_POWER ? 2 : 4;
   const fadeAlpha = LOW_POWER ? 0.16 : 0.12;
   const fontPx = 14;
-  const yellow = 'rgba(255,213,64,'; // alpha appended
+  // Brand honey-gold for symbols (was green in mock) — keep alpha appended at use sites
+  const GOLD = 'rgba(255,193,7,'; // #FFC107 amber-like
 
   let width=0, height=0, cols=0; let drops=[];
   let rafId=0, intervalId=0, active=true;
@@ -34,7 +35,7 @@
   function CHAR_AT(){ return CHARS[(Math.random()*CHARS.length)|0]; }
 
   // Center fade mask over crest/logo to gently dim streams behind it
-  const overlayEl = document.getElementById('loaderProgressOverlay') || document.querySelector('.loader-logo-wrapper');
+  const overlayEl = document.querySelector('.loader-logo-wrapper');
   let mask = { cx: 0, cy: 0, innerR: 0, outerR: 0, ready: false };
   function updateMaskMetrics(){
     if(!overlayEl){ mask.ready = false; return; }
@@ -104,7 +105,7 @@
     for(let i=0;i<cols;i++){
       const x=i*colW+4;
       const y=(drops[i] = drops[i] + baseStep + Math.random()*jitter);
-      ctx.fillStyle = yellow + (0.65 + Math.random()*0.25) + ')';
+  ctx.fillStyle = GOLD + (0.65 + Math.random()*0.25) + ')';
       ctx.fillText(CHAR_AT(), x, y);
       if(y>height && Math.random()>0.975){ drops[i]=0; }
     }
@@ -120,7 +121,7 @@
     for(let i=liteOffset;i<cols;i+=2){
       const x=i*colW+4;
       const y=(drops[i] = drops[i] + baseStep + Math.random()*jitter);
-      ctx.fillStyle = yellow + (0.55 + Math.random()*0.25) + ')';
+  ctx.fillStyle = GOLD + (0.55 + Math.random()*0.25) + ')';
       ctx.fillText(CHAR_AT(), x, y);
       if(y>height && Math.random()>0.98){ drops[i]=0; }
     }
@@ -134,7 +135,7 @@
     for(let i=0;i<cols;i++){
       const x=i*colW+4;
       const y=Math.random()*height;
-      ctx.fillStyle = yellow + (0.35 + Math.random()*0.35) + ')';
+  ctx.fillStyle = GOLD + (0.35 + Math.random()*0.35) + ')';
       ctx.fillText(CHAR_AT(), x, y);
     }
   }
