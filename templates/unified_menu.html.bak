@@ -11026,7 +11026,7 @@
             try {
                 // Initialize loading system (now just for page setup, not visual loading)
                 console.log('🍯 [INIT 1/10] Creating LoadingSystem...');
-                // window.loadingSystem = new LoadingSystem(); // DISABLED - conflicts with honey-loader
+                window.loadingSystem = new LoadingSystem();
                 console.log('🍯 [INIT 1/10] ✅ LoadingSystem created in', (performance.now() - initStart).toFixed(0), 'ms');
                 
                 // Skip visual updates since honey-loader already handled that
