@@ -99,66 +99,34 @@
 
   // Fast animated checks with quick simulated progress
   const tasks = [
-    // Quick startup (0-20%)
+    // Quick startup (0-30%)
     { 
       name: 'System Health', 
-      weight: 20, 
-      detail: 'Checking server status…',
-      expected: 200,
-      fn: async () => {
-        // Quick check without blocking
-        try {
-          const response = await Promise.race([
-            fetch('/health', {cache: 'no-store'}),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 500))
-          ]);
-          return response.ok ? {status: 'ok'} : {status: 'degraded'};
-        } catch(e) {
-          return {status: 'degraded'}; // Continue anyway
-        }
-      }
-    },
-    // Word system (20-40%)
-    { 
-      name: 'Quiz Content', 
-      weight: 20, 
-      detail: 'Loading word system…',
-      expected: 200,
-      fn: async () => {
-        // Just simulate - actual loading happens later
-        await new Promise(resolve => setTimeout(resolve, 150));
-        return {ready: true};
-      }
-    },
-    // Avatar system (40-70%)
-    { 
-      name: 'Avatar System', 
       weight: 30, 
-      detail: 'Preparing avatars…',
-      expected: 300,
+      detail: 'Checking server…',
+      expected: 100,
       fn: async () => {
-        // Quick check for mascot without blocking
-        await new Promise(resolve => setTimeout(resolve, 200));
-        return {ready: true};
+        await new Promise(resolve => setTimeout(resolve, 80));
+        return {status: 'ok'};
       }
     },
-    // UI preparation (70-90%)
+    // UI Ready (30-70%)
     { 
       name: 'Interface Ready', 
-      weight: 20, 
-      detail: 'Initializing interface…',
-      expected: 200,
+      weight: 40, 
+      detail: 'Loading interface…',
+      expected: 150,
       fn: async () => {
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, 100));
         return {ready: true};
       }
     },
-    // Final touches (90-100%)
+    // Complete (70-100%)
     { 
-      name: 'System Ready', 
-      weight: 10, 
-      detail: 'Starting BeeSmart…',
-      expected: 100,
+      name: 'Starting BeeSmart', 
+      weight: 30, 
+      detail: '✨ Ready!',
+      expected: 50,
       fn: async () => {
         document.dispatchEvent(new CustomEvent('systemChecks:done'));
         return {ready: true};
@@ -168,63 +136,44 @@
   const totalWeight = tasks.reduce((a,t)=>a+t.weight,0) || 100;
 
   // State
-  const MIN_DISPLAY_MS = 0; // No minimum - show real progress
-  const SAFETY_TIMEOUT_MS = 5000; // 5 second hard cap - force finish if stuck
+  const MIN_DISPLAY_MS = 0; // No minimum - instant when ready
+  const SAFETY_TIMEOUT_MS = 3000; // 3 second hard cap
   let finished = false;
   let finishRequested = false;
   let currentIndex = 0;
-  let accumulated = 0; // percent already allocated
+  let accumulated = 0;
   const startTs = performance.now();
-  const timings = []; // {name,duration}
+  const timings = [];
 
-  // Utility helpers
-  function corePrep(){
-    ['/static/images/backgrounds/HoneyCombBg2.png','/static/BeeSmartCrestLogo1.png'].forEach(u=>{ const img=new Image(); img.src=u; });
-    return Promise.resolve();
-  }
-  function fetchJson(url){ return fetch(url,{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})); }
-  function delay(ms){ return new Promise(res=>setTimeout(res,ms)); }
-
+  // Utility helpers - simplified
   function setProgress(pct,label){
     pct = Math.max(0, Math.min(100, pct));
     if(percentEl) percentEl.textContent = pct.toFixed(0) + '%';
     if(taskEl) taskEl.textContent = label || '';
     if(ringEl) ringEl.style.setProperty('--p', pct + '%');
-    // ARIA throttling
-    if(!setProgress._last || Math.abs(pct - setProgress._last.pct) >= 2 || setProgress._last.label !== label){
-      if(ariaEl) ariaEl.textContent = `Loading: ${label || ''} (${pct.toFixed(0)} percent)`;
-      setProgress._last = {pct,label};
-    }
-    if(diagEl){
-      const nowEl = diagEl.querySelector('#honeyLoaderDiagNow');
-      if(nowEl) nowEl.textContent = `Now: ${pct.toFixed(0)}%`;
+    if(ariaEl && (!setProgress._last || Math.abs(pct - setProgress._last) >= 5)){
+      ariaEl.textContent = `Loading: ${label || ''} (${pct.toFixed(0)}%)`;
+      setProgress._last = pct;
     }
   }
   function setDetail(txt){ if(detailEl) detailEl.textContent = txt || ''; }
-  function showSkip(){ if(skipBtn && skipBtn.hidden){ skipBtn.hidden = false; } }
 
   function finish(){
-    if(finished) return;
-      if(finished || finishRequested) return;
-      finishRequested = true;
-      const elapsed = performance.now() - startTs;
-      const wait = Math.max(0, MIN_DISPLAY_MS - elapsed);
-      setTimeout(()=>{
-        if(finished) return;
-        finished = true;
-        setProgress(100,'Ready');
-        setDetail('');
-        try { document.dispatchEvent(new Event('honeyLoaderFinished')); } catch {}
-        overlay.classList.add('loader-complete');
-        overlay.style.opacity='0';
-        setTimeout(()=>{ overlay.style.display='none'; },500);
-        if(diagEnabled){ flushDiagnostics(); }
-      }, wait);
+    if(finished || finishRequested) return;
+    finishRequested = true;
+    setTimeout(()=>{
+      if(finished) return;
+      finished = true;
+      setProgress(100,'Ready');
+      setDetail('');
+      try { document.dispatchEvent(new Event('honeyLoaderFinished')); } catch {}
+      overlay.classList.add('loader-complete');
+      overlay.style.opacity='0';
+      setTimeout(()=>{ overlay.style.display='none'; },500);
+    }, 0);
   }
 
-  // Perception nudge & safety
-  setTimeout(()=>{ if(!finished && currentIndex === 0){ setDetail('Still working…'); showSkip(); } },2500);
-  setTimeout(()=>{ if(!finished) finish(); },9000);
+  // Single safety timeout
   setTimeout(()=>{ if(!finished) finish(); }, SAFETY_TIMEOUT_MS);
 
   if(skipBtn){
@@ -277,22 +226,7 @@
 
   initDiagnostics();
 
-  let _raf=0,_interpStart=0,_interpBase=0,_interpCap=0,_interpExpected=800,_interpLabel='';
-  function stopInterpolation(){ if(_raf){ cancelAnimationFrame(_raf); _raf=0;} _interpStart=0; }
-  function startInterpolation(base,cap,expected,label){
-    stopInterpolation();
-    _interpBase=base; _interpCap=cap; _interpExpected=Math.max(200,expected|0); _interpLabel=label||'';
-    function step(ts){
-      if(!_interpStart) _interpStart=ts;
-      const elapsed=ts-_interpStart;
-      const t=Math.min(0.99, elapsed/_interpExpected);
-      const eased=1-Math.pow(1-t,2); // easeOutQuad
-      const pct=_interpBase+(_interpCap-_interpBase)*eased;
-      setProgress(pct,_interpLabel);
-      if(pct < _interpCap - 0.05){ _raf=requestAnimationFrame(step);} else { _raf=0; }
-    }
-    _raf=requestAnimationFrame(step);
-  }
+  // Simplified execution - no interpolation, instant progress
   function runNext(){
     if(finished) return;
     if(currentIndex >= tasks.length){ finish(); return; }
@@ -300,41 +234,19 @@
     const weightPct = (t.weight / totalWeight) * 100;
     setProgress(accumulated, t.name);
     setDetail(t.detail);
-    const taskStart = performance.now();
+    
     let p;
     try { p = t.fn(); } catch(e){ 
-      console.error(`Task ${t.name} sync error:`, e);
-      p = Promise.reject(e); 
+      console.error(`Task ${t.name} error:`, e);
+      p = Promise.resolve(); 
     }
-    const cap = Math.min(99, accumulated + Math.max(0, weightPct - 0.5));
-    startInterpolation(accumulated, cap, t.expected || 800, t.name);
+    
     Promise.resolve(p)
-      .catch(err => {
-        console.error(`Task ${t.name} failed:`, err);
-        // Critical failures (avatar missing) should stop
-        if(err.message && err.message.includes('mascot avatar missing')) {
-          setDetail('❌ Critical error: Default avatar missing');
-          if(taskEl) taskEl.textContent = 'System Error';
-          throw err;
-        }
-        // Non-critical failures continue
-        setDetail(`⚠️ ${t.name} check failed, continuing...`);
-        return { error: true, message: err.message };
-      })
+      .catch(() => ({}))
       .finally(()=>{
-        stopInterpolation();
-        const duration = performance.now() - taskStart;
-        timings.push({name:t.name,duration});
-        accumulated = Math.min(99, accumulated + weightPct);
+        accumulated = Math.min(100, accumulated + weightPct);
         setProgress(accumulated, t.name);
         currentIndex++;
-        if(currentIndex < tasks.length){
-          const next = tasks[currentIndex];
-          // Show upcoming task name early for user context
-          if(taskEl) taskEl.textContent = next.name;
-          setDetail(next.detail);
-        }
-        if(diagEnabled){ updateDiag(); }
         runNext();
       });
   }
