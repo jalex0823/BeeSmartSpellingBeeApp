@@ -46,8 +46,8 @@
     // Inner radius fully faded, outer radius feather
     mask = {
       cx, cy,
-      innerR: (minDim * 0.32),
-      outerR: (minDim * 0.58),
+      innerR: (minDim * 0.38),  // slightly larger inner fade to smooth under-logo transition
+      outerR: (minDim * 0.70),  // expanded feather for softer blend
       ready: true
     };
   }
