@@ -159,18 +159,30 @@
   function setDetail(txt){ if(detailEl) detailEl.textContent = txt || ''; }
 
   function finish(){
-    if(finished || finishRequested) return;
+    if(finished) return;
+    finished = true;
     finishRequested = true;
-    setTimeout(()=>{
-      if(finished) return;
-      finished = true;
-      setProgress(100,'Ready');
-      setDetail('');
-      try { document.dispatchEvent(new Event('honeyLoaderFinished')); } catch {}
-      overlay.classList.add('loader-complete');
-      overlay.style.opacity='0';
-      setTimeout(()=>{ overlay.style.display='none'; },500);
-    }, 0);
+    
+    setProgress(100,'Ready');
+    setDetail('Complete!');
+    
+    // Dispatch event for page initialization
+    try { 
+      document.dispatchEvent(new Event('honeyLoaderFinished')); 
+      console.log('🍯 Honey loader finished, dispatched event');
+    } catch(e) {
+      console.error('Error dispatching honeyLoaderFinished:', e);
+    }
+    
+    // Immediate hide - no delays
+    if(overlay) {
+      overlay.style.transition = 'opacity 0.3s ease';
+      overlay.style.opacity = '0';
+      setTimeout(() => { 
+        overlay.style.display = 'none'; 
+        console.log('🍯 Loader hidden');
+      }, 300);
+    }
   }
 
   // Single safety timeout
@@ -229,11 +241,16 @@
   // Simplified execution - no interpolation, instant progress
   function runNext(){
     if(finished) return;
-    if(currentIndex >= tasks.length){ finish(); return; }
+    if(currentIndex >= tasks.length){ 
+      console.log('🍯 All tasks complete, calling finish()');
+      finish(); 
+      return; 
+    }
     const t = tasks[currentIndex];
     const weightPct = (t.weight / totalWeight) * 100;
     setProgress(accumulated, t.name);
     setDetail(t.detail);
+    console.log(`🍯 Running task ${currentIndex + 1}/${tasks.length}: ${t.name}`);
     
     let p;
     try { p = t.fn(); } catch(e){ 
