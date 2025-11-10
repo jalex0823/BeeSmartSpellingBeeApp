@@ -89,17 +89,37 @@
     diagEl = document.createElement('div');
     diagEl.id = 'honeyLoaderDiagnostics';
     diagEl.style.cssText = 'position:fixed;top:8px;right:8px;z-index:99999;font:12px/1.3 monospace;background:rgba(20,18,10,.85);color:#f8d25c;padding:8px 10px;border:1px solid #f0c246;border-radius:6px;max-width:260px;box-shadow:0 0 6px #000;';
-    diagEl.innerHTML = '<strong>Loader Diagnostics</strong><div style="margin-top:4px" id="honeyLoaderDiagRows"></div><div style="margin-top:4px;font-size:11px;opacity:.8" id="honeyLoaderDiagFooter"></div>';
+  diagEl.innerHTML = '<strong>Loader Diagnostics</strong><div style="margin-top:4px" id="honeyLoaderDiagRows"></div><div style="margin-top:6px" id="honeyLoaderDiagSparkline"></div><div style="margin-top:4px;font-size:11px;opacity:.8" id="honeyLoaderDiagFooter"></div>';
     document.body.appendChild(diagEl);
   }
   function updateDiag(){
     if(!diagEnabled || !diagEl) return;
     const rowsEl = diagEl.querySelector('#honeyLoaderDiagRows');
     const footer = diagEl.querySelector('#honeyLoaderDiagFooter');
+    const spark = diagEl.querySelector('#honeyLoaderDiagSparkline');
     rowsEl.innerHTML = timings.map(t => {
       const dur = (t.duration).toFixed(0);
       return `<div>${t.name}</div><div style="color:#aaa;margin-left:6px">${dur} ms</div>`;
     }).join('');
+    if(spark){
+      if(!timings.length){
+        spark.innerHTML = '<div style="opacity:.6">(waiting for data…)</div>';
+      } else {
+        const max = Math.max(...timings.map(t=>t.duration),1);
+        const w = 240, h = 34, pad = 5;
+        const pts = timings.map((t,i)=>{
+          const x = pad + (i/(timings.length-1||1))*(w-pad*2);
+          const y = h - pad - (t.duration/max)*(h-pad*2);
+          return `${x},${y}`;
+        });
+        const last = pts[pts.length-1].split(',');
+        const svg = `<svg viewBox='0 0 ${w} ${h}' width='${w}' height='${h}' preserveAspectRatio='none'>`
+          + `<polyline points='${pts.join(' ')}' fill='none' stroke='#f8d25c' stroke-width='2' stroke-linejoin='round' />`
+          + `<circle cx='${last[0]}' cy='${last[1]}' r='3' fill='#f0c246' stroke='#332600' stroke-width='1' />`
+          + `</svg>`;
+        spark.innerHTML = svg;
+      }
+    }
     const total = (performance.now() - startTs).toFixed(0);
     footer.textContent = `Total: ${total} ms | ${(timings.reduce((a,t)=>a+t.duration,0)).toFixed(0)} ms task time`;
   }
@@ -137,18 +157,4 @@
 
   // Kick off sequence
   runNext();
-})();
-// Dark Honeycomb Loader — gated progress with matrix background
-(function(){
-  const overlay = document.getElementById('appHoneyLoader');
-  if (!overlay) return;
-  window.addEventListener('systemChecks:done', finish);
-})();
-  function finish(){
-    if(done) return;
-    done = true;
-    setProgress(100, 'Ready');
-    setDetail('');
-    // Stop matrix animation
-      })();
-      pct = Math.max(0, Math.min(100, pct));
+  })();
