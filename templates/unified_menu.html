@@ -11072,13 +11072,25 @@
                     window.userAvatarLoader = new UserAvatarLoader();
                 }
                 
-                // Run comprehensive avatar system preload
-                const preloadResults = await window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
+                // Run comprehensive avatar system preload with timeout
+                const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
                     console.log(`🔍 Checking: ${avatarName}...`);
                 });
                 
+                // Add 3-second timeout to prevent freeze
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => {
+                        console.warn('⏱️ Avatar preload timeout after 3s, continuing...');
+                        resolve({systemReady: false, successfulAvatars: 0, totalAvatars: 0, timedOut: true});
+                    }, 3000);
+                });
+                
+                const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
+                
                 // Log preload results
-                if (preloadResults.systemReady) {
+                if (preloadResults.timedOut) {
+                    console.warn('⚠️ Avatar system check timed out');
+                } else if (preloadResults.systemReady) {
                     console.log(`✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
                 } else {
                     console.warn(`⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);

@@ -97,37 +97,90 @@
   // Start matrix animation immediately (before tasks)
   initMatrixRain();
 
-  // Fast animated checks with quick simulated progress
+    // System checks with realistic timing - minimum 65% before page loads
   const tasks = [
-    // Quick startup (0-30%)
+    // Quick startup (0-20%)
     { 
       name: 'System Health', 
-      weight: 30, 
-      detail: 'Checking server…',
-      expected: 100,
+      weight: 20, 
+      detail: 'Checking server status…',
+      expected: 800,
       fn: async () => {
-        await new Promise(resolve => setTimeout(resolve, 80));
-        return {status: 'ok'};
+        // Real health check with timeout
+        try {
+          const response = await Promise.race([
+            fetch('/health', {cache: 'no-store'}),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
+          ]);
+          await new Promise(resolve => setTimeout(resolve, 600)); // Ensure visible time
+          return response.ok ? {status: 'ok'} : {status: 'degraded'};
+        } catch(e) {
+          await new Promise(resolve => setTimeout(resolve, 600));
+          return {status: 'degraded'}; // Continue anyway
+        }
       }
     },
-    // UI Ready (30-70%)
+    // Word system (20-40%)
+    { 
+      name: 'Quiz Content', 
+      weight: 20, 
+      detail: 'Loading word system…',
+      expected: 800,
+      fn: async () => {
+        // Check wordbank
+        try {
+          const response = await fetch('/api/wordbank', {cache: 'no-store'});
+          await new Promise(resolve => setTimeout(resolve, 600));
+          return response.ok ? {loaded: true} : {loaded: false};
+        } catch(e) {
+          await new Promise(resolve => setTimeout(resolve, 600));
+          return {loaded: false};
+        }
+      }
+    },
+    // Avatar system (40-70%) - CRITICAL CHECKPOINT
+    { 
+      name: 'Avatar System', 
+      weight: 30, 
+      detail: 'Preparing avatars…',
+      expected: 1000,
+      fn: async () => {
+        // Check mascot avatar exists
+        try {
+          const mascotCheck = await fetch('/static/assets/avatars/Mascot%20Bee/mascot-bee.obj', {
+            method: 'HEAD',
+            cache: 'no-store'
+          });
+          await new Promise(resolve => setTimeout(resolve, 800));
+          if (!mascotCheck.ok) {
+            console.warn('Mascot avatar missing, using fallback');
+          }
+          return {ready: true};
+        } catch(e) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          return {ready: false};
+        }
+      }
+    },
+    // UI preparation (70-90%)
     { 
       name: 'Interface Ready', 
-      weight: 40, 
-      detail: 'Loading interface…',
-      expected: 150,
+      weight: 20, 
+      detail: 'Initializing interface…',
+      expected: 600,
       fn: async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 500));
         return {ready: true};
       }
     },
-    // Complete (70-100%)
+    // Final touches (90-100%)
     { 
-      name: 'Starting BeeSmart', 
-      weight: 30, 
-      detail: '✨ Ready!',
-      expected: 50,
+      name: 'System Ready', 
+      weight: 10, 
+      detail: 'Starting BeeSmart…',
+      expected: 400,
       fn: async () => {
+        await new Promise(resolve => setTimeout(resolve, 300));
         document.dispatchEvent(new CustomEvent('systemChecks:done'));
         return {ready: true};
       }
