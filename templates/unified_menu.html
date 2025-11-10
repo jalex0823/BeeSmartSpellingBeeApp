@@ -11020,62 +11020,75 @@
         
         // Wait for honey-loader to finish, then initialize page
         document.addEventListener('honeyLoaderFinished', async () => {
-            console.log('🍯 Honey loader finished, initializing page...');
+            console.log('🍯 [INIT START] Honey loader finished at:', new Date().toISOString());
+            const initStart = performance.now();
             
-            // Initialize loading system (now just for page setup, not visual loading)
-            window.loadingSystem = new LoadingSystem();
-            
-            // Skip visual updates since honey-loader already handled that
-            // Just run the actual initialization code
-            
-            // 60% complete after system checks, now initialize UI components
-            console.log('🎨 Initializing interface...');
-            
-            if (!window.DISABLE_FLOATING_DECOR) {
-                window.magicalEffects = new MagicalEffects();
-            } else {
-                // Ensure any pre-existing containers are hidden if present
-                const mb = document.querySelector('.magic-background');
-                const fc = document.querySelector('.fairy-container');
-                if (mb) mb.style.display = 'none';
-                if (fc) fc.style.display = 'none';
-            }
-            
-            // Update Saved Lists badge in the menu
-            refreshSavedListsBadge();
-            
-            // UI components ready
-            console.log('✨ Loading effects...');
-            
-            // Note: Initial wordbank check happens earlier in the code (after handleImportFile)
-            // No need to call updateWordCount() here as it causes race conditions
-            
-            // Check for error parameter in URL (e.g., from /quiz redirect)
-            const urlParams = new URLSearchParams(window.location.search);
-            const errorType = urlParams.get('error');
-            if (errorType === 'no_words') {
-                showErrorMessage('⚠️ No words loaded! Please upload a word list before starting the quiz.');
-                // Clear the error from URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            
-            // NOTE: Student name loading is now handled earlier
-            // This ensures authenticated users always see their correct display_name
-            // before the page finishes loading
-            
-            // Preload and validate avatar system
-            console.log('🔍 Checking avatar system...');
-            
-            // Initialize avatar loader and run preload validation
             try {
-                if (!window.userAvatarLoader) {
-                    window.userAvatarLoader = new UserAvatarLoader();
-                }
+                // Initialize loading system (now just for page setup, not visual loading)
+                console.log('🍯 [INIT 1/10] Creating LoadingSystem...');
+                window.loadingSystem = new LoadingSystem();
+                console.log('🍯 [INIT 1/10] ✅ LoadingSystem created in', (performance.now() - initStart).toFixed(0), 'ms');
                 
-                // Run comprehensive avatar system preload with timeout
-                const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
-                    console.log(`🔍 Checking: ${avatarName}...`);
-                });
+                // Skip visual updates since honey-loader already handled that
+                // Just run the actual initialization code
+                
+                // 60% complete after system checks, now initialize UI components
+                const magicStart = performance.now();
+                console.log('� [INIT 2/10] Initializing magical effects...');
+                
+                if (!window.DISABLE_FLOATING_DECOR) {
+                    window.magicalEffects = new MagicalEffects();
+                } else {
+                    // Ensure any pre-existing containers are hidden if present
+                    const mb = document.querySelector('.magic-background');
+                    const fc = document.querySelector('.fairy-container');
+                    if (mb) mb.style.display = 'none';
+                    if (fc) fc.style.display = 'none';
+                }
+                console.log('🍯 [INIT 2/10] ✅ Magical effects done in', (performance.now() - magicStart).toFixed(0), 'ms');
+                
+                // Update Saved Lists badge in the menu
+                const badgeStart = performance.now();
+                console.log('🍯 [INIT 3/10] Refreshing saved lists badge...');
+                refreshSavedListsBadge();
+                console.log('🍯 [INIT 3/10] ✅ Badge refreshed in', (performance.now() - badgeStart).toFixed(0), 'ms');
+            
+                console.log('🍯 [INIT 3/10] ✅ Badge refreshed in', (performance.now() - badgeStart).toFixed(0), 'ms');
+                
+                // UI components ready
+                const urlStart = performance.now();
+                console.log('🍯 [INIT 4/10] Checking URL parameters...');
+                
+                // Check for error parameter in URL (e.g., from /quiz redirect)
+                const urlParams = new URLSearchParams(window.location.search);
+                const errorType = urlParams.get('error');
+                if (errorType === 'no_words') {
+                    showErrorMessage('⚠️ No words loaded! Please upload a word list before starting the quiz.');
+                    // Clear the error from URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+                console.log('🍯 [INIT 4/10] ✅ URL check done in', (performance.now() - urlStart).toFixed(0), 'ms');
+                
+                // NOTE: Student name loading is now handled earlier
+                // This ensures authenticated users always see their correct display_name
+                // before the page finishes loading
+                
+                // Preload and validate avatar system
+                const avatarStart = performance.now();
+                console.log('🍯 [INIT 5/10] Starting avatar system preload...');
+                
+                // Initialize avatar loader and run preload validation
+                try {
+                    if (!window.userAvatarLoader) {
+                        console.log('🍯 [INIT 5/10] Creating UserAvatarLoader...');
+                        window.userAvatarLoader = new UserAvatarLoader();
+                    }
+                    
+                    // Run comprehensive avatar system preload with timeout
+                    console.log('🍯 [INIT 5/10] Running avatar preload (max 3s)...');
+                    const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
+                        console.log(`🍯 [INIT 5/10] Checking avatar: ${avatarName}...`);
+                    });
                 
                 // Add 3-second timeout to prevent freeze
                 const timeoutPromise = new Promise((resolve) => {
@@ -11086,14 +11099,15 @@
                 });
                 
                 const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
+                console.log('🍯 [INIT 5/10] ✅ Avatar preload finished in', (performance.now() - avatarStart).toFixed(0), 'ms');
                 
                 // Log preload results
                 if (preloadResults.timedOut) {
-                    console.warn('⚠️ Avatar system check timed out');
+                    console.warn('🍯 [INIT 5/10] ⚠️ Avatar system TIMED OUT');
                 } else if (preloadResults.systemReady) {
-                    console.log(`✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
+                    console.log(`🍯 [INIT 5/10] ✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
                 } else {
-                    console.warn(`⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
+                    console.warn(`🍯 [INIT 5/10] ⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
                 }
                 
                 // Store preload results for later use
