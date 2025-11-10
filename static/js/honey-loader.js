@@ -1,7 +1,8 @@
-// Dark Honeycomb Loader – canonical implementation (sequential gated tasks + matrix stop)
+// Dark Honeycomb Loader – canonical implementation (weighted gated tasks + optional diagnostics + matrix stop)
 (function(){
   const overlay = document.getElementById('appHoneyLoader');
   if(!overlay){ return; }
+
   // Elements
   const percentEl = document.getElementById('loaderPercentText');
   const taskEl = document.getElementById('loaderProcessName');
@@ -9,109 +10,132 @@
   const ringEl = document.querySelector('.progress-ring');
   const ariaEl = document.getElementById('loaderAriaStatus');
   const skipBtn = document.getElementById('skipLoaderBtn');
-  const allowMotion = overlay.dataset.allowMotion !== 'false';
+
+  // Diagnostics enable switches (any truthy path turns it on)
+  const diagEnabled = (
+    overlay.dataset.diagnostics === '1' ||
+    /[?&]loaderDiag=1/.test(location.search) ||
+    localStorage.getItem('honeyLoaderDiagnostics') === '1'
+  );
 
   // Reduced motion support
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(prefersReduced){ overlay.classList.add('reduced-motion'); }
 
-  // State
-  let progress = 0;          // numeric percent (0–100)
-  let currentTask = 0;       // index in tasks array
-  let finished = false;      // completion flag
-  let skipShown = false;     // whether skip button exposed
-  const startTs = Date.now();// start timestamp for perception tweaks
-
-  // Ordered task list – each returns a Promise
+  // Weighted tasks (sum to 100) – adjust weights to perceived duration
   const tasks = [
-    {
-      name: 'Core', detail: 'Preparing interface…', fn: () => {
-        ['/static/images/backgrounds/HoneyCombBg2.png','/static/BeeSmartCrestLogo1.png'].forEach(u => { const img = new Image(); img.src = u; });
-        return Promise.resolve();
-      }
-    },
-    { name: 'Health', detail: 'Checking system health…', fn: () => fetch('/health',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
-    { name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetch('/api/wordbank',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
-    { name: 'Avatars', detail: 'Caching avatars…', fn: () => new Promise(res => setTimeout(res,600)) },
-    { name: 'Definitions', detail: 'Priming dictionary cache…', fn: () => new Promise(res => setTimeout(res,500)) }
+    { name:'Core',        weight:10, detail:'Preparing interface…', fn: corePrep },
+    { name:'Health',      weight:20, detail:'Checking system health…', fn: () => fetchJson('/health') },
+    { name:'Wordbank',    weight:35, detail:'Loading word lists…', fn: () => fetchJson('/api/wordbank') },
+    { name:'Avatars',     weight:15, detail:'Caching avatars…', fn: () => delay(600) },
+    { name:'Definitions', weight:20, detail:'Priming dictionary cache…', fn: () => delay(500) }
   ];
-  const slice = Math.floor(100 / tasks.length); // integer slice size for even distribution
+  const totalWeight = tasks.reduce((a,t)=>a+t.weight,0) || 100;
 
-  // Utility: progress + ARIA throttling
-  function setProgress(pct, label){
+  // State
+  let finished = false;
+  let currentIndex = 0;
+  let accumulated = 0; // percent already allocated
+  const startTs = performance.now();
+  const timings = []; // {name,start,end,duration}
+
+  // Utility helpers
+  function corePrep(){
+    ['/static/images/backgrounds/HoneyCombBg2.png','/static/BeeSmartCrestLogo1.png'].forEach(u=>{ const img=new Image(); img.src=u; });
+    return Promise.resolve();
+  }
+  function fetchJson(url){ return fetch(url,{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})); }
+  function delay(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+  function setProgress(pct,label){
     pct = Math.max(0, Math.min(100, pct));
-    progress = pct;
-    if(percentEl) percentEl.textContent = pct + '%';
+    if(percentEl) percentEl.textContent = pct.toFixed(0) + '%';
     if(taskEl) taskEl.textContent = label || '';
     if(ringEl) ringEl.style.setProperty('--p', pct + '%');
-    // ARIA live updates throttled (>=2% change or label change)
+    // ARIA throttling
     if(!setProgress._last || Math.abs(pct - setProgress._last.pct) >= 2 || setProgress._last.label !== label){
-      if(ariaEl) ariaEl.textContent = `Loading: ${label || ''} (${pct} percent)`;
+      if(ariaEl) ariaEl.textContent = `Loading: ${label || ''} (${pct.toFixed(0)} percent)`;
       setProgress._last = {pct,label};
     }
   }
-  function setDetail(text){ if(detailEl) detailEl.textContent = text || ''; }
-  function showSkip(){ if(skipBtn && !skipShown){ skipBtn.hidden = false; skipShown = true; } }
+  function setDetail(txt){ if(detailEl) detailEl.textContent = txt || ''; }
+  function showSkip(){ if(skipBtn && skipBtn.hidden){ skipBtn.hidden = false; } }
 
   function finish(){
     if(finished) return;
     finished = true;
     setProgress(100,'Ready');
     setDetail('');
-    // Dispatch completion so matrix can stop
     try { document.dispatchEvent(new Event('honeyLoaderFinished')); } catch {}
-    // Visually clear overlay
     overlay.classList.add('loader-complete');
-    setTimeout(()=>{ overlay.style.opacity = '0'; }, 50);
-    setTimeout(()=>{ overlay.style.display = 'none'; }, 600);
+    setTimeout(()=>{ overlay.style.opacity='0'; },50);
+    setTimeout(()=>{ overlay.style.display='none'; },600);
+    if(diagEnabled){ flushDiagnostics(); }
   }
 
-  // Perception nudge if first task seems slow
-  setTimeout(()=>{
-    if(!finished && currentTask === 0 && Date.now() - startTs > 2400){
-      setDetail('Still working…');
-      showSkip();
-    }
-  },2500);
+  // Perception nudge & safety
+  setTimeout(()=>{ if(!finished && currentIndex === 0){ setDetail('Still working…'); showSkip(); } },2500);
+  setTimeout(()=>{ if(!finished) finish(); },9000);
 
-  // Safety timeout (never hang longer than ~8s)
-  setTimeout(()=>{ if(!finished){ finish(); } },8000);
-
-  // Skip handler
   if(skipBtn){
-    skipBtn.addEventListener('click', ()=>{
-      showSkip();
-      finish();
-    });
+    skipBtn.addEventListener('click', ()=>{ showSkip(); finish(); });
   }
-
-  // External integration: allow other scripts to force completion
   window.addEventListener('systemChecks:done', finish);
+
+  // Diagnostics overlay construction
+  let diagEl;
+  function initDiagnostics(){
+    if(!diagEnabled) return;
+    diagEl = document.createElement('div');
+    diagEl.id = 'honeyLoaderDiagnostics';
+    diagEl.style.cssText = 'position:fixed;top:8px;right:8px;z-index:99999;font:12px/1.3 monospace;background:rgba(20,18,10,.85);color:#f8d25c;padding:8px 10px;border:1px solid #f0c246;border-radius:6px;max-width:260px;box-shadow:0 0 6px #000;';
+    diagEl.innerHTML = '<strong>Loader Diagnostics</strong><div style="margin-top:4px" id="honeyLoaderDiagRows"></div><div style="margin-top:4px;font-size:11px;opacity:.8" id="honeyLoaderDiagFooter"></div>';
+    document.body.appendChild(diagEl);
+  }
+  function updateDiag(){
+    if(!diagEnabled || !diagEl) return;
+    const rowsEl = diagEl.querySelector('#honeyLoaderDiagRows');
+    const footer = diagEl.querySelector('#honeyLoaderDiagFooter');
+    rowsEl.innerHTML = timings.map(t => {
+      const dur = (t.duration).toFixed(0);
+      return `<div>${t.name}</div><div style="color:#aaa;margin-left:6px">${dur} ms</div>`;
+    }).join('');
+    const total = (performance.now() - startTs).toFixed(0);
+    footer.textContent = `Total: ${total} ms | ${(timings.reduce((a,t)=>a+t.duration,0)).toFixed(0)} ms task time`;
+  }
+  function flushDiagnostics(){ updateDiag(); }
+
+  initDiagnostics();
 
   function runNext(){
     if(finished) return;
-    if(currentTask >= tasks.length){ finish(); return; }
-    const t = tasks[currentTask];
-    setProgress(slice * currentTask, t.name);
+    if(currentIndex >= tasks.length){ finish(); return; }
+    const t = tasks[currentIndex];
+    const weightPct = (t.weight / totalWeight) * 100;
+    setProgress(accumulated, t.name);
     setDetail(t.detail);
+    const taskStart = performance.now();
     let p;
     try { p = t.fn(); } catch(e){ p = Promise.resolve({error:true}); }
-    Promise.resolve(p)
-      .finally(()=>{
-        // Advance progress slice
-        currentTask++;
-        setProgress(Math.min(slice * currentTask, 99), t.name);
-        // Pre-label next task (UX hint) if exists
-        if(currentTask < tasks.length){
-          const next = tasks[currentTask];
-          setDetail(next.detail);
-          if(taskEl) taskEl.textContent = next.name; // show upcoming
-        }
-        runNext();
-      });
+    Promise.resolve(p).finally(()=>{
+      const end = performance.now();
+      const duration = end - taskStart;
+      timings.push({name:t.name,start:taskStart,end,duration});
+      accumulated = Math.min(99, accumulated + weightPct);
+      setProgress(accumulated, t.name);
+      currentIndex++;
+      if(currentIndex < tasks.length){
+        const next = tasks[currentIndex];
+        // Show upcoming task name early for user context
+        if(taskEl) taskEl.textContent = next.name;
+        setDetail(next.detail);
+      }
+      if(diagEnabled){ updateDiag(); }
+      runNext();
+    });
   }
 
-  // Start sequence
+  // Kick off sequence
   runNext();
 })();
 // Dark Honeycomb Loader — gated progress with matrix background
@@ -126,124 +150,5 @@
     setProgress(100, 'Ready');
     setDetail('');
     // Stop matrix animation
-      // Clamp 0-100 and sync shared progress var
+      })();
       pct = Math.max(0, Math.min(100, pct));
-      progress = pct;
-      if (percentText) percentText.textContent = pct + '%';
-      if (processName) processName.textContent = label;
-      if (ring) ring.style.setProperty('--p', pct + '%');
-  // Public API for external scripts (optional extension)
-  window.SystemChecks = Object.assign(window.SystemChecks || {}, {
-    // Dark Honeycomb Loader – dynamic gated progress (clean version)
-    (function(){
-      const overlay = document.getElementById('appHoneyLoader');
-      if(!overlay){ return; }
-
-      // Elements
-      const percentEl = document.getElementById('loaderPercentText');
-      const taskEl = document.getElementById('loaderProcessName');
-      const detailEl = document.getElementById('loaderStatusDetail');
-      const ringEl = document.querySelector('.progress-ring');
-      const ariaEl = document.getElementById('loaderAriaStatus');
-      const skipBtn = document.getElementById('skipLoaderBtn');
-      const allowMotion = overlay.dataset.allowMotion !== 'false';
-
-      // Reduced motion
-      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if(prefersReduced){ overlay.classList.add('reduced-motion'); }
-
-      // State
-      let progress = 0;       // numeric percent
-      let currentTask = 0;    // index in tasks
-      let finished = false;   // completion flag
-      let skipShown = false;  // skip visibility flag
-      const startTs = Date.now();
-
-      // Tasks (ordered)
-      const tasks = [
-        {
-          name: 'Core', detail: 'Preparing interface…', fn: () => {
-            ['/static/images/backgrounds/HoneyCombBg2.png','/static/BeeSmartCrestLogo1.png'].forEach(u=>{ const img=new Image(); img.src=u; });
-            return Promise.resolve();
-          }
-        },
-        { name: 'Health', detail: 'Checking system health…', fn: () => fetch('/health',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
-        { name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetch('/api/wordbank',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
-        { name: 'Avatars', detail: 'Caching avatars…', fn: () => new Promise(res=>setTimeout(res,600)) },
-        { name: 'Definitions', detail: 'Priming dictionary cache…', fn: () => new Promise(res=>setTimeout(res,500)) }
-      ];
-      const slice = Math.floor(100 / tasks.length); // integer slice size
-
-      // Utility setters
-      function setProgress(pct, label){
-        pct = Math.max(0, Math.min(100, pct));
-        progress = pct;
-        if(percentEl) percentEl.textContent = pct + '%';
-        if(taskEl) taskEl.textContent = label;
-        if(ringEl) ringEl.style.setProperty('--p', pct + '%');
-        if(!setProgress._last || Math.abs(pct - setProgress._last.pct) >= 2 || setProgress._last.label !== label){
-          if(ariaEl) ariaEl.textContent = `Loading: ${label} (${pct} percent)`;
-          setProgress._last = {pct,label};
-        }
-      }
-      function setDetail(text){ if(detailEl) detailEl.textContent = text || ''; }
-
-      function showSkip(){ if(skipBtn && !skipShown){ skipBtn.hidden = false; skipShown = true; } }
-
-      function finish(){
-        if(finished) return;
-        finished = true;
-        setProgress(100,'Ready');
-        setDetail('');
-        try{ document.dispatchEvent(new Event('honeyLoaderFinished')); }catch{}
-        setTimeout(()=>{ overlay.classList.add('hidden'); }, 350);
-      }
-
-      // Expose minimal API
-      window.SystemChecks = Object.assign(window.SystemChecks||{}, { setProgress, setDetail, finish });
-
-      // Per-task runner
-      function runNext(){
-        if(finished) return;
-        const task = tasks[currentTask];
-        if(!task){ finish(); return; }
-        setProgress(currentTask * slice, task.name + '…');
-        setDetail(task.detail);
-        Promise.resolve().then(task.fn).then(()=>{
-          currentTask++;
-          const base = Math.min(99, currentTask * slice);
-          setProgress(base, tasks[currentTask] ? tasks[currentTask].name + '…' : 'Finalizing…');
-          setDetail(tasks[currentTask] ? tasks[currentTask].detail : '');
-          if(!skipShown && (base >= 60 || (Date.now() - startTs) > 1500)) showSkip();
-          setTimeout(runNext, 80);
-        }).catch(()=>{
-          currentTask++;
-          setProgress(Math.min(99, currentTask * slice), tasks[currentTask] ? tasks[currentTask].name + '…' : 'Finalizing…');
-          setDetail(tasks[currentTask] ? tasks[currentTask].detail : '');
-          if(!skipShown && (progress >= 60 || (Date.now() - startTs) > 1500)) showSkip();
-          setTimeout(runNext, 60);
-        });
-      }
-
-      // Perception nudge: if still at first slice after 2.5s, advance slightly
-      setTimeout(()=>{
-        if(finished) return;
-        const current = parseInt((percentEl?.textContent||'').replace(/[^0-9]/g,''),10) || 0;
-        const oneSlice = Math.floor(100 / tasks.length);
-        if(current <= oneSlice && allowMotion && !prefersReduced){
-          setProgress(Math.max(1, oneSlice - 1), tasks[1]? tasks[1].name + '…':'Loading…');
-        }
-      },2500);
-
-      // Safety timeout
-      setTimeout(()=>{ if(!finished) finish(); }, 8000);
-
-      // Skip button
-      if(skipBtn){ skipBtn.addEventListener('click', ()=> finish()); }
-
-      // Start
-      if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', runNext); } else { runNext(); }
-
-      // External early finish hook
-      window.addEventListener('systemChecks:done', finish);
-    })();
