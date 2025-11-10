@@ -145,20 +145,47 @@
       detail: 'Preparing avatars…',
       expected: 1000,
       fn: async () => {
-        // Check mascot avatar exists
+        // Preload guest carousel avatars (priority picks for non-registered users)
+        const base = '/static/assets/avatars/glb_files/AvatarThumbnails';
+        const carouselAvatars = [
+          'SuperBee!.png',
+          'QueenBee!.png', 
+          'JRockBee!.png',
+          'BeeKnight!.png'
+        ];
+        
+        console.log('🍯 Preloading carousel avatars for home page');
+        const carouselPromises = carouselAvatars.map(file => {
+          return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+              console.log(`✅ Loaded carousel: ${file}`);
+              resolve(true);
+            };
+            img.onerror = () => {
+              console.warn(`⚠️ Failed carousel: ${file}`);
+              resolve(false);
+            };
+            img.src = `${base}/${file}`;
+          });
+        });
+        
+        // Load all carousel avatars in parallel
+        await Promise.all(carouselPromises);
+        
+        // Also check mascot avatar for registered users
         try {
           const mascotCheck = await fetch('/static/assets/avatars/Mascot%20Bee/mascot-bee.obj', {
             method: 'HEAD',
             cache: 'no-store'
           });
-          await new Promise(resolve => setTimeout(resolve, 800));
           if (!mascotCheck.ok) {
             console.warn('Mascot avatar missing, using fallback');
           }
-          return {ready: true};
+          return {ready: true, carouselLoaded: true};
         } catch(e) {
-          await new Promise(resolve => setTimeout(resolve, 800));
-          return {ready: false};
+          console.warn('Mascot check failed:', e);
+          return {ready: false, carouselLoaded: true};
         }
       }
     },
@@ -219,7 +246,20 @@
     setProgress(100,'Ready');
     setDetail('Complete!');
     
-    // Dispatch event for page initialization
+    // UNLOCK PAGE IMMEDIATELY - Don't wait for anything
+    console.log('🍯 UNLOCKING PAGE NOW');
+    document.body.style.pointerEvents = 'auto';
+    document.body.style.overflow = 'auto';
+    document.body.style.userSelect = 'auto';
+    
+    // Remove overlay from DOM flow immediately
+    if(overlay) {
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '-1';
+      console.log('🍯 Overlay disabled for interactions');
+    }
+    
+    // Dispatch event for page initialization (non-blocking)
     try { 
       document.dispatchEvent(new Event('honeyLoaderFinished')); 
       console.log('🍯 Honey loader finished, dispatched event');
@@ -227,19 +267,35 @@
       console.error('Error dispatching honeyLoaderFinished:', e);
     }
     
-    // Immediate hide - no delays
+    // Hide loader overlay visually
     if(overlay) {
       overlay.style.transition = 'opacity 0.3s ease';
       overlay.style.opacity = '0';
       setTimeout(() => { 
-        overlay.style.display = 'none'; 
-        console.log('🍯 Loader hidden');
+        overlay.style.display = 'none';
+        overlay.remove(); // Completely remove from DOM
+        console.log('🍯 Loader removed from DOM');
       }, 300);
     }
   }
 
-  // Single safety timeout
-  setTimeout(()=>{ if(!finished) finish(); }, SAFETY_TIMEOUT_MS);
+  // Single safety timeout - force finish if loader hangs
+  setTimeout(()=>{ 
+    if(!finished) {
+      console.warn('🍯 SAFETY TIMEOUT: Forcing loader to finish');
+      finish(); 
+    }
+  }, SAFETY_TIMEOUT_MS);
+  
+  // Emergency page unlock after 10 seconds if EVERYTHING fails
+  setTimeout(() => {
+    if(overlay && overlay.style.display !== 'none') {
+      console.error('🍯 EMERGENCY UNLOCK: Page frozen, forcing unlock');
+      overlay.style.display = 'none';
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
+    }
+  }, 10000);
 
   if(skipBtn){
     skipBtn.addEventListener('click', ()=>{ showSkip(); finish(); });
@@ -291,6 +347,10 @@
 
   initDiagnostics();
 
+  // START MATRIX ANIMATION IMMEDIATELY for instant visual feedback
+  console.log('🍯 Starting Matrix rain animation FIRST');
+  initMatrixRain();
+
   // Simplified execution - no interpolation, instant progress
   function runNext(){
     if(finished) return;
@@ -321,6 +381,10 @@
       });
   }
 
-  // Kick off sequence
-  runNext();
+  // Give Matrix 100ms to start rendering, THEN begin system checks
+  console.log('🍯 Delaying system checks to let Matrix animation start');
+  setTimeout(() => {
+    console.log('🍯 Beginning system checks now');
+    runNext();
+  }, 100);
   })();

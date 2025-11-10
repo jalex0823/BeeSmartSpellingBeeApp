@@ -11021,24 +11021,37 @@
         // Wait for honey-loader to finish, then initialize page
         document.addEventListener('honeyLoaderFinished', async () => {
             console.log('🍯 [INIT START] Honey loader finished at:', new Date().toISOString());
+            console.log('🍯 [DIAGNOSTIC] Body pointer-events:', document.body.style.pointerEvents);
+            console.log('🍯 [DIAGNOSTIC] Body overflow:', document.body.style.overflow);
             const initStart = performance.now();
             
+            // Wrap entire init in timeout to prevent infinite hang
+            const initTimeout = setTimeout(() => {
+                console.error('🍯 [INIT TIMEOUT] Page initialization took too long, forcing completion');
+                document.body.style.pointerEvents = 'auto';
+                document.body.style.overflow = 'auto';
+            }, 8000);
+            
             try {
-                // Initialize loading system (now just for page setup, not visual loading)
-                console.log('🍯 [INIT 1/10] Creating LoadingSystem...');
-                // window.loadingSystem = new LoadingSystem(); // DISABLED - conflicts with honey-loader
-                console.log('🍯 [INIT 1/10] ✅ LoadingSystem created in', (performance.now() - initStart).toFixed(0), 'ms');
+                // NO LoadingSystem - honey-loader already handled all loading
+                console.log('🍯 [INIT 1/10] Skipping old LoadingSystem');
+                await new Promise(resolve => setTimeout(resolve, 10)); // Tiny delay to test async
+                console.log('🍯 [INIT 1/10] ✅ Skipped in', (performance.now() - initStart).toFixed(0), 'ms');
                 
                 // Skip visual updates since honey-loader already handled that
                 // Just run the actual initialization code
                 
                 // 60% complete after system checks, now initialize UI components
                 const magicStart = performance.now();
-                console.log('� [INIT 2/10] Initializing magical effects...');
+                console.log('🍯 [INIT 2/10] Initializing magical effects...');
+                console.log('🍯 [DIAGNOSTIC] DISABLE_FLOATING_DECOR:', window.DISABLE_FLOATING_DECOR);
                 
                 if (!window.DISABLE_FLOATING_DECOR) {
+                    console.log('🍯 [DIAGNOSTIC] Creating MagicalEffects...');
                     window.magicalEffects = new MagicalEffects();
+                    console.log('🍯 [DIAGNOSTIC] MagicalEffects created');
                 } else {
+                    console.log('🍯 [DIAGNOSTIC] Magical effects disabled, hiding containers');
                     // Ensure any pre-existing containers are hidden if present
                     const mb = document.querySelector('.magic-background');
                     const fc = document.querySelector('.fairy-container');
@@ -11076,29 +11089,35 @@
                 // Preload and validate avatar system
                 const avatarStart = performance.now();
                 console.log('🍯 [INIT 5/10] Starting avatar system preload...');
+                console.log('🍯 [DIAGNOSTIC] window.userAvatarLoader exists:', !!window.userAvatarLoader);
                 
                 // Initialize avatar loader and run preload validation
                 try {
                     if (!window.userAvatarLoader) {
-                        console.log('🍯 [INIT 5/10] Creating UserAvatarLoader...');
+                        console.log('🍯 [DIAGNOSTIC] Creating UserAvatarLoader...');
+                        const loaderCreateStart = performance.now();
                         window.userAvatarLoader = new UserAvatarLoader();
+                        console.log('🍯 [DIAGNOSTIC] UserAvatarLoader created in', (performance.now() - loaderCreateStart).toFixed(0), 'ms');
                     }
                     
                     // Run comprehensive avatar system preload with timeout
-                    console.log('🍯 [INIT 5/10] Running avatar preload (max 3s)...');
+                    console.log('🍯 [DIAGNOSTIC] Starting preloadAvatarSystem (max 3s)...');
+                    const preloadStartTime = performance.now();
                     const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
-                        console.log(`🍯 [INIT 5/10] Checking avatar: ${avatarName}...`);
+                        console.log(`🍯 [DIAGNOSTIC] Preload checking: ${avatarName}...`);
                     });
                 
                 // Add 3-second timeout to prevent freeze
                 const timeoutPromise = new Promise((resolve) => {
                     setTimeout(() => {
-                        console.warn('⏱️ Avatar preload timeout after 3s, continuing...');
+                        console.warn('⏱️ [DIAGNOSTIC] Avatar preload TIMEOUT triggered after 3s');
                         resolve({systemReady: false, successfulAvatars: 0, totalAvatars: 0, timedOut: true});
                     }, 3000);
                 });
                 
+                console.log('🍯 [DIAGNOSTIC] Racing preload vs timeout...');
                 const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
+                console.log('🍯 [DIAGNOSTIC] Promise.race completed in', (performance.now() - preloadStartTime).toFixed(0), 'ms');
                 console.log('🍯 [INIT 5/10] ✅ Avatar preload finished in', (performance.now() - avatarStart).toFixed(0), 'ms');
                 
                 // Log preload results
@@ -11260,6 +11279,15 @@
 
             // Initialize guest avatar carousel (guests only) — prefer 3D when available
             try {
+                const isGuest = (window.IS_AUTH !== true);
+                console.log('🍯 [INIT 9/10] Avatar carousel check - isGuest:', isGuest);
+                
+                if (!isGuest) {
+                    console.log('🍯 [INIT 9/10] User is registered, skipping carousel');
+                    window._avatarCarouselSystemInitialized = true;
+                    return;
+                }
+                
                 // Reset on fresh page load (not navigation) to allow re-initialization
                 if (performance && performance.navigation && performance.navigation.type === 1) {
                     // Page was refreshed, reset flags
@@ -11291,12 +11319,22 @@
                 let used3D = false;
                 if (typeof initGuestAvatar3DCarousel === 'function') {
                     used3D = !!initGuestAvatar3DCarousel();
-                    console.log('[Avatar] 3D carousel initialized:', used3D);
+                    console.log('🍯 [Avatar] 3D carousel initialized:', used3D);
                 }
                 if (!used3D && typeof initGuestAvatarCarousel === 'function') {
                     initGuestAvatarCarousel();
-                    console.log('[Avatar] 2D carousel initialized as fallback');
+                    console.log('🍯 [Avatar] 2D carousel initialized as fallback');
                 }
+                
+                // Verify carousel is visible
+                const carouselEl = document.getElementById('guestAvatarCarousel');
+                if (carouselEl) {
+                    const isVisible = carouselEl.style.display !== 'none';
+                    console.log('🍯 [Avatar] Carousel element display:', carouselEl.style.display, 'visible:', isVisible);
+                }
+                
+                window._avatarCarouselSystemInitialized = true;
+                console.log('🍯 [INIT 9/10] ✅ Avatar carousel ready');
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
             }
