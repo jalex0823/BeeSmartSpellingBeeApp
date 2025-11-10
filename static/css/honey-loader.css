@@ -44,8 +44,27 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
-.loader-logo-wrapper { position: relative; width: clamp(260px,42vw,360px); aspect-ratio: 1/1; z-index: 4; }
-.loader-logo-wrapper img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 30px rgba(0,0,0,0.6)); position: relative; z-index: 3; }
+.loader-logo-wrapper { 
+  position: relative; 
+  width: clamp(260px,42vw,360px); 
+  aspect-ratio: 1/1; 
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-logo-wrapper img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: contain; 
+  filter: drop-shadow(0 8px 30px rgba(0,0,0,0.6)); 
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
 
 /* Soft honey glow behind crest */
 .loader-logo-wrapper::after{
@@ -62,23 +81,7 @@
   pointer-events: none;
 }
 
-#loaderProgressOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25));
-  backdrop-filter: blur(4px);
-  border: 2px solid rgba(255,255,255,0.18);
-  border-radius: 28px;
-  padding: 24px 20px 28px;
-  box-shadow: 0 12px 36px -6px rgba(0,0,0,0.65), 0 0 30px rgba(0,0,0,0.35);
-  z-index: 3;
-}
-
-/* Percent text over crest */
+/* Percent text over crest - centered and properly layered */
 #loaderPercentText {
   font-size: clamp(40px, 9vw, 72px);
   font-weight: 900;
@@ -87,6 +90,9 @@
   color: rgba(255, 213, 64, 0.96); /* brand honey yellow */
   text-shadow: 0 4px 14px rgba(0,0,0,0.9);
   margin-bottom: 4px;
+  position: relative;
+  z-index: 5;
+  text-align: center;
 }
 
 #loaderProcessName {
@@ -94,6 +100,9 @@
   font-weight: 700;
   color: rgba(255,255,255,0.88);
   text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  position: relative;
+  z-index: 5;
+  text-align: center;
 }
 
 #loaderStatusDetail {
@@ -103,6 +112,9 @@
   color: rgba(255,255,255,0.7);
   letter-spacing: .5px;
   text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  position: relative;
+  z-index: 5;
+  text-align: center;
 }
 
 /* Branding text at bottom */
