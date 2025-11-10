@@ -1,55 +1,96 @@
-// Honeycomb Loader Controller
+// Dark Honeycomb Loader – dynamic gated progress
 (function(){
   const el = document.getElementById('appHoneyLoader');
   if(!el){ return; }
+
   const percentText = document.getElementById('loaderPercentText');
   const processName = document.getElementById('loaderProcessName');
-  const detailText = document.getElementById('loaderStatusDetail');
+  const detailText   = document.getElementById('loaderStatusDetail');
 
-  let progress = 0;
-  let done = false;
+  let progress = 0;       // integer percent
+  let done = false;       // finished flag
+  let currentTask = 0;    // index in tasks
 
-  function setProgress(p, status){
-    progress = Math.max(0, Math.min(100, p|0));
+  function render(){
     if (percentText) percentText.textContent = progress + '%';
-    if (status) { processName.textContent = status; }
+  }
+  function setProgress(p, label){
+    progress = Math.max(0, Math.min(100, p|0));
+    if(label){ processName.textContent = label; }
+    render();
   }
   function setDetail(msg){ if(detailText) detailText.textContent = msg; }
   function finish(){
+    if(done) return;
     done = true;
     setProgress(100, 'Ready');
     setDetail('');
-    setTimeout(()=>{
-      const target = document.body && document.body.dataset ? document.body.dataset.autoloadTarget : null;
-      if (target) {
-        // Navigate automatically to the main page when a target is provided
-        window.location.replace(target);
-      } else {
-        // Otherwise just hide the overlay
-        el.classList.add('hidden');
-      }
-    }, 250);
+    // Stop matrix animation
+    try { document.dispatchEvent(new Event('honeyLoaderFinished')); } catch(e) {}
+    // small delay for user to register 100%
+    setTimeout(()=>{ el.classList.add('hidden'); }, 350);
   }
 
-  // Expose a small API other scripts can call
-  window.SystemChecks = window.SystemChecks || {};
-  window.SystemChecks.setProgress = setProgress;
-  window.SystemChecks.setDetail = setDetail;
-  window.SystemChecks.finish = finish;
-
-  // Default progression if no one drives it explicitly
-  const timer = setInterval(()=>{
-    if(done) { clearInterval(timer); return; }
-    // Ease towards 90% until onload; then finish()
-    if(progress < 90){ setProgress(progress + Math.max(1, Math.round((90-progress)/10))); }
-  }, 200);
-
-  // If the page fully loads, we finish shortly after
-  window.addEventListener('load', ()=>{
-    setDetail('Finalizing checks...');
-    setTimeout(finish, 400);
+  // Public API for external scripts (optional extension)
+  window.SystemChecks = Object.assign(window.SystemChecks || {}, {
+    setProgress, setDetail, finish
   });
 
-  // Optional: listen for custom complete event to close early
+  // Sequential task list – each returns a promise
+  const tasks = [
+    {
+      name: 'Core', detail: 'Preparing interface…', fn: () => Promise.resolve()
+    },
+    {
+      name: 'Health', detail: 'Checking system health…', fn: () => fetch('/health',{cache:'no-store'})
+        .then(r=>r.json()).catch(()=>({}))
+    },
+    {
+      name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetch('/api/wordbank',{cache:'no-store'})
+        .then(r=>r.json()).catch(()=>({}))
+    },
+    {
+      name: 'Avatars', detail: 'Caching avatars…', fn: () => new Promise(res=>setTimeout(res,400))
+    }
+  ];
+
+  const slice = Math.floor(100 / tasks.length); // equal weight slices
+
+  function runNext(){
+    if(done) return;
+    const task = tasks[currentTask];
+    if(!task){ finish(); return; }
+    setProgress(currentTask * slice, task.name + '…');
+    setDetail(task.detail);
+    Promise.resolve()
+      .then(task.fn)
+      .then(()=>{
+        currentTask++;
+        // Advance progress into next slice but cap at 99 until final finish
+        const base = Math.min(99, currentTask * slice);
+        setProgress(base, task.name + ' done');
+        setDetail('');
+        setTimeout(runNext, 75); // brief pause for readability
+      })
+      .catch(()=>{
+        // Non‑fatal – mark slice complete and continue
+        currentTask++;
+        setProgress(Math.min(99, currentTask * slice), task.name + ' skipped');
+        setDetail('');
+        setTimeout(runNext, 50);
+      });
+  }
+
+  // Safety timeout: never leave user stuck > 8s
+  setTimeout(()=>{ if(!done) finish(); }, 8000);
+
+  // Start tasks after DOM is ready
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', runNext);
+  } else {
+    runNext();
+  }
+
+  // Allow external scripts to fast‑finish early if they know readiness
   window.addEventListener('systemChecks:done', finish);
 })();

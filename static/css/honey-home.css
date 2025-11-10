@@ -2,7 +2,7 @@
 #honeyHome.honey-home-wrapper{
   position: relative;
   min-height: 100vh;
-  background: #000 url('/static/images/backgrounds/honeycombbg3.png') center/cover no-repeat fixed;
+  background: #000 url('/static/images/backgrounds/HoneyCombBg2.png') center/cover no-repeat fixed;
 }
 .honey-home-center{
   position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; flex-direction:column;
@@ -12,7 +12,7 @@
 .honey-home-overlay{ margin-top: 12px; color:#fff; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
 .honey-home-appname{ font-size: 3rem; font-weight:800; letter-spacing:1px; }
 .honey-home-appname .sub{ font-weight:700; opacity:0.95; }
-.honey-home-section{ font-size: 1.35rem; margin-top: 4px; color: rgba(255,213,64,0.95); font-weight:700; }
+.honey-home-section{ font-size: 1.35rem; margin-top: 4px; color: rgba(255,255,255,0.92); font-weight:700; }
 .honey-home-section.alt{ opacity: 0.9; }
 .honey-home-actions{ margin-top: 18px; display:flex; gap:12px; justify-content:center; }
 .honey-home-actions .btn{ padding:10px 16px; border-radius: 10px; backdrop-filter: blur(2px); background: rgba(0,0,0,0.35); color:#fff; border: 1px solid rgba(255,255,255,0.25); }

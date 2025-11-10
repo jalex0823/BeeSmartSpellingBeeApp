@@ -1,0 +1,10 @@
+/* Canvas for yellow matrix background */
+#appHoneyLoader #matrixCanvas{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0; /* behind crest overlay */
+  background: transparent;
+  pointer-events: none;
+}
