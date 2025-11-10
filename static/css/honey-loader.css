@@ -47,7 +47,7 @@
 .loader-logo-wrapper { 
   position: relative; 
   width: clamp(260px,42vw,360px); 
-  aspect-ratio: 1/1; 
+  min-height: 400px;
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -57,13 +57,14 @@
 
 .loader-logo-wrapper img { 
   width: 100%; 
-  height: 100%; 
+  max-width: 360px;
+  height: auto;
   object-fit: contain; 
   filter: drop-shadow(0 8px 30px rgba(0,0,0,0.6)); 
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   z-index: 2;
+  order: 2;
+  margin: 0;
 }
 
 /* Soft honey glow behind crest */
@@ -81,7 +82,7 @@
   pointer-events: none;
 }
 
-/* Percent text over crest - centered and properly layered */
+/* Percent text ABOVE crest */
 #loaderPercentText {
   font-size: clamp(40px, 9vw, 72px);
   font-weight: 900;
@@ -89,10 +90,11 @@
   letter-spacing: 2px;
   color: rgba(255, 213, 64, 0.96); /* brand honey yellow */
   text-shadow: 0 4px 14px rgba(0,0,0,0.9);
-  margin-bottom: 4px;
+  margin-bottom: 20px;
   position: relative;
   z-index: 5;
   text-align: center;
+  order: 1;
 }
 
 #loaderProcessName {
@@ -103,10 +105,12 @@
   position: relative;
   z-index: 5;
   text-align: center;
+  margin-top: 20px;
+  order: 3;
 }
 
 #loaderStatusDetail {
-  margin-top: 4px;
+  margin-top: 8px;
   font-size: clamp(11px,2vw,16px);
   font-weight: 500;
   color: rgba(255,255,255,0.7);
@@ -115,23 +119,10 @@
   position: relative;
   z-index: 5;
   text-align: center;
+  order: 4;
 }
 
-/* Branding text at bottom */
-#loaderBrandingText {
-  position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.65);
-  letter-spacing: 1px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-  z-index: 5;
-  white-space: nowrap;
-  pointer-events: none;
-}
+/* Branding text removed - no longer needed */
 
 /* Progress Ring around crest */
 .ring-wrap{

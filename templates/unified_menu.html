@@ -1941,17 +1941,17 @@
         
         <!-- Centered content wrapper -->
         <div class="loader-logo-wrapper" role="status" aria-label="Application loading">
+            <!-- Percentage ABOVE logo -->
+            <div id="loaderPercentText">0%</div>
+            
             <!-- BeeSmart Crest Logo -->
             <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
             
-            <!-- Centered text overlays -->
-            <div id="loaderPercentText">0%</div>
+            <!-- System status BELOW logo -->
             <div id="loaderProcessName">Initializing BeeSmart…</div>
             <div id="loaderStatusDetail">Loading core modules…</div>
         </div>
         
-        <!-- Branding text at bottom -->
-        <div id="loaderBrandingText">BeeSmart Spelling Bee Application Avatars</div>
         <div id="loaderAriaStatus" class="sr-only" aria-live="polite"></div>
         <button id="skipLoaderBtn" class="loader-skip" type="button" hidden>Skip</button>
     </div>
