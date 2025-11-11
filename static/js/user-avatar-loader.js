@@ -982,7 +982,28 @@ class UserAvatarLoader {
 // Create global instance
 window.userAvatarLoader = new UserAvatarLoader();
 
-// Auto-initialize on page load
+// DEFER initialization until honey loader finishes to prevent blocking
+let avatarInitialized = false;
+
+// Listen for honey loader to finish
+document.addEventListener('honeyLoaderFinished', () => {
+    if (!avatarInitialized) {
+        console.log('🍯 Honey loader finished, initializing avatar loader');
+        avatarInitialized = true;
+        // Delay slightly to let page become interactive first
+        setTimeout(() => {
+            window.userAvatarLoader.init();
+        }, 100);
+    }
+});
+
+// Fallback: Initialize after DOM load if honey loader doesn't fire within 2 seconds
 document.addEventListener('DOMContentLoaded', () => {
-    window.userAvatarLoader.init();
+    setTimeout(() => {
+        if (!avatarInitialized) {
+            console.warn('⚠️ Honey loader timeout, initializing avatar loader anyway');
+            avatarInitialized = true;
+            window.userAvatarLoader.init();
+        }
+    }, 2000);
 });

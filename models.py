@@ -1086,8 +1086,21 @@ class Avatar(db.Model):
     
     @staticmethod
     def get_by_slug(slug):
-        """Get avatar by slug (e.g., 'cool-bee')"""
-        return Avatar.query.filter_by(slug=slug, is_active=True).first()
+        """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""
+        from flask import g
+        
+        # Initialize cache if not exists
+        if not hasattr(g, '_avatar_cache'):
+            g._avatar_cache = {}
+        
+        # Return cached result if available
+        if slug in g._avatar_cache:
+            return g._avatar_cache[slug]
+        
+        # Query database and cache result
+        avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
+        g._avatar_cache[slug] = avatar
+        return avatar
     
     @staticmethod
     def get_all_active(category=None):

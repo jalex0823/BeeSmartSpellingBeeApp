@@ -1,0 +1,15 @@
+WARNING: honey-loader.bak.js is CORRUPTED
+=========================================
+
+This backup file has syntax errors and should NOT be used.
+
+Issues found:
+1. Malformed structure - duplicate/merged code blocks
+2. Missing timeout on /api/wordbank fetch (can hang forever)
+3. Missing timeout on mascot HEAD check (can hang forever)  
+4. Event listener mismatch (window vs document)
+
+If you need a working full-featured loader, use honey-loader.clean.js instead,
+which has been fixed with proper timeouts and event handling.
+
+For production, use honey-loader.js (emergency fast stub).

@@ -23,6 +23,14 @@
   let skipShown = false;  // skip visibility flag
   const startTs = Date.now();
 
+  // Helper: fetch with timeout
+  const fetchWithTimeout = (url, ms = 1200) => {
+    return Promise.race([
+      fetch(url, {cache: 'no-store'}),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+    ]);
+  };
+
   // Tasks (ordered)
   const tasks = [
     {
@@ -31,8 +39,8 @@
         return Promise.resolve();
       }
     },
-    { name: 'Health', detail: 'Checking system health…', fn: () => fetch('/health',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
-    { name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetch('/api/wordbank',{cache:'no-store'}).then(r=>r.json()).catch(()=>({error:true})) },
+    { name: 'Health', detail: 'Checking system health…', fn: () => fetchWithTimeout('/health', 1000).then(r=>r.json()).catch(()=>({error:true})) },
+    { name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetchWithTimeout('/api/wordbank', 1200).then(r=>r.json()).catch(()=>({error:true})) },
     { name: 'Avatars', detail: 'Caching avatars…', fn: () => new Promise(res=>setTimeout(res,600)) },
     { name: 'Definitions', detail: 'Priming dictionary cache…', fn: () => new Promise(res=>setTimeout(res,500)) }
   ];
@@ -97,8 +105,8 @@
     }
   },2500);
 
-  // Safety timeout
-  setTimeout(()=>{ if(!finished) finish(); }, 8000);
+  // Safety timeout (increased to 5000ms for testing)
+  setTimeout(()=>{ if(!finished) finish(); }, 5000);
 
   // Skip button
   if(skipBtn){ skipBtn.addEventListener('click', ()=> finish()); }
@@ -106,6 +114,6 @@
   // Start
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', runNext); } else { runNext(); }
 
-  // External early finish hook
-  window.addEventListener('systemChecks:done', finish);
+  // External early finish hook (fixed to use document, not window)
+  document.addEventListener('systemChecks:done', finish);
 })();
