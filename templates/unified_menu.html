@@ -24,6 +24,43 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
     <script src="{{ url_for('static', filename='js/honey-loader.js') }}"></script>
     
+    <!-- CRITICAL: Failsafe loader timeout - hide loader after 4.5s no matter what -->
+    <script>
+    (function(){
+        var MAX_WAIT_MS = 4500;
+        var loaderHidden = false;
+        
+        function forceHideLoader() {
+            if (loaderHidden) return;
+            loaderHidden = true;
+            console.warn('🍯 FAILSAFE: Force hiding loader after timeout');
+            
+            var overlay = document.getElementById('appHoneyLoader');
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.remove();
+            }
+            
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.overflow = 'auto';
+            document.body.style.userSelect = 'auto';
+            document.documentElement.classList.add('app-loaded');
+            
+            try {
+                document.dispatchEvent(new Event('honeyLoaderFinished'));
+            } catch(e) {}
+        }
+        
+        // Start timeout immediately
+        setTimeout(forceHideLoader, MAX_WAIT_MS);
+        
+        // Also listen for the loader's own finish event
+        document.addEventListener('honeyLoaderFinished', function() {
+            loaderHidden = true;
+        }, { once: true });
+    })();
+    </script>
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
