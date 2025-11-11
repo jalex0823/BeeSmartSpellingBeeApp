@@ -22,7 +22,8 @@
     
     <!-- New Honeycomb Loader - load IMMEDIATELY without defer so loader shows first -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
-    <script src="{{ url_for('static', filename='js/honey-loader.js') }}"></script>
+    <!-- Using cleaned honey loader implementation -->
+    <script src="{{ url_for('static', filename='js/honey-loader.clean.js') }}"></script>
     
     <!-- CRITICAL: Failsafe loader timeout - hide loader after 4.5s no matter what -->
     <script>
