@@ -314,17 +314,21 @@
     data-fast-boot="{{ '1' if fast_boot else '0' }}"
     data-autoload-target="{{ url_for('home_root_direct') }}"
 >
-    <!-- Honeycomb Loader -->
-    <div id="appHoneyLoader" aria-live="polite" aria-busy="true">
-        <div class="loader-logo-wrapper">
+    <!-- Honeycomb Loader with Matrix Animation -->
+    <div id="appHoneyLoader" aria-live="polite" aria-busy="true" data-allow-motion="1" style="background-image: url('{{ url_for('static', filename='images/backgrounds/HoneyCombBg2.png') }}');">
+        <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+        
+        <div class="loader-logo-wrapper" role="status" aria-label="Application loading">
+            <div id="loaderPercentText">0%</div>
             <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
-            <div id="loaderProgressOverlay" role="status">
-                <div id="loaderPercentText">0%</div>
-                <div id="loaderProcessName">Initializing BeeSmart…</div>
-                <div id="loaderStatusDetail">Loading core modules…</div>
-            </div>
+            <div id="loaderProcessName">Initializing BeeSmart…</div>
+            <div id="loaderStatusDetail">Loading core modules…</div>
         </div>
+        
+        <div id="loaderAriaStatus" class="sr-only" aria-live="polite"></div>
+        <button id="skipLoaderBtn" class="loader-skip" type="button" hidden>Skip</button>
     </div>
+    
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>

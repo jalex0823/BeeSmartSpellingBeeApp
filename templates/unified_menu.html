@@ -23,26 +23,16 @@
     <!-- New Honeycomb Loader CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
     
-    <!-- LOADER SCRIPT: Only load if this template is rendered directly (not extending base.html) -->
-    <!-- If extending base.html, that already provides honey-loader.js -->
-    <!-- Using emergency stub for maximum reliability (no network calls, finishes in 100ms) -->
+    <!-- LOADER SCRIPT: Full visual experience with matrix animation and system checks -->
+    <!-- Only load if not already loaded by base.html (for standalone rendering) -->
     <script>
-    // Check if loader already loaded by base.html
     if (typeof window.honeyLoaderLoaded === 'undefined') {
         window.honeyLoaderLoaded = true;
-        // Inline emergency loader stub
-        (function(){
-          const overlay = document.getElementById('appHoneyLoader');
-          if(!overlay) { document.body.style.pointerEvents='auto'; document.body.style.overflow='auto'; return; }
-          const finish = () => {
-            document.body.style.pointerEvents='auto';
-            document.body.style.overflow='auto';
-            try{ document.dispatchEvent(new Event('honeyLoaderFinished')); }catch{}
-            if(overlay){ overlay.style.opacity='0'; setTimeout(()=>overlay.style.display='none',200); }
-          };
-          setTimeout(finish, 100); // Ultra-fast finish
-          setTimeout(()=>{ if(overlay && overlay.style.display!=='none') finish(); }, 1000); // Failsafe
-        })();
+        // Load the full loader script dynamically
+        var script = document.createElement('script');
+        script.src = "{{ url_for('static', filename='js/honey-loader.full.js') }}";
+        script.defer = true;
+        document.head.appendChild(script);
     }
     </script>
     
@@ -1994,7 +1984,8 @@
     </style>
 </head>
 <body class="home-no-shimmer">
-    <!-- Honeycomb Loader -->
+    <!-- Honeycomb Loader (for standalone rendering; pages extending base.html already have this) -->
+    {% if request.endpoint == 'home_root_direct' %}
     <div id="appHoneyLoader" aria-live="polite" aria-busy="true" data-allow-motion="1" style="background-image: url('{{ url_for('static', filename='images/backgrounds/HoneyCombBg2.png') }}');">
         <canvas id="matrixCanvas" aria-hidden="true"></canvas>
         
@@ -2014,6 +2005,7 @@
         <div id="loaderAriaStatus" class="sr-only" aria-live="polite"></div>
         <button id="skipLoaderBtn" class="loader-skip" type="button" hidden>Skip</button>
     </div>
+    {% endif %}
     
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="

@@ -1,5 +1,12 @@
 // Dark Honeycomb Loader – Full featured with matrix animation and system checks
 (function(){
+  // Prevent double-execution if loader already ran
+  if (window.honeyLoaderLoaded) {
+    console.log('🍯 Loader already initialized, skipping');
+    return;
+  }
+  window.honeyLoaderLoaded = true;
+  
   const overlay = document.getElementById('appHoneyLoader');
   if(!overlay){ return; }
 
@@ -98,25 +105,102 @@
   const startTs = Date.now();
 
   // Helper: fetch with timeout
-  const fetchWithTimeout = (url, ms = 1200) => {
+  const fetchWithTimeout = (url, ms = 1200, opts = {}) => {
     return Promise.race([
-      fetch(url, {cache: 'no-store'}),
+      fetch(url, { cache: 'no-store', ...opts }),
       new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
     ]);
   };
+
+  // System diagnostics logger
+  const diagnosticsLog = {
+    timestamp: new Date().toISOString(),
+    checks: [],
+    warnings: [],
+    errors: []
+  };
+
+  function logCheck(name, status, details = {}) {
+    const entry = {
+      name,
+      status, // 'success', 'warning', 'error', 'timeout'
+      timestamp: new Date().toISOString(),
+      ...details
+    };
+    diagnosticsLog.checks.push(entry);
+    
+    if (status === 'warning') diagnosticsLog.warnings.push(entry);
+    if (status === 'error' || status === 'timeout') diagnosticsLog.errors.push(entry);
+    
+    // Store in sessionStorage for user viewing
+    try {
+      sessionStorage.setItem('beeSmartDiagnostics', JSON.stringify(diagnosticsLog));
+    } catch(e) {
+      console.warn('Could not save diagnostics:', e);
+    }
+  }
 
   // Tasks (ordered)
   const tasks = [
     {
       name: 'Core', detail: 'Preparing interface…', fn: () => {
         ['/static/images/backgrounds/HoneyCombBg2.png','/static/BeeSmartCrestLogo1.png'].forEach(u=>{ const img=new Image(); img.src=u; });
+        logCheck('Core Assets', 'success', { preloaded: 2 });
         return Promise.resolve();
       }
     },
-    { name: 'Health', detail: 'Checking system health…', fn: () => fetchWithTimeout('/health', 1000).then(r=>r.json()).catch(()=>({error:true})) },
-    { name: 'Wordbank', detail: 'Loading word lists…', fn: () => fetchWithTimeout('/api/wordbank', 1200).then(r=>r.json()).catch(()=>({error:true})) },
-    { name: 'Avatars', detail: 'Caching avatars…', fn: () => new Promise(res=>setTimeout(res,600)) },
-    { name: 'Definitions', detail: 'Priming dictionary cache…', fn: () => new Promise(res=>setTimeout(res,500)) }
+    { 
+      name: 'Health', 
+      detail: 'Checking system health…', 
+      fn: () => fetchWithTimeout('/health', 1000)
+        .then(r=>r.json())
+        .then(data => {
+          logCheck('Health Check', 'success', { version: data.version, status: data.status });
+          return data;
+        })
+        .catch(err => {
+          logCheck('Health Check', err.message === 'timeout' ? 'timeout' : 'error', { error: err.message });
+          return {error:true};
+        })
+    },
+    { 
+      name: 'Wordbank', 
+      detail: 'Loading word lists…', 
+      fn: () => fetchWithTimeout('/api/wordbank', 1200)
+        .then(r=>r.json())
+        .then(data => {
+          const wordCount = Array.isArray(data) ? data.length : (data.count || 0);
+          logCheck('Wordbank', wordCount > 0 ? 'success' : 'warning', { words: wordCount });
+          return data;
+        })
+        .catch(err => {
+          logCheck('Wordbank', err.message === 'timeout' ? 'timeout' : 'error', { error: err.message });
+          return {error:true};
+        })
+    },
+    { 
+      name: 'Avatars', 
+      detail: 'Checking mascot…', 
+      fn: () => fetchWithTimeout('/static/assets/avatars/Mascot%20Bee/mascot-bee.obj', 1200, { method: 'HEAD' })
+        .then(res => {
+          logCheck('Mascot Avatar', res.ok ? 'success' : 'warning', { status: res.status, size: res.headers.get('content-length') });
+          return res;
+        })
+        .catch(err => {
+          logCheck('Mascot Avatar', err.message === 'timeout' ? 'timeout' : 'error', { error: err.message });
+          return null;
+        })
+    },
+    { 
+      name: 'Definitions', 
+      detail: 'Priming dictionary cache…', 
+      fn: () => new Promise(res=>{
+        setTimeout(() => {
+          logCheck('Dictionary Cache', 'success', { primed: true });
+          res();
+        }, 500);
+      })
+    }
   ];
   const slice = Math.floor(100 / tasks.length);
 
@@ -136,7 +220,69 @@
   function showSkip(){ if(skipBtn && !skipShown){ skipBtn.hidden = false; skipShown = true; } }
   function finish(){
     if(finished) return;
+    
+    // Calculate system health percentage
+    const totalChecks = diagnosticsLog.checks.length;
+    const successfulChecks = diagnosticsLog.checks.filter(c => c.status === 'success').length;
+    const healthPercentage = totalChecks > 0 ? Math.round((successfulChecks / totalChecks) * 100) : 0;
+    
+    // CRITICAL THRESHOLD: Minimum 55% system health required
+    const MIN_HEALTH_THRESHOLD = 55;
+    
+    if (healthPercentage < MIN_HEALTH_THRESHOLD) {
+      // System health below threshold - show error and halt
+      console.error(`🚫 System health at ${healthPercentage}% - below minimum threshold of ${MIN_HEALTH_THRESHOLD}%`);
+      console.error('Critical systems failed. View diagnostics: SystemChecks.viewDiagnostics()');
+      
+      setProgress(healthPercentage, 'System Health Critical');
+      setDetail(`Only ${healthPercentage}% of systems healthy (need ${MIN_HEALTH_THRESHOLD}%)`);
+      
+      // Log critical failure
+      diagnosticsLog.criticalFailure = true;
+      diagnosticsLog.healthPercentage = healthPercentage;
+      diagnosticsLog.thresholdRequired = MIN_HEALTH_THRESHOLD;
+      
+      try {
+        sessionStorage.setItem('beeSmartDiagnostics', JSON.stringify(diagnosticsLog));
+      } catch(e) {}
+      
+      // Show error message to user
+      if (detailEl) {
+        detailEl.innerHTML = `<span style="color:#ff4444">⚠️ System health: ${healthPercentage}% (need ${MIN_HEALTH_THRESHOLD}%)<br>Please refresh or contact support</span>`;
+      }
+      
+      // Don't proceed to main page - keep loader visible
+      return;
+    }
+    
     finished = true;
+    
+    // Log completion summary
+    const duration = Date.now() - startTs;
+    diagnosticsLog.completedAt = new Date().toISOString();
+    diagnosticsLog.duration = duration;
+    diagnosticsLog.healthPercentage = healthPercentage;
+    diagnosticsLog.summary = {
+      totalChecks: diagnosticsLog.checks.length,
+      successful: successfulChecks,
+      warnings: diagnosticsLog.warnings.length,
+      errors: diagnosticsLog.errors.length,
+      healthPercentage: healthPercentage
+    };
+    
+    // Save final state
+    try {
+      sessionStorage.setItem('beeSmartDiagnostics', JSON.stringify(diagnosticsLog));
+    } catch(e) {}
+    
+    // Console summary (colored for visibility)
+    const hasIssues = diagnosticsLog.errors.length > 0 || diagnosticsLog.warnings.length > 0;
+    if (hasIssues) {
+      console.warn(`🍯 BeeSmart loaded in ${duration}ms (${healthPercentage}% healthy) with ${diagnosticsLog.errors.length} errors, ${diagnosticsLog.warnings.length} warnings. View: SystemChecks.viewDiagnostics()`);
+    } else {
+      console.log(`🍯 BeeSmart loaded in ${duration}ms - All systems healthy (${healthPercentage}%) ✓`);
+    }
+    
     setProgress(100,'Ready');
     setDetail('Complete!');
     try{ document.dispatchEvent(new Event('honeyLoaderFinished')); }catch{}
@@ -144,7 +290,32 @@
   }
 
   // Expose minimal API
-  window.SystemChecks = Object.assign(window.SystemChecks||{}, { setProgress, setDetail, finish });
+  window.SystemChecks = Object.assign(window.SystemChecks||{}, { 
+    setProgress, 
+    setDetail, 
+    finish,
+    getDiagnostics: () => diagnosticsLog,
+    viewDiagnostics: () => {
+      console.group('🍯 BeeSmart System Diagnostics');
+      console.log('Timestamp:', diagnosticsLog.timestamp);
+      console.log('Total Checks:', diagnosticsLog.checks.length);
+      console.log('Warnings:', diagnosticsLog.warnings.length);
+      console.log('Errors:', diagnosticsLog.errors.length);
+      console.table(diagnosticsLog.checks);
+      if (diagnosticsLog.errors.length > 0) {
+        console.group('❌ Errors');
+        diagnosticsLog.errors.forEach(e => console.error(e));
+        console.groupEnd();
+      }
+      if (diagnosticsLog.warnings.length > 0) {
+        console.group('⚠️ Warnings');
+        diagnosticsLog.warnings.forEach(w => console.warn(w));
+        console.groupEnd();
+      }
+      console.groupEnd();
+      return diagnosticsLog;
+    }
+  });
 
   // Per-task runner
   function runNext(){
