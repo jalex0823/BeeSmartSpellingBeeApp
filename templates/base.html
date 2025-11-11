@@ -4,8 +4,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/matrix-fall.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-home.css') }}">
-    <!-- Using unified loader with all fixes: AbortController, requestAnimationFrame, deferred start, dedupe -->
-    <script defer src="{{ url_for('static', filename='js/honey-loader.unified.js') }}"></script>
+    <!-- Ultra-safe loader: CSS animations + micro-task slicing prevent Safari freeze -->
+    <script defer src="{{ url_for('static', filename='js/honey-loader.unified.safe.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/matrix-fall.js') }}"></script>
 <!-- Performance instrumentation: logs key paint metrics to console -->
 <script defer src="{{ url_for('static', filename='js/perf-instrumentation.js') }}"></script>
@@ -315,18 +315,22 @@
     data-autoload-target="{{ url_for('home_root_direct') }}"
 >
     <!-- Honeycomb Loader with Matrix Animation -->
-    <div id="appHoneyLoader" aria-live="polite" aria-busy="true" data-allow-motion="1" style="background-image: url('{{ url_for('static', filename='images/backgrounds/HoneyCombBg2.png') }}');">
-        <canvas id="matrixCanvas" aria-hidden="true"></canvas>
-        
-        <div class="loader-logo-wrapper" role="status" aria-label="Application loading">
-            <div id="loaderPercentText">0%</div>
-            <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" onerror="this.style.display='none'">
-            <div id="loaderProcessName">Initializing BeeSmart…</div>
-            <div id="loaderStatusDetail">Loading core modules…</div>
+    <!-- Ultra-Safe Honey Loader: CSS-driven animations prevent Safari freeze -->
+    <div id="loader-root" class="loader" role="status" aria-live="polite" aria-busy="true">
+        <div id="loader-percent" class="loader-percent">0%</div>
+        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" class="loader-logo" alt="BeeSmart Logo" onerror="this.style.display='none'">
+
+        <div id="loader-status" class="loader-status">Initializing BeeSmart…</div>
+        <div id="loader-substatus" class="loader-substatus">Loading core modules…</div>
+
+        <!-- yellow matrix layer - pure CSS animation -->
+        <div id="matrix-overlay" class="matrix-overlay" aria-hidden="true">
+            <div class="matrix-col" style="left:12%;">9¥B</div>
+            <div class="matrix-col" style="left:28%;">A7Ω</div>
+            <div class="matrix-col" style="left:45%;">Ξ3K</div>
+            <div class="matrix-col" style="left:62%;">§1P</div>
+            <div class="matrix-col" style="left:78%;">4∂G</div>
         </div>
-        
-        <div id="loaderAriaStatus" class="sr-only" aria-live="polite"></div>
-        <button id="skipLoaderBtn" class="loader-skip" type="button" hidden>Skip</button>
     </div>
     
     <!-- Fairy Animation Container -->

@@ -28,9 +28,9 @@
     <script>
     if (typeof window.honeyLoaderLoaded === 'undefined') {
         window.honeyLoaderLoaded = true;
-        // Load the unified loader script with all fixes
+        // Load the ultra-safe loader: CSS animations + micro-task slicing
         var script = document.createElement('script');
-        script.src = "{{ url_for('static', filename='js/honey-loader.unified.js') }}";
+        script.src = "{{ url_for('static', filename='js/honey-loader.unified.safe.js') }}";
         script.defer = true;
         document.head.appendChild(script);
     }
