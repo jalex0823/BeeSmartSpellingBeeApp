@@ -42,12 +42,10 @@ class UserAvatarLoader {
      * @returns {Promise} Fetch promise with timeout
      */
     async _safeFetch(url, opts = {}, timeoutMs = 1500) {
-        return Promise.race([
-            fetch(url, opts),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('fetch timeout')), timeoutMs)
-            )
-        ]);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...opts, signal: controller.signal })
+            .finally(() => clearTimeout(timeout));
     }
 
     // Legacy properties preserved for compatibility

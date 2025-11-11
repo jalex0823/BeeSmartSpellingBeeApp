@@ -28,9 +28,9 @@
     <script>
     if (typeof window.honeyLoaderLoaded === 'undefined') {
         window.honeyLoaderLoaded = true;
-        // Load the full loader script dynamically
+        // Load the unified loader script with all fixes
         var script = document.createElement('script');
-        script.src = "{{ url_for('static', filename='js/honey-loader.full.js') }}";
+        script.src = "{{ url_for('static', filename='js/honey-loader.unified.js') }}";
         script.defer = true;
         document.head.appendChild(script);
     }
