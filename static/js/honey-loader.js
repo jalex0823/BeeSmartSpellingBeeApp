@@ -24,6 +24,9 @@
     /[?&]loaderDiag=1/.test(location.search) ||
     localStorage.getItem('honeyLoaderDiagnostics') === '1'
   );
+  
+  // EMERGENCY BYPASS: Skip all async tasks and finish immediately
+  const emergencyBypass = true; // Set to false once we identify the hanging task
 
   // Reduced motion support
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -390,10 +393,35 @@
 
   // Give Matrix 100ms to start rendering, THEN begin system checks
   console.log('🍯 Delaying system checks to let Matrix animation start');
-  setTimeout(() => {
-    console.log('🍯 Beginning system checks now');
-    runNext();
-  }, 100);
+  
+  if (emergencyBypass) {
+    console.warn('⚠️ EMERGENCY BYPASS ACTIVE - Skipping all async tasks');
+    setTimeout(() => {
+      console.log('🍯 Emergency bypass: Simulating quick load');
+      setProgress(20, 'System Health');
+      setTimeout(() => {
+        setProgress(40, 'Quiz Content');
+        setTimeout(() => {
+          setProgress(70, 'Avatar System');
+          setTimeout(() => {
+            setProgress(90, 'Interface Ready');
+            setTimeout(() => {
+              setProgress(100, 'System Ready');
+              setTimeout(() => {
+                console.log('🍯 Emergency bypass: Finishing loader');
+                finish();
+              }, 300);
+            }, 300);
+          }, 300);
+        }, 300);
+      }, 300);
+    }, 500);
+  } else {
+    setTimeout(() => {
+      console.log('🍯 Beginning system checks now');
+      runNext();
+    }, 100);
+  }
   } // End initHoneyLoader
   
   // Start loader when DOM is ready
