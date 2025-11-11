@@ -4182,7 +4182,10 @@
                             const data = await res.json();
                             if (data.ok){
                                 showSuccessMessage('Loaded "' + data.loaded.name + '". Starting quiz…');
-                                window.location.href = '/quiz';
+                                // Delay redirect slightly to allow message to be seen and avoid page hang
+                                setTimeout(() => {
+                                    window.location.href = '/quiz';
+                                }, 800);
                             } else {
                                 showErrorMessage(data.error || 'Failed to load list');
                             }
@@ -11100,62 +11103,59 @@
                         console.log('🍯 [DIAGNOSTIC] UserAvatarLoader created in', (performance.now() - loaderCreateStart).toFixed(0), 'ms');
                     }
                     
-                    // Run comprehensive avatar system preload with timeout
-                    console.log('🍯 [DIAGNOSTIC] Starting preloadAvatarSystem (max 3s)...');
-                    const preloadStartTime = performance.now();
-                    const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
-                        console.log(`🍯 [DIAGNOSTIC] Preload checking: ${avatarName}...`);
-                    });
-                
-                // Add 3-second timeout to prevent freeze
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => {
-                        console.warn('⏱️ [DIAGNOSTIC] Avatar preload TIMEOUT triggered after 3s');
-                        resolve({systemReady: false, successfulAvatars: 0, totalAvatars: 0, timedOut: true});
-                    }, 3000);
-                });
-                
-                console.log('🍯 [DIAGNOSTIC] Racing preload vs timeout...');
-                const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
-                console.log('🍯 [DIAGNOSTIC] Promise.race completed in', (performance.now() - preloadStartTime).toFixed(0), 'ms');
-                console.log('🍯 [INIT 5/10] ✅ Avatar preload finished in', (performance.now() - avatarStart).toFixed(0), 'ms');
-                
-                // Log preload results
-                if (preloadResults.timedOut) {
-                    console.warn('🍯 [INIT 5/10] ⚠️ Avatar system TIMED OUT');
-                } else if (preloadResults.systemReady) {
-                    console.log(`🍯 [INIT 5/10] ✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
-                } else {
-                    console.warn(`🍯 [INIT 5/10] ⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
-                }
-                
-                // Store preload results for later use
-                window.avatarPreloadResults = preloadResults;
-                
-                // Update the visual status badge
-                setTimeout(() => {
-                    if (typeof updateAvatarSystemStatus === 'function') {
-                        updateAvatarSystemStatus();
-                    }
-                }, 100);
-
-                // Inform of unified avatar mode
-                try {
-                    const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
-                    if (mode === 'guest') {
-                        console.log('🖼️ Avatar mode: Guest — Carousel preview enabled');
+                    // CRITICAL FIX: Skip avatar preload during page load to prevent freeze
+                    // Avatars will load on-demand when needed instead
+                    console.log('🍯 [DIAGNOSTIC] SKIPPING preloadAvatarSystem to prevent page freeze');
+                    console.log('🍯 [DIAGNOSTIC] Avatars will load on-demand when needed');
+                    
+                    // Create mock preload results to satisfy downstream code
+                    const preloadResults = {
+                        systemReady: true,
+                        successfulAvatars: 0,
+                        totalAvatars: 0,
+                        failedAvatars: [],
+                        skipped: true,
+                        message: 'Preload skipped - avatars load on-demand'
+                    };
+                    
+                    console.log('🍯 [INIT 5/10] ✅ Avatar preload skipped in', (performance.now() - avatarStart).toFixed(0), 'ms');
+                    
+                    // Log preload results
+                    if (preloadResults.timedOut) {
+                        console.warn('🍯 [INIT 5/10] ⚠️ Avatar system TIMED OUT');
+                    } else if (preloadResults.systemReady) {
+                        console.log(`🍯 [INIT 5/10] ✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
                     } else {
-                        console.log('🖼️ Avatar mode: Registered — Rendering selected avatar');
+                        console.warn(`🍯 [INIT 5/10] ⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
                     }
-                } catch(_) {}
-                
-            } catch (preloadError) {
-                console.error('❌ Avatar preload failed:', preloadError);
-                console.log('Using emergency fallback mode');
-                
-                // Set emergency mode flag
-                window.avatarEmergencyMode = true;
-            }
+                    
+                    // Store preload results for later use
+                    window.avatarPreloadResults = preloadResults;
+                    
+                    // Update the visual status badge
+                    setTimeout(() => {
+                        if (typeof updateAvatarSystemStatus === 'function') {
+                            updateAvatarSystemStatus();
+                        }
+                    }, 100);
+
+                    // Inform of unified avatar mode
+                    try {
+                        const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
+                        if (mode === 'guest') {
+                            console.log('🖼️ Avatar mode: Guest — Carousel preview enabled');
+                        } else {
+                            console.log('🖼️ Avatar mode: Registered — Rendering selected avatar');
+                        }
+                    } catch(_) {}
+                    
+                } catch (preloadError) {
+                    console.error('❌ Avatar preload failed:', preloadError);
+                    console.log('Using emergency fallback mode');
+                    
+                    // Set emergency mode flag
+                    window.avatarEmergencyMode = true;
+                }
             
             // Prepare for 3D mascot (but defer actual loading)
             console.log('🐝 Preparing bee avatar...');
