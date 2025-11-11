@@ -305,7 +305,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body
+<body class="honey-bg"
     {% if session.get('theme') %} data-theme="{{ session.get('theme') }}"{% endif %}
     data-env="{{ config_env }}"
     data-version="{{ app_version }}"
