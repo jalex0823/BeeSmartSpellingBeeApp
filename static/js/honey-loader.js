@@ -1,7 +1,14 @@
 // Dark Honeycomb Loader – canonical implementation (weighted gated tasks + optional diagnostics + matrix stop)
 (function(){
-  const overlay = document.getElementById('appHoneyLoader');
-  if(!overlay){ return; }
+  // Wait for DOM to be ready before initializing loader
+  function initHoneyLoader() {
+    const overlay = document.getElementById('appHoneyLoader');
+    if(!overlay){ 
+      console.error('🍯 Honey loader overlay not found!');
+      return; 
+    }
+
+    console.log('🍯 Honey loader initializing...');
 
   // Elements
   const percentEl = document.getElementById('loaderPercentText');
@@ -387,4 +394,13 @@
     console.log('🍯 Beginning system checks now');
     runNext();
   }, 100);
-  })();
+  } // End initHoneyLoader
+  
+  // Start loader when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHoneyLoader);
+  } else {
+    // DOM already loaded
+    initHoneyLoader();
+  }
+})();
