@@ -32,7 +32,26 @@ class UserAvatarLoader {
         
         // Quick DB connection check instead of loading all avatars
         this.verifyDatabaseConnection();
-        
+    }
+
+    /**
+     * Safe fetch with timeout to prevent infinite hangs
+     * @param {string} url - URL to fetch
+     * @param {object} opts - Fetch options
+     * @param {number} timeoutMs - Timeout in milliseconds (default 1500ms)
+     * @returns {Promise} Fetch promise with timeout
+     */
+    async _safeFetch(url, opts = {}, timeoutMs = 1500) {
+        return Promise.race([
+            fetch(url, opts),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('fetch timeout')), timeoutMs)
+            )
+        ]);
+    }
+
+    // Legacy properties preserved for compatibility
+    _legacyInit() {
         // DEPRECATED - Old hardcoded map (kept for fallback only) - UPDATED TO NEW PATHS
         // Only includes the 9 working avatars with verified files
         this._oldAvatarMap = {
@@ -130,7 +149,7 @@ class UserAvatarLoader {
     async verifyDatabaseConnection() {
         try {
             console.log('🔍 Verifying avatar database connection...');
-            const response = await fetch('/api/avatars?category=classic', { credentials: 'same-origin' });
+            const response = await this._safeFetch('/api/avatars?category=classic', { credentials: 'same-origin' }, 1500);
             if (response.ok) {
                 this.dbConnectionVerified = true;
                 console.log('✅ Avatar database connection verified');
@@ -157,7 +176,7 @@ class UserAvatarLoader {
         
         try {
             console.log('📡 Loading avatar catalog from database API...');
-            const response = await fetch('/api/avatars', { credentials: 'same-origin' });
+            const response = await this._safeFetch('/api/avatars', { credentials: 'same-origin' }, 2000);
             if (!response.ok) {
                 throw new Error(`API returned ${response.status}`);
             }
@@ -344,7 +363,7 @@ class UserAvatarLoader {
         
         for (const fileUrl of filesToCheck) {
             try {
-                const response = await fetch(fileUrl, { method: 'HEAD' });
+                const response = await this._safeFetch(fileUrl, { method: 'HEAD' }, 1000);
                 if (response.ok) {
                     validFiles.push({
                         url: fileUrl,
@@ -798,9 +817,9 @@ class UserAvatarLoader {
         this.showLoadingState();
         
         try {
-            const response = await fetch('/api/users/me/avatar', {
+            const response = await this._safeFetch('/api/users/me/avatar', {
                 credentials: 'same-origin'
-            });
+            }, 1500);
             
             if (response.ok) {
                 const data = await response.json();
@@ -858,14 +877,14 @@ class UserAvatarLoader {
         // GLB-first validation: only need the .glb file
         if (paths.glb) {
             try {
-                const res = await fetch(paths.glb, { method: 'HEAD' });
+                const res = await this._safeFetch(paths.glb, { method: 'HEAD' }, 1000);
                 if (!res.ok) {
                     console.error('❌ GLB file not accessible:', paths.glb, res.status);
                     return false;
                 }
                 return true;
             } catch (e) {
-                console.error('❌ GLB validation error:', e);
+                console.error('❌ GLB validation error (timeout or network):', e.name === 'Error' && e.message === 'fetch timeout' ? 'TIMEOUT' : e);
                 return false;
             }
         }
@@ -880,7 +899,7 @@ class UserAvatarLoader {
         try {
             const checks = filesToCheck.map(async (url) => {
                 try {
-                    const response = await fetch(url, { method: 'HEAD' });
+                    const response = await this._safeFetch(url, { method: 'HEAD' }, 1000);
                     return response.ok;
                 } catch {
                     return false;

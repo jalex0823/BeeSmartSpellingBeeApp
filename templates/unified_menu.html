@@ -20,10 +20,31 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
     
-    <!-- New Honeycomb Loader - load IMMEDIATELY without defer so loader shows first -->
+    <!-- New Honeycomb Loader CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
-    <!-- Using cleaned honey loader implementation -->
-    <script src="{{ url_for('static', filename='js/honey-loader.clean.js') }}"></script>
+    
+    <!-- LOADER SCRIPT: Only load if this template is rendered directly (not extending base.html) -->
+    <!-- If extending base.html, that already provides honey-loader.js -->
+    <!-- Using emergency stub for maximum reliability (no network calls, finishes in 100ms) -->
+    <script>
+    // Check if loader already loaded by base.html
+    if (typeof window.honeyLoaderLoaded === 'undefined') {
+        window.honeyLoaderLoaded = true;
+        // Inline emergency loader stub
+        (function(){
+          const overlay = document.getElementById('appHoneyLoader');
+          if(!overlay) { document.body.style.pointerEvents='auto'; document.body.style.overflow='auto'; return; }
+          const finish = () => {
+            document.body.style.pointerEvents='auto';
+            document.body.style.overflow='auto';
+            try{ document.dispatchEvent(new Event('honeyLoaderFinished')); }catch{}
+            if(overlay){ overlay.style.opacity='0'; setTimeout(()=>overlay.style.display='none',200); }
+          };
+          setTimeout(finish, 100); // Ultra-fast finish
+          setTimeout(()=>{ if(overlay && overlay.style.display!=='none') finish(); }, 1000); // Failsafe
+        })();
+    }
+    </script>
     
     <!-- CRITICAL: Failsafe loader timeout - hide loader after 4.5s no matter what -->
     <script>
