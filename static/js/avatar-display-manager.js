@@ -14,6 +14,10 @@
   function AvatarDisplayManager(){ }
 
   AvatarDisplayManager.prototype.init = function(){
+    // Prevent double initialization
+    if (window._avatarDisplayManagerInitialized) return;
+    window._avatarDisplayManagerInitialized = true;
+    
     try {
       var isAuth = !!(window && window.IS_AUTH === true);
       var guestWrap = document.getElementById('guestAvatarCarousel');
@@ -59,9 +63,20 @@
   // Expose
   window.AvatarDisplayManager = AvatarDisplayManager;
 
-  // Auto-init on DOM ready for convenience
-  document.addEventListener('DOMContentLoaded', function(){
-    try { new AvatarDisplayManager().init(); } catch(_){}
+  // DEFERRED: Wait for honey loader to finish before initializing 3D carousel
+  // This prevents blocking the main thread during initial page load
+  document.addEventListener('BeeSmart:loaderComplete', function(){
+    // Add small delay to let page fully paint first
+    setTimeout(function(){
+      try { new AvatarDisplayManager().init(); } catch(_){}
+    }, 100);
   });
+
+  // Fallback: if loader never fires, init after 3 seconds
+  setTimeout(function(){
+    if (!window._avatarDisplayManagerInitialized) {
+      try { new AvatarDisplayManager().init(); } catch(_){}
+    }
+  }, 3000);
 
 })(window, document);
