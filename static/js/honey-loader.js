@@ -32,8 +32,9 @@
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(prefersReduced){ overlay.classList.add('reduced-motion'); }
 
-  // Matrix Rain Animation Setup - optimized for instant start
+  // Matrix Rain Animation Setup - optimized for instant start (wrapped in try-catch to prevent blocking)
   function initMatrixRain(){
+    try {
     let canvas = document.getElementById('matrixCanvas');
     if(!canvas){
       canvas = document.createElement('canvas');
@@ -102,10 +103,19 @@
         }
       }, 100);
     });
+    } catch(e) {
+      console.error('🍯 Matrix animation failed, continuing without it:', e);
+    }
   }
   
-  // Start matrix animation immediately (before tasks)
-  initMatrixRain();
+  // Start matrix animation immediately (before tasks) - non-blocking
+  setTimeout(() => {
+    try {
+      initMatrixRain();
+    } catch(e) {
+      console.error('🍯 Matrix init failed:', e);
+    }
+  }, 0);
 
     // System checks with realistic timing - minimum 65% before page loads
   const tasks = [
@@ -410,12 +420,12 @@
               setTimeout(() => {
                 console.log('🍯 Emergency bypass: Finishing loader');
                 finish();
-              }, 300);
-            }, 300);
-          }, 300);
-        }, 300);
-      }, 300);
-    }, 500);
+              }, 100);
+            }, 100);
+          }, 100);
+        }, 100);
+      }, 100);
+    }, 50); // Reduced from 500ms to 50ms for instant start
   } else {
     setTimeout(() => {
       console.log('🍯 Beginning system checks now');
