@@ -5008,7 +5008,7 @@ def check_newly_unlocked_avatars(old_honey_points, new_honey_points):
     Returns list of newly unlocked avatar objects with name, slug, description, thumbnail.
     """
     try:
-        from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+        from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
         from models import Avatar
         
         newly_unlocked = []
@@ -5330,7 +5330,7 @@ def api_answer():
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
                     
                     # 🐝 Check for newly unlocked avatars based on honey points
-                    from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+                    from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
                     old_honey_points = current_user.honey_points or 0
                     new_honey_points = old_honey_points + total_points
                     current_user.honey_points = new_honey_points
@@ -8853,7 +8853,8 @@ def api_get_avatars():
             print(f"⚠️ Avatar model import failed, falling back to filesystem-only avatars: {_imp_err}")
             Avatar = None  # type: ignore
         try:
-            from avatar_catalog import check_avatar_unlocked, AVATARS_CATALOG
+            from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
+            AVATARS_CATALOG = AVATAR_CATALOG  # Alias for backward compatibility
         except Exception as _cat_err:
             print(f"⚠️ Avatar catalog import failed, disabling unlock checks: {_cat_err}")
             AVATARS_CATALOG = []  # type: ignore
