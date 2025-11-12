@@ -1,14 +1,3 @@
-    <!-- New honeycomb loader assets -->
-    
-    <!-- New Honeycomb Loader & Home styles -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/matrix-fall.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-home.css') }}">
-    <!-- Ultra-safe loader: CSS animations + micro-task slicing prevent Safari freeze -->
-    <script defer src="{{ url_for('static', filename='js/honey-loader.unified.safe.js') }}?v=2"></script>
-    <script defer src="{{ url_for('static', filename='js/matrix-fall.js') }}"></script>
-<!-- Performance instrumentation: logs key paint metrics to console -->
-<script defer src="{{ url_for('static', filename='js/perf-instrumentation.js') }}"></script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,11 +31,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
-            <script>
-                // Global logo path now points to new crest logo (served from static root)
-                window.BeeSmartBrand = { logoPath: "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" };
-            </script>
+    <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -164,6 +152,17 @@
                 --transition: none;
             }
         }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+
         
         /* Main Container */
         .container {
@@ -305,37 +304,24 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="honey-bg"
-    {% if session.get('theme') %} data-theme="{{ session.get('theme') }}"{% endif %}
-    data-env="{{ config_env }}"
-    data-version="{{ app_version }}"
-    data-user-auth="{{ '1' if current_user.is_authenticated else '0' }}"
-    data-user-role="{{ current_user.role if current_user.is_authenticated else 'anon' }}"
-    data-fast-boot="{{ '1' if fast_boot else '0' }}"
-    data-autoload-target="{{ url_for('home_root_direct') }}"
->
-    <!-- Honeycomb Loader with Matrix Animation -->
-    <!-- Ultra-Safe Honey Loader: CSS-driven animations prevent Safari freeze -->
-    <div id="loader-root" class="loader" role="status" aria-live="polite" aria-busy="true">
-        <div id="loader-percent" class="loader-percent">0%</div>
-        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" class="loader-logo" alt="BeeSmart Logo" onerror="this.style.display='none'">
-
-        <div id="loader-status" class="loader-status">Initializing BeeSmart…</div>
-        <div id="loader-substatus" class="loader-substatus">Loading core modules…</div>
-
-        <!-- yellow matrix layer - pure CSS animation -->
-        <div id="matrix-overlay" class="matrix-overlay" aria-hidden="true">
-            <div class="matrix-col" style="left:12%;">9¥B</div>
-            <div class="matrix-col" style="left:28%;">A7Ω</div>
-            <div class="matrix-col" style="left:45%;">Ξ3K</div>
-            <div class="matrix-col" style="left:62%;">§1P</div>
-            <div class="matrix-col" style="left:78%;">4∂G</div>
-        </div>
-    </div>
-    
+<body>
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
+
+    <!-- Global Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
+    <img src="" alt="BeeSmart Logo" class="crest-logo brand-logo" decoding="async" />
+        <h1>Preparing Magic...</h1>
+        <div class="checks" id="loadingChecks" aria-live="polite">
+            <h2>System Checks</h2>
+            <!-- Dynamic check items inserted by loading-screen.js -->
+        </div>
+        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready">Tap to Start</button>
+        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
+        <div class="footer-note">All systems must pass before starting for the best experience.</div>
+    </div>
+    
     <!-- Main Content -->
     <main class="container">
         {% block content %}{% endblock %}
@@ -546,7 +532,6 @@
             showError: (message) => window.toast?.error(message)
         };
     </script>
-    <!-- Duplicate overlay cleanup not needed since base no longer injects an overlay -->
     
     <!-- Three.js for 3D Mascot -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -652,6 +637,7 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
 
     <!-- PWA Service Worker Registration -->
