@@ -7699,13 +7699,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (isGuest) {
             // Guest users: always use default mascot-bee
-            console.log('👤 Guest user detected - using default mascot-bee');
+            console.log('👤 Guest user detected - using default Mascot Bee');
             avatarId = 'mascot-bee';
             avatarOptions = {
                 avatarId: 'mascot-bee',
                 format: 'obj',
-                objFile: '/static/assets/avatars/mascot-bee/mascot-bee.obj',
-                mtlFile: '/static/assets/avatars/mascot-bee/mascot-bee.mtl',
+                modelBase: '/static/assets/avatars/mascot-bee/',
+                modelName: 'MascotBee',
+                modelPath: '/static/assets/avatars/mascot-bee/MascotBee.obj',
+                mtlPath: '/static/assets/avatars/mascot-bee/MascotBee.mtl',
+                texturePath: '/static/assets/avatars/mascot-bee/MascotBee.png',
                 width: 180,
                 height: 180,
                 autoRotate: true,
