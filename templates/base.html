@@ -33,10 +33,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
-            <script>
-                    // Simple global logo path (new logo). Replace file with your new image to update everywhere.
-                    window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' };
-            </script>
+    <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -313,7 +311,7 @@
 
     <!-- Global Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
+    <img src="" alt="BeeSmart Logo" class="crest-logo brand-logo" decoding="async" />
         <h1>Preparing Magic...</h1>
         <div class="checks" id="loadingChecks" aria-live="polite">
             <h2>System Checks</h2>
