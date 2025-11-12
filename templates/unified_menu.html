@@ -30,7 +30,7 @@
         window.honeyLoaderLoaded = true;
         // Load the ultra-safe loader: CSS animations + micro-task slicing
         var script = document.createElement('script');
-        script.src = "{{ url_for('static', filename='js/honey-loader.unified.safe.js') }}";
+        script.src = "{{ url_for('static', filename='js/honey-loader.unified.safe.js') }}?v=2";
         script.defer = true;
         document.head.appendChild(script);
     }
@@ -107,8 +107,8 @@
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     <!-- User Avatar Loader -->
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
-    <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
-    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}"></script>
+    <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) - DEFERRED until loader completes -->
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=2"></script>
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
     {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
