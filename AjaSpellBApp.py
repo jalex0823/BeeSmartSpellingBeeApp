@@ -5990,6 +5990,189 @@ def api_bundles_redeem():
     })
 
 
+
+# ----------------------------------------------------------------------------
+# BeeKey Redemption for Linked Users (Admin/Parent/Teacher)
+# ----------------------------------------------------------------------------
+@app.route('/api/beekey/redeem-for-linked', methods=['POST'])
+@login_required
+def api_beekey_redeem_for_linked():
+    """Redeem a BeeKey and unlock avatars for all users linked to the redeemer's admin/teacher key.
+    
+    This endpoint allows Admin, Parent, and Teacher users to redeem a BeeKey code and automatically
+    unlock the avatars in that BeeKey pack for all students/children linked to their account via
+    admin_key or teacher_key.
+    
+    Request JSON: { beekey: string }
+    Response: { success, bundle_id, avatars_count, users_unlocked, message }
+    """
+    data = request.get_json(silent=True) or {}
+    raw_key = (data.get('beekey') or '').strip()
+    
+    if not raw_key:
+        return jsonify({"success": False, "error": "Missing BeeKey code"}), 400
+    
+    # Normalize the key
+    norm_key = re.sub(r"\s+", "", raw_key).upper()
+    
+    # Find the BeeKey in database
+    try:
+        _ensure_db_initialized()
+        bundle_key_row = BundleKey.query.filter_by(key_norm=norm_key).first()
+    except Exception as e:
+        app.logger.error(f"BeeKey lookup error: {e}")
+        return jsonify({"success": False, "error": "Database error"}), 500
+    
+    if not bundle_key_row:
+        return jsonify({"success": False, "error": "Invalid BeeKey code"}), 400
+    
+    # Check if the BeeKey can be redeemed
+    can_redeem, reason = bundle_key_row.can_redeem()
+    if not can_redeem:
+        error_messages = {
+            'status_not_active': 'This BeeKey has been revoked or is no longer active',
+            'expired': 'This BeeKey has expired',
+            'key_exhausted': 'This BeeKey has reached its maximum number of uses'
+        }
+        return jsonify({"success": False, "error": error_messages.get(reason, reason)}), 400
+    
+    bundle_id = bundle_key_row.bundle_id
+    
+    # Get the avatars from the bundle (check DynamicBundle first, then BUNDLE_CATALOG)
+    avatars = []
+    bundle_name = bundle_id
+    
+    try:
+        dyn_bundle = DynamicBundle.query.filter_by(bundle_id=bundle_id).first()
+        if dyn_bundle:
+            avatars = list(dyn_bundle.avatars or [])
+            bundle_name = dyn_bundle.name or bundle_id
+        else:
+            # Fallback to BUNDLE_CATALOG
+            bundle_cfg = (BUNDLE_CATALOG or {}).get(bundle_id, {})
+            avatars = list(bundle_cfg.get('avatars', []) or [])
+            bundle_name = bundle_cfg.get('name') or bundle_id
+    except Exception as e:
+        app.logger.error(f"Bundle lookup error: {e}")
+        return jsonify({"success": False, "error": "Bundle not found"}), 404
+    
+    if not avatars:
+        return jsonify({"success": False, "error": "No avatars found in this BeeKey pack"}), 400
+    
+    # Find all linked users based on the current user's role
+    linked_users = []
+    
+    try:
+        if current_user.role == 'admin':
+            # For admins, find all users linked via their teacher_key (admins have a teacher_key too)
+            if current_user.teacher_key:
+                # Find via TeacherStudent relationship
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        elif current_user.role == 'parent':
+            # For parents, find all users linked via their teacher_key (parents also use teacher_key)
+            if current_user.teacher_key:
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        elif current_user.role == 'teacher':
+            # For teachers, find all students linked via their teacher_key
+            if current_user.teacher_key:
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        else:
+            return jsonify({"success": False, "error": "Only Admin, Parent, and Teacher accounts can redeem BeeKeys for linked users"}), 403
+    
+    except Exception as e:
+        app.logger.error(f"Error finding linked users: {e}")
+        return jsonify({"success": False, "error": "Error finding linked users"}), 500
+    
+    if not linked_users:
+        return jsonify({"success": False, "error": "No students/children are linked to your account"}), 400
+    
+    # Unlock avatars for all linked users
+    unlocked_count = 0
+    
+    for user in linked_users:
+        try:
+            # Get user's current purchased avatars list
+            purchased = user.purchased_avatars or []
+            if not isinstance(purchased, list):
+                purchased = []
+            
+            # Add new avatars (avoiding duplicates)
+            initial_count = len(purchased)
+            for avatar_id in avatars:
+                if avatar_id not in purchased:
+                    purchased.append(avatar_id)
+            
+            # Update user's purchased avatars
+            user.purchased_avatars = purchased
+            
+            # If avatars were added, count this user
+            if len(purchased) > initial_count:
+                unlocked_count += 1
+        
+        except Exception as e:
+            app.logger.error(f"Error unlocking avatars for user {user.id}: {e}")
+            continue
+    
+    # Record the BeeKey usage
+    try:
+        bundle_key_row.apply_use(current_user.id)
+        db.session.add(bundle_key_row)
+        
+        # Create redemption trace
+        trace = BundleKeyRedemption(
+            bundle_key_id=bundle_key_row.id,
+            user_id=current_user.id,
+            bundle_id=bundle_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:300]
+        )
+        db.session.add(trace)
+        
+        # Log purchase record for the redeemer
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform='web',
+            product_id=f"beekey:{bundle_id}",
+            status='verified',
+            transaction_id=None,
+            purchase_token=None,
+            raw_payload={
+                'redeemed_key': norm_key,
+                'bundle_id': bundle_id,
+                'redemption_type': 'for_linked_users',
+                'users_unlocked': unlocked_count,
+                'total_linked_users': len(linked_users)
+            }
+        )
+        db.session.add(rec)
+        
+        db.session.commit()
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saving BeeKey redemption: {e}")
+        return jsonify({"success": False, "error": "Failed to save redemption"}), 500
+    
+    return jsonify({
+        "success": True,
+        "bundle_id": bundle_id,
+        "bundle_name": bundle_name,
+        "avatars_count": len(avatars),
+        "users_unlocked": unlocked_count,
+        "total_linked_users": len(linked_users),
+        "message": f"Successfully unlocked {len(avatars)} avatar(s) for {unlocked_count} user(s)"
+    })
+
+
 # ----------------------------------------------------------------------------
 # Admin: Bundle Key Management (DB-managed keys)
 # ----------------------------------------------------------------------------
