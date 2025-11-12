@@ -5192,7 +5192,7 @@ def api_answer():
     user_obj = get_or_create_guest_user()
     if user_obj and state.get("db_session_id"):
         try:
-            # Save individual word result
+            # Save individual word result with detailed points breakdown
             quiz_result = QuizResult(
                 session_id=state["db_session_id"],
                 user_id=user_obj.id,
@@ -5202,7 +5202,12 @@ def api_answer():
                 correct_spelling=correct_spelling,
                 time_taken_seconds=(elapsed_ms / 1000.0) if elapsed_ms else None,
                 input_method=method,
-                points_earned=int(state.get("session_points", 0) and (points_earned if is_correct else 0)),
+                points_earned=points_earned if is_correct else 0,
+                base_points=points_breakdown.get("base", 0) if is_correct else 0,
+                time_bonus=points_breakdown.get("time_bonus", 0) if is_correct else 0,
+                streak_bonus=points_breakdown.get("streak_bonus", 0) if is_correct else 0,
+                first_attempt_bonus=points_breakdown.get("first_attempt", 0) if is_correct else 0,
+                no_hints_bonus=points_breakdown.get("no_hints", 0) if is_correct else 0,
                 hints_used=state.get("hints_used_current_word", 0),
                 # Use the 1-based question sequence; idx was incremented above after processing this answer
                 question_number=state.get("idx", 0)
@@ -5294,13 +5299,23 @@ def api_answer():
                 quiz_session.incorrect_count = state["incorrect"]
                 quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
                 
-                # 🍯 Save session points earned (from gamification system)
-                quiz_session.points_earned = state.get("session_points", 0)
+                # 🍯 Calculate total points from all sources
+                word_points = state.get("session_points", 0)  # Points from answering words correctly
+                badge_points = sum(b["points"] for b in badges_unlocked)  # Badge bonus points
+                extra_bonus = state.get("extra_points", 0)  # Any additional bonus points
+                
+                # Store detailed breakdown
+                quiz_session.points_earned = word_points  # Word answer points (already includes time/streak bonuses)
+                quiz_session.badge_bonus_points = badge_points  # Badge achievement points
+                quiz_session.extra_points = extra_bonus  # Any extra/special bonus points
+                
+                # Calculate cumulative total (all points combined)
+                total_points = word_points + badge_points + extra_bonus
+                quiz_session.total_points = total_points  # Store cumulative total
+                
+                print(f"📊 POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
                 
                 quiz_session.complete_session()
-                
-                # Calculate points (includes points_earned + any database bonus)
-                total_points = quiz_session.total_points
                 
                 # 🏆 Save badges to Achievement table
                 if badges_unlocked and current_user.is_authenticated:
@@ -5526,6 +5541,73 @@ def api_save_partial_progress():
         traceback.print_exc()
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/add-bonus-points", methods=["POST"])
+def api_add_bonus_points():
+    """
+    Add extra/bonus points to the current quiz session
+    Useful for special achievements, milestones, events, etc.
+    
+    Body JSON: {
+        "points": <int>,           # Amount of bonus points to add
+        "reason": "<string>",      # Description of why points were awarded
+        "category": "<string>"     # Optional: "achievement", "milestone", "event", "special"
+    }
+    """
+    try:
+        session.permanent = True
+        session.modified = True
+        
+        payload = request.get_json(force=True)
+        bonus_points = int(payload.get("points", 0))
+        reason = payload.get("reason", "Bonus points")
+        category = payload.get("category", "bonus")
+        
+        if bonus_points <= 0:
+            return jsonify({"error": "Bonus points must be positive"}), 400
+        
+        state = get_quiz_state()
+        if not state:
+            return jsonify({"error": "No active quiz session"}), 400
+        
+        # Add bonus points to session extra_points tracker
+        current_extra = state.get("extra_points", 0)
+        state["extra_points"] = current_extra + bonus_points
+        
+        # Also add to session_points for immediate cumulative total
+        state["session_points"] = state.get("session_points", 0) + bonus_points
+        
+        # Track bonus point awards in history
+        if "bonus_awards" not in state:
+            state["bonus_awards"] = []
+        
+        state["bonus_awards"].append({
+            "points": bonus_points,
+            "reason": reason,
+            "category": category,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        session[QUIZ_STATE_KEY] = state
+        session.modified = True
+        
+        print(f"🎁 BONUS POINTS AWARDED: +{bonus_points} points for '{reason}' (category: {category})")
+        print(f"   New session total: {state['session_points']} points (extra_points: {state['extra_points']})")
+        
+        return jsonify({
+            "success": True,
+            "bonus_points_added": bonus_points,
+            "reason": reason,
+            "category": category,
+            "new_session_total": state["session_points"],
+            "total_extra_points": state["extra_points"]
+        })
+        
+    except Exception as e:
+        print(f"❌ Error adding bonus points: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/user/level", methods=["GET"])
 def api_user_level():

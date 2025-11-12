@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">BeeSmart Spelling Bee</string>
-    <string name="title_activity_main">BeeSmart Spelling Bee</string>
-    <string name="package_name">app.beesmartspelling</string>
-    <string name="custom_url_scheme">app.beesmartspelling</string>
+    <string name="app_name">BeeSmart Spelling</string>
+    <string name="title_activity_main">BeeSmart Spelling</string>
+    <string name="package_name">com.beesmart.spelling</string>
+    <string name="custom_url_scheme">com.beesmart.spelling</string>
 </resources>

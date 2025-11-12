@@ -470,7 +470,10 @@ class QuizSession(db.Model):
     correct_count = db.Column(db.Integer, default=0)
     incorrect_count = db.Column(db.Integer, default=0)
     skipped_count = db.Column(db.Integer, default=0)
-    total_points = db.Column(db.Integer, default=0)
+    total_points = db.Column(db.Integer, default=0)  # Deprecated - use points_earned instead
+    points_earned = db.Column(db.Integer, default=0)  # Total session points (word points + bonuses + badges)
+    badge_bonus_points = db.Column(db.Integer, default=0)  # Points from badges only
+    extra_points = db.Column(db.Integer, default=0)  # Additional bonus points (achievements, special events)
     max_streak = db.Column(db.Integer, default=0)
     accuracy_percentage = db.Column(db.Numeric(5, 2))
     difficulty_level = db.Column(db.String(20), default='normal')  # easy, normal, challenge, mixed

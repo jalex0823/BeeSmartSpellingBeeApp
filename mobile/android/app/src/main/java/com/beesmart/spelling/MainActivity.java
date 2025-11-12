@@ -1,4 +1,4 @@
-package app.beesmartspelling;
+package com.beesmart.spelling;
 
 import com.getcapacitor.BridgeActivity;
 
