@@ -310,16 +310,13 @@
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
 
     <!-- Global Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false">
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false" style="display: none;">
     <img src="" alt="BeeSmart Logo" class="crest-logo brand-logo" decoding="async" />
-        <h1>Preparing Magic...</h1>
-        <div class="checks" id="loadingChecks" aria-live="polite">
-            <h2>System Checks</h2>
+        <div class="checks" id="loadingChecks" aria-live="polite" style="display: none;">
             <!-- Dynamic check items inserted by loading-screen.js -->
         </div>
-        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready">Tap to Start</button>
-        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
-        <div class="footer-note">All systems must pass before starting for the best experience.</div>
+        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready" style="display: none;">Tap to Start</button>
+        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()" style="display: none;">Skip</button>
     </div>
     
     <!-- Main Content -->
