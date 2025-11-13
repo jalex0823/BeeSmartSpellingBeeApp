@@ -14,10 +14,94 @@
     
     <!-- Refresh Button Beneath Title -->
     <div style="text-align: center; margin-bottom: 2rem;">
-        <button onclick="window.location.reload()" class="copy-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem; font-size: 1rem;" title="Refresh to see latest stats">
+        <button onclick="refreshDashboard()" class="copy-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem; font-size: 1rem;" title="Refresh to see latest stats">
             🔄 Refresh Data
         </button>
+        <div id="last-updated" style="margin-top: 0.5rem; font-size: 0.875rem; color: #666;">
+            Last updated: <span id="update-time"></span>
+        </div>
     </div>
+
+    <!-- Refresh Modal -->
+    <div id="refreshModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="margin: 0 0 1rem 0; color: #4CAF50;">Data Refreshed!</h2>
+            <p style="margin: 0 0 1rem 0; color: #666;">Dashboard updated as of:</p>
+            <p style="margin: 0 0 1.5rem 0; font-size: 1.125rem; font-weight: 600; color: #333;" id="modal-timestamp"></p>
+            <button onclick="closeRefreshModal()" class="copy-btn" style="background: #667eea; padding: 0.75rem 2rem;">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Set initial timestamp on page load
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric',
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            };
+            const timestamp = now.toLocaleString('en-US', options);
+            document.getElementById('update-time').textContent = timestamp;
+            return timestamp;
+        }
+
+        // Initialize timestamp on load
+        window.addEventListener('load', function() {
+            updateTimestamp();
+        });
+
+        // Refresh dashboard with modal
+        function refreshDashboard() {
+            // Store scroll position
+            const scrollPos = window.scrollY;
+            
+            // Show loading state
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Refreshing...';
+            btn.disabled = true;
+            
+            // Reload page
+            window.location.reload();
+            
+            // After reload (this runs on the new page load)
+            window.addEventListener('load', function() {
+                const timestamp = updateTimestamp();
+                document.getElementById('modal-timestamp').textContent = timestamp;
+                document.getElementById('refreshModal').style.display = 'flex';
+                
+                // Restore scroll position
+                setTimeout(() => {
+                    window.scrollTo(0, scrollPos);
+                }, 100);
+            }, { once: true });
+        }
+
+        function closeRefreshModal() {
+            document.getElementById('refreshModal').style.display = 'none';
+        }
+
+        // Close modal on outside click
+        document.getElementById('refreshModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRefreshModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeRefreshModal();
+            }
+        });
+    </script>
 
     <!-- System Statistics -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
