@@ -7927,13 +7927,14 @@ def api_generate_teacher_key():
 @login_required
 def admin_dashboard():
     """Admin dashboard"""
-    if current_user.role != 'admin':
-        flash('Access denied: Admins only', 'error')
-        return redirect(url_for('home'))
-    
-    # Get MY teacher key to find students/family under my supervision
-    # (Admins use teacher_key field for tracking their students)
-    my_key = current_user.teacher_key
+    try:
+        if current_user.role != 'admin':
+            flash('Access denied: Admins only', 'error')
+            return redirect(url_for('home'))
+        
+        # Get MY teacher key to find students/family under my supervision
+        # (Admins use teacher_key field for tracking their students)
+        my_key = current_user.teacher_key
     
     # Find all students who registered with MY teacher key
     # Use TeacherStudent link table to find students linked to this admin
@@ -8074,16 +8075,26 @@ def admin_dashboard():
         user_avatar_data = None
         use_mascot = True
     
-    return render_template('admin/dashboard.html', 
-                         user=current_user, 
-                         stats=stats,
-                         battle_stats=battle_stats,
-                         leaderboard=leaderboard,
-                         my_students=my_students,
-                         admin_key=my_key,
-                         BUNDLE_CATALOG=BUNDLE_CATALOG or {},
-                         user_avatar=user_avatar_data,
-                         use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
+        return render_template('admin/dashboard.html', 
+                             user=current_user, 
+                             stats=stats,
+                             battle_stats=battle_stats,
+                             leaderboard=leaderboard,
+                             my_students=my_students,
+                             admin_key=my_key,
+                             BUNDLE_CATALOG=BUNDLE_CATALOG or {},
+                             user_avatar=user_avatar_data,
+                             use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ ADMIN DASHBOARD ERROR: {str(e)}")
+        print(error_details)
+        flash(f'Error loading admin dashboard: {str(e)}', 'error')
+        return render_template('error.html', 
+                             error_message=f"Admin Dashboard Error: {str(e)}",
+                             error_details=error_details if app.debug else None), 500
 
 
 @app.route('/admin/battle-bees')
