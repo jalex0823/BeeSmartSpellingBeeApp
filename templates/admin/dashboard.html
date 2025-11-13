@@ -3,9 +3,9 @@
 {% block title %}Admin Dashboard - BeeSmart Spelling{% endblock %}
 
 {% block content %}
-<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
     <!-- Centered Admin Title Bar -->
-    <div style="text-align: center; margin-bottom: 1rem;">
+    <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
             <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👑 Admin Dashboard</h1>
             <p style="margin: 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
@@ -13,7 +13,7 @@
     </div>
     
     <!-- Refresh Button Beneath Title -->
-    <div style="text-align: center; margin-bottom: 2rem;">
+    <div style="text-align: center; margin-bottom: 2rem; width: 100%;">
         <button onclick="refreshDashboard()" class="copy-btn" style="background: #4CAF50; padding: 0.75rem 1.5rem; font-size: 1rem;" title="Refresh to see latest stats">
             🔄 Refresh Data
         </button>
@@ -24,7 +24,7 @@
 
     <!-- Refresh Modal -->
     <div id="refreshModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; text-align: center;">
+        <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; text-align: center; margin: 0 auto;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
             <h2 style="margin: 0 0 1rem 0; color: #4CAF50;">Data Refreshed!</h2>
             <p style="margin: 0 0 1rem 0; color: #666;">Dashboard updated as of:</p>
@@ -104,47 +104,47 @@
     </script>
 
     <!-- System Statistics -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <div onclick="scrollToStudents()" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; width: 100%; justify-content: center;">
+        <div onclick="scrollToStudents()" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">My Students/Family</div>
             <div style="font-size: 2rem; font-weight: 700; color: #FF6B00;" class="formatted-number">{{ stats.my_students_count | format_number }}</div>
             <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 Click to view</div>
         </div>
-        <a href="/admin/users" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+        <a href="/admin/users" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; text-align: center; display: block;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Users</div>
             <div style="font-size: 2rem; font-weight: 700; color: #667eea;" class="formatted-number">{{ stats.total_users | format_number }}</div>
             <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 Manage users</div>
         </a>
-        <a href="/admin/users?role=student" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+        <a href="/admin/users?role=student" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; text-align: center; display: block;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Students</div>
             <div style="font-size: 2rem; font-weight: 700; color: #48bb78;" class="formatted-number">{{ stats.total_students | format_number }}</div>
             <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 View students</div>
         </a>
-        <a href="/admin/users?role=teacher" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+        <a href="/admin/users?role=teacher" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; text-align: center; display: block;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Teachers</div>
             <div style="font-size: 2rem; font-weight: 700; color: #ed8936;" class="formatted-number">{{ stats.total_teachers | format_number }}</div>
             <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 View teachers</div>
         </a>
-        <a href="/admin/battle-bees" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(255, 165, 0, 0.5)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(255, 165, 0, 0.3)';">
+        <a href="/admin/battle-bees" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; text-align: center; display: block;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(255, 165, 0, 0.5)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(255, 165, 0, 0.3)';">
             <div style="font-size: 0.875rem; color: white; margin-bottom: 0.5rem;">⚔️ Battle Bee Matches</div>
             <div style="font-size: 2rem; font-weight: 700; color: white;">{{ battle_stats.total_battles | format_number }}</div>
             <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); margin-top: 0.5rem;">👇 View all battles</div>
         </a>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Completed Quizzes</div>
             <div style="font-size: 2rem; font-weight: 700; color: #9f7aea;" class="formatted-number">{{ stats.total_quizzes | format_number }}</div>
         </div>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Words Attempted</div>
             <div style="font-size: 2rem; font-weight: 700; color: #f56565;" class="formatted-number">{{ stats.total_words_attempted | format_number }}</div>
         </div>
     </div>
     
     <!-- Battle Bee Statistics Section -->
-    <div style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(255, 165, 0, 0.3);">
+    <div style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 24px rgba(255, 165, 0, 0.3); width: 100%;">
         <h2 style="margin: 0 0 1.5rem 0; font-size: 1.75rem; color: white; text-align: center;">⚔️ Battle of the Bees Statistics</h2>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; justify-content: center;">
             <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 12px; text-align: center;">
                 <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Battles</div>
                 <div style="font-size: 2.5rem; font-weight: 700; color: #FF6B00;">{{ battle_stats.total_battles | format_number }}</div>
@@ -165,8 +165,8 @@
     </div>
 
     <!-- Global Leaderboard Section -->
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
-        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; display: flex; align-items: center;">
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
             <span style="font-size: 2rem; margin-right: 0.5rem;">🏆</span>
             Global Leaderboard - Top 10 Players
         </h2>
@@ -259,9 +259,9 @@
 
     <!-- My Students/Family Section -->
     {% if my_students %}
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="margin: 0; font-size: 1.5rem;">👨‍👩‍👧‍👦 My Students/Family</h2>
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
+        <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 style="margin: 0; font-size: 1.5rem; text-align: center;">👨‍👩‍👧‍👦 My Students/Family</h2>
             <div style="background: #FFF9E6; padding: 0.5rem 1rem; border-radius: 8px; border: 2px solid #FFD700;">
                 <span style="font-size: 0.875rem; color: #8B6914; font-weight: 600;">Admin Key: {{ admin_key }}</span>
             </div>
