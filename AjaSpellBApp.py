@@ -7935,146 +7935,146 @@ def admin_dashboard():
         # Get MY teacher key to find students/family under my supervision
         # (Admins use teacher_key field for tracking their students)
         my_key = current_user.teacher_key
-    
-    # Find all students who registered with MY teacher key
-    # Use TeacherStudent link table to find students linked to this admin
-    my_students = []
-    if my_key:
-        # Get student IDs from TeacherStudent link table
-        student_links = TeacherStudent.query.filter_by(
-            teacher_key=my_key,
-            is_active=True
-        ).all()
         
-        # Get the actual user objects for these students (exclude guests)
-        student_ids = [link.student_id for link in student_links]
-        if student_ids:
-            my_students = filter_non_guest_users(
-                User.query.filter(User.id.in_(student_ids))
-            ).order_by(User.created_at.desc()).all()
-        
-        # Double-check to filter out any remaining guests
-        my_students = [student for student in my_students if not is_guest_user(student)]
-        
-        # Enrich student data with their stats
-        for student in my_students:
-            # Build a reusable query for sessions with actual activity
-            session_q = QuizSession.query.filter_by(
-                user_id=student.id
-            ).filter(
-                or_(
-                    QuizSession.completed == True,
-                    and_(
-                        QuizSession.completed == False,
-                        (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+        # Find all students who registered with MY teacher key
+        # Use TeacherStudent link table to find students linked to this admin
+        my_students = []
+        if my_key:
+            # Get student IDs from TeacherStudent link table
+            student_links = TeacherStudent.query.filter_by(
+                teacher_key=my_key,
+                is_active=True
+            ).all()
+            
+            # Get the actual user objects for these students (exclude guests)
+            student_ids = [link.student_id for link in student_links]
+            if student_ids:
+                my_students = filter_non_guest_users(
+                    User.query.filter(User.id.in_(student_ids))
+                ).order_by(User.created_at.desc()).all()
+            
+            # Double-check to filter out any remaining guests
+            my_students = [student for student in my_students if not is_guest_user(student)]
+            
+            # Enrich student data with their stats
+            for student in my_students:
+                # Build a reusable query for sessions with actual activity
+                session_q = QuizSession.query.filter_by(
+                    user_id=student.id
+                ).filter(
+                    or_(
+                        QuizSession.completed == True,
+                        and_(
+                            QuizSession.completed == False,
+                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+                        )
                     )
                 )
-            )
 
-            # Count quizzes with activity (completed or in-progress with attempts)
-            student.quiz_count = session_q.count()
+                # Count quizzes with activity (completed or in-progress with attempts)
+                student.quiz_count = session_q.count()
 
-            # Prefer robust counts from QuizSession aggregates to avoid gaps when QuizResult rows are missing
-            from sqlalchemy import func
-            total_correct = session_q.with_entities(func.coalesce(func.sum(QuizSession.correct_count), 0)).scalar() or 0
-            total_incorrect = session_q.with_entities(func.coalesce(func.sum(QuizSession.incorrect_count), 0)).scalar() or 0
+                # Prefer robust counts from QuizSession aggregates to avoid gaps when QuizResult rows are missing
+                from sqlalchemy import func
+                total_correct = session_q.with_entities(func.coalesce(func.sum(QuizSession.correct_count), 0)).scalar() or 0
+                total_incorrect = session_q.with_entities(func.coalesce(func.sum(QuizSession.incorrect_count), 0)).scalar() or 0
 
-            student.correct_count = int(total_correct)
-            student.words_practiced = int(total_correct + total_incorrect)
+                student.correct_count = int(total_correct)
+                student.words_practiced = int(total_correct + total_incorrect)
 
-            # Accuracy for parent view should mirror the student's dashboard value
-            # Use the stored per-session average_accuracy field for exact consistency
-            try:
-                student.accuracy = round(float(student.average_accuracy or 0.0), 1)
-            except Exception:
-                student.accuracy = round((student.correct_count / student.words_practiced) * 100, 1) if student.words_practiced > 0 else 0
+                # Accuracy for parent view should mirror the student's dashboard value
+                # Use the stored per-session average_accuracy field for exact consistency
+                try:
+                    student.accuracy = round(float(student.average_accuracy or 0.0), 1)
+                except Exception:
+                    student.accuracy = round((student.correct_count / student.words_practiced) * 100, 1) if student.words_practiced > 0 else 0
 
-            # Get latest quiz date (including incomplete sessions)
-            latest_quiz = session_q.order_by(
-                QuizSession.session_end.desc().nullslast(),
-                QuizSession.session_start.desc()
-            ).first()
-            
-            student.last_active = (
-                latest_quiz.session_end if (latest_quiz and latest_quiz.session_end)
-                else latest_quiz.session_start if (latest_quiz and latest_quiz.session_start)
-                else student.created_at
-            )
-    
-    # System-wide statistics (exclude guest users)
-    stats = {
-        'total_users': get_non_guest_users_query().count(),
-        'total_students': filter_non_guest_users(User.query.filter_by(role='student')).count(),
-        'total_teachers': filter_non_guest_users(User.query.filter_by(role='teacher')).count(),
-        'total_quizzes': QuizSession.query.join(User).filter(
-            and_(
-                or_(
-                    QuizSession.completed == True,
-                    and_(
-                        QuizSession.completed == False,
-                        (QuizSession.correct_count + QuizSession.incorrect_count) > 0
-                    )
-                ),
-                # Exclude guest users from quiz counts
-                not_(User.username.like('guest_%')),
-                User.password_hash.isnot(None)
-            )
-        ).count(),
-        'total_words_attempted': QuizResult.query.join(User).filter(
-            and_(
-                not_(User.username.like('guest_%')),
-                User.password_hash.isnot(None)
-            )
-        ).count(),
-        'my_students_count': len(my_students)
-    }
-    
-    # Battle Bee Statistics - Query actual battle sessions
-    try:
-        total_battles = BattleSession.query.count()
-        active_battles = BattleSession.query.filter(
-            BattleSession.status.in_(['waiting', 'in_progress'])
-        ).count()
-        completed_battles = BattleSession.query.filter_by(status='completed').count()
-    except Exception as e:
-        print(f"Error loading battle stats: {e}")
-        total_battles = 0
-        active_battles = 0
-        completed_battles = 0
-    
-    # Get top 10 players on the leaderboard (exclude guests)
-    try:
-        leaderboard = get_leaderboard_no_guests(10)
-    except Exception as e:
-        print(f"Error loading leaderboard: {e}")
-        leaderboard = []
-    
-    # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
-    for idx, player in enumerate(leaderboard, start=1):
-        player.rank = idx
-        # Placeholder: battle stats not yet implemented
-        player.total_battles_played = getattr(player, 'total_battles_played', 0)
-        player.total_battles_won = getattr(player, 'total_battles_won', 0)
-        player.win_rate = round((player.total_battles_won / player.total_battles_played * 100), 1) if player.total_battles_played > 0 else 0
-        # Use total_lifetime_points as honey_points for now
-        player.honey_points = getattr(player, 'honey_points', player.total_lifetime_points)
-    
-    battle_stats = {
-        'total_battles': total_battles,
-        'active_battles': active_battles,
-        'completed_battles': completed_battles,
-        'total_battle_participants': 0  # Placeholder until Battle models implemented
-    }
-    
-    # Get current user's avatar data for immediate display
-    try:
-        user_avatar_data = current_user.get_avatar_data()
-        use_mascot = current_user.has_selected_avatar() == False
-    except Exception as e:
-        print(f"⚠️ Could not load user avatar data: {e}")
-        user_avatar_data = None
-        use_mascot = True
-    
+                # Get latest quiz date (including incomplete sessions)
+                latest_quiz = session_q.order_by(
+                    QuizSession.session_end.desc().nullslast(),
+                    QuizSession.session_start.desc()
+                ).first()
+                
+                student.last_active = (
+                    latest_quiz.session_end if (latest_quiz and latest_quiz.session_end)
+                    else latest_quiz.session_start if (latest_quiz and latest_quiz.session_start)
+                    else student.created_at
+                )
+        
+        # System-wide statistics (exclude guest users)
+        stats = {
+            'total_users': get_non_guest_users_query().count(),
+            'total_students': filter_non_guest_users(User.query.filter_by(role='student')).count(),
+            'total_teachers': filter_non_guest_users(User.query.filter_by(role='teacher')).count(),
+            'total_quizzes': QuizSession.query.join(User).filter(
+                and_(
+                    or_(
+                        QuizSession.completed == True,
+                        and_(
+                            QuizSession.completed == False,
+                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+                        )
+                    ),
+                    # Exclude guest users from quiz counts
+                    not_(User.username.like('guest_%')),
+                    User.password_hash.isnot(None)
+                )
+            ).count(),
+            'total_words_attempted': QuizResult.query.join(User).filter(
+                and_(
+                    not_(User.username.like('guest_%')),
+                    User.password_hash.isnot(None)
+                )
+            ).count(),
+            'my_students_count': len(my_students)
+        }
+        
+        # Battle Bee Statistics - Query actual battle sessions
+        try:
+            total_battles = BattleSession.query.count()
+            active_battles = BattleSession.query.filter(
+                BattleSession.status.in_(['waiting', 'in_progress'])
+            ).count()
+            completed_battles = BattleSession.query.filter_by(status='completed').count()
+        except Exception as e:
+            print(f"Error loading battle stats: {e}")
+            total_battles = 0
+            active_battles = 0
+            completed_battles = 0
+        
+        # Get top 10 players on the leaderboard (exclude guests)
+        try:
+            leaderboard = get_leaderboard_no_guests(10)
+        except Exception as e:
+            print(f"Error loading leaderboard: {e}")
+            leaderboard = []
+        
+        # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
+        for idx, player in enumerate(leaderboard, start=1):
+            player.rank = idx
+            # Placeholder: battle stats not yet implemented
+            player.total_battles_played = getattr(player, 'total_battles_played', 0)
+            player.total_battles_won = getattr(player, 'total_battles_won', 0)
+            player.win_rate = round((player.total_battles_won / player.total_battles_played * 100), 1) if player.total_battles_played > 0 else 0
+            # Use total_lifetime_points as honey_points for now
+            player.honey_points = getattr(player, 'honey_points', player.total_lifetime_points)
+        
+        battle_stats = {
+            'total_battles': total_battles,
+            'active_battles': active_battles,
+            'completed_battles': completed_battles,
+            'total_battle_participants': 0  # Placeholder until Battle models implemented
+        }
+        
+        # Get current user's avatar data for immediate display
+        try:
+            user_avatar_data = current_user.get_avatar_data()
+            use_mascot = current_user.has_selected_avatar() == False
+        except Exception as e:
+            print(f"⚠️ Could not load user avatar data: {e}")
+            user_avatar_data = None
+            use_mascot = True
+        
         return render_template('admin/dashboard.html', 
                              user=current_user, 
                              stats=stats,
