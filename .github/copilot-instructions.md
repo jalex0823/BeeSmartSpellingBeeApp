@@ -17,10 +17,24 @@ This repo is a Flask app for kids’ spelling practice with uploads, an interact
 - OCR is optional: gate any image OCR on `TESSERACT_AVAILABLE` (alias `OCR_AVAILABLE`).
 
 ## Avatars in a nutshell
+- **TOTAL AVATARS: 30** (as of Nov 13, 2025) - See `AVATAR_CATALOG_SYNC_COMPLETE_NOV13.md` for full documentation
+- **Catalog source:** `avatar_catalog.py` - single source of truth with 30 entries
+- **Apple Store Compliance:** ALL avatar names MUST end with " Avatar" suffix
+- **Tier Distribution:** 5 free, 7 earn/buy, 1 mascot, 17 premium
+- **GLB Files:** All 30 avatars have GLB files in `static/assets/avatars/glb_files/`
+- **Database:** Railway PostgreSQL with 30 active avatars (connection string in sync docs)
+- **Key Mappings (IMPORTANT):**
+  - Robo Bee Avatar → uses `BuzzbotBee.glb` (not a separate "Buzzbot Bee")
+  - Super Bee Avatar → uses `SuperBee.glb` (not a separate "Buzzhero Bee")
+  - Knight Bee Avatar → uses `KnightBee.glb` (same as "Bee Knight" reference)
+- **API:** `/api/avatars` endpoint uses catalog names for GLB avatars (see `AjaSpellBApp.py` lines 9400-9460)
+- **Verification:** Run `python3 count_avatars.py` to confirm catalog state
+- **Sync Scripts:** Use `cleanup_railway_database.py` to sync database with catalog changes
+- **Reference Image:** User's 30-avatar image is the definitive source of what avatars should exist
 - Static assets live under `static/assets/avatars/`.
     - OBJ avatars: one folder per avatar; GLB avatars live in `glb_files/` with thumbnails in `glb_files/AvatarThumbnails/`.
-- Use the JSON provided by avatar APIs/templates; don’t hardcode paths—prefer the `urls` fields when available.
-- Quick local asset sanity: run the VS Code task “Avatar: Asset Consistency (localhost)” which calls `test_avatar_assets.py`.
+- Use the JSON provided by avatar APIs/templates; don't hardcode paths—prefer the `urls` fields when available.
+- Quick local asset sanity: run the VS Code task "Avatar: Asset Consistency (localhost)" which calls `test_avatar_assets.py`.
 
 ## Auth and password reset
 - Reset flow is generic by default. A dev‑only peek is available when `ALLOW_DEV_RESET_PEEK=1` at `/dev/peek-reset-token?identifier=…` for e2e.
