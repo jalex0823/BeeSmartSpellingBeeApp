@@ -4,6 +4,14 @@
  * Works across all pages: quiz, speed round, menu, etc.
  */
 
+// Early, defensive stub so any premature calls from templates won't crash.
+// Will be replaced below by the real instance.
+try {
+    if (typeof window !== 'undefined') {
+        window.userAvatarLoader = window.userAvatarLoader || { isGuest: () => true };
+    }
+} catch(_) {}
+
 class UserAvatarLoader {
     constructor() {
         this.userAvatar = null;
@@ -12,6 +20,8 @@ class UserAvatarLoader {
         this.avatarMap = {};
         this.avatarDataLoaded = false;
         this.dbConnectionVerified = false;
+        // Auth cache: null = unknown, true/false set after check
+        this._isAuthenticated = null;
         // Known aliases to improve resilience against spacing/case/underscore differences
         // Only includes the 9 working avatars
         this._aliasMap = {
@@ -25,13 +35,38 @@ class UserAvatarLoader {
             'vampbee': 'vamp-bee',
             'warebee': 'ware-bee',
             'zombee': 'zom-bee',
+            'coolbee': 'cool-bee',
             // New GLB aliases
             'buzzbee': 'buzz-bee',
             'selfiebee': 'selfie-bee'
         };
         
+        // Initialize legacy/fallback mappings and defaults immediately
+        // so we always have GLB preferences (e.g., cool-bee) even if API returns OBJ links.
+        try { this._legacyInit(); } catch (_) { /* no-op */ }
+
         // Quick DB connection check instead of loading all avatars
         this.verifyDatabaseConnection();
+    }
+
+    /**
+     * Lightweight auth check to distinguish guests from authenticated users.
+     * Caches result in this._isAuthenticated.
+     */
+    async _checkAuthStatus() {
+        try {
+            const resp = await this._safeFetch('/api/users/me', { credentials: 'same-origin' }, 800);
+            if (!resp.ok) {
+                this._isAuthenticated = false; // be conservative: treat as guest on failure codes
+                return this._isAuthenticated;
+            }
+            const data = await resp.json();
+            this._isAuthenticated = !!(data && data.authenticated);
+        } catch (_) {
+            // Network hiccup: default to guest for safety
+            this._isAuthenticated = false;
+        }
+        return this._isAuthenticated;
     }
 
     /**
@@ -118,6 +153,10 @@ class UserAvatarLoader {
                 glb: '/static/assets/avatars/glb_files/BuzzBee.glb',
                 thumbnail: '/static/assets/avatars/glb_files/AvatarThumbnails/CutieBee!.png'
             },
+            'cool-bee': {
+                glb: '/static/assets/avatars/glb_files/CoolBee.glb',
+                thumbnail: '/static/assets/avatars/glb_files/AvatarThumbnails/CoolBee!.png'
+            },
             'selfie-bee': {
                 glb: '/static/assets/avatars/glb_files/SelfieBee.glb',
                 thumbnail: '/static/assets/avatars/glb_files/AvatarThumbnails/CutieBee!.png'
@@ -190,19 +229,38 @@ class UserAvatarLoader {
             }
             console.log(`✅ Loaded ${avatars.length} avatars from database`);
             
-            // Convert API response to avatarMap format (prefer GLB when available)
+            // Convert API response to avatarMap format while preserving known-good GLB paths
             avatars.forEach(avatar => {
                 const id = avatar.id;
                 const urls = avatar.urls || avatar;
                 const modelObj = urls?.model_obj || avatar.model_obj_url || avatar.obj_file_url;
-                const isGlb = typeof modelObj === 'string' && /\.(glb|gltf)(\?.*)?$/i.test(modelObj);
-                this.avatarMap[id] = {
-                    glb: isGlb ? modelObj : undefined,
-                    obj: isGlb ? undefined : modelObj,
-                    mtl: urls?.model_mtl || avatar.model_mtl_url || avatar.mtl_file_url,
-                    texture: urls?.texture || avatar.texture_url,
-                    thumbnail: urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail
-                };
+                const isGlb = typeof modelObj === 'string' && /(\.glb|\.gltf)(\?.*)?$/i.test(modelObj);
+
+                // Start with any existing mapping (from legacy map that may already contain GLB)
+                const existing = this.avatarMap[id] || {};
+                const next = { ...existing }; // don't clobber good fields by default
+
+                // Prefer GLB: if API supplies GLB, set it; otherwise keep existing GLB if present
+                if (isGlb) {
+                    next.glb = modelObj;
+                    // Clear legacy OBJ fields if GLB is present to avoid accidental OBJ usage
+                    delete next.obj; delete next.mtl; delete next.texture;
+                } else {
+                    // Only set OBJ pipeline fields if we don't already have GLB
+                    if (!next.glb) {
+                        if (modelObj) next.obj = modelObj;
+                        const mtl = urls?.model_mtl || avatar.model_mtl_url || avatar.mtl_file_url;
+                        const texture = urls?.texture || avatar.texture_url;
+                        if (mtl) next.mtl = mtl;
+                        if (texture) next.texture = texture;
+                    }
+                }
+
+                // Always update thumbnail if provided
+                const thumb = urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail;
+                if (thumb) next.thumbnail = thumb;
+
+                this.avatarMap[id] = next;
             });
             
             this.avatarDataLoaded = true;
@@ -520,7 +578,16 @@ class UserAvatarLoader {
             container.classList.add('avatar-error');
             console.error(`❌ Avatar loading failed for ${containerId}:`, error);
             
-            // Try 3D MascotBee fallback first
+            // Guest policy: strictly show MascotBee (legacy OBJ) and stop
+            try {
+                if (this.isGuest && this.isGuest()) {
+                    console.log('👤 Guest mode: rendering MascotBee OBJ fallback');
+                    this.loadUserAvatar('mascot-bee', containerId);
+                    return;
+                }
+            } catch(_) {}
+            
+            // Registered users: try layered 3D fallback
             this.load2DFallback(containerId);
             
             // Show error notification
@@ -536,27 +603,53 @@ class UserAvatarLoader {
             console.log('🚫 Auto avatar render disabled on this page; skipping 3D fallback');
             return;
         }
-        console.log('🔄 Loading 3D MascotBee fallback...');
-        
-        // Use MascotBee as the default 3D fallback avatar
-        const defaultAvatarType = 'mascot-bee';
-        
-        if (this.avatarMap[defaultAvatarType]) {
-            console.log('Loading MascotBee 3D model as fallback');
-            this.loadUserAvatar(defaultAvatarType, containerId)
-                .then(() => {
+        console.log('🔄 Loading 3D fallback avatar...');
+
+            // Enforce guest policy: MascotBee OBJ only, no GLB alternates
+            try {
+                if (this.isGuest && this.isGuest()) {
+                    this.loadUserAvatar('mascot-bee', containerId);
+                    return;
+                }
+            } catch(_) {}
+
+        // Prefer a known-good GLB avatar first to avoid legacy OBJ pipeline issues
+        const glbFallbackCandidates = ['cool-bee', 'buzz-bee'];
+
+        const tryNext = async (candidates) => {
+            if (!candidates.length) {
+                // Final attempt: MascotBee (legacy OBJ)
+                const defaultAvatarType = 'mascot-bee';
+                console.log('Loading MascotBee 3D model as final fallback');
+                try {
+                    await this.loadUserAvatar(defaultAvatarType, containerId);
                     console.log('✅ 3D MascotBee fallback loaded successfully');
-                    // Per UI rule: show name only, no counts
                     this.showStatusMessage('Using MascotBee avatar', 'info', 4000);
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('❌ MascotBee fallback failed, using emergency 2D display:', error);
                     this.loadEmergency2DFallback(containerId);
-                });
-        } else {
-            console.error('❌ MascotBee not found in avatar map, using emergency 2D');
-            this.loadEmergency2DFallback(containerId);
-        }
+                }
+                return;
+            }
+
+            const id = candidates.shift();
+            const mapped = this.avatarMap?.[id];
+            if (mapped?.glb) {
+                console.log(`Attempting GLB fallback: ${id}`);
+                try {
+                    await this.loadUserAvatar(id, containerId);
+                    console.log(`✅ GLB fallback loaded: ${id}`);
+                    this.showStatusMessage(`Using ${id.replace('-', ' ')} avatar`, 'info', 4000);
+                    return;
+                } catch (e) {
+                    console.warn(`⚠️ GLB fallback failed for ${id}:`, e);
+                }
+            }
+            // Try next candidate
+            await tryNext(candidates);
+        };
+
+        tryNext([...glbFallbackCandidates]);
     }
 
     /**
@@ -815,6 +908,18 @@ class UserAvatarLoader {
         this.showLoadingState();
         
         try {
+            // Step 1: determine auth status first; guests must always see MascotBee OBJ
+            const isAuthed = await this._checkAuthStatus();
+            if (isAuthed === false) {
+                console.log('👤 Guest session detected via /api/users/me. Forcing MascotBee OBJ.');
+                this.userAvatar = null;
+                this.userAvatarValid = false;
+                try { localStorage.removeItem(this.GUEST_AVATAR_KEY); } catch(_) {}
+                await this.loadUserAvatar('mascot-bee', 'mascotBee3D');
+                this.showLoadedState('mascotBee3D');
+                return false;
+            }
+
             const response = await this._safeFetch('/api/users/me/avatar', {
                 credentials: 'same-origin'
             }, 1500);
@@ -840,19 +945,32 @@ class UserAvatarLoader {
                     }
                 }
             } else {
+                // Guest (unauthenticated) should see MascotBee OBJ only
+                if (response.status === 401 || response.status === 403) {
+                    console.log(`👤 Guest detected (HTTP ${response.status}). Rendering MascotBee OBJ.`);
+                    this.userAvatar = null;
+                    this.userAvatarValid = false;
+                    try { localStorage.removeItem(this.GUEST_AVATAR_KEY); } catch(_) {}
+                    await this.loadUserAvatar('mascot-bee', 'mascotBee3D');
+                    this.showLoadedState('mascotBee3D');
+                    return false;
+                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             console.warn('⚠️ Could not load user avatar, using default:', error);
             this.userAvatarValid = false;
-            this.showErrorState('mascotBee3D', error);
+            // Enforce MascotBee OBJ for guests/default
+            try {
+                await this.loadUserAvatar('mascot-bee', 'mascotBee3D');
+                this.showLoadedState('mascotBee3D');
+            } catch (e) {
+                this.showErrorState('mascotBee3D', e);
+            }
 
             // Policy: Guests cannot change avatar. Ensure any legacy guest override is cleared.
             try { localStorage.removeItem(this.GUEST_AVATAR_KEY); } catch(_) {}
-            // Try to load default avatar as fallback
-            if (await this.validateAvatarFiles(true)) {
-                this.showLoadedState();
-            }
+            // Validation optional: we already attempted render above
         }
         
         // Use default if no user avatar
@@ -929,10 +1047,17 @@ class UserAvatarLoader {
         const u = this.userAvatar?.urls || null;
         if (u && typeof u.model_obj === 'string') {
             const modelUrl = u.model_obj;
-            const isGlb = /\.(glb|gltf)(\?.*)?$/i.test(modelUrl) || /\/glb_files\//i.test(modelUrl);
-            const thumbnail = u.thumbnail;
+            const isGlb = /(\.glb|\.gltf)(\?.*)?$/i.test(modelUrl) || /\/glb_files\//i.test(modelUrl);
+            // Be tolerant of API field name drift (thumbnail | thumbnail_url | thumb | thumb_url)
+            const thumbnail = u.thumbnail || u.thumbnail_url || u.thumb || u.thumb_url;
             if (isGlb) {
                 return { glb: modelUrl, thumbnail };
+            }
+            // If API provided OBJ but we have a known GLB mapping for this avatar id, prefer GLB
+            const idFromUser = this.getAvatarId();
+            const mappedForId = this.avatarMap[idFromUser];
+            if (mappedForId && mappedForId.glb) {
+                return { glb: mappedForId.glb, thumbnail: mappedForId.thumbnail };
             }
             // Legacy OBJ pipeline (only if all required parts exist)
             if (u.model_mtl && u.texture) {
@@ -985,7 +1110,13 @@ class UserAvatarLoader {
      * Get avatar ID
      */
     getAvatarId() {
-        return this._normalizeId(this.userAvatar?.avatar_id || 'mascot-bee');
+        // Be tolerant of API field drift: some payloads use avatar_id, others use id/slug/name
+        const rawId = this.userAvatar?.avatar_id
+            || this.userAvatar?.id
+            || this.userAvatar?.slug
+            || this.userAvatar?.name
+            || 'mascot-bee';
+        return this._normalizeId(rawId);
     }
 
     /**
@@ -994,10 +1125,38 @@ class UserAvatarLoader {
     isUsingMascot() {
         return !this.userAvatar || this.userAvatar.avatar_id === 'mascot-bee';
     }
+
+    /**
+     * Back-compat shim: some older templates may still call isGuest().
+     * Return true when there is no authenticated user avatar payload.
+     */
+    isGuest() {
+        try {
+            if (this._isAuthenticated === false) return true;
+            if (this._isAuthenticated === true) return false;
+            // Fallback heuristic if auth unknown
+            return !this.userAvatar || !this.userAvatar.avatar_id;
+        } catch (_) {
+            return true;
+        }
+    }
 }
 
 // Create global instance
 window.userAvatarLoader = new UserAvatarLoader();
+
+// Back-compat global shim for templates that call window.isGuest()
+if (typeof window.isGuest !== 'function') {
+    window.isGuest = function () {
+        try {
+            return typeof window.userAvatarLoader?.isGuest === 'function'
+                ? window.userAvatarLoader.isGuest()
+                : true;
+        } catch (_) {
+            return true;
+        }
+    };
+}
 
 // DEFER initialization until honey loader finishes to prevent blocking
 let avatarInitialized = false;

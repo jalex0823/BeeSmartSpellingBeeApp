@@ -1239,6 +1239,45 @@ def _static_url(path: str) -> str:
     return f"{base}/static/{path.lstrip('/')}"
 
 
+# ------------------------------
+# Template helpers: cache-busted static URLs
+# ------------------------------
+@app.context_processor
+def inject_asset_helpers():
+    """Provide asset_url() helper to append a version query based on file mtime.
+
+    This forces browsers to fetch updated JS/CSS when files change without globally disabling caching.
+    Also exposes sw_version for service worker registration.
+    """
+    import time as _time
+    import os as _os
+
+    static_folder = app.static_folder or _os.path.join(app.root_path, 'static')
+
+    def _mtime_for(rel_path: str) -> int:
+        try:
+            full = _os.path.join(static_folder, rel_path.replace('/', _os.sep))
+            return int(_os.path.getmtime(full))
+        except Exception:
+            # Fallback to current epoch to ensure uniqueness if file lookup fails
+            return int(_time.time())
+
+    def asset_url(filename: str) -> str:
+        try:
+            v = _mtime_for(filename)
+            return url_for('static', filename=filename, v=v)
+        except Exception:
+            return url_for('static', filename=filename)
+
+    # Version for service worker registration (based on its mtime)
+    sw_version = _mtime_for('service-worker.js')
+
+    return {
+        'asset_url': asset_url,
+        'sw_version': sw_version,
+    }
+
+
 # --- Simple Email Sender (best-effort) --------------------------------------
 def send_reset_email(recipient_email: str, reset_url: str) -> bool:
     """Password reset email (multipart text+html) with BeeSmart logo."""
@@ -2756,8 +2795,8 @@ def upload_page():
 
 @app.route("/magical_quiz")
 def magical_quiz_page():
-    """Legacy magical quiz experience (kept for backwards compatibility)"""
-    return render_template("magical_quiz.html")
+    """Deprecated: Redirect any old links to the unified quiz page."""
+    return redirect(url_for('quiz_page'))
 
 @app.route("/health")
 def health_check():
@@ -2832,7 +2871,15 @@ def health_iap():
 # PWA service worker - serve from root scope so it controls the whole app
 @app.route('/service-worker.js')
 def service_worker():
-    return send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
+    resp = send_from_directory('static', 'service-worker.js', mimetype='application/javascript')
+    # Ensure the service worker isn't cached improperly by intermediaries or the browser
+    try:
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+    except Exception:
+        pass
+    return resp
 
 # Well-known endpoints for app links / universal links
 @app.route('/.well-known/apple-app-site-association')
@@ -7309,6 +7356,12 @@ def test_single_avatar():
 def test_glb_avatars():
     """Test page for GLB avatar display and verification"""
     return render_template('test_glb_avatars.html')
+
+
+@app.route('/test/glb-viewer')
+def glb_viewer():
+    """Standalone GLB viewer for quick model validation via ?url= query param"""
+    return render_template('glb_viewer.html')
 
 
 @app.route('/teacher/dashboard')

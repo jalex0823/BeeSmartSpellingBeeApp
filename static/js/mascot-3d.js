@@ -11,6 +11,12 @@ class SmartyBee3D {
             return;
         }
 
+        // Ensure a clean slate: remove any previous fallback/inner content
+        // Some pages may have injected a temporary 2D fallback before we arrive.
+        try {
+            this.container.innerHTML = '';
+        } catch (e) { /* no-op */ }
+
         this.options = {
             width: options.width || 200,
             height: options.height || 200,

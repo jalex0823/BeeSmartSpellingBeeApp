@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BeeSmart GLB Viewer</title>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #fff7e6; color: #5A2C15; }
+    header { padding: 14px 18px; background: linear-gradient(135deg,#FFD54F,#FFB300); color: #4a2b10; box-shadow: 0 2px 8px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; }
+    .container { padding: 16px 18px; max-width: 1100px; margin: 0 auto; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input[type="text"] { flex: 1; min-width: 280px; padding: 10px 12px; border: 2px solid #FFC107; border-radius: 10px; }
+    button { padding: 10px 14px; border: 0; border-radius: 10px; background: #FFB300; color: #4a2b10; font-weight: 700; cursor: pointer; }
+    button:hover { filter: brightness(0.95); }
+    .examples { margin-top: 8px; font-size: 13px; color: #7a4e1d; }
+    .examples a { color: #b05a00; text-decoration: underline; margin-right: 10px; }
+    #viewer { width: 100%; height: calc(100vh - 190px); background: linear-gradient(135deg, #111, #222); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25); overflow: hidden; }
+    .status { margin-top: 8px; font-size: 14px; color: #7a4e1d; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px; background: #ffe082; color: #4a2b10; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap: wrap;">
+        <h1 style="margin:0; font-size:20px;">🐝 BeeSmart GLB Viewer <span class="badge">Standalone</span></h1>
+        <div class="row" style="flex:1;">
+          <input id="glbUrl" type="text" placeholder="Enter GLB URL (e.g., /static/assets/avatars/glb_files/BuzzBee.glb)" />
+          <button id="loadBtn">Load</button>
+        </div>
+      </div>
+      <div class="examples">
+        Examples:
+        <a href="#" data-url="/static/assets/avatars/glb_files/BuzzBee.glb">BuzzBee</a>
+        <a href="#" data-url="/static/assets/avatars/glb_files/SelfieBee.glb">SelfieBee</a>
+      </div>
+      <div class="status" id="status">Ready.</div>
+    </div>
+  </header>
+  <div class="container">
+    <div id="viewer"></div>
+  </div>
+
+  <!-- Three.js + loaders (standalone, does not depend on base.html) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <script>
+    // Utility: get query param
+    function getParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    // DOM
+    const viewer = document.getElementById('viewer');
+    const urlInput = document.getElementById('glbUrl');
+    const loadBtn = document.getElementById('loadBtn');
+    const statusEl = document.getElementById('status');
+
+    // Three.js scene setup
+    let renderer, scene, camera, controls, currentObject;
+
+    function initScene() {
+      const w = viewer.clientWidth;
+      const h = viewer.clientHeight;
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(w, h);
+      renderer.setClearColor(0x000000, 1);
+      // Prefer modern color space if supported
+      try {
+        if (typeof renderer.outputColorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+        } else if (typeof renderer.outputEncoding !== 'undefined' && THREE.sRGBEncoding) {
+          renderer.outputEncoding = THREE.sRGBEncoding;
+        }
+      } catch (e) {}
+      viewer.innerHTML = '';
+      viewer.appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x101010);
+
+      camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 2000);
+      camera.position.set(0, 1.25, 4.5);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+
+      const amb = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(amb);
+
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      dir.position.set(5, 10, 7);
+      scene.add(dir);
+
+      const fill = new THREE.DirectionalLight(0xffe0b2, 0.45);
+      fill.position.set(-6, 2, -4);
+      scene.add(fill);
+
+      window.addEventListener('resize', onResize);
+      animate();
+    }
+
+    function onResize() {
+      if (!renderer || !camera) return;
+      const w = viewer.clientWidth;
+      const h = viewer.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+      console.log(msg);
+    }
+
+    function centerAndScale(object) {
+      try {
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = 3.2 / maxDim; // fit nicely in view
+        object.scale.setScalar(scale);
+        object.position.x = -center.x * scale;
+        object.position.y = -center.y * scale;
+        object.position.z = -center.z * scale;
+        camera.position.z = Math.max(4.5, (maxDim * scale) * 2.2);
+        camera.lookAt(0, 0, 0);
+        camera.updateProjectionMatrix();
+      } catch (e) { /* best-effort */ }
+    }
+
+    function clearCurrent() {
+      if (currentObject) {
+        scene.remove(currentObject);
+        currentObject.traverse?.((child) => {
+          if (child.isMesh) {
+            child.geometry?.dispose?.();
+            if (child.material) {
+              if (Array.isArray(child.material)) child.material.forEach(m => m.dispose?.());
+              else child.material.dispose?.();
+            }
+          }
+        });
+        currentObject = null;
+      }
+    }
+
+    function appendCacheBust(url) {
+      const hasQuery = url.includes('?');
+      return url + (hasQuery ? '&' : '?') + 'v=' + Date.now();
+    }
+
+    function loadGLB(url) {
+      if (!url) { setStatus('Please provide a GLB URL.'); return; }
+      setStatus('Loading GLB: ' + url);
+      clearCurrent();
+
+      const loader = new THREE.GLTFLoader();
+      const loadUrl = appendCacheBust(url);
+      loader.load(
+        loadUrl,
+        (gltf) => {
+          const obj = gltf.scene || gltf.scenes?.[0];
+          if (!obj) { setStatus('GLB loaded, but no scene content found.'); return; }
+
+          // Ensure sRGB for textures
+          try {
+            obj.traverse((node) => {
+              if (node.isMesh) {
+                const mats = Array.isArray(node.material) ? node.material : [node.material];
+                mats.forEach((mat) => {
+                  if (mat && mat.map) {
+                    if (typeof mat.map.colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+                      mat.map.colorSpace = THREE.SRGBColorSpace;
+                    } else if (typeof mat.map.encoding !== 'undefined' && THREE.sRGBEncoding) {
+                      mat.map.encoding = THREE.sRGBEncoding;
+                    }
+                    mat.map.needsUpdate = true;
+                  }
+                  if (mat) mat.needsUpdate = true;
+                });
+              }
+            });
+          } catch (_) {}
+
+          currentObject = obj;
+          centerAndScale(obj);
+          scene.add(obj);
+          setStatus('✅ GLB loaded successfully.');
+        },
+        (xhr) => {
+          if (xhr.total) {
+            const pct = (xhr.loaded / xhr.total) * 100;
+            setStatus('Loading… ' + pct.toFixed(0) + '%');
+          } else {
+            setStatus('Loading… ' + (xhr.loaded / 1024).toFixed(1) + ' KB');
+          }
+        },
+        (err) => {
+          console.error('GLB load error:', err);
+          const message = (err?.message || err?.toString?.() || 'Unknown error');
+          setStatus('❌ Error loading GLB: ' + message);
+        }
+      );
+    }
+
+    function wireExamples() {
+      document.querySelectorAll('.examples a[data-url]')?.forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const url = a.getAttribute('data-url');
+          urlInput.value = url;
+          loadGLB(url);
+        });
+      });
+    }
+
+    function boot() {
+      initScene();
+      wireExamples();
+      loadBtn.addEventListener('click', () => loadGLB(urlInput.value.trim()));
+      const initial = getParam('url') || '/static/assets/avatars/glb_files/BuzzBee.glb';
+      urlInput.value = initial;
+      loadGLB(initial);
+    }
+
+    document.addEventListener('DOMContentLoaded', boot);
+  </script>
+</body>
+</html>

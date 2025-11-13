@@ -763,6 +763,23 @@ lottie-player {
   }
 }
 
+/* Cross-page centering for avatar container and its canvas */
+#mascotBee3D,
+.quiz-logo .mascot-3d-container {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#mascotBee3D canvas,
+.quiz-logo .mascot-3d-container canvas {
+  display: block !important;
+  margin: 0 auto !important;
+  position: static !important; /* avoid odd offsets from absolute canvas */
+}
+
 /* Tablet styles */
 @media screen and (min-width: 769px) and (max-width: 1024px) {
   form, .form-container {

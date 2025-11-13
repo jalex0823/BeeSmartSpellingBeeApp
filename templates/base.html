@@ -18,23 +18,27 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
         <!-- PWA Manifest -->
-        <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+        <link rel="manifest" href="{{ asset_url('manifest.webmanifest') }}">
         <script>
-            // Register service worker if supported
+            // Register service worker if supported (root scope)
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/static/service-worker.js').catch(() => {});
+                    // Append version query based on service-worker.js mtime to force updates
+                    navigator.serviceWorker.register('/service-worker.js?v={{ sw_version }}').catch(() => {/* no-op */});
                 });
             }
         </script>
+        <script>
+            // Expose a global asset version for optional client-side cache busting
+            window.__ASSET_VERSION = {{ sw_version | tojson }};
+        </script>
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
+    <link rel="stylesheet" href="{{ asset_url('css/BeeSmart.css') }}">
+    <link rel="stylesheet" href="{{ asset_url('css/ui-fixes.css') }}">
+    <link rel="stylesheet" href="{{ asset_url('css/mobile-fonts.css') }}">
 
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
-    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
+    <script src="{{ asset_url('js/logo-config.js') }}"></script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -536,15 +540,15 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
     <!-- GLTF/GLB loader so GLB avatars work across all pages (quiz, results, etc.) -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
+    <script src="{{ asset_url('js/mascot-3d.js') }}"></script>
     
     <!-- User Avatar System -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+    <script src="{{ asset_url('js/user-avatar-loader.js') }}"></script>
     
     <!-- Bee Swarm Animation for Quiz Page -->
-    <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}"></script>
+    <script src="{{ asset_url('js/bee-swarm-animation.js') }}"></script>
     <!-- Global celebrations (persona confetti + stinger) -->
-    <script src="{{ url_for('static', filename='js/quiz-celebrations.js') }}"></script>
+    <script src="{{ asset_url('js/quiz-celebrations.js') }}"></script>
     
     <!-- Mobile Viewport Handler for iOS/Android -->
     <script>
@@ -634,17 +638,9 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
+    <script src="{{ asset_url('js/brand-logo-replacer.js') }}"></script>
 
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
-            });
-        }
-    </script>
+    <!-- PWA Service Worker Registration (kept once at top) -->
 
     <!-- If running inside Capacitor, open external links in the native browser -->
     <script>

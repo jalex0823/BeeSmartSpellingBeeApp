@@ -1548,8 +1548,11 @@ if ('speechSynthesis' in window) {
         filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
         transition: transform 0.3s ease;
         z-index: 10;
-        margin-bottom: 1.2rem;
-        transform: translateY(-8px);
+        margin: 0 auto 1.2rem auto; /* center inside card */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: translateY(0); /* remove upward offset so it centers visually */
     }
     
     .quiz-logo .mascot-3d-container:hover {
@@ -7692,39 +7695,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🔄 Fetching user avatar from API...');
         await window.userAvatarLoader.init();
         
-        // Check if user is registered or guest
-        const isGuest = window.userAvatarLoader.isGuest();
+        // Unified path: always use loader to compute the best options (GLB preferred)
         let avatarId;
-        let avatarOptions;
-        
-        if (isGuest) {
-            // Guest users: always use default mascot-bee
-            console.log('👤 Guest user detected - using default Mascot Bee');
-            avatarId = 'mascot-bee';
-            avatarOptions = {
-                avatarId: 'mascot-bee',
-                format: 'obj',
-                modelBase: '/static/assets/avatars/mascot-bee/',
-                modelName: 'MascotBee',
-                modelPath: '/static/assets/avatars/mascot-bee/MascotBee.obj',
-                mtlPath: '/static/assets/avatars/mascot-bee/MascotBee.mtl',
-                texturePath: '/static/assets/avatars/mascot-bee/MascotBee.png',
-                width: 180,
-                height: 180,
-                autoRotate: true,
-                enableInteraction: true
-            };
-        } else {
-            // Registered users: use their chosen avatar
-            console.log('👤 Registered user - loading chosen avatar');
-            avatarOptions = window.userAvatarLoader.getAvatarOptions({
-                width: 180,
-                height: 180,
-                autoRotate: true,
-                enableInteraction: true
-            });
-            avatarId = window.userAvatarLoader.getAvatarId();
-        }
+        let avatarOptions = window.userAvatarLoader.getAvatarOptions({
+            width: 180,
+            height: 180,
+            autoRotate: true,
+            enableInteraction: true
+        });
+        avatarId = window.userAvatarLoader.getAvatarId();
         
         console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         

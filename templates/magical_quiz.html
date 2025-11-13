@@ -94,6 +94,28 @@ if ('speechSynthesis' in window) {
         justify-content: center;
         gap: 0.5rem;
     }
+
+    /* Avatar container area for quiz */
+    .quiz-avatar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0.5rem auto 1rem;
+    }
+
+    /* Size the 3D avatar canvas */
+    .mascot-3d-container {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
+        transition: transform 0.3s ease;
+        z-index: 10;
+        margin-bottom: 0.5rem;
+    }
+
+    .mascot-3d-container:hover { transform: scale(1.05); }
     
     .saved-lists-section {
         background: rgba(255, 255, 255, 0.9);
@@ -377,6 +399,10 @@ if ('speechSynthesis' in window) {
     
     <div class="quiz-header">
         <h1 class="quiz-title">🌟 Aja's Magical Spelling Bee ✨</h1>
+        <!-- Quiz Avatar (3D) -->
+        <div class="quiz-avatar">
+            <div id="mascotBee3D" class="mascot-3d-container"></div>
+        </div>
     </div>
     
     <!-- Saved Word Lists Section -->
@@ -966,6 +992,30 @@ class MagicalSpellingBee {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new MagicalSpellingBee();
+    // Defer a tick to allow global scripts to attach
+    setTimeout(() => {
+        try {
+            if (window.userAvatarLoader) {
+                // Ensure avatar loader has user or default paths ready
+                const maybeInit = typeof window.userAvatarLoader.init === 'function'
+                    ? window.userAvatarLoader.init()
+                    : Promise.resolve();
+                Promise.resolve(maybeInit)
+                    .then(() => {
+                        const id = (typeof window.userAvatarLoader.getAvatarId === 'function')
+                            ? window.userAvatarLoader.getAvatarId()
+                            : 'mascot-bee';
+                        return window.userAvatarLoader.loadUserAvatar(id, 'mascotBee3D');
+                    })
+                    .catch(() => {
+                        // Emergency 2D fallback if 3D fails
+                        try { window.userAvatarLoader.load2DFallback('mascotBee3D'); } catch (_) {}
+                    });
+            }
+        } catch (e) {
+            console.warn('Avatar init error on quiz page:', e);
+        }
+    }, 200);
 });
 </script>
 <!-- celebrations loaded globally via base.html -->

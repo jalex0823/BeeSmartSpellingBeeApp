@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.1.0-2025-11-08';
+const CACHE_VERSION = 'beesmart-v1.1.1-2025-11-13';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -40,24 +40,36 @@ self.addEventListener('fetch', (event) => {
 
   // Network-first for navigation requests to keep content fresh
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match('/'))
-    );
+    event.respondWith((async () => {
+      try {
+        return await fetch(request);
+      } catch (e) {
+        const cachedHome = await caches.match('/');
+        return cachedHome || new Response('<!doctype html><title>Offline</title><h1>Offline</h1><p>This page is unavailable while you are offline.</p>', {
+          headers: { 'Content-Type': 'text/html; charset=UTF-8' },
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
+      }
+    })());
     return;
   }
 
   // Cache-first for static assets under /static/
   if (url.pathname.startsWith('/static/')) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchAndCache = fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
-          return response;
-        }).catch(() => cached);
-        return cached || fetchAndCache;
-      })
-    );
+    event.respondWith((async () => {
+      try {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        const copy = response.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        return response;
+      } catch (e) {
+        // Always return a valid Response to avoid TypeError in respondWith
+        return new Response('', { status: 504, statusText: 'Gateway Timeout (offline or fetch failed)' });
+      }
+    })());
     return;
   }
 
