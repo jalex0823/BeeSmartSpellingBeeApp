@@ -49,5 +49,7 @@
 	<string></string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BeeSmart Spelling needs access to your photo library to upload word lists from images and save your spelling progress.</string>
 </dict>
 </plist>
