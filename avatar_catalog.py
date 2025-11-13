@@ -31,6 +31,7 @@ from typing import Dict, List, Optional
 AVATAR_CATALOG: List[Dict] = [
     {
         "id": "al-bee",
+        "product_id": "beesmart.avatar.al_bee",
         "name": "Al Bee Avatar",
         "folder": "al-bee",
         "obj_file": "AlBee.obj",
@@ -47,6 +48,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "brother-bee",
+        "product_id": "beesmart.avatar.brother_bee",
         "name": "Brother Bee Avatar",
         "folder": "brother-bee",
         "obj_file": "BrotherBee.obj",
@@ -63,6 +65,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "builder-bee",
+        "product_id": "beesmart.avatar.builder_bee",
         "name": "Builder Bee Avatar",
         "folder": "builder-bee",
         "obj_file": "BuilderBee.obj",
@@ -79,6 +82,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "buda-bee",
+        "product_id": "beesmart.avatar.buda_bee",
         "name": "Buda Bee Avatar",
         "folder": "glb_files",
         "obj_file": "BudaBee.glb",
@@ -95,6 +99,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "buzz-bee",
+        "product_id": "beesmart.avatar.buzz_bee",
         "name": "Buzz Bee Avatar",
         "folder": "glb_files",
         "obj_file": "BuzzBee.glb",
@@ -111,6 +116,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "cool-bee",
+        "product_id": "beesmart.avatar.cool_bee",
         "name": "Cool Bee Avatar",
         "folder": "cool-bee",
         "obj_file": "CoolBee.obj",
@@ -127,6 +133,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "cutie-bee",
+        "product_id": "beesmart.avatar.cutie_bee",
         "name": "Cutie Bee Avatar",
         "folder": "glb_files",
         "obj_file": "CutieBee.glb",
@@ -143,6 +150,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "detective-bee",
+        "product_id": "beesmart.avatar.detective_bee",
         "name": "Detective Bee Avatar",
         "folder": "detective-bee",
         "obj_file": "DetectiveBee.obj",
@@ -159,6 +167,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "diva-bee",
+        "product_id": "beesmart.avatar.diva_bee",
         "name": "Diva Bee Avatar",
         "folder": "diva-bee",
         "obj_file": "DivaBee.obj",
@@ -175,6 +184,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "doc-bee",
+        "product_id": "beesmart.avatar.doc_bee",
         "name": "Doc Bee Avatar",
         "folder": "glb_files",
         "obj_file": "DoctorBee.glb",
@@ -191,6 +201,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "explorer-bee",
+        "product_id": "beesmart.avatar.explorer_bee",
         "name": "Explorer Bee Avatar",
         "folder": "explorer-bee",
         "obj_file": "ExplorerBee.obj",
@@ -207,6 +218,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "franken-bee",
+        "product_id": "beesmart.avatar.franken_bee",
         "name": "Franken Bee Avatar",
         "folder": "glb_files",
         "obj_file": "FrankenBee.glb",
@@ -223,6 +235,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "honey-comb",
+        "product_id": "beesmart.avatar.honey_comb",
         "name": "Honey Comb Avatar",
         "folder": "glb_files",
         "obj_file": "HoneyComb.glb",
@@ -239,6 +252,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "j-rock-bee",
+        "product_id": "beesmart.avatar.j_rock_bee",
         "name": "J Rock Bee Avatar",
         "folder": "glb_files",
         "obj_file": "JRockBee.glb",
@@ -255,6 +269,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "knight-bee",
+        "product_id": "beesmart.avatar.knight_bee",
         "name": "Knight Bee Avatar",
         "folder": "glb_files",
         "obj_file": "KnightBee.glb",
@@ -271,6 +286,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "mascot-bee",
+        "product_id": "beesmart.avatar.mascot_bee",
         "name": "Mascot Bee Avatar",
         "folder": "mascot-bee",
         "obj_file": "MascotBee.obj",
@@ -287,6 +303,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "professor-bee",
+        "product_id": "beesmart.avatar.professor_bee",
         "name": "Professor Bee Avatar",
         "folder": "professor-bee",
         "obj_file": "ProfessorBee.obj",
@@ -303,6 +320,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "queen-bee",
+        "product_id": "beesmart.avatar.queen_bee",
         "name": "Queen Bee Avatar",
         "folder": "queen-bee",
         "obj_file": "QueenBee.obj",
@@ -319,6 +337,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "robo-bee",
+        "product_id": "beesmart.avatar.robo_bee",
         "name": "Robo Bee Avatar",
         "folder": "glb_files",
         "obj_file": "BuzzbotBee.glb",
@@ -335,6 +354,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "rocker-bee",
+        "product_id": "beesmart.avatar.rocker_bee",
         "name": "Rocker Bee Avatar",
         "folder": "rocker-bee",
         "obj_file": "RockerBee.obj",
@@ -351,6 +371,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "sea-bee",
+        "product_id": "beesmart.avatar.sea_bee",
         "name": "Sea Bee Avatar",
         "folder": "glb_files",
         "obj_file": "SeaBee.glb",
@@ -367,6 +388,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "selfie-bee",
+        "product_id": "beesmart.avatar.selfie_bee",
         "name": "Selfie Bee Avatar",
         "folder": "glb_files",
         "obj_file": "SelfieBee.glb",
@@ -383,6 +405,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "vamp-bee",
+        "product_id": "beesmart.avatar.vamp_bee",
         "name": "Vamp Bee Avatar",
         "folder": "vamp-bee",
         "obj_file": "VampBee.obj",
@@ -399,6 +422,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "ware-bee",
+        "product_id": "beesmart.avatar.ware_bee",
         "name": "Ware Bee Avatar",
         "folder": "ware-bee",
         "obj_file": "WareBee.obj",
@@ -415,6 +439,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "zom-bee",
+        "product_id": "beesmart.avatar.zom_bee",
         "name": "Zom Bee Avatar",
         "folder": "zom-bee",
         "obj_file": "ZomBee.obj",
@@ -431,6 +456,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "motor-bee",
+        "product_id": "beesmart.avatar.motor_bee",
         "name": "Motor Bee Avatar",
         "folder": "glb_files",
         "obj_file": "MotorBee.glb",
@@ -447,6 +473,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "o-bee",
+        "product_id": "beesmart.avatar.o_bee",
         "name": "O Bee Avatar",
         "folder": "glb_files",
         "obj_file": "OBee.glb",
@@ -463,6 +490,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "singer-bee",
+        "product_id": "beesmart.avatar.singer_bee",
         "name": "Singer Bee Avatar",
         "folder": "glb_files",
         "obj_file": "SingerBee.glb",
@@ -479,6 +507,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "space-bee",
+        "product_id": "beesmart.avatar.space_bee",
         "name": "Space Bee Avatar",
         "folder": "glb_files",
         "obj_file": "SpaceBee.glb",
@@ -495,6 +524,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "super-bee",
+        "product_id": "beesmart.avatar.super_bee",
         "name": "Super Bee Avatar",
         "folder": "glb_files",
         "obj_file": "SuperBee.glb",
@@ -1452,6 +1482,7 @@ def get_avatar_catalog_railway_safe():
         return [
             {
                 "id": "cool-bee",
+        "product_id": "beesmart.avatar.cool_bee",
                 "name": "Cool Bee Avatar", 
                 "folder": "cool-bee",
                 "obj_file": "CoolBee.obj",
