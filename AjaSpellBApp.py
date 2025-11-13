@@ -7803,15 +7803,40 @@ def teacher_student_detail(student_id: int):
     except Exception:
         avatar_data = None
 
-    # Aggregate stats
-    total_quizzes = QuizSession.query.filter_by(user_id=student.id, completed=True).count()
+    # Aggregate stats - count both completed and in-progress quizzes with attempts
+    total_quizzes = QuizSession.query.filter(
+        QuizSession.user_id == student.id,
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
+    ).count()
+    
     avg_accuracy = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter(
         QuizSession.user_id == student.id,
-        QuizSession.completed == True
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
     ).scalar() or 0
 
-    # Recent quiz sessions
-    recent_sessions = QuizSession.query.filter_by(user_id=student.id, completed=True).order_by(
+    # Recent quiz sessions - include in-progress with attempts
+    recent_sessions = QuizSession.query.filter(
+        QuizSession.user_id == student.id,
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
+    ).order_by(
         QuizSession.session_end.desc().nullslast()
     ).limit(10).all()
 
