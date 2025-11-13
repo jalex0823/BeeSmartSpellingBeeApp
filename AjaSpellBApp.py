@@ -8224,6 +8224,54 @@ def admin_user_detail(user_id):
                          battle_participations=battle_participations)
 
 
+@app.route('/admin/sync-avatar-names', methods=['POST'])
+@login_required
+def admin_sync_avatar_names():
+    """Sync DB avatar names with catalog (Apple Store compliance - add ' Avatar' suffix)"""
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+    
+    try:
+        from models import Avatar
+        from avatar_catalog import AVATAR_CATALOG
+        
+        # Build catalog lookup
+        catalog_map = {a['id']: a for a in AVATAR_CATALOG}
+        
+        updated_count = 0
+        updated_avatars = []
+        
+        # Update DB avatars to match catalog names
+        db_avatars = Avatar.query.filter_by(is_active=True).all()
+        
+        for avatar in db_avatars:
+            catalog_entry = catalog_map.get(avatar.slug)
+            if catalog_entry:
+                catalog_name = catalog_entry['name']
+                if avatar.name != catalog_name:
+                    old_name = avatar.name
+                    avatar.name = catalog_name
+                    updated_count += 1
+                    updated_avatars.append({
+                        'slug': avatar.slug,
+                        'old_name': old_name,
+                        'new_name': catalog_name
+                    })
+        
+        if updated_count > 0:
+            db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "updated_count": updated_count,
+            "updated_avatars": updated_avatars
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/admin/users', methods=['GET'])
 @login_required
 def api_admin_get_users():
@@ -9408,6 +9456,10 @@ def api_get_avatars():
             tier_val = None
             price_val = None
             
+            # Use catalog name if available (Apple Store compliant with " Avatar" suffix)
+            display_name = catalog_avatar.get('name') if catalog_avatar else info['name']
+            catalog_desc = catalog_avatar.get('description') if catalog_avatar else auto_desc
+            
             if is_admin_or_premium:
                 is_locked = False
             elif catalog_avatar:
@@ -9439,8 +9491,8 @@ def api_get_avatars():
 
             enriched_avatars.append({
                 'id': slug,
-                'name': info['name'],
-                'description': auto_desc,
+                'name': display_name,
+                'description': catalog_desc,
                 'category': 'classic',
                 'folder': 'glb_files',
                 'is_glb': True,
