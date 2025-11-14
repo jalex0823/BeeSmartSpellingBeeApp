@@ -308,14 +308,13 @@ def save_dictionary_cache(cache_data):
     except Exception as e:
         print(f"Warning: Failed to save dictionary cache: {e}")
 
-# Load cache at startup
-print("🔧 Loading dictionary cache...")
-DICTIONARY_CACHE = load_dictionary_cache()
+# Dictionary cache - loaded on-demand by get_word_info(), not at startup
+DICTIONARY_CACHE = {}
 
 # Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
 SIMPLE_WIKTIONARY = {}
 
-print("✅ Dictionary resources initialized (using built-in dictionary API)")
+print("✅ Dictionary resources initialized (on-demand loading enabled)")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -695,6 +694,12 @@ def get_word_info(word):
     """Get definition and example sentence for a word. 
     Priority: 1) Simple Wiktionary (50K words), 2) API cache, 3) API lookup
     Returns: Formatted definition string OR "Definition not available" for spelling-only quiz."""
+    global DICTIONARY_CACHE
+    
+    # Lazy load dictionary cache on first use
+    if not DICTIONARY_CACHE:
+        DICTIONARY_CACHE = load_dictionary_cache()
+    
     word_lower = word.lower()
     
     # PRIORITY 1: Check Simple English Wiktionary FIRST (50K+ words, kid-friendly)
