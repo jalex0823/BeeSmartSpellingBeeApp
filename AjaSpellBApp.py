@@ -1178,14 +1178,17 @@ def format_percentage_filter(value):
 # Ensure sessions are persistent and trackable
 @app.before_request
 def ensure_session():
-    """Ensure every request has a session with unique ID and permanent flag"""
+    """Ensure every request has a session with unique ID and permanent flag
+    Skip for static files, health checks, and other non-interactive endpoints to improve performance"""
+    # Skip session creation for static files and health/utility endpoints
+    if request.path.startswith(('/static/', '/health', '/favicon.ico', '/.well-known/')):
+        return
+    
     if not session.get("session_id"):
         session["session_id"] = str(uuid.uuid4())
         session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
-        print(f"DEBUG: New session created - id={session['session_id']}")
     elif not session.permanent:
         session.permanent = True  # Ensure existing sessions are permanent
-        print(f"DEBUG: Made existing session permanent - id={session.get('session_id')}")
 
 
 # --- Session Logging Helper --------------------------------------------------
