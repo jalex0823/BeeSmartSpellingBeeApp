@@ -9175,6 +9175,11 @@ def speed_round_results():
 
 
 # --- 3D Avatar API Routes ----------------------------------------------------
+# Simple in-memory cache for avatar list (invalidates on app restart)
+_AVATAR_CACHE = {"data": None, "timestamp": 0, "ttl": 300}  # 5 minute TTL
+# Cache for GLB file scanning (expensive filesystem operation)
+_GLB_SCAN_CACHE = {"data": None, "timestamp": 0, "ttl": 600}  # 10 minute TTL
+
 @app.route("/api/avatars", methods=["GET"])
 def api_get_avatars():
     """Get the complete avatar catalog with optional filtering, plus canonical asset URLs.
@@ -9185,6 +9190,17 @@ def api_get_avatars():
     - Alphabetize the final hive list for stable ordering
     - Include unlock status based on user's honey points and purchases
     """
+    # Check cache first (only for non-authenticated users to avoid stale unlock status)
+    global _AVATAR_CACHE
+    current_time = time.time()
+    
+    # For logged-in users, skip cache to get fresh unlock status
+    # For guests, use cache to speed up initial page load
+    if not current_user.is_authenticated:
+        if _AVATAR_CACHE["data"] and (current_time - _AVATAR_CACHE["timestamp"]) < _AVATAR_CACHE["ttl"]:
+            print("⚡ Returning cached avatar list")
+            return jsonify(_AVATAR_CACHE["data"])
+    
     try:
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
         try:
@@ -9203,19 +9219,14 @@ def api_get_avatars():
                 return {"unlocked": True, "reason": "Catalog unavailable", "required_points": 0, "price": 0}
         import re as _re
         
-        # Helper: append a cache-busting query using file mtime if available
+        # Helper: append a simple cache-busting query (use app start time instead of checking each file)
+        # This avoids expensive os.path.getmtime() calls for every asset
+        _APP_VERSION = str(int(time.time()))  # Changes on each app restart
         def _cachebust_url(url: str) -> str:
-            try:
-                # Convert URL like /static/../Foo.png to filesystem path
-                rel = url.lstrip('/')
-                fs_path = os.path.join(app.root_path, rel)
-                if os.path.exists(fs_path):
-                    ts = int(os.path.getmtime(fs_path))
-                    sep = '&' if '?' in url else '?'
-                    return f"{url}{sep}v={ts}"
-            except Exception:
-                pass
-            return url
+            if not url:
+                return url
+            sep = '&' if '?' in url else '?'
+            return f"{url}{sep}v={_APP_VERSION}"
 
     # Get current user's unlock status
         user_honey_points = 0
@@ -9383,8 +9394,15 @@ def api_get_avatars():
             return None
 
         # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
+        # Use cache to avoid expensive filesystem scanning on every request
+        global _GLB_SCAN_CACHE
         glb_latest: dict = {}
-        if os.path.isdir(glb_dir):
+        
+        if _GLB_SCAN_CACHE["data"] and (time.time() - _GLB_SCAN_CACHE["timestamp"]) < _GLB_SCAN_CACHE["ttl"]:
+            print("⚡ Using cached GLB scan results")
+            glb_latest = _GLB_SCAN_CACHE["data"]
+        elif os.path.isdir(glb_dir):
+            print("🔍 Scanning GLB files...")
             for fname in os.listdir(glb_dir):
                 if not fname.lower().endswith('.glb'):
                     continue
@@ -9407,6 +9425,11 @@ def api_get_avatars():
                         'name': name_with_spaces,
                         'mtime': mtime,
                     }
+            
+            # Cache the results
+            _GLB_SCAN_CACHE["data"] = glb_latest
+            _GLB_SCAN_CACHE["timestamp"] = time.time()
+            print(f"💾 Cached {len(glb_latest)} GLB files")
 
         # If certain GLB slugs exist, prefer them over older OBJ variants with different slugs
         # Example: if 'j-rock-bee' (from JRockBee.glb) exists, drop legacy 'rocker-bee' DB entry
@@ -9557,13 +9580,21 @@ def api_get_avatars():
 
         enriched_avatars = deduped
 
-        return jsonify({
+        response_data = {
             'status': 'success',
             'avatars': enriched_avatars,
             'total': len(enriched_avatars),
             # include current user honey points for client-side computations
             'user_honey_points': user_honey_points
-        })
+        }
+        
+        # Cache for unauthenticated users only
+        if not current_user.is_authenticated:
+            _AVATAR_CACHE["data"] = response_data
+            _AVATAR_CACHE["timestamp"] = time.time()
+            print(f"💾 Cached {len(enriched_avatars)} avatars")
+        
+        return jsonify(response_data)
 
     except Exception as e:
         import traceback
