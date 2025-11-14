@@ -1,0 +1,241 @@
+{
+  "total": 39,
+  "compliant": 39,
+  "issues": [],
+  "all_names": [
+    {
+      "id": "al-bee",
+      "name": "Al Bee Avatar",
+      "tier": "premium",
+      "category": "classic"
+    },
+    {
+      "id": "anxious-bee",
+      "name": "Anxious Bee Avatar",
+      "tier": "special",
+      "category": "emotion"
+    },
+    {
+      "id": "astro-bee",
+      "name": "Astro Bee Avatar",
+      "tier": "premium",
+      "category": "adventure"
+    },
+    {
+      "id": "biker-bee",
+      "name": "Biker Bee Avatar",
+      "tier": "premium",
+      "category": "action"
+    },
+    {
+      "id": "brother-bee",
+      "name": "Brother Bee Avatar",
+      "tier": "default_free",
+      "category": "classic"
+    },
+    {
+      "id": "builder-bee",
+      "name": "Builder Bee Avatar",
+      "tier": "default_free",
+      "category": "profession"
+    },
+    {
+      "id": "buzz-bee",
+      "name": "Buzz Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "classic"
+    },
+    {
+      "id": "cool-bee",
+      "name": "Cool Bee Avatar",
+      "tier": "default_free",
+      "category": "classic"
+    },
+    {
+      "id": "detective-bee",
+      "name": "Detective Bee Avatar",
+      "tier": "default_free",
+      "category": "profession"
+    },
+    {
+      "id": "diva-bee",
+      "name": "Diva Bee Avatar",
+      "tier": "premium",
+      "category": "entertainment"
+    },
+    {
+      "id": "doctor-bee",
+      "name": "Doctor Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "profession"
+    },
+    {
+      "id": "explorer-bee",
+      "name": "Explorer Bee Avatar",
+      "tier": "default_free",
+      "category": "adventure"
+    },
+    {
+      "id": "franken-bee",
+      "name": "Franken Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "knight-bee",
+      "name": "Knight Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "fantasy"
+    },
+    {
+      "id": "mascot-bee",
+      "name": "Mascot Bee Avatar",
+      "tier": "mascot",
+      "category": "classic"
+    },
+    {
+      "id": "monster-bee",
+      "name": "Monster Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "fantasy"
+    },
+    {
+      "id": "professor-bee",
+      "name": "Professor Bee Avatar",
+      "tier": "premium",
+      "category": "profession"
+    },
+    {
+      "id": "queen-bee",
+      "name": "Queen Bee Avatar",
+      "tier": "premium",
+      "category": "royal"
+    },
+    {
+      "id": "robo-bee",
+      "name": "Robo Bee Avatar",
+      "tier": "premium",
+      "category": "tech"
+    },
+    {
+      "id": "rocker-bee",
+      "name": "Rocker Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "entertainment"
+    },
+    {
+      "id": "selfie-bee",
+      "name": "Selfie Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "entertainment"
+    },
+    {
+      "id": "seabea",
+      "name": "Seabea Avatar",
+      "tier": "earn_or_buy",
+      "category": "adventure"
+    },
+    {
+      "id": "superbee",
+      "name": "Superbee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "vamp-bee",
+      "name": "Vamp Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "ware-bee",
+      "name": "Ware Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "zom-bee",
+      "name": "Zom Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "bee-knight",
+      "name": "Bee Knight Avatar",
+      "tier": "earn_or_buy",
+      "category": "fantasy"
+    },
+    {
+      "id": "buda-bee",
+      "name": "Buda Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "cutie-bee",
+      "name": "Cutie Bee Avatar",
+      "tier": "default_free",
+      "category": "classic"
+    },
+    {
+      "id": "doc-bee",
+      "name": "Doc Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "profession"
+    },
+    {
+      "id": "frankenbee",
+      "name": "Frankenbee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "honey-comb",
+      "name": "Honey Comb Avatar",
+      "tier": "mascot",
+      "category": "classic"
+    },
+    {
+      "id": "j-rock-bee",
+      "name": "J Rock Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "entertainment"
+    },
+    {
+      "id": "motor-bee",
+      "name": "Motor Bee Avatar",
+      "tier": "premium",
+      "category": "action"
+    },
+    {
+      "id": "o-bee",
+      "name": "O Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    },
+    {
+      "id": "sea-bee",
+      "name": "Sea Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "adventure"
+    },
+    {
+      "id": "singer-bee",
+      "name": "Singer Bee Avatar",
+      "tier": "earn_or_buy",
+      "category": "entertainment"
+    },
+    {
+      "id": "space-bee",
+      "name": "Space Bee Avatar",
+      "tier": "premium",
+      "category": "adventure"
+    },
+    {
+      "id": "super-bee",
+      "name": "Super Bee Avatar",
+      "tier": "premium",
+      "category": "fantasy"
+    }
+  ]
+}

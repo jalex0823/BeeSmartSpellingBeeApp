@@ -5356,8 +5356,11 @@ def api_answer():
                     for avatar_data in AVATARS_CATALOG:
                         avatar_id = avatar_data.get('id')
                         # Check if avatar was locked with old points but unlocked with new points
-                        was_locked = not check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
-                        is_now_unlocked = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                        old_unlock_result = check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
+                        new_unlock_result = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                        
+                        was_locked = not old_unlock_result.get('unlocked', False)
+                        is_now_unlocked = new_unlock_result.get('unlocked', False)
                         
                         if was_locked and is_now_unlocked:
                             newly_unlocked_avatars.append({
@@ -9208,7 +9211,8 @@ def api_get_avatars():
             print(f"⚠️ Avatar catalog import failed, disabling unlock checks: {_cat_err}")
             AVATARS_CATALOG = []  # type: ignore
             def check_avatar_unlocked(*_args, **_kwargs):
-                return True  # Treat as unlocked if catalog unavailable
+                # Return dict format to match avatar_catalog.check_avatar_unlocked
+                return {"unlocked": True, "reason": "Catalog unavailable", "required_points": 0, "price": 0}
         import re as _re
         
         # Helper: append a cache-busting query using file mtime if available
@@ -9295,12 +9299,13 @@ def api_get_avatars():
                         # Admins and premium members have access to all avatars
                         is_locked = False
                     elif catalog_avatar:
-                        # Check unlock status using avatar_catalog helper
-                        is_locked = not check_avatar_unlocked(
+                        # Check unlock status using avatar_catalog helper (returns dict)
+                        unlock_result = check_avatar_unlocked(
                             avatar_slug,
                             user_honey_points,
                             purchased_avatars
                         )
+                        is_locked = not unlock_result.get('unlocked', False)
 
                         if is_locked:
                             # Generate unlock message based on tier
@@ -9463,11 +9468,13 @@ def api_get_avatars():
             if is_admin_or_premium:
                 is_locked = False
             elif catalog_avatar:
-                is_locked = not check_avatar_unlocked(
+                # Check unlock status using avatar_catalog helper (returns dict)
+                unlock_result = check_avatar_unlocked(
                     slug, 
                     user_honey_points, 
                     purchased_avatars
                 )
+                is_locked = not unlock_result.get('unlocked', False)
                 
                 if is_locked:
                     tier = catalog_avatar.get('tier', 'premium')
