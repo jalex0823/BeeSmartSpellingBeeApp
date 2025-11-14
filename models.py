@@ -1039,8 +1039,8 @@ class Avatar(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(50), unique=True, nullable=False, index=True)  # e.g., 'cool-bee', 'explorer-bee'
-    name = db.Column(db.String(100), nullable=False)  # Display name: "Cool Bee", "Explorer Bee"
-    description = db.Column(db.Text)  # Kid-friendly description
+    name = db.Column(db.String(100), nullable=False, index=True)  # Display name: "Cool Bee", "Explorer Bee" - indexed for search
+    description = db.Column(db.Text, index=True)  # Kid-friendly description - indexed for search
     category = db.Column(db.String(50), default='classic', index=True)  # classic, adventure, sports, etc.
     
     # File paths (relative to static/assets/avatars/)
@@ -1060,10 +1060,16 @@ class Avatar(db.Model):
     unlock_level = db.Column(db.Integer, default=1)  # Minimum level to unlock (1 = always available)
     points_required = db.Column(db.Integer, default=0)  # Points needed to unlock
     is_premium = db.Column(db.Boolean, default=False)  # Premium/paid avatars
-    sort_order = db.Column(db.Integer, default=0)  # Display order in picker
-    is_active = db.Column(db.Boolean, default=True)  # Can be selected by users
+    sort_order = db.Column(db.Integer, default=0, index=True)  # Display order in picker - indexed for sorting
+    is_active = db.Column(db.Boolean, default=True, index=True)  # Can be selected by users - indexed for filtering
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Composite index for common query pattern: active avatars ordered by sort_order and name
+    __table_args__ = (
+        db.Index('idx_active_sorted', 'is_active', 'sort_order', 'name'),
+        db.Index('idx_category_active', 'category', 'is_active'),
+    )
     
     # Relationship (users who have selected this avatar)
     users = db.relationship('User', backref='avatar', lazy='dynamic',
