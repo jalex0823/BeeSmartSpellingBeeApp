@@ -312,25 +312,10 @@ def save_dictionary_cache(cache_data):
 print("🔧 Loading dictionary cache...")
 DICTIONARY_CACHE = load_dictionary_cache()
 
-# Load Simple English Wiktionary (50K+ words with definitions)
-# DISABLED for Railway - this takes too long and blocks startup
-# Load it in background after app starts
-print("🔧 Simple English Wiktionary loading scheduled for background...")
-SIMPLE_WIKTIONARY = {}  # Start with empty dict, will load async
+# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
+SIMPLE_WIKTIONARY = {}
 
-def load_wiktionary_background():
-    """Load wiktionary in background thread after app starts"""
-    global SIMPLE_WIKTIONARY
-    print("🔧 Background: Loading Simple English Wiktionary (this may take 30-60 seconds)...")
-    SIMPLE_WIKTIONARY = load_simple_wiktionary()
-    print(f"✅ Background: Wiktionary loaded with {len(SIMPLE_WIKTIONARY)} words")
-
-# Start background loading
-import threading
-wiktionary_thread = threading.Thread(target=load_wiktionary_background, daemon=True)
-wiktionary_thread.start()
-
-print("✅ Dictionary resources initialized (Wiktionary loading in background)")
+print("✅ Dictionary resources initialized (using built-in dictionary API)")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
