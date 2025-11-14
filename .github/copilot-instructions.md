@@ -44,7 +44,7 @@ This repo is a Flask app for kids’ spelling practice with uploads, an interact
 - Upload: `POST /api/upload` (parse → dedupe → enrich → store → `init_quiz_state`).
 - Quiz step: `POST /api/next`, answer: `POST /api/answer` with `{"user_input","method","elapsed_ms"}`.
 - Utilities: `GET /api/wordbank`, `POST /api/clear`, health: `GET /health` → `{version: "1.6"}`.
-- UI: `templates/unified_menu.html`, `magical_quiz.html`, `speed_round_quiz.html`; PWA endpoints include `/service-worker.js` and `/.well-known/*`.
+- UI: `templates/unified_menu.html`, `quiz.html`, `speed_round_quiz.html`; PWA endpoints include `/service-worker.js` and `/.well-known/*`.
 
 ## Local dev and tests
 - Python 3.11. Install deps then run `AjaSpellBApp.py` to serve on http://localhost:5000.

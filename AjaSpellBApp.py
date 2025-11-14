@@ -2749,8 +2749,8 @@ def upload_page():
 
 @app.route("/magical_quiz")
 def magical_quiz_page():
-    """Legacy magical quiz experience (kept for backwards compatibility)"""
-    return render_template("magical_quiz.html")
+    """Legacy route - redirects to main quiz"""
+    return redirect("/quiz")
 
 @app.route("/health")
 def health_check():
