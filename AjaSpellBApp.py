@@ -9190,16 +9190,17 @@ def api_get_avatars():
     - Alphabetize the final hive list for stable ordering
     - Include unlock status based on user's honey points and purchases
     """
-    # Check cache first (only for non-authenticated users to avoid stale unlock status)
+    # Check cache first
     global _AVATAR_CACHE
     current_time = time.time()
     
-    # For logged-in users, skip cache to get fresh unlock status
-    # For guests, use cache to speed up initial page load
-    if not current_user.is_authenticated:
-        if _AVATAR_CACHE["data"] and (current_time - _AVATAR_CACHE["timestamp"]) < _AVATAR_CACHE["ttl"]:
-            print("⚡ Returning cached avatar list")
-            return jsonify(_AVATAR_CACHE["data"])
+    # Use cache for both authenticated and unauthenticated users
+    # Cache key includes user ID to separate per-user unlock status
+    cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+    
+    if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
+        print(f"⚡ Returning cached avatar list for {cache_key}")
+        return jsonify(_AVATAR_CACHE[cache_key])
     
     try:
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
@@ -9588,11 +9589,11 @@ def api_get_avatars():
             'user_honey_points': user_honey_points
         }
         
-        # Cache for unauthenticated users only
-        if not current_user.is_authenticated:
-            _AVATAR_CACHE["data"] = response_data
-            _AVATAR_CACHE["timestamp"] = time.time()
-            print(f"💾 Cached {len(enriched_avatars)} avatars")
+        # Cache for all users (with per-user cache key)
+        cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+        _AVATAR_CACHE[cache_key] = response_data
+        _AVATAR_CACHE[f"{cache_key}_timestamp"] = time.time()
+        print(f"💾 Cached {len(enriched_avatars)} avatars for {cache_key}")
         
         return jsonify(response_data)
 
