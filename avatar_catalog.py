@@ -187,7 +187,7 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.doc_bee",
         "name": "Doc Bee Avatar",
         "folder": "glb_files",
-        "obj_file": "DoctorBee.glb",
+        "obj_file": "DocBee.glb",
         "mtl_file": "",
         "texture_file": "",
         "description": "Medical expert bee ready to diagnose and cure!",
@@ -340,7 +340,7 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.robo_bee",
         "name": "Robo Bee Avatar",
         "folder": "glb_files",
-        "obj_file": "BuzzbotBee.glb",
+        "obj_file": "RoboBee.glb",
         "mtl_file": "",
         "texture_file": "",
         "description": "Buzzbot 3000! Programmed with 1 million words. Runs on honey-powered circuits. *BEEP* Spelling complete!",
@@ -867,7 +867,7 @@ def get_avatar_info(avatar_id, variant='default'):
     elif folder == 'explorer-bee':
         thumbnail_file = 'ExplorerBee!.png'
     elif folder == 'franken-bee':
-        thumbnail_file = 'Frankenbee!.png'
+        thumbnail_file = 'FrankenBee!.png'
     elif folder == 'mascot-bee':
         thumbnail_file = 'MascotBee!.png'
     elif folder == 'monster-bee':
