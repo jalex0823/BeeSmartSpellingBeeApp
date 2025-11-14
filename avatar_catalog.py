@@ -118,10 +118,10 @@ AVATAR_CATALOG: List[Dict] = [
         "id": "cool-bee",
         "product_id": "beesmart.avatar.cool_bee",
         "name": "Cool Bee Avatar",
-        "folder": "cool-bee",
-        "obj_file": "CoolBee.obj",
-        "mtl_file": "CoolBee.mtl",
-        "texture_file": "Cool_Bee_1022222744.png",
+        "folder": "glb_files",
+        "obj_file": "CoolBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
         "description": "The coolest bee around - always stylish!",
         "variants": ["default"],
         "category": "classic",
@@ -187,7 +187,7 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.doc_bee",
         "name": "Doc Bee Avatar",
         "folder": "glb_files",
-        "obj_file": "DocBee.glb",
+        "obj_file": "DoctorBee.glb",
         "mtl_file": "",
         "texture_file": "",
         "description": "Medical expert bee ready to diagnose and cure!",
@@ -322,10 +322,10 @@ AVATAR_CATALOG: List[Dict] = [
         "id": "queen-bee",
         "product_id": "beesmart.avatar.queen_bee",
         "name": "Queen Bee Avatar",
-        "folder": "queen-bee",
-        "obj_file": "QueenBee.obj",
-        "mtl_file": "QueenBee.mtl",
-        "texture_file": "Queen_Bee_Majesty_1022222156.png",
+        "folder": "glb_files",
+        "obj_file": "QueenBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
         "description": "Royal and majestic! Leader with grace.",
         "variants": ["default"],
         "category": "royal",
@@ -681,12 +681,12 @@ FOLDER_PREFIX_TO_AVATAR_ID = {
     "Cool_Bee": "cool-bee",
     "Explorer_Bee": "explorer-bee",
     "Rockin_Bee": "rockstar-bee",
-    "Bee_Doctor": "doctor-bee",
+    # "Bee_Doctor": "doctor-bee",  # COMMENTED OUT - duplicate of doc-bee
     "Bee_Scientist": "scientist-bee",
     "Professor_Bee": "professor-bee",
     "Super_Bee_Hero": "superhero-bee",
     "Bee_Knight": "knight-bee",
-    "Buzzbot_Bee": "robot-bee",
+    # "Buzzbot_Bee": "robot-bee",  # COMMENTED OUT - duplicate of robo-bee
     "Bee_Diva": "bee-diva",
     "Queen_Bee_Majesty": "queen-bee",
     # We consolidate Bee_Majesty to queen-bee as a single catalog entry
@@ -840,8 +840,12 @@ def get_avatar_info(avatar_id, variant='default'):
             thumbnail_file = 'AvatarThumbnails/AstroBee!.png'
         elif avatar_id == 'buzz-bee':
             thumbnail_file = 'AvatarThumbnails/BuzzBee!.png'
+        elif avatar_id == 'cool-bee':
+            thumbnail_file = 'AvatarThumbnails/CoolBee!.png'
         elif avatar_id == 'knight-bee':
-            thumbnail_file = 'AvatarThumbnails/KnightBee!.png'
+            thumbnail_file = 'AvatarThumbnails/BeeKnight!.png'
+        elif avatar_id == 'queen-bee':
+            thumbnail_file = 'AvatarThumbnails/QueenBee!.png'
         elif avatar_id == 'selfie-bee':
             thumbnail_file = 'AvatarThumbnails/SelfieBee!.png'
         else:

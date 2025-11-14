@@ -9365,11 +9365,11 @@ def api_get_avatars():
             cand_fs = os.path.join(thumb_dir, f"{base}!.png")
             if os.path.exists(cand_fs):
                 return candidate
-            # 2) known aliases (e.g., DoctorBee -> DocBee consolidated to DocBee)
+            # 2) known aliases (e.g., DoctorBee -> DocBee thumbnail)
             # Support multiple alias candidates per base to handle spacing/hyphenation variants
             # Python 3.9 compatibility: use typing.Union instead of PEP 604 (|) unions
             aliases: Dict[str, Union[List[str], str]] = {
-                'DocBee': ['DoctorBee'],
+                'DoctorBee': ['DocBee'],
                 'FrankenBee': ['Franken Bee', 'Franken-Bee'],
             }
             alias_val = aliases.get(base)
@@ -9415,6 +9415,8 @@ def api_get_avatars():
             'j-rock-bee': ['rocker-bee'],
             # Prefer concise GLB slug 'doc-bee' over legacy DB slug 'doctor-bee'
             'doc-bee': ['doctor-bee'],
+            # Prefer 'robo-bee' over legacy 'buzzbot-bee'
+            'robo-bee': ['buzzbot-bee'],
         }
         if glb_slugs:
             pruned = []
