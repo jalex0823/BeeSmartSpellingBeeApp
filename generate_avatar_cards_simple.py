@@ -22,11 +22,12 @@ THUMB_DIR = GLB_DIR / "AvatarThumbnails"
 OUTPUT_DIR = Path("/Users/jalex0823/Dropbox/GitBackUpAppFolder/static/assets/avatars/app_store_cards")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Card settings
-CARD_SIZE = 2048
+# Card settings - Apple App Store IAP screenshot format
+CARD_WIDTH = 768
+CARD_HEIGHT = 768
 BLACK = (0, 0, 0, 255)
 HONEY_GOLD = (250, 210, 90, 255)
-CARD_BG = (18, 18, 24, 255)
+CARD_BG = (70, 70, 72, 255)  # Dark gray background from sample
 TEXT_DARK = (15, 15, 15, 255)
 GLOW_COLOR = (255, 200, 50, 120)
 
@@ -48,12 +49,17 @@ def get_avatar_info(glb_filename):
         'DocBee': {'sku': 'doc_bee', 'product_id': 'beesmart.avatar.doc_bee', 'tier': 'premium', 'price': '$0.99'},
         'ExplorerBee': {'sku': 'explorer_bee', 'product_id': 'beesmart.avatar.explorer_bee', 'tier': 'default_free', 'price': '$0.00'},
         'FrankenBee': {'sku': 'franken_bee', 'product_id': 'beesmart.avatar.franken_bee', 'tier': 'premium', 'price': '$0.99'},
+        'GamerBee': {'sku': 'gamer_bee', 'product_id': 'beesmart.avatar.gamer_bee', 'tier': 'premium', 'price': '$1.99'},
         'HoneyCombBee': {'sku': 'honey_comb', 'product_id': 'beesmart.avatar.honey_comb', 'tier': 'premium', 'price': '$0.99'},
+        'InventorBee': {'sku': 'inventor_bee', 'product_id': 'beesmart.avatar.inventor_bee', 'tier': 'premium', 'price': '$1.99'},
         'JRockBee': {'sku': 'j_rock_bee', 'product_id': 'beesmart.avatar.j_rock_bee', 'tier': 'premium', 'price': '$0.99'},
         'BeeKnight': {'sku': 'knight_bee', 'product_id': 'beesmart.avatar.knight_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
+        'LumberjackBee': {'sku': 'lumberjack_bee', 'product_id': 'beesmart.avatar.lumberjack_bee', 'tier': 'premium', 'price': '$1.99'},
         'MascotBee': {'sku': 'mascot_bee', 'product_id': 'beesmart.avatar.mascot_bee', 'tier': 'mascot', 'price': '$0.00'},
         'MotorBee': {'sku': 'motor_bee', 'product_id': 'beesmart.avatar.motor_bee', 'tier': 'premium', 'price': '$0.99'},
+        'NurseBee': {'sku': 'nurse_bee', 'product_id': 'beesmart.avatar.nurse_bee', 'tier': 'premium', 'price': '$1.99'},
         'OBee': {'sku': 'o_bee', 'product_id': 'beesmart.avatar.o_bee', 'tier': 'premium', 'price': '$0.99'},
+        'PlumberBee': {'sku': 'plumber_bee', 'product_id': 'beesmart.avatar.plumber_bee', 'tier': 'premium', 'price': '$1.99'},
         'ProfessorBee': {'sku': 'professor_bee', 'product_id': 'beesmart.avatar.professor_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
         'QueenBee': {'sku': 'queen_bee', 'product_id': 'beesmart.avatar.queen_bee', 'tier': 'premium', 'price': '$1.99'},
         'RoboBee': {'sku': 'robo_bee', 'product_id': 'beesmart.avatar.robo_bee', 'tier': 'premium', 'price': '$1.99'},
@@ -63,8 +69,12 @@ def get_avatar_info(glb_filename):
         'SingerBee': {'sku': 'singer_bee', 'product_id': 'beesmart.avatar.singer_bee', 'tier': 'premium', 'price': '$0.99'},
         'SpaceBee': {'sku': 'space_bee', 'product_id': 'beesmart.avatar.space_bee', 'tier': 'premium', 'price': '$0.99'},
         'SuperBee': {'sku': 'super_bee', 'product_id': 'beesmart.avatar.super_bee', 'tier': 'premium', 'price': '$0.99'},
+        'TechnoBee': {'sku': 'techno_bee', 'product_id': 'beesmart.avatar.techno_bee', 'tier': 'premium', 'price': '$1.99'},
+        'UmpireBee': {'sku': 'umpire_bee', 'product_id': 'beesmart.avatar.umpire_bee', 'tier': 'premium', 'price': '$1.99'},
         'VampBee': {'sku': 'vamp_bee', 'product_id': 'beesmart.avatar.vamp_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
         'WareBee': {'sku': 'ware_bee', 'product_id': 'beesmart.avatar.ware_bee', 'tier': 'premium', 'price': '$1.99'},
+        'XrayBee': {'sku': 'xray_bee', 'product_id': 'beesmart.avatar.xray_bee', 'tier': 'premium', 'price': '$1.99'},
+        'YetiBee': {'sku': 'yeti_bee', 'product_id': 'beesmart.avatar.yeti_bee', 'tier': 'premium', 'price': '$1.99'},
         'ZomBee': {'sku': 'zom_bee', 'product_id': 'beesmart.avatar.zom_bee', 'tier': 'premium', 'price': '$1.99'}
     }
     
@@ -124,154 +134,135 @@ def find_thumbnail(base_name):
     
     return None
 
-def create_app_store_card(avatar_img, info, size=CARD_SIZE):
-    """Create beautiful App Store card with metadata"""
+def create_app_store_card(avatar_img, info, width=CARD_WIDTH, height=CARD_HEIGHT):
+    """Create Apple App Store IAP screenshot (768x768)"""
     # Create base card
-    card = Image.new("RGBA", (size, size), CARD_BG)
+    card = Image.new("RGBA", (width, height), CARD_BG)
     draw = ImageDraw.Draw(card)
     
-    w, h = size, size
-    margin = int(w * 0.04)
+    w, h = width, height
+    margin = 30  # Fixed margin from sample
+    border_width = 6  # Border width from sample
+    corner_radius = 30  # Rounded corner radius from sample
     
-    # Gradient background
-    for y in range(h):
-        alpha = int(30 + 25 * (1.0 - y / h))
-        color = (CARD_BG[0] + alpha, CARD_BG[1] + alpha, CARD_BG[2] + alpha, 255)
-        draw.line([(0, y), (w, y)], fill=color)
-    
-    # Gold border
+    # Gold border with rounded corners
     border_rect = [margin, margin, w - margin, h - margin]
-    draw.rounded_rectangle(border_rect, radius=int(w * 0.03), outline=HONEY_GOLD, width=int(w * 0.008))
+    draw.rounded_rectangle(border_rect, radius=corner_radius, outline=HONEY_GOLD, width=border_width)
     
-    # Name plate (larger to fit more info)
-    plate_h = int(h * 0.22)
-    plate_top = h - margin - plate_h - int(h * 0.025)
+    # Name plate at bottom (yellow background)
+    plate_h = 160  # Height from sample card
+    plate_top = h - margin - plate_h - 30  # Position from sample
     plate_rect = [
-        margin + int(w * 0.06),
+        margin + 45,  # Inner margin
         plate_top,
-        w - margin - int(w * 0.06),
-        h - margin - int(h * 0.025)
+        w - margin - 45,
+        h - margin - 30
     ]
-    draw.rounded_rectangle(plate_rect, radius=int(w * 0.02), fill=HONEY_GOLD)
+    draw.rounded_rectangle(plate_rect, radius=15, fill=HONEY_GOLD)
     
-    # Tier badge (top right corner)
+    # Price badge (top left corner - orange circle)
+    price_size = 90  # Circle diameter from sample
+    price_pos = (margin + 20, margin + 20)
+    price_color = (255, 150, 50, 255) if info.get('price') != '$0.00' else (100, 200, 100, 255)
+    draw.ellipse([price_pos[0], price_pos[1], price_pos[0] + price_size, price_pos[1] + price_size], 
+                 fill=price_color)
+    
+    # Tier badge (top right corner - yellow circle)
+    tier_size = 90  # Circle diameter from sample
+    tier_pos = (w - margin - tier_size - 20, margin + 20)
     tier_colors = {
         'default_free': (100, 200, 100, 255),
         'earn_or_buy': (100, 150, 255, 255),
-        'premium': (255, 200, 50, 255),
+        'premium': (250, 210, 90, 255),  # HONEY_GOLD
         'mascot': (255, 100, 255, 255)
     }
     tier_color = tier_colors.get(info.get('tier'), tier_colors['premium'])
-    tier_size = int(w * 0.12)
-    tier_pos = (w - margin - tier_size - int(w * 0.02), margin + int(w * 0.02))
-    draw.ellipse([tier_pos[0], tier_pos[1], tier_pos[0] + tier_size, tier_pos[1] + tier_size], fill=tier_color)
+    draw.ellipse([tier_pos[0], tier_pos[1], tier_pos[0] + tier_size, tier_pos[1] + tier_size], 
+                 fill=tier_color)
     
-    # Price badge (top left corner)
-    price_size = int(w * 0.12)
-    price_pos = (margin + int(w * 0.02), margin + int(w * 0.02))
-    price_color = (50, 200, 50, 255) if info.get('price') == '$0.00' else (255, 150, 50, 255)
-    draw.ellipse([price_pos[0], price_pos[1], price_pos[0] + price_size, price_pos[1] + price_size], fill=price_color)
+    # Avatar area (centered between badges and name plate)
+    avatar_top = margin + 120  # Start below badges
+    avatar_bottom = plate_top - 30  # End above name plate
+    avatar_area_h = avatar_bottom - avatar_top
+    avatar_max_w = w - 2 * margin - 100  # Max width
     
-    # Avatar area (adjusted for larger name plate)
-    avatar_top = margin + int(h * 0.08)
-    avatar_bottom = plate_top - int(h * 0.04)
-    avatar_w = int((w - 2 * margin) * 0.75)
-    avatar_h = avatar_bottom - avatar_top
-    
-    # Resize and center avatar
+    # Resize avatar proportionally to fit
+    avatar_target_h = int(avatar_area_h * 0.85)  # 85% of available height
     aspect = avatar_img.width / avatar_img.height
-    if aspect > 1:
-        new_w = avatar_w
-        new_h = int(avatar_w / aspect)
-    else:
-        new_h = avatar_h
-        new_w = int(avatar_h * aspect)
+    new_h = avatar_target_h
+    new_w = int(avatar_target_h * aspect)
     
-    # Make sure it fits
-    if new_w > avatar_w:
-        new_w = avatar_w
-        new_h = int(avatar_w / aspect)
-    if new_h > avatar_h:
-        new_h = avatar_h
-        new_w = int(avatar_h * aspect)
+    # Make sure width doesn't exceed limits
+    if new_w > avatar_max_w:
+        new_w = avatar_max_w
+        new_h = int(avatar_max_w / aspect)
     
     avatar_resized = avatar_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
     
-    # Add subtle glow effect
-    glow = Image.new("RGBA", (new_w + 40, new_h + 40), (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow)
-    glow_draw.ellipse([0, 0, new_w + 40, new_h + 40], fill=GLOW_COLOR)
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=20))
-    
-    # Position avatar
+    # Center avatar in available space
     avatar_x = (w - new_w) // 2
-    avatar_y = avatar_top + (avatar_h - new_h) // 2
-    glow_x = avatar_x - 20
-    glow_y = avatar_y - 20
+    avatar_y = avatar_top + (avatar_area_h - new_h) // 2
     
-    card.paste(glow, (glow_x, glow_y), glow)
+    # Paste avatar
     card.paste(avatar_resized, (avatar_x, avatar_y), avatar_resized)
     
-    # Text on name plate
+    # Text on name plate - smaller fonts to fit everything
     try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", int(w * 0.055))
-        info_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", int(w * 0.035))
-        small_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", int(w * 0.025))
+        title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 42)  # Title size
+        info_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 22)   # Info size
+        small_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)  # Small size
+        price_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)  # Price badge
     except:
         title_font = ImageFont.load_default()
         info_font = ImageFont.load_default()
         small_font = ImageFont.load_default()
+        price_font = ImageFont.load_default()
     
-    # Draw text info on name plate
-    text_x = plate_rect[0] + int(w * 0.03)
-    text_y = plate_rect[1] + int(h * 0.015)
+    # Draw text info on name plate - tighter spacing
+    text_x = plate_rect[0] + 20  # Left padding
+    text_y = plate_rect[1] + 12  # Top padding
     
-    # Avatar name
+    # Avatar name (line 1)
     draw.text((text_x, text_y), info.get('name', 'Unknown'), fill=TEXT_DARK, font=title_font)
-    text_y += int(h * 0.045)
+    text_y += 35  # Line spacing
     
-    # SKU
+    # SKU (line 2)
     sku_text = f"SKU: {info.get('sku', 'unknown')}"
-    draw.text((text_x, text_y), sku_text, fill=TEXT_DARK, font=info_font)
-    text_y += int(h * 0.035)
+    draw.text((text_x, text_y), sku_text, fill=TEXT_DARK, font=small_font)
+    text_y += 23  # Line spacing
     
-    # Product ID
+    # Product ID (line 3)
     product_text = f"ID: {info.get('product_id', 'beesmart.avatar.unknown')}"
     draw.text((text_x, text_y), product_text, fill=TEXT_DARK, font=small_font)
-    text_y += int(h * 0.03)
+    text_y += 23  # Line spacing
     
-    # Tier
+    # Tier (line 4)
     tier_text = f"Tier: {info.get('tier', 'premium').replace('_', ' ').title()}"
     draw.text((text_x, text_y), tier_text, fill=TEXT_DARK, font=small_font)
-    text_y += int(h * 0.03)
+    text_y += 23  # Line spacing
     
-    # Price (last line, left-justified)
+    # Price (line 5)
     price_text = f"Price: {info.get('price', '$0.99')}"
     draw.text((text_x, text_y), price_text, fill=TEXT_DARK, font=info_font)
     
-    # Add price to price badge
-    try:
-        badge_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", int(w * 0.02))
-    except:
-        badge_font = ImageFont.load_default()
-    
+    # Add price to price badge (centered in circle)
     price_display = info.get('price', '$0.99').replace('$0.00', 'FREE')
-    price_bbox = draw.textbbox((0, 0), price_display, font=badge_font)
+    price_bbox = draw.textbbox((0, 0), price_display, font=price_font)
     price_text_w = price_bbox[2] - price_bbox[0]
     price_text_h = price_bbox[3] - price_bbox[1]
     price_text_x = price_pos[0] + (price_size - price_text_w) // 2
-    price_text_y = price_pos[1] + (price_size - price_text_h) // 2
-    draw.text((price_text_x, price_text_y), price_display, fill=(255, 255, 255, 255), font=badge_font)
+    price_text_y = price_pos[1] + (price_size - price_text_h) // 2 - 2  # Slight adjustment
+    draw.text((price_text_x, price_text_y), price_display, fill=(255, 255, 255, 255), font=price_font)
     
     return card
 
 def main():
     print("=" * 70)
-    print("🎨 APP STORE AVATAR CARD GENERATOR (Simple Version)")
+    print("🎨 APP STORE AVATAR CARD GENERATOR (Apple IAP Format)")
     print("=" * 70)
     print(f"\n📂 Thumbnails: {THUMB_DIR}")
     print(f"📂 Output:     {OUTPUT_DIR}")
-    print(f"📐 Size:       {CARD_SIZE}x{CARD_SIZE}px\n")
+    print(f"📐 Size:       {CARD_WIDTH}x{CARD_HEIGHT}px (Apple IAP screenshot)\n")
     
     glb_files = sorted([p for p in GLB_DIR.iterdir() if p.suffix.lower() == ".glb"])
     
