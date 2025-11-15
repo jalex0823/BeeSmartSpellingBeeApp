@@ -556,11 +556,15 @@
             }
         }
         
-        /* Main container */
+        /* Main container - ENHANCED: Better centering and padding */
         .main-container {
             max-width: 600px;
             margin: 0 auto;
             padding: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Sticky top load bar for small screens */
@@ -1839,6 +1843,9 @@
             .main-container {
                 margin: 0 auto;
                 padding: 0 0.5rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
             
             .logo-section {
