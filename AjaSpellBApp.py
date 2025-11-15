@@ -348,15 +348,39 @@ def get_railway_speed_round_engine_options():
 IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1') in ('1', 'true', 'True', 'yes')
 IAP_VERIFICATION_MODE = os.getenv('IAP_VERIFICATION_MODE', 'mock' if IAP_MOCK_MODE else 'live_strict').strip().lower()
 
+# Subscription Product IDs (for App Store Connect)
+SUBSCRIPTION_PRODUCT_IDS = {
+    'monthly': 'beesmart.premium.monthly',      # $4.99/month
+    'yearly': 'beesmart.premium.yearly',        # $39.99/year (Save 33%)
+    'family': 'beesmart.premium.family.monthly', # $7.99/month (Up to 6 members)
+    'legacy': 'beesmart.sub.full_monthly'       # Legacy subscription (backward compatibility)
+}
+
 # Product -> entitlement mapping (override via env if needed)
 PRODUCT_MAP = {
-    # Full unlock (premium membership)
+    # Full unlock (premium membership - one-time purchase)
     os.getenv('PRODUCT_FULL_UNLOCK_ID', 'beesmart.full_unlock'): {
         'type': 'premium'
     },
-    # Monthly subscription full access (maps to premium entitlement; renewal handled by store)
+    # SUBSCRIPTION TIERS (Auto-Renewable)
+    # Legacy subscription (kept for backward compatibility)
     os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly'): {
-        'type': 'premium', 'subscription': True
+        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
+    },
+    # Monthly Premium Subscription ($4.99/month)
+    'beesmart.premium.monthly': {
+        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month',
+        'name': 'Premium Monthly Membership'
+    },
+    # Yearly Premium Subscription ($39.99/year - Best Value, Save 33%)
+    'beesmart.premium.yearly': {
+        'type': 'premium', 'subscription': True, 'price': 39.99, 'duration': '1 year',
+        'name': 'Premium Yearly Membership'
+    },
+    # Family Premium Subscription ($7.99/month - Up to 6 members)
+    'beesmart.premium.family.monthly': {
+        'type': 'premium', 'subscription': True, 'price': 7.99, 'duration': '1 month',
+        'name': 'Premium Family Membership', 'family_sharing': True
     },
     # Individual avatar unlocks
     os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee'): {
@@ -2536,6 +2560,30 @@ def app_home():
         avatar_product_ids = AVATAR_SKUS
     except Exception:
         avatar_product_ids = {}
+    
+    # Expose subscription product IDs to client
+    subscription_products = {
+        'monthly': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
+            'price': 4.99,
+            'duration': '1 month',
+            'name': 'Premium Monthly Membership'
+        },
+        'yearly': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
+            'price': 39.99,
+            'duration': '1 year',
+            'name': 'Premium Yearly Membership',
+            'savings': '33%'
+        },
+        'family': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['family'],
+            'price': 7.99,
+            'duration': '1 month',
+            'name': 'Premium Family Membership',
+            'family_sharing': True
+        }
+    }
 
     html = render_template(
         "unified_menu.html",
@@ -2546,6 +2594,7 @@ def app_home():
         subscription_intro_price_usd=intro_price,
         subscription_intro_months=intro_months,
         subscription_product_id=subscription_product_id,
+        subscription_products=subscription_products,
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids
     )
@@ -9614,6 +9663,118 @@ def api_get_avatars():
     except Exception as e:
         import traceback
         print(f"❌ Error fetching avatars: {e}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'trace': traceback.format_exc()
+        }), 500
+
+@app.route("/api/subscriptions", methods=["GET"])
+def api_get_subscriptions():
+    """Get available subscription products with pricing and details.
+    
+    Returns subscription tiers for App Store Connect integration:
+    - Monthly Premium ($4.99/month)
+    - Yearly Premium ($39.99/year - Save 33%)
+    - Family Premium ($7.99/month - Up to 6 members)
+    """
+    try:
+        subscriptions = {
+            'status': 'success',
+            'products': [
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
+                    'type': 'monthly',
+                    'name': 'Premium Monthly Membership',
+                    'displayName': 'Premium Monthly',
+                    'price': 4.99,
+                    'currency': 'USD',
+                    'duration': '1 month',
+                    'subscription': True,
+                    'familySharing': False,
+                    'description': 'Unlock unlimited spelling practice with Premium Monthly Membership!',
+                    'benefits': [
+                        'Unlimited word lists and quizzes',
+                        'All 39 premium bee avatars unlocked',
+                        'Ad-free experience',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'Monthly content updates'
+                    ]
+                },
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
+                    'type': 'yearly',
+                    'name': 'Premium Yearly Membership',
+                    'displayName': 'Premium Yearly',
+                    'price': 39.99,
+                    'currency': 'USD',
+                    'duration': '1 year',
+                    'subscription': True,
+                    'familySharing': False,
+                    'savings': '33%',
+                    'savingsAmount': 20.00,
+                    'monthlyEquivalent': 3.33,
+                    'recommended': True,
+                    'badge': 'Best Value',
+                    'description': 'Best Value! Unlock unlimited spelling practice for a full year!',
+                    'benefits': [
+                        'Everything in Monthly Premium',
+                        'Save 33% compared to monthly billing',
+                        'All 39 premium bee avatars unlocked forever',
+                        'Ad-free experience for the entire year',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'All future content updates included'
+                    ]
+                },
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['family'],
+                    'type': 'family',
+                    'name': 'Premium Family Membership',
+                    'displayName': 'Premium Family',
+                    'price': 7.99,
+                    'currency': 'USD',
+                    'duration': '1 month',
+                    'subscription': True,
+                    'familySharing': True,
+                    'maxMembers': 6,
+                    'description': 'Perfect for families! Share Premium access with up to 6 family members!',
+                    'benefits': [
+                        'Premium access for up to 6 family members',
+                        'Each member gets their own progress tracking',
+                        'All 39 premium bee avatars unlocked',
+                        'Ad-free experience for everyone',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'Individual leaderboards and achievements'
+                    ]
+                }
+            ],
+            'subscriptionGroup': 'BeeSmart Premium Membership',
+            'freeTrial': {
+                'available': True,
+                'duration': 7,
+                'durationUnit': 'days'
+            }
+        }
+        
+        # Include user's current subscription status if authenticated
+        if current_user.is_authenticated:
+            subscriptions['user'] = {
+                'isPremium': getattr(current_user, 'premium_member', False),
+                'activeSubscription': None  # TODO: Track active subscription type
+            }
+        
+        return jsonify(subscriptions)
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error fetching subscriptions: {e}")
         print(traceback.format_exc())
         return jsonify({
             'status': 'error',
