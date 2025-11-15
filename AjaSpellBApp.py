@@ -9826,7 +9826,6 @@ def validate_receipt():
         import requests
         import base64
         import json
-        from models import User, db
         
         # Get receipt data from request
         data = request.get_json()
@@ -9913,20 +9912,29 @@ def validate_receipt():
         if user_id:
             user = User.query.get(user_id)
             if user:
-                success = user.update_subscription(apple_response)
-                if success:
-                    db.session.commit()
-                    
-                    return jsonify({
-                        'status': 'success',
-                        'message': 'Subscription validated and updated',
-                        'subscription': user.get_subscription_status()
-                    }), 200
-                else:
+                try:
+                    success = user.update_subscription(apple_response)
+                    if success:
+                        db.session.commit()
+                        
+                        return jsonify({
+                            'status': 'success',
+                            'message': 'Subscription validated and updated',
+                            'subscription': user.get_subscription_status()
+                        }), 200
+                    else:
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'Failed to update subscription'
+                        }), 500
+                except AttributeError as e:
+                    # Database not migrated yet - subscription fields don't exist
+                    print(f"⚠️ Subscription fields not in database yet: {e}")
                     return jsonify({
                         'status': 'error',
-                        'message': 'Failed to update subscription'
-                    }), 500
+                        'message': 'Database migration required. Run: python scripts/migrate_subscription_fields.py',
+                        'migration_needed': True
+                    }), 503
         
         # Return validation success even if user not found
         return jsonify({
@@ -9968,7 +9976,6 @@ def apple_subscription_webhook():
     URL: https://your-domain.com/apple-webhook
     """
     try:
-        from models import User, db
         import json
         
         # Get notification from Apple
@@ -9990,7 +9997,12 @@ def apple_subscription_webhook():
             print(f"⚠️ No transaction ID in webhook: {notification_type}")
             return jsonify({'status': 'received'}), 200
         
-        user = User.query.filter_by(original_transaction_id=original_transaction_id).first()
+        try:
+            user = User.query.filter_by(original_transaction_id=original_transaction_id).first()
+        except Exception as query_error:
+            # Database not migrated - subscription columns don't exist
+            print(f"⚠️ Database migration needed: {query_error}")
+            return jsonify({'status': 'received', 'migration_needed': True}), 200
         
         if not user:
             print(f"⚠️ No user found for transaction: {original_transaction_id}")
