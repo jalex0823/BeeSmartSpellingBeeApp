@@ -7741,15 +7741,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('❌ 3D mascot failed to load:', error);
         console.error('Error details:', error.message, error.stack);
-        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+        // Hide avatar container instead of showing 2D fallback
         try {
-            console.log('🔄 Attempting 2D fallback...');
-            if (window.userAvatarLoader) {
-                await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                console.log('✅ 2D fallback loaded successfully');
+            console.log('🔄 Hiding avatar container (3D load failed)...');
+            const mascotContainer = document.getElementById('mascotBee3D');
+            if (mascotContainer) {
+                mascotContainer.style.display = 'none';
+                console.log('✅ Avatar container hidden');
             }
         } catch (fallbackError) {
-            console.error('❌ Fallback avatar also failed:', fallbackError);
+            console.error('❌ Could not hide avatar container:', fallbackError);
         }
     }
 

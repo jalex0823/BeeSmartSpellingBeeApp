@@ -635,61 +635,19 @@ class UserAvatarLoader {
 
     /**
      * Emergency 2D fallback when even MascotBee 3D fails
+     * UPDATED: Hide container instead of showing 2D bee circle
      */
     loadEmergency2DFallback(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        console.log('🔄 Loading emergency 2D fallback...');
+        console.log('🔄 Hiding avatar container - no fallback shown');
         
-        // Create simple 2D bee emoji display as last resort
-        container.innerHTML = `
-            <div style="
-                width: 100%;
-                height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: linear-gradient(135deg, #FFB300, #FF8F00);
-                border-radius: 50%;
-                border: 3px solid rgba(255, 179, 0, 0.8);
-                box-shadow: 0 8px 16px rgba(255, 179, 0, 0.4);
-                position: relative;
-                overflow: hidden;
-            ">
-                <div style="
-                    font-size: 4rem;
-                    line-height: 1;
-                    text-align: center;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                ">🐝</div>
-                <div style="
-                    position: absolute;
-                    bottom: -5px;
-                    right: -5px;
-                    width: 20px;
-                    height: 20px;
-                    background: rgba(255, 255, 255, 0.9);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 12px;
-                    border: 1px solid rgba(0,0,0,0.2);
-                ">📚</div>
-            </div>
-        `;
-
-        // Add click animation
-        container.addEventListener('click', () => {
-            container.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                container.style.transform = 'scale(1)';
-            }, 150);
-        });
-
-        console.log('✅ Emergency 2D fallback loaded');
-        this.showStatusMessage('Emergency avatar mode - Please check 3D files', 'warning', 5000);
+        // Hide the container completely - no 2D fallback
+        container.style.display = 'none';
+        
+        console.log('✅ Avatar container hidden (3D load failed)');
+        this.showStatusMessage('3D avatar loading issue - container hidden', 'info', 3000);
     }
 
     /**
