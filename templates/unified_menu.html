@@ -8869,15 +8869,20 @@
             // 🧪 Science & Academic
             if (name.includes('al bee') || name.includes('al-bee') || simplified.includes('albee')) return 'einstein';
             if (name.includes('professor') || simplified.includes('professorbee')) return 'academic';
+            if (name.includes('inventor') || simplified.includes('inventorbee')) return 'scientist';
 
             // 🎸 Music/Stage
             if (name.includes('rocker') || name.includes('j‑rock') || name.includes('jrock') || simplified.includes('jrockbee') || name.includes('rock')) return 'rockstar';
+            if (name.includes('singer') || simplified.includes('singerbee')) return 'performer';
 
             // 🤖 Tech
             if (name.includes('robo') || name.includes('bot') || simplified.includes('robobee')) return 'robot';
+            if (name.includes('techno') || simplified.includes('technobee')) return 'cyber';
 
-            // 🏍️ Action
+            // 🏍️ Action/Sports
             if (name.includes('biker') || name.includes('motor') || simplified.includes('motorbee')) return 'biker';
+            if (name.includes('umpire') || simplified.includes('umpirebee')) return 'sports';
+            if (name.includes('gamer') || simplified.includes('gamerbee')) return 'gaming';
 
             // 👑 Royal/Medieval
             if (name.includes('knight') || simplified.includes('beeknight')) return 'knight';
@@ -8886,7 +8891,10 @@
             // 🔍 Professions / Roles
             if (name.includes('detective') || simplified.includes('detectivebee')) return 'detective';
             if (name.includes('doctor') || name.includes('doc') || simplified.includes('docbee')) return 'doctor';
+            if (name.includes('nurse') || simplified.includes('nursebee')) return 'medical';
             if (name.includes('builder') || simplified.includes('builderbee')) return 'builder';
+            if (name.includes('plumber') || simplified.includes('plumberbee')) return 'mechanic';
+            if (name.includes('lumberjack') || simplified.includes('lumberjackbee')) return 'lumberjack';
 
             // 🌍 Adventure / Travel / Space / Ocean
             if (name.includes('explorer') || simplified.includes('explorerbee')) return 'explorer';
@@ -8899,20 +8907,25 @@
             if (name.includes('vamp') || simplified.includes('vampbee')) return 'vampire';
             if (name.includes('zom') || name.includes('zombie') || simplified.includes('zombee')) return 'zombie';
             if (name.includes('ware') || name.includes('werewolf') || name.includes('wolf') || simplified.includes('warebee')) return 'werewolf';
+            if (name.includes('xray') || name.includes('x-ray') || simplified.includes('xraybee')) return 'skeleton';
+            if (name.includes('yeti') || simplified.includes('yetibee')) return 'yeti';
 
             // 🌟 Personality / Archetypes
-            if (name.includes('diva') || name.includes('cutie') || simplified.includes('selfiebee')) return 'diva';
-            if (name.includes('super')) return 'superhero';
-            if (name.includes('cool') || name.includes('buda') || name.includes('obee') || simplified.includes('coolbee')) return 'cool';
-            if (name.includes('selfie')) return 'diva';
-            if (name.includes('buzz') || simplified.includes('buzzbee')) return 'mascot';
+            if (name.includes('diva') || simplified.includes('divabee')) return 'diva';
+            if (name.includes('cutie') || simplified.includes('cutiebee')) return 'cute';
+            if (name.includes('selfie') || simplified.includes('selfiebee')) return 'influencer';
+            if (name.includes('super') || simplified.includes('superbee')) return 'superhero';
+            if (name.includes('cool') || simplified.includes('coolbee')) return 'cool';
+            if (name.includes('buda') || simplified.includes('budabee')) return 'zen';
+            if (name.includes('buzz') || simplified.includes('buzzbee')) return 'energetic';
             if (name.includes('brother') || simplified.includes('brotherbee')) return 'brother';
             if (name.includes('anxious')) return 'nervous';
+            if (name.includes('obee') || simplified.includes('obee')) return 'classic';
 
             // 🍯 Honeycomb variant → use mascot effects
-            if (name.includes('honeycomb')) return 'mascot';
+            if (name.includes('honeycomb') || simplified.includes('honeycomb')) return 'honeycomb';
 
-            // 🅾️ O-Bee and all others → generic happy
+            // 🅾️ All others → generic happy
             return 'happy';
         }
 
