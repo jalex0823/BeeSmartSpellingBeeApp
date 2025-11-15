@@ -3329,7 +3329,7 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.65) {
+    speakWord(word, onEndCallback = null, rate = 0.85) {
         if (!word || !('speechSynthesis' in window)) {
             if (onEndCallback) onEndCallback();
             return;
@@ -3340,7 +3340,7 @@ class BeeSoundboard {
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.pitch = 1.0; // Natural neutral female voice
-            utterance.rate = rate; // Use provided rate (default 0.65 - very slow)
+            utterance.rate = rate; // Use provided rate (default 0.85 - natural conversational pace)
             utterance.volume = 0.9;
             utterance.text = word;
             
@@ -4072,7 +4072,7 @@ class BeeDelightManager {
         if (data?.word) {
             // Speak a friendly prompt and the word once (removed echo)
             const phrase = `Spell the word, ${data.word}.`;
-            const rate = data.rate || 0.65; // Use provided rate or default
+            const rate = data.rate || 0.85; // Use provided rate or default natural pace
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -4497,7 +4497,7 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 0.7;  // Slower for clearer definition reading
+                utterance.rate = 0.85;  // Natural conversational pace (consistent with speakWord)
                 utterance.pitch = 1.0; // Natural neutral female voice
                 utterance.volume = 0.85;
                 
@@ -4782,7 +4782,7 @@ class QuizManager {
                     utterance.voice = window.QUIZ_CACHED_VOICE;
                 }
                 
-                utterance.rate = 0.7; // Slower for clearer introduction
+                utterance.rate = 0.85; // Natural conversational pace (consistent)
                 utterance.pitch = 1.0; // Natural neutral female voice
                 utterance.volume = 0.9;                    utterance.onend = () => {
                         console.log('✅ iOS intro voice completed successfully');
@@ -5936,11 +5936,12 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // DISABLE input until timer starts
+            // ✅ ENABLE input immediately - no waiting for timer
             const spellingInput = document.getElementById('spellingInput');
-            spellingInput.disabled = true;
+            spellingInput.disabled = false;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Wait for timer...';
+            spellingInput.placeholder = 'Type your answer...';
+            spellingInput.focus();
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
@@ -5949,14 +5950,9 @@ class QuizManager {
             this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
-            // Input will be enabled when timer starts
+            // Input is already enabled - users can start typing immediately
             if (this.timerEnabled && this.quizStarted) {
                 await this.announceAndStartTimer();
-            } else {
-                // If timer is disabled, enable input immediately
-                spellingInput.disabled = false;
-                spellingInput.placeholder = 'Type your answer...';
-                spellingInput.focus();
             }
         } catch (error) {
             console.error('Error loading next word:', error);
@@ -6167,7 +6163,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
+    async pronounceWord({ refresh = false, rate = 0.85 } = {}) {
         try {
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
@@ -6178,7 +6174,7 @@ class QuizManager {
                 const data = {
                     word: this.currentWordData.word,
                     definition: this.currentWordData.definition,
-                    rate: rate // Pass speech rate to handlers
+                    rate: rate // Pass speech rate to handlers (default 0.85 - natural pace)
                 };
                 
                 // Start visualizer animation BEFORE speaking
@@ -6233,12 +6229,12 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = 0.85) {
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = rate;
+                utterance.rate = rate; // Default 0.85 - natural conversational pace
                 utterance.pitch = 1.0;
                 utterance.volume = 0.9;
                 
@@ -6281,14 +6277,14 @@ class QuizManager {
         }
     }
 
-    // Pronounce word at slower speed for learning
+    // Pronounce word at natural pace (same as default)
     async pronounceWordSlow() {
-        return await this.pronounceWord({ rate: 0.7 });
+        return await this.pronounceWord({ rate: 0.85 });
     }
 
-    // Repeat word at normal speed
+    // Repeat word at natural pace
     async repeatWord() {
-        return await this.pronounceWord({ rate: 1.0 });
+        return await this.pronounceWord({ rate: 0.85 });
     }
 
     async submitAnswer() {
@@ -7419,7 +7415,7 @@ function pronounceWordFromReport(word) {
             utterance.voice = window.QUIZ_CACHED_VOICE;
         }
         
-        utterance.rate = 0.65;  // Very slow for maximum clarity
+        utterance.rate = 0.85;  // Natural conversational pace (consistent)
         utterance.pitch = 1.0; // Natural neutral female voice
         utterance.volume = 1.0;
         
