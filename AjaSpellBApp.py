@@ -9782,6 +9782,38 @@ def api_get_subscriptions():
             'trace': traceback.format_exc()
         }), 500
 
+@app.route("/subscription")
+@app.route("/premium")
+def subscription_page():
+    """
+    Subscription landing page for BeeSmart Premium
+    Shows all 3 tiers (Monthly, Yearly, Family) with pricing comparison
+    """
+    try:
+        # Check if user is authenticated
+        user_authenticated = 'user_id' in session
+        current_user = None
+        
+        if user_authenticated:
+            user_id = session.get('user_id')
+            current_user = User.query.get(user_id)
+        
+        return render_template(
+            'subscription.html',
+            user_authenticated=user_authenticated,
+            current_user=current_user
+        )
+    
+    except Exception as e:
+        print(f"❌ Error loading subscription page: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template(
+            'subscription.html',
+            user_authenticated=False,
+            current_user=None
+        )
+
 @app.route("/api/speed-round/health")
 def speed_round_health_railway():
     """Speed Round system health check for Railway"""
