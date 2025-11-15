@@ -10467,6 +10467,84 @@
                     count: 26,
                     speed: 1400,
                     distance: 85
+                },
+                // 🤖 EXISTING THEMES - Now with complete particle effects!
+                robot: {
+                    colors: ['#c0c0c0', '#00ffff', '#0080ff'],
+                    symbols: ['🤖', '⚙️', '🔩', '⚡', '💻', '📡', '🔧', '💾', '⌨️', '🖥️', '🔋', '💫'],
+                    count: 26,
+                    speed: 1300,
+                    distance: 85
+                },
+                biker: {
+                    colors: ['#000000', '#ff4500', '#ffd700'],
+                    symbols: ['🏍️', '💨', '⚡', '🔥', '💪', '🛣️', '🏁', '⚙️', '🔧', '💀', '⭐', '💥'],
+                    count: 28,
+                    speed: 1200,
+                    distance: 95
+                },
+                knight: {
+                    colors: ['#c0c0c0', '#4169e1', '#ffd700'],
+                    symbols: ['⚔️', '🛡️', '🏰', '👑', '🏆', '⚡', '🌟', '💫', '🦅', '🗡️', '🏇', '✨'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 85
+                },
+                queen: {
+                    colors: ['#9370db', '#ff1493', '#ffd700'],
+                    symbols: ['👑', '💎', '✨', '🌟', '💫', '⭐', '🌹', '💜', '💖', '👗', '🏰', '🦋'],
+                    count: 30,
+                    speed: 1400,
+                    distance: 90
+                },
+                detective: {
+                    colors: ['#8b4513', '#2f4f4f', '#ffd700'],
+                    symbols: ['🔍', '🕵️', '📝', '💡', '🔎', '📋', '🎩', '🧐', '⚡', '🔦', '📖', '🗝️'],
+                    count: 22,
+                    speed: 1500,
+                    distance: 80
+                },
+                doctor: {
+                    colors: ['#ffffff', '#1e90ff', '#00ff00'],
+                    symbols: ['🩺', '💊', '💉', '🏥', '⚕️', '❤️', '💚', '🩹', '🔬', '📋', '✨', '💫'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 85
+                },
+                builder: {
+                    colors: ['#ff8c00', '#ffff00', '#4682b4'],
+                    symbols: ['🔨', '🔧', '🛠️', '⚒️', '🏗️', '🧱', '📐', '⚙️', '💪', '🏠', '⚡', '🔩'],
+                    count: 26,
+                    speed: 1400,
+                    distance: 85
+                },
+                explorer: {
+                    colors: ['#8b4513', '#228b22', '#ffd700'],
+                    symbols: ['🧭', '🗺️', '🎒', '🏔️', '🌍', '⛰️', '🌲', '🔦', '🧗', '⛺', '🌟', '💫'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 90
+                },
+                space: {
+                    colors: ['#000080', '#4169e1', '#ffffff'],
+                    symbols: ['🚀', '🌟', '⭐', '🌙', '💫', '🌌', '🛸', '👽', '🌠', '🪐', '☄️', '✨'],
+                    count: 28,
+                    speed: 1600,
+                    distance: 100
+                },
+                ocean: {
+                    colors: ['#0080ff', '#00ffff', '#87ceeb'],
+                    symbols: ['🌊', '🐠', '🐟', '🐚', '🦈', '🐙', '💧', '🌈', '🐬', '⚓', '🏄', '🌊'],
+                    count: 26,
+                    speed: 1500,
+                    distance: 90
+                },
+                frankenstein: {
+                    colors: ['#00ff00', '#228b22', '#ffff00'],
+                    symbols: ['⚡', '🧪', '🔬', '💚', '⚙️', '🔩', '🧟', '🌩️', '💥', '🔋', '💫', '✨'],
+                    count: 26,
+                    speed: 1300,
+                    distance: 85
                 }
             };
             
@@ -10580,7 +10658,19 @@
                 zen: { speed: 0.08, bounce: false, wobble: false, float: true }, // Peaceful float
                 energetic: { speed: 0.28, bounce: true, wobble: true, hyperactive: true }, // Buzzing energy
                 classic: { speed: 0.15, bounce: true, wobble: false }, // Traditional bee
-                honeycomb: { speed: 0.14, bounce: true, wobble: false, hexagon: true } // Hexagonal pattern
+                honeycomb: { speed: 0.14, bounce: true, wobble: false, hexagon: true }, // Hexagonal pattern
+                // 🎯 EXISTING THEMES - Now with complete rotation behaviors!
+                robot: { speed: 0.16, bounce: true, wobble: false, mechanical: true }, // Robotic precision
+                biker: { speed: 0.22, bounce: false, wobble: true, lean: true }, // Motorcycle lean
+                knight: { speed: 0.14, bounce: true, wobble: false, march: true }, // Noble march
+                queen: { speed: 0.12, bounce: true, wobble: true, regal: true }, // Royal grace
+                detective: { speed: 0.13, bounce: false, wobble: false, investigate: true }, // Searching motion
+                doctor: { speed: 0.15, bounce: true, wobble: false, examine: true }, // Medical examination
+                builder: { speed: 0.16, bounce: true, wobble: false, hammer: true }, // Hammering motion
+                explorer: { speed: 0.14, bounce: true, wobble: true, trek: true }, // Adventurous trek
+                space: { speed: 0.12, bounce: false, wobble: false, orbit: true }, // Orbital float
+                ocean: { speed: 0.13, bounce: true, wobble: true, swim: true }, // Swimming motion
+                frankenstein: { speed: 0.17, bounce: true, wobble: false, electric: true } // Electric surge
             };
             
             const config = rotationConfigs[theme] || rotationConfigs.mascot;
@@ -10728,6 +10818,92 @@
                     const hexAngle = (currentRotation * 6) % (Math.PI * 2);
                     model.position.x = originalPosition.x + Math.cos(hexAngle) * 0.08;
                     model.position.y = originalPosition.y + Math.sin(hexAngle) * 0.08;
+                }
+                
+                // 🎯 EXISTING THEME ANIMATIONS - Now complete!
+                if (config.mechanical) {
+                    // Robot - Precise mechanical movements
+                    if (animationFrame % 8 === 0) {
+                        model.position.y = originalPosition.y + 0.08;
+                    } else if (animationFrame % 4 === 0) {
+                        model.position.y = originalPosition.y;
+                    }
+                    model.rotation.z = Math.sin(currentRotation * 6) * 0.05;
+                }
+                
+                if (config.lean) {
+                    // Biker - Motorcycle leaning into turns
+                    model.rotation.z = Math.sin(currentRotation * 2) * 0.25;
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 2) * 0.12;
+                }
+                
+                if (config.march) {
+                    // Knight - Noble marching motion
+                    model.position.y = originalPosition.y + Math.abs(Math.sin(currentRotation * 4)) * 0.15;
+                    if (animationFrame % 6 === 0) {
+                        model.rotation.z = (Math.random() - 0.5) * 0.08;
+                    }
+                }
+                
+                if (config.regal) {
+                    // Queen - Graceful royal movement
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 2) * 0.1;
+                    model.rotation.x = Math.sin(currentRotation * 1.5) * 0.06;
+                }
+                
+                if (config.investigate) {
+                    // Detective - Searching/investigating motion
+                    model.rotation.x = Math.sin(currentRotation * 3) * 0.12;
+                    if (animationFrame % 10 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.06;
+                    }
+                }
+                
+                if (config.examine) {
+                    // Doctor - Medical examination motion
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 3) * 0.09;
+                    model.rotation.z = Math.sin(currentRotation * 2) * 0.08;
+                }
+                
+                if (config.hammer) {
+                    // Builder - Hammering motion
+                    if (animationFrame % 6 === 0) {
+                        model.position.y = originalPosition.y + 0.15;
+                        model.rotation.x = 0.2;
+                    } else {
+                        model.position.y = originalPosition.y + Math.sin(currentRotation * 4) * 0.08;
+                        model.rotation.x = Math.sin(currentRotation * 4) * 0.1;
+                    }
+                }
+                
+                if (config.trek) {
+                    // Explorer - Adventurous trekking
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 3) * 0.12;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 3) * 0.08;
+                }
+                
+                if (config.orbit) {
+                    // Space - Orbital floating motion
+                    model.position.x = originalPosition.x + Math.cos(currentRotation * 1.5) * 0.15;
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 1.5) * 0.15;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 2) * 0.06;
+                }
+                
+                if (config.swim) {
+                    // Ocean - Swimming/wave motion
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 4) * 0.12;
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 2) * 0.08;
+                    model.rotation.z = Math.sin(currentRotation * 3) * 0.1;
+                }
+                
+                if (config.electric) {
+                    // Frankenstein - Electric surge effect
+                    if (animationFrame % 4 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.1;
+                        model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.1;
+                        model.position.z = originalPosition.z + (Math.random() - 0.5) * 0.05;
+                    }
+                    model.rotation.y += Math.sin(currentRotation * 5) * 0.02;
                 }
                 
                 // Complete rotation
