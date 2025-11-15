@@ -9814,6 +9814,259 @@ def subscription_page():
             current_user=None
         )
 
+@app.route("/api/validate-receipt", methods=["POST"])
+def validate_receipt():
+    """
+    Validate App Store receipt and update user's subscription status.
+    
+    iOS app sends receipt data after purchase/restore.
+    We validate with Apple's servers and update database.
+    """
+    try:
+        import requests
+        import base64
+        import json
+        from models import User, db
+        
+        # Get receipt data from request
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data provided'
+            }), 400
+        
+        receipt_data = data.get('receipt_data')  # Base64 encoded receipt
+        user_id = data.get('user_id')  # User ID from session/auth
+        
+        if not receipt_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Receipt data required'
+            }), 400
+        
+        # Validate with Apple's servers
+        # Try production first, fall back to sandbox
+        apple_response = None
+        
+        # Production URL
+        production_url = 'https://buy.itunes.apple.com/verifyReceipt'
+        sandbox_url = 'https://sandbox.itunes.apple.com/verifyReceipt'
+        
+        receipt_payload = {
+            'receipt-data': receipt_data,
+            'password': os.getenv('APPLE_SHARED_SECRET'),  # App-specific shared secret from App Store Connect
+            'exclude-old-transactions': True
+        }
+        
+        # Try production first
+        prod_response = requests.post(
+            production_url,
+            json=receipt_payload,
+            timeout=10
+        )
+        
+        if prod_response.status_code == 200:
+            apple_response = prod_response.json()
+            
+            # Status 21007 means sandbox receipt sent to production
+            if apple_response.get('status') == 21007:
+                # Retry with sandbox
+                sandbox_response = requests.post(
+                    sandbox_url,
+                    json=receipt_payload,
+                    timeout=10
+                )
+                if sandbox_response.status_code == 200:
+                    apple_response = sandbox_response.json()
+        
+        if not apple_response:
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to validate receipt with Apple'
+            }), 500
+        
+        # Check validation status
+        status_code = apple_response.get('status')
+        
+        if status_code != 0:
+            # Non-zero status means validation failed
+            error_messages = {
+                21000: 'App Store could not read receipt',
+                21002: 'Receipt data was malformed',
+                21003: 'Receipt could not be authenticated',
+                21004: 'Shared secret does not match',
+                21005: 'Receipt server unavailable',
+                21006: 'Receipt is valid but subscription expired',
+                21007: 'Sandbox receipt sent to production',
+                21008: 'Production receipt sent to sandbox',
+                21010: 'Receipt could not be authorized'
+            }
+            
+            return jsonify({
+                'status': 'error',
+                'message': error_messages.get(status_code, f'Validation failed: {status_code}'),
+                'apple_status': status_code
+            }), 400
+        
+        # Receipt is valid! Update user subscription
+        if user_id:
+            user = User.query.get(user_id)
+            if user:
+                success = user.update_subscription(apple_response)
+                if success:
+                    db.session.commit()
+                    
+                    return jsonify({
+                        'status': 'success',
+                        'message': 'Subscription validated and updated',
+                        'subscription': user.get_subscription_status()
+                    }), 200
+                else:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Failed to update subscription'
+                    }), 500
+        
+        # Return validation success even if user not found
+        return jsonify({
+            'status': 'success',
+            'message': 'Receipt validated successfully',
+            'subscription_active': True
+        }), 200
+        
+    except requests.Timeout:
+        return jsonify({
+            'status': 'error',
+            'message': 'Apple verification timed out'
+        }), 504
+        
+    except Exception as e:
+        print(f"❌ Error validating receipt: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route("/apple-webhook", methods=["POST"])
+def apple_subscription_webhook():
+    """
+    Apple App Store Server-to-Server Notifications webhook.
+    
+    Apple automatically POSTs to this endpoint for subscription events:
+    - DID_RENEW: Subscription renewed successfully
+    - DID_FAIL_TO_RENEW: Billing failed (enters grace period)
+    - DID_CHANGE_RENEWAL_STATUS: User canceled or re-enabled auto-renew
+    - REFUND: User received refund
+    - CANCEL: Subscription canceled by Apple support
+    
+    Setup in App Store Connect:
+    App → General → App Information → App Store Server Notifications
+    URL: https://your-domain.com/apple-webhook
+    """
+    try:
+        from models import User, db
+        import json
+        
+        # Get notification from Apple
+        notification = request.get_json()
+        
+        if not notification:
+            return jsonify({'status': 'error', 'message': 'No notification data'}), 400
+        
+        # Extract notification type and receipt data
+        notification_type = notification.get('notification_type')
+        unified_receipt = notification.get('unified_receipt', {})
+        latest_receipt_info = unified_receipt.get('latest_receipt_info', [{}])[0]
+        pending_renewal_info = unified_receipt.get('pending_renewal_info', [{}])[0]
+        
+        # Get user by original transaction ID
+        original_transaction_id = latest_receipt_info.get('original_transaction_id')
+        
+        if not original_transaction_id:
+            print(f"⚠️ No transaction ID in webhook: {notification_type}")
+            return jsonify({'status': 'received'}), 200
+        
+        user = User.query.filter_by(original_transaction_id=original_transaction_id).first()
+        
+        if not user:
+            print(f"⚠️ No user found for transaction: {original_transaction_id}")
+            return jsonify({'status': 'received'}), 200
+        
+        print(f"📱 Apple webhook: {notification_type} for user {user.id}")
+        
+        # Handle different notification types
+        if notification_type == 'DID_RENEW':
+            # Subscription renewed successfully
+            user.update_subscription(unified_receipt)
+            user.subscription_status = 'active'
+            user.subscription_canceled_at = None
+            print(f"✅ Subscription renewed for user {user.id}")
+        
+        elif notification_type == 'DID_FAIL_TO_RENEW':
+            # Billing failed - enters grace period
+            user.subscription_status = 'grace_period'
+            print(f"⚠️ Billing failed for user {user.id} - grace period active")
+        
+        elif notification_type == 'DID_CHANGE_RENEWAL_STATUS':
+            # User changed auto-renew setting
+            auto_renew_status = pending_renewal_info.get('auto_renew_status')
+            
+            if auto_renew_status == '0':
+                # User canceled - mark cancellation but keep access until expiration
+                user.subscription_auto_renew = False
+                user.subscription_canceled_at = datetime.utcnow()
+                user.subscription_status = 'canceled'  # Will expire at subscription_expires_at
+                print(f"❌ User {user.id} canceled subscription")
+            else:
+                # User re-enabled auto-renew
+                user.subscription_auto_renew = True
+                user.subscription_canceled_at = None
+                user.subscription_status = 'active'
+                print(f"✅ User {user.id} re-enabled auto-renew")
+        
+        elif notification_type == 'REFUND':
+            # User received refund - immediately revoke access
+            user.subscription_status = 'refunded'
+            user.subscription_expires_at = datetime.utcnow()
+            user.premium_member = False
+            print(f"💸 Refund processed for user {user.id}")
+        
+        elif notification_type == 'CANCEL':
+            # Apple support canceled subscription
+            user.subscription_status = 'canceled'
+            user.subscription_expires_at = datetime.utcnow()
+            user.premium_member = False
+            print(f"🚫 Subscription canceled by Apple for user {user.id}")
+        
+        elif notification_type == 'INITIAL_BUY':
+            # New subscription
+            user.update_subscription(unified_receipt)
+            user.subscription_status = 'active'
+            print(f"🎉 New subscription for user {user.id}")
+        
+        elif notification_type == 'DID_RECOVER':
+            # Billing recovered after grace period
+            user.update_subscription(unified_receipt)
+            user.subscription_status = 'active'
+            print(f"💚 Billing recovered for user {user.id}")
+        
+        # Commit changes
+        db.session.commit()
+        
+        return jsonify({'status': 'received'}), 200
+        
+    except Exception as e:
+        print(f"❌ Apple webhook error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Always return 200 to Apple (don't retry on our errors)
+        return jsonify({'status': 'error', 'message': str(e)}), 200
+
 @app.route("/api/speed-round/health")
 def speed_round_health_railway():
     """Speed Round system health check for Railway"""

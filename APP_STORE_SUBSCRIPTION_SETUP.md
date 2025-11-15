@@ -405,6 +405,177 @@ After launch, monitor in App Store Connect:
 
 ---
 
+## Step 11: Server-to-Server Notifications (Critical!)
+
+### Why You Need This
+Server-to-Server notifications allow Apple to automatically notify your backend when subscription events happen:
+- Renewals (monthly/yearly)
+- Cancellations
+- Billing failures
+- Refunds
+- Upgrades/downgrades
+
+**Without this**, you'd have to manually check subscription status every time a user opens the app. **With this**, Apple automatically keeps your database in sync.
+
+### Setup in App Store Connect
+
+1. **Navigate to App Information**:
+   - App Store Connect → My Apps → BeeSmart Spelling Bee
+   - Click **General** → **App Information**
+
+2. **Scroll to "App Store Server Notifications"**
+
+3. **Production Server URL**:
+   ```
+   https://your-railway-domain.up.railway.app/apple-webhook
+   ```
+   
+   Replace `your-railway-domain` with your actual Railway URL (e.g., `beesmart-production.up.railway.app`)
+
+4. **Version**: Select **Version 2** (recommended)
+
+5. **Save**
+
+### Get Your Railway URL
+
+```bash
+# In Railway dashboard:
+# Project → Settings → Domains → Copy your domain
+
+# Example URL:
+https://beesmart-production.up.railway.app/apple-webhook
+```
+
+### Webhook Events Your Backend Handles
+
+| Event Type | What Happens | Backend Action |
+|------------|--------------|----------------|
+| `INITIAL_BUY` | User subscribes for first time | Set subscription_status='active', record transaction ID |
+| `DID_RENEW` | Subscription renewed successfully | Extend subscription_expires_at, keep status='active' |
+| `DID_FAIL_TO_RENEW` | Billing failed (card declined) | Set status='grace_period', keep access for 16 days |
+| `DID_CHANGE_RENEWAL_STATUS` | User canceled or re-enabled | Update auto_renew flag, set canceled_at if canceled |
+| `DID_RECOVER` | Billing recovered after grace | Set status='active', extend expiration |
+| `REFUND` | User received refund | Revoke access immediately, set status='refunded' |
+| `CANCEL` | Apple support canceled | Revoke access, set status='canceled' |
+
+### Testing Webhook
+
+**Sandbox Testing** (during development):
+```bash
+# Apple will send test notifications to your webhook
+# Check Railway logs to see incoming notifications
+
+# View logs:
+railway logs -f
+```
+
+**Test Payload** (what Apple sends):
+```json
+{
+  "notification_type": "DID_RENEW",
+  "unified_receipt": {
+    "latest_receipt_info": [{
+      "product_id": "beesmart.premium.monthly",
+      "original_transaction_id": "1000000123456789",
+      "expires_date_ms": "1700000000000",
+      "purchase_date_ms": "1697000000000"
+    }],
+    "pending_renewal_info": [{
+      "auto_renew_status": "1",
+      "is_in_billing_retry_period": "0"
+    }]
+  }
+}
+```
+
+### Important: APPLE_SHARED_SECRET
+
+Your webhook endpoint needs to validate receipts. You **must** set this environment variable:
+
+1. **Get Shared Secret** from App Store Connect:
+   - My Apps → BeeSmart Spelling Bee
+   - App Information → App-Specific Shared Secret
+   - Click **Generate** (if not already created)
+   - Copy the secret (looks like: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`)
+
+2. **Add to Railway**:
+   ```bash
+   # Railway Dashboard:
+   # Project → Variables → New Variable
+   
+   # Variable name:
+   APPLE_SHARED_SECRET
+   
+   # Value:
+   a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+   ```
+
+3. **Redeploy** your Railway app after adding the variable
+
+### Webhook Security
+
+Apple's webhook is **not authenticated** by default. Best practices:
+
+1. **Validate Receipt**: Always validate the receipt data with Apple before trusting it
+2. **HTTPS Only**: Apple only sends to HTTPS endpoints (Railway provides this)
+3. **Verify Payload**: Check that `original_transaction_id` exists in your database
+
+Your backend (`/apple-webhook`) already implements these checks.
+
+---
+
+## Step 12: Database Migration
+
+### Run Migration Script
+
+After deploying your updated code with subscription fields, run the migration:
+
+```bash
+# SSH into Railway or run locally with production DATABASE_URL
+
+python scripts/migrate_subscription_fields.py
+```
+
+**What this does**:
+- Adds 10 new columns to `users` table
+- Creates indexes for query performance
+- Verifies all columns exist
+- Tests subscription query
+
+**Expected output**:
+```
+✅ Columns added: 10
+✅ Added index: idx_users_subscription_type
+✅ Added index: idx_users_subscription_expires
+✅ Added index: idx_users_original_transaction
+✨ Migration completed successfully!
+```
+
+### Manual Migration (if script fails)
+
+If you need to run SQL manually:
+
+```sql
+-- Add subscription columns
+ALTER TABLE users ADD COLUMN subscription_type VARCHAR(50);
+ALTER TABLE users ADD COLUMN subscription_product_id VARCHAR(100);
+ALTER TABLE users ADD COLUMN subscription_status VARCHAR(20) DEFAULT 'none';
+ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN subscription_auto_renew BOOLEAN DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN original_transaction_id VARCHAR(100) UNIQUE;
+ALTER TABLE users ADD COLUMN latest_receipt_data TEXT;
+ALTER TABLE users ADD COLUMN subscription_started_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN subscription_canceled_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN family_shared_from VARCHAR(100);
+
+-- Add indexes
+CREATE INDEX idx_users_subscription_type ON users(subscription_type);
+CREATE INDEX idx_users_subscription_expires ON users(subscription_expires_at);
+CREATE INDEX idx_users_original_transaction ON users(original_transaction_id);
+```
+
+---
+
 ## Support Resources
 
 - [Apple Subscription Documentation](https://developer.apple.com/app-store/subscriptions/)

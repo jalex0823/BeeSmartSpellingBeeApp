@@ -52,6 +52,18 @@ class User(UserMixin, db.Model):
     premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
     admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
     
+    # 📱 App Store Subscription System
+    subscription_type = db.Column(db.String(50), index=True)  # 'monthly', 'yearly', 'family', or None
+    subscription_product_id = db.Column(db.String(100))  # e.g., 'beesmart.premium.monthly'
+    subscription_status = db.Column(db.String(20), default='none')  # 'active', 'grace_period', 'expired', 'canceled', 'none'
+    subscription_expires_at = db.Column(db.DateTime, index=True)  # When current subscription period ends
+    subscription_auto_renew = db.Column(db.Boolean, default=True)  # Whether auto-renewal is enabled
+    original_transaction_id = db.Column(db.String(100), unique=True, index=True)  # Apple's unique transaction ID
+    latest_receipt_data = db.Column(db.Text)  # Latest App Store receipt (base64)
+    subscription_started_at = db.Column(db.DateTime)  # When subscription first started
+    subscription_canceled_at = db.Column(db.DateTime)  # When user canceled (still has access until expires_at)
+    family_shared_from = db.Column(db.String(100))  # If using family sharing, original subscriber's transaction ID
+    
     # �📊 GPA Tracking
     cumulative_gpa = db.Column(db.Numeric(3, 2), default=0.0)  # 0.00 to 4.00 scale
     average_accuracy = db.Column(db.Numeric(5, 2), default=0.0)  # 0.00 to 100.00%
@@ -236,6 +248,119 @@ class User(UserMixin, db.Model):
             return False, "Avatar already purchased"
         
         self.purchased_avatars.append(avatar_id)
+        return True, f"Avatar {avatar_id} purchased successfully"
+    
+    # 📱 Subscription Helper Methods
+    
+    def is_premium_active(self) -> bool:
+        """
+        Check if user has active premium subscription.
+        
+        Returns True if:
+        - Admin/admin_all_access (bypass)
+        - Active subscription that hasn't expired
+        - Subscription in grace period (billing issue)
+        """
+        # Admin bypass
+        if self.role == 'admin' or self.admin_all_access:
+            return True
+        
+        # Legacy premium_member flag (backward compatibility)
+        if self.premium_member:
+            return True
+        
+        # Check subscription status
+        if not self.subscription_status or self.subscription_status == 'none':
+            return False
+        
+        # Active subscription or grace period
+        if self.subscription_status in ['active', 'grace_period']:
+            # Verify not expired
+            if self.subscription_expires_at:
+                return datetime.utcnow() < self.subscription_expires_at
+            return True  # Active status but no expiration means lifetime
+        
+        return False
+    
+    def get_subscription_status(self) -> dict:
+        """
+        Get comprehensive subscription status information.
+        
+        Returns:
+            dict: Subscription details including type, status, expiration, auto-renew
+        """
+        return {
+            'is_premium': self.is_premium_active(),
+            'subscription_type': self.subscription_type,
+            'product_id': self.subscription_product_id,
+            'status': self.subscription_status or 'none',
+            'expires_at': self.subscription_expires_at.isoformat() if self.subscription_expires_at else None,
+            'auto_renew': self.subscription_auto_renew,
+            'started_at': self.subscription_started_at.isoformat() if self.subscription_started_at else None,
+            'canceled_at': self.subscription_canceled_at.isoformat() if self.subscription_canceled_at else None,
+            'family_shared': bool(self.family_shared_from),
+            'days_remaining': (self.subscription_expires_at - datetime.utcnow()).days if self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow() else 0
+        }
+    
+    def update_subscription(self, receipt_data: dict) -> bool:
+        """
+        Update subscription status from App Store receipt data.
+        
+        Args:
+            receipt_data: Decoded receipt from Apple's verification response
+        
+        Returns:
+            bool: True if subscription updated successfully
+        """
+        try:
+            from datetime import datetime, timezone
+            
+            # Extract subscription info from latest_receipt_info
+            latest_info = receipt_data.get('latest_receipt_info', [{}])[0]
+            
+            self.subscription_product_id = latest_info.get('product_id')
+            self.original_transaction_id = latest_info.get('original_transaction_id')
+            
+            # Determine subscription type from product ID
+            if 'monthly' in self.subscription_product_id:
+                self.subscription_type = 'family' if 'family' in self.subscription_product_id else 'monthly'
+            elif 'yearly' in self.subscription_product_id:
+                self.subscription_type = 'yearly'
+            
+            # Parse expiration date (Apple sends milliseconds since epoch)
+            expires_ms = int(latest_info.get('expires_date_ms', 0))
+            if expires_ms:
+                self.subscription_expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc).replace(tzinfo=None)
+            
+            # Set subscription start date if first time
+            if not self.subscription_started_at:
+                purchase_ms = int(latest_info.get('purchase_date_ms', 0))
+                if purchase_ms:
+                    self.subscription_started_at = datetime.fromtimestamp(purchase_ms / 1000, tz=timezone.utc).replace(tzinfo=None)
+            
+            # Check auto-renew status
+            pending_renewal = receipt_data.get('pending_renewal_info', [{}])[0]
+            self.subscription_auto_renew = pending_renewal.get('auto_renew_status') == '1'
+            
+            # Determine status
+            if self.subscription_expires_at and datetime.utcnow() < self.subscription_expires_at:
+                # Check if in billing retry (grace period)
+                is_in_billing_retry = pending_renewal.get('is_in_billing_retry_period') == '1'
+                self.subscription_status = 'grace_period' if is_in_billing_retry else 'active'
+            else:
+                self.subscription_status = 'expired'
+            
+            # Store latest receipt for future validation
+            self.latest_receipt_data = receipt_data.get('latest_receipt')
+            
+            # Update legacy premium_member flag for backward compatibility
+            self.premium_member = self.is_premium_active()
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error updating subscription: {e}")
+            return False
         return True, f"Avatar {avatar_id} purchased successfully"
     
     def purchase_bundle(self, bundle_id: str, included_avatars: list) -> tuple[bool, str]:
