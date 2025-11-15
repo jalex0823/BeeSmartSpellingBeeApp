@@ -712,14 +712,14 @@
             overflow: visible;        /* Prevent clipping of 3D avatar */
             z-index: 30;              /* Ensure the avatar/name area sits above following sections */
             /* Perfect centering alignment to match main menu column */
-            max-width: 420px;
+            max-width: 100%;
             margin: 0 auto;
         }
         
-        /* FINAL CONTAINER SIZE - Enlarged for better avatar detail showcase */
+        /* FINAL CONTAINER SIZE - Enlarged and centered for better avatar showcase */
         div#mascotBee3D {
-            width: 400px !important;
-            height: 350px !important;
+            width: 480px !important;
+            height: 420px !important;
             margin: 0 auto 1.2rem auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
@@ -2536,13 +2536,15 @@
                     border: 0;                 /* no outer panel border */
                     padding: 0;                /* flush to preview box */
                     box-shadow: none;          /* remove panel glow */
-                    max-width: clamp(400px, 80vw, 640px);
+                    max-width: 100%;
                     margin: 0 auto 12px auto;
+                    display: flex;
+                    justify-content: center;
                 ">
-                    <!-- Enlarged aspect for better avatar detail showcase with enhanced drop-shadow -->
+                    <!-- Enlarged and centered avatar container for better detail showcase -->
                     <div class="preview-avatar-container" style="
-                        width: 400px;                     /* enlarged from 240px for better detail */
-                        height: 350px;                    /* enlarged from 180px for better detail */
+                        width: 480px;                     /* enlarged from 400px for better detail */
+                        height: 420px;                    /* enlarged from 350px for better detail */
                         background: transparent;
                         border: 0;
                         border-radius: 20px;
