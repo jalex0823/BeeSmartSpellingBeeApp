@@ -52,17 +52,17 @@ class User(UserMixin, db.Model):
     premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
     admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
     
-    # 📱 App Store Subscription System
-    subscription_type = db.Column(db.String(50), index=True)  # 'monthly', 'yearly', 'family', or None
-    subscription_product_id = db.Column(db.String(100))  # e.g., 'beesmart.premium.monthly'
-    subscription_status = db.Column(db.String(20), default='none')  # 'active', 'grace_period', 'expired', 'canceled', 'none'
-    subscription_expires_at = db.Column(db.DateTime, index=True)  # When current subscription period ends
-    subscription_auto_renew = db.Column(db.Boolean, default=True)  # Whether auto-renewal is enabled
-    original_transaction_id = db.Column(db.String(100), unique=True, index=True)  # Apple's unique transaction ID
-    latest_receipt_data = db.Column(db.Text)  # Latest App Store receipt (base64)
-    subscription_started_at = db.Column(db.DateTime)  # When subscription first started
-    subscription_canceled_at = db.Column(db.DateTime)  # When user canceled (still has access until expires_at)
-    family_shared_from = db.Column(db.String(100))  # If using family sharing, original subscriber's transaction ID
+    # 📱 App Store Subscription System (nullable until migration)
+    subscription_type = db.Column(db.String(50), nullable=True, index=True)  # 'monthly', 'yearly', 'family', or None
+    subscription_product_id = db.Column(db.String(100), nullable=True)  # e.g., 'beesmart.premium.monthly'
+    subscription_status = db.Column(db.String(20), nullable=True, default='none')  # 'active', 'grace_period', 'expired', 'canceled', 'none'
+    subscription_expires_at = db.Column(db.DateTime, nullable=True, index=True)  # When current subscription period ends
+    subscription_auto_renew = db.Column(db.Boolean, nullable=True, default=True)  # Whether auto-renewal is enabled
+    original_transaction_id = db.Column(db.String(100), nullable=True, unique=True, index=True)  # Apple's unique transaction ID
+    latest_receipt_data = db.Column(db.Text, nullable=True)  # Latest App Store receipt (base64)
+    subscription_started_at = db.Column(db.DateTime, nullable=True)  # When subscription first started
+    subscription_canceled_at = db.Column(db.DateTime, nullable=True)  # When user canceled (still has access until expires_at)
+    family_shared_from = db.Column(db.String(100), nullable=True)  # If using family sharing, original subscriber's transaction ID
     
     # �📊 GPA Tracking
     cumulative_gpa = db.Column(db.Numeric(3, 2), default=0.0)  # 0.00 to 4.00 scale
@@ -269,6 +269,10 @@ class User(UserMixin, db.Model):
         if self.premium_member:
             return True
         
+        # Check if subscription columns exist (migration check)
+        if not hasattr(self, 'subscription_status'):
+            return False
+        
         # Check subscription status
         if not self.subscription_status or self.subscription_status == 'none':
             return False
@@ -276,7 +280,7 @@ class User(UserMixin, db.Model):
         # Active subscription or grace period
         if self.subscription_status in ['active', 'grace_period']:
             # Verify not expired
-            if self.subscription_expires_at:
+            if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at:
                 return datetime.utcnow() < self.subscription_expires_at
             return True  # Active status but no expiration means lifetime
         
@@ -289,17 +293,32 @@ class User(UserMixin, db.Model):
         Returns:
             dict: Subscription details including type, status, expiration, auto-renew
         """
+        # Check if subscription columns exist (migration check)
+        if not hasattr(self, 'subscription_status'):
+            return {
+                'is_premium': self.premium_member or False,
+                'subscription_type': 'none',
+                'product_id': None,
+                'status': 'none',
+                'expires_at': None,
+                'auto_renew': False,
+                'started_at': None,
+                'canceled_at': None,
+                'family_shared': False,
+                'days_remaining': 0
+            }
+        
         return {
             'is_premium': self.is_premium_active(),
-            'subscription_type': self.subscription_type,
-            'product_id': self.subscription_product_id,
-            'status': self.subscription_status or 'none',
-            'expires_at': self.subscription_expires_at.isoformat() if self.subscription_expires_at else None,
-            'auto_renew': self.subscription_auto_renew,
-            'started_at': self.subscription_started_at.isoformat() if self.subscription_started_at else None,
-            'canceled_at': self.subscription_canceled_at.isoformat() if self.subscription_canceled_at else None,
-            'family_shared': bool(self.family_shared_from),
-            'days_remaining': (self.subscription_expires_at - datetime.utcnow()).days if self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow() else 0
+            'subscription_type': getattr(self, 'subscription_type', None),
+            'product_id': getattr(self, 'subscription_product_id', None),
+            'status': getattr(self, 'subscription_status', 'none') or 'none',
+            'expires_at': self.subscription_expires_at.isoformat() if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at else None,
+            'auto_renew': getattr(self, 'subscription_auto_renew', False),
+            'started_at': self.subscription_started_at.isoformat() if hasattr(self, 'subscription_started_at') and self.subscription_started_at else None,
+            'canceled_at': self.subscription_canceled_at.isoformat() if hasattr(self, 'subscription_canceled_at') and self.subscription_canceled_at else None,
+            'family_shared': bool(getattr(self, 'family_shared_from', None)),
+            'days_remaining': (self.subscription_expires_at - datetime.utcnow()).days if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow() else 0
         }
     
     def update_subscription(self, receipt_data: dict) -> bool:
