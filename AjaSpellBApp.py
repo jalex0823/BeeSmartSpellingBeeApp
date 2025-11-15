@@ -9335,6 +9335,20 @@ def api_get_avatars():
                     thumb_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
                     thumb_cb = _cachebust_url(thumb_url) if thumb_url else None
 
+                    # Build urls object with GLB support
+                    model_obj_url = f"{base_path}/{avatar.obj_file}"
+                    urls_obj = {
+                        'model_obj': model_obj_url,
+                        'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+                        'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+                        'thumbnail': thumb_cb,
+                        'preview': thumb_cb,
+                    }
+                    
+                    # If it's a GLB file, add explicit glb key for GLTFLoader
+                    if is_glb:
+                        urls_obj['glb'] = model_obj_url
+
                     enriched_avatars.append({
                         'id': avatar.slug,
                         'name': avatar.name,
@@ -9344,13 +9358,7 @@ def api_get_avatars():
                         'is_glb': is_glb,
                         'thumbnail': thumb_cb,
                         'preview': thumb_cb,
-                        'urls': {
-                            'model_obj': f"{base_path}/{avatar.obj_file}",
-                            'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-                            'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-                            'thumbnail': thumb_cb,
-                            'preview': thumb_cb,
-                        },
+                        'urls': urls_obj,
                         'unlock_level': avatar.unlock_level,
                         'points_required': avatar.points_required,
                         'is_premium': avatar.is_premium,
@@ -9525,7 +9533,8 @@ def api_get_avatars():
                 'thumbnail': thumb_cb,
                 'preview': thumb_cb,
                 'urls': {
-                    'model_obj': model_url,
+                    'glb': model_url,  # PRIMARY: GLB file path for GLTFLoader
+                    'model_obj': model_url,  # BACKUP: For compatibility with code checking model_obj
                     'model_mtl': None,
                     'texture': None,
                     'thumbnail': thumb_cb,
