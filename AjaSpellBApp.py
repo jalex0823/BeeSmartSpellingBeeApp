@@ -9821,6 +9821,16 @@ def validate_receipt():
     
     iOS app sends receipt data after purchase/restore.
     We validate with Apple's servers and update database.
+    
+    TEMPORARILY DISABLED: Database migration required.
+    """
+    return jsonify({
+        'status': 'error',
+        'message': 'Subscription system temporarily disabled for database migration',
+        'migration_needed': True
+    }), 503
+    
+    # DISABLED CODE - Will be re-enabled after migration
     """
     try:
         import requests
@@ -9958,6 +9968,8 @@ def validate_receipt():
             'status': 'error',
             'message': str(e)
         }), 500
+    """
+    # END DISABLED CODE
 
 @app.route("/apple-webhook", methods=["POST"])
 def apple_subscription_webhook():
@@ -9971,6 +9983,12 @@ def apple_subscription_webhook():
     - REFUND: User received refund
     - CANCEL: Subscription canceled by Apple support
     
+    TEMPORARILY DISABLED: Database migration required.
+    """
+    return jsonify({'status': 'received', 'migration_needed': True}), 200
+    
+    # DISABLED CODE - Will be re-enabled after migration
+    """
     Setup in App Store Connect:
     App → General → App Information → App Store Server Notifications
     URL: https://your-domain.com/apple-webhook
@@ -10078,6 +10096,8 @@ def apple_subscription_webhook():
         
         # Always return 200 to Apple (don't retry on our errors)
         return jsonify({'status': 'error', 'message': str(e)}), 200
+    """
+    # END DISABLED CODE
 
 @app.route("/api/speed-round/health")
 def speed_round_health_railway():
