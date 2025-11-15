@@ -4154,6 +4154,31 @@
         
         let currentSelection = null;
         
+        // 📱 Auto-scroll utility for mobile - scrolls opened content into view
+        function autoScrollToElement(element, offset = -20) {
+            if (!element) return;
+            
+            // Detect mobile device
+            const isMobile = window.innerWidth <= 768 || /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Small delay to allow content to render
+                setTimeout(() => {
+                    const rect = element.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const elementTop = rect.top + scrollTop + offset;
+                    
+                    // Smooth scroll to element
+                    window.scrollTo({
+                        top: elementTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    console.log('📱 Auto-scrolled to opened item for mobile');
+                }, 150);
+            }
+        }
+        
         function selectOption(type, element) {
             console.log('selectOption called with type:', type);
             
@@ -4192,6 +4217,8 @@
             // Add active to clicked/resolved option
             if (element) {
                 element.classList.add('active');
+                // 📱 Auto-scroll to the selected option on mobile
+                autoScrollToElement(element);
             }
             currentSelection = type;
             
