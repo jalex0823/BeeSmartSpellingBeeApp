@@ -2111,12 +2111,18 @@ def get_wordbank() -> List[Dict[str, str]]:
     if not isinstance(wb, list):
         wb = []
 
+    # Check suppression flag - if set, do NOT auto-load defaults
+    if session.get("suppress_default"):
+        print("DEBUG get_wordbank: Suppression flag set, skipping default auto-load")
+        session["wordbank_count"] = len(wb)
+        return wb
+
     # Smart default load for brand-new sessions with nothing uploaded yet
     if not wb and not session.get("skip_default_load", False) and not session.get("has_uploaded_once", False):
         print("DEBUG get_wordbank: New/empty session detected, loading default demo words")
         default_words = load_default_wordbank()
         if default_words:
-            set_wordbank(default_words, is_user_upload=False)
+            set_wordbank(default_words, is_user_upload=False, source='default')
             wb = default_words
             session["using_default_words"] = True
             print(f"DEBUG get_wordbank: Loaded {len(wb)} default demo words for new session")
@@ -2125,24 +2131,54 @@ def get_wordbank() -> List[Dict[str, str]]:
     print(f"DEBUG get_wordbank: Retrieved {len(wb)} words from server-side session, session keys: {list(session.keys())}")
     return wb
 
-def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Persist the full wordbank in the server-side session store."""
-    print(f"DEBUG set_wordbank: Storing {len(rows)} words directly in server-side session (is_user_upload={is_user_upload})")
+def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False, source: str = None, list_id: Optional[int] = None):
+    """Persist the full wordbank in the server-side session store.
     
-    session[DATA_KEY] = rows
+    This REPLACES any existing wordbank and resets quiz state.
+    
+    Args:
+        rows: List of word dictionaries to store
+        is_user_upload: Whether this is a user upload (for legacy compatibility)
+        source: Source of the words ('uploaded', 'saved_list', 'default', etc.)
+        list_id: Optional saved list ID if source is 'saved_list'
+    """
+    print(f"DEBUG set_wordbank: Storing {len(rows)} words directly in server-side session (is_user_upload={is_user_upload}, source={source})")
+    
+    # REPLACE wordbank completely
+    session[DATA_KEY] = list(rows) if rows else []
     session["wordbank_count"] = len(rows)
+    
     # Clear any legacy indirection
     session.pop("wordbank_storage_id", None)
-    session.modified = True
-
+    
+    # Track word source
+    if source:
+        session['word_source'] = source
+    elif is_user_upload:
+        session['word_source'] = 'uploaded'
+    
+    # Track saved list ID if applicable
+    if list_id:
+        session['active_list_id'] = int(list_id)
+    else:
+        session.pop('active_list_id', None)
+    
+    # Clear suppression flag when new words are loaded
+    session.pop('suppress_default', None)
+    
+    # Legacy flags
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
         print("DEBUG set_wordbank: Marked as user upload - has_uploaded_once=True")
-
+    
     # Always clear skip flag when new words are loaded
     session.pop("skip_default_load", None)
     
+    # Reset quiz state whenever wordbank changes
+    reset_quiz_state()
+    
+    session.modified = True
     print(f"DEBUG set_wordbank: Server-side session updated, keys={list(session.keys())}")
 
 def init_quiz_state():
@@ -2196,6 +2232,52 @@ def init_quiz_state():
 
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
+
+def reset_quiz_state():
+    """Clear all quiz-related session state without touching wordbank."""
+    for key in [
+        'current_index', 'correct_count', 'incorrect_count', 'streak_count',
+        'session_points', 'incorrect_words', 'last_word', 'last_result',
+        'badges_earned', 'speed_round', 'quiz_started', 'quiz_complete'
+    ]:
+        session.pop(key, None)
+    session.pop(QUIZ_STATE_KEY, None)
+    session.modified = True
+    print("DEBUG reset_quiz_state: Cleared all quiz-related state")
+
+def clear_wordbank_and_state():
+    """Completely clear wordbank and quiz state, then set suppression flag."""
+    # Clear wordbank
+    session.pop(DATA_KEY, None)
+    session.pop('wordbank_count', None)
+    session.pop('wordbank_storage_id', None)
+    session.pop('word_source', None)
+    session.pop('active_list_id', None)
+    session.pop('using_default_words', None)
+    session.pop('has_uploaded_once', None)
+    session.pop('skip_default_load', None)
+    
+    # Clear from WORD_STORAGE if needed
+    storage_id = session.get("wordbank_storage_id")
+    if storage_id:
+        with WORD_STORAGE_LOCK:
+            WORD_STORAGE.pop(storage_id, None)
+    
+    # Clear quiz state
+    reset_quiz_state()
+    
+    # Set suppression flag to prevent auto-loading defaults
+    session['suppress_default'] = True
+    session.modified = True
+    print("DEBUG clear_wordbank_and_state: Cleared all wordbank and quiz state, set suppression flag")
+
+def load_default_words_list() -> List[Dict[str, str]]:
+    """Load and return the default word list without modifying session.
+    
+    This is a refactored version of the loading logic that returns words
+    instead of setting them directly in the session.
+    """
+    return load_default_wordbank()
 
 # Register Battle of the Bees API Blueprint
 print("🔧 Registering Battle API...")
@@ -2345,16 +2427,12 @@ def load_saved_wordlist():
         if not rows:
             return jsonify({"ok": False, "error": "This list has no items"}), 400
 
-        # Explicitly clear any previous quiz state BEFORE loading new words to avoid stale stats
-        if session.get(QUIZ_STATE_KEY):
-            print(f"DEBUG /api/saved-lists/load: Clearing previous quiz state for session_id={session.get('session_id')}")
-            session.pop(QUIZ_STATE_KEY, None)
-            session.modified = True
-
-        # Load into session for quiz use (not marked as user upload so defaults like skip_default_load remain consistent)
-        set_wordbank(rows, is_user_upload=False)
-        # Re-initialize quiz state with fresh order & counters
+        # Use new set_wordbank with REPLACE semantics and source tracking
+        set_wordbank(rows, is_user_upload=False, source='saved_list', list_id=wl.id)
+        
+        # Initialize quiz state (now done inside set_wordbank, but call again for DB session creation)
         init_quiz_state()
+        
         # Safety: ensure new quiz state reflects new word count
         fresh_state = get_quiz_state()
         if fresh_state and len(fresh_state.get("order", [])) != len(rows):
@@ -3799,12 +3877,32 @@ def api_battle_export_DEPRECATED(battle_code):
 def api_get_wordbank():
     # Enhanced debugging for mobile troubleshooting
     storage_id = session.get("wordbank_storage_id")
-    words = get_wordbank()
+    suppress_flag = session.get("suppress_default", False)
     
     print(f"DEBUG /api/wordbank: session_id={session.get('session_id', 'NONE')}, "
-          f"storage_id={storage_id}, word_count={len(words)}, "
+          f"storage_id={storage_id}, suppress_default={suppress_flag}, "
           f"session_keys={list(session.keys())}, "
           f"user_agent={request.headers.get('User-Agent', 'UNKNOWN')[:50]}")
+    
+    # Check suppression flag first
+    if suppress_flag:
+        wb = session.get(DATA_KEY, [])
+        if not wb:
+            print("DEBUG /api/wordbank: Suppression flag active and wordbank empty")
+            response = jsonify({
+                "words": [],
+                "success": False,
+                "count": 0,
+                "suppressed": True
+            })
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
+    
+    words = get_wordbank()
+    
+    print(f"DEBUG /api/wordbank: Returning {len(words)} words")
     
     # Check if storage exists in WORD_STORAGE
     if storage_id:
@@ -3816,7 +3914,8 @@ def api_get_wordbank():
     response = jsonify({
         "words": words,
         "success": len(words) > 0,
-        "count": len(words)
+        "count": len(words),
+        "suppressed": False
     })
     # Add cache-control headers to prevent Safari caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -4368,8 +4467,8 @@ def api_upload():
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
     
-    # Set wordbank (USER UPLOAD - marks has_uploaded_once)
-    set_wordbank(deduped, is_user_upload=True)
+    # Set wordbank (USER UPLOAD - marks has_uploaded_once) with REPLACE semantics
+    set_wordbank(deduped, is_user_upload=True, source='uploaded')
     init_quiz_state()
     
     # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -4564,8 +4663,8 @@ def api_upload_manual_words():
         # CRITICAL: Set flag to prevent default word loading
         session["skip_default_load"] = True
         
-        # Store and initialize quiz (USER UPLOAD - manual words)
-        set_wordbank(enriched, is_user_upload=True)
+        # Store and initialize quiz (USER UPLOAD - manual words) with REPLACE semantics
+        set_wordbank(enriched, is_user_upload=True, source='uploaded')
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -4609,6 +4708,18 @@ def api_next():
     # Ensure session persists
     session.permanent = True
     session.modified = True
+    
+    # Check suppression flag first
+    if session.get("suppress_default"):
+        wb = session.get(DATA_KEY, [])
+        if not wb:
+            print("DEBUG /api/next: Suppression flag active and wordbank empty")
+            return jsonify({
+                "error": "No words loaded",
+                "message": "No words loaded. Load a Saved List or Upload words.",
+                "total": 0,
+                "action_required": "upload_words"
+            }), 400
     
     state = get_quiz_state()
     wb = get_wordbank()
@@ -5779,30 +5890,8 @@ def api_clear():
         
         print(f"DEBUG /api/clear: Clearing session - session_id={session.get('session_id')}")
         
-        # Get current storage_id before clearing
-        storage_id = session.get("wordbank_storage_id")
-        print(f"DEBUG /api/clear: Current storage_id={storage_id}")
-        
-        # Clear from storage first
-        if storage_id:
-            with WORD_STORAGE_LOCK:
-                removed = WORD_STORAGE.pop(storage_id, None)
-                print(f"DEBUG /api/clear: Removed {len(removed) if removed else 0} words from WORD_STORAGE")
-        
-        # Clear all session data
-        session.pop("wordbank_storage_id", None)
-        session.pop(DATA_KEY, None)
-        session.pop(QUIZ_STATE_KEY, None)
-        session.pop("wordbank_count", None)
-        session.pop("using_default_words", None)  # Clear default flag
-        
-        # CRITICAL: Prevent auto-loading defaults after explicit clear
-        # User explicitly cleared everything, so don't auto-load defaults
-        session["skip_default_load"] = True
-        session["has_uploaded_once"] = True  # Treat as if user has used the app before
-        
-        # Force session modification
-        session.modified = True
+        # Use new helper to clear everything and set suppression
+        clear_wordbank_and_state()
         
         print(f"DEBUG /api/clear: Session cleared. Remaining keys: {list(session.keys())}")
         
@@ -5827,6 +5916,49 @@ def api_reset():
         return jsonify({"error": f"No wordbank loaded. Session keys: {list(session.keys())}"}), 400
     init_quiz_state()
     return jsonify({"ok": True})
+
+@app.route("/api/load-default", methods=["GET", "POST"])
+def api_load_default():
+    """Load the curated default word list explicitly.
+    
+    This endpoint allows users to intentionally load the default list,
+    clearing any suppression flags and replacing the current wordbank.
+    """
+    try:
+        print("DEBUG /api/load-default: Loading default word list")
+        
+        # Load default words
+        default_words = load_default_words_list()
+        
+        if not default_words:
+            return jsonify({
+                "ok": False,
+                "error": "Failed to load default word list"
+            }), 500
+        
+        # Set wordbank with REPLACE semantics and source tracking
+        set_wordbank(default_words, is_user_upload=False, source='default')
+        
+        # Initialize quiz state
+        init_quiz_state()
+        
+        print(f"DEBUG /api/load-default: Loaded {len(default_words)} default words")
+        
+        return jsonify({
+            "ok": True,
+            "count": len(default_words),
+            "source": "default",
+            "message": f"Loaded {len(default_words)} default words successfully"
+        })
+        
+    except Exception as e:
+        print(f"ERROR /api/load-default: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "ok": False,
+            "error": f"Failed to load default list: {str(e)}"
+        }), 500
 
 @app.route("/api/build_dictionary", methods=["POST"])
 def api_build_dictionary():
