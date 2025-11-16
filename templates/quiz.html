@@ -5938,7 +5938,9 @@ class QuizManager {
 
             // ✅ ENABLE input immediately - no waiting for timer
             const spellingInput = document.getElementById('spellingInput');
+            const submitButton = document.getElementById('submitButton');
             spellingInput.disabled = false;
+            submitButton.disabled = false;  // 🔧 FIX: Re-enable submit button for each new word
             spellingInput.value = '';
             spellingInput.placeholder = 'Type your answer...';
             spellingInput.focus();

@@ -3145,6 +3145,22 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
+                <!-- Word List Count Badge -->
+                <div id="wordListCountBadge" style="
+                    display: inline-block;
+                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    margin-bottom: 15px;
+                    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                ">
+                    📚 Word List: <span id="wordListCount">0</span> words
+                </div>
+                
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title="💾 Save your word list with definitions">
                     💾 Export List
                 </button>
@@ -4390,6 +4406,10 @@
                     ];
                     const message = messages[Math.floor(Math.random() * messages.length)];
                     showSuccessMessage(message);
+                    
+                    // ✅ Update word count badge
+                    updateWordListCount(data.count);
+                    
                     // Persist the user's list locally for mobile rehydration
                     try { if (window.persistUploadedWords) { window.persistUploadedWords(words); } } catch(_){}
                     
@@ -4576,6 +4596,41 @@
                 container.querySelectorAll('button[data-id]').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         const id = btn.getAttribute('data-id');
+                        const listName = btn.textContent.trim();
+                        
+                        // ✅ Check if user already has words loaded
+                        try {
+                            const wordbankRes = await fetch('/api/wordbank', {
+                                cache: 'no-store',
+                                credentials: 'same-origin',
+                                headers: { 'Cache-Control': 'no-cache' }
+                            });
+                            const wordbankData = await wordbankRes.json();
+                            const currentWordCount = wordbankData.words ? wordbankData.words.length : 0;
+                            
+                            if (currentWordCount > 0) {
+                                // ⚠️ User has words - confirm replacement
+                                const confirmed = await showBeeConfirm({
+                                    title: '⚠️ Replace Current Word List?',
+                                    message: 
+                                        `You currently have ${currentWordCount} word(s) loaded.\n\n` +
+                                        `Loading this saved list will REPLACE your current words.\n\n` +
+                                        `Continue and replace your current list?`,
+                                    confirmText: 'Yes, Replace',
+                                    cancelText: 'Cancel'
+                                });
+                                
+                                if (!confirmed) {
+                                    console.log('User cancelled loading saved list');
+                                    return;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Could not check current wordbank:', e);
+                            // Continue anyway if wordbank check fails
+                        }
+                        
+                        // Load the saved list (replaces current words)
                         try {
                             const res = await fetch('/api/saved-lists/load', {
                                 method: 'POST', headers: {'Content-Type':'application/json'},
@@ -4583,8 +4638,15 @@
                             });
                             const data = await res.json();
                             if (data.ok){
-                                showSuccessMessage('Loaded "' + data.loaded.name + '". Starting quiz…');
-                                window.location.href = '/quiz';
+                                // ✅ Update word count badge before redirecting
+                                updateWordListCount(data.loaded.word_count);
+                                
+                                showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz…`);
+                                
+                                // Short delay to show success message
+                                setTimeout(() => {
+                                    window.location.href = '/quiz';
+                                }, 800);
                             } else {
                                 showErrorMessage(data.error || 'Failed to load list');
                             }
@@ -6567,6 +6629,10 @@
                         ];
                         const message = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
                         showSuccessMessage(message);
+                        
+                        // ✅ Update word count badge
+                        updateWordListCount(data.count);
+                        
                         // Persist latest word list for mobile restore (fetch enriched list)
                         try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
@@ -6738,6 +6804,10 @@
                         ];
                         const message = magicMessages[Math.floor(Math.random() * magicMessages.length)];
                         showSuccessMessage(message);
+                        
+                        // ✅ Update word count badge
+                        updateWordListCount(data.count);
+                        
                         // Persist latest word list for mobile restore (fetch enriched list)
                         try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
@@ -6850,22 +6920,44 @@
         function startQuiz() {
             console.log('startQuiz called');
             
-            // Verify wordbank exists before navigating
-            fetch('/api/wordbank', {
+            // 🔧 ENHANCED: Verify wordbank state before navigating to quiz
+            const cacheBuster = Date.now();
+            fetch(`/api/wordbank/verify?_=${cacheBuster}`, {
                 cache: 'no-store',
-                credentials: 'same-origin',  // Ensure session cookie is sent
+                credentials: 'same-origin',
                 headers: {
-                    'Cache-Control': 'no-cache'
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
                 }
             })
                 .then(response => response.json())
                 .then(data => {
-                    const wordCount = data.count || data.words?.length || 0;
-                    console.log('✅ Pre-quiz wordbank check:', wordCount, 'words');
+                    console.log('✅ Pre-quiz wordbank verification:', data);
+                    
+                    // Check for critical issues
+                    if (data.issues && data.issues.length > 0) {
+                        console.warn('⚠️ Wordbank issues detected:', data.issues);
+                        data.issues.forEach(issue => console.warn('  -', issue));
+                    }
+                    
+                    // CRITICAL: Show warning if using default words when user uploaded before
+                    if (data.using_default_words && data.has_uploaded_once) {
+                        console.error('🚨 CRITICAL: Using default words but user previously uploaded custom list!');
+                        showErrorMessage('⚠️ Your word list was lost! Please re-upload your words before starting the quiz.');
+                        return;
+                    }
+                    
+                    const wordCount = data.wordbank_count || 0;
                     
                     if (wordCount === 0) {
                         showErrorMessage('⚠️ No words loaded! Please upload a word list first.');
                         return;
+                    }
+                    
+                    // Log first few words for user verification
+                    if (data.wordbank_preview && data.wordbank_preview.length > 0) {
+                        const previewWords = data.wordbank_preview.map(w => w.word).join(', ');
+                        console.log(`📚 Quiz will use ${wordCount} words. Preview: ${previewWords}...`);
                     }
                     
                     // Play magical sound
@@ -6880,7 +6972,7 @@
                     }, 150);
                 })
                 .catch(error => {
-                    console.error('❌ Pre-quiz wordbank check failed:', error);
+                    console.error('❌ Pre-quiz wordbank verification failed:', error);
                     showErrorMessage('Oops! Please try uploading your word list again.');
                 });
         }
@@ -6901,6 +6993,9 @@
                     const wordCount = data.words ? data.words.length : 0;
                     const startBtn = document.getElementById('startQuizBtn');
                     console.log('📊 Word count updated:', wordCount, 'Button element:', startBtn);
+                    
+                    // Update word count badge
+                    updateWordListCount(wordCount);
                     
                     if (wordCount > 0) {
                         startBtn.disabled = false;
@@ -6946,6 +7041,37 @@
                 .catch(error => {
                     console.log('Could not check word count:', error);
                 });
+        }
+        
+        /**
+         * Updates the word list count badge display
+         * @param {number} count - Number of words in the current list
+         */
+        function updateWordListCount(count) {
+            const countEl = document.getElementById('wordListCount');
+            const badgeEl = document.getElementById('wordListCountBadge');
+            
+            if (!countEl) {
+                console.warn('⚠️ wordListCount element not found');
+                return;
+            }
+            
+            countEl.textContent = count.toString();
+            console.log(`📊 Word list count badge updated: ${count} words`);
+            
+            // Update badge styling based on count
+            if (badgeEl) {
+                if (count === 0) {
+                    badgeEl.style.background = 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)';
+                    badgeEl.style.boxShadow = '0 4px 15px rgba(158, 158, 158, 0.3)';
+                } else if (count < 5) {
+                    badgeEl.style.background = 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)';
+                    badgeEl.style.boxShadow = '0 4px 15px rgba(255, 152, 0, 0.3)';
+                } else {
+                    badgeEl.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+                    badgeEl.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.3)';
+                }
+            }
         }
         
         // UI Helper Functions (reverted to overlay for first-load excitement)
@@ -8429,15 +8555,27 @@
                             if (data.ok) {
                                 showSuccessMessage('✨ All clean! Ready for your next set of spelling words! 🌟');
                             
+                                // ✅ Reset word count badge to 0
+                                updateWordListCount(0);
+                                
                                 // Reset UI to initial state - with null checks
                                 const wordCountEl = document.getElementById('wordCount');
                                 if (wordCountEl) {
                                     wordCountEl.textContent = '0 words loaded';
                                 }
                                 
-                                const startQuizBtn = document.getElementById('startQuiz');
+                                const startQuizBtn = document.getElementById('startQuizBtn');
                                 if (startQuizBtn) {
                                     startQuizBtn.disabled = true;
+                                    startQuizBtn.setAttribute('disabled', 'disabled');
+                                    startQuizBtn.innerHTML = "🌟 Let's Spell! (Add words first)";
+                                    startQuizBtn.classList.remove('ready-to-play');
+                                    startQuizBtn.classList.add('waiting-to-play');
+                                    
+                                    // Force disabled styles
+                                    startQuizBtn.style.opacity = '0.6';
+                                    startQuizBtn.style.cursor = 'not-allowed';
+                                    startQuizBtn.style.pointerEvents = 'none';
                                 }
                                 
                                 // Clear any displayed word lists in the UI
@@ -8461,6 +8599,8 @@
                                         uploader.querySelector('textarea').value = '';
                                     }
                                 });
+                                
+                                console.log('✅ Word list cleared - count reset to 0');
                                 
                                 // Reload page to refresh state
                                 setTimeout(() => {
@@ -13594,6 +13734,26 @@
 
         // Update status after avatar preload completes
         document.addEventListener('DOMContentLoaded', () => {
+            // ✅ Initialize word count badge on page load
+            fetch('/api/wordbank', {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const wordCount = data.words ? data.words.length : 0;
+                updateWordListCount(wordCount);
+                console.log(`✅ Word count badge initialized on page load: ${wordCount} words`);
+            })
+            .catch(error => {
+                console.warn('⚠️ Could not initialize word count badge:', error);
+                updateWordListCount(0);
+            });
+            
             // Wait a bit for preload to complete, then update status
             setTimeout(updateAvatarSystemStatus, 2000);
             

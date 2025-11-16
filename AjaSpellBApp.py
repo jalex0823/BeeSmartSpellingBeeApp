@@ -79,21 +79,10 @@ if FAST_BOOT:
 else:
     print("⚙️ FAST_BOOT=off → Running full startup checks")
 
-# Dictionary API with robust error handling
-try:
-    from dictionary_api import dictionary_api
-    def DICT_LOOKUP(word: str):
-        return dictionary_api.lookup_word(word)
-    print("✅ Dictionary API loaded successfully")
-except Exception as e:
-    print(f"⚠️ Dictionary API not available: {e}")
-    # Safe fallback when dictionary API isn't available
-    def DICT_LOOKUP(word: str):
-        return {
-            "definition": f"A placeholder definition for '{word}'.",
-            "example": f"The _____ is spelled '{word}'.",
-            "phonetic": ""
-        }
+# ✅ BUILT-IN DICTIONARY ONLY - External API removed for performance
+# No external dictionary_api imports - we use Simple Wiktionary (50K+ words)
+print("📚 Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
+
 
 # Content Filter and Guardian Reporting System
 try:
@@ -311,8 +300,26 @@ def save_dictionary_cache(cache_data):
 # Dictionary cache - loaded on-demand by get_word_info(), not at startup
 DICTIONARY_CACHE = {}
 
-# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
-SIMPLE_WIKTIONARY = {}
+# Simple English Wiktionary - Lazy load on first use (for Random Word feature)
+# This improves Railway startup time by ~2-3 seconds
+SIMPLE_WIKTIONARY = None  # Loaded on-demand when random words are requested
+SIMPLE_WIKTIONARY_LOADED = False
+
+def ensure_simple_wiktionary_loaded():
+    """
+    Lazy-load Simple Wiktionary only when needed.
+    This prevents blocking Railway app startup with 50K+ word dictionary load.
+    """
+    global SIMPLE_WIKTIONARY, SIMPLE_WIKTIONARY_LOADED
+    
+    if SIMPLE_WIKTIONARY_LOADED:
+        return SIMPLE_WIKTIONARY
+    
+    print("📚 Loading Simple English Wiktionary on-demand (first use)...")
+    SIMPLE_WIKTIONARY = load_simple_wiktionary()
+    SIMPLE_WIKTIONARY_LOADED = True
+    print(f"✅ Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready")
+    return SIMPLE_WIKTIONARY
 
 print("✅ Dictionary resources initialized (on-demand loading enabled)")
 
@@ -716,8 +723,11 @@ def _filter_definition(definition, word):
 
 def get_word_info(word):
     """Get definition and example sentence for a word. 
-    Priority: 1) Simple Wiktionary (50K words), 2) API cache, 3) API lookup
-    Returns: Formatted definition string OR "Definition not available" for spelling-only quiz."""
+    Priority: 1) Simple Wiktionary (50K words), 2) Cached definitions, 3) Smart fallback
+    Returns: Formatted definition string OR "Definition not available" for spelling-only quiz.
+    
+    ✅ USES ONLY BUILT-IN DICTIONARY - NO EXTERNAL API CALLS
+    """
     global DICTIONARY_CACHE
     
     # Lazy load dictionary cache on first use
@@ -727,8 +737,11 @@ def get_word_info(word):
     word_lower = word.lower()
     
     # PRIORITY 1: Check Simple English Wiktionary FIRST (50K+ words, kid-friendly)
-    if word_lower in SIMPLE_WIKTIONARY:
-        word_data = SIMPLE_WIKTIONARY[word_lower]
+    # Lazy-load if not already loaded (first use only)
+    wiktionary = ensure_simple_wiktionary_loaded()
+    
+    if wiktionary and word_lower in wiktionary:
+        word_data = wiktionary[word_lower]
         definition = word_data.get("definition", "")
         example = word_data.get("example", "")
         
@@ -742,10 +755,10 @@ def get_word_info(word):
                 return f"{definition}. Fill in the blank: {example}"
             else:
                 # Have definition but no example
-                print(f"� Found '{word}' in Simple Wiktionary (no example)")
+                print(f"📖 Found '{word}' in Simple Wiktionary (no example)")
                 return f"{definition}. Fill in the blank: Can you spell _____ correctly?"
     
-    # PRIORITY 2: Check API cache
+    # PRIORITY 2: Check previously cached definitions (from old API calls or manual entries)
     if word_lower in DICTIONARY_CACHE:
         word_data = DICTIONARY_CACHE[word_lower]
         definition = word_data.get("definition", "")
@@ -753,35 +766,17 @@ def get_word_info(word):
         if definition and example:
             definition = _filter_definition(definition, word)
             example = _blank_word(example, word)
-            print(f"✅ Found '{word}' in API cache")
+            print(f"✅ Found '{word}' in dictionary cache")
             return f"{definition}. Fill in the blank: {example}"
     
-    # PRIORITY 3: Try API lookup (rarely needed with 50K Wiktionary!)
-    print(f"🔍 Word '{word}' not in Wiktionary, trying API...")
-    api_result = DICT_LOOKUP(word)
-    print(f"DEBUG get_word_info: API returned for '{word}': {api_result}")
-    
-    # Check if API returned real data (not placeholder)
-    if api_result and not api_result.get("definition", "").startswith("A placeholder"):
-        # Cache successful API result
-        cache_entry = {word_lower: api_result}
-        save_dictionary_cache(cache_entry)
-        DICTIONARY_CACHE.update(cache_entry)
-        
-        definition = api_result.get("definition", "")
-        example = api_result.get("example", "")
-        definition = _filter_definition(definition, word)
-        example = _blank_word(example, word)
-        print(f"✅ API returned definition for '{word}'")
-        return f"{definition}. Fill in the blank: {example}"
-    
-    # PRIORITY 4: Smart fallback to guarantee a helpful prompt
+    # PRIORITY 3: Smart fallback - NO EXTERNAL API CALLS
+    # This generates a helpful prompt even if word is not in our dictionary
     try:
         fb = generate_smart_fallback(word)
         definition = fb.get("definition", "A word to spell")
         example = fb.get("example", "Can you spell _____ correctly?")
         example = _blank_word(example, word)
-        print(f"🟨 Fallback used for '{word}' ({fb.get('source','fallback')})")
+        print(f"🟨 Using smart fallback for '{word}' ({fb.get('source','fallback')})")
         return f"{definition}. Fill in the blank: {example}"
     except Exception as _e:
         # Absolute last resort
@@ -2112,6 +2107,8 @@ def get_wordbank() -> List[Dict[str, str]]:
         wb = []
 
     # Smart default load for brand-new sessions with nothing uploaded yet
+    # ⚠️ CRITICAL: Only load defaults if user has NEVER uploaded anything
+    # This prevents default words from appearing after user uploads their own list
     if not wb and not session.get("skip_default_load", False) and not session.get("has_uploaded_once", False):
         print("DEBUG get_wordbank: New/empty session detected, loading default demo words")
         default_words = load_default_wordbank()
@@ -2120,6 +2117,12 @@ def get_wordbank() -> List[Dict[str, str]]:
             wb = default_words
             session["using_default_words"] = True
             print(f"DEBUG get_wordbank: Loaded {len(wb)} default demo words for new session")
+    elif not wb and session.get("has_uploaded_once", False):
+        # 🔧 FIX: User previously uploaded words but wordbank is now empty (session loss!)
+        # Don't auto-load defaults - require user to re-upload
+        print("⚠️ WARNING get_wordbank: User previously uploaded words but wordbank is empty now!")
+        print("⚠️ WARNING get_wordbank: This indicates session loss. NOT loading default words.")
+        print("⚠️ WARNING get_wordbank: User must re-upload their word list.")
 
     session["wordbank_count"] = len(wb)
     print(f"DEBUG get_wordbank: Retrieved {len(wb)} words from server-side session, session keys: {list(session.keys())}")
@@ -2955,48 +2958,9 @@ def migrate_avatar_columns():
             "error": str(e)
         }), 500
 
-@app.route("/api/test-dictionary")
-def test_dictionary():
-    """Test dictionary API with a simple word"""
-    try:
-        # Reset circuit breaker first
-        from dictionary_api import dictionary_api
-        dictionary_api.reset_circuit_breaker()
-        
-        # Test with a simple word
-        test_word = "test"
-        print(f"🧪 Testing dictionary API with word: '{test_word}'")
-        
-        result = dictionary_api.lookup_word(test_word)
-        
-        if result:
-            return jsonify({
-                "status": "success",
-                "message": "Dictionary API is working",
-                "test_word": test_word,
-                "result": result,
-                "circuit_breaker_failures": dictionary_api.circuit_breaker_failures
-            })
-        else:
-            return jsonify({
-                "status": "failed", 
-                "message": "Dictionary API returned no result",
-                "test_word": test_word,
-                "circuit_breaker_failures": dictionary_api.circuit_breaker_failures
-            }), 500
-            
-    except Exception as e:
-        try:
-            from dictionary_api import dictionary_api
-            failures = dictionary_api.circuit_breaker_failures
-        except:
-            failures = 'unknown'
-            
-        return jsonify({
-            "status": "error",
-            "message": f"Dictionary API test failed: {str(e)}",
-            "circuit_breaker_failures": failures
-        }), 500
+# ✅ TEST ENDPOINT REMOVED - No external dictionary API
+# The app now uses only Simple English Wiktionary (50K+ words built-in)
+# For testing definitions, use /api/wordbank or Random Words feature
 
 # --- Random Play Helper Functions -------------------------------------------
 def calculate_word_difficulty(word: str) -> int:
@@ -3068,7 +3032,10 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     Returns:
         List of word dictionaries with word, sentence, and hint fields
     """
-    if not SIMPLE_WIKTIONARY:
+    # ✅ Lazy-load Simple Wiktionary on first use (improves Railway startup time)
+    wiktionary = ensure_simple_wiktionary_loaded()
+    
+    if not wiktionary:
         raise ValueError("Simple Wiktionary not loaded - cannot generate random words")
     
     # Filter words by difficulty
@@ -3076,7 +3043,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     
     print(f"🎲 Searching for {count} words at difficulty level {difficulty}...")
     
-    for word, data in SIMPLE_WIKTIONARY.items():
+    for word, data in wiktionary.items():
         # Skip very short words (likely abbreviations) or words with special characters
         if len(word) < 3 or not word.isalpha():
             continue
@@ -4615,8 +4582,18 @@ def api_next():
     
     # Enhanced debugging for session loss
     storage_id = session.get("wordbank_storage_id")
+    has_uploaded = session.get("has_uploaded_once", False)
+    using_defaults = session.get("using_default_words", False)
+    
     print(f"DEBUG /api/next: session_id={session.get('session_id')}, storage_id={storage_id}, "
-          f"wordbank_len={len(wb)}, quiz_idx={state['idx'] if state else 'NO_STATE'}")
+          f"wordbank_len={len(wb)}, quiz_idx={state['idx'] if state else 'NO_STATE'}, "
+          f"has_uploaded_once={has_uploaded}, using_default_words={using_defaults}")
+    
+    # 🔧 CRITICAL CHECK: Warn if using default words when user has uploaded before
+    if using_defaults and has_uploaded:
+        print("⚠️⚠️⚠️ CRITICAL WARNING /api/next: Using DEFAULT words but has_uploaded_once=True!")
+        print("⚠️⚠️⚠️ This indicates session loss - user's uploaded words were lost!")
+        print(f"⚠️⚠️⚠️ Session keys: {list(session.keys())}")
     
     # Enhanced validation with detailed error messages
     if not wb:
@@ -5763,6 +5740,38 @@ def api_session_debug():
         "quiz_key": QUIZ_STATE_KEY
     })
 
+@app.route("/api/wordbank/verify", methods=["GET"])
+def api_verify_wordbank():
+    """
+    Verify the current wordbank state before starting quiz.
+    Returns detailed information about the loaded word list.
+    Frontend can call this before navigating to /quiz to ensure correct list is loaded.
+    """
+    wb = get_wordbank()
+    has_uploaded = session.get("has_uploaded_once", False)
+    using_defaults = session.get("using_default_words", False)
+    skip_defaults = session.get("skip_default_load", False)
+    
+    # Detect potential issues
+    issues = []
+    if len(wb) == 0:
+        issues.append("No words loaded - wordbank is empty")
+    if using_defaults and has_uploaded:
+        issues.append("WARNING: Using default words but user previously uploaded custom list (possible session loss)")
+    if not wb and has_uploaded:
+        issues.append("CRITICAL: User uploaded words but wordbank is empty (session lost)")
+    
+    return jsonify({
+        "ok": len(wb) > 0,
+        "wordbank_count": len(wb),
+        "wordbank_preview": wb[:5] if wb else [],  # Show first 5 words
+        "has_uploaded_once": has_uploaded,
+        "using_default_words": using_defaults,
+        "skip_default_load": skip_defaults,
+        "issues": issues,
+        "recommendation": "Ready to start quiz" if len(wb) > 0 and not issues else "Please upload a word list before starting"
+    })
+
 @app.route("/api/clear", methods=["POST"])
 def api_clear():
     """Clear wordbank and quiz state with authorization check"""
@@ -5831,8 +5840,8 @@ def api_reset():
 @app.route("/api/build_dictionary", methods=["POST"])
 def api_build_dictionary():
     """
-    Build dictionary cache for all words in current wordbank
-    P0 Feature: Batch dictionary builder for imported word lists
+    Build dictionary cache for all words in current wordbank using built-in Simple Wiktionary
+    ✅ NO EXTERNAL API - Uses only 50K+ word built-in dictionary
     """
     wordbank = get_wordbank()
     if not wordbank:
@@ -5840,13 +5849,13 @@ def api_build_dictionary():
     
     results = {
         "total_words": len(wordbank),
-        "api_lookups": 0,
+        "api_lookups": 0,  # Now means Wiktionary lookups
         "cache_hits": 0,
         "fallbacks": 0,
         "errors": []
     }
     
-    print(f"Building dictionary cache for {len(wordbank)} words...")
+    print(f"Building dictionary cache for {len(wordbank)} words using built-in Wiktionary...")
     
     for record in wordbank:
         word = record.get("word", "").strip()
@@ -5861,18 +5870,19 @@ def api_build_dictionary():
             continue
         
         try:
-            # Try API lookup using safe wrapper function
-            api_result = DICT_LOOKUP(word)
+            # Try built-in Wiktionary lookup first (50K+ words)
+            wiktionary = ensure_simple_wiktionary_loaded()
             
-            if api_result:
-                # Cache successful API result
-                cache_entry = {word_lower: api_result}
+            if wiktionary and word_lower in wiktionary:
+                word_data = wiktionary[word_lower]
+                # Cache the Wiktionary entry
+                cache_entry = {word_lower: word_data}
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
                 results["api_lookups"] += 1
-                print(f"Γ£ô API lookup successful for '{word}'")
+                print(f"📖 Wiktionary lookup successful for '{word}'")
             else:
-                # Generate fallback
+                # Generate fallback for words not in Wiktionary
                 fallback_data = generate_smart_fallback(word)
                 fallback_data["created"] = datetime.now().isoformat()
                 
@@ -5880,7 +5890,7 @@ def api_build_dictionary():
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
                 results["fallbacks"] += 1
-                print(f"ΓÜá Using fallback for '{word}'")
+                print(f"🟨 Using fallback for '{word}'")
                 
         except Exception as e:
             error_msg = f"Error processing '{word}': {str(e)}"
@@ -5889,7 +5899,7 @@ def api_build_dictionary():
     
     return jsonify({
         "success": True,
-        "message": f"Dictionary cache built for {results['total_words']} words",
+        "message": f"Dictionary cache built for {results['total_words']} words using built-in Wiktionary (50K+ words)",
         "results": results
     })
 

@@ -597,6 +597,160 @@
         document.body.scrollTop = 0;
     </script>
     
+    <!-- 📱 Mobile Modal Auto-Centering System -->
+    <script>
+        /**
+         * Mobile-optimized modal display system
+         * Automatically centers modals and scrolls them into view on mobile devices
+         */
+        window.BeeMobileOptimization = {
+            /**
+             * Show a modal with mobile-optimized centering and scrolling
+             * @param {HTMLElement|string} modal - Modal element or selector
+             * @param {Object} options - Configuration options
+             */
+            showModal: function(modal, options = {}) {
+                const modalEl = typeof modal === 'string' ? document.querySelector(modal) : modal;
+                if (!modalEl) {
+                    console.warn('BeeMobileOptimization: Modal not found', modal);
+                    return;
+                }
+                
+                const defaults = {
+                    scrollIntoView: true,
+                    scrollBehavior: 'smooth',
+                    block: 'center',
+                    lockScroll: true,
+                    focusFirstInput: true
+                };
+                
+                const config = { ...defaults, ...options };
+                
+                // Show the modal
+                modalEl.style.display = 'flex';
+                
+                // Lock background scroll if requested
+                if (config.lockScroll) {
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                }
+                
+                // Auto-scroll into view after a small delay (allows CSS animations)
+                if (config.scrollIntoView) {
+                    setTimeout(() => {
+                        // Find the modal content (the actual dialog, not the overlay)
+                        const modalContent = modalEl.querySelector('.modal-content, .exit-modal-content, .voice-intro-content, .badge-modal-content, .content-filter-popup');
+                        const targetElement = modalContent || modalEl;
+                        
+                        // Scroll the modal content into view
+                        targetElement.scrollIntoView({
+                            behavior: config.scrollBehavior,
+                            block: config.block,
+                            inline: 'center'
+                        });
+                        
+                        // Also ensure parent modal is visible
+                        if (modalContent !== modalEl) {
+                            modalEl.scrollIntoView({
+                                behavior: config.scrollBehavior,
+                                block: config.block,
+                                inline: 'center'
+                            });
+                        }
+                        
+                        // Focus first input/button for accessibility
+                        if (config.focusFirstInput) {
+                            const firstInput = modalEl.querySelector('input:not([type="hidden"]), textarea, button');
+                            if (firstInput) {
+                                setTimeout(() => firstInput.focus(), 300);
+                            }
+                        }
+                    }, 150); // Delay to allow modal animation to start
+                }
+                
+                console.log('✅ Modal shown with mobile optimization:', modalEl.id || modalEl.className);
+            },
+            
+            /**
+             * Hide a modal and restore scroll
+             * @param {HTMLElement|string} modal - Modal element or selector
+             */
+            hideModal: function(modal) {
+                const modalEl = typeof modal === 'string' ? document.querySelector(modal) : modal;
+                if (!modalEl) return;
+                
+                modalEl.style.display = 'none';
+                
+                // Restore background scroll
+                document.body.style.overflow = '';
+                document.body.style.position = '';
+                document.body.style.width = '';
+                
+                console.log('✅ Modal hidden:', modalEl.id || modalEl.className);
+            },
+            
+            /**
+             * Auto-patch existing modal show/hide functions
+             */
+            patchExistingModals: function() {
+                // Patch common modal show patterns
+                const modalSelectors = [
+                    '#contentFilterModal',
+                    '#exitModal',
+                    '#voiceIntroModal',
+                    '.exit-modal',
+                    '.voice-intro-modal'
+                ];
+                
+                modalSelectors.forEach(selector => {
+                    const modal = document.querySelector(selector);
+                    if (modal) {
+                        // Add data attribute to mark as mobile-optimized
+                        modal.setAttribute('data-mobile-optimized', 'true');
+                        
+                        // Monitor style changes to auto-scroll when shown
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'style') {
+                                    const display = window.getComputedStyle(modal).display;
+                                    if (display === 'flex' || display === 'block') {
+                                        // Modal was just shown - auto-center it
+                                        setTimeout(() => {
+                                            const modalContent = modal.querySelector('.modal-content, .exit-modal-content, .voice-intro-content, .badge-modal-content, .content-filter-popup');
+                                            const target = modalContent || modal;
+                                            target.scrollIntoView({
+                                                behavior: 'smooth',
+                                                block: 'center',
+                                                inline: 'center'
+                                            });
+                                        }, 100);
+                                    }
+                                }
+                            });
+                        });
+                        
+                        observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                    }
+                });
+            }
+        };
+        
+        // Auto-patch modals when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                window.BeeMobileOptimization.patchExistingModals();
+            });
+        } else {
+            window.BeeMobileOptimization.patchExistingModals();
+        }
+        
+        // Re-patch on dynamic content changes
+        setTimeout(() => {
+            window.BeeMobileOptimization.patchExistingModals();
+        }, 1000);
+    </script>
+    
     <!-- Global Effects Toggle (floating) -->
     <button id="globalEffectsToggle" aria-label="Toggle Celebrations"
         style="position: fixed; bottom: 16px; right: 16px; z-index: 11000; border: 3px solid #FFA000; background: linear-gradient(135deg, #FFD54F, #FFB300); color: #5A2C15; font-weight: 800; border-radius: 999px; padding: 10px 16px; box-shadow: 0 8px 18px rgba(255,165,0,0.3); cursor: pointer;">
