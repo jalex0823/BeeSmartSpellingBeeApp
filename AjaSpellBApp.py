@@ -2361,6 +2361,12 @@ def load_saved_wordlist():
             print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
             init_quiz_state()
 
+        # Store active list metadata in session for word list manager
+        session["active_list_id"] = str(wl.id)
+        session["active_list_name"] = wl.list_name
+        session.modified = True
+        print(f"DEBUG /api/saved-lists/load: Set active_list_id={wl.id}, active_list_name={wl.list_name}")
+
         return jsonify({
             "ok": True,
             "loaded": {
@@ -2713,7 +2719,28 @@ def quiz_page():
         user_name = current_user.display_name
         print(f"DEBUG /quiz: User logged in as {user_name}")
     
-    return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
+    # Prepare selected_list metadata for frontend word list manager
+    # Check if there's a currently active saved list ID in session
+    active_list_id = session.get("active_list_id", None)
+    active_list_name = session.get("active_list_name", "Word List")
+    
+    # If no active list ID, generate a default identifier based on word count and hash
+    if not active_list_id:
+        # Create a simple hash of the wordbank to identify this specific set of words
+        import hashlib
+        words_str = "_".join([w.get("word", "") for w in wordbank[:5]])  # Use first 5 words as signature
+        word_hash = hashlib.md5(words_str.encode()).hexdigest()[:8]
+        active_list_id = f"wordbank_{word_hash}"
+        active_list_name = f"Word List ({len(wordbank)} words)"
+    
+    selected_list = {
+        "id": active_list_id,
+        "name": active_list_name
+    }
+    
+    print(f"DEBUG /quiz: Passing selected_list to template: {selected_list}")
+    
+    return render_template("quiz.html", user_name=user_name, timestamp=timestamp, selected_list=selected_list)
 
 @app.route("/battle/<battle_code>")
 @login_required
@@ -5795,6 +5822,8 @@ def api_clear():
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("wordbank_count", None)
         session.pop("using_default_words", None)  # Clear default flag
+        session.pop("active_list_id", None)  # Clear active list metadata
+        session.pop("active_list_name", None)
         
         # CRITICAL: Prevent auto-loading defaults after explicit clear
         # User explicitly cleared everything, so don't auto-load defaults

@@ -2564,6 +2564,24 @@ if ('speechSynthesis' in window) {
         </div>
     </div>
 
+    <!-- Word List Metadata Anchor (for quiz-wordlist.js) -->
+    <div id="quiz-root" 
+         data-selected-list-id="{{ selected_list.id if selected_list else 'default' }}"
+         data-selected-list-name="{{ selected_list.name if selected_list else 'Word List' }}"
+         data-words-url="/api/wordbank"
+         style="display: none;">
+    </div>
+
+    <!-- Refresh List Button (optional UI element) -->
+    <div style="text-align: center; margin: 0.5rem 0;">
+        <button id="refreshWordListBtn" 
+                class="action-btn secondary" 
+                style="font-size: 0.85rem; padding: 0.4rem 1rem;"
+                title="Clear the current word list and start fresh">
+            🔄 Refresh List
+        </button>
+    </div>
+
     <!-- Quiz Card -->
     <div class="quiz-card" id="quizCard">
         <!-- Logo at top center -->
@@ -8289,5 +8307,36 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
+</script>
+
+<!-- Word List Manager -->
+<script src="{{ url_for('static', filename='js/quiz-wordlist.js') }}?v={{ timestamp }}"></script>
+<script>
+// Initialize word list manager with server-provided data
+document.addEventListener('DOMContentLoaded', () => {
+    const quizRoot = document.getElementById('quiz-root');
+    if (quizRoot && window.wordListManager) {
+        const selectedListId = quizRoot.dataset.selectedListId;
+        const selectedListName = quizRoot.dataset.selectedListName;
+        const wordsUrl = quizRoot.dataset.wordsUrl;
+        
+        console.log('🎯 Initializing word list manager with server data:', {
+            selectedListId,
+            selectedListName,
+            wordsUrl
+        });
+        
+        // Ensure using the selected list from server
+        window.wordListManager.ensureUsingSelectedList({
+            selectedListId: selectedListId,
+            selectedListName: selectedListName,
+            wordsUrl: wordsUrl
+        }).then(list => {
+            console.log('✅ Word list manager initialized:', list);
+        }).catch(error => {
+            console.error('❌ Error initializing word list manager:', error);
+        });
+    }
+});
 </script>
 {% endblock %}
