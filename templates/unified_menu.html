@@ -2846,18 +2846,17 @@
                                                             function $(id){return document.getElementById(id);}    
                                                             function gradeFromGpa(g){
                                                                 var v = Number(g)||0;
-                                                                if(v>=3.97) return 'A+';
-                                                                if(v>=3.85) return 'A';
-                                                                if(v>=3.70) return 'A-';
-                                                                if(v>=3.30) return 'B+';
-                                                                if(v>=3.00) return 'B';
-                                                                if(v>=2.70) return 'B-';
-                                                                if(v>=2.30) return 'C+';
-                                                                if(v>=2.00) return 'C';
-                                                                if(v>=1.70) return 'C-';
-                                                                if(v>=1.30) return 'D+';
-                                                                if(v>=1.00) return 'D';
-                                                                if(v>=0.70) return 'D-';
+                                                                if(v>=4.0) return 'A+';
+                                                                if(v>=3.7) return 'A-';
+                                                                if(v>=3.3) return 'B+';
+                                                                if(v>=3.0) return 'B';
+                                                                if(v>=2.7) return 'B-';
+                                                                if(v>=2.3) return 'C+';
+                                                                if(v>=2.0) return 'C';
+                                                                if(v>=1.7) return 'C-';
+                                                                if(v>=1.3) return 'D+';
+                                                                if(v>=1.0) return 'D';
+                                                                if(v>=0.7) return 'D-';
                                                                 return 'F';
                                                             }
                                                             async function updateStats(){
@@ -2868,7 +2867,7 @@
                                                                     if(d.status!=='success' || !d.authenticated) return;
                                                                     const s = d.stats||{};
                                                                     if($('stats-gpa-value')) $('stats-gpa-value').textContent = Number(s.cumulative_gpa||0).toFixed(2);
-                                                                    const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
+                                                                    const letter = gradeFromGpa(s.cumulative_gpa);
                                                                     if($('stats-grade-letter')) $('stats-grade-letter').textContent = letter;
                                                                     if($('stats-points')) $('stats-points').textContent = (s.total_lifetime_points||0).toLocaleString();
                                                                     if($('stats-quizzes')) $('stats-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
