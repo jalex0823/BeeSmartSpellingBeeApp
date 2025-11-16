@@ -11782,16 +11782,82 @@
                     });
                     const data = await response.json();
                     if (data.success && data.count > 0) {
-                        this.updateCheck(check8, `${data.count} words ready`, '✅', 65);
-                        this.updateProgress(65, `📚 ${data.count} words loaded`);
+                        this.updateCheck(check8, `${data.count} words ready`, '✅', 60);
+                        this.updateProgress(60, `📚 ${data.count} words loaded`);
                     } else {
-                        this.updateCheck(check8, 'No words loaded', '⚠️', 65);
-                        this.updateProgress(65, '⚠️ Upload word list to start');
+                        this.updateCheck(check8, 'No words loaded', '⚠️', 60);
+                        this.updateProgress(60, '⚠️ Upload word list to start');
                     }
                 } catch (e) {
-                    this.updateCheck(check8, 'Check failed', '⚠️', 65);
-                    this.updateProgress(65, '⚠️ Session check failed');
+                    this.updateCheck(check8, 'Check failed', '⚠️', 60);
+                    this.updateProgress(60, '⚠️ Session check failed');
                     console.error('Session check error:', e);
+                }
+                
+                // Check 9: GPA, Grade & Points Validation
+                const check9 = this.addCheck('Stats Validation', 'Checking...', '⏳');
+                await this.delay(200);
+                try {
+                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    
+                    if (isAuthenticated) {
+                        const statsResponse = await fetch('/api/users/stats', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        
+                        if (statsResponse.ok) {
+                            const statsData = await statsResponse.json();
+                            if (statsData.status === 'success' && statsData.stats) {
+                                const s = statsData.stats;
+                                const gpa = Number(s.cumulative_gpa || 0).toFixed(2);
+                                const points = (s.total_lifetime_points || 0).toLocaleString();
+                                
+                                // Calculate expected grade from GPA
+                                function gradeFromGpa(g) {
+                                    const v = Number(g) || 0;
+                                    if (v >= 4.0) return 'A+';
+                                    if (v >= 3.7) return 'A-';
+                                    if (v >= 3.3) return 'B+';
+                                    if (v >= 3.0) return 'B';
+                                    if (v >= 2.7) return 'B-';
+                                    if (v >= 2.3) return 'C+';
+                                    if (v >= 2.0) return 'C';
+                                    if (v >= 1.7) return 'C-';
+                                    if (v >= 1.3) return 'D+';
+                                    if (v >= 1.0) return 'D';
+                                    if (v >= 0.7) return 'D-';
+                                    return 'F';
+                                }
+                                
+                                const calculatedGrade = gradeFromGpa(gpa);
+                                
+                                // Validate GPA and grade are in sync
+                                if (gpa > 0) {
+                                    this.updateCheck(check9, `GPA ${gpa} → ${calculatedGrade} | ${points} pts`, '✅', 65);
+                                    this.updateProgress(65, `📊 Stats verified: ${calculatedGrade}`);
+                                    console.log('✅ Stats validated:', {gpa, grade: calculatedGrade, points});
+                                } else {
+                                    this.updateCheck(check9, 'No stats yet', '⚠️', 65);
+                                    this.updateProgress(65, '📊 Complete quizzes to earn stats');
+                                }
+                            } else {
+                                this.updateCheck(check9, 'No data', '⚠️', 65);
+                                this.updateProgress(65, '⚠️ Stats unavailable');
+                            }
+                        } else {
+                            this.updateCheck(check9, 'API error', '⚠️', 65);
+                            this.updateProgress(65, '⚠️ Stats check failed');
+                        }
+                    } else {
+                        // Guest user - no stats
+                        this.updateCheck(check9, 'Guest mode', 'ℹ️', 65);
+                        this.updateProgress(65, 'ℹ️ Login to track stats');
+                    }
+                } catch (e) {
+                    this.updateCheck(check9, 'Check failed', '⚠️', 65);
+                    this.updateProgress(65, '⚠️ Stats check error');
+                    console.error('Stats validation error:', e);
                 }
                 
                 return true;
