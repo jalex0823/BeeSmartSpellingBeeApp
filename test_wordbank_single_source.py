@@ -11,15 +11,20 @@ This test validates:
 """
 import urllib.request
 import urllib.error
+import http.cookiejar
 import json
 import time
 
 
 BASE_URL = "http://127.0.0.1:5000"
 
+# Cookie jar to maintain session across requests
+cookie_jar = http.cookiejar.CookieJar()
+opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+
 
 def make_request(endpoint, method="GET", data=None, headers=None):
-    """Make HTTP request and return response or error."""
+    """Make HTTP request and return response or error, maintaining cookies."""
     url = f"{BASE_URL}{endpoint}"
     if headers is None:
         headers = {}
@@ -30,7 +35,7 @@ def make_request(endpoint, method="GET", data=None, headers=None):
     
     try:
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
-        response = urllib.request.urlopen(req)
+        response = opener.open(req)
         return json.loads(response.read().decode('utf-8')), response.status
     except urllib.error.HTTPError as e:
         error_data = json.loads(e.read().decode('utf-8'))
@@ -39,11 +44,21 @@ def make_request(endpoint, method="GET", data=None, headers=None):
         return {"error": str(e)}, 500
 
 
+def clear_cookies():
+    """Clear cookie jar to start fresh session."""
+    global cookie_jar, opener
+    cookie_jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+
+
 def test_clear_sets_suppression():
     """Test that /api/clear sets suppress_default flag."""
     print("\n" + "="*70)
     print("TEST 1: Clear sets suppression flag")
     print("="*70)
+    
+    # Start fresh session
+    clear_cookies()
     
     # First, clear with confirmation
     result, status = make_request("/api/clear", method="POST", data={"confirmed": True})
@@ -65,6 +80,9 @@ def test_upload_replaces_wordbank():
     print("\n" + "="*70)
     print("TEST 2: Upload replaces wordbank")
     print("="*70)
+    
+    # Start fresh session
+    clear_cookies()
     
     # Upload first set of words
     words1 = [
@@ -116,6 +134,9 @@ def test_next_with_suppression():
     print("TEST 3: /api/next with suppression flag")
     print("="*70)
     
+    # Start fresh session
+    clear_cookies()
+    
     # Clear to set suppression
     result, status = make_request("/api/clear", method="POST", data={"confirmed": True})
     assert result.get("ok") == True, "Clear should succeed"
@@ -137,6 +158,9 @@ def test_load_default_clears_suppression():
     print("\n" + "="*70)
     print("TEST 4: /api/load-default clears suppression")
     print("="*70)
+    
+    # Start fresh session
+    clear_cookies()
     
     # Clear to set suppression
     result, status = make_request("/api/clear", method="POST", data={"confirmed": True})
@@ -174,6 +198,9 @@ def test_manual_words_replaces():
     print("TEST 5: Manual words upload replaces wordbank")
     print("="*70)
     
+    # Start fresh session
+    clear_cookies()
+    
     # Upload first batch
     result, status = make_request("/api/upload-manual-words", method="POST",
                                    data={"words": ["apple", "banana"]})
@@ -205,6 +232,9 @@ def test_full_flow():
     print("\n" + "="*70)
     print("TEST 6: Complete flow")
     print("="*70)
+    
+    # Start fresh session
+    clear_cookies()
     
     # 1. Upload words
     words = [
