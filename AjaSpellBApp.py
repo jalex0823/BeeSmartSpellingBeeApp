@@ -79,21 +79,23 @@ if FAST_BOOT:
 else:
     print("⚙️ FAST_BOOT=off → Running full startup checks")
 
-# Dictionary API with robust error handling
+# Built-in dictionary cache - load Simple English Wiktionary
+from simple_wiktionary_loader import load_simple_wiktionary
+
 try:
-    from dictionary_api import dictionary_api
-    def DICT_LOOKUP(word: str):
-        return dictionary_api.lookup_word(word)
-    print("✅ Dictionary API loaded successfully")
+    SIMPLE_WIKTIONARY = load_simple_wiktionary()
 except Exception as e:
-    print(f"⚠️ Dictionary API not available: {e}")
-    # Safe fallback when dictionary API isn't available
-    def DICT_LOOKUP(word: str):
-        return {
-            "definition": f"A placeholder definition for '{word}'.",
-            "example": f"The _____ is spelled '{word}'.",
-            "phonetic": ""
-        }
+    print(f"⚠️ Failed to load Simple Wiktionary: {e}")
+    SIMPLE_WIKTIONARY = {}
+
+def DICT_LOOKUP(word: str):
+    """
+    Look up word in built-in dictionary (SIMPLE_WIKTIONARY).
+    Returns dict with definition, example, etc. or None if not found.
+    """
+    if not word:
+        return None
+    return SIMPLE_WIKTIONARY.get(word.lower())
 
 # Content Filter and Guardian Reporting System
 try:
@@ -311,10 +313,16 @@ def save_dictionary_cache(cache_data):
 # Dictionary cache - loaded on-demand by get_word_info(), not at startup
 DICTIONARY_CACHE = {}
 
-# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
-SIMPLE_WIKTIONARY = {}
+# Difficulty mapping: 1-5 to internal grade levels
+DIFFICULTY_MAP = {
+    1: 'grade_1_2',
+    2: 'grade_3_4',
+    3: 'grade_5_6',
+    4: 'middle_school',
+    5: 'high_school'
+}
 
-print("✅ Dictionary resources initialized (on-demand loading enabled)")
+print("✅ Dictionary resources initialized (built-in SIMPLE_WIKTIONARY loaded)")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -2344,6 +2352,19 @@ def load_saved_wordlist():
 
         if not rows:
             return jsonify({"ok": False, "error": "This list has no items"}), 400
+        
+        # Apply content filtering to loaded words (defense in depth)
+        word_list = [r["word"] for r in rows]
+        safe_words, blocked_words, violation_messages = filter_content_with_tracking(word_list, request)
+        
+        if blocked_words:
+            print(f"🛡️ Saved list load filtered {len(blocked_words)} inappropriate words")
+        
+        # Keep only safe words
+        safe_rows = [r for r in rows if r["word"] in safe_words]
+        
+        if not safe_rows:
+            return jsonify({"ok": False, "error": "No valid words after content filtering"}), 400
 
         # Explicitly clear any previous quiz state BEFORE loading new words to avoid stale stats
         if session.get(QUIZ_STATE_KEY):
@@ -2352,12 +2373,12 @@ def load_saved_wordlist():
             session.modified = True
 
         # Load into session for quiz use (not marked as user upload so defaults like skip_default_load remain consistent)
-        set_wordbank(rows, is_user_upload=False)
+        set_wordbank(safe_rows, is_user_upload=False)
         # Re-initialize quiz state with fresh order & counters
         init_quiz_state()
         # Safety: ensure new quiz state reflects new word count
         fresh_state = get_quiz_state()
-        if fresh_state and len(fresh_state.get("order", [])) != len(rows):
+        if fresh_state and len(fresh_state.get("order", [])) != len(safe_rows):
             print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
             init_quiz_state()
 
@@ -2367,7 +2388,7 @@ def load_saved_wordlist():
                 "id": wl.id,
                 "uuid": wl.uuid,
                 "name": wl.list_name,
-                "word_count": len(rows)
+                "word_count": len(safe_rows)
             }
         })
     except Exception as e:
@@ -3140,7 +3161,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
 @login_required
 def api_random_words():
     """
-    Generate a random word list based on difficulty level.
+    Generate a random word list based on difficulty level using built-in dictionary.
     Expects JSON: {"difficulty": 1-5, "count": 10}
     """
     try:
@@ -3161,38 +3182,111 @@ def api_random_words():
                 "message": "Count must be between 1 and 50"
             }), 400
         
-        # Generate random words (authenticated users only)
+        # Map difficulty to internal level
+        internal_level = DIFFICULTY_MAP.get(difficulty, 'grade_3_4')
+        print(f"🎲 Generating {count} words: difficulty {difficulty} → {internal_level}")
+        
+        # Generate candidate words using word_generator
         try:
-            random_words = get_random_words_by_difficulty(difficulty, count)
+            # Allow +/-1 level for variety - generate more than needed
+            candidate_words = generate_words_by_difficulty(
+                internal_level, 
+                count=count * 2, 
+                exclude_words=None
+            )
             
-            if not random_words:
+            # Apply content filtering
+            safe_words, blocked_words, violation_messages = filter_content_with_tracking(
+                candidate_words, 
+                request
+            )
+            
+            if blocked_words:
+                print(f"🛡️ Random Play filtered {len(blocked_words)} inappropriate words")
+            
+            # Take only the count we need
+            safe_words = safe_words[:count]
+            
+            if not safe_words:
                 return jsonify({
                     "status": "error",
-                    "message": f"Could not find enough words at difficulty level {difficulty}"
+                    "message": f"Could not generate safe words at difficulty level {difficulty}"
                 }), 404
             
-            # Store in session (same as file upload)
-            set_wordbank(random_words)
+            # Enrich with builtin dictionary data
+            enriched_words = []
+            for word in safe_words:
+                word_str = word if isinstance(word, str) else word.get('word', '')
+                
+                # Look up in builtin dictionary
+                dict_entry = DICT_LOOKUP(word_str)
+                
+                # Determine what fields we have
+                sentence = None
+                hint = None
+                definition = None
+                definition_source = 'none'
+                
+                if dict_entry:
+                    definition = dict_entry.get('definition', '')
+                    example = dict_entry.get('example', '')
+                    
+                    if example and len(example) > 10:
+                        sentence = _blank_word(example, word_str)
+                        definition_source = 'sentence'
+                    elif definition:
+                        # Create sentence from definition
+                        sentence = f"{definition}. Fill in the blank: _____ ."
+                        definition_source = 'builtin'
+                    
+                    # Use definition as hint
+                    if definition:
+                        hint = definition[:100] if len(definition) > 100 else definition
+                        if not sentence:
+                            definition_source = 'hint'
+                
+                # Fallback if no dictionary entry
+                if not sentence:
+                    sentence = f"Can you spell this word correctly? _____"
+                if not hint:
+                    hint = f"A level {difficulty} word with {len(word_str)} letters."
+                if not definition:
+                    definition = hint
+                
+                enriched_words.append({
+                    "word": word_str,
+                    "sentence": sentence,
+                    "hint": hint,
+                    "definition": definition,
+                    "definitionSource": definition_source,
+                    "difficulty": difficulty
+                })
+            
+            # Store in session
+            set_wordbank(enriched_words)
             init_quiz_state()
             
-            print(f"✅ Generated {len(random_words)} random words at difficulty {difficulty}")
+            print(f"✅ Generated {len(enriched_words)} random words at difficulty {difficulty}")
             
             return jsonify({
                 "status": "success",
-                "count": len(random_words),
+                "count": len(enriched_words),
                 "difficulty": difficulty,
-                "message": f"🎲 Generated {len(random_words)} random words at difficulty level {difficulty}!",
-                "words": random_words  # For preview
+                "message": f"🎲 Generated {len(enriched_words)} random words!",
+                "words": enriched_words
             })
             
-        except ValueError as e:
+        except Exception as gen_err:
+            print(f"❌ Word generation error: {gen_err}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 "status": "error",
-                "message": str(e)
+                "message": f"Word generation failed: {str(gen_err)}"
             }), 500
             
     except Exception as e:
-        print(f"❌ Error generating random words: {e}")
+        print(f"❌ Error in /api/random-words: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -9251,8 +9345,7 @@ def api_get_avatars():
     - Alphabetize the final hive list for stable ordering
     - Include unlock status based on user's honey points and purchases
     """
-    # Check cache first
-    global _AVATAR_CACHE
+    # Check cache first (module-level _AVATAR_CACHE dict is mutated, not reassigned)
     current_time = time.time()
     
     # Use cache for both authenticated and unauthenticated users

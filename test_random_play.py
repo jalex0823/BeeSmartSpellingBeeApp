@@ -40,8 +40,14 @@ def test_random_words(difficulty, count=10):
             for i, word_data in enumerate(words[:3], 1):
                 word = word_data.get('word', 'N/A')
                 sentence = word_data.get('sentence', 'N/A')[:80] + "..."
+                def_source = word_data.get('definitionSource', 'unknown')
                 print(f"   {i}. {word.upper()}")
-                print(f"      {sentence}")
+                print(f"      Sentence: {sentence}")
+                print(f"      Definition Source: {def_source}")
+            
+            # Verify builtin dictionary is used
+            builtin_count = sum(1 for w in words if w.get('definitionSource') in ['sentence', 'builtin', 'hint'])
+            print(f"\n✅ {builtin_count}/{len(words)} words use builtin dictionary")
         
         return True
     else:
