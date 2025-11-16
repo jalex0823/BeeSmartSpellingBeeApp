@@ -2352,6 +2352,19 @@ def load_saved_wordlist():
 
         if not rows:
             return jsonify({"ok": False, "error": "This list has no items"}), 400
+        
+        # Apply content filtering to loaded words (defense in depth)
+        word_list = [r["word"] for r in rows]
+        safe_words, blocked_words, violation_messages = filter_content_with_tracking(word_list, request)
+        
+        if blocked_words:
+            print(f"🛡️ Saved list load filtered {len(blocked_words)} inappropriate words")
+        
+        # Keep only safe words
+        safe_rows = [r for r in rows if r["word"] in safe_words]
+        
+        if not safe_rows:
+            return jsonify({"ok": False, "error": "No valid words after content filtering"}), 400
 
         # Explicitly clear any previous quiz state BEFORE loading new words to avoid stale stats
         if session.get(QUIZ_STATE_KEY):
@@ -2360,12 +2373,12 @@ def load_saved_wordlist():
             session.modified = True
 
         # Load into session for quiz use (not marked as user upload so defaults like skip_default_load remain consistent)
-        set_wordbank(rows, is_user_upload=False)
+        set_wordbank(safe_rows, is_user_upload=False)
         # Re-initialize quiz state with fresh order & counters
         init_quiz_state()
         # Safety: ensure new quiz state reflects new word count
         fresh_state = get_quiz_state()
-        if fresh_state and len(fresh_state.get("order", [])) != len(rows):
+        if fresh_state and len(fresh_state.get("order", [])) != len(safe_rows):
             print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
             init_quiz_state()
 
@@ -2375,7 +2388,7 @@ def load_saved_wordlist():
                 "id": wl.id,
                 "uuid": wl.uuid,
                 "name": wl.list_name,
-                "word_count": len(rows)
+                "word_count": len(safe_rows)
             }
         })
     except Exception as e:
