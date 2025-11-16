@@ -120,3 +120,7 @@ mobile/node_modules/
 
 # Ignore local deps
 node_modules/
+
+# Office temp/lock files
+~$*
+*.tmp
