@@ -3114,12 +3114,23 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     # Remove duplicates
     candidate_words = list(set(candidate_words))
     
-    # Apply content filtering
+    # Apply content filtering (wrap in try/except for when called outside request context)
     word_records = [{"word": w} for w in candidate_words]
-    safe_words, blocked_words, violation_messages = filter_content_with_tracking(word_records, request)
-    
-    if blocked_words:
-        print(f"🛡️ Filtered out {len(blocked_words)} inappropriate word(s)")
+    try:
+        safe_words, blocked_words, violation_messages = filter_content_with_tracking(word_records, request)
+        if blocked_words:
+            print(f"🛡️ Filtered out {len(blocked_words)} inappropriate word(s)")
+    except Exception as e:
+        # If filter_content_with_tracking fails (e.g., outside request context), fall back to basic filtering
+        print(f"⚠️ Advanced filtering not available: {e}")
+        safe_words = []
+        for wr in word_records:
+            w = wr.get("word", "")
+            is_safe, reason = is_kid_friendly(w)
+            if is_safe:
+                safe_words.append(wr)
+            else:
+                print(f"🛡️ Blocked word: {w} - {reason}")
     
     # Enrich safe words with definitions from built-in dictionary
     enriched = []
