@@ -2,11 +2,21 @@
  * Quiz Word List Manager
  * 
  * Centralizes word list state management for the quiz page.
- * Ensures that:
- * - New word list selection always overrides existing lists
- * - "Refresh list" button clears active list from storage
- * - Quiz uses selected word list consistently across page reloads
- * - Backward compatibility with window.QUIZ_WORDS and window.QUIZ_CURRENT_INDEX
+ * 
+ * Current State (v1):
+ * - Provides infrastructure for future word list selection features
+ * - Tracks active word list in localStorage for potential future use
+ * - Maintains backward-compatible globals for existing quiz code
+ * - Provides refresh button handler to clear word list state
+ * 
+ * Future Enhancements:
+ * - Server-side list selection tracking (pass list ID/name to template)
+ * - Word list selector UI in quiz header
+ * - Automatic detection of list changes across page reloads
+ * - Override stale lists when server provides different list
+ * 
+ * The module is designed to work seamlessly with existing quiz code
+ * and adds no breaking changes to the current workflow.
  */
 
 (function() {
@@ -357,10 +367,44 @@
         document.addEventListener('DOMContentLoaded', () => {
             window.quizWordListManager = new QuizWordListManager();
             window.quizWordListManager.init();
+            
+            // Listen for quiz initialization to sync state
+            _syncWithQuizManager();
         });
     } else {
         window.quizWordListManager = new QuizWordListManager();
         window.quizWordListManager.init();
+        
+        // Listen for quiz initialization to sync state
+        _syncWithQuizManager();
+    }
+    
+    /**
+     * Private: Sync with existing quiz manager when it initializes
+     */
+    function _syncWithQuizManager() {
+        // When the quiz manager is initialized, sync the word list state
+        const checkQuizManager = setInterval(() => {
+            if (window.quizManager) {
+                clearInterval(checkQuizManager);
+                
+                // If we have a stored list, make sure it's available to the quiz
+                const manager = window.quizWordListManager;
+                if (manager && manager.currentList) {
+                    console.log('📊 Syncing word list with quiz manager');
+                    
+                    // Update globals to ensure quiz has access to the list
+                    window.QUIZ_WORDS = manager.currentList.words || [];
+                    window.QUIZ_CURRENT_INDEX = manager.currentList.currentIndex || 0;
+                    window.QUIZ_ACTIVE_LIST_ID = manager.currentList.listId;
+                    
+                    console.log('✅ Word list synced with quiz manager');
+                }
+            }
+        }, 100); // Check every 100ms
+        
+        // Stop checking after 10 seconds
+        setTimeout(() => clearInterval(checkQuizManager), 10000);
     }
     
     // Export helper functions for backward compatibility
