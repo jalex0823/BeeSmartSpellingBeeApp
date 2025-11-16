@@ -939,3 +939,83 @@ lottie-player {
   white-space: nowrap;
   border: 0;
 }
+
+/* Timer wrapper and accessible text styles */
+.timer-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.timer-text {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 0.35rem;
+  color: #2b2100;
+  background: linear-gradient(135deg, #FFF9D1 0%, #FFD26A 100%);
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  border: 2px solid #FFB300;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.timer-wrapper.warning .timer-text {
+  color: #BF360C;
+}
+
+.timer-wrapper.critical .timer-text {
+  color: #B71C1C;
+  animation: pulseCritical 0.9s infinite;
+}
+
+@keyframes pulseCritical {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* Mobile large timer overlay */
+#mobileLargeTimer {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  font-weight: 800;
+  color: #222;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  border: 2px solid #FFB300;
+  z-index: 400;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+#mobileLargeTimer.warning {
+  color: #E65100;
+}
+
+#mobileLargeTimer.critical {
+  color: #B71C1C;
+  animation: pulseCritical 1s infinite;
+}
+
+@media (min-width: 640px) {
+  #mobileLargeTimer {
+    display: none;
+  }
+}
+
+/* Button disabled state */
+button.disabled,
+.quiz-button.disabled {
+  filter: grayscale(0.4);
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
