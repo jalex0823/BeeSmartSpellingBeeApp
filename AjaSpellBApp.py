@@ -79,46 +79,7 @@ if FAST_BOOT:
 else:
     print("⚙️ FAST_BOOT=off → Running full startup checks")
 
-# Dictionary API with robust error handling
-try:
-    from dictionary_api import dictionary_api
-    def DICT_LOOKUP(word: str):
-        return dictionary_api.lookup_word(word)
-    print("✅ Dictionary API loaded successfully")
-except Exception as e:
-    print(f"⚠️ Dictionary API not available: {e}")
-    # Safe fallback when dictionary API isn't available
-    def DICT_LOOKUP(word: str):
-        return {
-            "definition": f"A placeholder definition for '{word}'.",
-            "example": f"The _____ is spelled '{word}'.",
-            "phonetic": ""
-        }
-
-# Content Filter and Guardian Reporting System
-try:
-    from content_filter_guardian import (
-        filter_content_with_tracking, 
-        get_content_filter_status, 
-        violation_tracker,
-        ContentViolationTracker
-    )
-    print("✅ Content Filter with Guardian Reporting loaded successfully")
-    CONTENT_FILTER_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️ Content Filter not available: {e}")
-    # Fallback functions if content filter isn't available
-    def filter_content_with_tracking(words, session_context):
-        # Simple fallback - just return words as-is when content filter unavailable
-        # The original filtering will still happen in the upload processing functions
-        return words, [], []
-    
-    def get_content_filter_status(session_context):
-        return {'session_id': 'fallback', 'violation_count_24h': 0, 'warning_level': 'green', 'guardian_notification_triggered': False}
-    
-    CONTENT_FILTER_AVAILABLE = False
-
-# Dictionary Cache Functions
+# Dictionary Cache Functions - defined early for DICT_LOOKUP
 DICTIONARY_CACHE_FILE = "data/dictionary.json"
 SIMPLE_WIKTIONARY_FILE = "data/simple-wiktionary.jsonl"
 
@@ -163,6 +124,53 @@ def load_simple_wiktionary():
     except Exception as e:
         print(f"❌ Failed to load Simple Wiktionary: {e}")
     return {}
+
+# Built-in dictionary cache - load at module import
+try:
+    SIMPLE_WIKTIONARY = load_simple_wiktionary()
+except Exception:
+    SIMPLE_WIKTIONARY = {}
+
+def DICT_LOOKUP(word: str):
+    """
+    Look up word definition in built-in Simple Wiktionary.
+    Returns dict with definition, example, and source fields or None if not found.
+    """
+    if not word:
+        return None
+    return SIMPLE_WIKTIONARY.get(word.lower())
+
+# Difficulty mapping for Random Play UI (1-5) to internal word generator categories
+DIFFICULTY_MAP = {
+    1: 'grade_1_2',
+    2: 'grade_3_4', 
+    3: 'grade_5_6',
+    4: 'middle_school',
+    5: 'high_school'
+}
+
+# Content Filter and Guardian Reporting System
+try:
+    from content_filter_guardian import (
+        filter_content_with_tracking, 
+        get_content_filter_status, 
+        violation_tracker,
+        ContentViolationTracker
+    )
+    print("✅ Content Filter with Guardian Reporting loaded successfully")
+    CONTENT_FILTER_AVAILABLE = True
+except Exception as e:
+    print(f"⚠️ Content Filter not available: {e}")
+    # Fallback functions if content filter isn't available
+    def filter_content_with_tracking(words, session_context):
+        # Simple fallback - just return words as-is when content filter unavailable
+        # The original filtering will still happen in the upload processing functions
+        return words, [], []
+    
+    def get_content_filter_status(session_context):
+        return {'session_id': 'fallback', 'violation_count_24h': 0, 'warning_level': 'green', 'guardian_notification_triggered': False}
+    
+    CONTENT_FILTER_AVAILABLE = False
 
 # 🏆 Badge metadata for display
 BADGE_METADATA = {
@@ -311,10 +319,8 @@ def save_dictionary_cache(cache_data):
 # Dictionary cache - loaded on-demand by get_word_info(), not at startup
 DICTIONARY_CACHE = {}
 
-# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
-SIMPLE_WIKTIONARY = {}
-
-print("✅ Dictionary resources initialized (on-demand loading enabled)")
+# Note: SIMPLE_WIKTIONARY is now loaded at module import (see top of file)
+print("✅ Dictionary resources initialized")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -3123,13 +3129,16 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         # Create sentence from definition and example
         if example and len(example) > 10:
             sentence = f"{definition}. {_blank_word(example, word)}"
+            definition_source = "builtin"
         else:
             sentence = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+            definition_source = "builtin"
         
         result.append({
             "word": word,
             "sentence": sentence,
-            "hint": f"This is a level {difficulty} word with {len(word)} letters."
+            "hint": f"This is a level {difficulty} word with {len(word)} letters.",
+            "definitionSource": definition_source
         })
     
     print(f"✅ Selected {len(result)} random words at difficulty {difficulty}")
@@ -3170,6 +3179,21 @@ def api_random_words():
                     "status": "error",
                     "message": f"Could not find enough words at difficulty level {difficulty}"
                 }), 404
+            
+            # CRITICAL: Apply content filtering to generated words
+            filtered_words, blocked_words, flagged_words = filter_content_with_tracking(random_words, session)
+            
+            if blocked_words:
+                print(f"🛡️ Random Play blocked {len(blocked_words)} inappropriate words")
+            
+            # Use filtered words
+            random_words = filtered_words
+            
+            if not random_words:
+                return jsonify({
+                    "status": "error",
+                    "message": "Unable to generate appropriate words. Please try a different difficulty level."
+                }), 400
             
             # Store in session (same as file upload)
             set_wordbank(random_words)
