@@ -47,6 +47,12 @@ except Exception:
     BUNDLE_CATALOG = {}
     REDEEMABLE_KEYS = {}
 
+# Avatar catalog import with fallback
+try:
+    from avatar_catalog import AVATARS_CATALOG
+except Exception:
+    AVATARS_CATALOG = [{"id": "default", "name": "Default Avatar", "tier": "free"}]
+
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
 
@@ -79,21 +85,19 @@ if FAST_BOOT:
 else:
     print("⚙️ FAST_BOOT=off → Running full startup checks")
 
-# Dictionary API with robust error handling
-try:
-    from dictionary_api import dictionary_api
-    def DICT_LOOKUP(word: str):
-        return dictionary_api.lookup_word(word)
-    print("✅ Dictionary API loaded successfully")
-except Exception as e:
-    print(f"⚠️ Dictionary API not available: {e}")
-    # Safe fallback when dictionary API isn't available
-    def DICT_LOOKUP(word: str):
-        return {
-            "definition": f"A placeholder definition for '{word}'.",
-            "example": f"The _____ is spelled '{word}'.",
-            "phonetic": ""
-        }
+# Dictionary API with robust error handling - PLACEHOLDER
+# Will be replaced with built-in dictionary after load_simple_wiktionary is defined
+SIMPLE_WIKTIONARY = {}
+
+def DICT_LOOKUP(word: str):
+    """
+    Look up word in built-in Simple Wiktionary dictionary.
+    Returns dict with definition, example, source or None if not found.
+    """
+    if not word:
+        return None
+    word_lower = word.lower().strip()
+    return SIMPLE_WIKTIONARY.get(word_lower)
 
 # Content Filter and Guardian Reporting System
 try:
@@ -163,6 +167,14 @@ def load_simple_wiktionary():
     except Exception as e:
         print(f"❌ Failed to load Simple Wiktionary: {e}")
     return {}
+
+# Built-in dictionary cache - load Simple Wiktionary once at startup
+print("📚 Loading Simple English Wiktionary at startup...")
+try:
+    SIMPLE_WIKTIONARY = load_simple_wiktionary()
+except Exception as e:
+    print(f"⚠️ Failed to load Simple Wiktionary: {e}")
+    SIMPLE_WIKTIONARY = {}
 
 # 🏆 Badge metadata for display
 BADGE_METADATA = {
@@ -311,10 +323,16 @@ def save_dictionary_cache(cache_data):
 # Dictionary cache - loaded on-demand by get_word_info(), not at startup
 DICTIONARY_CACHE = {}
 
-# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
-SIMPLE_WIKTIONARY = {}
+print("✅ Dictionary resources initialized (built-in Simple Wiktionary loaded)")
 
-print("✅ Dictionary resources initialized (on-demand loading enabled)")
+# Difficulty mapping for Random Play: UI levels 1-5 to internal categories
+DIFFICULTY_MAP = {
+    1: 'grade_1_2',
+    2: 'grade_3_4',
+    3: 'grade_5_6',
+    4: 'middle_school',
+    5: 'high_school'
+}
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -3059,81 +3077,109 @@ def calculate_word_difficulty(word: str) -> int:
 
 def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dict[str, str]]:
     """
-    Get random words from Simple Wiktionary filtered by difficulty level.
+    Get random words using word_generator and enrich with built-in dictionary.
+    Now uses DIFFICULTY_MAP and enforces content filtering.
     
     Args:
         difficulty: Level 1-5 (1=easy, 5=hard)
         count: Number of words to return (default 10)
     
     Returns:
-        List of word dictionaries with word, sentence, and hint fields
+        List of word dictionaries with word, sentence, hint, definition fields
     """
-    if not SIMPLE_WIKTIONARY:
-        raise ValueError("Simple Wiktionary not loaded - cannot generate random words")
+    # Map UI difficulty (1-5) to internal category
+    difficulty_category = DIFFICULTY_MAP.get(difficulty, 'grade_3_4')
     
-    # Filter words by difficulty
-    words_at_difficulty = []
+    print(f"🎲 Generating {count} words at difficulty level {difficulty} ({difficulty_category})...")
     
-    print(f"🎲 Searching for {count} words at difficulty level {difficulty}...")
+    # Generate candidate words from word_generator (may include adjacent levels)
+    try:
+        # Generate extra words to account for filtering
+        candidate_words = generate_words_by_difficulty(difficulty_category, count * 2)
+    except Exception as e:
+        print(f"❌ Error generating words: {e}")
+        candidate_words = []
     
-    for word, data in SIMPLE_WIKTIONARY.items():
-        # Skip very short words (likely abbreviations) or words with special characters
-        if len(word) < 3 or not word.isalpha():
-            continue
+    # If primary level doesn't yield enough, try adjacent levels for variety
+    if len(candidate_words) < count and difficulty > 1:
+        adjacent_category = DIFFICULTY_MAP.get(difficulty - 1)
+        if adjacent_category:
+            candidate_words.extend(generate_words_by_difficulty(adjacent_category, count))
+    
+    if len(candidate_words) < count and difficulty < 5:
+        adjacent_category = DIFFICULTY_MAP.get(difficulty + 1)
+        if adjacent_category:
+            candidate_words.extend(generate_words_by_difficulty(adjacent_category, count))
+    
+    # Remove duplicates
+    candidate_words = list(set(candidate_words))
+    
+    # Apply content filtering (wrap in try/except for when called outside request context)
+    word_records = [{"word": w} for w in candidate_words]
+    try:
+        safe_words, blocked_words, violation_messages = filter_content_with_tracking(word_records, request)
+        if blocked_words:
+            print(f"🛡️ Filtered out {len(blocked_words)} inappropriate word(s)")
+    except Exception as e:
+        # If filter_content_with_tracking fails (e.g., outside request context), fall back to basic filtering
+        print(f"⚠️ Advanced filtering not available: {e}")
+        safe_words = []
+        for wr in word_records:
+            w = wr.get("word", "")
+            is_safe, reason = is_kid_friendly(w)
+            if is_safe:
+                safe_words.append(wr)
+            else:
+                print(f"🛡️ Blocked word: {w} - {reason}")
+    
+    # Enrich safe words with definitions from built-in dictionary
+    enriched = []
+    for word_rec in safe_words[:count]:
+        word = word_rec.get("word", "")
+        word_lower = word.lower()
         
-        word_difficulty = calculate_word_difficulty(word)
+        # Look up in DICT_LOOKUP (Simple Wiktionary)
+        dict_data = DICT_LOOKUP(word)
         
-        # Accept words at exact difficulty or ±1 level (for variety)
-        if abs(word_difficulty - difficulty) <= 1:
-            words_at_difficulty.append({
-                "word": word,
-                "data": data,
-                "exact_match": word_difficulty == difficulty
-            })
-    
-    # Prioritize exact matches, then close matches
-    exact_matches = [w for w in words_at_difficulty if w["exact_match"]]
-    close_matches = [w for w in words_at_difficulty if not w["exact_match"]]
-    
-    print(f"📊 Found {len(exact_matches)} exact matches and {len(close_matches)} close matches")
-    
-    # Randomly select words (prefer exact matches)
-    selected = []
-    
-    # First, try to get from exact matches
-    if exact_matches:
-        random.shuffle(exact_matches)
-        selected = exact_matches[:count]
-    
-    # If not enough exact matches, add from close matches
-    if len(selected) < count and close_matches:
-        random.shuffle(close_matches)
-        remaining_needed = count - len(selected)
-        selected.extend(close_matches[:remaining_needed])
-    
-    # Format as word records
-    result = []
-    for item in selected[:count]:
-        word = item["word"]
-        data = item["data"]
+        sentence = ""
+        hint = ""
+        definition = ""
+        definition_source = "none"
         
-        definition = data.get("definition", "")
-        example = data.get("example", "")
-        
-        # Create sentence from definition and example
-        if example and len(example) > 10:
-            sentence = f"{definition}. {_blank_word(example, word)}"
+        if dict_data:
+            definition = dict_data.get("definition", "")
+            example = dict_data.get("example", "")
+            
+            if definition:
+                definition = _filter_definition(definition, word)
+                definition_source = "builtin"
+                
+            if example and len(example) > 10:
+                sentence = f"{definition}. {_blank_word(example, word)}"
+                definition_source = "sentence"
+            elif definition:
+                sentence = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+                definition_source = "hint"
+            
+            hint = f"This is a level {difficulty} word with {len(word)} letters."
         else:
-            sentence = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+            # Fallback if not in dictionary
+            sentence = f"Fill in the blank: Can you spell _____ correctly?"
+            hint = f"A level {difficulty} word with {len(word)} letters."
+            definition_source = "none"
         
-        result.append({
+        enriched.append({
             "word": word,
             "sentence": sentence,
-            "hint": f"This is a level {difficulty} word with {len(word)} letters."
+            "hint": hint,
+            "definition": definition,
+            "definitionSource": definition_source,
+            "difficulty": difficulty,
+            "hasDefinition": bool(definition)
         })
     
-    print(f"✅ Selected {len(result)} random words at difficulty {difficulty}")
-    return result
+    print(f"✅ Generated {len(enriched)} filtered and enriched words at difficulty {difficulty}")
+    return enriched
 
 # --- Routes: API -------------------------------------------------------------
 @app.route("/api/random-words", methods=["POST"])
