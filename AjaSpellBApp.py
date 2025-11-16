@@ -85,12 +85,9 @@ if FAST_BOOT:
 else:
     print("⚙️ FAST_BOOT=off → Running full startup checks")
 
-# Built-in dictionary cache - load Simple Wiktionary once at startup
-try:
-    SIMPLE_WIKTIONARY = load_simple_wiktionary()
-except Exception as e:
-    print(f"⚠️ Failed to load Simple Wiktionary: {e}")
-    SIMPLE_WIKTIONARY = {}
+# Dictionary API with robust error handling - PLACEHOLDER
+# Will be replaced with built-in dictionary after load_simple_wiktionary is defined
+SIMPLE_WIKTIONARY = {}
 
 def DICT_LOOKUP(word: str):
     """
@@ -170,6 +167,14 @@ def load_simple_wiktionary():
     except Exception as e:
         print(f"❌ Failed to load Simple Wiktionary: {e}")
     return {}
+
+# Built-in dictionary cache - load Simple Wiktionary once at startup
+print("📚 Loading Simple English Wiktionary at startup...")
+try:
+    SIMPLE_WIKTIONARY = load_simple_wiktionary()
+except Exception as e:
+    print(f"⚠️ Failed to load Simple Wiktionary: {e}")
+    SIMPLE_WIKTIONARY = {}
 
 # 🏆 Badge metadata for display
 BADGE_METADATA = {
