@@ -647,6 +647,58 @@
     </script>
 
     <!-- If running inside Capacitor, open external links in the native browser -->
+    
+    <script>
+        // Loading overlay "Tap to Start" button - make responsive on first interaction
+        (function() {
+            const overlay = document.getElementById('loadingOverlay');
+            const startBtn = document.getElementById('loadingStartBtn');
+            
+            if (overlay && startBtn) {
+                // Handler function
+                function hideOverlayAndStart(e) {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    
+                    // Hide overlay
+                    overlay.style.display = 'none';
+                    
+                    // Trigger welcome if available
+                    if (window.voiceAnnouncer && typeof window.voiceAnnouncer.welcome === 'function') {
+                        try {
+                            window.voiceAnnouncer.welcome();
+                        } catch (err) {
+                            console.warn('Voice announcer welcome failed:', err);
+                        }
+                    }
+                    
+                    // Remove event listeners after first use
+                    startBtn.removeEventListener('click', hideOverlayAndStart);
+                    startBtn.removeEventListener('touchstart', hideOverlayAndStart);
+                    startBtn.removeEventListener('keydown', handleKeyDown);
+                }
+                
+                function handleKeyDown(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        hideOverlayAndStart(e);
+                    }
+                }
+                
+                // Attach multiple event types for maximum reliability
+                startBtn.addEventListener('click', hideOverlayAndStart, false);
+                startBtn.addEventListener('touchstart', hideOverlayAndStart, { passive: false });
+                startBtn.addEventListener('keydown', handleKeyDown, false);
+                
+                // Ensure button is interactive
+                startBtn.style.pointerEvents = 'auto';
+                startBtn.style.cursor = 'pointer';
+                overlay.style.pointerEvents = 'auto';
+            }
+        })();
+    </script>
+    
     <script>
         (function(){
             function isExternalUrl(href){

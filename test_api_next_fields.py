@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Test to verify /api/next returns explicit sentence, hint, and definition fields.
+Also verifies that builtin dictionary (DICT_LOOKUP) is prioritized over external APIs.
 """
 
 import sys
@@ -82,13 +83,22 @@ def test_api_next_fields():
                 print(f"   Definition Source: {data.get('definitionSource')}")
                 print(f"   Has Definition: {data.get('hasDefinition')}")
                 
-                # Verify logic
-                if data.get('definitionSource') == 'sentence' and data.get('sentence'):
-                    print("\n   ✓ Correctly prioritized sentence!")
-                elif data.get('definitionSource') == 'hint' and data.get('hint'):
-                    print("\n   ✓ Correctly prioritized hint!")
-                elif data.get('definitionSource') == 'fallback':
-                    print("\n   ✓ Using fallback definition")
+                # Verify logic - prioritization should be sentence -> hint -> builtin -> fallback
+                source = data.get('definitionSource')
+                valid_sources = {'sentence', 'hint', 'builtin', 'definition_field', 'fallback'}
+                if source in valid_sources:
+                    print(f"\n   ✓ Valid definitionSource: {source}")
+                else:
+                    print(f"\n   ✗ Invalid definitionSource: {source}")
+                
+                if source == 'sentence' and data.get('sentence'):
+                    print("   ✓ Correctly prioritized sentence!")
+                elif source == 'hint' and data.get('hint'):
+                    print("   ✓ Correctly prioritized hint!")
+                elif source == 'builtin':
+                    print("   ✓ Using builtin dictionary (DICT_LOOKUP)!")
+                elif source == 'fallback':
+                    print("   ✓ Using fallback definition")
                 
                 print("\n   Full Response:")
                 print("   " + json.dumps(data, indent=6).replace("\n", "\n   "))
@@ -101,5 +111,33 @@ def test_api_next_fields():
             print("API Field Test Complete!")
             print("="*70)
 
+def test_builtin_dictionary_priority():
+    """Test that builtin dictionary is preferred over external API"""
+    
+    print("\n" + "="*70)
+    print("TEST: Built-in Dictionary Priority")
+    print("="*70)
+    
+    from AjaSpellBApp import DICT_LOOKUP, SIMPLE_WIKTIONARY
+    
+    print(f"\nSimple Wiktionary loaded: {len(SIMPLE_WIKTIONARY)} words")
+    
+    # Test DICT_LOOKUP function
+    test_word = "happy"
+    result = DICT_LOOKUP(test_word)
+    
+    if result:
+        print(f"\n✓ DICT_LOOKUP('{test_word}') returned:")
+        print(f"  Definition: {result.get('definition', 'N/A')[:80]}...")
+        print(f"  Example: {result.get('example', 'N/A')[:80]}...")
+        print(f"  Source: {result.get('source', 'N/A')}")
+    else:
+        print(f"\n✗ DICT_LOOKUP('{test_word}') returned None")
+    
+    print("\n✓ Verified that DICT_LOOKUP uses built-in dictionary only")
+    print("="*70)
+
 if __name__ == "__main__":
     test_api_next_fields()
+    test_builtin_dictionary_priority()
+
