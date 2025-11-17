@@ -14281,41 +14281,63 @@
 
         // Update status after avatar preload completes
         document.addEventListener('DOMContentLoaded', () => {
-            // ✅ Initialize word count badge on page load
-            fetch('/api/wordbank', {
-                cache: 'no-store',
-                credentials: 'same-origin',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const wordCount = data.words ? data.words.length : 0;
-                updateWordListCount(wordCount);
-                console.log(`✅ Word count badge initialized on page load: ${wordCount} words`);
-                
-                // ✅ Enable Start Quiz button if we have words
-                if (wordCount > 0) {
+            // ✅ Initialize word count badge on page load - SYNC with quiz button
+            const syncWordCounts = () => {
+                fetch('/api/wordbank', {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const wordCount = data.words ? data.words.length : 0;
+                    
+                    // ✅ CRITICAL: Update word list badge to match quiz button
+                    updateWordListCount(wordCount);
+                    console.log(`✅ Word count badge initialized: ${wordCount} words`);
+                    
+                    // ✅ Update Start Quiz button with same count
                     const btn = document.getElementById('startQuizBtn');
                     if (btn) {
-                        btn.disabled = false;
-                        btn.removeAttribute('disabled');
-                        btn.innerHTML = `🚀 Start Quiz (${wordCount} words)`;
-                        btn.classList.add('ready-to-play');
-                        btn.classList.remove('waiting-to-play');
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                        btn.style.pointerEvents = 'auto';
-                        console.log(`✅ Start Quiz button enabled with ${wordCount} words`);
+                        if (wordCount > 0) {
+                            btn.disabled = false;
+                            btn.removeAttribute('disabled');
+                            btn.innerHTML = `🚀 Start Quiz (${wordCount} words)`;
+                            btn.classList.add('ready-to-play');
+                            btn.classList.remove('waiting-to-play');
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                            btn.style.pointerEvents = 'auto';
+                        } else {
+                            btn.disabled = true;
+                            btn.setAttribute('disabled', 'disabled');
+                            btn.innerHTML = `🐝 Let's Get Buzzing Spelling Some Words!`;
+                            btn.classList.remove('ready-to-play');
+                            btn.classList.add('waiting-to-play');
+                        }
+                        console.log(`✅ Quiz button synced: ${wordCount} words`);
                     }
-                }
-            })
-            .catch(error => {
-                console.warn('⚠️ Could not initialize word count badge:', error);
-                updateWordListCount(0);
-            });
+                    
+                    // ✅ Double-check: Force badge update again after short delay
+                    setTimeout(() => {
+                        updateWordListCount(wordCount);
+                        console.log(`🔄 Word count badge re-synced: ${wordCount} words`);
+                    }, 500);
+                })
+                .catch(error => {
+                    console.warn('⚠️ Could not initialize word count badge:', error);
+                    updateWordListCount(0);
+                });
+            };
+            
+            // Run immediately
+            syncWordCounts();
+            
+            // Also run after a short delay to catch any race conditions
+            setTimeout(syncWordCounts, 1000);
             
             // Wait a bit for preload to complete, then update status
             setTimeout(updateAvatarSystemStatus, 2000);
