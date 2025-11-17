@@ -2272,9 +2272,14 @@ def save_current_wordlist():
         if not list_name:
             return jsonify({"ok": False, "error": "List name is required"}), 400
 
+        storage_id = session.get("wordbank_storage_id")
+        print(f"DEBUG /api/saved-lists/save: storage_id={storage_id}, session_keys={list(session.keys())}")
+        
         words = get_wordbank()
+        print(f"DEBUG /api/saved-lists/save: Retrieved {len(words)} words from get_wordbank()")
+        
         if not words:
-            return jsonify({"ok": False, "error": "No words available to save"}), 400
+            return jsonify({"ok": False, "error": "No words available to save. Please upload or paste words first."}), 400
 
         user = get_or_create_guest_user()
         if not user:
@@ -2333,6 +2338,8 @@ def load_saved_wordlist():
         if not list_id:
             return jsonify({"ok": False, "error": "Missing list id"}), 400
 
+        print(f"DEBUG /api/saved-lists/load: Loading list_id={list_id}")
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -2365,8 +2372,9 @@ def load_saved_wordlist():
             session.pop(QUIZ_STATE_KEY, None)
             session.modified = True
 
-        # Load into session for quiz use (not marked as user upload so defaults like skip_default_load remain consistent)
-        set_wordbank(rows, is_user_upload=False)
+        # Load into session for quiz use (mark as user_upload to prevent defaults from appearing)
+        print(f"DEBUG /api/saved-lists/load: Loading {len(rows)} words into session via set_wordbank")
+        set_wordbank(rows, is_user_upload=True)  # Changed to True - saved lists are user content
         # Re-initialize quiz state with fresh order & counters
         init_quiz_state()
         # Safety: ensure new quiz state reflects new word count
@@ -2374,6 +2382,8 @@ def load_saved_wordlist():
         if fresh_state and len(fresh_state.get("order", [])) != len(rows):
             print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
             init_quiz_state()
+
+        print(f"DEBUG /api/saved-lists/load: Successfully loaded {len(rows)} words, storage_id={session.get('wordbank_storage_id')}")
 
         return jsonify({
             "ok": True,
@@ -2401,6 +2411,8 @@ def delete_saved_wordlist():
         if not list_id:
             return jsonify({"ok": False, "error": "Missing list id"}), 400
 
+        print(f"DEBUG /api/saved-lists/delete: Attempting to delete list_id={list_id}")
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -2412,10 +2424,13 @@ def delete_saved_wordlist():
             wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
 
         if not wl:
+            print(f"DEBUG /api/saved-lists/delete: List not found for user {user.id}")
             return jsonify({"ok": False, "error": "List not found"}), 404
 
+        print(f"DEBUG /api/saved-lists/delete: Deleting list '{wl.list_name}' (id={wl.id})")
         db.session.delete(wl)
         db.session.commit()
+        print(f"DEBUG /api/saved-lists/delete: Successfully deleted list")
         return jsonify({"ok": True})
     except Exception as e:
         print(f"ERROR /api/saved-lists/delete: {e}")
