@@ -4664,13 +4664,17 @@
             `;
             modal.innerHTML = `
                 <div style="
-                    width: 92%; max-width: 720px; background: linear-gradient(135deg, #FFF0F6 0%, #FFFAE3 100%);
+                    width: 95%; max-width: 900px; background: linear-gradient(135deg, #FFF0F6 0%, #FFFAE3 100%);
                     border-radius: 24px; padding: 1.5rem; box-shadow: 0 18px 40px rgba(255, 182, 193, 0.45);
                     border: 3px solid rgba(255, 107, 157, 0.4); position: relative; animation: slideUp 0.25s ease;
+                    max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
                 ">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h2 style="margin:0; color:#FF6B9D; font-weight:800;">📚 Saved Word Lists</h2>
-                        <button id="savedCloseBtn" style="background: transparent; border:none; font-size:1.5rem; cursor:pointer;">×</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="backToMenuBtn" class="action-btn secondary" style="padding:0.5rem 1rem; font-size:0.9rem;">🏠 Back to Menu</button>
+                            <button id="savedCloseBtn" style="background: transparent; border:none; font-size:1.5rem; cursor:pointer;">×</button>
+                        </div>
                     </div>
 
                     <div style="
@@ -4701,6 +4705,10 @@
             autoCenterModal(modal); // 📱 Auto-center for mobile
 
             document.getElementById('savedCloseBtn').onclick = () => modal.remove();
+            document.getElementById('backToMenuBtn').onclick = () => {
+                modal.remove();
+                window.location.href = '/';
+            };
 
             const statusEl = document.getElementById('saveStatus');
             const container = document.getElementById('savedListsContainer');
@@ -4860,7 +4868,7 @@
             function saveCurrent(){
                 const name = document.getElementById('saveListName').value.trim();
                 const description = document.getElementById('saveListDesc').value.trim();
-                if (!name){ statusEl.textContent = 'Please enter a list name.'; return; }
+                if (!name){ statusEl.textContent = '⚠️ Please enter a list name.'; return; }
                 
                 // iOS Fix: Perform actual save function without await to maintain user gesture context
                 function doActualSave() {
@@ -4873,7 +4881,7 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data.ok){ 
-                            statusEl.textContent = 'Saved "' + data.saved.name + '" (' + data.saved.word_count + ' words).'; 
+                            statusEl.textContent = '✅ Saved "' + data.saved.name + '" (' + data.saved.word_count + ' words).'; 
                             loadSaved(); 
                             try{ refreshSavedListsBadge(); }catch(e){}
                             // Clear form after successful save
@@ -4888,15 +4896,18 @@
                     });
                 }
                 
-                // Check if it's the default word list (iOS-compatible: no await)
+                // Always show confirmation before saving
                 fetch('/api/wordbank')
                     .then(checkRes => checkRes.json())
                     .then(checkData => {
-                        if (checkData.words && checkData.words.length === 50 && checkData.words[0].word === 'verdict') {
-                            // This is the default 50-word list - show confirmation
+                        const wordCount = (checkData.words && checkData.words.length) || 0;
+                        const isDefaultList = wordCount === 50 && checkData.words && checkData.words[0] && checkData.words[0].word === 'verdict';
+                        
+                        if (isDefaultList) {
+                            // This is the default 50-word list - show warning
                             showBeeConfirm({
-                                title: 'Save Default Word List?',
-                                message: "You haven't uploaded your own word list yet. This will save the default 50-word demo list. Upload your own words first if you want to save a custom list.",
+                                title: '⚠️ Save Default Word List?',
+                                message: "You haven't uploaded your own word list yet. This will save the default 50-word demo list.\n\nUpload your own words first if you want to save a custom list.",
                                 confirmText: 'Save Default List',
                                 cancelText: 'Cancel'
                             }).then(confirmed => {
@@ -4906,15 +4917,40 @@
                                     statusEl.textContent = 'Save cancelled. Upload your own word list first!';
                                 }
                             });
+                        } else if (wordCount === 0) {
+                            // No words loaded
+                            statusEl.textContent = '⚠️ No words loaded! Upload or enter words first.';
                         } else {
-                            // Not default list, save immediately
-                            doActualSave();
+                            // Custom list - show confirmation with word count
+                            showBeeConfirm({
+                                title: '💾 Save Word List?',
+                                message: `Save your current word list:\n\n📚 "${name}"\n(${wordCount} words)\n\n${description ? 'Description: ' + description : 'No description'}`,
+                                confirmText: 'Yes, Save',
+                                cancelText: 'Cancel'
+                            }).then(confirmed => {
+                                if (confirmed) {
+                                    doActualSave();
+                                } else {
+                                    statusEl.textContent = 'Save cancelled.';
+                                }
+                            });
                         }
                     })
                     .catch(e => {
                         console.error('Error checking wordbank:', e);
-                        // If check fails, try to save anyway
-                        doActualSave();
+                        // If check fails, show basic confirmation and try to save
+                        showBeeConfirm({
+                            title: '💾 Save Word List?',
+                            message: `Save as:\n\n📚 "${name}"\n\n${description ? 'Description: ' + description : 'No description'}`,
+                            confirmText: 'Yes, Save',
+                            cancelText: 'Cancel'
+                        }).then(confirmed => {
+                            if (confirmed) {
+                                doActualSave();
+                            } else {
+                                statusEl.textContent = 'Save cancelled.';
+                            }
+                        });
                     });
             }
 
