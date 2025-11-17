@@ -4736,7 +4736,10 @@
                 });
                 // Wire load buttons
                 container.querySelectorAll('button[data-id]').forEach(btn => {
-                    btn.addEventListener('click', async () => {
+                    btn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
                         const id = btn.getAttribute('data-id');
                         const listName = btn.textContent.trim();
                         
@@ -4800,7 +4803,10 @@
                 });
                 // Wire upload buttons for updating saved lists from files
                 container.querySelectorAll('button[data-upload]').forEach(btn => {
-                    btn.addEventListener('click', () => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
                         const listId = btn.getAttribute('data-upload');
                         const listName = btn.getAttribute('data-name');
                         showUploadToSavedListModal(listId, listName);
@@ -4808,7 +4814,10 @@
                 });
                 // Wire delete buttons (iOS-compatible - no async/await)
                 container.querySelectorAll('button[data-del]').forEach(btn => {
-                    btn.addEventListener('click', () => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
                         const id = btn.getAttribute('data-del');
                         const listName = btn.getAttribute('data-name') || 'this list';
                         const wordCount = btn.getAttribute('data-wordcount') || '?';
