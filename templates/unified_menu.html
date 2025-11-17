@@ -84,27 +84,6 @@
     {% set _subscription_sku = subscription_product_id if subscription_product_id is defined else '' %}
     {% set _subscription_monthly = (subscription_monthly_usd or 4.49) %}
     <script>
-        (function(){
-            var root = document.documentElement;
-            function create3DBeeHiveAnimation() {
-                const container = document.getElementById('beeHiveLoader');
-                if (!container) return;
-                // GLB-only policy: use lightweight fallback animation instead of legacy OBJ/MTL scene
-                createFallbackHiveAnimation(container);
-            }
-                    <a href="/auth/register" data-subscribe="1" style="padding:6px 12px; background:#4FC3F7; color:white; border-radius:10px; text-decoration:none; font-weight:800; border:2px solid rgba(255,255,255,0.6);">${ctaText}</a>
-                    <button type="button" aria-label="Dismiss" title="Dismiss" style="background:transparent; border:0; font-size:18px; margin-left:6px; cursor:pointer; color:#8B6B3A;">×</button>
-                `;
-                const closeBtn = bar.querySelector('button');
-                closeBtn.addEventListener('click', function(){
-                    try { localStorage.setItem(dismissedKey, '1'); } catch(e) {}
-                    bar.remove();
-                });
-                document.body.prepend(bar);
-            } catch(e) { /* no-op */ }
-        });
-    </script>
-    <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
             const VERSION = 'unified_menu_v2.1-' + Date.now();
