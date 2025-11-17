@@ -57,7 +57,6 @@
             clearTimeout(window.THREE_LOAD_TIMEOUT);
         }
     </script>
-    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
     <script>
         (function(){
@@ -12656,22 +12655,14 @@
         
         // Initialize magical effects when page loads
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🎬 DOM LOADED - Starting initialization...');
-            
             // 🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
-            console.log('📜 Scrolled to top');
             
             // Show loader immediately
             const loader = document.getElementById('honeyLoader');
-            if (loader) {
-                loader.style.display = 'flex';
-                console.log('👁️ Loader displayed');
-            } else {
-                console.error('❌ ERROR: honeyLoader element not found!');
-            }
+            if (loader) loader.style.display = 'flex';
             
             // Show emergency bypass button after 5 seconds
             const bypassBtn = document.getElementById('emergencyBypassBtn');
@@ -12684,37 +12675,24 @@
                     console.warn('⚠️ Emergency bypass button now available');
                 }
             }, 5000);
-            
             if (loader) {
+                loader.style.display = 'flex';
                 loader.style.opacity = '1';
                 loader.style.visibility = 'visible';
-                console.log('✅ Loader opacity/visibility set');
             }
             
             // Initialize Matrix Rain Effect
-            console.log('🌧️ Initializing Matrix Rain...');
             if (typeof MatrixRain !== 'undefined') {
-                try {
-                    window.matrixRain = new MatrixRain('matrixCanvas');
-                    window.matrixRain.start();
-                    console.log('✅ Matrix rain animation started');
-                } catch (matrixError) {
-                    console.error('❌ Matrix rain error:', matrixError);
-                }
+                window.matrixRain = new MatrixRain('matrixCanvas');
+                window.matrixRain.start();
+                console.log('🌧️ Matrix rain animation started');
             } else {
-                console.warn('⚠️ MatrixRain class not loaded, skipping animation');
+                console.warn('⚠️ MatrixRain not loaded, skipping animation');
             }
             
             // Initialize loading system
-            console.log('⚙️ Initializing LoadingSystem...');
-            try {
-                window.loadingSystem = new LoadingSystem();
-                window.loadingSystem.updateProgress(5, '🚀 Starting up...');
-                console.log('✅ LoadingSystem initialized at 5%');
-            } catch (loadingSystemError) {
-                console.error('❌ LoadingSystem initialization error:', loadingSystemError);
-                return; // Exit if loading system fails
-            }
+            window.loadingSystem = new LoadingSystem();
+            window.loadingSystem.updateProgress(5, '🚀 Starting up...');
             
             // EMERGENCY TIMEOUT - Force loading screen to complete after 10 seconds
             const LOADING_EMERGENCY_TIMEOUT = 10000;
@@ -12722,17 +12700,14 @@
                 console.error('🚨 EMERGENCY: Loading took too long, forcing completion...');
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
-                    window.loadingSystem.dismissLoader();
+                    window.loadingSystem.presentTapToStart();
                 }
             }, LOADING_EMERGENCY_TIMEOUT);
-            console.log(`⏰ Emergency timeout set for ${LOADING_EMERGENCY_TIMEOUT}ms`);
             
             try {
-                console.log('🚀 Starting system checks...');
             
             // Run system checks
             await window.loadingSystem.runSystemChecks();
-            console.log('✅ System checks complete');
             
             // 60% complete after system checks, now initialize UI components
             window.loadingSystem.updateProgress(60, '🎨 Initializing interface...');
