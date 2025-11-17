@@ -3020,64 +3020,158 @@ def migrate_avatar_columns():
 def calculate_word_difficulty(word: str) -> int:
     """
     Calculate difficulty level (1-5) for a word based on multiple factors.
-    1 = Easy (3-4 letters, common patterns)
-    2 = Medium-Easy (5-6 letters, simple patterns)
-    3 = Medium (7-8 letters, some complexity)
-    4 = Medium-Hard (9-10 letters, complex patterns)
-    5 = Hard (11+ letters, very complex)
+    Enhanced algorithm for unique and challenging spelling experience.
+    
+    1 = Easy (3-4 letters, common patterns, phonetic)
+    2 = Medium-Easy (5-6 letters, mostly phonetic)
+    3 = Medium (7-8 letters, some tricky patterns)
+    4 = Medium-Hard (9-11 letters, complex patterns, silent letters)
+    5 = Hard (12+ letters, very complex, multiple tricks)
     """
     word_lower = word.lower()
     length = len(word_lower)
     
-    # Base difficulty from length
+    # Base difficulty from length (revised scale)
     if length <= 4:
-        base_difficulty = 1
+        base_difficulty = 1.0
     elif length <= 6:
-        base_difficulty = 2
+        base_difficulty = 2.0
     elif length <= 8:
-        base_difficulty = 3
-    elif length <= 10:
-        base_difficulty = 4
+        base_difficulty = 3.0
+    elif length <= 11:
+        base_difficulty = 4.0
     else:
-        base_difficulty = 5
+        base_difficulty = 5.0
     
-    # Adjust for complexity factors
-    complexity_score = 0
+    # Complexity scoring system
+    complexity_score = 0.0
     
-    # Check for difficult letter combinations
-    difficult_patterns = ['ough', 'eigh', 'tion', 'sion', 'ious', 'eous', 'queue', 'pneum', 'psych', 'rrhea']
-    for pattern in difficult_patterns:
+    # ══════════════════════════════════════════════════════════════
+    # VERY DIFFICULT PATTERNS (+1.5 each)
+    # ══════════════════════════════════════════════════════════════
+    very_hard_patterns = [
+        'ough',    # tough, through, bough (multiple pronunciations)
+        'eigh',    # eight, weigh, neighbor
+        'queue',   # unique spelling
+        'pneum',   # pneumonia, pneumatic
+        'psych',   # psychology, psychic
+        'rrhea',   # diarrhea
+        'rrh',     # hemorrhage, catarrh
+        'phth',    # ophthalmology
+        'chth',    # chthonic
+    ]
+    for pattern in very_hard_patterns:
         if pattern in word_lower:
-            complexity_score += 1
+            complexity_score += 1.5
     
-    # Check for silent letters (common patterns)
-    silent_patterns = ['kn', 'gn', 'wr', 'mb', 'gh', 'ph']
+    # ══════════════════════════════════════════════════════════════
+    # HARD PATTERNS (+1.0 each)
+    # ══════════════════════════════════════════════════════════════
+    hard_patterns = [
+        'tion',    # nation, station
+        'sion',    # mansion, tension
+        'ious',    # various, curious
+        'eous',    # gorgeous, courteous
+        'ough',    # though, thought
+        'augh',    # laugh, taught
+        'eigh',    # sleigh, freight
+        'ign',     # sign, design, foreign
+        'sce',     # scene, science
+        'tch',     # match, watch
+        'dge',     # bridge, edge
+        'ance',    # dance,rance
+        'ence',    # fence, science
+    ]
+    for pattern in hard_patterns:
+        if pattern in word_lower:
+            complexity_score += 1.0
+    
+    # ══════════════════════════════════════════════════════════════
+    # SILENT LETTERS (+0.7 each)
+    # ══════════════════════════════════════════════════════════════
+    silent_patterns = [
+        'kn',      # knife, know
+        'gn',      # gnome, sign
+        'wr',      # write, wrong
+        'mb',      # climb, comb
+        'gh',      # night, thought (silent or /f/)
+        'ph',      # phone, elephant
+        'pn',      # pneumonia
+        'ps',      # psychology
+        'pt',      # pterodactyl, receipt
+        'rh',      # rhythm, rhyme
+        'wh',      # who, whole (sometimes)
+    ]
     for pattern in silent_patterns:
+        if pattern in word_lower:
+            complexity_score += 0.7
+    
+    # ══════════════════════════════════════════════════════════════
+    # VOWEL COMBINATIONS (+0.5 each)
+    # ══════════════════════════════════════════════════════════════
+    vowel_combos = [
+        'ea',      # bread vs bead (different sounds)
+        'ie',      # field vs friend
+        'ei',      # receive, weird
+        'ou',      # through, tough, cough (many sounds)
+        'oo',      # book vs boot
+        'au',      # autumn, laugh
+        'ai',      # rain, said
+        'ay',      # way, says
+    ]
+    for pattern in vowel_combos:
         if pattern in word_lower:
             complexity_score += 0.5
     
-    # Check for double letters (slightly harder)
+    # ══════════════════════════════════════════════════════════════
+    # STRUCTURAL COMPLEXITY
+    # ══════════════════════════════════════════════════════════════
+    
+    # Double letters (+0.3 each occurrence)
     import re
-    if re.search(r'(.)\1', word_lower):
-        complexity_score += 0.5
+    double_count = len(re.findall(r'(.)\1', word_lower))
+    complexity_score += double_count * 0.3
     
-    # Check for uncommon letters
+    # Triple letters (rare but very tricky, +0.8)
+    if re.search(r'(.)\1\1', word_lower):
+        complexity_score += 0.8
+    
+    # Uncommon letters (+0.4 each)
     uncommon_letters = set('qxzj')
-    if any(letter in word_lower for letter in uncommon_letters):
-        complexity_score += 0.5
+    uncommon_count = sum(1 for letter in word_lower if letter in uncommon_letters)
+    complexity_score += uncommon_count * 0.4
     
-    # Adjust base difficulty
-    if complexity_score >= 2:
-        base_difficulty = min(5, base_difficulty + 1)
-    elif complexity_score >= 1:
-        base_difficulty = min(5, base_difficulty + 0.5)
+    # Consonant clusters (3+ consonants together, +0.5)
+    consonant_clusters = re.findall(r'[bcdfghjklmnpqrstvwxyz]{3,}', word_lower)
+    complexity_score += len(consonant_clusters) * 0.5
+    
+    # ══════════════════════════════════════════════════════════════
+    # FINAL DIFFICULTY CALCULATION
+    # ══════════════════════════════════════════════════════════════
+    
+    # Apply complexity adjustments
+    final_difficulty = base_difficulty
+    
+    if complexity_score >= 3.0:
+        final_difficulty += 2.0
+    elif complexity_score >= 2.0:
+        final_difficulty += 1.5
+    elif complexity_score >= 1.0:
+        final_difficulty += 1.0
+    elif complexity_score >= 0.5:
+        final_difficulty += 0.5
+    
+    # Cap at 1-5 range
+    final_difficulty = max(1.0, min(5.0, final_difficulty))
     
     # Round to nearest integer
-    return int(round(base_difficulty))
+    return int(round(final_difficulty))
+
 
 def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dict[str, str]]:
     """
     Get random words from Simple Wiktionary filtered by difficulty level.
+    Enhanced with quality filters for unique, challenging spelling experience.
     
     Args:
         difficulty: Level 1-5 (1=easy, 5=hard)
@@ -3092,47 +3186,112 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     if not wiktionary:
         raise ValueError("Simple Wiktionary not loaded - cannot generate random words")
     
-    # Filter words by difficulty
+    # ══════════════════════════════════════════════════════════════
+    # QUALITY FILTERS - Skip overly simple/common words
+    # ══════════════════════════════════════════════════════════════
+    overly_common_words = {
+        'the', 'and', 'or', 'but', 'if', 'for', 'of', 'to', 'in', 'on', 'at', 'is', 'it',
+        'be', 'was', 'are', 'as', 'by', 'he', 'she', 'we', 'you', 'they', 'me', 'him', 'her',
+        'us', 'them', 'my', 'his', 'our', 'your', 'their', 'this', 'that', 'these', 'those',
+        'a', 'an', 'am', 'i', 'do', 'go', 'so', 'no', 'up', 'out', 'get', 'got', 'see', 'saw',
+        'cat', 'dog', 'boy', 'girl', 'man', 'can', 'run', 'big', 'red', 'hot', 'cold', 'yes'
+    }
+    
+    # Filter words by difficulty with quality checks
     words_at_difficulty = []
     
     print(f"🎲 Searching for {count} words at difficulty level {difficulty}...")
     
     for word, data in wiktionary.items():
-        # Skip very short words (likely abbreviations) or words with special characters
-        if len(word) < 3 or not word.isalpha():
+        word_lower = word.lower()
+        
+        # ══════════════════════════════════════════════════════════════
+        # SKIP CONDITIONS (quality filters)
+        # ══════════════════════════════════════════════════════════════
+        
+        # Skip very short words unless difficulty is 1
+        if len(word) < 3 and difficulty > 1:
             continue
         
+        # Skip words with non-alphabetic characters
+        if not word.isalpha():
+            continue
+        
+        # Skip overly common words (except for difficulty 1)
+        if difficulty > 1 and word_lower in overly_common_words:
+            continue
+        
+        # Skip proper nouns (capitalized words from dictionary, basic check)
+        if word[0].isupper() and len(word) > 1:
+            continue
+        
+        # Skip extremely long words (over 18 letters - likely compound/technical)
+        if len(word) > 18:
+            continue
+        
+        # Must have a meaningful definition
+        if not data.get("definition") or len(data.get("definition", "")) < 10:
+            continue
+        
+        # ══════════════════════════════════════════════════════════════
+        # DIFFICULTY MATCHING
+        # ══════════════════════════════════════════════════════════════
         word_difficulty = calculate_word_difficulty(word)
         
-        # Accept words at exact difficulty or ±1 level (for variety)
-        if abs(word_difficulty - difficulty) <= 1:
+        # For difficulty 1-2: Accept exact match only (keep it simple)
+        # For difficulty 3-5: Accept ±1 level for variety
+        tolerance = 1 if difficulty >= 3 else 0
+        
+        if abs(word_difficulty - difficulty) <= tolerance:
+            # Calculate uniqueness score (words with interesting patterns get priority)
+            uniqueness = 0
+            if any(p in word_lower for p in ['ough', 'eigh', 'queue', 'pneum', 'psych']):
+                uniqueness += 3
+            if any(p in word_lower for p in ['tion', 'sion', 'ious', 'eous', 'ign', 'sce']):
+                uniqueness += 2
+            if any(p in word_lower for p in ['kn', 'gn', 'wr', 'mb', 'ph', 'gh']):
+                uniqueness += 1
+            
             words_at_difficulty.append({
                 "word": word,
                 "data": data,
-                "exact_match": word_difficulty == difficulty
+                "exact_match": word_difficulty == difficulty,
+                "uniqueness": uniqueness
             })
     
-    # Prioritize exact matches, then close matches
+    # ══════════════════════════════════════════════════════════════
+    # PRIORITIZED SELECTION
+    # ══════════════════════════════════════════════════════════════
+    
+    # Sort by: exact match first, then by uniqueness, then random
     exact_matches = [w for w in words_at_difficulty if w["exact_match"]]
     close_matches = [w for w in words_at_difficulty if not w["exact_match"]]
     
-    print(f"📊 Found {len(exact_matches)} exact matches and {len(close_matches)} close matches")
+    # Sort each group by uniqueness (descending)
+    exact_matches.sort(key=lambda x: x["uniqueness"], reverse=True)
+    close_matches.sort(key=lambda x: x["uniqueness"], reverse=True)
     
-    # Randomly select words (prefer exact matches)
+    print(f"📊 Found {len(exact_matches)} exact matches, {len(close_matches)} close matches")
+    
+    # Randomly select words (prefer exact matches, but add randomness to top candidates)
     selected = []
     
-    # First, try to get from exact matches
+    # From exact matches: take top 50% by uniqueness, then shuffle those
     if exact_matches:
-        random.shuffle(exact_matches)
-        selected = exact_matches[:count]
+        top_exact = exact_matches[:max(len(exact_matches) // 2, count * 2)]
+        random.shuffle(top_exact)
+        selected = top_exact[:count]
     
-    # If not enough exact matches, add from close matches
+    # If not enough, add from close matches
     if len(selected) < count and close_matches:
-        random.shuffle(close_matches)
+        top_close = close_matches[:max(len(close_matches) // 2, count * 2)]
+        random.shuffle(top_close)
         remaining_needed = count - len(selected)
-        selected.extend(close_matches[:remaining_needed])
+        selected.extend(top_close[:remaining_needed])
     
-    # Format as word records
+    # ══════════════════════════════════════════════════════════════
+    # FORMAT RESULTS
+    # ══════════════════════════════════════════════════════════════
     result = []
     for item in selected[:count]:
         word = item["word"]
@@ -3141,19 +3300,28 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         definition = data.get("definition", "")
         example = data.get("example", "")
         
-        # Create sentence from definition and example
+        # Create kid-friendly sentence from definition and example
         if example and len(example) > 10:
-            sentence = f"{definition}. {_blank_word(example, word)}"
+            # Blank out the word in the example
+            sentence = f"{definition}. Example: {_blank_word(example, word)}"
         else:
-            sentence = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+            # Use definition with creative prompt
+            sentence = f"{definition}. Can you spell this {len(word)}-letter word?"
+        
+        # Create informative hint
+        hint_parts = [f"Level {difficulty} word"]
+        if len(word) >= 8:
+            hint_parts.append(f"{len(word)} letters")
+        if item["uniqueness"] >= 2:
+            hint_parts.append("has tricky spelling patterns")
         
         result.append({
             "word": word,
             "sentence": sentence,
-            "hint": f"This is a level {difficulty} word with {len(word)} letters."
+            "hint": " - ".join(hint_parts) + "."
         })
     
-    print(f"✅ Selected {len(result)} random words at difficulty {difficulty}")
+    print(f"✅ Selected {len(result)} quality words at difficulty {difficulty}")
     return result
 
 # --- Routes: API -------------------------------------------------------------
