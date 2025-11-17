@@ -2418,6 +2418,34 @@
             pointer-events: none; /* not clickable until enabled */
         " disabled aria-disabled="true">Tap to Start ✨</button>
         
+        <!-- Emergency Bypass Button (appears after 5 seconds if loading hangs) -->
+        <button id="emergencyBypassBtn" style="
+            position: relative;
+            z-index: 10;
+            margin-top: 1rem;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 2px solid #FF6B6B;
+            background: rgba(255, 107, 107, 0.1);
+            color: #FFD700;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            display: none;
+            opacity: 0;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        " onclick="
+            if (confirm('⚠️ Skip loading checks?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
+                const loader = document.getElementById('honeyLoader');
+                if (loader) {
+                    if (window.matrixRain) window.matrixRain.stop();
+                    loader.style.display = 'none';
+                    console.warn('🚨 EMERGENCY BYPASS: User skipped loading screen');
+                }
+            }
+        ">⚠️ Skip Loading (Emergency)</button>
+        
         <!-- System Checks Display -->
         <div id="systemChecks" style="
             position: relative;
@@ -12630,6 +12658,19 @@
             
             // Show loader immediately
             const loader = document.getElementById('honeyLoader');
+            if (loader) loader.style.display = 'flex';
+            
+            // Show emergency bypass button after 5 seconds
+            const bypassBtn = document.getElementById('emergencyBypassBtn');
+            setTimeout(() => {
+                if (bypassBtn && loader && loader.style.display !== 'none') {
+                    bypassBtn.style.display = 'block';
+                    setTimeout(() => {
+                        bypassBtn.style.opacity = '1';
+                    }, 50);
+                    console.warn('⚠️ Emergency bypass button now available');
+                }
+            }, 5000);
             if (loader) {
                 loader.style.display = 'flex';
                 loader.style.opacity = '1';
