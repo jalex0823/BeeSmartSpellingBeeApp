@@ -12159,6 +12159,8 @@
         `;
         document.head.appendChild(style);
         
+        console.log('🔧 Loading screen script starting...');
+        
         // Loading System with Progress Tracking and System Checks
         class LoadingSystem {
             constructor() {
@@ -12653,8 +12655,12 @@
             }
         }
         
+        console.log('📍 About to register DOMContentLoaded listener...');
+        
         // Initialize magical effects when page loads
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🎬 DOMContentLoaded FIRED!');
+            
             // 🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             document.documentElement.scrollTop = 0;
