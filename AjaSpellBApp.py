@@ -2080,35 +2080,33 @@ def load_default_wordbank() -> List[Dict[str, str]]:
         return []
 
 def get_wordbank() -> List[Dict[str, str]]:
-    """Read the active wordbank directly from the server-side session.
-
-    We persist the full list in the session store (filesystem/Redis), so
-    it is shared across workers and survives process restarts.
+    """Read wordbank from WORD_STORAGE using session's storage_id pointer.
+    
+    Avoids cookie size limits by keeping full word list server-side.
+    Session only stores small UUID pointer (~36 bytes).
     """
-    wb = session.get(DATA_KEY)
+    storage_id = session.get("wordbank_storage_id")
+    wb = []
 
-    # Migrate legacy payload (dict with storage_id) to direct list if possible
-    if isinstance(wb, dict):
-        storage_id = wb.get("storage_id")
-        migrated = []
-        if storage_id:
-            with WORD_STORAGE_LOCK:
-                migrated = WORD_STORAGE.get(storage_id, [])
-        if migrated:
-            session[DATA_KEY] = migrated
-            session.pop("wordbank_storage_id", None)
-            wb = migrated
-            print(f"DEBUG get_wordbank: Migrated {len(migrated)} words from legacy storage_id to server-side session")
+    # Try to load from WORD_STORAGE using storage_id pointer
+    if storage_id:
+        with WORD_STORAGE_LOCK:
+            wb = WORD_STORAGE.get(storage_id, [])
+        if wb:
+            print(f"DEBUG get_wordbank: Loaded {len(wb)} words from WORD_STORAGE[{storage_id}]")
         else:
-            wb = []
-
-    # New shape: list of word dicts
-    if not isinstance(wb, list):
-        wb = []
+            print(f"⚠️ WARNING get_wordbank: storage_id={storage_id} exists but WORD_STORAGE is empty (server restart?)")
+    
+    # Fallback: try legacy direct session storage (migrate to WORD_STORAGE)
+    if not wb:
+        legacy = session.get(DATA_KEY)
+        if isinstance(legacy, list) and legacy:
+            wb = legacy
+            print(f"DEBUG get_wordbank: Migrating {len(wb)} words from session to WORD_STORAGE")
+            set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
 
     # Smart default load for brand-new sessions with nothing uploaded yet
     # ⚠️ CRITICAL: Only load defaults if user has NEVER uploaded anything
-    # This prevents default words from appearing after user uploads their own list
     if not wb and not session.get("skip_default_load", False) and not session.get("has_uploaded_once", False):
         print("DEBUG get_wordbank: New/empty session detected, loading default demo words")
         default_words = load_default_wordbank()
@@ -2116,32 +2114,45 @@ def get_wordbank() -> List[Dict[str, str]]:
             set_wordbank(default_words, is_user_upload=False)
             wb = default_words
             session["using_default_words"] = True
-            print(f"DEBUG get_wordbank: Loaded {len(wb)} default demo words for new session")
     elif not wb and session.get("has_uploaded_once", False):
-        # 🔧 FIX: User previously uploaded words but wordbank is now empty (session loss!)
-        # Don't auto-load defaults - require user to re-upload
-        print("⚠️ WARNING get_wordbank: User previously uploaded words but wordbank is empty now!")
-        print("⚠️ WARNING get_wordbank: This indicates session loss. NOT loading default words.")
-        print("⚠️ WARNING get_wordbank: User must re-upload their word list.")
+        # 🔧 FIX: User previously uploaded but wordbank empty (session/storage loss)
+        print("⚠️ WARNING get_wordbank: User uploaded before but wordbank empty (server restart?)")
+        print("⚠️ WARNING get_wordbank: NOT loading defaults - user must re-upload")
 
     session["wordbank_count"] = len(wb)
-    print(f"DEBUG get_wordbank: Retrieved {len(wb)} words from server-side session, session keys: {list(session.keys())}")
     return wb
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Persist the full wordbank in the server-side session store."""
-    print(f"DEBUG set_wordbank: Storing {len(rows)} words directly in server-side session (is_user_upload={is_user_upload})")
+    """Store wordbank in WORD_STORAGE to avoid cookie size limits.
     
-    session[DATA_KEY] = rows
+    Cookie-based sessions have ~4KB limit - large word lists cause data loss.
+    WORD_STORAGE is server-side in-memory, session only stores UUID pointer.
+    """
+    import uuid
+    
+    # Get or create storage_id for this session
+    storage_id = session.get("wordbank_storage_id")
+    if not storage_id:
+        storage_id = str(uuid.uuid4())
+        session["wordbank_storage_id"] = storage_id
+        print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
+    
+    # Store full word list in server-side WORD_STORAGE (not in cookies!)
+    with WORD_STORAGE_LOCK:
+        WORD_STORAGE[storage_id] = rows
+    
+    # Only store lightweight metadata in session
     session["wordbank_count"] = len(rows)
-    # Clear any legacy indirection
-    session.pop("wordbank_storage_id", None)
+    session.pop(DATA_KEY, None)  # Remove any old direct session storage
     session.modified = True
 
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
-        print("DEBUG set_wordbank: Marked as user upload - has_uploaded_once=True")
+        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words → WORD_STORAGE[{storage_id}]")
+    else:
+        session["using_default_words"] = True
+        print(f"DEBUG set_wordbank: System words {len(rows)} → WORD_STORAGE[{storage_id}]")
 
     # Always clear skip flag when new words are loaded
     session.pop("skip_default_load", None)
