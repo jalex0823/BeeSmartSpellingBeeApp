@@ -716,6 +716,78 @@
             margin: 0 auto;
         }
         
+        /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Used across all pages */
+        .bee-avatar-container,
+        #mascotBee3D,
+        .mascot-3d-container {
+            /* Container sizing */
+            width: 280px;
+            height: 280px;
+            
+            /* Layout */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            
+            /* Visibility */
+            overflow: visible;
+            z-index: 100;
+            
+            /* Visual effects */
+            background: transparent;
+            border: none;
+            filter: drop-shadow(0 10px 30px rgba(255, 193, 7, 0.3));
+            
+            /* Interaction */
+            pointer-events: auto;
+            cursor: pointer;
+            
+            /* Smooth transitions */
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        
+        .bee-avatar-container:hover,
+        #mascotBee3D:hover,
+        .mascot-3d-container:hover {
+            transform: translateY(-8px) scale(1.05);
+            filter: drop-shadow(0 15px 40px rgba(255, 193, 7, 0.5));
+        }
+        
+        /* Canvas styling for Three.js avatars */
+        .bee-avatar-container canvas,
+        #mascotBee3D canvas,
+        .mascot-3d-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            pointer-events: none;
+            z-index: 101 !important;
+            background: transparent !important;
+        }
+        
+        /* Remove any pseudo-elements */
+        .bee-avatar-container::before,
+        .bee-avatar-container::after,
+        #mascotBee3D::before,
+        #mascotBee3D::after,
+        .mascot-3d-container::before,
+        .mascot-3d-container::after {
+            display: none !important;
+        }
+        
+        /* MAIN MENU SPECIFIC: Larger showcase */
+        .logo-section #mascotBee3D {
+            width: 480px !important;
+            height: 420px !important;
+        }
+        
         /* FINAL CONTAINER SIZE - Enlarged and centered for better avatar showcase */
         div#mascotBee3D {
             width: 480px !important;
@@ -1858,20 +1930,27 @@
                 margin: 0 auto;
             }
             
-            #mascotBee3D {
-                width: 280px;
-                height: 240px; /* ENHANCED: Larger for better detail showcase (was 120px) */
-                margin: 0 auto 1.2rem auto;
-                transform: translateY(-10px);  /* Reduced upward movement (was -20px) */
-                position: relative;
-                left: 0;
-                right: 0;
-                /* Maintain avatar visibility on mobile */
-                z-index: 15;
-                overflow: visible;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            /* 📱 MOBILE: Avatar container standards */
+            .bee-avatar-container,
+            #mascotBee3D,
+            .mascot-3d-container {
+                width: 240px !important;
+                height: 240px !important;
+                margin: 0 auto 1rem auto !important;
+                transform: translateY(-10px) !important;
+                filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
+            }
+            
+            .bee-avatar-container:hover,
+            #mascotBee3D:hover,
+            .mascot-3d-container:hover {
+                transform: translateY(-15px) scale(1.05) !important;
+            }
+            
+            /* Main menu specific - slightly larger */
+            .logo-section #mascotBee3D {
+                width: 280px !important;
+                height: 280px !important;
             }
             
             .logo-section img {
