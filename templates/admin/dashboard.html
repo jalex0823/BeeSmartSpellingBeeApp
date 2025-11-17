@@ -258,14 +258,18 @@
     </script>
 
     <!-- My Students/Family Section -->
-    {% if my_students %}
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
         <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
             <h2 style="margin: 0; font-size: 1.5rem; text-align: center;">👨‍👩‍👧‍👦 My Students/Family</h2>
             <div style="background: #FFF9E6; padding: 0.5rem 1rem; border-radius: 8px; border: 2px solid #FFD700;">
                 <span style="font-size: 0.875rem; color: #8B6914; font-weight: 600;">Admin Key: {{ admin_key }}</span>
             </div>
+            <button onclick="openAddStudentModal()" class="copy-btn" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 700; border-radius: 8px;">
+                ➕ Add New Student
+            </button>
         </div>
+        
+        {% if my_students %}
         
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -323,18 +327,14 @@
                 💡 <strong>Tip:</strong> Share your admin key (<strong>{{ admin_key }}</strong>) with students or family members during registration to track their progress here.
             </p>
         </div>
-    </div>
-    {% else %}
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">👨‍👩‍👧‍👦</div>
-        <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem; color: #4a5568;">No Students Yet</h2>
-        <p style="margin: 0 0 1.5rem 0; color: #718096;">Share your admin key with students or family members to see their stats here.</p>
-        <div style="background: #FFF9E6; padding: 1rem; border-radius: 8px; border: 2px solid #FFD700; display: inline-block;">
-            <div style="font-size: 0.875rem; color: #8B6914; margin-bottom: 0.5rem;">Your Admin Key:</div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: #FF6B00; font-family: monospace;">{{ admin_key }}</div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #718096;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👨‍👩‍👧‍👦</div>
+            <p style="font-size: 1.125rem; margin: 0;">No students added yet!</p>
+            <p style="font-size: 0.875rem; margin: 0.5rem 0 0 0;">Click "Add New Student" above to create student accounts.</p>
         </div>
+        {% endif %}
     </div>
-    {% endif %}
 
     <!-- What's New / Changelog -->
     <div class="admin-card" style="background: #ECFEFF; border: 1px solid #06B6D4; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1rem;">
@@ -674,4 +674,180 @@ a:hover {
     /* Ensure the card stays centered */
     .quick-actions-panel { margin-left: auto; margin-right: auto; }
 </style>
+
+<!-- Add Student Modal -->
+<div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center; padding: 1rem;">
+    <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.75rem; color: #667eea;">➕ Add New Student</h2>
+            <button onclick="closeAddStudentModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #718096; padding: 0.25rem; line-height: 1;">&times;</button>
+        </div>
+        
+        <form id="addStudentForm" onsubmit="handleAddStudent(event)">
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Display Name *</label>
+                <input type="text" id="studentDisplayName" name="display_name" required 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
+                    placeholder="e.g., Emily Johnson">
+            </div>
+            
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Username *</label>
+                <input type="text" id="studentUsername" name="username" required 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
+                    placeholder="e.g., emily_j">
+                <div style="font-size: 0.875rem; color: #718096; margin-top: 0.25rem;">Lowercase letters, numbers, underscores only</div>
+            </div>
+            
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Password *</label>
+                <input type="password" id="studentPassword" name="password" required 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
+                    placeholder="Minimum 4 characters">
+            </div>
+            
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Email (Optional)</label>
+                <input type="email" id="studentEmail" name="email" 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
+                    placeholder="student@example.com">
+            </div>
+            
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Grade Level</label>
+                <select id="studentGrade" name="grade_level" 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;">
+                    <option value="">Select grade...</option>
+                    <option value="K">Kindergarten</option>
+                    <option value="1">1st Grade</option>
+                    <option value="2">2nd Grade</option>
+                    <option value="3">3rd Grade</option>
+                    <option value="4">4th Grade</option>
+                    <option value="5">5th Grade</option>
+                    <option value="6">6th Grade</option>
+                    <option value="7">7th Grade</option>
+                    <option value="8">8th Grade</option>
+                    <option value="9">9th Grade</option>
+                    <option value="10">10th Grade</option>
+                    <option value="11">11th Grade</option>
+                    <option value="12">12th Grade</option>
+                </select>
+            </div>
+            
+            <div style="background: #FFF9E6; padding: 1rem; border-radius: 8px; border: 2px solid #FFD700; margin-bottom: 1.5rem;">
+                <div style="font-size: 0.875rem; color: #8B6914; margin-bottom: 0.5rem;">Student will be linked to your Admin Key:</div>
+                <div style="font-size: 1.125rem; font-weight: 700; color: #FF6B00; font-family: monospace;">{{ admin_key }}</div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="closeAddStudentModal()" class="copy-btn" style="flex: 1; background: #718096; padding: 0.875rem; font-size: 1rem;">
+                    Cancel
+                </button>
+                <button type="submit" class="copy-btn" style="flex: 1; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding: 0.875rem; font-size: 1rem;">
+                    Create Student
+                </button>
+            </div>
+        </form>
+        
+        <div id="studentCreationStatus" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px;"></div>
+    </div>
+</div>
+
+<script>
+function openAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'flex';
+    document.getElementById('addStudentForm').reset();
+    document.getElementById('studentCreationStatus').style.display = 'none';
+}
+
+function closeAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('addStudentModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAddStudentModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('addStudentModal').style.display === 'flex') {
+        closeAddStudentModal();
+    }
+});
+
+async function handleAddStudent(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const statusDiv = document.getElementById('studentCreationStatus');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Creating...';
+    
+    // Get form data
+    const formData = {
+        display_name: form.display_name.value.trim(),
+        username: form.username.value.trim().toLowerCase(),
+        password: form.password.value,
+        email: form.email.value.trim() || null,
+        grade_level: form.grade_level.value || null,
+        role: 'student',
+        teacher_key: '{{ admin_key }}'
+    };
+    
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#D1FAE5';
+            statusDiv.style.border = '2px solid #10B981';
+            statusDiv.style.color = '#065F46';
+            statusDiv.innerHTML = `
+                <div style="font-weight: 700; margin-bottom: 0.5rem;">✅ Student Created Successfully!</div>
+                <div style="font-size: 0.875rem;">Username: <strong>${formData.username}</strong></div>
+                <div style="font-size: 0.875rem; margin-top: 0.5rem;">Refreshing dashboard...</div>
+            `;
+            
+            // Reload page after 2 seconds to show new student
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Failed to create student');
+        }
+    } catch (error) {
+        console.error('Error creating student:', error);
+        
+        // Show error message
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = '#FEE2E2';
+        statusDiv.style.border = '2px solid #EF4444';
+        statusDiv.style.color = '#991B1B';
+        statusDiv.innerHTML = `
+            <div style="font-weight: 700; margin-bottom: 0.5rem;">❌ Error Creating Student</div>
+            <div style="font-size: 0.875rem;">${error.message}</div>
+        `;
+        
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Create Student';
+    }
+}
+</script>
+
 {% endblock %}

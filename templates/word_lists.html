@@ -216,12 +216,13 @@
 
     .list-card {
         background: linear-gradient(135deg, #fff 0%, #FFF9E6 100%);
-        border: 3px dashed rgba(255, 140, 0, 0.3);
+        border: 3px solid rgba(255, 215, 0, 0.4);
         border-radius: 20px;
-        padding: 1.5rem;
+        padding: 2rem;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
     .list-card::before {
@@ -230,15 +231,22 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 6px;
-        background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+        height: 8px;
+        background: linear-gradient(90deg, #FFD700, #FFA500, #FF6B00, #FFA500, #FFD700);
+        background-size: 200% 100%;
         opacity: 0;
         transition: opacity 0.3s ease;
+        animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
     }
 
     .list-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px rgba(255, 215, 0, 0.3);
         border-color: var(--honey-amber);
     }
 
@@ -250,7 +258,7 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
     }
 
     .list-info {
@@ -258,20 +266,35 @@
     }
 
     .list-name {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
         font-weight: 900;
         color: var(--bee-brown);
-        margin: 0 0 0.5rem 0;
+        margin: 0 0 0.75rem 0;
         display: flex;
         align-items: center;
+        gap: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .word-count-badge {
+        display: inline-flex;
+        align-items: center;
         gap: 0.5rem;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: var(--bee-brown);
+        padding: 0.5rem 1.25rem;
+        border-radius: 20px;
+        font-size: 1.25rem;
+        font-weight: 800;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+        border: 2px solid rgba(255, 140, 0, 0.3);
     }
 
     .list-description {
         color: #666;
-        font-size: 1rem;
-        margin: 0.5rem 0;
-        line-height: 1.5;
+        font-size: 1.05rem;
+        margin: 0.75rem 0;
+        line-height: 1.6;
     }
 
     .list-meta {
@@ -296,67 +319,83 @@
 
     .list-actions {
         display: flex;
-        gap: 0.75rem;
+        gap: 1rem;
         flex-wrap: wrap;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 2px solid rgba(255, 215, 0, 0.2);
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid rgba(255, 215, 0, 0.3);
     }
 
     .list-btn {
-        padding: 0.75rem 1.5rem;
+        padding: 1rem 1.75rem;
         border: none;
-        border-radius: 12px;
-        font-size: 1rem;
+        border-radius: 14px;
+        font-size: 1.05rem;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
         flex: 1;
-        min-width: 140px;
+        min-width: 160px;
         justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .btn-use {
         background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
         color: white;
+        border: 2px solid rgba(76, 175, 80, 0.3);
     }
 
     .btn-use:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4);
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+        border: 2px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-view:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
     }
 
     .btn-edit {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
         color: white;
+        border: 2px solid rgba(156, 39, 176, 0.3);
     }
 
     .btn-edit:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
     }
 
     .btn-upload {
-        background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
         color: white;
+        border: 2px solid rgba(255, 152, 0, 0.3);
     }
 
     .btn-upload:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4);
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
     }
 
     .btn-delete {
         background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
         color: white;
+        border: 2px solid rgba(244, 67, 54, 0.3);
     }
 
     .btn-delete:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(244, 67, 54, 0.4);
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
     }
 
     .empty-state {
@@ -505,6 +544,15 @@
 
 {% block content %}
 <div class="word-lists-container">
+    <!-- Breadcrumb Navigation -->
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: #5A2C15; font-weight: 600;">
+            <a href="/" style="color: #FF8F00; text-decoration: none; transition: color 0.3s;" onmouseover="this.style.color='#FF6B00'" onmouseout="this.style.color='#FF8F00'">🏠 Home</a>
+            <span style="color: #D2691E;">›</span>
+            <span style="color: #5A2C15;">📚 My Word Lists</span>
+        </div>
+    </div>
+
     <!-- Header Section -->
     <div class="header-section">
         <div class="header-content">
@@ -673,29 +721,32 @@ function displayLists() {
 
 // Create list card HTML
 function createListCard(list) {
-    const createdDate = list.created_at ? new Date(list.created_at).toLocaleDateString() : 'Unknown';
-    const isNew = list.created_at && (new Date() - new Date(list.created_at)) < 86400000; // 24 hours
-    const isLarge = (list.word_count || 0) > 50;
+    const updatedDate = list.updated_at ? new Date(list.updated_at).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    }) : 'Unknown';
+    const isNew = list.created_at && (new Date() - new Date(list.created_at)) < 7 * 86400000; // 7 days
+    const isLarge = (list.word_count || 0) >= 50;
     
     return `
         <div class="list-card" data-list-id="${list.id}">
             <div class="list-card-header">
                 <div class="list-info">
-                    <h3 class="list-name">
+                    <div class="list-name">
                         📚 ${list.name || 'Unnamed List'}
-                        ${isNew ? '<span class="badge badge-new">New</span>' : ''}
-                        ${isLarge ? '<span class="badge badge-large">Large</span>' : ''}
-                    </h3>
-                    ${list.description ? `<p class="list-description">${list.description}</p>` : ''}
+                        <span class="word-count-badge">
+                            📝 ${list.word_count || 0} ${(list.word_count || 0) === 1 ? 'word' : 'words'}
+                        </span>
+                    </div>
+                    ${list.description ? `<div class="list-description">${list.description}</div>` : ''}
                     <div class="list-meta">
                         <div class="meta-item">
-                            <span class="meta-icon">📝</span>
-                            <span>${list.word_count || 0} words</span>
+                            <span class="meta-icon">�</span>
+                            <span>Updated ${updatedDate}</span>
                         </div>
-                        <div class="meta-item">
-                            <span class="meta-icon">📅</span>
-                            <span>${createdDate}</span>
-                        </div>
+                        ${isNew ? '<span class="badge badge-new">New</span>' : ''}
+                        ${isLarge ? '<span class="badge badge-large">Large</span>' : ''}
                         ${list.uuid ? `
                         <div class="meta-item">
                             <span class="meta-icon">🔑</span>
@@ -709,8 +760,8 @@ function createListCard(list) {
                 <button class="list-btn btn-use" data-action="use" data-id="${list.id}" data-uuid="${list.uuid}">
                     🎯 Use in Quiz
                 </button>
-                <button class="list-btn btn-upload" data-action="upload" data-id="${list.id}" data-name="${list.name}">
-                    📤 Upload More
+                <button class="list-btn btn-view" data-action="view" data-id="${list.id}" data-name="${list.name || 'Unnamed List'}">
+                    �️ View Details
                 </button>
                 <button class="list-btn btn-delete" data-action="delete" data-id="${list.id}" data-name="${list.name}" data-count="${list.word_count}">
                     🗑️ Delete
@@ -727,6 +778,15 @@ function wireListButtons() {
             e.preventDefault();
             const id = btn.getAttribute('data-id');
             await useListInQuiz(id);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="view"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            viewListDetails(id, name);
         });
     });
     
@@ -748,6 +808,12 @@ function wireListButtons() {
             await deleteList(id, name, count);
         });
     });
+}
+
+// View list details (placeholder - can be expanded later)
+function viewListDetails(id, name) {
+    showToast(`📚 Viewing details for "${name}" - Feature coming soon!`, 'info');
+    // TODO: Could open a modal showing all words in the list, edit capabilities, etc.
 }
 
 // Use list in quiz
