@@ -14175,6 +14175,29 @@
                 statusBadge.style.backgroundColor = '#999';
             }
         }
+        
+        // Refresh avatar system status (can be called from avatar picker or after purchases)
+        function refreshAvatarSystemStatus() {
+            console.log('🔄 Refreshing avatar system status...');
+            
+            // Re-run the avatar system preload to get updated counts
+            if (window.userAvatarLoader) {
+                window.userAvatarLoader.preloadAvatarSystem()
+                    .then(results => {
+                        window.avatarPreloadResults = results;
+                        updateAvatarSystemStatus();
+                        console.log('✅ Avatar system status refreshed:', results);
+                    })
+                    .catch(err => {
+                        console.warn('⚠️ Could not refresh avatar system:', err);
+                    });
+            } else {
+                console.warn('⚠️ Avatar loader not initialized, cannot refresh');
+            }
+        }
+        
+        // Make refresh function globally available
+        window.refreshAvatarSystemStatus = refreshAvatarSystemStatus;
 
         function showAvatarSystemDetails() {
             if (!window.userAvatarLoader) {

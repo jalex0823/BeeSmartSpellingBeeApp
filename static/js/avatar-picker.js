@@ -84,6 +84,14 @@ async function loadAvatars() {
                 avatarCountSpan.textContent = avatars.length;
             }
             
+            // ✅ Calculate and update owned/unlocked avatar counts
+            const unlockedCount = avatars.filter(a => !a.is_locked).length;
+            const lockedCount = avatars.filter(a => a.is_locked).length;
+            console.log(`📊 Avatar library status: ${unlockedCount} unlocked, ${lockedCount} locked, ${avatars.length} total`);
+            
+            // Update any avatar status displays on the page
+            updateAvatarCountDisplays(avatars.length, unlockedCount, lockedCount);
+            
             // Small delay to show completion
             await new Promise(resolve => setTimeout(resolve, 300));
             
@@ -745,4 +753,52 @@ function closeAvatarPopup() {
             popup.remove();
         }, 300);
     }
+}
+
+/**
+ * Update avatar count displays across the page
+ * @param {number} total - Total number of avatars available
+ * @param {number} unlocked - Number of avatars unlocked/owned
+ * @param {number} locked - Number of avatars still locked
+ */
+function updateAvatarCountDisplays(total, unlocked, locked) {
+    console.log(`📊 Updating avatar count displays: ${unlocked}/${total} unlocked`);
+    
+    // Update any avatar count badges on the page
+    const countBadges = document.querySelectorAll('[data-avatar-count]');
+    countBadges.forEach(badge => {
+        const type = badge.getAttribute('data-avatar-count');
+        if (type === 'total') {
+            badge.textContent = total;
+        } else if (type === 'unlocked') {
+            badge.textContent = unlocked;
+        } else if (type === 'locked') {
+            badge.textContent = locked;
+        }
+    });
+    
+    // If parent window exists (opened from main menu), notify it to refresh avatar status
+    if (window.opener && typeof window.opener.refreshAvatarSystemStatus === 'function') {
+        try {
+            window.opener.refreshAvatarSystemStatus();
+            console.log('✅ Notified parent window to refresh avatar status');
+        } catch (e) {
+            console.warn('Could not notify parent window:', e);
+        }
+    }
+    
+    // If updateAvatarSystemStatus function exists in current window, call it
+    if (typeof window.updateAvatarSystemStatus === 'function') {
+        try {
+            window.updateAvatarSystemStatus();
+            console.log('✅ Updated avatar system status in current window');
+        } catch (e) {
+            console.warn('Could not update avatar system status:', e);
+        }
+    }
+}
+
+// Export for use in other scripts
+if (typeof window !== 'undefined') {
+    window.updateAvatarCountDisplays = updateAvatarCountDisplays;
 }
