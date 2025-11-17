@@ -12257,15 +12257,20 @@
             }
             
             async runSystemChecks() {
+                console.log('🚀 === STARTING SYSTEM CHECKS ===');
+                
                 // Check 1: Three.js Support
+                console.log('📍 Check 1/9: Three.js - START');
                 const check1 = this.addCheck('3D Graphics (Three.js)', 'Checking...', '⏳');
                 await this.delay(200);
                 if (typeof THREE !== 'undefined') {
                     this.updateCheck(check1, 'Ready', '✅', 15);
                     this.updateProgress(15, '✨ 3D graphics engine loaded');
+                    console.log('✅ Check 1/9: Three.js - COMPLETE');
                 } else {
                     this.updateCheck(check1, 'Missing', '⚠️', 15);
                     this.updateProgress(15, '⚠️ 3D graphics unavailable');
+                    console.log('⚠️ Check 1/9: Three.js - MISSING');
                 }
                 
                 // Check 2: User Avatar Detection (determine which avatar to load)
@@ -12651,14 +12656,22 @@
         
         // Initialize magical effects when page loads
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🎬 DOM LOADED - Starting initialization...');
+            
             // 🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
+            console.log('📜 Scrolled to top');
             
             // Show loader immediately
             const loader = document.getElementById('honeyLoader');
-            if (loader) loader.style.display = 'flex';
+            if (loader) {
+                loader.style.display = 'flex';
+                console.log('👁️ Loader displayed');
+            } else {
+                console.error('❌ ERROR: honeyLoader element not found!');
+            }
             
             // Show emergency bypass button after 5 seconds
             const bypassBtn = document.getElementById('emergencyBypassBtn');
@@ -12671,24 +12684,37 @@
                     console.warn('⚠️ Emergency bypass button now available');
                 }
             }, 5000);
+            
             if (loader) {
-                loader.style.display = 'flex';
                 loader.style.opacity = '1';
                 loader.style.visibility = 'visible';
+                console.log('✅ Loader opacity/visibility set');
             }
             
             // Initialize Matrix Rain Effect
+            console.log('🌧️ Initializing Matrix Rain...');
             if (typeof MatrixRain !== 'undefined') {
-                window.matrixRain = new MatrixRain('matrixCanvas');
-                window.matrixRain.start();
-                console.log('🌧️ Matrix rain animation started');
+                try {
+                    window.matrixRain = new MatrixRain('matrixCanvas');
+                    window.matrixRain.start();
+                    console.log('✅ Matrix rain animation started');
+                } catch (matrixError) {
+                    console.error('❌ Matrix rain error:', matrixError);
+                }
             } else {
-                console.warn('⚠️ MatrixRain not loaded, skipping animation');
+                console.warn('⚠️ MatrixRain class not loaded, skipping animation');
             }
             
             // Initialize loading system
-            window.loadingSystem = new LoadingSystem();
-            window.loadingSystem.updateProgress(5, '🚀 Starting up...');
+            console.log('⚙️ Initializing LoadingSystem...');
+            try {
+                window.loadingSystem = new LoadingSystem();
+                window.loadingSystem.updateProgress(5, '🚀 Starting up...');
+                console.log('✅ LoadingSystem initialized at 5%');
+            } catch (loadingSystemError) {
+                console.error('❌ LoadingSystem initialization error:', loadingSystemError);
+                return; // Exit if loading system fails
+            }
             
             // EMERGENCY TIMEOUT - Force loading screen to complete after 10 seconds
             const LOADING_EMERGENCY_TIMEOUT = 10000;
@@ -12696,14 +12722,17 @@
                 console.error('🚨 EMERGENCY: Loading took too long, forcing completion...');
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
-                    window.loadingSystem.presentTapToStart();
+                    window.loadingSystem.dismissLoader();
                 }
             }, LOADING_EMERGENCY_TIMEOUT);
+            console.log(`⏰ Emergency timeout set for ${LOADING_EMERGENCY_TIMEOUT}ms`);
             
             try {
+                console.log('🚀 Starting system checks...');
             
             // Run system checks
             await window.loadingSystem.runSystemChecks();
+            console.log('✅ System checks complete');
             
             // 60% complete after system checks, now initialize UI components
             window.loadingSystem.updateProgress(60, '🎨 Initializing interface...');
