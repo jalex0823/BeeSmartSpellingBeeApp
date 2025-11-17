@@ -1910,6 +1910,21 @@
                 -webkit-tap-highlight-color: rgba(255, 105, 180, 0.3);
             }
             
+            /* Sticky Start Quiz button for mobile - always visible at top */
+            #startQuizBtn {
+                position: sticky;
+                top: 10px;
+                z-index: 1000;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+                margin-bottom: 1rem;
+            }
+            
+            /* Ensure action-buttons section positions properly */
+            .action-buttons {
+                position: relative;
+                z-index: 10;
+            }
+            
             input, textarea, select {
                 font-size: 16px !important; /* Prevent zoom on focus in iOS */
             }
