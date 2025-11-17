@@ -28,14 +28,32 @@
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
-    <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Three.js for 3D Bees - ASYNC to prevent blocking page load -->
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" onerror="console.warn('OBJLoader CDN failed')"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js" onerror="console.warn('MTLLoader CDN failed')"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
+        // CDN timeout protection - allow page to load even if Three.js fails
+        window.THREE_LOAD_TIMEOUT = setTimeout(function() {
+            if (typeof THREE === 'undefined') {
+                console.warn('⚠️ Three.js CDN timed out (5s) - 3D features disabled, continuing page load');
+                window.THREE_FAILED = true;
+                // Trigger DOMContentLoaded manually if still waiting
+                if (document.readyState === 'loading') {
+                    console.log('📌 Force-triggering page load despite CDN timeout');
+                }
+            } else {
+                console.log('✅ Three.js loaded successfully');
+            }
+        }, 5000); // 5 second timeout
+        
+        // Clear timeout when Three.js loads
+        if (typeof THREE !== 'undefined') {
+            clearTimeout(window.THREE_LOAD_TIMEOUT);
+        }
     </script>
     <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
