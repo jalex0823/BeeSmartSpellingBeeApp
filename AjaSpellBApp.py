@@ -5805,19 +5805,24 @@ def api_clear():
         session.pop("wordbank_count", None)
         session.pop("using_default_words", None)  # Clear default flag
         
-        # CRITICAL: Prevent auto-loading defaults after explicit clear
-        # User explicitly cleared everything, so don't auto-load defaults
-        session["skip_default_load"] = True
-        session["has_uploaded_once"] = True  # Treat as if user has used the app before
+        # 🔧 TOTAL RESET: Clear flags so user gets fresh start (NO default words auto-load)
+        # This ensures refresh button truly clears EVERYTHING including default word list
+        session.pop("skip_default_load", None)  # Remove flag
+        session.pop("has_uploaded_once", None)  # Remove flag
+        
+        # Set flag to explicitly prevent auto-loading defaults after clear
+        # User must manually upload or select "Random Words" to get any words
+        session["skip_default_load"] = True  # Don't auto-load defaults after clear
         
         # Force session modification
         session.modified = True
         
         print(f"DEBUG /api/clear: Session cleared. Remaining keys: {list(session.keys())}")
+        print(f"DEBUG /api/clear: User must manually upload words or use Random Words feature")
         
         return jsonify({
             "ok": True, 
-            "message": "All word lists and quiz progress cleared successfully! Ready for new words.",
+            "message": "All word lists and quiz progress cleared successfully! Word list is now completely empty.",
             "cleared": {
                 "wordbank": True,
                 "quiz_state": True,
