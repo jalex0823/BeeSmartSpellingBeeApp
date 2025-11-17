@@ -4611,12 +4611,13 @@
                             if (currentWordCount > 0) {
                                 // ⚠️ User has words - confirm replacement
                                 const confirmed = await showBeeConfirm({
-                                    title: '⚠️ Replace Current Word List?',
+                                    title: '⚠️ Override Current Word List?',
                                     message: 
                                         `You currently have ${currentWordCount} word(s) loaded.\n\n` +
-                                        `Loading this saved list will REPLACE your current words.\n\n` +
-                                        `Continue and replace your current list?`,
-                                    confirmText: 'Yes, Replace',
+                                        `Loading this saved list will OVERRIDE (completely replace) your current words.\n\n` +
+                                        `Your current words will be lost unless you save them first.\n\n` +
+                                        `Continue and override?`,
+                                    confirmText: 'Yes, Override',
                                     cancelText: 'Cancel'
                                 });
                                 
@@ -4632,12 +4633,14 @@
                         
                         // Load the saved list (replaces current words)
                         try {
+                            console.log(`📋 Loading saved list ${id} - will OVERRIDE current wordbank`);
                             const res = await fetch('/api/saved-lists/load', {
                                 method: 'POST', headers: {'Content-Type':'application/json'},
                                 body: JSON.stringify({ id })
                             });
                             const data = await res.json();
                             if (data.ok){
+                                console.log(`✅ Saved list loaded: ${data.loaded.word_count} words OVERRODE previous list`);
                                 // ✅ Update word count badge before redirecting
                                 updateWordListCount(data.loaded.word_count);
                                 
