@@ -3210,6 +3210,37 @@
     </div>
 
     <script>
+        // 📱 Mobile Modal Auto-Center Helper
+        // Ensures modals are centered and scrolled into view on mobile devices
+        function autoCenterModal(modalElement) {
+            if (!modalElement) return;
+            
+            // Wait for DOM to settle
+            setTimeout(() => {
+                // Scroll modal into view (important for mobile)
+                modalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Also scroll to top of modal content for tall modals
+                const modalContent = modalElement.querySelector('div[style*="max-width"]') || 
+                                   modalElement.querySelector('.modal-content') ||
+                                   modalElement.firstElementChild;
+                
+                if (modalContent) {
+                    // Ensure modal content is at top of viewport
+                    modalContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
+                // Focus first input if exists (for better UX)
+                const firstInput = modalElement.querySelector('input, textarea');
+                if (firstInput && window.innerWidth > 768) {
+                    // Only auto-focus on desktop to avoid keyboard popup on mobile
+                    firstInput.focus();
+                }
+                
+                console.log('📱 Modal auto-centered for mobile');
+            }, 50);
+        }
+
         // Kid-Friendly Sound System
         class KidFriendlySounds {
             constructor() {
@@ -4565,6 +4596,7 @@
             `;
             modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
 
             document.getElementById('savedCloseBtn').onclick = () => modal.remove();
 
@@ -4867,6 +4899,7 @@
 
             modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
 
             // Wire up event handlers
             const fileInput = document.getElementById('uploadToSavedFile');
@@ -5082,6 +5115,7 @@
             `;
 
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
 
             // Level data for display
             const levelData = {
@@ -5570,6 +5604,7 @@
             `;
 
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
         }
 
         function switchBattleTab(tab) {
@@ -5960,6 +5995,7 @@
             });
 
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
 
             const closeBtn = document.getElementById('kidFriendlyClose');
             closeBtn.addEventListener('mouseenter', () => {
@@ -6090,6 +6126,7 @@
                     `;
 
                     document.body.appendChild(modal);
+                    autoCenterModal(modal); // 📱 Auto-center for mobile
                 })
                 .catch(error => {
                     console.error('Error checking wordbank:', error);
@@ -6203,6 +6240,7 @@
                 `;
 
                 document.body.appendChild(modal);
+                autoCenterModal(modal); // 📱 Auto-center for mobile
 
                 const okBtn = document.getElementById('beeConfirmOk');
                 const cancelBtn = document.getElementById('beeConfirmCancel');
@@ -6368,6 +6406,7 @@
                 `;
 
                 document.body.appendChild(modal);
+                autoCenterModal(modal); // 📱 Auto-center for mobile
 
                 const inputField = document.getElementById('beePromptInput');
                 const okBtn = document.getElementById('beePromptOk');
@@ -7821,6 +7860,7 @@
             });
             
             document.body.appendChild(modal);
+            autoCenterModal(modal); // 📱 Auto-center for mobile
             
             // iOS Safari fix: Pre-load voices on modal open
             if ('speechSynthesis' in window && window.speechSynthesis.getVoices) {
@@ -13653,6 +13693,7 @@
 
                 modal.appendChild(card);
                 document.body.appendChild(modal);
+                autoCenterModal(modal); // 📱 Auto-center for mobile
 
                 // Keyboard support (ESC to close) - define before using in handlers
                 const onKeyDown = (ev) => { if (ev.key === 'Escape') onClose(); };
