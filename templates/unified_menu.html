@@ -13819,6 +13819,22 @@
                 const wordCount = data.words ? data.words.length : 0;
                 updateWordListCount(wordCount);
                 console.log(`✅ Word count badge initialized on page load: ${wordCount} words`);
+                
+                // ✅ Enable Start Quiz button if we have words
+                if (wordCount > 0) {
+                    const btn = document.getElementById('startQuizBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.removeAttribute('disabled');
+                        btn.innerHTML = `🚀 Start Quiz (${wordCount} words)`;
+                        btn.classList.add('ready-to-play');
+                        btn.classList.remove('waiting-to-play');
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                        btn.style.pointerEvents = 'auto';
+                        console.log(`✅ Start Quiz button enabled with ${wordCount} words`);
+                    }
+                }
             })
             .catch(error => {
                 console.warn('⚠️ Could not initialize word count badge:', error);
