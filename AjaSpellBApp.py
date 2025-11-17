@@ -9179,26 +9179,66 @@ def api_speed_round_start():
         word_count = data.get('word_count', 20)
         word_source = data.get('word_source', 'auto')
         
+        # Map difficulty names to 1-5 scale for internal dictionary
+        difficulty_map = {
+            'grade_1_2': 1,
+            'grade_3_4': 2,
+            'grade_5_6': 3,
+            'grade_7_8': 4,
+            'grade_9_12': 5,
+            'easy': 1,
+            'medium': 3,
+            'hard': 5
+        }
+        
         # Generate or fetch words
         if word_source == 'auto':
-            words = generate_words_by_difficulty(difficulty, count=word_count)
+            # ✅ Use internal dictionary (50K+ Simple Wiktionary) with enhanced difficulty system
+            difficulty_level = difficulty_map.get(difficulty, 2)  # Default to grade 3-4
+            print(f"🎯 Speed Round: Generating {word_count} words at difficulty level {difficulty_level} from internal dictionary")
+            
+            word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
+            
+            # Extract just word strings for speed round
+            words = [record['word'] for record in word_records]
+            
+            print(f"✅ Generated {len(words)} kid-friendly words from internal dictionary")
+            
         elif word_source == 'uploaded':
             # Get user's uploaded word list
             wordbank = get_wordbank()
             if not wordbank or len(wordbank) == 0:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'No uploaded word list found. Please upload words first or use auto-generate.'
-                }), 400
-            
-            # Extract just the word strings
-            words = [item['word'] for item in wordbank]
-            random.shuffle(words)
-            words = words[:word_count]  # Take only requested count
+                # ✅ FALLBACK: If no uploaded words, use internal dictionary instead of erroring
+                print("⚠️ No uploaded words found, falling back to internal dictionary")
+                difficulty_level = difficulty_map.get(difficulty, 2)
+                word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
+                words = [record['word'] for record in word_records]
+            else:
+                # Extract just the word strings
+                words = [item['word'] for item in wordbank]
+                random.shuffle(words)
+                words = words[:word_count]  # Take only requested count
+                
         elif word_source == 'mixed':
-            words = generate_mixed_words(count=word_count)
+            # Use internal dictionary with mixed difficulty levels
+            print("🎲 Speed Round: Generating mixed difficulty words from internal dictionary")
+            mixed_words = []
+            words_per_level = max(1, word_count // 5)  # Distribute across all 5 levels
+            
+            for level in range(1, 6):
+                level_words = get_random_words_by_difficulty(level, count=words_per_level)
+                mixed_words.extend([record['word'] for record in level_words])
+            
+            # Shuffle and trim to exact count
+            random.shuffle(mixed_words)
+            words = mixed_words[:word_count]
+            print(f"✅ Generated {len(words)} mixed difficulty words")
+            
         else:
-            words = generate_words_by_difficulty('grade_3_4', count=word_count)
+            # Default: Use internal dictionary at medium difficulty
+            print("⚠️ Unknown word source, using internal dictionary at medium difficulty")
+            word_records = get_random_words_by_difficulty(3, count=word_count)
+            words = [record['word'] for record in word_records]
         
         # Store speed round state in session
         session['speed_round'] = {

@@ -9,22 +9,51 @@
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
     }
 
-    /* Avatar Container - Centered and Locked */
+    /* 🎭 UNIFIED AVATAR CONTAINER - Matches Avatar Picker Style */
     .avatar-container {
-        width: 120px;
-        height: 120px;
+        width: 240px;
+        height: 240px;
         margin: 0 auto 1.5rem auto;
         position: relative;
-        left: 0;
-        right: 0;
         display: flex;
         align-items: center;
         justify-content: center;
+        
+        /* ✨ Transparent background with golden glow (Avatar Picker Style) */
+        background: transparent;
+        border-radius: 30px;
+        border: 4px solid #FFD700;
+        box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 
+                    0 0 60px rgba(255, 215, 0, 0.3),
+                    inset 0 0 30px rgba(255, 215, 0, 0.1);
+        overflow: visible;
+        
+        /* Smooth interactions */
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .avatar-container:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.8), 
+                    0 0 70px rgba(255, 215, 0, 0.4),
+                    inset 0 0 40px rgba(255, 215, 0, 0.15);
     }
 
     #userAvatar3D {
         width: 100%;
         height: 100%;
+    }
+
+    #userAvatar3D canvas {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        pointer-events: none;
+        z-index: 101 !important;
+        background: transparent !important;
     }
 
     .results-container {

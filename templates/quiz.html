@@ -1636,26 +1636,29 @@ if ('speechSynthesis' in window) {
     }
     
     /* 3D Mascot in logo section */
-    /* 🎭 UNIVERSAL AVATAR CONTAINER - Matches app-wide standards */
+    /* 🎭 UNIFIED AVATAR CONTAINER - Matches Avatar Picker Style */
     .quiz-logo .mascot-3d-container,
     #mascotBee3D {
         position: relative;
-        width: 160px;
-        height: 160px;
+        width: 200px;
+        height: 200px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 0.5rem auto;
         
-        /* Consistent visual effects */
+        /* ✨ Transparent background with golden glow (Avatar Picker Style) */
         background: transparent;
-        border: none;
+        border-radius: 30px;
+        border: 4px solid #FFD700;
+        box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 
+                    0 0 60px rgba(255, 215, 0, 0.3),
+                    inset 0 0 30px rgba(255, 215, 0, 0.1);
         overflow: visible;
         z-index: 100;
-        filter: drop-shadow(0 10px 30px rgba(255, 193, 7, 0.3));
         
         /* Smooth transitions */
-        transition: transform 0.3s ease, filter 0.3s ease;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
         transform: translateY(-8px);
         
         /* Interaction */
@@ -1666,7 +1669,9 @@ if ('speechSynthesis' in window) {
     .quiz-logo .mascot-3d-container:hover,
     #mascotBee3D:hover {
         transform: translateY(-12px) scale(1.05);
-        filter: drop-shadow(0 15px 40px rgba(255, 193, 7, 0.5));
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.8), 
+                    0 0 70px rgba(255, 215, 0, 0.4),
+                    inset 0 0 40px rgba(255, 215, 0, 0.15);
     }
     
     /* Canvas styling for Three.js avatars */
