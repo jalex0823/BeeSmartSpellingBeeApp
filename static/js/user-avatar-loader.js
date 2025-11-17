@@ -127,12 +127,17 @@ class UserAvatarLoader {
         // Initialize avatarMap with fallback data immediately (will be replaced by API if successful)
         this.avatarMap = {...this._oldAvatarMap};
         
-        // Fallback to MascotBee if no avatar selected - use API-based path
+        // Fallback to MascotBee if no avatar selected - PRIORITIZE GLB FORMAT
+        // GLB is preferred: single file, faster loading, better compatibility
         this.defaultAvatar = {
+            glb: '/static/assets/avatars/glb_files/MascotBee.glb',
+            // OBJ fallback kept for legacy compatibility
             obj: '/static/assets/avatars/mascot-bee/MascotBee.obj',
             mtl: '/static/assets/avatars/mascot-bee/MascotBee.mtl',
             texture: '/static/assets/avatars/mascot-bee/MascotBee.png',
-            thumbnail: '/static/assets/avatars/mascot-bee/MascotBee!.png'
+            thumbnail: '/static/assets/avatars/mascot-bee/MascotBee!.png',
+            name: 'Mascot Bee',
+            format: 'glb' // Mark preferred format
         };
 
     // Guests are restricted to MascotBee only. Any legacy guest override in localStorage is ignored.
@@ -190,19 +195,35 @@ class UserAvatarLoader {
             }
             console.log(`✅ Loaded ${avatars.length} avatars from database`);
             
-            // Convert API response to avatarMap format (prefer GLB when available)
+            // Convert API response to avatarMap format (PREFER GLB WHEN AVAILABLE)
+            // GLB files are superior: single file, embedded textures, faster loading
             avatars.forEach(avatar => {
                 const id = avatar.id;
                 const urls = avatar.urls || avatar;
                 const modelObj = urls?.model_obj || avatar.model_obj_url || avatar.obj_file_url;
                 const isGlb = typeof modelObj === 'string' && /\.(glb|gltf)(\?.*)?$/i.test(modelObj);
+                
+                // Build avatar data with GLB prioritized
                 this.avatarMap[id] = {
                     glb: isGlb ? modelObj : undefined,
                     obj: isGlb ? undefined : modelObj,
                     mtl: urls?.model_mtl || avatar.model_mtl_url || avatar.mtl_file_url,
                     texture: urls?.texture || avatar.texture_url,
-                    thumbnail: urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail
+                    thumbnail: urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail,
+                    name: avatar.name || id,
+                    format: isGlb ? 'glb' : 'obj', // Track format for diagnostics
+                    folder_path: avatar.folder_path
                 };
+                
+                // Quality check: warn if GLB missing for glb_files folder
+                if (avatar.folder_path === 'glb_files' && !isGlb) {
+                    console.warn(`⚠️ Avatar ${id} in glb_files folder but no GLB URL found`);
+                }
+                
+                // If GLB avatar, verify file extension is correct
+                if (isGlb) {
+                    console.log(`✅ GLB avatar registered: ${avatar.name || id} -> ${modelObj}`);
+                }
             });
             
             this.avatarDataLoaded = true;
@@ -295,7 +316,8 @@ class UserAvatarLoader {
             
             // OPTIMIZATION: Skip file validation - database already validated avatars
             // Just verify fallback system and trust the database
-            console.log('⚡ Using fast preload (database-validated avatars)');
+            // GLB files load faster than OBJ (single file vs 3 files), so reduced delays
+            console.log('⚡ Using fast preload (database-validated avatars, GLB-optimized)');
             
             // Mark all avatars as successful (database has already validated them)
             preloadResults.successfulAvatars = preloadResults.totalAvatars;
@@ -303,17 +325,21 @@ class UserAvatarLoader {
                 // Report progress with avatar name
                 if (progressCallback) {
                     const avatarName = avatarData.name || avatarKey;
-                    progressCallback(avatarName);
+                    const format = avatarData.format || 'obj';
+                    progressCallback(`${avatarName} (${format})`);
                 }
                 
                 preloadResults.validationDetails[avatarKey] = {
                     status: 'valid',
                     files: ['trusted-from-database'],
+                    format: avatarData.format || 'obj',
                     timestamp: new Date().toISOString()
                 };
                 
-                // Small delay to show progress (10ms per avatar = ~220ms total for 22 avatars)
-                await new Promise(resolve => setTimeout(resolve, 10));
+                // Minimal delay: GLB avatars = 5ms, OBJ avatars = 8ms
+                // Total for 39 avatars: ~200-300ms (was 390ms)
+                const delay = (avatarData.format === 'glb') ? 5 : 8;
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
             
             // Only validate fallback system (MascotBee) - critical for app stability
@@ -353,33 +379,69 @@ class UserAvatarLoader {
 
     /**
      * Validate that avatar files exist and are accessible (explicit paths)
+     * Enhanced for GLB files with better error reporting
      */
     async validateAvatarFilesForPaths(avatarData) {
-        const filesToCheck = [avatarData.obj, avatarData.mtl, avatarData.texture, avatarData.thumbnail];
+        const filesToCheck = [];
+        const format = avatarData.format || 'unknown';
+        
+        // GLB files only need to check one file (much simpler!)
+        if (avatarData.glb) {
+            filesToCheck.push(avatarData.glb);
+            console.log(`🎯 Validating GLB avatar: ${avatarData.name || 'Unknown'}`);
+        } else {
+            // OBJ format needs 3 files minimum
+            filesToCheck.push(
+                avatarData.obj,
+                avatarData.mtl,
+                avatarData.texture
+            );
+            console.log(`🎯 Validating OBJ avatar: ${avatarData.name || 'Unknown'} (3 files)`);
+        }
+        
+        // Always check thumbnail if present
+        if (avatarData.thumbnail) {
+            filesToCheck.push(avatarData.thumbnail);
+        }
+        
         const validFiles = [];
         const errors = [];
         
         for (const fileUrl of filesToCheck) {
+            if (!fileUrl) {
+                errors.push(`Missing file URL in avatar data`);
+                continue;
+            }
+            
             try {
-                const response = await this._safeFetch(fileUrl, { method: 'HEAD' }, 1000);
+                const response = await this._safeFetch(fileUrl, { method: 'HEAD' }, 2000);
                 if (response.ok) {
+                    const fileSize = response.headers.get('content-length');
                     validFiles.push({
                         url: fileUrl,
                         type: this.getFileType(fileUrl),
-                        size: response.headers.get('content-length') || 'unknown'
+                        size: fileSize ? `${(parseInt(fileSize)/1024).toFixed(1)}KB` : 'unknown'
                     });
+                    console.log(`  ✅ ${this.getFileType(fileUrl)}: ${fileUrl.split('/').pop()} (${fileSize ? (parseInt(fileSize)/1024).toFixed(1)+'KB' : 'unknown size'})`);
                 } else {
-                    errors.push(`${fileUrl}: HTTP ${response.status}`);
+                    const errorMsg = `${fileUrl}: HTTP ${response.status}`;
+                    errors.push(errorMsg);
+                    console.error(`  ❌ ${errorMsg}`);
                 }
             } catch (error) {
-                errors.push(`${fileUrl}: ${error.message}`);
+                const errorMsg = `${fileUrl}: ${error.message}`;
+                errors.push(errorMsg);
+                console.error(`  ❌ ${errorMsg}`);
             }
         }
         
         if (errors.length > 0) {
-            throw new Error(`File validation failed: ${errors.join(', ')}`);
+            const errorDetails = `File validation failed for ${avatarData.name || 'avatar'} (${format} format): ${errors.join(', ')}`;
+            console.error(`❌ ${errorDetails}`);
+            throw new Error(errorDetails);
         }
         
+        console.log(`✅ All ${filesToCheck.length} files validated for ${avatarData.name || 'avatar'}`);
         return { validFiles, fileCount: validFiles.length };
     }
 

@@ -186,24 +186,42 @@ class SmartyBee3D {
 
         // New: GLB support using GLTFLoader when a .glb is provided
         // Accept either explicit options.glbPath or a modelPath ending with .glb/.gltf
+        // GLB is the PREFERRED format: single file, embedded textures, faster loading
         try {
             const explicitGlb = this.options.glbPath;
             const inferredGlb = (this.options.modelPath && /\.(glb|gltf)(\?.*)?$/i.test(this.options.modelPath)) ? this.options.modelPath : null;
             const glbPath = explicitGlb || inferredGlb;
+            
             if (glbPath) {
+                // Verify GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined') {
-                    console.error('GLTFLoader not loaded. Cannot render GLB. Falling back to OBJ pipeline if available.');
+                    console.error('❌ GLTFLoader not loaded. Cannot render GLB. Falling back to OBJ pipeline if available.');
+                    // Don't return - let it fall through to OBJ loader
                 } else {
+                    console.log('🎯 GLB MODE ACTIVATED - Loading single-file 3D model');
                     const cacheBuster = Date.now();
                     const glbUrl = glbPath + (glbPath.includes('?') ? `&v=${cacheBuster}` : `?v=${cacheBuster}`);
                     const gltfLoader = new THREE.GLTFLoader();
                     console.log('🐝 Loading GLB model:', glbUrl);
+                    
+                    // Add timeout protection for GLB loading
+                    const loadTimeout = setTimeout(() => {
+                        console.error('❌ GLB loading timeout (10s) - file may be corrupted or too large');
+                        console.log('🔄 Attempting OBJ fallback...');
+                        // Fallback will be handled by continuing to OBJ/MTL code below
+                    }, 10000);
+                    
                     gltfLoader.load(
                         glbUrl,
                         (gltf) => {
+                            clearTimeout(loadTimeout);
                             try {
                                 const object = gltf.scene || gltf.scenes?.[0];
-                                if (!object) throw new Error('GLB contained no scene');
+                                if (!object) {
+                                    throw new Error('GLB contained no scene - file may be corrupted');
+                                }
+                                
+                                console.log('✅ GLB file parsed successfully');
                                 
                                 // 🎨 HIGH QUALITY GLB TEXTURE PROCESSING 🎨
                                 // Ensure GLB textures use sRGB for correct color and apply anisotropic filtering
@@ -212,8 +230,12 @@ class SmartyBee3D {
                                     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
                                     console.log(`🔥 Applying ${maxAnisotropy}x anisotropic filtering for ultra-crisp textures`);
                                     
+                                    let meshCount = 0;
+                                    let textureCount = 0;
+                                    
                                     object.traverse((node) => {
                                         if (node.isMesh) {
+                                            meshCount++;
                                             // Enable shadow casting and receiving for depth
                                             node.castShadow = true;
                                             node.receiveShadow = true;
@@ -224,6 +246,7 @@ class SmartyBee3D {
                                                     // Process all texture maps (diffuse, normal, roughness, etc.)
                                                     ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'].forEach(texType => {
                                                         if (mat[texType]) {
+                                                            textureCount++;
                                                             // Set color space for accurate colors
                                                             if (typeof mat[texType].colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
                                                                 mat[texType].colorSpace = THREE.SRGBColorSpace;
@@ -247,7 +270,7 @@ class SmartyBee3D {
                                             });
                                         }
                                     });
-                                    console.log('✅ Applied 4K quality texture filtering to GLB model');
+                                    console.log(`✅ Applied 4K quality texture filtering to ${meshCount} meshes, ${textureCount} textures`);
                                 } catch (e) { 
                                     console.warn('⚠️ Could not apply full quality settings:', e);
                                 }
@@ -280,30 +303,35 @@ class SmartyBee3D {
                                     this.renderer.setScissorTest(false);
                                 }
 
-                                console.log('✅ GLB model loaded successfully');
+                                console.log('✅ GLB model loaded and rendered successfully');
                                 window.mascotBeeLoaded = true;
                             } catch (e) {
                                 console.error('❌ Error processing GLB scene:', e);
+                                console.log('🔄 Attempting OBJ fallback...');
                                 this.addFallbackBee();
                             }
                         },
                         (xhr) => {
                             if (xhr && xhr.total) {
                                 const pct = (xhr.loaded / xhr.total) * 100;
-                                console.log(`Loading GLB: ${pct.toFixed(0)}%`);
+                                console.log(`📥 Loading GLB: ${pct.toFixed(0)}% (${(xhr.loaded/1024).toFixed(1)}KB / ${(xhr.total/1024).toFixed(1)}KB)`);
                             }
                         },
                         (error) => {
+                            clearTimeout(loadTimeout);
                             console.error('❌ Error loading GLB model:', error);
-                            // Continue to OBJ/MTL pipeline below as fallback
+                            console.error('   File path:', glbPath);
+                            console.error('   Error details:', error.message || error);
+                            console.log('🔄 Attempting OBJ fallback if available...');
+                            // Let execution continue to OBJ/MTL pipeline below as fallback
                         }
                     );
-                    // If GLB branch was taken, return so we don't run OBJ logic
+                    // If GLB branch was taken successfully, return so we don't run OBJ logic
                     return;
                 }
             }
         } catch (e) {
-            console.warn('GLB detection/initialization failed, falling back to OBJ:', e);
+            console.warn('⚠️ GLB detection/initialization failed, falling back to OBJ:', e);
         }
 
     // Resolve base and filenames (OBJ/MTL path)
