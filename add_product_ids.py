@@ -10,7 +10,7 @@ import re
 with open('avatar_catalog.py', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# Product ID mapping for all 30 avatars
+# Product ID mapping for all 39 avatars
 product_id_map = {
     "al-bee": "beesmart.avatar.al_bee",
     "brother-bee": "beesmart.avatar.brother_bee",

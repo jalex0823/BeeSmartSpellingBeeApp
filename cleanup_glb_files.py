@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Clean up GLB files that aren't in the official 30 avatar catalog.
+Clean up GLB files that aren't in the official 39 avatar catalog.
 Moves unwanted GLB files to a backup folder instead of deleting them.
 """
 
 import os
 import shutil
 
-# Official 30 avatars from avatar_catalog.py
+# Official 39 avatars from avatar_catalog.py
 OFFICIAL_CATALOG_IDS = {
     'knight-bee', 'super-bee', 'robo-bee', 'queen-bee', 'mascot-bee',
     'builder-bee', 'detective-bee', 'singer-bee', 'o-bee', 'motor-bee',

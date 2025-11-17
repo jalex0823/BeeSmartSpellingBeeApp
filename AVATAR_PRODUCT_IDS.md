@@ -1,8 +1,8 @@
 # Avatar Product IDs for Apple App Store IAP
 
-**Generated:** November 13, 2025  
+**Generated:** November 13, 2025 (Updated November 17, 2025)  
 **Format:** `beesmart.avatar.{slug_with_underscores}`  
-**Total Avatars:** 30
+**Total Avatars:** 39
 
 ## Product ID Format
 - **Prefix:** `beesmart.avatar.`
@@ -38,7 +38,7 @@
 |-------------|-----------|------------|
 | Mascot Bee Avatar | mascot-bee | `beesmart.avatar.mascot_bee` |
 
-### PREMIUM (17 avatars)
+### PREMIUM (26 avatars)
 | Display Name | Avatar ID | Product ID |
 |-------------|-----------|------------|
 | Al Bee Avatar | al-bee | `beesmart.avatar.al_bee` |
@@ -46,22 +46,31 @@
 | Diva Bee Avatar | diva-bee | `beesmart.avatar.diva_bee` |
 | Doc Bee Avatar | doc-bee | `beesmart.avatar.doc_bee` |
 | Franken Bee Avatar | franken-bee | `beesmart.avatar.franken_bee` |
+| Gamer Bee Avatar | gamer-bee | `beesmart.avatar.gamer_bee` |
 | Honey Comb Avatar | honey-comb | `beesmart.avatar.honey_comb` |
+| Inventor Bee Avatar | inventor-bee | `beesmart.avatar.inventor_bee` |
 | J Rock Bee Avatar | j-rock-bee | `beesmart.avatar.j_rock_bee` |
+| Lumberjack Bee Avatar | lumberjack-bee | `beesmart.avatar.lumberjack_bee` |
 | Motor Bee Avatar | motor-bee | `beesmart.avatar.motor_bee` |
+| Nurse Bee Avatar | nurse-bee | `beesmart.avatar.nurse_bee` |
 | O Bee Avatar | o-bee | `beesmart.avatar.o_bee` |
+| Plumber Bee Avatar | plumber-bee | `beesmart.avatar.plumber_bee` |
 | Queen Bee Avatar | queen-bee | `beesmart.avatar.queen_bee` |
 | Robo Bee Avatar | robo-bee | `beesmart.avatar.robo_bee` |
 | Sea Bee Avatar | sea-bee | `beesmart.avatar.sea_bee` |
 | Singer Bee Avatar | singer-bee | `beesmart.avatar.singer_bee` |
 | Space Bee Avatar | space-bee | `beesmart.avatar.space_bee` |
 | Super Bee Avatar | super-bee | `beesmart.avatar.super_bee` |
+| Techno Bee Avatar | techno-bee | `beesmart.avatar.techno_bee` |
+| Umpire Bee Avatar | umpire-bee | `beesmart.avatar.umpire_bee` |
 | Ware Bee Avatar | ware-bee | `beesmart.avatar.ware_bee` |
+| Xray Bee Avatar | xray-bee | `beesmart.avatar.xray_bee` |
+| Yeti Bee Avatar | yeti-bee | `beesmart.avatar.yeti_bee` |
 | Zom Bee Avatar | zom-bee | `beesmart.avatar.zom_bee` |
 
 ---
 
-## Alphabetical Product ID List (All 30)
+## Alphabetical Product ID List (All 39)
 
 ```
 beesmart.avatar.al_bee
@@ -76,12 +85,17 @@ beesmart.avatar.diva_bee
 beesmart.avatar.doc_bee
 beesmart.avatar.explorer_bee
 beesmart.avatar.franken_bee
+beesmart.avatar.gamer_bee
 beesmart.avatar.honey_comb
+beesmart.avatar.inventor_bee
 beesmart.avatar.j_rock_bee
 beesmart.avatar.knight_bee
+beesmart.avatar.lumberjack_bee
 beesmart.avatar.mascot_bee
 beesmart.avatar.motor_bee
+beesmart.avatar.nurse_bee
 beesmart.avatar.o_bee
+beesmart.avatar.plumber_bee
 beesmart.avatar.professor_bee
 beesmart.avatar.queen_bee
 beesmart.avatar.robo_bee
@@ -91,8 +105,12 @@ beesmart.avatar.selfie_bee
 beesmart.avatar.singer_bee
 beesmart.avatar.space_bee
 beesmart.avatar.super_bee
+beesmart.avatar.techno_bee
+beesmart.avatar.umpire_bee
 beesmart.avatar.vamp_bee
 beesmart.avatar.ware_bee
+beesmart.avatar.xray_bee
+beesmart.avatar.yeti_bee
 beesmart.avatar.zom_bee
 ```
 

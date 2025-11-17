@@ -1,13 +1,14 @@
 """
 3D Bee Avatar Catalog
-Manages the catalog of 24 bee avatars with monetization tiers
+Manages the catalog of 39 bee avatars with monetization tiers
 
 Monetization Tiers:
 - DEFAULT_FREE: Available during registration (5 avatars)
-- EARN_OR_BUY: Unlock with Honey Points or purchase (5 avatars)
-- PREMIUM: Top-tier avatars with higher unlock requirements (12 avatars)
+- EARN_OR_BUY: Unlock with Honey Points or purchase (7 avatars)
+- PREMIUM: Top-tier avatars with higher unlock requirements (26 avatars)
 - MASCOT: Default for guests/unregistered users (1 avatar)
-- ANXIOUS: Special emotion category (1 avatar)
+
+Total: 39 avatars (verified via count_avatars.py)
 
 Dynamic naming: If available, avatar display names are sourced from the
 original render PNG filenames that end with '!' under
