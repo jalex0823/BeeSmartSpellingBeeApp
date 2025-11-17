@@ -4875,8 +4875,8 @@
                             const data = await res.json();
                             if (data.ok){
                                 console.log(`✅ Saved list loaded: ${data.loaded.word_count} words OVERRODE previous list`);
-                                // ✅ Update word count badge before redirecting
-                                updateWordListCount(data.loaded.word_count);
+                                // ✅ Update word count badge AND start quiz button using centralized manager
+                                await WordBankManager.updateAllDisplays(true);
                                 
                                 showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz…`);
                                 
@@ -6927,33 +6927,15 @@
                         const message = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
                         showSuccessMessage(message);
                         
-                        // ✅ Update word count badge
-                        updateWordListCount(data.count);
+                        // ✅ Update word count badge AND start quiz button using centralized manager
+                        await WordBankManager.updateAllDisplays(true);
                         
                         // Persist latest word list for mobile restore (fetch enriched list)
                         try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
-                    // Enable Start Quiz button IMMEDIATELY (mobile fix)
-                    if (data.count > 0) {
-                        const btn = document.getElementById('startQuizBtn');
-                        btn.disabled = false;
-                        btn.removeAttribute('disabled');
-                        btn.innerHTML = `🚀 Start Quiz (${data.count} words)`;
-                        btn.classList.add('ready-to-play');
-                        btn.classList.remove('waiting-to-play');
-                        
-                        // Force style update for mobile
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                        btn.style.pointerEvents = 'auto';
-                        
-                        console.log('✅ Quiz button enabled after text upload:', {
-                            disabled: btn.disabled,
-                            hasDisabledAttr: btn.hasAttribute('disabled'),
-                            classes: btn.className,
-                            wordCount: data.count
-                        });
+                        // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
+                        console.log('✅ Quiz button enabled after text upload, word count:', data.count);
                         
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
@@ -7102,38 +7084,18 @@
                         const message = magicMessages[Math.floor(Math.random() * magicMessages.length)];
                         showSuccessMessage(message);
                         
-                        // ✅ Update word count badge
-                        updateWordListCount(data.count);
+                        // ✅ Update word count badge AND start quiz button using centralized manager
+                        await WordBankManager.updateAllDisplays(true);
                         
                         // Persist latest word list for mobile restore (fetch enriched list)
                         try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
-                        // Enable Start Quiz button IMMEDIATELY (mobile fix)
+                        // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
+                        console.log('✅ Quiz button enabled after image upload, word count:', data.count);
+                        
+                        // Show quiz-ready notification
                         if (data.count > 0) {
-                            const btn = document.getElementById('startQuizBtn');
-                            btn.disabled = false;
-                            btn.removeAttribute('disabled');
-                            btn.innerHTML = `🚀 Start Quiz (${data.count} words)`;
-                            btn.classList.add('ready-to-play');
-                            btn.classList.remove('waiting-to-play');
-                            
-                            // Force style update for mobile
-                            btn.style.opacity = '1';
-                            btn.style.cursor = 'pointer';
-                            btn.style.pointerEvents = 'auto';
-                            
-                            console.log('✅ Quiz button enabled after image upload:', {
-                                disabled: btn.disabled,
-                                hasDisabledAttr: btn.hasAttribute('disabled'),
-                                classes: btn.className,
-                                wordCount: data.count
-                            });
-                            
-                            // Force immediate visual update
-                            btn.offsetHeight; // Trigger reflow
-                            
-                            // Show quiz-ready notification
                             showQuizReadyNotification(data.count);
                         }
                         
@@ -7274,70 +7236,23 @@
                 });
         }
         
-        function updateWordCount() {
-            // Add cache-busting parameter for Safari
-            const cacheBuster = Date.now();
-            fetch(`/api/wordbank?_=${cacheBuster}`, {
-                cache: 'no-store',
-                credentials: 'same-origin',  // Ensure session cookie is sent
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
+        async function updateWordCount() {
+            console.log('📊 updateWordCount() called - using WordBankManager');
+            try {
+                const count = await WordBankManager.updateAllDisplays(true);
+                
+                // Encourage the child based on word count
+                if (count >= 5) {
+                    showSuccessMessage(`Awesome! You have ${count} words ready to practice! 🎯`);
+                } else if (count > 0) {
+                    showNotification(`Great start! ${count} words loaded. Add more for longer practice! 📚`, 'info');
                 }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    const wordCount = data.words ? data.words.length : 0;
-                    const startBtn = document.getElementById('startQuizBtn');
-                    console.log('📊 Word count updated:', wordCount, 'Button element:', startBtn);
-                    
-                    // Update word count badge
-                    updateWordListCount(wordCount);
-                    
-                    if (wordCount > 0) {
-                        startBtn.disabled = false;
-                        startBtn.removeAttribute('disabled');
-                        startBtn.innerHTML = `🐝 Let's Get Buzzing Spelling Some Words! (${wordCount} words)`;
-                        startBtn.classList.add('ready-to-play');
-                        startBtn.classList.remove('waiting-to-play');
-                        
-                        // Force inline styles for mobile (critical!)
-                        startBtn.style.opacity = '1';
-                        startBtn.style.cursor = 'pointer';
-                        startBtn.style.pointerEvents = 'auto';
-                        
-                        // Force reflow
-                        startBtn.offsetHeight;
-                        
-                        console.log('✅ Button enabled in updateWordCount:', {
-                            disabled: startBtn.disabled,
-                            hasDisabledAttr: startBtn.hasAttribute('disabled'),
-                            classes: startBtn.className,
-                            style: startBtn.style.cssText
-                        });
-                        
-                        // Encourage the child
-                        if (wordCount >= 5) {
-                            showSuccessMessage(`Awesome! You have ${wordCount} words ready to practice! 🎯`);
-                        } else {
-                            showNotification(`Great start! ${wordCount} words loaded. Add more for longer practice! 📚`, 'info');
-                        }
-                    } else {
-                        startBtn.disabled = true;
-                        startBtn.setAttribute('disabled', 'disabled');
-                        startBtn.innerHTML = "🌟 Let's Spell! (Add words first)";
-                        startBtn.classList.remove('ready-to-play');
-                        startBtn.classList.add('waiting-to-play');
-                        
-                        // Force disabled styles
-                        startBtn.style.opacity = '0.6';
-                        startBtn.style.cursor = 'not-allowed';
-                        startBtn.style.pointerEvents = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.log('Could not check word count:', error);
-                });
+                
+                return count;
+            } catch (error) {
+                console.error('❌ Could not check word count:', error);
+                return 0;
+            }
         }
         
         /**
@@ -9068,36 +8983,14 @@
                 'Pragma': 'no-cache'
             }
         })
-            .then(response => response.json())
-            .then(data => {
+            .then(async response => {
+                const data = await response.json();
                 const wordCount = data.words ? data.words.length : 0;
                 
-                // ✅ Update word count badge on page load
-                updateWordListCount(wordCount);
+                // ✅ Update word count badge AND start quiz button using centralized manager
+                await WordBankManager.updateAllDisplays(true);
                 
-                if (wordCount > 0) {
-                    const btn = document.getElementById('startQuizBtn');
-                    btn.disabled = false;
-                    btn.removeAttribute('disabled');
-                    btn.innerHTML = `🚀 Start Quiz (${wordCount} words)`;
-                    btn.classList.add('ready-to-play');
-                    btn.classList.remove('waiting-to-play');
-                    
-                    // Force style update (same as upload methods)
-                    btn.style.opacity = '1';
-                    btn.style.cursor = 'pointer';
-                    btn.style.pointerEvents = 'auto';
-                    
-                    // Force reflow
-                    btn.offsetHeight;
-                    
-                    console.log('✅ Quiz button enabled on page load:', {
-                        disabled: btn.disabled,
-                        hasDisabledAttr: btn.hasAttribute('disabled'),
-                        classes: btn.className,
-                        wordCount: wordCount
-                    });
-                }
+                console.log('✅ Page load complete - word count synced');
             })
             .catch(error => {
                 console.log('Could not check word count:', error);
