@@ -47,8 +47,8 @@ class MatrixRain {
     }
     
     draw() {
-        // Semi-transparent black background for fade effect
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        // Very transparent background for fade effect - allows honeycomb to show through
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Set font
