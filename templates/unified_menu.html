@@ -11938,20 +11938,30 @@
                 try {
                     const response = await fetch('/api/wordbank', {
                         credentials: 'same-origin',
-                        headers: { 'Accept': 'application/json' }
+                        cache: 'no-store',
+                        headers: { 
+                            'Accept': 'application/json',
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
                     });
                     const data = await response.json();
+                    console.log('🔍 Word List System Check:', data);
+                    
                     if (data.success && data.count > 0) {
+                        // Show accurate word count from current session
                         this.updateCheck(check8, `${data.count} words ready`, '✅', 60);
                         this.updateProgress(60, `📚 ${data.count} words loaded`);
+                        console.log(`✅ Word list verified: ${data.count} words in library`);
                     } else {
                         this.updateCheck(check8, 'No words loaded', '⚠️', 60);
                         this.updateProgress(60, '⚠️ Upload word list to start');
+                        console.log('⚠️ No words in library - user needs to upload');
                     }
                 } catch (e) {
                     this.updateCheck(check8, 'Check failed', '⚠️', 60);
                     this.updateProgress(60, '⚠️ Session check failed');
-                    console.error('Session check error:', e);
+                    console.error('❌ Word list check error:', e);
                 }
                 
                 // Check 9: GPA, Grade & Points Validation
