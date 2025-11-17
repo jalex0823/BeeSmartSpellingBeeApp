@@ -3232,18 +3232,26 @@
             
             // Wait for DOM to settle
             setTimeout(() => {
-                // Scroll modal into view (important for mobile)
-                modalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Scroll modal to TOP of viewport (not center) for better mobile UX
+                modalElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 
-                // Also scroll to top of modal content for tall modals
+                // Ensure we're at the very top of the modal content
                 const modalContent = modalElement.querySelector('div[style*="max-width"]') || 
                                    modalElement.querySelector('.modal-content') ||
                                    modalElement.firstElementChild;
                 
                 if (modalContent) {
-                    // Ensure modal content is at top of viewport
-                    modalContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Scroll modal content to top as well
+                    modalContent.scrollTop = 0;
                 }
+                
+                // Also scroll window to ensure modal is at top
+                setTimeout(() => {
+                    const rect = modalElement.getBoundingClientRect();
+                    if (rect.top > 0) {
+                        window.scrollBy({ top: rect.top, behavior: 'smooth' });
+                    }
+                }, 100);
                 
                 // Focus first input if exists (for better UX)
                 const firstInput = modalElement.querySelector('input, textarea');
@@ -3252,7 +3260,7 @@
                     firstInput.focus();
                 }
                 
-                console.log('📱 Modal auto-centered for mobile');
+                console.log('📱 Modal scrolled to top for mobile');
             }, 50);
         }
 
