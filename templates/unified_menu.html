@@ -12640,6 +12640,18 @@
             window.loadingSystem = new LoadingSystem();
             window.loadingSystem.updateProgress(5, '🚀 Starting up...');
             
+            // EMERGENCY TIMEOUT - Force loading screen to complete after 10 seconds
+            const LOADING_EMERGENCY_TIMEOUT = 10000;
+            const emergencyTimeout = setTimeout(() => {
+                console.error('🚨 EMERGENCY: Loading took too long, forcing completion...');
+                if (window.loadingSystem) {
+                    window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
+                    window.loadingSystem.presentTapToStart();
+                }
+            }, LOADING_EMERGENCY_TIMEOUT);
+            
+            try {
+            
             // Run system checks
             await window.loadingSystem.runSystemChecks();
             
@@ -12678,19 +12690,36 @@
             // This ensures authenticated users always see their correct display_name
             // before the page finishes loading
             
-            // 75% - Preload and validate avatar system
+            // 75% - Preload and validate avatar system WITH TIMEOUT PROTECTION
             window.loadingSystem.updateProgress(75, '🔍 Checking avatar system...');
             
-            // Initialize avatar loader and run preload validation
+            // Initialize avatar loader and run preload validation with 3-second timeout
             try {
                 if (!window.userAvatarLoader) {
                     window.userAvatarLoader = new UserAvatarLoader();
                 }
                 
-                // Run comprehensive avatar system preload with progress callback
-                const preloadResults = await window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
+                // Create timeout protection for avatar preload
+                const PRELOAD_TIMEOUT = 3000; // 3 seconds max
+                const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
                     window.loadingSystem.updateProgress(75, `🔍 Checking: ${avatarName}...`);
                 });
+                
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => {
+                        console.warn('⏱️ Avatar preload timeout - continuing with fallback');
+                        resolve({
+                            totalAvatars: 39,
+                            successfulAvatars: 0,
+                            failedAvatars: [],
+                            systemReady: false,
+                            fallbackReady: true
+                        });
+                    }, PRELOAD_TIMEOUT);
+                });
+                
+                // Run comprehensive avatar system preload with progress callback
+                const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
                 
                 // Update progress based on preload results
                 if (preloadResults.systemReady) {
@@ -12842,6 +12871,19 @@
             
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
+            
+            // Clear emergency timeout - loading completed successfully
+            clearTimeout(emergencyTimeout);
+            
+            } catch (loadingError) {
+                console.error('🚨 Loading error:', loadingError);
+                // Force completion even on error
+                if (window.loadingSystem) {
+                    window.loadingSystem.updateProgress(100, '⚠️ Loaded with errors');
+                    window.loadingSystem.presentTapToStart();
+                }
+                clearTimeout(emergencyTimeout);
+            }
 
             // Final sanity: reflect actual container visibility in logs
             try {
