@@ -2735,6 +2735,14 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
+<!-- Word List Metadata Anchor (hidden) -->
+<div id="quiz-root" style="display: none;" 
+     data-selected-list-id="" 
+     data-selected-list-name="" 
+     data-words="" 
+     data-words-url="/api/wordbank">
+</div>
+
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -2749,6 +2757,10 @@ if ('speechSynthesis' in window) {
                     <span class="arrow">🔙</span>
                     <span>Back to Menu</span>
                 </a>
+                <button type="button" id="refreshWordListBtn" class="back-button" title="Refresh word list" style="margin-left: 0.5rem; cursor: pointer; border: none; background: linear-gradient(135deg, #FFD54F 0%, #FFC107 100%); display: none;">
+                    <span class="arrow">🔄</span>
+                    <span>Refresh List</span>
+                </button>
                 <span id="progressText">Question 1 of 10</span>
             </div>
         </div>
@@ -8620,4 +8632,8 @@ function playThemedSound(soundType) {
     }
 }
 </script>
+
+<!-- Word List Manager Module -->
+<script src="{{ url_for('static', filename='js/quiz-wordlist.js') }}"></script>
+
 {% endblock %}
