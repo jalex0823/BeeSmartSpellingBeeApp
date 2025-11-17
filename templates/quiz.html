@@ -663,16 +663,51 @@ if ('speechSynthesis' in window) {
     /* Mobile responsiveness */
     @media (max-width: 768px) {
         .jar-svg {
-            width: 150px; /* Wider on mobile too */
-            height: 180px;
+            width: 140px; /* Slightly smaller for space */
+            height: 160px;
         }
         
+        /* 📱 MOBILE: Timer number MUCH MORE VISIBLE AND READABLE */
         .timer-number {
-            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
+            font-size: 3.5rem !important; /* LARGER */
+            font-weight: 900 !important; /* EXTRA BOLD */
+            color: #FF4500 !important; /* Bright orange-red */
+            text-shadow: 
+                0 0 15px rgba(255, 255, 255, 1),
+                0 0 30px rgba(255, 193, 7, 0.9),
+                0 3px 8px rgba(0, 0, 0, 0.5),
+                0 0 5px #FFD700 !important; /* Strong glow */
+            -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.3); /* Outline for contrast */
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+        
+        /* Warning state - even MORE visible */
+        .honey-jar-timer.warning .timer-number {
+            font-size: 4rem !important;
+            color: #FF0000 !important; /* Bright red */
+            animation: timerPulseMobile 0.5s ease-in-out infinite;
+        }
+        
+        /* Critical state - MAXIMUM visibility */
+        .honey-jar-timer.critical .timer-number {
+            font-size: 4.5rem !important;
+            color: #FF0000 !important;
+            animation: timerPulseMobile 0.3s ease-in-out infinite;
+        }
+        
+        @keyframes timerPulseMobile {
+            0%, 100% { 
+                transform: translate(-50%, -50%) scale(1); 
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.2); 
+            }
         }
         
         .timer-label {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
     }
 
@@ -1323,13 +1358,57 @@ if ('speechSynthesis' in window) {
     }
     
     @media (max-width: 768px) {
+        /* 📱 MOBILE-FIRST: Wider quiz area to reduce scrolling */
         .quiz-container {
             max-width: 100%;
-            padding: 1rem 0.5rem 3rem;
+            padding: 0.5rem 0.25rem 3rem; /* Reduced padding for more width */
         }
         
         .quiz-header {
-            padding: 1rem;
+            padding: 0.75rem 0.5rem; /* Reduced padding */
+        }
+        
+        /* 📱 MOBILE: Make definition more compact but always visible */
+        .definition-display {
+            font-size: 1rem; /* Slightly smaller */
+            padding: 1rem; /* Less padding */
+            margin-bottom: 1rem; /* Less margin */
+            position: sticky; /* Keep visible during scroll */
+            top: 60px; /* Below header */
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.98); /* More solid background */
+        }
+        
+        /* 📱 MOBILE: Countdown timer - MUCH MORE VISIBLE */
+        .countdown-container {
+            margin: 0.5rem 0 1rem; /* Less margin */
+        }
+        
+        .jar-svg {
+            width: 140px; /* Slightly smaller but still visible */
+            height: 160px;
+        }
+        
+        .timer-display {
+            font-size: 2.5rem !important; /* LARGER */
+            font-weight: 900 !important; /* BOLDER */
+            text-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 0 10px rgba(255, 193, 7, 0.8) !important; /* Glow effect */
+            color: #FF6B35 !important; /* Bright orange-red for visibility */
+            stroke: #000 !important;
+            stroke-width: 2px !important;
+        }
+        
+        .timer-display.warning {
+            font-size: 3rem !important; /* Even larger when warning */
+            color: #FF0000 !important; /* Bright red */
+            animation: timerPulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
         }
         
         .progress-info {
