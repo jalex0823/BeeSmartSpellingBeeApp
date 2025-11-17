@@ -23,7 +23,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
     
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
@@ -12706,7 +12705,7 @@
                 console.error('🚨 EMERGENCY: Loading took too long, forcing completion...');
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
-                    window.loadingSystem.presentTapToStart();
+                    window.loadingSystem.dismissLoader();
                 }
             }, LOADING_EMERGENCY_TIMEOUT);
             
@@ -12940,7 +12939,7 @@
                 // Force completion even on error
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded with errors');
-                    window.loadingSystem.presentTapToStart();
+                    window.loadingSystem.dismissLoader();
                 }
                 clearTimeout(emergencyTimeout);
             }
