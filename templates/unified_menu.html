@@ -8989,6 +8989,10 @@
             .then(response => response.json())
             .then(data => {
                 const wordCount = data.words ? data.words.length : 0;
+                
+                // ✅ Update word count badge on page load
+                updateWordListCount(wordCount);
+                
                 if (wordCount > 0) {
                     const btn = document.getElementById('startQuizBtn');
                     btn.disabled = false;
