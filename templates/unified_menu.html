@@ -12615,9 +12615,9 @@
                 console.log(`✅ Loading complete in ${elapsed}ms`);
                 
                 this.updateProgress(100, '🎉 Ready to spell!');
-                // Show "Tap to Start" instead of auto-dismiss so kids can enjoy the welcome moment
-                await this.delay(400);
-                this.presentTapToStart();
+                // Auto-dismiss after brief celebration
+                await this.delay(1000);
+                this.dismissLoader();
             }
         }
         
