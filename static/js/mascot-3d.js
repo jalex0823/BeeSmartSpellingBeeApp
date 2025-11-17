@@ -109,12 +109,32 @@ class SmartyBee3D {
         );
         this.camera.position.z = 5;
 
-        // Create renderer
+        // Create renderer with 4K quality settings for crisp GLB avatars
         this.renderer = new THREE.WebGLRenderer({ 
             alpha: true, 
-            antialias: true 
+            antialias: true,
+            // 🎨 HIGH QUALITY RENDERING FOR GLB FILES 🎨
+            powerPreference: 'high-performance',
+            precision: 'highp',
+            logarithmicDepthBuffer: true,
+            preserveDrawingBuffer: false,
+            premultipliedAlpha: true,
+            stencil: false,
+            depth: true
         });
+        
         this.renderer.setSize(this.options.width, this.options.height);
+        
+        // 🔥 4K QUALITY SETTINGS - CRISP AND CLEAR 🔥
+        // Use higher pixel ratio for sharper rendering (capped at 2 for performance)
+        const pixelRatio = Math.min(window.devicePixelRatio * 1.5, 2);
+        this.renderer.setPixelRatio(pixelRatio);
+        console.log(`🎨 Rendering at ${pixelRatio}x pixel ratio for crisp detail`);
+        
+        // Enable shadow maps for realistic depth
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+        
         // Ensure correct color space and tone mapping so colors don't look washed out
         try {
             if (typeof this.renderer.outputColorSpace !== 'undefined' && THREE.SRGBColorSpace) {
@@ -128,11 +148,11 @@ class SmartyBee3D {
                 this.renderer.toneMappingExposure = 1.0;
             }
         } catch (e) { /* no-op */ }
+        
         // Ensure fully transparent background so the home page design shows through
         if (this.renderer && typeof this.renderer.setClearColor === 'function') {
             this.renderer.setClearColor(0x000000, 0);
         }
-        this.renderer.setPixelRatio(window.devicePixelRatio);
         
         // Make canvas transparent to pointer events so parent div's onclick works
         this.renderer.domElement.style.pointerEvents = 'none';
@@ -184,25 +204,54 @@ class SmartyBee3D {
                             try {
                                 const object = gltf.scene || gltf.scenes?.[0];
                                 if (!object) throw new Error('GLB contained no scene');
-                                // Ensure GLB textures use sRGB for correct color
+                                
+                                // 🎨 HIGH QUALITY GLB TEXTURE PROCESSING 🎨
+                                // Ensure GLB textures use sRGB for correct color and apply anisotropic filtering
                                 try {
+                                    // Get max anisotropy for crisp textures at all angles
+                                    const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
+                                    console.log(`🔥 Applying ${maxAnisotropy}x anisotropic filtering for ultra-crisp textures`);
+                                    
                                     object.traverse((node) => {
                                         if (node.isMesh) {
+                                            // Enable shadow casting and receiving for depth
+                                            node.castShadow = true;
+                                            node.receiveShadow = true;
+                                            
                                             const mats = Array.isArray(node.material) ? node.material : [node.material];
                                             mats.forEach((mat) => {
-                                                if (mat && mat.map) {
-                                                    if (typeof mat.map.colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
-                                                        mat.map.colorSpace = THREE.SRGBColorSpace;
-                                                    } else if (typeof mat.map.encoding !== 'undefined' && THREE.sRGBEncoding) {
-                                                        mat.map.encoding = THREE.sRGBEncoding;
-                                                    }
-                                                    mat.map.needsUpdate = true;
+                                                if (mat) {
+                                                    // Process all texture maps (diffuse, normal, roughness, etc.)
+                                                    ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap'].forEach(texType => {
+                                                        if (mat[texType]) {
+                                                            // Set color space for accurate colors
+                                                            if (typeof mat[texType].colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
+                                                                mat[texType].colorSpace = THREE.SRGBColorSpace;
+                                                            } else if (typeof mat[texType].encoding !== 'undefined' && THREE.sRGBEncoding) {
+                                                                mat[texType].encoding = THREE.sRGBEncoding;
+                                                            }
+                                                            
+                                                            // 🔥 ANISOTROPIC FILTERING - Makes textures ultra-crisp at all angles 🔥
+                                                            mat[texType].anisotropy = maxAnisotropy;
+                                                            
+                                                            // High-quality filtering
+                                                            mat[texType].minFilter = THREE.LinearMipmapLinearFilter;
+                                                            mat[texType].magFilter = THREE.LinearFilter;
+                                                            mat[texType].generateMipmaps = true;
+                                                            mat[texType].needsUpdate = true;
+                                                        }
+                                                    });
+                                                    
+                                                    mat.needsUpdate = true;
                                                 }
-                                                if (mat) mat.needsUpdate = true;
                                             });
                                         }
                                     });
-                                } catch (e) { /* best-effort */ }
+                                    console.log('✅ Applied 4K quality texture filtering to GLB model');
+                                } catch (e) { 
+                                    console.warn('⚠️ Could not apply full quality settings:', e);
+                                }
+                                
                                 // Center/scale like OBJ path
                                 const box = new THREE.Box3().setFromObject(object);
                                 const center = box.getCenter(new THREE.Vector3());

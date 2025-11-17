@@ -10956,49 +10956,107 @@
             const originalRotation = model.rotation.y;
             const originalPosition = { x: model.position.x, y: model.position.y, z: model.position.z };
             
+            // 🎭 COMPREHENSIVE AVATAR PERSONA MAPPING 🎭
+            // Maps all 30 avatars to their unique animation behaviors
+            const avatarPersonaMap = {
+                // 🎓 ACADEMIC & INTELLECTUAL
+                'al-bee': 'scientist',           // AI scientist with eureka moments
+                'professor-bee': 'academic',      // Wise professor bouncing with knowledge
+                'inventor-bee': 'scientist',      // Brilliant spark-powered inventor
+                
+                // 🎸 PERFORMERS & ENTERTAINERS
+                'rocker-bee': 'rockstar',         // Electric guitar energy
+                'j-rock-bee': 'rockstar',         // Rock n' roll rhythm
+                'singer-bee': 'performer',        // Stage presence with vocal power
+                'diva-bee': 'performer',          // Glamorous stage diva
+                'selfie-bee': 'influencer',       // Camera-ready poses
+                
+                // 🎮 TECH & GAMING
+                'robo-bee': 'robot',              // Mechanical precision
+                'ware-bee': 'cyber',              // Digital glitch defender
+                'gamer-bee': 'gaming',            // Fast reflexes
+                
+                // ⚔️ FANTASY & HEROES
+                'knight-bee': 'knight',           // Noble marching
+                'queen-bee': 'queen',             // Regal grace
+                'super-bee': 'sports',            // Athletic superhero power
+                'franken-bee': 'frankenstein',    // Electric surge
+                
+                // 👻 SPOOKY & HALLOWEEN
+                'vamp-bee': 'vampire',            // Fluttering bat-like
+                'zom-bee': 'zombie',              // Slow shuffle
+                'monster-bee': 'monster',         // Scary shaking
+                
+                // 🏗️ PROFESSIONS
+                'builder-bee': 'builder',         // Hammering motion
+                'detective-bee': 'detective',     // Investigating
+                'doc-bee': 'doctor',              // Medical examination
+                'nurse-bee': 'medical',           // Gentle caring
+                'lumberjack-bee': 'lumberjack',   // Axe chopping
+                
+                // 🌟 CUTE & FUN
+                'cutie-bee': 'cute',              // Adorable twirl
+                'brother-bee': 'classic',         // Traditional bee bounce
+                'mascot-bee': 'mascot',           // Official cheerleader
+                'honey-comb': 'honeycomb',        // Hexagonal pattern
+                'o-bee': 'classic',               // Simple charm
+                
+                // 🌍 ADVENTURE
+                'explorer-bee': 'explorer',       // Adventurous trek
+                'space-bee': 'space',             // Orbital float
+                'sea-bee': 'ocean',               // Swimming motion
+                'motor-bee': 'biker',             // Fast motorcycle lean
+                
+                // 🧘 PEACEFUL
+                'buda-bee': 'zen',                // Peaceful floating meditation
+                
+                // � ENERGETIC
+                'buzz-bee': 'energetic',          // Buzzing hyperactive
+                'cool-bee': 'classic'             // Smooth and stylish
+            };
+            
             // Character-specific rotation behaviors
             const rotationConfigs = {
-                einstein: { speed: 0.12, bounce: false, wobble: true },
-                academic: { speed: 0.10, bounce: true, wobble: false },
-                monster: { speed: 0.08, bounce: false, wobble: false, shake: true },
-                vampire: { speed: 0.15, bounce: false, wobble: false, flutter: true },
-                zombie: { speed: 0.06, bounce: false, wobble: false, shuffle: true },
-                werewolf: { speed: 0.18, bounce: true, wobble: false },
-                rockstar: { speed: 0.20, bounce: true, wobble: true },
-                nervous: { speed: 0.14, bounce: false, wobble: true, jitter: true },
-                mascot: { speed: 0.15, bounce: true, wobble: false },
-                // 🎭 NEW ROTATION BEHAVIORS - Persona-driven animations!
                 scientist: { speed: 0.13, bounce: true, wobble: false, pulse: true }, // Eureka bounce
+                academic: { speed: 0.10, bounce: true, wobble: false },
                 performer: { speed: 0.22, bounce: true, wobble: true, spin: true }, // Stage energy
-                cyber: { speed: 0.25, bounce: false, wobble: false, glitch: true }, // Digital glitch
-                sports: { speed: 0.18, bounce: true, wobble: false, power: true }, // Athletic power
-                gaming: { speed: 0.24, bounce: true, wobble: true, rapid: true }, // Fast reflexes
-                medical: { speed: 0.12, bounce: true, wobble: false, gentle: true }, // Caring motion
-                mechanic: { speed: 0.16, bounce: true, wobble: false, wrench: true }, // Tool swing
-                lumberjack: { speed: 0.14, bounce: true, wobble: false, chop: true }, // Axe swing
-                skeleton: { speed: 0.17, bounce: false, wobble: false, rattle: true }, // Bone rattle
-                yeti: { speed: 0.11, bounce: true, wobble: true, stomp: true }, // Heavy stomp
-                cute: { speed: 0.16, bounce: true, wobble: true, twirl: true }, // Adorable twirl
+                rockstar: { speed: 0.20, bounce: true, wobble: true },
                 influencer: { speed: 0.19, bounce: true, wobble: false, pose: true }, // Camera pose
-                zen: { speed: 0.08, bounce: false, wobble: false, float: true }, // Peaceful float
-                energetic: { speed: 0.28, bounce: true, wobble: true, hyperactive: true }, // Buzzing energy
-                classic: { speed: 0.15, bounce: true, wobble: false }, // Traditional bee
-                honeycomb: { speed: 0.14, bounce: true, wobble: false, hexagon: true }, // Hexagonal pattern
-                // 🎯 EXISTING THEMES - Now with complete rotation behaviors!
                 robot: { speed: 0.16, bounce: true, wobble: false, mechanical: true }, // Robotic precision
-                biker: { speed: 0.22, bounce: false, wobble: true, lean: true }, // Motorcycle lean
+                cyber: { speed: 0.25, bounce: false, wobble: false, glitch: true }, // Digital glitch
+                gaming: { speed: 0.24, bounce: true, wobble: true, rapid: true }, // Fast reflexes
                 knight: { speed: 0.14, bounce: true, wobble: false, march: true }, // Noble march
                 queen: { speed: 0.12, bounce: true, wobble: true, regal: true }, // Royal grace
+                sports: { speed: 0.18, bounce: true, wobble: false, power: true }, // Athletic power
+                frankenstein: { speed: 0.17, bounce: true, wobble: false, electric: true }, // Electric surge
+                vampire: { speed: 0.15, bounce: false, wobble: false, flutter: true },
+                zombie: { speed: 0.06, bounce: false, wobble: false, shuffle: true },
+                monster: { speed: 0.08, bounce: false, wobble: false, shake: true },
+                builder: { speed: 0.16, bounce: true, wobble: false, hammer: true }, // Hammering motion
                 detective: { speed: 0.13, bounce: false, wobble: false, investigate: true }, // Searching motion
                 doctor: { speed: 0.15, bounce: true, wobble: false, examine: true }, // Medical examination
-                builder: { speed: 0.16, bounce: true, wobble: false, hammer: true }, // Hammering motion
+                medical: { speed: 0.12, bounce: true, wobble: false, gentle: true }, // Caring motion
+                lumberjack: { speed: 0.14, bounce: true, wobble: false, chop: true }, // Axe swing
+                cute: { speed: 0.16, bounce: true, wobble: true, twirl: true }, // Adorable twirl
+                classic: { speed: 0.15, bounce: true, wobble: false }, // Traditional bee
+                mascot: { speed: 0.15, bounce: true, wobble: false },
+                honeycomb: { speed: 0.14, bounce: true, wobble: false, hexagon: true }, // Hexagonal pattern
                 explorer: { speed: 0.14, bounce: true, wobble: true, trek: true }, // Adventurous trek
                 space: { speed: 0.12, bounce: false, wobble: false, orbit: true }, // Orbital float
                 ocean: { speed: 0.13, bounce: true, wobble: true, swim: true }, // Swimming motion
-                frankenstein: { speed: 0.17, bounce: true, wobble: false, electric: true } // Electric surge
+                biker: { speed: 0.22, bounce: false, wobble: true, lean: true }, // Motorcycle lean
+                zen: { speed: 0.08, bounce: false, wobble: false, float: true }, // Peaceful float
+                energetic: { speed: 0.28, bounce: true, wobble: true, hyperactive: true }, // Buzzing energy
+                nervous: { speed: 0.14, bounce: false, wobble: true, jitter: true }
             };
             
-            const config = rotationConfigs[theme] || rotationConfigs.mascot;
+            // Map avatar ID to persona, fallback to theme parameter or mascot
+            const avatarId = mascot.options?.avatarId || theme;
+            const persona = avatarPersonaMap[avatarId] || theme || 'mascot';
+            const config = rotationConfigs[persona] || rotationConfigs.mascot;
+            
+            console.log(`🎭 Performing ${persona} animation for ${avatarId}`);
+            
             let currentRotation = 0;
             let animationFrame = 0;
             
@@ -12210,6 +12268,39 @@
                         // Preload the 3D model
                         if (typeof SmartyBee3D !== 'undefined' && typeof THREE !== 'undefined') {
                             window.mascotBeePreloaded = new SmartyBee3D('mascot3DPreload', avatarOptions);
+                            
+                            // 🎭 AUTO-TRIGGER RANDOM THEMED ANIMATION ON MENU LOAD 🎭
+                            // Wait for model to fully load, then start a random persona animation
+                            const waitForModelLoad = setInterval(() => {
+                                if (window.mascotBeePreloaded && window.mascotBeePreloaded.bee) {
+                                    clearInterval(waitForModelLoad);
+                                    // Delay 1.5s after menu appears to let user see the avatar first
+                                    setTimeout(() => {
+                                        console.log('🎭 Auto-triggering random themed animation on menu load');
+                                        try {
+                                            // Get avatar ID from avatarOptions
+                                            const avatarId = avatarOptions.avatarId || 'mascot-bee';
+                                            
+                                            // Perform the rotation animation
+                                            if (typeof performFullRotation === 'function') {
+                                                performFullRotation(window.mascotBeePreloaded, avatarId);
+                                            }
+                                            
+                                            // Also play visual effect overlay
+                                            const container = document.getElementById('mascot3DPreload');
+                                            if (container && typeof playThemedAvatarEffect === 'function') {
+                                                playThemedAvatarEffect(avatarId, container);
+                                            }
+                                        } catch (e) {
+                                            console.warn('Could not auto-trigger animation:', e);
+                                        }
+                                    }, 1500);
+                                }
+                            }, 100); // Check every 100ms
+                            
+                            // Safety: clear interval after 5 seconds if model never loads
+                            setTimeout(() => clearInterval(waitForModelLoad), 5000);
+                            
                             console.log('✅ 3D Mascot preloaded successfully during loading screen');
                             resolve();
                         } else {
@@ -12643,90 +12734,274 @@
                 // Remove after animation
                 setTimeout(() => effectOverlay.remove(), reducedMotion ? 1500 : 3000);
                 
-                // Avatar-specific effects (expanded personas)
+                // 🎭 COMPREHENSIVE AVATAR-SPECIFIC EFFECTS - ALL 30 AVATARS 🎭
                 switch(avatarId) {
+                    // 🎓 ACADEMIC & INTELLECTUAL
                     case 'al-bee':
+                    case 'inventor-bee':
                         // AI + Science: equations burst + tech sparkles + electric arc
-                        createEquationBurst(effectOverlay, 10);
-                        createSparkles(effectOverlay, '🤖✨', '#00d4ff');
+                        createEquationBurst(effectOverlay, 12);
+                        createSparkles(effectOverlay, '🤖✨⚡', '#00d4ff');
                         createElectricArc(effectOverlay);
                         playSound('tech');
                         break;
-                    case 'anxious-bee':
-                        // Thought bubbles
-                        createThoughtBubbles(effectOverlay);
-                        playSound('nervous-hmm');
-                        break;
-                    case 'mascot-bee':
-                        // Classic bee sparkles
-                        createSparkles(effectOverlay, '🐝✨', '#ffd700');
-                        playSound('cheer');
-                        break;
-                    case 'monster-bee':
-                        // Spooky effects
-                        createSparkles(effectOverlay, '👻🎃', '#9400d3');
-                        playSound('spooky');
-                        break;
+                    
                     case 'professor-bee':
-                        // Books + equations chalk
-                        createFloatingIcon(effectOverlay, '📚📖', 5);
+                        // Books + equations + scholarly wisdom
+                        createFloatingIcon(effectOverlay, '📚📖🎓', 6);
                         createEquationBurst(effectOverlay, 8);
+                        createSparkles(effectOverlay, '✨', '#4169e1');
                         playSound('wise-hmm');
                         break;
+                    
+                    // 🎸 PERFORMERS & ENTERTAINERS
                     case 'rocker-bee':
+                    case 'j-rock-bee':
                         // Electric guitar + stage lights + stage shake
-                        createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00']);
-                        createFloatingIcon(effectOverlay, '🎸', 3);
+                        createFlashingLights(effectOverlay, ['#ff00ff', '#ff0000', '#ffff00', '#00ff00']);
+                        createFloatingIcon(effectOverlay, '🎸🎵🎶', 5);
                         quickShake(effectOverlay.parentElement || container);
                         playSound('guitar-riff');
                         break;
-                    case 'vamp-bee':
-                        // Vampire effects
-                        createSparkles(effectOverlay, '🦇🌙', '#8b0000');
-                        playSound('mysterious');
+                    
+                    case 'singer-bee':
+                        // Microphone + musical notes + spotlight
+                        createFloatingIcon(effectOverlay, '🎤🎵🎶', 8);
+                        createSparkles(effectOverlay, '✨💫', '#ff1493');
+                        createSpotlight(effectOverlay);
+                        playSound('applause');
                         break;
-                    case 'ware-bee':
-                        // Werewolf howl
-                        createLightningEffect(effectOverlay);
-                        playSound('howl');
-                        break;
-                    case 'zom-bee':
-                        // Zombie effects
-                        createSparkles(effectOverlay, '🧟‍♂️💀', '#556b2f');
-                        playSound('groan');
-                        break;
-                    case 'knight-bee':
-                        createFloatingIcon(effectOverlay, '🛡️⚔️', 4);
-                        createShieldGlint(effectOverlay);
-                        playSound('clang');
-                        break;
-                    case 'queen-bee':
-                        createFloatingIcon(effectOverlay, '👑✨', 6);
-                        createSparkles(effectOverlay, '💛', '#ffd700');
+                    
+                    case 'diva-bee':
+                        // Glamorous sparkles + glitter + diva energy
+                        createSparkles(effectOverlay, '�✨👑', '#ffd700');
+                        createFloatingIcon(effectOverlay, '🌟', 10);
+                        createFlashingLights(effectOverlay, ['#ffd700', '#ff69b4', '#da70d6']);
                         playSound('chime');
                         break;
+                    
                     case 'selfie-bee':
-                        cameraFlashes(effectOverlay, 5);
+                        // Camera flashes + social media icons
+                        cameraFlashes(effectOverlay, 7);
+                        createFloatingIcon(effectOverlay, '📸💫❤️', 5);
+                        createSparkles(effectOverlay, '✨', '#00bfff');
                         playSound('camera');
                         break;
+                    
+                    // 🎮 TECH & GAMING
+                    case 'robo-bee':
+                        // Mechanical gears + digital effects
+                        createFloatingIcon(effectOverlay, '⚙️🔧🤖', 6);
+                        createSparkles(effectOverlay, '✨', '#c0c0c0');
+                        createDigitalGlitch(effectOverlay);
+                        playSound('robot-beep');
+                        break;
+                    
+                    case 'ware-bee':
+                        // Cyber defender + digital shield + matrix effect
+                        createLightningEffect(effectOverlay);
+                        createFloatingIcon(effectOverlay, '🛡️��', 5);
+                        createMatrixRain(effectOverlay);
+                        playSound('tech');
+                        break;
+                    
+                    case 'gamer-bee':
+                        // Gaming controller + level up + power-up
+                        createFloatingIcon(effectOverlay, '🎮🕹️⭐', 8);
+                        createSparkles(effectOverlay, '💥', '#00ff00');
+                        createLevelUpText(effectOverlay);
+                        playSound('power-up');
+                        break;
+                    
+                    // ⚔️ FANTASY & HEROES
+                    case 'knight-bee':
+                        // Shield + sword + armor glint
+                        createFloatingIcon(effectOverlay, '🛡️⚔️👑', 5);
+                        createShieldGlint(effectOverlay);
+                        createSparkles(effectOverlay, '✨', '#silver');
+                        playSound('clang');
+                        break;
+                    
+                    case 'queen-bee':
+                        // Royal crown + golden sparkles + regal aura
+                        createFloatingIcon(effectOverlay, '👑✨💛', 8);
+                        createSparkles(effectOverlay, '💎', '#ffd700');
+                        createRegalGlow(effectOverlay);
+                        playSound('chime');
+                        break;
+                    
+                    case 'super-bee':
+                        // Superhero power + cape flutter + POW effect
+                        createFloatingIcon(effectOverlay, '⚡💥🦸', 6);
+                        createSparkles(effectOverlay, '✨', '#ff0000');
+                        createPowerBurst(effectOverlay);
+                        playSound('superhero-whoosh');
+                        break;
+                    
+                    case 'franken-bee':
+                        // Frankenstein electric + bolts + spark
+                        createElectricArc(effectOverlay);
+                        createFloatingIcon(effectOverlay, '⚡🔩', 5);
+                        createSparkles(effectOverlay, '✨', '#00ff00');
+                        quickShake(effectOverlay.parentElement || container);
+                        playSound('electric-zap');
+                        break;
+                    
+                    // 👻 SPOOKY & HALLOWEEN
+                    case 'vamp-bee':
+                        // Vampire bats + moon + mist
+                        createSparkles(effectOverlay, '🦇🌙✨', '#8b0000');
+                        createFloatingIcon(effectOverlay, '🦇', 6);
+                        createMistEffect(effectOverlay);
+                        playSound('mysterious');
+                        break;
+                    
+                    case 'zom-bee':
+                        // Zombie shuffle + gravestones + groans
+                        createSparkles(effectOverlay, '🧟‍♂️💀', '#556b2f');
+                        createFloatingIcon(effectOverlay, '🪦', 3);
+                        quickShake(effectOverlay.parentElement || container);
+                        playSound('groan');
+                        break;
+                    
+                    case 'monster-bee':
+                        // Scary monster + spooky effects
+                        createSparkles(effectOverlay, '👻🎃�', '#9400d3');
+                        createFlashingLights(effectOverlay, ['#9400d3', '#000000']);
+                        playSound('spooky');
+                        break;
+                    
+                    // 🏗️ PROFESSIONS
+                    case 'builder-bee':
+                        // Hammer + tools + construction
+                        createFloatingIcon(effectOverlay, '🔨🔧⚒️', 6);
+                        createSparkles(effectOverlay, '✨', '#ffa500');
+                        createHammerStrike(effectOverlay);
+                        playSound('hammer');
+                        break;
+                    
+                    case 'detective-bee':
+                        // Magnifying glass + clues + investigation
+                        createFloatingIcon(effectOverlay, '🔍📋🕵️', 5);
+                        createSparkles(effectOverlay, '✨', '#8b4513');
+                        createSearchBeam(effectOverlay);
+                        playSound('mystery');
+                        break;
+                    
+                    case 'doc-bee':
+                    case 'nurse-bee':
+                        // Medical care + health + healing
+                        createFloatingIcon(effectOverlay, '🏥�❤️', 6);
+                        createSparkles(effectOverlay, '✨', '#ff69b4');
+                        createHealingPulse(effectOverlay);
+                        playSound('gentle-chime');
+                        break;
+                    
+                    case 'lumberjack-bee':
+                        // Axe + trees + wood chopping
+                        createFloatingIcon(effectOverlay, '🪓🌲', 4);
+                        createSparkles(effectOverlay, '✨', '#8b4513');
+                        createChopEffect(effectOverlay);
+                        playSound('wood-chop');
+                        break;
+                    
+                    // 🌟 CUTE & FUN
+                    case 'cutie-bee':
+                        // Hearts + adorable sparkles + cuteness overload
+                        createFloatingIcon(effectOverlay, '💕💖💗', 10);
+                        createSparkles(effectOverlay, '✨🌸', '#ff69b4');
+                        createHeartBurst(effectOverlay);
+                        playSound('kawaii');
+                        break;
+                    
+                    case 'brother-bee':
+                    case 'cool-bee':
+                        // Cool shades + chill vibes
+                        createFloatingIcon(effectOverlay, '�✨', 5);
+                        createSparkles(effectOverlay, '⭐', '#00bfff');
+                        playSound('cool-sound');
+                        break;
+                    
+                    case 'mascot-bee':
+                        // Classic bee sparkles + cheering
+                        createSparkles(effectOverlay, '�✨🎉', '#ffd700');
+                        createFloatingIcon(effectOverlay, '🎉', 6);
+                        playSound('cheer');
+                        break;
+                    
+                    case 'honey-comb':
+                        // Honeycomb pattern + golden honey + sweet vibes
+                        createFloatingIcon(effectOverlay, '🍯✨', 6);
+                        createSparkles(effectOverlay, '💛', '#ffd700');
+                        createHexagonPattern(effectOverlay);
+                        playSound('sweet-bell');
+                        break;
+                    
+                    case 'o-bee':
+                        // Simple charm + classic sparkles
+                        createSparkles(effectOverlay, '🐝✨', '#ffa500');
+                        createFloatingIcon(effectOverlay, '⭕', 4);
+                        playSound('chime');
+                        break;
+                    
+                    // 🌍 ADVENTURE
                     case 'explorer-bee':
-                        createFloatingIcon(effectOverlay, '🧭🗺️', 5);
+                        // Compass + map + adventure trail
+                        createFloatingIcon(effectOverlay, '🧭🗺️🏔️', 6);
                         footprints(effectOverlay);
+                        createSparkles(effectOverlay, '✨', '#8b4513');
                         playSound('step');
                         break;
+                    
                     case 'space-bee':
-                        starfield(effectOverlay, 20);
-                        createFloatingIcon(effectOverlay, '🛰️', 2);
+                        // Starfield + planets + space travel
+                        starfield(effectOverlay, 25);
+                        createFloatingIcon(effectOverlay, '�🛸🪐', 5);
+                        createSparkles(effectOverlay, '✨', '#4169e1');
                         playSound('space');
                         break;
+                    
+                    case 'sea-bee':
+                        // Ocean waves + bubbles + underwater
+                        createFloatingIcon(effectOverlay, '🌊🐚🐠', 8);
+                        createBubbles(effectOverlay);
+                        createSparkles(effectOverlay, '✨', '#00bfff');
+                        playSound('water');
+                        break;
+                    
+                    case 'motor-bee':
                     case 'biker-bee':
                     case 'motorcycle-bee':
+                        // Speed lines + motorcycle + fast motion
                         speedLines(effectOverlay);
+                        createFloatingIcon(effectOverlay, '🏍️💨', 4);
+                        createSparkles(effectOverlay, '✨', '#ff4500');
                         playSound('engine');
                         break;
+                    
+                    // 🧘 PEACEFUL
+                    case 'buda-bee':
+                        // Zen + meditation + peaceful aura
+                        createFloatingIcon(effectOverlay, '🧘☮️🕉️', 6);
+                        createSparkles(effectOverlay, '✨', '#9370db');
+                        createZenRipple(effectOverlay);
+                        playSound('zen-bell');
+                        break;
+                    
+                    // 🎯 ENERGETIC
+                    case 'buzz-bee':
+                        // Buzzing energy + hyperactive + electric
+                        createSparkles(effectOverlay, '⚡✨💥', '#ffff00');
+                        createFloatingIcon(effectOverlay, '🐝', 10);
+                        quickShake(effectOverlay.parentElement || container);
+                        createEnergyBurst(effectOverlay);
+                        playSound('buzz');
+                        break;
+                    
                     default:
                         // Generic bounce sparkle (fewer particles in reduced mode)
                         createSparkles(effectOverlay, '✨', '#ffeb3b');
+                        playSound('cheer');
                         break;
                 }
                 

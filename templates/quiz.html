@@ -7816,9 +7816,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('🎯 Quiz page: Starting avatar initialization...');
         
+        // CRITICAL: Ensure container exists before attempting to load avatar
+        const mascotContainer = document.getElementById('mascotBee3D');
+        if (!mascotContainer) {
+            throw new Error('❌ Avatar container #mascotBee3D not found in DOM');
+        }
+        console.log('✅ Avatar container found:', mascotContainer);
+        
+        // CRITICAL: Ensure Three.js is loaded
+        if (typeof THREE === 'undefined') {
+            throw new Error('❌ Three.js library not loaded');
+        }
+        console.log('✅ Three.js library loaded');
+        
+        // CRITICAL: Ensure SmartyBee3D class is loaded
+        if (typeof SmartyBee3D === 'undefined') {
+            throw new Error('❌ SmartyBee3D class not loaded - check mascot-3d.js');
+        }
+        console.log('✅ SmartyBee3D class loaded');
+        
         // Ensure avatar loader exists (should be loaded from base.html)
         if (!window.userAvatarLoader) {
             console.warn('⚠️ UserAvatarLoader not found - creating new instance');
+            if (typeof UserAvatarLoader === 'undefined') {
+                throw new Error('❌ UserAvatarLoader class not loaded - check user-avatar-loader.js');
+            }
             window.userAvatarLoader = new UserAvatarLoader();
         }
         
@@ -7862,23 +7884,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
+        // CRITICAL: Verify avatar options before rendering
+        if (!avatarOptions || !avatarOptions.modelPath) {
+            throw new Error(`❌ Invalid avatar options - missing modelPath for ${avatarId}`);
+        }
+        
     // Render into mascot container (replaces old smartyBee3D)
+    console.log('🎨 Creating SmartyBee3D instance...');
     smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
+        
+        if (!smartyBee) {
+            throw new Error('❌ SmartyBee3D instance creation failed');
+        }
         
         console.log(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
         // Add click handler for themed animation
-        const mascotContainer = document.getElementById('mascotBee3D');
-        if (mascotContainer) {
-            mascotContainer.style.cursor = 'pointer';
-            mascotContainer.addEventListener('click', () => {
-                console.log('🐝 Quiz mascot clicked - playing themed animation');
+        mascotContainer.style.cursor = 'pointer';
+        mascotContainer.addEventListener('click', () => {
+            console.log('🐝 Quiz mascot clicked - playing themed animation');
+            try {
                 playThemedAvatarEffect(avatarId, mascotContainer);
-            });
-        }
+            } catch (clickError) {
+                console.error('❌ Avatar click animation failed:', clickError);
+            }
+        });
+        
+        console.log('✅ Avatar initialization complete!');
+        
     } catch (error) {
         console.error('❌ 3D mascot failed to load:', error);
-        console.error('Error details:', error.message, error.stack);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        
         // Hide avatar container instead of showing 2D fallback
         try {
             console.log('🔄 Hiding avatar container (3D load failed)...');
