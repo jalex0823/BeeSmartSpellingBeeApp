@@ -7771,6 +7771,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            // ✅ Update progress text with actual word count on page load
+            const totalWords = data.words.length;
+            const progressText = document.getElementById('progressText');
+            if (progressText) {
+                progressText.textContent = `Question 1 of ${totalWords}`;
+                console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
+            }
+
             window.quizManager = new QuizManager({ delight, smartyBee });
         })
         .catch(error => {
