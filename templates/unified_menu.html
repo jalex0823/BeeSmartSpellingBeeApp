@@ -28,6 +28,8 @@
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
+    <!-- Matrix Rain Effect -->
+    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}"></script>
     <!-- Three.js for 3D Bees - ASYNC to prevent blocking page load -->
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" onerror="console.warn('OBJLoader CDN failed')"></script>
@@ -2253,15 +2255,14 @@
     </audio>
 
     <!-- Magical background effects -->
-    <!-- Honey Pot Loading Screen -->
+    <!-- Matrix Rain Loading Screen -->
     <div id="honeyLoader" style="
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: url('/static/images/backgrounds/honeycombbg3.png') center/cover no-repeat, 
-                    linear-gradient(180deg, #8B2A5C 0%, #D94E2D 35%, #FF8C00 70%, #FFD700 100%);
+        background: #000000;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -2272,9 +2273,21 @@
         box-sizing: border-box;
         z-index: 10000;
         transition: opacity 0.5s ease, visibility 0.5s ease;
-    " 
+    ">
+        <!-- Matrix Rain Canvas (behind all content) -->
+        <canvas id="matrixCanvas" style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        "></canvas> 
         <!-- Welcome Title -->
         <div id="welcomeTitle" style="
+            position: relative;
+            z-index: 10;
             margin: 8px auto 24px;
             font-size: clamp(1.8rem, 4.5vw, 2.4rem);
             font-weight: 900;
@@ -2321,78 +2334,31 @@
                 margin-bottom: 1rem;
                 filter: drop-shadow(0 6px 18px rgba(0,0,0,0.35));
                 image-rendering: -webkit-optimize-contrast;
+                position: relative;
+                z-index: 10;
             "
         />
         
-        <!-- Honey Pot -->
-        <div style="
+        <!-- Loading Percentage (centered, large yellow text) -->
+        <div id="loadingPercentage" style="
             position: relative;
-            width: 260px;
-            height: 230px;
-            min-width: 240px;
-            min-height: 210px;
-            flex-shrink: 0;
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            border-radius: 25px 25px 50px 50px;
-            border: 5px solid #8B4513;
-            box-shadow: 0 15px 40px rgba(255, 165, 0, 0.5), inset 0 -30px 50px rgba(139, 69, 19, 0.3);
-            overflow: hidden;
-            margin-bottom: 16px;
-        ">
-            <!-- Honey Fill Animation -->
-            <div id="honeyFillLoader" style="
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 0%;
-                background: linear-gradient(180deg, rgba(255, 223, 0, 0.9) 0%, rgba(255, 193, 7, 1) 100%);
-                border-radius: 0 0 45px 45px;
-                transition: height 0.3s ease-out;
-                box-shadow: inset 0 10px 20px rgba(255, 255, 255, 0.4);
-            ">
-                <!-- Honey Shine -->
-                <div style="
-                    position: absolute;
-                    top: 15px;
-                    left: 25px;
-                    width: 80px;
-                    height: 40px;
-                    background: rgba(255, 255, 255, 0.5);
-                    border-radius: 50%;
-                    filter: blur(15px);
-                "></div>
-            </div>
-            
-            <!-- Percentage Text -->
-            <div id="loadingPercentage" style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 3.4rem;
-                font-weight: 900;
-                color: #8B4513;
-                text-shadow: 3px 3px 6px rgba(255, 255, 255, 0.6);
-                z-index: 10;
-            ">0%</div>
-            
-            <!-- Pot Rim -->
-            <div style="
-                position: absolute;
-                top: -10px;
-                left: -5px;
-                right: -5px;
-                height: 25px;
-                background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
-                border-radius: 25px 25px 0 0;
-                border: 3px solid #654321;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            "></div>
-        </div>
+            z-index: 10;
+            font-size: 5rem;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.9),
+                0 0 40px rgba(255, 165, 0, 0.7),
+                0 0 60px rgba(255, 140, 0, 0.5),
+                0 4px 8px rgba(0, 0, 0, 0.3);
+            margin: 2rem 0;
+            letter-spacing: 0.05em;
+        ">0%</div>
         
         <!-- Loading Text -->
         <div id="loadingText" style="
+            position: relative;
+            z-index: 10;
             margin-top: 1.5rem;
             font-size: 1.5rem;
             font-weight: 700;
@@ -2411,6 +2377,8 @@
         
         <!-- Loading Message -->
         <div id="loadingStatus" style="
+            position: relative;
+            z-index: 10;
             margin-top: 0.75rem;
             font-size: 1rem;
             /* Match welcome title: gold with soft glow */
@@ -2422,11 +2390,13 @@
                 0 1px 6px rgba(0, 0, 0, 0.15);
             -webkit-text-stroke: 0.3px rgba(90, 44, 21, 0.18);
         ">
-            🍯 Filling the honey pot...
+            🚀 Loading BeeSmart...
         </div>
 
         <!-- Tap to Start Button (visible but disabled until ready) -->
         <button id="welcomeStartBtn" style="
+            position: relative;
+            z-index: 10;
             margin-top: 1.75rem;
             padding: 16px 28px; /* bigger button */
             border-radius: 999px;
@@ -2450,6 +2420,8 @@
         
         <!-- System Checks Display -->
         <div id="systemChecks" style="
+            position: relative;
+            z-index: 10;
             margin-top: 1rem;
             width: clamp(360px, 94vw, 720px);
             max-width: 720px;
@@ -12170,11 +12142,10 @@
             
             updateProgress(percent, status) {
                 this.progress = Math.min(percent, 100);
-                const fillElement = document.getElementById('honeyFillLoader');
                 const percentElement = document.getElementById('loadingPercentage');
                 const statusElement = document.getElementById('loadingStatus');
                 
-                if (fillElement) fillElement.style.height = `${this.progress}%`;
+                // Update percentage display (no honey fill animation)
                 if (percentElement) percentElement.textContent = `${Math.floor(this.progress)}%`;
                 if (statusElement) statusElement.textContent = status;
                 
@@ -12603,6 +12574,13 @@
             dismissLoader() {
                 const loader = document.getElementById('honeyLoader');
                 if (!loader) return;
+                
+                // Stop Matrix rain animation
+                if (window.matrixRain) {
+                    window.matrixRain.stop();
+                    console.log('🛑 Matrix rain stopped');
+                }
+                
                 // Allow immediate click-through to the page beneath
                 loader.style.pointerEvents = 'none';
                 loader.style.opacity = '0';
@@ -12634,6 +12612,15 @@
                 loader.style.display = 'flex';
                 loader.style.opacity = '1';
                 loader.style.visibility = 'visible';
+            }
+            
+            // Initialize Matrix Rain Effect
+            if (typeof MatrixRain !== 'undefined') {
+                window.matrixRain = new MatrixRain('matrixCanvas');
+                window.matrixRain.start();
+                console.log('🌧️ Matrix rain animation started');
+            } else {
+                console.warn('⚠️ MatrixRain not loaded, skipping animation');
             }
             
             // Initialize loading system
