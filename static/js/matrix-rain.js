@@ -14,10 +14,15 @@ class MatrixRain {
         
         this.ctx = this.canvas.getContext('2d');
         this.characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
-        this.fontSize = 16;
+        
+        // Responsive font size based on device width
+        this.isMobile = window.innerWidth < 768;
+        this.fontSize = this.isMobile ? 12 : 16;
+        
         this.columns = 0;
         this.drops = [];
         this.animationId = null;
+        this.speed = this.isMobile ? 0.5 : 1; // Slower on mobile for better visibility
         
         this.init();
     }
@@ -32,9 +37,18 @@ class MatrixRain {
     }
     
     resize() {
+        // Detect device type on resize
+        this.isMobile = window.innerWidth < 768;
+        this.fontSize = this.isMobile ? 12 : 16;
+        this.speed = this.isMobile ? 0.5 : 1;
+        
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.columns = Math.floor(this.canvas.width / this.fontSize);
+        
+        // Fewer columns on mobile for cleaner effect
+        const columnSpacing = this.isMobile ? this.fontSize * 1.5 : this.fontSize;
+        this.columns = Math.floor(this.canvas.width / columnSpacing);
+        
         this.initDrops();
     }
     
@@ -47,41 +61,56 @@ class MatrixRain {
     }
     
     draw() {
-        // Very transparent background for fade effect - allows honeycomb to show through
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+        // Slightly more opaque fade on mobile for better trail visibility
+        const fadeOpacity = this.isMobile ? 0.04 : 0.02;
+        this.ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Set font
-        this.ctx.font = `${this.fontSize}px 'Courier New', monospace`;
+        // Set font with better rendering for mobile
+        this.ctx.font = `bold ${this.fontSize}px 'Courier New', monospace`;
+        
+        // Calculate column spacing (wider on mobile)
+        const columnSpacing = this.isMobile ? this.fontSize * 1.5 : this.fontSize;
         
         // Draw characters
         for (let i = 0; i < this.drops.length; i++) {
             // Random character
             const char = this.characters[Math.floor(Math.random() * this.characters.length)];
             
-            // Create gradient from bright gold to darker gold
-            const x = i * this.fontSize;
+            // Calculate position with proper spacing
+            const x = i * columnSpacing;
             const y = this.drops[i] * this.fontSize;
             
+            // Enhanced brightness gradient for mobile visibility
+            const brightThreshold = this.isMobile ? 0.95 : 0.975;
+            const midThreshold = this.isMobile ? 0.85 : 0.95;
+            
             // Brightest characters at the head
-            if (Math.random() > 0.975) {
+            if (Math.random() > brightThreshold) {
                 this.ctx.fillStyle = '#FFFF00'; // Bright yellow
-            } else if (Math.random() > 0.95) {
+                this.ctx.shadowColor = '#FFD700';
+                this.ctx.shadowBlur = this.isMobile ? 4 : 2;
+            } else if (Math.random() > midThreshold) {
                 this.ctx.fillStyle = '#FFD700'; // Gold
+                this.ctx.shadowBlur = 0;
             } else {
                 this.ctx.fillStyle = '#DAA520'; // Goldenrod
+                this.ctx.shadowBlur = 0;
             }
             
             // Draw character
             this.ctx.fillText(char, x, y);
+            
+            // Reset shadow for next character
+            this.ctx.shadowBlur = 0;
             
             // Reset drop to top when it reaches bottom
             if (y > this.canvas.height && Math.random() > 0.975) {
                 this.drops[i] = 0;
             }
             
-            // Move drop down
-            this.drops[i]++;
+            // Move drop down at appropriate speed
+            this.drops[i] += this.speed;
         }
     }
     
