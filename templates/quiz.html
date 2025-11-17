@@ -2494,7 +2494,77 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* 🎯 LEVEL UP MODAL */
+    /* � THEMED BACKGROUNDS - Change with progress */
+    .quiz-container.theme-start {
+        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 50%, #FFA500 100%);
+        transition: background 1.5s ease;
+    }
+    
+    .quiz-container.theme-25 {
+        background: linear-gradient(135deg, #98FB98 0%, #90EE90 50%, #00FA9A 100%);
+        transition: background 1.5s ease;
+    }
+    
+    .quiz-container.theme-50 {
+        background: linear-gradient(135deg, #87CEEB 0%, #4682B4 50%, #1E90FF 100%);
+        transition: background 1.5s ease;
+    }
+    
+    .quiz-container.theme-75 {
+        background: linear-gradient(135deg, #DDA0DD 0%, #DA70D6 50%, #BA55D3 100%);
+        transition: background 1.5s ease;
+    }
+    
+    .quiz-container.theme-complete {
+        background: linear-gradient(135deg, #FFD700 0%, #FF69B4 25%, #00CED1 50%, #9370DB 75%, #FFD700 100%);
+        background-size: 200% 200%;
+        animation: rainbowShift 8s ease infinite;
+    }
+    
+    @keyframes rainbowShift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    
+    /* Theme transition notification */
+    .theme-notification {
+        position: fixed;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1rem 2rem;
+        border-radius: 16px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #5A2C15;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        z-index: 9000;
+        opacity: 0;
+        animation: themePopIn 2s ease-out forwards;
+        pointer-events: none;
+    }
+    
+    @keyframes themePopIn {
+        0% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px) scale(0.8);
+        }
+        20% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1.05);
+        }
+        80% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px) scale(0.95);
+        }
+    }
+    
+    /* �🎯 LEVEL UP MODAL */
     .level-up-modal {
         position: fixed;
         top: 0;
@@ -4377,6 +4447,14 @@ class QuizManager {
         
         // Reset honey jar to 0% at start
         this.resetHoneyJar();
+        
+        // 🌈 Initialize themed background
+        this.currentTheme = 'theme-start';
+        const quizContainer = document.querySelector('.quiz-container');
+        if (quizContainer) {
+            quizContainer.classList.add('theme-start');
+            console.log('🌈 Initial theme set to: theme-start');
+        }
         
         // Randomized positive feedback messages (without names - we'll add dynamically)
         this.positiveFeedback = [
@@ -6708,6 +6786,65 @@ class QuizManager {
         }
 
         this.delight?.updateProgress({ ...progress, total: this.totalWords });
+        
+        // 🌈 Update themed background based on progress
+        this.updateThemedBackground(correct, this.totalWords);
+    }
+    
+    updateThemedBackground(correct, total) {
+        if (!total || total === 0) return;
+        
+        const percentage = (correct / total) * 100;
+        const quizContainer = document.querySelector('.quiz-container');
+        if (!quizContainer) return;
+        
+        // Define theme thresholds and names
+        const themes = [
+            { threshold: 0, name: 'theme-start', label: '🌅 Sunny Start!' },
+            { threshold: 25, name: 'theme-25', label: '🌱 Growing Garden!' },
+            { threshold: 50, name: 'theme-50', label: '🌊 Halfway Ocean!' },
+            { threshold: 75, name: 'theme-75', label: '🌸 Blossom Peak!' },
+            { threshold: 100, name: 'theme-complete', label: '🌈 Rainbow Victory!' }
+        ];
+        
+        // Find the current theme based on percentage
+        let newTheme = themes[0];
+        for (const theme of themes) {
+            if (percentage >= theme.threshold) {
+                newTheme = theme;
+            }
+        }
+        
+        // Check if theme has changed
+        const currentTheme = this.currentTheme || 'theme-start';
+        if (newTheme.name !== currentTheme) {
+            // Remove all theme classes
+            themes.forEach(t => quizContainer.classList.remove(t.name));
+            
+            // Add new theme class
+            quizContainer.classList.add(newTheme.name);
+            this.currentTheme = newTheme.name;
+            
+            // Show celebration notification (except for first theme)
+            if (newTheme.threshold > 0) {
+                this.showThemeNotification(newTheme.label);
+            }
+            
+            console.log(`🌈 Theme changed to: ${newTheme.name} (${percentage.toFixed(1)}% progress)`);
+        }
+    }
+    
+    showThemeNotification(message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'theme-notification';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Remove after animation completes
+        setTimeout(() => {
+            notification.remove();
+        }, 2000);
     }
 
     resetHoneyJar() {
