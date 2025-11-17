@@ -4668,28 +4668,45 @@
                 container.querySelectorAll('button[data-del]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const id = btn.getAttribute('data-del');
+                        console.log(`🗑️ Delete button clicked for list ID: ${id}`);
+                        
                         showBeeConfirm({ 
                             title:'Delete List?', 
-                            message:'This will remove the saved list from your account.', 
+                            message:'This will permanently remove the saved list from your account.', 
                             confirmText:'Delete', 
                             cancelText:'Cancel' 
                         }).then(confirmed => {
-                            if (!confirmed) return;
+                            if (!confirmed) {
+                                console.log('❌ User cancelled delete');
+                                return;
+                            }
+                            
+                            console.log(`📤 Sending delete request for list ID: ${id}`);
                             fetch('/api/saved-lists/delete', {
                                 method: 'POST', 
                                 headers: {'Content-Type':'application/json'},
                                 body: JSON.stringify({ id })
                             })
-                            .then(res => res.json())
+                            .then(res => {
+                                console.log(`📥 Delete response status: ${res.status}`);
+                                return res.json();
+                            })
                             .then(data => {
-                                if (data.ok) { 
+                                console.log('📥 Delete response data:', data);
+                                if (data.ok) {
+                                    console.log('✅ List deleted successfully, refreshing list...');
+                                    showSuccessMessage('✅ List deleted successfully');
                                     loadSaved(); 
                                     try { refreshSavedListsBadge(); } catch(e) {}
                                 } else { 
+                                    console.error('❌ Delete failed:', data.error);
                                     showErrorMessage(data.error || 'Delete failed'); 
                                 }
                             })
-                            .catch(e => showErrorMessage('Delete failed'));
+                            .catch(e => {
+                                console.error('❌ Delete request error:', e);
+                                showErrorMessage('Delete failed - network error');
+                            });
                         });
                     });
                 });

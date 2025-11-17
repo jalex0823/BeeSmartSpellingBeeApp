@@ -2400,38 +2400,61 @@ def load_saved_wordlist():
         return jsonify({"ok": False, "error": "Failed to load list"}), 500
 
 
-@app.route("/api/saved-lists/delete", methods=["POST"])  # small, optional helper
+@app.route("/api/saved-lists/delete", methods=["POST"])
 def delete_saved_wordlist():
     try:
         # Guests are not allowed to delete lists
         if not current_user.is_authenticated:
+            print(f"DEBUG /api/saved-lists/delete: User not authenticated")
             return jsonify({"ok": False, "error": "Login required to delete saved lists", "auth_required": True}), 403
+        
         payload = request.get_json(silent=True) or {}
         list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
+        
+        print(f"DEBUG /api/saved-lists/delete: Received payload={payload}, list_id={list_id}")
+        
         if not list_id:
+            print(f"DEBUG /api/saved-lists/delete: Missing list ID in payload")
             return jsonify({"ok": False, "error": "Missing list id"}), 400
 
         print(f"DEBUG /api/saved-lists/delete: Attempting to delete list_id={list_id}")
 
         user = get_or_create_guest_user()
         if not user:
+            print(f"DEBUG /api/saved-lists/delete: Unable to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        print(f"DEBUG /api/saved-lists/delete: User resolved: id={user.id}, username={user.username}")
 
         wl = None
         try:
-            wl = WordList.query.filter_by(id=int(str(list_id)), created_by_user_id=user.id).first()
-        except Exception:
+            # Try numeric ID first
+            numeric_id = int(str(list_id))
+            wl = WordList.query.filter_by(id=numeric_id, created_by_user_id=user.id).first()
+            print(f"DEBUG /api/saved-lists/delete: Tried numeric lookup id={numeric_id}, found={wl is not None}")
+        except Exception as e:
+            # Fallback to UUID
+            print(f"DEBUG /api/saved-lists/delete: Numeric lookup failed ({e}), trying UUID")
             wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
+            print(f"DEBUG /api/saved-lists/delete: UUID lookup uuid={list_id}, found={wl is not None}")
 
         if not wl:
+            # List all user's lists for debugging
+            all_lists = WordList.query.filter_by(created_by_user_id=user.id).all()
+            list_info = [(l.id, l.uuid, l.list_name) for l in all_lists]
             print(f"DEBUG /api/saved-lists/delete: List not found for user {user.id}")
-            return jsonify({"ok": False, "error": "List not found"}), 404
+            print(f"DEBUG /api/saved-lists/delete: User has {len(all_lists)} lists: {list_info}")
+            return jsonify({"ok": False, "error": "List not found or you don't have permission to delete it"}), 404
 
-        print(f"DEBUG /api/saved-lists/delete: Deleting list '{wl.list_name}' (id={wl.id})")
+        # Count items before deletion
+        item_count = WordListItem.query.filter_by(word_list_id=wl.id).count()
+        print(f"DEBUG /api/saved-lists/delete: Deleting list '{wl.list_name}' (id={wl.id}, uuid={wl.uuid}) with {item_count} items")
+        
         db.session.delete(wl)
         db.session.commit()
-        print(f"DEBUG /api/saved-lists/delete: Successfully deleted list")
-        return jsonify({"ok": True})
+        
+        print(f"✅ /api/saved-lists/delete: Successfully deleted list and its {item_count} items (cascade)")
+        return jsonify({"ok": True, "deleted": {"id": wl.id, "name": wl.list_name, "item_count": item_count}})
     except Exception as e:
         print(f"ERROR /api/saved-lists/delete: {e}")
         db.session.rollback()
