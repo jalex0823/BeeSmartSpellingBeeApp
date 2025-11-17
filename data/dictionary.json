@@ -1,8 +1,9 @@
 {
   "_metadata": {
-    "version": "1.6",
+    "version": "1.7",
     "created": "2025-10-13",
-    "description": "BeeSmart dictionary cache - API fetched definitions only"
+    "updated": "2025-11-17",
+    "description": "BeeSmart dictionary cache - INTERNAL ONLY (legacy entries from old external API, now deprecated)"
   },
   "words": {
     "test": {

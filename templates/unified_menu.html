@@ -29,11 +29,10 @@
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Matrix Rain Effect -->
     <script src="{{ url_for('static', filename='js/matrix-rain.js') }}"></script>
-    <!-- Three.js for 3D Bees - ASYNC to prevent blocking page load -->
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" onerror="console.warn('OBJLoader CDN failed')"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js" onerror="console.warn('MTLLoader CDN failed')"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
+    <!-- Three.js core MUST load before loaders; use ordered non-async scripts to avoid race causing THREE undefined -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
@@ -87,123 +86,12 @@
     <script>
         (function(){
             var root = document.documentElement;
-            var isAuth = '{{ _is_auth }}' === 'true';
-            var isPremium = '{{ _is_premium }}' === 'true';
-            var billingMode = '{{ _billing_mode }}';
-            var subscriptionSku = '{{ _subscription_sku }}';
-            var subscriptionMonthly = '{{ _subscription_monthly }}';
-            root.setAttribute('data-is-auth', isAuth ? '1':'0');
-            root.setAttribute('data-is-premium', isPremium ? '1':'0');
-            root.setAttribute('data-billing-mode', billingMode);
-            root.setAttribute('data-subscription-sku', subscriptionSku);
-            root.setAttribute('data-subscription-monthly-usd', subscriptionMonthly);
-            window.AVATAR_SKUS = {{ (avatar_product_ids if avatar_product_ids is defined else {}) | tojson }};
-            window.IS_AUTH = isAuth;
-            window.IS_PREMIUM = isPremium;
-            window.REG_BILLING_MODE = billingMode || 'subscription';
-            window.SUBSCRIPTION_SKU = subscriptionSku || null;
-            window.subscription_monthly_usd = parseFloat(subscriptionMonthly || '4.49') || 4.49;
-        })();
-    </script>
-    <script>
-        // If running inside a native wrapper that exposes BeeSmartIAP, attempt restore once a day
-        document.addEventListener('DOMContentLoaded', function(){
-            try {
-                if (window.IS_AUTH && window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') {
-                    const KEY = 'iap_restore_last';
-                    const DAY = 24*60*60*1000;
-                    let last = 0;
-                    try { last = parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch(e) { last = 0; }
-                    if (!last || (Date.now() - last) > DAY) {
-                        Promise.resolve()
-                            .then(() => window.BeeSmartIAP.getOwnedProducts())
-                            .then((skus) => {
-                                if (Array.isArray(skus) && skus.length) {
-                                    const platform = (window.BeeSmartIAP.platform || (/iPhone|iPad|Mac/i.test(navigator.userAgent) ? 'apple' : (/Android/i.test(navigator.userAgent) ? 'google' : 'web'))).toLowerCase();
-                                    return fetch('/api/iap/restore', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ platform, product_ids: skus })
-                                    });
-                                }
-                            })
-                            .then(() => { try { localStorage.setItem(KEY, String(Date.now())); } catch(e){} })
-                            .catch(() => { try { localStorage.setItem(KEY, String(Date.now())); } catch(e){} });
-                    }
-                }
-            } catch (e) { /* no-op */ }
-        });
-    </script>
-    <script>
-        // Optional native purchase glue: if a user is already signed-in and a native BeeSmartIAP
-        // bridge is present, intercept subscription CTAs to purchase and immediately verify
-        document.addEventListener('DOMContentLoaded', function(){
-            try {
-                const sku = window.SUBSCRIPTION_SKU;
-                if (!sku) return; // no SKU provided
-                const anchors = document.querySelectorAll('a.register-button, a[data-subscribe="1"]');
-                anchors.forEach(function(a){
-                    a.addEventListener('click', async function(ev){
-                        try {
-                            // Only intercept if user is authenticated (verification requires login)
-                            if (!window.IS_AUTH) return; // let navigation to /auth/register happen for guests
-                            if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return;
-                            ev.preventDefault();
-                            const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
-                                ? String(window.BeeSmartIAP.platform).toLowerCase()
-                                : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
-                            const result = await Promise.resolve(window.BeeSmartIAP.purchase(sku));
-                            const body = {
-                                product_id: sku,
-                                transaction_id: result && (result.transaction_id || result.transactionId || null),
-                                purchase_token: result && (result.purchase_token || result.purchaseToken || null),
-                                payload: result && result.payload ? result.payload : (result || {})
-                            };
-                            const resp = await fetch(`/api/iap/verify/${platform}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(body)
-                            });
-                            const data = await resp.json().catch(()=>({}));
-                            if (resp.ok && data && data.success) {
-                                // Entitlements applied; redirect to dashboard/home
-                                window.location.href = '/';
-                            } else {
-                                // Fallback to register route if something failed
-                                window.location.href = a.getAttribute('href') || '/auth/register';
-                            }
-                        } catch (e) {
-                            // Fail open to default nav
-                            try { window.location.href = a.getAttribute('href') || '/auth/register'; } catch(_) {}
-                        }
-                    }, { capture: true });
-                });
-            } catch (e) { /* no-op */ }
-        });
-    </script>
-    <script>
-        // Post-login trial banner for native wrappers (and web fallbacks)
-        // Shows only if: user is signed-in, not premium, billing mode is subscription, and banner not dismissed.
-        document.addEventListener('DOMContentLoaded', function(){
-            try {
-                const dismissedKey = 'trial_banner_dismissed_v1';
-                if (!window.IS_AUTH) return;
-                if (window.IS_PREMIUM) return;
-                if ((window.REG_BILLING_MODE || 'subscription') !== 'subscription') return;
-                try { if (localStorage.getItem(dismissedKey) === '1') return; } catch(e) {}
-
-                const fee = (typeof window.subscription_monthly_usd !== 'undefined') ? window.subscription_monthly_usd : null;
-                const price = (fee && !isNaN(fee)) ? Number(fee).toFixed(2) : null;
-                const trialDays = {{ (subscription_trial_days or 0) | int }};
-                const ctaText = trialDays > 0 ? `Start ${trialDays}\u2011day Free Trial` : 'Start Subscription';
-
-                const bar = document.createElement('div');
-                bar.setAttribute('role', 'region');
-                bar.setAttribute('aria-label', 'Subscription Offer');
-                bar.style.cssText = `position:sticky; top:0; z-index:1000; background:linear-gradient(135deg,#FFF3E0,#FFFDE7); border-bottom:2px solid #FFCC80; color:#5A2C15; padding:10px 12px; display:flex; align-items:center; justify-content:center; gap:12px;`;
-                bar.innerHTML = `
-                    <span style="font-weight:800; color:#E65100;">Unlock Premium</span>
-                    <span style="font-size:0.95rem;">${trialDays > 0 ? `Free trial ${trialDays} days` : ''} ${price ? `\u2014 $${price}/month` : ''}</span>
+            function create3DBeeHiveAnimation() {
+                const container = document.getElementById('beeHiveLoader');
+                if (!container) return;
+                // GLB-only policy: use lightweight fallback animation instead of legacy OBJ/MTL scene
+                createFallbackHiveAnimation(container);
+            }
                     <a href="/auth/register" data-subscribe="1" style="padding:6px 12px; background:#4FC3F7; color:white; border-radius:10px; text-decoration:none; font-weight:800; border:2px solid rgba(255,255,255,0.6);">${ctaText}</a>
                     <button type="button" aria-label="Dismiss" title="Dismiss" style="background:transparent; border:0; font-size:18px; margin-left:6px; cursor:pointer; color:#8B6B3A;">×</button>
                 `;
@@ -2274,11 +2162,12 @@
     ">
         <!-- Matrix Rain Canvas (behind all content) -->
         <canvas id="matrixCanvas" style="
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            min-height: 100vh;
             z-index: 1;
             pointer-events: none;
         "></canvas> 
@@ -4411,7 +4300,7 @@
             function persistUploadedWords(words){
                 try {
                     if(!Array.isArray(words) || words.length===0){return;}
-                    const normalized = words.map(w => (typeof w==='string'? w : (w && w.word))).filter(Boolean).slice(0, 500);
+                    const normalized = words.map(w => (typeof w==='string' ? w : (w && w.word ? w.word : ''))).filter(Boolean).slice(0, 500);
                     const payload = { words: normalized, savedAt: Date.now() };
                     localStorage.setItem('beesmart_last_user_word_list_v1', JSON.stringify(payload));
                     console.log('💾 Persisted word list locally for mobile restore:', payload.words.length);
@@ -4747,6 +4636,8 @@
             .then(data => {
                 hideLoadingMessage();
                 if (data.ok) {
+                    // Safely obtain the quiz start button reference (was missing, causing runtime error)
+                    const btn = document.getElementById('startQuizBtn');
                     const messages = [
                         `Buzz-tastic! ${data.count} word${data.count > 1 ? 's' : ''} added to your hive! 🐝`,
                         `Sweet! ${data.count} word${data.count > 1 ? 's are' : ' is'} ready to spell! 🍯`,
@@ -4761,7 +4652,7 @@
                     
                     // Persist the user's list locally for mobile rehydration
                     try { if (window.persistUploadedWords) { window.persistUploadedWords(words); } } catch(_){}
-                        
+                    if (btn) {
                         // Force style update for mobile
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
@@ -4779,12 +4670,15 @@
                         
                         // Show quiz-ready notification
                         showQuizReadyNotification(data.count);
+
+                        // DON'T call updateWordCount() - causes race condition and re-disables button
+                        // Button already enabled above with correct count from upload response
+                        console.log('✅ Manual entry complete - quiz button enabled with', data.count, 'words');
+                    } else {
+                        console.warn('🚫 startQuizBtn not found; quiz-ready UI tweaks skipped');
+                        showQuizReadyNotification(data.count);
                     }
-                    
-                    // DON'T call updateWordCount() - causes race condition and re-disables button
-                    // Button already enabled above with correct count from upload response
-                    console.log('✅ Manual entry complete - quiz button enabled with', data.count, 'words');
-                } else {
+                    } else {
                     // Check if this is a content violation warning
                     if (data.violation_warning && data.error) {
                         // Show violation in modal popup (like "Attention, spelling bee!")
@@ -12300,17 +12194,14 @@
                                     const useMascot = avatarData.use_mascot || false;
                                     
                                     // Determine format
-                                    let format = '(OBJ)'; // default
-                                    if (folderPath === 'glb_files' || (avatarData.avatar.urls && avatarData.avatar.urls.model_obj && avatarData.avatar.urls.model_obj.toLowerCase().endsWith('.glb'))) {
-                                        format = '(GLB)';
-                                    }
+                                    let format = '(GLB)'; // GLB-only
                                     
                                     this.updateCheck(check2, `${avatarName} ${format}`, '✅', 30);
                                     this.updateProgress(30, `🐝 Will load ${avatarName}`);
                                     console.log('✅ Avatar detected:', avatarName, format, 'useMascot:', useMascot);
                                 } else {
                                     // User hasn't selected an avatar yet
-                                    this.updateCheck(check2, 'Default Mascot (OBJ)', '✅', 30);
+                                    this.updateCheck(check2, 'Default Mascot (GLB)', '✅', 30);
                                     this.updateProgress(30, '🐝 Default avatar ready');
                                     console.log('ℹ️ Using default avatar - no avatar selected');
                                 }
@@ -12326,7 +12217,7 @@
                         }
                     } else {
                         // Guest user - always use default MascotBee
-                        this.updateCheck(check2, 'Default Mascot (OBJ)', '✅', 30);
+                        this.updateCheck(check2, 'Default Mascot (GLB)', '✅', 30);
                         this.updateProgress(30, '🐝 Guest using default');
                         console.log('👋 Guest user detected');
                     }
@@ -13863,143 +13754,62 @@
                         directionalLight.position.set(5, 5, 5);
                         scene.add(directionalLight);
                         
-                        // Get model URLs
-                        const objUrl = avatar.urls.model_obj;
-                        const mtlUrl = avatar.urls.model_mtl;
-                        
-                        console.log('🎨 Avatar loading config:');
-                        console.log('  - OBJ URL:', objUrl);
-                        console.log('  - MTL URL:', mtlUrl);
-                        console.log('  - Avatar ID:', avatar.avatar_id);
-                        console.log('  - Avatar Name:', avatar.name);
-                        
-                        // Detect if this is a GLB file (for new avatars)
-                        const isGLB = objUrl && objUrl.toLowerCase().endsWith('.glb');
-                        
-                        if (isGLB) {
-                            // Load GLB file using GLTFLoader
-                            console.log('🌟 Loading GLB avatar...');
-                            
-                            if (typeof THREE.GLTFLoader === 'undefined') {
-                                throw new Error('GLTFLoader not loaded - ensure three-gltf-loader is included');
-                            }
-                            
-                            const gltfLoader = new THREE.GLTFLoader();
-                            window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
-                            
-                            gltfLoader.load(
-                                objUrl,
-                                (gltf) => {
-                                    console.log('✅ GLB model loaded successfully');
-                                    const object = gltf.scene;
-                                    
-                                    // Disable shadows for performance
-                                    object.traverse((child) => {
-                                        if (child.isMesh) {
-                                            child.castShadow = false;
-                                            child.receiveShadow = false;
-                                        }
-                                    });
-                                    
-                                    // Professional centering and scaling
-                                    const box = new THREE.Box3().setFromObject(object);
-                                    const size = box.getSize(new THREE.Vector3()).length();
-                                    const center = box.getCenter(new THREE.Vector3());
-                                    
-                                    object.position.sub(center);
-                                    const targetSize = 2.5;
-                                    object.scale.setScalar(targetSize / size);
-                                    
-                                    scene.add(object);
-                                    
-                                    // Setup animation and rendering
-                                    setupAvatarAnimation(renderer, scene, camera, container, object, avatar);
-                                    resolveAvatar(true);
-                                },
-                                (xhr) => {
-                                    if (xhr.lengthComputable) {
-                                        const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                        window.loadingSystem?.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
-                                    }
-                                },
-                                (error) => {
-                                    console.error('❌ Error loading GLB model:', error);
-                                    rejectAvatar(error);
-                                }
-                            );
-                        } else {
-                            // Load OBJ/MTL files (original working avatars)
-                            console.log('🎨 Loading OBJ avatar...');
-                            
-                            const mtlLoader = new THREE.MTLLoader();
-                            const basePath = objUrl.substring(0, objUrl.lastIndexOf('/') + 1);
-                            const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
-                            const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
-                            
-                            console.log('  - Base path:', basePath);
-                            console.log('  - MTL file:', mtlFilename);
-                            console.log('  - OBJ file:', objFilename);
-                            
-                            mtlLoader.setPath(basePath);
-                            if (mtlLoader.setTexturePath) mtlLoader.setTexturePath(basePath);
-                            if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
-                            
-                            mtlLoader.load(
-                                mtlFilename,
-                                (materials) => {
-                                    console.log('✅ Materials loaded');
-                                    window.loadingSystem?.updateProgress(88, '🎨 Textures loaded...');
-                                    materials.preload();
-                                    
-                                    const objLoader = new THREE.OBJLoader();
-                                    objLoader.setMaterials(materials);
-                                    objLoader.setPath(basePath);
-                                    
-                                    window.loadingSystem?.updateProgress(90, '🐝 Building 3D model...');
-                                    
-                                    objLoader.load(objFilename, (object) => {
-                                        object.traverse((child) => {
-                                            if (child.isMesh) {
-                                                child.castShadow = false;
-                                                child.receiveShadow = false;
-                                            }
-                                        });
-                                        
-                                        const box = new THREE.Box3().setFromObject(object);
-                                        const size = box.getSize(new THREE.Vector3()).length();
-                                        const center = box.getCenter(new THREE.Vector3());
-                                        
-                                        object.position.sub(center);
-                                        const targetSize = 2.5;
-                                        object.scale.setScalar(targetSize / size);
-                                        
-                                        scene.add(object);
-                                        
-                                        setupAvatarAnimation(renderer, scene, camera, container, object, avatar);
-                                        resolveAvatar(true);
-                                    },
-                                    (xhr) => {
-                                        if (xhr.lengthComputable) {
-                                            const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                            window.loadingSystem?.updateProgress(90 + (percentComplete * 0.05), `🐝 Loading model: ${Math.floor(percentComplete)}%`);
-                                        }
-                                    },
-                                    (error) => {
-                                        console.error('❌ Error loading OBJ model:', error);
-                                        rejectAvatar(error);
-                                    });
-                                },
-                                (xhr) => {
-                                    if (xhr.lengthComputable) {
-                                        const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                        window.loadingSystem?.updateProgress(85 + (percentComplete * 0.03), `🎨 Loading textures: ${Math.floor(percentComplete)}%`);
-                                    }
-                                },
-                                (error) => {
-                                    console.error('❌ Error loading MTL materials:', error);
-                                    rejectAvatar(error);
-                                });
+                        // GLB-only model URL
+                        const modelUrl = avatar && avatar.urls ? avatar.urls.model_obj : null;
+                        if (!modelUrl || !/\.glb(\?.*)?$/i.test(modelUrl)) {
+                            throw new Error('Avatar model is not a GLB file');
                         }
+                        
+                        // Load GLB file using GLTFLoader
+                        console.log('🌟 Loading GLB avatar...');
+                        
+                        if (typeof THREE.GLTFLoader === 'undefined') {
+                            throw new Error('GLTFLoader not loaded - ensure three-gltf-loader is included');
+                        }
+                        
+                        const gltfLoader = new THREE.GLTFLoader();
+                        window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
+                        
+                        gltfLoader.load(
+                            modelUrl,
+                            (gltf) => {
+                                console.log('✅ GLB model loaded successfully');
+                                const object = gltf.scene;
+                                
+                                // Disable shadows for performance
+                                object.traverse((child) => {
+                                    if (child.isMesh) {
+                                        child.castShadow = false;
+                                        child.receiveShadow = false;
+                                    }
+                                });
+                                
+                                // Professional centering and scaling
+                                const box = new THREE.Box3().setFromObject(object);
+                                const size = box.getSize(new THREE.Vector3()).length();
+                                const center = box.getCenter(new THREE.Vector3());
+                                
+                                object.position.sub(center);
+                                const targetSize = 2.5;
+                                object.scale.setScalar(targetSize / size);
+                                
+                                scene.add(object);
+                                
+                                // Setup animation and rendering
+                                setupAvatarAnimation(renderer, scene, camera, container, object, avatar);
+                                resolveAvatar(true);
+                            },
+                            (xhr) => {
+                                if (xhr.lengthComputable) {
+                                    const percentComplete = (xhr.loaded / xhr.total) * 100;
+                                    window.loadingSystem?.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
+                                }
+                            },
+                            (error) => {
+                                console.error('❌ Error loading GLB model:', error);
+                                rejectAvatar(error);
+                            }
+                        );
                     } catch (error) {
                         console.warn('Could not load user avatar 3D:', error);
                         rejectAvatar(error);
@@ -14064,7 +13874,7 @@
                     // Clear any previous fallback/canvas to prevent double rendering
                     try { container.innerHTML = ''; } catch (e) {}
 
-                    // Use the unified loader that supports GLB and OBJ
+                    // Use the GLB-only unified loader
                     const avatar = window.userAvatarLoader.userAvatar;
                     const ok = await initUserAvatar3D(avatar);
                     if (!ok) throw new Error('initUserAvatar3D returned false');
@@ -14078,7 +13888,7 @@
                     });
 
                     const avatarId = window.userAvatarLoader.getAvatarId();
-                    console.log(`✨ Menu avatar initialized with GLB/OBJ support for: ${avatarId}`);
+                    console.log(`✨ Menu avatar initialized with GLB support for: ${avatarId}`);
                 } catch (error) {
                     console.warn('Could not initialize user avatar, falling back to default mascot:', error);
                     try { await initDefaultMascot(); }

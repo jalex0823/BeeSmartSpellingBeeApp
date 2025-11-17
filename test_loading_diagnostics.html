@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loading Screen Diagnostics</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        .step { margin: 10px 0; padding: 10px; background: #111; border-left: 4px solid #333; }
+        .complete { border-color: #0f0; }
+        .error { border-color: #f00; color: #f00; }
+        .pending { border-color: #ff0; color: #ff0; }
+        .timeout { border-color: #f80; color: #f80; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Loading Screen Diagnostic Test</h1>
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, status = 'pending') {
+            const div = document.createElement('div');
+            div.className = `step ${status}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(div);
+            console.log(message);
+            return div;
+        }
+        
+        async function testLoadingSequence() {
+            const startTime = Date.now();
+            addLog('🚀 Starting diagnostic test...', 'pending');
+            
+            // Test 1: Three.js
+            const test1 = addLog('Test 1/9: Checking Three.js...', 'pending');
+            await new Promise(r => setTimeout(r, 200));
+            if (typeof THREE !== 'undefined') {
+                test1.className = 'step complete';
+                test1.textContent += ' ✅ Found';
+            } else {
+                test1.className = 'step error';
+                test1.textContent += ' ❌ Missing';
+            }
+            
+            // Test 2: Avatar API
+            const test2 = addLog('Test 2/9: Fetching /api/users/me/avatar...', 'pending');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('/api/users/me/avatar', {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                test2.className = 'step complete';
+                test2.textContent += ` ✅ ${response.status} - ${JSON.stringify(data).substring(0, 100)}`;
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    test2.className = 'step timeout';
+                    test2.textContent += ' ⏱️ TIMEOUT (5s exceeded)';
+                } else {
+                    test2.className = 'step error';
+                    test2.textContent += ` ❌ ${e.message}`;
+                }
+            }
+            
+            // Test 3: Wordbank API
+            const test3 = addLog('Test 3/9: Fetching /api/wordbank...', 'pending');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('/api/wordbank', {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                test3.className = 'step complete';
+                test3.textContent += ` ✅ ${response.status} - Count: ${data.count}`;
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    test3.className = 'step timeout';
+                    test3.textContent += ' ⏱️ TIMEOUT (5s exceeded)';
+                } else {
+                    test3.className = 'step error';
+                    test3.textContent += ` ❌ ${e.message}`;
+                }
+            }
+            
+            // Test 4: Stats API
+            const test4 = addLog('Test 4/9: Fetching /api/users/stats...', 'pending');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('/api/users/stats', {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                test4.className = 'step complete';
+                test4.textContent += ` ✅ ${response.status} - ${JSON.stringify(data).substring(0, 100)}`;
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    test4.className = 'step timeout';
+                    test4.textContent += ' ⏱️ TIMEOUT (5s exceeded)';
+                } else {
+                    test4.className = 'step error';
+                    test4.textContent += ` ❌ ${e.message}`;
+                }
+            }
+            
+            // Test 5: Avatar Preload System
+            const test5 = addLog('Test 5/9: Testing avatar preload (if available)...', 'pending');
+            try {
+                if (typeof UserAvatarLoader !== 'undefined') {
+                    test5.className = 'step complete';
+                    test5.textContent += ' ✅ UserAvatarLoader available';
+                } else {
+                    test5.className = 'step error';
+                    test5.textContent += ' ❌ UserAvatarLoader not found';
+                }
+            } catch (e) {
+                test5.className = 'step error';
+                test5.textContent += ` ❌ ${e.message}`;
+            }
+            
+            const elapsed = Date.now() - startTime;
+            const summary = addLog(`✅ Diagnostic complete in ${elapsed}ms`, 'complete');
+            summary.style.fontSize = '1.2em';
+            summary.style.fontWeight = 'bold';
+            summary.style.marginTop = '20px';
+            
+            // Check which tests timed out
+            const timeouts = document.querySelectorAll('.timeout');
+            if (timeouts.length > 0) {
+                addLog(`⚠️ ${timeouts.length} test(s) timed out - these are likely causing the freeze`, 'error');
+            }
+        }
+        
+        // Start test after page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testLoadingSequence, 500);
+        });
+    </script>
+</body>
+</html>

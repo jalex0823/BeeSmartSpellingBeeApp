@@ -35,7 +35,9 @@
     // Dispatch event
     try{ 
       document.dispatchEvent(new Event('honeyLoaderFinished')); 
-      console.log('🍯 honeyLoaderFinished event dispatched');
+      // Bridge legacy event name expected by AvatarDisplayManager
+      document.dispatchEvent(new Event('BeeSmart:loaderComplete'));
+      console.log('🍯 honeyLoaderFinished + BeeSmart:loaderComplete events dispatched');
     }catch(e){ 
       console.error('🍯 Error dispatching event:', e);
     }

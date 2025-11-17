@@ -7,8 +7,8 @@ This is idempotent - safe to run multiple times
 These filenames are validated against actual filesystem and locked to prevent overwrites.
 """
 import os
-from AjaSpellBApp import app, db
-from models import Avatar
+from flask import current_app
+from models import db, Avatar
 
 # GLB avatars to ensure exist - ALL 16 GLB files
 GLB_AVATARS = [
@@ -194,7 +194,7 @@ def validate_glb_files():
     🔒 VALIDATION: Ensure all GLB avatars point to correct files
     Prevents accidental overwrites or incorrect file references
     """
-    with app.app_context():
+    with current_app.app_context():
         # Get all GLB avatars from database
         glb_avatars = Avatar.query.filter_by(folder_path='glb_files', is_active=True).all()
         
@@ -246,7 +246,7 @@ def validate_glb_files():
 
 def init_glb_avatars():
     """Initialize GLB avatars - safe to call multiple times"""
-    with app.app_context():
+    with current_app.app_context():
         # 🔒 FIRST: Validate all existing GLB files
         validate_glb_files()
         
@@ -296,7 +296,7 @@ def init_glb_avatars():
         # Ensure motorcycle-bee activation reflects filesystem reality
         motorcycle = Avatar.query.filter_by(slug="motorcycle-bee").first()
         if motorcycle and motorcycle.obj_file == "MotorBee.glb":
-            model_path = os.path.join(app.static_folder, 'assets', 'avatars', 'glb_files', 'MotorBee.glb')
+            model_path = os.path.join(current_app.static_folder, 'assets', 'avatars', 'glb_files', 'MotorBee.glb')
             if not os.path.exists(model_path):
                 print(f"⚠️ Deactivating motorcycle-bee (file MotorBee.glb not found)")
                 motorcycle.is_active = False
@@ -314,4 +314,6 @@ def init_glb_avatars():
             print(f"✅ GLB Avatars already initialized")
 
 if __name__ == "__main__":
+    # Importing here avoids circular import during normal app startup.
+    from AjaSpellBApp import app  # noqa: F401
     init_glb_avatars()

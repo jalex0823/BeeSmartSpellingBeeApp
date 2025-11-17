@@ -2690,6 +2690,12 @@ def _debug_root_status(resp):
     try:
         if request.path == '/':
             print(f"DEBUG AFTER_REQUEST / status={resp.status_code}")
+        # Apply aggressive no-cache headers for all API endpoints to prevent stale wordbank / quiz state.
+        # This consolidates front-end cache busting with server guarantees (see manual upload race condition notes).
+        if request.path.startswith('/api/'):
+            resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
     except Exception:
         pass
     return resp
@@ -5899,7 +5905,9 @@ def api_user_level():
 @app.route("/api/dictionary-lookup", methods=["POST"])
 def api_dictionary_lookup():
     """
-    Look up a word in the built-in dictionary.
+    Look up a word using INTERNAL DICTIONARY ONLY (Simple English Wiktionary → Cache → Smart Fallback).
+    ✅ NO EXTERNAL API CALLS - All definitions from built-in resources.
+    
     Body JSON: { "word": "example" }
     Returns: { "word": "example", "definition": "...", "phonetic": "E X A M P L E", "found": true/false }
     """
@@ -5937,17 +5945,30 @@ def api_dictionary_lookup():
         # Non-fatal if quota logic fails
         pass
     
+    # ✅ All lookups use INTERNAL DICTIONARY ONLY (get_word_info uses Simple Wiktionary → Cache → Smart Fallback)
     definition = get_word_info(word)
     phonetic_spelling = build_phonetic_spelling(word)
     word_lower = word.lower()
+    
+    # Check which internal source provided the definition
+    wiktionary = ensure_simple_wiktionary_loaded()
+    found_in_wiktionary = wiktionary and word_lower in wiktionary
     found_in_cache = word_lower in DICTIONARY_CACHE
+    
+    # Determine source (all internal)
+    if found_in_wiktionary:
+        source = "simple_wiktionary"
+    elif found_in_cache:
+        source = "internal_cache"
+    else:
+        source = "smart_fallback"
 
     return jsonify({
         "word": word,
         "definition": definition,
         "phonetic": phonetic_spelling,
-        "found": found_in_cache,
-        "source": "cached" if found_in_cache else "api_lookup"
+        "found": found_in_wiktionary or found_in_cache,
+        "source": source  # ✅ All sources are internal (simple_wiktionary, internal_cache, or smart_fallback)
     })
 
 @app.route("/api/session_debug", methods=["GET"])
@@ -10805,7 +10826,7 @@ def api_get_my_avatar():
             user = get_or_create_guest_user()
         
         if not user:
-            # No user found, return default mascot
+            # No user found, return default mascot (GLB-only)
             return jsonify({
                 'status': 'success',
                 'avatar': {
@@ -10813,10 +10834,8 @@ def api_get_my_avatar():
                     'variant': 'default',
                     'name': 'MascotBee',
                     'urls': {
-                        'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
-                        'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
-                        'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
-                        'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
+                        'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                        'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                     }
                 },
                 'use_mascot': True
@@ -10834,10 +10853,8 @@ def api_get_my_avatar():
                     'variant': 'default',
                     'name': 'MascotBee',
                     'urls': {
-                        'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
-                        'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
-                        'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
-                        'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
+                        'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                        'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                     }
                 },
                 'use_mascot': True
@@ -10853,7 +10870,7 @@ def api_get_my_avatar():
     
     except Exception as e:
         print(f"❌ Error fetching user avatar: {e}")
-        # Return default mascot on error
+        # Return default mascot on error (GLB-only)
         return jsonify({
             'status': 'success',
             'avatar': {
@@ -10861,10 +10878,8 @@ def api_get_my_avatar():
                 'variant': 'default',
                 'name': 'MascotBee',
                 'urls': {
-                    'model_obj': '/static/assets/avatars/mascot-bee/MascotBee.obj',
-                    'model_mtl': '/static/assets/avatars/mascot-bee/MascotBee.mtl',
-                    'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
-                    'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
+                    'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                    'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                 }
             },
             'use_mascot': True
