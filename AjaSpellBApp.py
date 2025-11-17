@@ -2855,6 +2855,11 @@ def upload_page():
     """Upload word lists page"""
     return render_template("upload.html")
 
+@app.route("/word-lists")
+def word_lists_page():
+    """Dedicated word lists management page - robust and dynamic!"""
+    return render_template("word_lists.html")
+
 @app.route("/magical_quiz")
 def magical_quiz_page():
     """Legacy route - redirects to main quiz"""

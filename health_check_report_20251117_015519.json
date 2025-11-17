@@ -1,0 +1,222 @@
+{
+  "timestamp": "2025-11-17 01:55:19",
+  "summary": {
+    "total": 32,
+    "passed": 9,
+    "failed": 12,
+    "warnings": 9,
+    "health_score": 28.12
+  },
+  "results": {
+    "Core Application": [
+      {
+        "status": "FAIL",
+        "test": "Health Endpoint",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Main Page Load",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Session Management",
+        "message": "Unexpected status: 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Static Asset: BeeSmart.css",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Static Asset: avatar-picker.js",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Static Asset: service-worker.js",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Authentication": [
+      {
+        "status": "FAIL",
+        "test": "Login Page Load",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Register Page Load",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Forgot Password Page",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Protected Route Security",
+        "message": "Admin requires authentication",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Word Management": [
+      {
+        "status": "FAIL",
+        "test": "Upload Page Load",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Wordbank API",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Upload API Endpoint",
+        "message": "Endpoint exists and validates requests",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Saved Lists API",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Quiz System": [
+      {
+        "status": "FAIL",
+        "test": "Quiz Page Load",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Quiz API: /api/next",
+        "message": "Endpoint exists",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Quiz API: /api/answer",
+        "message": "Endpoint exists",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Quiz API: /api/results",
+        "message": "Endpoint exists",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Speed Round Quiz",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Avatar System": [
+      {
+        "status": "FAIL",
+        "test": "Avatar API",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Avatar Picker Page",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Avatar Assets",
+        "message": "Sample GLB file: HTTP 403",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Dictionary System": [
+      {
+        "status": "PASS",
+        "test": "Dictionary Cache",
+        "message": "4 cached definitions",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "INFO",
+        "test": "Wiktionary Cache",
+        "message": "Cache file not found (may be loading)",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Points & Achievements": [
+      {
+        "status": "FAIL",
+        "test": "Achievements Page",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "FAIL",
+        "test": "Leaderboard Page",
+        "message": "HTTP 403",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Admin Dashboard": [
+      {
+        "status": "PASS",
+        "test": "Admin Page Protection",
+        "message": "Requires authentication",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Admin API: /admin/api/users",
+        "message": "Protected endpoint",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "PASS",
+        "test": "Admin API: /admin/api/stats",
+        "message": "Protected endpoint",
+        "timestamp": "01:55:19"
+      }
+    ],
+    "Database": [
+      {
+        "status": "WARN",
+        "test": "Database File: data/spelling_bee.db",
+        "message": "File not found",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "WARN",
+        "test": "Database File: data/users.db",
+        "message": "File not found",
+        "timestamp": "01:55:19"
+      },
+      {
+        "status": "INFO",
+        "test": "Railway PostgreSQL",
+        "message": "DATABASE_URL not configured",
+        "timestamp": "01:55:19"
+      }
+    ]
+  }
+}

@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+
+{% block title %}My Word Lists - BeeSmart Spelling{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+<style>
+    :root {
+        --honey-gold: #FFD700;
+        --honey-amber: #FFA500;
+        --bee-brown: #5A2C15;
+        --pollen-yellow: #FFE5B4;
+        --hive-gray: #F5F5DC;
+    }
+
+    body {
+        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 50%, #FFA500 100%);
+        min-height: 100vh;
+        font-family: 'Nunito', sans-serif;
+    }
+
+    .word-lists-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 3px solid var(--honey-gold);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .header-title h1 {
+        font-size: 2.5rem;
+        color: var(--bee-brown);
+        margin: 0;
+        font-weight: 900;
+    }
+
+    .header-title .bee-icon {
+        font-size: 3rem;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .action-button {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 16px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: var(--bee-brown);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-home {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+    }
+
+    .btn-home:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4);
+    }
+
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 2px solid var(--honey-gold);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--bee-brown);
+        margin: 0.5rem 0;
+    }
+
+    .stat-label {
+        font-size: 1rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .lists-section {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 3px solid var(--honey-gold);
+    }
+
+    .lists-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--pollen-yellow);
+    }
+
+    .lists-header h2 {
+        font-size: 2rem;
+        color: var(--bee-brown);
+        margin: 0;
+        font-weight: 800;
+    }
+
+    .search-filter {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-box {
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--honey-gold);
+        border-radius: 12px;
+        font-size: 1rem;
+        width: 300px;
+        transition: all 0.3s ease;
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: var(--honey-amber);
+        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+    }
+
+    .sort-dropdown {
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--honey-gold);
+        border-radius: 12px;
+        font-size: 1rem;
+        background: white;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .lists-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .list-card {
+        background: linear-gradient(135deg, #fff 0%, #FFF9E6 100%);
+        border: 3px dashed rgba(255, 140, 0, 0.3);
+        border-radius: 20px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .list-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .list-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        border-color: var(--honey-amber);
+    }
+
+    .list-card:hover::before {
+        opacity: 1;
+    }
+
+    .list-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .list-info {
+        flex: 1;
+    }
+
+    .list-name {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--bee-brown);
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .list-description {
+        color: #666;
+        font-size: 1rem;
+        margin: 0.5rem 0;
+        line-height: 1.5;
+    }
+
+    .list-meta {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .meta-icon {
+        font-size: 1.2rem;
+    }
+
+    .list-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 2px solid rgba(255, 215, 0, 0.2);
+    }
+
+    .list-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+    }
+
+    .btn-use {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+    }
+
+    .btn-use:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-edit {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+    }
+
+    .btn-edit:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-upload {
+        background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+        color: white;
+    }
+
+    .btn-upload:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4);
+    }
+
+    .btn-delete {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        color: white;
+    }
+
+    .btn-delete:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(244, 67, 54, 0.4);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .empty-state-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 2rem;
+        color: var(--bee-brown);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 4rem;
+    }
+
+    .spinner {
+        width: 60px;
+        height: 60px;
+        border: 6px solid var(--pollen-yellow);
+        border-top: 6px solid var(--honey-gold);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+        }
+
+        .header-actions {
+            flex-direction: column;
+        }
+
+        .action-button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .search-box {
+            width: 100%;
+        }
+
+        .lists-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .search-filter {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .list-actions {
+            flex-direction: column;
+        }
+
+        .list-btn {
+            width: 100%;
+        }
+    }
+
+    /* Toast notifications */
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-left: 4px solid var(--honey-gold);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    }
+
+    .toast.success {
+        border-left-color: #4CAF50;
+    }
+
+    .toast.error {
+        border-left-color: #f44336;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-new {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .badge-large {
+        background: #FF9800;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="word-lists-container">
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <span class="bee-icon">🐝</span>
+                <h1>My Word Lists</h1>
+            </div>
+            <div class="header-actions">
+                <button class="action-button btn-home" onclick="window.location.href='/'">
+                    🏠 Back to Home
+                </button>
+                <button class="action-button btn-primary" onclick="createNewList()">
+                    ➕ Create New List
+                </button>
+                <button class="action-button btn-secondary" onclick="window.location.href='/upload'">
+                    📤 Upload Words
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+        <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-value" id="totalListsCount">0</div>
+            <div class="stat-label">Total Word Lists</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-value" id="totalWordsCount">0</div>
+            <div class="stat-label">Total Words</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-value" id="largestListCount">0</div>
+            <div class="stat-label">Largest List</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value" id="avgWordsCount">0</div>
+            <div class="stat-label">Avg Words/List</div>
+        </div>
+    </div>
+
+    <!-- Lists Section -->
+    <div class="lists-section">
+        <div class="lists-header">
+            <h2>📋 Your Saved Lists</h2>
+            <div class="search-filter">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search lists...">
+                <select class="sort-dropdown" id="sortDropdown">
+                    <option value="recent">Most Recent</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="words">Most Words</option>
+                    <option value="oldest">Oldest First</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="listsContainer">
+            <!-- Lists will be loaded here -->
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global state
+let allLists = [];
+let filteredLists = [];
+
+// Load lists on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadWordLists();
+    
+    // Setup search
+    document.getElementById('searchBox').addEventListener('input', filterAndDisplayLists);
+    document.getElementById('sortDropdown').addEventListener('change', filterAndDisplayLists);
+});
+
+// Load word lists from API
+async function loadWordLists() {
+    try {
+        const response = await fetch('/api/saved-lists');
+        const data = await response.json();
+        
+        if (data.ok && data.lists) {
+            allLists = data.lists;
+            filteredLists = [...allLists];
+            updateStats();
+            filterAndDisplayLists();
+        } else {
+            displayEmptyState();
+        }
+    } catch (error) {
+        console.error('Error loading lists:', error);
+        showToast('Failed to load word lists', 'error');
+        displayEmptyState();
+    }
+}
+
+// Update statistics
+function updateStats() {
+    const totalLists = allLists.length;
+    const totalWords = allLists.reduce((sum, list) => sum + (list.word_count || 0), 0);
+    const largestList = Math.max(...allLists.map(l => l.word_count || 0), 0);
+    const avgWords = totalLists > 0 ? Math.round(totalWords / totalLists) : 0;
+    
+    document.getElementById('totalListsCount').textContent = totalLists;
+    document.getElementById('totalWordsCount').textContent = totalWords.toLocaleString();
+    document.getElementById('largestListCount').textContent = largestList.toLocaleString();
+    document.getElementById('avgWordsCount').textContent = avgWords.toLocaleString();
+}
+
+// Filter and display lists
+function filterAndDisplayLists() {
+    const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+    const sortBy = document.getElementById('sortDropdown').value;
+    
+    // Filter
+    filteredLists = allLists.filter(list => {
+        const name = (list.name || '').toLowerCase();
+        const desc = (list.description || '').toLowerCase();
+        return name.includes(searchTerm) || desc.includes(searchTerm);
+    });
+    
+    // Sort
+    filteredLists.sort((a, b) => {
+        switch(sortBy) {
+            case 'name':
+                return (a.name || '').localeCompare(b.name || '');
+            case 'words':
+                return (b.word_count || 0) - (a.word_count || 0);
+            case 'oldest':
+                return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            case 'recent':
+            default:
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        }
+    });
+    
+    displayLists();
+}
+
+// Display lists
+function displayLists() {
+    const container = document.getElementById('listsContainer');
+    
+    if (filteredLists.length === 0) {
+        displayEmptyState();
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="lists-grid">
+            ${filteredLists.map(list => createListCard(list)).join('')}
+        </div>
+    `;
+    
+    // Wire up buttons
+    wireListButtons();
+}
+
+// Create list card HTML
+function createListCard(list) {
+    const createdDate = list.created_at ? new Date(list.created_at).toLocaleDateString() : 'Unknown';
+    const isNew = list.created_at && (new Date() - new Date(list.created_at)) < 86400000; // 24 hours
+    const isLarge = (list.word_count || 0) > 50;
+    
+    return `
+        <div class="list-card" data-list-id="${list.id}">
+            <div class="list-card-header">
+                <div class="list-info">
+                    <h3 class="list-name">
+                        📚 ${list.name || 'Unnamed List'}
+                        ${isNew ? '<span class="badge badge-new">New</span>' : ''}
+                        ${isLarge ? '<span class="badge badge-large">Large</span>' : ''}
+                    </h3>
+                    ${list.description ? `<p class="list-description">${list.description}</p>` : ''}
+                    <div class="list-meta">
+                        <div class="meta-item">
+                            <span class="meta-icon">📝</span>
+                            <span>${list.word_count || 0} words</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>${createdDate}</span>
+                        </div>
+                        ${list.uuid ? `
+                        <div class="meta-item">
+                            <span class="meta-icon">🔑</span>
+                            <span>${list.uuid.substring(0, 8)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="list-actions">
+                <button class="list-btn btn-use" data-action="use" data-id="${list.id}" data-uuid="${list.uuid}">
+                    🎯 Use in Quiz
+                </button>
+                <button class="list-btn btn-upload" data-action="upload" data-id="${list.id}" data-name="${list.name}">
+                    📤 Upload More
+                </button>
+                <button class="list-btn btn-delete" data-action="delete" data-id="${list.id}" data-name="${list.name}" data-count="${list.word_count}">
+                    🗑️ Delete
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Wire up list buttons
+function wireListButtons() {
+    document.querySelectorAll('[data-action="use"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            await useListInQuiz(id);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="upload"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            uploadToList(id, name);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            const count = btn.getAttribute('data-count');
+            await deleteList(id, name, count);
+        });
+    });
+}
+
+// Use list in quiz
+async function useListInQuiz(id) {
+    try {
+        // Check current wordbank
+        const wordbankRes = await fetch('/api/wordbank');
+        const wordbankData = await wordbankRes.json();
+        const currentCount = wordbankData.words ? wordbankData.words.length : 0;
+        
+        if (currentCount > 0) {
+            const confirmed = await showBeeConfirm({
+                title: '⚠️ Override Current Words?',
+                message: `You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`,
+                confirmText: 'Yes, Override',
+                cancelText: 'Cancel'
+            });
+            
+            if (!confirmed) return;
+        }
+        
+        // Load the list
+        const res = await fetch('/api/saved-lists/load', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words)`, 'success');
+            setTimeout(() => {
+                window.location.href = '/quiz';
+            }, 1000);
+        } else {
+            showToast(data.error || 'Failed to load list', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to load list', 'error');
+    }
+}
+
+// Upload to list
+function uploadToList(id, name) {
+    // Redirect to upload page with list ID
+    window.location.href = `/upload?list_id=${id}&list_name=${encodeURIComponent(name)}`;
+}
+
+// Delete list
+async function deleteList(id, name, count) {
+    const confirmed = await showBeeConfirm({
+        title: '🗑️ Delete Word List?',
+        message: `Are you sure you want to permanently delete:\n\n📚 "${name}"\n(${count} words)\n\nThis cannot be undone!`,
+        confirmText: 'Yes, Delete',
+        cancelText: 'Cancel'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+        const res = await fetch('/api/saved-lists/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ "${name}" deleted successfully`, 'success');
+            await loadWordLists();
+        } else {
+            showToast(data.error || 'Delete failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Delete failed', 'error');
+    }
+}
+
+// Create new list
+function createNewList() {
+    window.location.href = '/upload';
+}
+
+// Display empty state
+function displayEmptyState() {
+    const container = document.getElementById('listsContainer');
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">📚</div>
+            <h3>No Word Lists Yet</h3>
+            <p>Start by creating your first word list!</p>
+            <button class="action-button btn-primary" onclick="createNewList()">
+                ➕ Create Your First List
+            </button>
+        </div>
+    `;
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span style="font-size: 1.5rem;">${type === 'success' ? '✅' : '❌'}</span>
+        <span style="font-weight: 600;">${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Bee confirm dialog (reuse from main app)
+function showBeeConfirm(options) {
+    return new Promise((resolve) => {
+        if (window.BeeSmart && window.BeeSmart.showConfirm) {
+            window.BeeSmart.showConfirm(options).then(resolve);
+        } else {
+            // Fallback to native confirm
+            const result = confirm(options.message);
+            resolve(result);
+        }
+    });
+}
+</script>
+{% endblock %}
