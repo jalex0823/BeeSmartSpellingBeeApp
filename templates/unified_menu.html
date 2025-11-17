@@ -12140,6 +12140,28 @@
                 this.startTime = Date.now();
             }
             
+            // Fetch with timeout protection using AbortController
+            async fetchWithTimeout(url, options = {}, timeout = 5000) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        console.error(`⏱️ Fetch timeout after ${timeout}ms:`, url);
+                        throw new Error(`Request timeout: ${url}`);
+                    }
+                    throw error;
+                }
+            }
+            
             updateProgress(percent, status) {
                 this.progress = Math.min(percent, 100);
                 const percentElement = document.getElementById('loadingPercentage');
@@ -12228,10 +12250,10 @@
                     if (isAuthenticated) {
                         // Authenticated user - fetch avatar from API
                         try {
-                            const avatarResponse = await fetch('/api/users/me/avatar', {
+                            const avatarResponse = await this.fetchWithTimeout('/api/users/me/avatar', {
                                 credentials: 'same-origin',
                                 headers: { 'Accept': 'application/json' }
-                            });
+                            }, 5000); // 5 second timeout
                             
                             if (avatarResponse.ok) {
                                 const avatarData = await avatarResponse.json();
@@ -12361,7 +12383,7 @@
                 const check8 = this.addCheck('Word List', 'Checking...', '⏳');
                 await this.delay(200);
                 try {
-                    const response = await fetch('/api/wordbank', {
+                    const response = await this.fetchWithTimeout('/api/wordbank', {
                         credentials: 'same-origin',
                         cache: 'no-store',
                         headers: { 
@@ -12369,7 +12391,7 @@
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
                             'Pragma': 'no-cache'
                         }
-                    });
+                    }, 5000); // 5 second timeout
                     const data = await response.json();
                     console.log('🔍 Word List System Check:', data);
                     
@@ -12396,10 +12418,10 @@
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
                     
                     if (isAuthenticated) {
-                        const statsResponse = await fetch('/api/users/stats', {
+                        const statsResponse = await this.fetchWithTimeout('/api/users/stats', {
                             credentials: 'same-origin',
                             headers: { 'Accept': 'application/json' }
-                        });
+                        }, 5000); // 5 second timeout
                         
                         if (statsResponse.ok) {
                             const statsData = await statsResponse.json();
