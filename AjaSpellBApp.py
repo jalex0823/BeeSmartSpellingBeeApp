@@ -4248,25 +4248,24 @@ def process_upload_with_progress(session_id, request_obj):
             progress = 55 + int((i + 1) / len(deduped) * 35)  # 55-90%
             update_upload_progress(session_id, "enriching", f"Getting definition for: {word}", "bees_fetching_definitions", progress, word)
             
-            # If no sentence/definition provided, use enhanced dictionary lookup
-            if not sentence and not hint:
-                auto_definition = get_word_info(word)
-                
-                # VALIDATE: Check if definition is real (not placeholder or empty)
-                if not auto_definition or auto_definition.strip() == "":
-                    enrichment_errors.append(f"No definition found for '{word}'")
-                    print(f"ERROR: Failed to get definition for '{word}'")
-                
-                enriched.append({
-                    "word": word,
-                    "sentence": auto_definition if auto_definition else f"Practice spelling this word: {word}",
-                    "hint": ""
-                })
-            else:
-                # VALIDATE: If user provided sentence/hint, make sure it's not empty after stripping
-                if not sentence and not hint:
-                    enrichment_errors.append(f"No definition or hint provided for '{word}'")
-                enriched.append(r)
+            # ✅ ALWAYS enrich with internal dictionary for consistency
+            # This ensures all words have complete definitions BEFORE quiz starts
+            auto_definition = get_word_info(word)
+            
+            # Use user-provided sentence if available, otherwise use auto-generated
+            final_sentence = sentence if sentence else auto_definition
+            
+            # VALIDATE: Check if definition is real (not placeholder or empty)
+            if not final_sentence or final_sentence.strip() == "":
+                enrichment_errors.append(f"No definition found for '{word}'")
+                print(f"ERROR: Failed to get definition for '{word}'")
+                final_sentence = f"Practice spelling this word: {word}"  # Emergency fallback
+            
+            enriched.append({
+                "word": word,
+                "sentence": final_sentence,
+                "hint": hint if hint else ""  # Preserve user hint or use empty string
+            })
             
             time.sleep(0.05)  # Small delay for animation effect
         
@@ -4986,17 +4985,24 @@ def api_pronounce():
     word_rec = wb[order[idx]]
     current_word = word_rec.get("word", "")
 
-    # Get properly formatted definition + fill-in-the-blank sentence
-    # This function already blanks out the word and formats nicely
-    definition = get_word_info(current_word)
+    # ✅ OPTIMIZED: Use pre-enriched definitions from word_rec (enriched during upload)
+    # Only call get_word_info() if sentence is completely missing (rare edge case)
+    definition = word_rec.get("sentence", "").strip()
     
-    # If get_word_info fails, fall back to sentence/hint from word_rec
+    if not definition:
+        # Fallback: Try to get definition from internal dictionary (fast, cached)
+        try:
+            definition = get_word_info(current_word)
+        except:
+            definition = "Please spell the word you hear."
+    
+    # Ensure word is blanked in the definition
+    if current_word and current_word in definition:
+        definition = _blank_word(definition, current_word)
+    
+    # Fallback to hint if definition is still empty
     if not definition or definition.startswith("Definition not available"):
-        if word_rec.get("sentence"):
-            # Make sure to blank out the word in the sentence
-            sentence_blanked = _blank_word(word_rec["sentence"], current_word)
-            definition = sentence_blanked
-        elif word_rec.get("hint"):
+        if word_rec.get("hint"):
             definition = f"Hint: {word_rec['hint']}"
         else:
             definition = "Please spell the word you hear."
