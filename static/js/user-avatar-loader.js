@@ -558,13 +558,19 @@ class UserAvatarLoader {
                     const height = Math.max(120, Math.floor(rect.height));
                     
                     // Create 3D instance
+                    // Make main-page avatar larger on screen without changing container size
+                    const isMainHero = containerId === 'mascotBee3D';
                     new window.SmartyBee3D(containerId, {
                         width,
                         height,
                         autoRotate: true,
                         enableInteraction: true,
                         glbPath: data.glb,
-                        modelPath: data.glb
+                        modelPath: data.glb,
+                        // Hero framing: bring camera closer for larger on-screen presence
+                        zoom: isMainHero ? 1.25 : 1.0,
+                        cameraDistanceFactor: 1.8,
+                        verticalOffset: 0.35
                     });
                     
                     this.showLoadedState(containerId);

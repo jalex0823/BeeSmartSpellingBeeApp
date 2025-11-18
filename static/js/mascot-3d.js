@@ -22,6 +22,13 @@ class SmartyBee3D {
             modelPath: options.modelPath, // optional absolute override
             texturePath: options.texturePath, // optional absolute override
             mtlPath: options.mtlPath, // optional absolute override
+            // Framing controls (hero mode zoom)
+            // zoom > 1.0 makes the avatar appear larger on screen by moving the camera in
+            zoom: typeof options.zoom === 'number' ? options.zoom : 1.0,
+            // Camera distance factor baseline used with model size; smaller = closer
+            cameraDistanceFactor: typeof options.cameraDistanceFactor === 'number' ? options.cameraDistanceFactor : 1.8,
+            // Vertical offset to keep feet from clipping
+            verticalOffset: typeof options.verticalOffset === 'number' ? options.verticalOffset : 0.35,
             ...options
         };
 
@@ -291,10 +298,11 @@ class SmartyBee3D {
                                 this.scene.add(object);
 
                                 // Offset up a bit to avoid bottom clipping
-                                object.position.y += 0.35;
+                                object.position.y += (this.options.verticalOffset || 0.35);
 
                                 const maxScaledDim = (maxDim || 1) * scale;
-                                this.camera.position.z = maxScaledDim * 1.8;
+                                const distance = (maxScaledDim * (this.options.cameraDistanceFactor || 1.8)) / (this.options.zoom || 1.0);
+                                this.camera.position.z = distance;
                                 this.camera.position.y = maxScaledDim * 0.15;
                                 this.camera.lookAt(0, 0, 0);
                                 this.camera.updateProjectionMatrix();
@@ -438,11 +446,12 @@ class SmartyBee3D {
                                 this.scene.add(object);
                                 
                                 // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
-                                object.position.y += 0.35;
+                                object.position.y += (this.options.verticalOffset || 0.35);
                                 
-                                // Pull camera back further and position slightly higher to show full model
+                                // Camera distance based on zoom/framing controls
                                 const maxScaledDim = maxDim * scale;
-                                this.camera.position.z = maxScaledDim * 1.8; // Pull back more
+                                const distance = (maxScaledDim * (this.options.cameraDistanceFactor || 1.8)) / (this.options.zoom || 1.0);
+                                this.camera.position.z = distance;
                                 this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
                                 this.camera.lookAt(0, 0, 0); // Look at center
                                 this.camera.updateProjectionMatrix();
@@ -500,11 +509,12 @@ class SmartyBee3D {
                                 this.scene.add(object);
                                 
                                 // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
-                                object.position.y += 0.35;
+                                object.position.y += (this.options.verticalOffset || 0.35);
                                 
-                                // Pull camera back further and position slightly higher to show full model
+                                // Camera distance based on zoom/framing controls
                                 const maxScaledDim = maxDim * scale;
-                                this.camera.position.z = maxScaledDim * 1.8; // Pull back more
+                                const distance = (maxScaledDim * (this.options.cameraDistanceFactor || 1.8)) / (this.options.zoom || 1.0);
+                                this.camera.position.z = distance; // Pull back/closer based on zoom
                                 this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
                                 this.camera.lookAt(0, 0, 0); // Look at center
                                 this.camera.updateProjectionMatrix();
