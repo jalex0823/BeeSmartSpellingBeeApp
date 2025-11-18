@@ -3212,22 +3212,9 @@
                     ⭐ Upgrade to Premium - From $3.33/month
                 </a>
                 
-                <a href="/word-lists" class="action-btn" style="
-                    text-decoration: none; 
-                    display: inline-block; 
-                    margin-bottom: 15px;
-                    background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
-                    border: 3px solid rgba(156, 39, 176, 0.3);
-                    box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    padding: 16px 24px;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(156, 39, 176, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(156, 39, 176, 0.4)';" title="📚 Manage your saved word lists with ease!">
-                    📚 My Word Lists
-                </a>
+                <!-- My Word Lists button removed - use tile instead -->
                 
-                <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" onclick="kidSounds.playHappyDing(); startQuiz()" onmouseover="kidSounds.playRandomEffect()" disabled title="🚀 Begin your spelling adventure!">
+                <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" disabled title="🚀 Begin your spelling adventure!">
                     🐝 Let's Get Buzzing Spelling Some Words!
                 </button>
             </section>
@@ -4656,15 +4643,15 @@
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
                         
-                        // Show quiz-ready notification
-                        showQuizReadyNotification(data.count);
+                        // Show quiz-ready notification (async, uses WordBankManager)
+                        showQuizReadyNotification();
 
                         // DON'T call updateWordCount() - causes race condition and re-disables button
                         // Button already enabled above with correct count from upload response
                         console.log('✅ Manual entry complete - quiz button enabled with', data.count, 'words');
                     } else {
                         console.warn('🚫 startQuizBtn not found; quiz-ready UI tweaks skipped');
-                        showQuizReadyNotification(data.count);
+                        showQuizReadyNotification();
                     }
                     } else {
                     // Check if this is a content violation warning
@@ -5473,8 +5460,8 @@
                             startBtn.classList.add('ready-to-play');
                             startBtn.innerHTML = `🚀 Start Quiz (${data.count} words)`;
                             
-                            // Show quiz-ready notification
-                            showQuizReadyNotification(data.count);
+                            // Show quiz-ready notification (async, uses WordBankManager)
+                            showQuizReadyNotification();
                         }
 
                         // Show success message
@@ -6940,8 +6927,8 @@
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
                         
-                        // Show quiz-ready notification
-                        showQuizReadyNotification(data.count);
+                        // Show quiz-ready notification (async, uses WordBankManager)
+                        showQuizReadyNotification();
                     }
                     
                     // DON'T call updateWordCount() - it causes race condition and re-disables button
@@ -7094,9 +7081,9 @@
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
                         console.log('✅ Quiz button enabled after image upload, word count:', data.count);
                         
-                        // Show quiz-ready notification
+                        // Show quiz-ready notification (async, uses WordBankManager)
                         if (data.count > 0) {
-                            showQuizReadyNotification(data.count);
+                            showQuizReadyNotification();
                         }
                         
                         // DON'T call updateWordCount() - causes race condition and re-disables button
@@ -7663,7 +7650,16 @@
         }
         
         // Quiz Ready Notification System
-        function showQuizReadyNotification(wordCount) {
+        // ✅ FIXED: Now uses WordBankManager as single source of truth
+        async function showQuizReadyNotification() {
+            // Fetch word count from WordBankManager (single source of truth)
+            const wordCount = await WordBankManager.getCount();
+            
+            if (wordCount === 0) {
+                console.log('⚠️ No words to show notification for');
+                return;
+            }
+            
             // Remove any existing notification
             const existing = document.querySelector('.quiz-ready-banner');
             if (existing) {
@@ -8947,8 +8943,8 @@
                         // Force reflow
                         btn.offsetHeight;
                         
-                        // Show quiz-ready notification
-                        showQuizReadyNotification(data.count);
+                        // Show quiz-ready notification (async, uses WordBankManager)
+                        showQuizReadyNotification();
                         
                         console.log('✅ Quiz button enabled after import:', {
                             disabled: btn.disabled,
@@ -8995,6 +8991,16 @@
             .catch(error => {
                 console.log('Could not check word count:', error);
             });
+        
+        // ✅ Attach Start Quiz button click handler
+        document.getElementById('startQuizBtn')?.addEventListener('click', function(e) {
+            if (this.disabled) {
+                console.log('❌ Start Quiz button is disabled');
+                return;
+            }
+            kidSounds.playHappyDing();
+            startQuiz();
+        });
         
         // Background Music System
         let musicAudioContext = null;
