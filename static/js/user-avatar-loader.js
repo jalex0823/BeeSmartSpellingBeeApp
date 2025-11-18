@@ -91,6 +91,7 @@ class UserAvatarLoader {
                 const timeout = setTimeout(() => controller.abort(), timeoutMs);
                 
                 const response = await fetch(url, { 
+                    credentials: 'same-origin', // Fix Safari ITP blocking
                     ...opts, 
                     signal: controller.signal 
                 });

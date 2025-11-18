@@ -3226,7 +3226,70 @@
 
     <script>
         // ═══════════════════════════════════════════════════════════════════
-        // 📚 CENTRALIZED WORDBANK MANAGER - Single Source of Truth
+        // � SAFE STORAGE WRAPPER - Safari ITP Protection
+        // ═══════════════════════════════════════════════════════════════════
+        // Wrap localStorage/sessionStorage to handle Safari's Intelligent Tracking Prevention
+        const safeStorage = {
+            local: {
+                getItem: (key) => {
+                    try {
+                        return localStorage.getItem(key);
+                    } catch (e) {
+                        console.warn('⚠️ localStorage blocked:', e.message);
+                        return null;
+                    }
+                },
+                setItem: (key, value) => {
+                    try {
+                        localStorage.setItem(key, value);
+                        return true;
+                    } catch (e) {
+                        console.warn('⚠️ localStorage blocked:', e.message);
+                        return false;
+                    }
+                },
+                removeItem: (key) => {
+                    try {
+                        localStorage.removeItem(key);
+                        return true;
+                    } catch (e) {
+                        console.warn('⚠️ localStorage blocked:', e.message);
+                        return false;
+                    }
+                }
+            },
+            session: {
+                getItem: (key) => {
+                    try {
+                        return sessionStorage.getItem(key);
+                    } catch (e) {
+                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        return null;
+                    }
+                },
+                setItem: (key, value) => {
+                    try {
+                        sessionStorage.setItem(key, value);
+                        return true;
+                    } catch (e) {
+                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        return false;
+                    }
+                },
+                removeItem: (key) => {
+                    try {
+                        sessionStorage.removeItem(key);
+                        return true;
+                    } catch (e) {
+                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        return false;
+                    }
+                }
+            }
+        };
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // �📚 CENTRALIZED WORDBANK MANAGER - Single Source of Truth
         // ═══════════════════════════════════════════════════════════════════
         // All word count displays MUST use this manager - it's the only true
         // representation of what will be quizzed.
@@ -3878,9 +3941,9 @@
                     backgroundColor = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
                     text = '🛡️ Safe Hive';
                     // Only show green badge briefly for first-time users
-                    if (!localStorage.getItem('contentFilterSeen')) {
+                    if (!safeStorage.local.getItem('contentFilterSeen')) {
                         badge.style.display = 'block';
-                        localStorage.setItem('contentFilterSeen', 'true');
+                        safeStorage.local.setItem('contentFilterSeen', 'true');
                         setTimeout(() => {
                             badge.style.display = 'none';
                         }, 5000);
@@ -4218,12 +4281,12 @@
             async function attemptWordbankRehydrate(){
                 try {
                     // Quick kill switch: set localStorage 'beesmart_disable_restore' to '1' to skip rehydrate
-                    if (localStorage.getItem('beesmart_disable_restore') === '1') {
+                    if (safeStorage.local.getItem('beesmart_disable_restore') === '1') {
                         console.log('⏹️ Wordbank rehydrate disabled by localStorage flag.');
                         return;
                     }
                     const cacheKey = 'beesmart_last_user_word_list_v1';
-                    const cached = localStorage.getItem(cacheKey);
+                    const cached = safeStorage.local.getItem(cacheKey);
                     if(!cached){ return; }
                     if(window.__wordbankRestored){ return; } // avoid repeat in same runtime
                     const parsed = JSON.parse(cached);
@@ -4277,7 +4340,7 @@
                     if(!Array.isArray(words) || words.length===0){return;}
                     const normalized = words.map(w => (typeof w==='string' ? w : (w && w.word ? w.word : ''))).filter(Boolean).slice(0, 500);
                     const payload = { words: normalized, savedAt: Date.now() };
-                    localStorage.setItem('beesmart_last_user_word_list_v1', JSON.stringify(payload));
+                    safeStorage.local.setItem('beesmart_last_user_word_list_v1', JSON.stringify(payload));
                     console.log('💾 Persisted word list locally for mobile restore:', payload.words.length);
                 } catch(e){ console.warn('Persist save failed', e); }
             }
@@ -4508,10 +4571,10 @@
             
             // Save to localStorage
             if (name) {
-                localStorage.setItem('studentName', name);
+                safeStorage.local.setItem('studentName', name);
                 console.log('📝 Student name saved:', name);
             } else {
-                localStorage.removeItem('studentName');
+                safeStorage.local.removeItem('studentName');
             }
         }
         
@@ -6056,8 +6119,8 @@
                     const joinedCode = data.code || battleCode;
                     
                     // Store battle info in sessionStorage for quiz page
-                    sessionStorage.setItem('battle_code', joinedCode);
-                    sessionStorage.setItem('battle_player_name', playerName);
+                    safeStorage.session.setItem('battle_code', joinedCode);
+                    safeStorage.session.setItem('battle_player_name', playerName);
                     
                     // Update Start Quiz button
                     const startBtn = document.getElementById('startQuizBtn') || document.getElementById('welcomeStartBtn');
@@ -12113,7 +12176,7 @@
                         const nameInput = document.getElementById('studentName');
                         if (nameInput) {
                             nameInput.value = authenticatedName;
-                            localStorage.setItem('studentName', authenticatedName);
+                            safeStorage.local.setItem('studentName', authenticatedName);
                             this.updateCheck(check3, authenticatedName, '✅', 35);
                             this.updateProgress(35, `👋 Welcome ${authenticatedName}!`);
                             console.log('✅ User name synced:', authenticatedName);
@@ -12123,7 +12186,7 @@
                         }
                     } else {
                         // Guest user
-                        const savedName = localStorage.getItem('studentName');
+                        const savedName = safeStorage.local.getItem('studentName');
                         if (savedName) {
                             this.updateCheck(check3, `Guest: ${savedName}`, '✅', 35);
                             this.updateProgress(35, `👋 Welcome back ${savedName}!`);
