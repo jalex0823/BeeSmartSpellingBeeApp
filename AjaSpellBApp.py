@@ -47,6 +47,19 @@ except Exception:
     BUNDLE_CATALOG = {}
     REDEEMABLE_KEYS = {}
 
+# Avatar catalog and runtime cache (module scope)
+_AVATAR_CACHE: dict = {"data": None, "timestamp": 0, "ttl": 300}  # 5 minute TTL
+_GLB_SCAN_CACHE: dict = {"data": None, "timestamp": 0, "ttl": 600}  # 10 minute TTL
+
+# Try to import real catalog; fallback to a minimal placeholder so flake8 doesn't error
+try:
+    from avatar_catalog import AVATAR_CATALOG
+    AVATARS_CATALOG = AVATAR_CATALOG  # Alias for backward compatibility
+except Exception:
+    AVATARS_CATALOG = [
+        {"id": "default", "name": "Default Avatar", "folder": "default"},
+    ]
+
 # Word generation for speed rounds
 from word_generator import generate_words_by_difficulty, get_difficulty_multiplier, generate_mixed_words
 
@@ -9574,10 +9587,6 @@ def speed_round_results():
 
 
 # --- 3D Avatar API Routes ----------------------------------------------------
-# Simple in-memory cache for avatar list (invalidates on app restart)
-_AVATAR_CACHE = {"data": None, "timestamp": 0, "ttl": 300}  # 5 minute TTL
-# Cache for GLB file scanning (expensive filesystem operation)
-_GLB_SCAN_CACHE = {"data": None, "timestamp": 0, "ttl": 600}  # 10 minute TTL
 
 @app.route("/api/avatars", methods=["GET"])
 def api_get_avatars():
@@ -9590,7 +9599,6 @@ def api_get_avatars():
     - Include unlock status based on user's honey points and purchases
     """
     # Check cache first
-    global _AVATAR_CACHE
     current_time = time.time()
     
     # Use cache for both authenticated and unauthenticated users
@@ -9800,7 +9808,6 @@ def api_get_avatars():
 
         # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
         # Use cache to avoid expensive filesystem scanning on every request
-        global _GLB_SCAN_CACHE
         glb_latest: dict = {}
         
         if _GLB_SCAN_CACHE["data"] and (time.time() - _GLB_SCAN_CACHE["timestamp"]) < _GLB_SCAN_CACHE["ttl"]:
