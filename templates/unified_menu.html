@@ -2329,44 +2329,6 @@
             pointer-events: none; /* not clickable until enabled */
         " disabled aria-disabled="true">Tap to Start ✨</button>
         
-        <!-- Emergency Bypass Button (always visible beneath system checks) -->
-        <button id="emergencyBypassBtn" style="
-            position: relative;
-            z-index: 10;
-            margin-top: 1rem;
-            margin-left: auto;
-            margin-right: auto;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 2px solid #FF6B6B;
-            background: rgba(255, 107, 107, 0.1);
-            color: #FFD700;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            display: block;
-            opacity: 1;
-            transition: all 0.3s ease;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-            width: clamp(220px, 60vw, 380px);
-            text-align: center;
-        " onclick="
-            if (confirm('⚠️ Skip loading checks and enter app now?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
-                const loader = document.getElementById('honeyLoader');
-                if (loader) {
-                    if (window.matrixRain) window.matrixRain.stop();
-                    document.body.style.visibility = 'visible';
-                    document.body.style.opacity = '1';
-                    loader.style.pointerEvents = 'none';
-                    loader.style.opacity = '0';
-                    loader.style.visibility = 'hidden';
-                    setTimeout(() => { loader.style.display = 'none'; }, 350);
-                    document.dispatchEvent(new Event('honeyLoaderFinished'));
-                    console.warn('🚨 EMERGENCY BYPASS: User skipped loading screen');
-                }
-            }
-        ">🚨 Emergency Bypass</button>
-        
         <!-- System Checks Display -->
         <div id="systemChecks" style="
             position: relative;
@@ -2404,6 +2366,47 @@
                 <!-- Checks will be added dynamically -->
             </div>
         </div>
+        
+        <!-- Emergency Bypass Button (always visible beneath system checks) -->
+        <button id="emergencyBypassBtn" style="
+            position: relative;
+            z-index: 10;
+            margin-top: 1.5rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 14px 32px;
+            border-radius: 10px;
+            border: 3px solid #FF6B6B;
+            background: rgba(255, 107, 107, 0.15);
+            color: #FFD700;
+            font-weight: 800;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: block;
+            opacity: 1;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            width: clamp(280px, 70vw, 480px);
+            text-align: center;
+        " onmouseover="this.style.background='rgba(255, 107, 107, 0.25)'; this.style.transform='scale(1.05)';" 
+           onmouseout="this.style.background='rgba(255, 107, 107, 0.15)'; this.style.transform='scale(1)';"
+           onclick="
+            if (confirm('⚠️ Skip loading checks and enter app now?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
+                const loader = document.getElementById('honeyLoader');
+                if (loader) {
+                    if (window.matrixRain) window.matrixRain.stop();
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = '1';
+                    loader.style.pointerEvents = 'none';
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    setTimeout(() => { loader.style.display = 'none'; }, 350);
+                    document.dispatchEvent(new Event('honeyLoaderFinished'));
+                    console.warn('🚨 EMERGENCY BYPASS: User skipped loading screen');
+                }
+            }
+        ">🚨 Emergency Bypass</button>
     </div>
     
     <style>
