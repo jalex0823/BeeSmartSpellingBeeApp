@@ -261,17 +261,18 @@ class UserAvatarLoader {
         console.groupCollapsed('🚀 Avatar System Preload');
         console.log('Loading Avatar GLB Files...');
         
-        // Load catalog if not already loaded
-        if (!this.avatarDataLoaded) {
-            await this.loadAvatarCatalog();
-        }
+        // SKIP catalog loading during initial page load to prevent blocking
+        // Catalog will be loaded later when actually needed
+        // if (!this.avatarDataLoaded) {
+        //     await this.loadAvatarCatalog();
+        // }
         
         const results = {
             totalAvatars: 0,
             successfulAvatars: 0,
             failedAvatars: [],
             systemReady: false,
-            fallbackReady: false
+            fallbackReady: true  // Use fallback for now
         };
 
         try {
