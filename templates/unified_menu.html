@@ -12100,6 +12100,7 @@
                 this.progress = 0;
                 this.checks = [];
                 this.startTime = Date.now();
+                this.tapToEnterShown = false;
             }
             
             // Fetch with timeout protection using AbortController
@@ -12134,6 +12135,12 @@
                 if (statusElement) statusElement.textContent = status;
                 
                 console.log(`📊 Loading: ${Math.floor(this.progress)}% - ${status}`);
+                
+                // Show "Tap to Enter" button at 50% progress
+                if (this.progress >= 50 && !this.tapToEnterShown) {
+                    this.tapToEnterShown = true;
+                    this.showTapToEnter();
+                }
             }
 
             refreshCheckPercentages() {
@@ -12497,6 +12504,12 @@
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
             
+            showTapToEnter() {
+                // Enable the "Tap to Start" button at 50% progress
+                console.log('📍 50% reached - enabling Tap to Start button');
+                this.presentTapToStart();
+            }
+            
             presentTapToStart() {
                 const btn = document.getElementById('welcomeStartBtn');
                 if (!btn) return;
@@ -12577,22 +12590,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🎬 DOMContentLoaded FIRED!');
             
-            // � ABSOLUTE NUCLEAR OPTION: Force hide loader after 3 seconds NO MATTER WHAT
-            const NUCLEAR_TIMEOUT = 3000;
-            setTimeout(() => {
-                console.error('💥💥💥 NUCLEAR TIMEOUT: Force-hiding loader after 3 seconds');
-                const loader = document.getElementById('honeyLoader');
-                if (loader && loader.style.display !== 'none') {
-                    loader.style.display = 'none';
-                    loader.remove();
-                    console.error('💥 Loader forcibly removed');
-                }
-                // Show the body content
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = '1';
-                document.body.style.pointerEvents = 'auto';
-                document.body.style.overflow = 'auto';
-                document.body.style.userSelect = 'auto';
             }, NUCLEAR_TIMEOUT);
             
             // �🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
