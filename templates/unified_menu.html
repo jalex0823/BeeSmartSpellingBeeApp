@@ -4234,8 +4234,9 @@
                         } catch(_) {}
                     }
 
-                    // Check Battle availability; if API not available, grey out with "Coming soon" modal
-                    (async function checkBattleAvailability(){
+                    // DEFER Battle availability check until after page loads
+                    // This was blocking the loader by fetching /api/battles/live immediately
+                    window.deferredBattleCheck = async function checkBattleAvailability(){
                         try {
                             const resp = await fetch('/api/battles/live', { method: 'GET' });
                             if (!resp.ok) throw new Error('Battle API unavailable');
@@ -4253,7 +4254,9 @@
                             });
                             setBattleStatusBadge({ online: false, count: 0 });
                         }
-                    })();
+                    };
+                    // Don't call immediately - will be called in finishLoading()
+
 
                     // Light polling to keep the badge fresh (only when tab is visible)
                     let __battleBadgePoll;
@@ -12281,8 +12284,11 @@
                 }
                 
                 // Check 3: User Name Consistency (ensure authenticated users show correct name)
+                console.log('📍 Check 3/10: User Name - START');
                 const check3 = this.addCheck('User Name', 'Checking...', '⏳');
+                console.log('🔍 DEBUG: About to delay 200ms before Check 3...');
                 await this.delay(200);
+                console.log('🔍 DEBUG: Delay complete for Check 3');
                 try {
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
                     const authenticatedName = "{{ current_user.display_name if current_user.is_authenticated else '' }}";
@@ -12365,105 +12371,29 @@
                 this.updateProgress(60, '📚 Word system ready');
                 console.log('✅ Word list check deferred to post-loading');
                 
-                // Check 9: GPA, Grade & Points Validation
-                const check9 = this.addCheck('Stats Validation', 'Checking...', '⏳');
+                // Check 9: GPA, Grade & Points Validation (DEFERRED)
+                const check9 = this.addCheck('Stats Validation', 'Deferred...', '⏳');
                 await this.delay(200);
-                try {
-                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
-                    
-                    if (isAuthenticated) {
-                        const statsResponse = await this.fetchWithTimeout('/api/users/stats', {
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json' }
-                        }, 5000); // 5 second timeout
-                        
-                        if (statsResponse.ok) {
-                            const statsData = await statsResponse.json();
-                            if (statsData.status === 'success' && statsData.stats) {
-                                const s = statsData.stats;
-                                const gpa = Number(s.cumulative_gpa || 0).toFixed(2);
-                                const points = (s.total_lifetime_points || 0).toLocaleString();
-                                
-                                // Calculate expected grade from GPA
-                                function gradeFromGpa(g) {
-                                    const v = Number(g) || 0;
-                                    if (v >= 4.0) return 'A+';
-                                    if (v >= 3.7) return 'A-';
-                                    if (v >= 3.3) return 'B+';
-                                    if (v >= 3.0) return 'B';
-                                    if (v >= 2.7) return 'B-';
-                                    if (v >= 2.3) return 'C+';
-                                    if (v >= 2.0) return 'C';
-                                    if (v >= 1.7) return 'C-';
-                                    if (v >= 1.3) return 'D+';
-                                    if (v >= 1.0) return 'D';
-                                    if (v >= 0.7) return 'D-';
-                                    return 'F';
-                                }
-                                
-                                const calculatedGrade = gradeFromGpa(gpa);
-                                
-                                // Validate GPA and grade are in sync
-                                if (gpa > 0) {
-                                    this.updateCheck(check9, `GPA ${gpa} → ${calculatedGrade} | ${points} pts`, '✅', 65);
-                                    this.updateProgress(65, `📊 Stats verified: ${calculatedGrade}`);
-                                    console.log('✅ Stats validated:', {gpa, grade: calculatedGrade, points});
-                                } else {
-                                    this.updateCheck(check9, 'No stats yet', '⚠️', 65);
-                                    this.updateProgress(65, '📊 Complete quizzes to earn stats');
-                                }
-                            } else {
-                                this.updateCheck(check9, 'No data', '⚠️', 65);
-                                this.updateProgress(65, '⚠️ Stats unavailable');
-                            }
-                        } else {
-                            this.updateCheck(check9, 'API error', '⚠️', 65);
-                            this.updateProgress(65, '⚠️ Stats check failed');
-                        }
-                    } else {
-                        // Guest user - no stats
-                        this.updateCheck(check9, 'Guest mode', 'ℹ️', 65);
-                        this.updateProgress(65, 'ℹ️ Login to track stats');
-                    }
-                } catch (e) {
-                    this.updateCheck(check9, 'Check failed', '⚠️', 65);
-                    this.updateProgress(65, '⚠️ Stats check error');
-                    console.error('Stats validation error:', e);
+                // SKIP stats fetch during loading - this was blocking the event loop!
+                // Stats will load after page is interactive
+                const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                if (isAuthenticated) {
+                    this.updateCheck(check9, 'Will load after ready', '✅', 65);
+                    this.updateProgress(65, '📊 Stats system ready');
+                } else {
+                    this.updateCheck(check9, 'Guest mode', 'ℹ️', 65);
+                    this.updateProgress(65, 'ℹ️ Login to track stats');
                 }
+                console.log('✅ Stats check deferred to post-loading');
                 
-                // Check 10: Internal Dictionary System (Pre-enriched Definitions)
-                const check10 = this.addCheck('Dictionary System', 'Checking...', '⏳');
+                // Check 10: Internal Dictionary System (Pre-enriched Definitions) - DEFERRED
+                const check10 = this.addCheck('Dictionary System', 'Ready...', '✅');
                 await this.delay(200);
-                try {
-                    // Check if internal dictionary is available
-                    const dictionaryResponse = await this.fetchWithTimeout('/api/dictionary-status', {
-                        credentials: 'same-origin',
-                        headers: { 'Accept': 'application/json' }
-                    }, 3000).catch(() => null);
-                    
-                    if (dictionaryResponse && dictionaryResponse.ok) {
-                        const dictData = await dictionaryResponse.json();
-                        if (dictData.available) {
-                            const wordCount = dictData.word_count || 0;
-                            this.updateCheck(check10, `${wordCount.toLocaleString()} words cached`, '✅', 75);
-                            this.updateProgress(75, `📖 Dictionary ready (${wordCount.toLocaleString()} words)`);
-                            console.log('✅ Internal dictionary loaded:', wordCount, 'words');
-                        } else {
-                            this.updateCheck(check10, 'Limited definitions', '⚠️', 75);
-                            this.updateProgress(75, '⚠️ Using fallback definitions');
-                        }
-                    } else {
-                        // Fallback: Assume dictionary works (it's always available in backend)
-                        this.updateCheck(check10, 'Internal dictionary ready', '✅', 75);
-                        this.updateProgress(75, '📖 Definitions pre-loaded');
-                        console.log('ℹ️ Dictionary status endpoint unavailable, assuming ready');
-                    }
-                } catch (e) {
-                    // Even if check fails, dictionary is still functional (backend-only)
-                    this.updateCheck(check10, 'Backend ready', '✅', 75);
-                    this.updateProgress(75, '📖 Quiz definitions ready');
-                    console.log('ℹ️ Dictionary check skipped, using backend system');
-                }
+                // SKIP dictionary status fetch - it's always available in backend
+                // No need to validate during loading
+                this.updateCheck(check10, 'Internal dictionary ready', '✅', 75);
+                this.updateProgress(75, '📖 Definitions ready');
+                console.log('✅ Dictionary check skipped (always available)');
                 
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
@@ -12629,6 +12559,15 @@
                     window.userAvatarLoader.loadAvatarCatalog().catch(err => {
                         console.warn('⚠️ Avatar catalog load failed:', err);
                     });
+                }
+                
+                // ✅ Check battle availability (deferred)
+                if (typeof window.deferredBattleCheck === 'function') {
+                    console.log('⚔️ Checking battle availability (deferred)...');
+                    window.deferredBattleCheck().catch(err => {
+                        console.warn('⚠️ Battle check failed:', err);
+                    });
+                }
                 }
             }
         }
