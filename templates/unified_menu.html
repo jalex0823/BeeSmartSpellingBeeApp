@@ -12641,6 +12641,14 @@
                     console.log('📚 Initializing word count after loading...');
                     initializeWordCount();
                 }
+                
+                // ✅ Load avatar catalog AFTER loader finishes (non-blocking)
+                if (window.userAvatarLoader && !window.userAvatarLoader.avatarDataLoaded) {
+                    console.log('🎨 Loading avatar catalog (deferred)...');
+                    window.userAvatarLoader.loadAvatarCatalog().catch(err => {
+                        console.warn('⚠️ Avatar catalog load failed:', err);
+                    });
+                }
             }
         }
         
