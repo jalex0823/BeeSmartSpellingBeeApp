@@ -2334,6 +2334,8 @@
             position: relative;
             z-index: 10;
             margin-top: 1rem;
+            margin-left: auto;
+            margin-right: auto;
             padding: 12px 24px;
             border-radius: 8px;
             border: 2px solid #FF6B6B;
@@ -2346,6 +2348,8 @@
             opacity: 0;
             transition: all 0.3s ease;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            width: clamp(220px, 60vw, 380px);
+            text-align: center;
         " onclick="
             if (confirm('⚠️ Skip loading checks?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
                 const loader = document.getElementById('honeyLoader');
@@ -4676,8 +4680,6 @@
         }
         
         function processManualWords(text) {
-            showLoadingMessage('🐝 Processing your words...');
-            
             // Parse words from text (support newlines, commas, spaces)
             let words = text
                 .replace(/[,;]/g, '\n')  // Replace commas/semicolons with newlines
@@ -4687,14 +4689,57 @@
                 .filter(w => /^[a-zA-Z]+$/.test(w)); // Only allow letters
             
             if (words.length === 0) {
-                hideLoadingMessage();
                 showErrorMessage('No valid words found! Please enter words using only letters.');
                 return;
             }
             
             console.log('📝 Manual words parsed:', words);
             
-            // Send to backend
+            // Show initial progress message
+            const totalWords = words.length;
+            if (totalWords > 10) {
+                showLoadingMessage(`🐝 Processing ${totalWords} words...\n<div style="margin-top: 12px; font-size: 0.9em; color: #f39c12;">⏳ Adding definitions and sentences...</div>`);
+            } else {
+                showLoadingMessage('🐝 Processing your words...');
+            }
+            
+            // Add progress indicator for large word lists
+            let progressInterval = null;
+            if (totalWords > 10) {
+                const startTime = Date.now();
+                const estimatedTimePerWord = 200; // ~200ms per word (dictionary lookup + enrichment)
+                const totalEstimatedTime = totalWords * estimatedTimePerWord;
+                
+                progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(95, Math.floor((elapsed / totalEstimatedTime) * 100));
+                    const estimatedWordsProcessed = Math.floor((elapsed / estimatedTimePerWord));
+                    
+                    // Update loading message with progress
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    if (loadingOverlay) {
+                        const messageEl = loadingOverlay.querySelector('p');
+                        if (messageEl) {
+                            messageEl.innerHTML = `🐝 Processing ${totalWords} words...<br>
+                                <div style="margin-top: 12px; font-size: 0.9em; color: #f39c12;">
+                                    ⏳ Estimated progress: ${progress}% (${Math.min(estimatedWordsProcessed, totalWords)}/${totalWords} words)
+                                </div>
+                                <div style="margin-top: 8px; width: 80%; max-width: 300px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${progress}%; height: 100%; background: linear-gradient(90deg, #f39c12, #e74c3c); transition: width 0.3s ease;"></div>
+                                </div>`;
+                        }
+                    }
+                }, 500); // Update every 500ms
+            }
+            
+            // CRITICAL FIX: Add timeout protection to prevent infinite "Processing..." hang
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+                console.error('⏱️ Manual word upload timeout after 30 seconds');
+            }, 30000); // 30 second timeout
+            
+            // Send to backend with timeout protection
             fetch('/api/upload-manual-words', {
                 method: 'POST',
                 headers: {
@@ -4704,9 +4749,14 @@
                     'Expires': '0'
                 },
                 credentials: 'same-origin',  // Ensure session cookie is sent
-                body: JSON.stringify({ words: words })
+                body: JSON.stringify({ words: words }),
+                signal: controller.signal
             })
-            .then(response => response.json())
+            .then(response => {
+                clearTimeout(timeoutId); // Clear timeout on successful response
+                if (progressInterval) clearInterval(progressInterval); // Clear progress updates
+                return response.json();
+            })
             .then(data => {
                 hideLoadingMessage();
                 if (data.ok) {
@@ -4763,9 +4813,16 @@
                 }
             })
             .catch(error => {
+                clearTimeout(timeoutId); // Clear timeout on error
+                if (progressInterval) clearInterval(progressInterval); // Clear progress updates
                 hideLoadingMessage();
                 console.error('Manual word upload error:', error);
-                showErrorMessage('Hmm, something went wrong. Please try again! 🤔');
+                
+                if (error.name === 'AbortError') {
+                    showErrorMessage('Processing is taking too long. Please try with fewer words! ⏱️');
+                } else {
+                    showErrorMessage('Hmm, something went wrong. Please try again! 🤔');
+                }
             });
         }
         
@@ -4773,7 +4830,7 @@
             // Create file input for text files
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
-            fileInput.accept = '.txt,.csv,.doc,.docx,text/*';
+            fileInput.accept = '.txt,.csv,.doc,.docx,.pdf,text/*,application/pdf';
             fileInput.multiple = false;
             fileInput.style.display = 'none';
             
@@ -7016,7 +7073,8 @@
                         console.log('✅ Quiz button enabled after text upload, word count:', data.count);
                         
                         // Force immediate visual update
-                        btn.offsetHeight; // Trigger reflow
+                        const btn = document.getElementById('startQuizBtn');
+                        if (btn) btn.offsetHeight; // Trigger reflow
                         
                         // Show quiz-ready notification (async, uses WordBankManager)
                         showQuizReadyNotification();
@@ -9056,27 +9114,33 @@
             });
         }
         
-        // Simple check for existing words on page load (no-cache + cache-buster)
-        const initialCacheBuster = Date.now();
-        fetch(`/api/wordbank?_=${initialCacheBuster}`, {
-            cache: 'no-store',
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-            }
-        })
-            .then(async response => {
-                const data = await response.json();
-                const wordCount = data.words ? data.words.length : 0;
-                
-                // ✅ Update word count badge AND start quiz button using centralized manager
-                await WordBankManager.updateAllDisplays(true);
-                
-                console.log('✅ Page load complete - word count synced');
+        // ⚠️ DISABLED: This was blocking the loading screen by running immediately
+        // Will be called after loading completes instead
+        function initializeWordCount() {
+            // Simple check for existing words on page load (no-cache + cache-buster)
+            const initialCacheBuster = Date.now();
+            fetch(`/api/wordbank?_=${initialCacheBuster}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
             })
-            .catch(error => {
-                console.log('Could not check word count:', error);
-            });
+                .then(async response => {
+                    const data = await response.json();
+                    const wordCount = data.words ? data.words.length : 0;
+                    
+                    // ✅ Update word count badge AND start quiz button using centralized manager
+                    await WordBankManager.updateAllDisplays(true);
+                    
+                    console.log('✅ Page load complete - word count synced');
+                })
+                .catch(error => {
+                    console.log('Could not check word count:', error);
+                });
+        }
+        
+        // DON'T call initializeWordCount() here - let the loading system call it after completion
         
         // ✅ Attach Start Quiz button click handler
         document.getElementById('startQuizBtn')?.addEventListener('click', function(e) {
@@ -12027,6 +12091,18 @@
         
         console.log('🔧 Loading screen script starting...');
         
+        // ⚠️ SUPER-AGGRESSIVE DEBUG MODE: Force hide loader after 2 seconds NO MATTER WHAT
+        setTimeout(() => {
+            console.error('🚨🚨🚨 DEBUG: 2-second force-hide triggered');
+            const loader = document.getElementById('honeyLoader');
+            if (loader) {
+                loader.style.display = 'none';
+                console.error('🚨 Loader hidden by debug timeout');
+            }
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.overflow = 'auto';
+        }, 2000);
+        
         // Loading System with Progress Tracking and System Checks
         class LoadingSystem {
             constructor() {
@@ -12126,19 +12202,35 @@
             async runSystemChecks() {
                 console.log('🚀 === STARTING SYSTEM CHECKS (10 checks) ===');
                 
+                // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
+                try {
+                
                 // Check 1: Three.js Support
                 console.log('📍 Check 1/10: Three.js - START');
+                console.log('🔍 DEBUG: About to call addCheck...');
                 const check1 = this.addCheck('3D Graphics (Three.js)', 'Checking...', '⏳');
+                console.log('🔍 DEBUG: addCheck returned:', check1);
+                console.log('🔍 DEBUG: About to delay 200ms...');
                 await this.delay(200);
-                if (typeof THREE !== 'undefined') {
-                    this.updateCheck(check1, 'Ready', '✅', 15);
-                    this.updateProgress(15, '✨ 3D graphics engine loaded');
-                    console.log('✅ Check 1/10: Three.js - COMPLETE');
-                } else {
-                    this.updateCheck(check1, 'Missing', '⚠️', 15);
-                    this.updateProgress(15, '⚠️ 3D graphics unavailable');
-                    console.log('⚠️ Check 1/10: Three.js - MISSING');
+                console.log('🔍 DEBUG: Delay complete, checking THREE...');
+                try {
+                    if (typeof THREE !== 'undefined') {
+                        console.log('🔍 DEBUG: THREE is defined, updating check...');
+                        this.updateCheck(check1, 'Ready', '✅', 15);
+                        this.updateProgress(15, '✨ 3D graphics engine loaded');
+                        console.log('✅ Check 1/10: Three.js - COMPLETE');
+                    } else {
+                        console.log('🔍 DEBUG: THREE is undefined');
+                        this.updateCheck(check1, 'Missing', '⚠️', 15);
+                        this.updateProgress(15, '⚠️ 3D graphics unavailable');
+                        console.log('⚠️ Check 1/10: Three.js - MISSING');
+                    }
+                } catch (e) {
+                    console.error('❌ Check 1 error:', e);
+                    this.updateCheck(check1, 'Error', '❌', 15);
+                    this.updateProgress(15, '❌ Check failed');
                 }
+                console.log('🔍 DEBUG: Check 1 DONE, moving to Check 2...');
                 
                 // Check 2: User Avatar Detection (determine which avatar to load)
                 const check2 = this.addCheck('User Avatar', 'Detecting...', '⏳');
@@ -12408,6 +12500,12 @@
                     console.log('ℹ️ Dictionary check skipped, using backend system');
                 }
                 
+                } catch (systemCheckError) {
+                    // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
+                    console.error('🚨 CRITICAL: System check crashed:', systemCheckError);
+                    this.updateProgress(75, '⚠️ Some checks failed - continuing anyway');
+                }
+                
                 return true;
             }
             
@@ -12549,6 +12647,12 @@
                 // Auto-dismiss after brief celebration
                 await this.delay(1000);
                 this.dismissLoader();
+                
+                // ✅ NOW safe to initialize word count (after loading completes)
+                if (typeof initializeWordCount === 'function') {
+                    console.log('📚 Initializing word count after loading...');
+                    initializeWordCount();
+                }
             }
         }
         
@@ -12597,20 +12701,39 @@
             window.loadingSystem = new LoadingSystem();
             window.loadingSystem.updateProgress(5, '🚀 Starting up...');
             
-            // EMERGENCY TIMEOUT - Force loading screen to complete after 10 seconds
-            const LOADING_EMERGENCY_TIMEOUT = 10000;
+            // EMERGENCY TIMEOUT - Force loading screen to complete after 5 seconds for debugging
+            const LOADING_EMERGENCY_TIMEOUT = 5000;
             const emergencyTimeout = setTimeout(() => {
-                console.error('🚨 EMERGENCY: Loading took too long, forcing completion...');
+                console.error('🚨 EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
+                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
+                console.error('Loader element:', document.getElementById('honeyLoader') ? 'found' : 'missing');
+                console.error('Stack trace of where we are stuck:');
+                console.trace();
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
                     window.loadingSystem.dismissLoader();
+                } else {
+                    // Last resort: manually hide loader
+                    const loader = document.getElementById('honeyLoader');
+                    if (loader) {
+                        loader.style.display = 'none';
+                        console.error('🚨 Manually hid loader (LoadingSystem missing)');
+                    }
                 }
+                // Enable the page even if loading failed
+                document.body.style.pointerEvents = 'auto';
+                document.body.style.overflow = 'auto';
             }, LOADING_EMERGENCY_TIMEOUT);
             
+            console.log('✅ Emergency timeout set for', LOADING_EMERGENCY_TIMEOUT, 'ms');
+            
+            console.log('📍 STEP 1: About to run system checks...');
             try {
             
             // Run system checks
+            console.log('📍 STEP 2: Calling runSystemChecks()...');
             await window.loadingSystem.runSystemChecks();
+            console.log('📍 STEP 3: System checks completed!');
             
             // 60% complete after system checks, now initialize UI components
             window.loadingSystem.updateProgress(60, '🎨 Initializing interface...');
@@ -12749,46 +12872,31 @@
                                 refreshBtn.style.display = 'block';
                             }
                             
-                            // Generate enhanced error message using preload results
-                            let errorMessage = '🐝 Oops! Your custom avatar couldn\'t load properly.\n\n';
+                            // CRITICAL FIX: Don't block loading with modal during initialization
+                            // Instead, automatically fall back to default and show a non-blocking notification
+                            console.warn('⚠️ Custom avatar failed, using default MascotBee:', avatarError);
                             
-                            // Add preload diagnostics if available
+                            // Log diagnostics but don't block
                             if (window.avatarPreloadResults) {
                                 const results = window.avatarPreloadResults;
-                                errorMessage += `📊 Avatar System Status:\n`;
-                                errorMessage += `• Total Avatars: ${results.totalAvatars}\n`;
-                                errorMessage += `• Working: ${results.successfulAvatars}\n`;
-                                errorMessage += `• Failed: ${results.failedAvatars.length}\n`;
-                                errorMessage += `• Fallback System: ${results.fallbackReady ? '✅ Ready' : '❌ Failed'}\n\n`;
-                                
-                                if (results.failedAvatars.length > 0) {
-                                    errorMessage += `❌ Failed Avatars: ${results.failedAvatars.map(f => f.avatar).join(', ')}\n\n`;
+                                console.warn('Avatar System Status:', {
+                                    total: results.totalAvatars,
+                                    working: results.successfulAvatars,
+                                    failed: results.failedAvatars.length,
+                                    fallbackReady: results.fallbackReady
+                                });
+                            }
+                            
+                            // Automatically use default avatar without blocking
+                            await initDefaultMascot();
+                            avatarLoadSuccess = true;
+                            
+                            // Show a deferred notification after page loads (non-blocking)
+                            setTimeout(() => {
+                                if (typeof showBeeNotification === 'function') {
+                                    showBeeNotification('Your custom avatar couldn\'t load. Using default bee. Check your avatar settings.', 'warning');
                                 }
-                            }
-                            
-                            errorMessage += '❓ Would you like to:\n';
-                            errorMessage += '• Continue with the default bee avatar?\n';
-                            errorMessage += '• Or contact an admin to fix the issue?\n\n';
-                            errorMessage += 'Error: ' + (avatarError.message || 'Unknown error');
-                            
-                            // Show alert during loading screen
-                            const userChoice = await showBeeConfirm({
-                                title: '⚠️ Avatar Loading Issue',
-                                message: errorMessage,
-                                confirmText: 'Continue with Default',
-                                cancelText: 'Contact Admin'
-                            });
-                            
-                            if (userChoice) {
-                                // User chose to continue with default
-                                console.log('✅ User chose to use default avatar');
-                                await initDefaultMascot();
-                                avatarLoadSuccess = true;
-                            } else {
-                                // User chose to contact admin - redirect to help/contact
-                                window.location.href = '/help';
-                                return; // Stop loading
-                            }
+                            }, 2000)
                         }
                     } else {
                         // No avatar returned by API; use MascotBee as default
@@ -12833,13 +12941,40 @@
             clearTimeout(emergencyTimeout);
             
             } catch (loadingError) {
-                console.error('🚨 Loading error:', loadingError);
+                console.error('🚨 CRITICAL LOADING ERROR:', loadingError);
+                console.error('Error stack:', loadingError.stack);
+                console.error('LoadingSystem exists:', !!window.loadingSystem);
+                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
+                
                 // Force completion even on error
-                if (window.loadingSystem) {
-                    window.loadingSystem.updateProgress(100, '⚠️ Loaded with errors');
-                    window.loadingSystem.dismissLoader();
+                try {
+                    if (window.loadingSystem) {
+                        window.loadingSystem.updateProgress(100, '⚠️ Loaded with errors');
+                        window.loadingSystem.dismissLoader();
+                    } else {
+                        // Fallback: manually hide loader
+                        const loader = document.getElementById('honeyLoader');
+                        if (loader) {
+                            loader.style.display = 'none';
+                            console.error('🚨 Manually hid loader due to error');
+                        }
+                    }
+                } catch (dismissError) {
+                    console.error('🚨 Failed to dismiss loader:', dismissError);
+                    // Last resort
+                    const loader = document.getElementById('honeyLoader');
+                    if (loader) loader.remove();
                 }
                 clearTimeout(emergencyTimeout);
+            } finally {
+                // ABSOLUTE FAILSAFE: Ensure loader is gone after 12 seconds no matter what
+                setTimeout(() => {
+                    const loader = document.getElementById('honeyLoader');
+                    if (loader && loader.style.display !== 'none') {
+                        console.error('🚨 FAILSAFE: Force-hiding loader after 12s');
+                        loader.style.display = 'none';
+                    }
+                }, 12000);
             }
 
             // Final sanity: reflect actual container visibility in logs
@@ -14388,6 +14523,11 @@
 
         // Update status after avatar preload completes
         document.addEventListener('DOMContentLoaded', () => {
+            // ⚠️ DISABLED: Word count initialization was blocking the loading screen
+            // The loading system will handle this after completion
+            // This was causing the delay() promises to never resolve
+            
+            /* COMMENTED OUT - WAS BLOCKING LOADING SCREEN
             // ✅ Initialize ALL word count displays from the WordBank library
             console.log('📚 Initializing word counts from WordBank library...');
             
@@ -14402,6 +14542,7 @@
                     console.log(`🔄 Secondary word count sync: ${count} words`);
                 });
             }, 1000);
+            */
             
             // Wait a bit for preload to complete, then update status
             setTimeout(updateAvatarSystemStatus, 2000);

@@ -4485,7 +4485,8 @@ def api_upload():
     deduped = filtered
     print(f"✅ {len(deduped)} words passed kid-friendly filter")
 
-    # Auto-enrich words with definitions from built-in dictionary
+    # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
+    # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
     print(f"DEBUG /api/upload: Starting enrichment for {len(deduped)} words...")
     import time
     enrichment_start = time.time()
@@ -4722,7 +4723,8 @@ def api_upload_manual_words():
         deduped = filtered
         print(f"✅ {len(deduped)} words passed kid-friendly filter")
         
-        # Auto-enrich words with definitions (same logic as file upload)
+        # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
+        # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
         print(f"DEBUG /api/upload-manual-words: Starting enrichment for {len(deduped)} words...")
         import time
         enrichment_start = time.time()

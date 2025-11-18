@@ -50,7 +50,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.brother_bee",
         "name": "Brother Bee Avatar",
         "folder": "brother-bee",
-        "obj_file": "BrotherBee.glb"  # GLB format (legacy field name),        "description": "Friendly, cool, and loyal — Brother Bee always cheers you on during your spelling adventure.",
+        "obj_file": "BrotherBee.glb",  # GLB format (legacy field name)
+        "description": "Friendly, cool, and loyal — Brother Bee always cheers you on during your spelling adventure.",
         "variants": ["default"],
         "category": "classic",
         "tier": "default_free",
@@ -64,7 +65,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.builder_bee",
         "name": "Builder Bee Avatar",
         "folder": "builder-bee",
-        "obj_file": "BuilderBee.glb"  # GLB format (legacy field name),        "description": "Hammer in one hand, honey in the other — Builder Bee helps you construct spelling success!",
+        "obj_file": "BuilderBee.glb",  # GLB format (legacy field name)
+        "description": "Hammer in one hand, honey in the other — Builder Bee helps you construct spelling success!",
         "variants": ["default"],
         "category": "profession",
         "tier": "default_free",
@@ -146,7 +148,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.detective_bee",
         "name": "Detective Bee Avatar",
         "folder": "detective-bee",
-        "obj_file": "DetectiveBee.glb"  # GLB format (legacy field name),        "description": "Always on the case! Detective Bee finds clues and helps you spell like a pro.",
+        "obj_file": "DetectiveBee.glb",  # GLB format (legacy field name)
+        "description": "Always on the case! Detective Bee finds clues and helps you spell like a pro.",
         "variants": ["default"],
         "category": "profession",
         "tier": "default_free",
@@ -160,7 +163,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.diva_bee",
         "name": "Diva Bee Avatar",
         "folder": "diva-bee",
-        "obj_file": "DivaBee.glb"  # GLB format (legacy field name),        "description": "Glamorous, glittery, and full of confidence. Diva Bee lights up any spelling stage.",
+        "obj_file": "DivaBee.glb",  # GLB format (legacy field name)
+        "description": "Glamorous, glittery, and full of confidence. Diva Bee lights up any spelling stage.",
         "variants": ["default"],
         "category": "entertainment",
         "tier": "premium",
@@ -191,7 +195,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.explorer_bee",
         "name": "Explorer Bee Avatar",
         "folder": "explorer-bee",
-        "obj_file": "ExplorerBee.glb"  # GLB format (legacy field name),        "description": "Adventurous and curious, Explorer Bee loves discovering new words with you.",
+        "obj_file": "ExplorerBee.glb",  # GLB format (legacy field name)
+        "description": "Adventurous and curious, Explorer Bee loves discovering new words with you.",
         "variants": ["default"],
         "category": "adventure",
         "tier": "default_free",
@@ -273,7 +278,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.mascot_bee",
         "name": "Mascot Bee Avatar",
         "folder": "mascot-bee",
-        "obj_file": "MascotBee.glb"  # GLB format (legacy field name),        "description": "The official BeeSmart cheerleader! Mascot Bee hypes you up every step of the way.",
+        "obj_file": "MascotBee.glb",  # GLB format (legacy field name)
+        "description": "The official BeeSmart cheerleader! Mascot Bee hypes you up every step of the way.",
         "variants": ["default"],
         "category": "classic",
         "tier": "mascot_free",
@@ -287,7 +293,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.professor_bee",
         "name": "Professor Bee Avatar",
         "folder": "professor-bee",
-        "obj_file": "ProfessorBee.glb"  # GLB format (legacy field name),        "description": "Wise, clever, and super smart — Professor Bee helps you master even the trickiest words.",
+        "obj_file": "ProfessorBee.glb",  # GLB format (legacy field name)
+        "description": "Wise, clever, and super smart — Professor Bee helps you master even the trickiest words.",
         "variants": ["default"],
         "category": "profession",
         "tier": "earn_or_buy",
@@ -335,7 +342,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.rocker_bee",
         "name": "Rocker Bee Avatar",
         "folder": "rocker-bee",
-        "obj_file": "RockerBee.glb"  # GLB format (legacy field name),        "description": "Crank up the volume — Rocker Bee brings electric energy to every spelling match.",
+        "obj_file": "RockerBee.glb",  # GLB format (legacy field name)
+        "description": "Crank up the volume — Rocker Bee brings electric energy to every spelling match.",
         "variants": ["default"],
         "category": "entertainment",
         "tier": "earn_or_buy",
@@ -383,7 +391,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.vamp_bee",
         "name": "Vamp Bee Avatar",
         "folder": "vamp-bee",
-        "obj_file": "VampBee.glb"  # GLB format (legacy field name),        "description": "A funny little night bee who is more cute than spooky — perfect for Halloween fun!",
+        "obj_file": "VampBee.glb",  # GLB format (legacy field name)
+        "description": "A funny little night bee who is more cute than spooky — perfect for Halloween fun!",
         "variants": ["default"],
         "category": "fantasy",
         "tier": "earn_or_buy",
@@ -397,7 +406,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.ware_bee",
         "name": "Ware Bee Avatar",
         "folder": "ware-bee",
-        "obj_file": "WareBee.glb"  # GLB format (legacy field name),        "description": "A cyber-tech defender bee — Ware Bee protects your spelling progress with digital power.",
+        "obj_file": "WareBee.glb",  # GLB format (legacy field name)
+        "description": "A cyber-tech defender bee — Ware Bee protects your spelling progress with digital power.",
         "variants": ["default"],
         "category": "fantasy",
         "tier": "premium",
@@ -411,7 +421,8 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.zom_bee",
         "name": "Zom Bee Avatar",
         "folder": "zom-bee",
-        "obj_file": "ZomBee.glb"  # GLB format (legacy field name),        "description": "Silly, slow, and super funny — Zom Bee brings goofy undead fun to the hive.",
+        "obj_file": "ZomBee.glb",  # GLB format (legacy field name)
+        "description": "Silly, slow, and super funny — Zom Bee brings goofy undead fun to the hive.",
         "variants": ["default"],
         "category": "fantasy",
         "tier": "premium",
@@ -1636,8 +1647,9 @@ def get_avatar_catalog_railway_safe():
         "product_id": "beesmart.avatar.cool_bee",
                 "name": "Cool Bee Avatar", 
                 "folder": "cool-bee",
-                "obj_file": "CoolBee.glb"  # GLB format (legacy field name),
-                "mtl_file": "CoolBee.mtl",                "description": "Default cool bee avatar",
+                "obj_file": "CoolBee.glb",  # GLB format (legacy field name)
+                "mtl_file": "CoolBee.mtl",
+                "description": "Default cool bee avatar",
                 "variants": ["default"],
                 "category": "classic",
                 "theme": generate_theme_from_title('Cool Bee')
