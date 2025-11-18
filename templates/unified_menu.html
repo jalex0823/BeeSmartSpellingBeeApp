@@ -5442,29 +5442,21 @@
                         }
                     }
 
-                    // Wait a bit to show progress
-                    setTimeout(() => {
-                        if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
-                            try {
-                                window.loadingSystem.updateProgress(100, `✨ ${data.count} words ready!`);
-                            } catch (e) {
-                                console.warn('Loading system update failed:', e);
+                        // Wait a bit to show progress
+                        setTimeout(async () => {
+                            if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
+                                try {
+                                    window.loadingSystem.updateProgress(100, `✨ ${data.count} words ready!`);
+                                } catch (e) {
+                                    console.warn('Loading system update failed:', e);
+                                }
                             }
-                        }
 
-                        // Update Start Quiz button
-                        const startBtn = document.getElementById('startQuizBtn');
-                        if (startBtn) {
-                            startBtn.disabled = false;
-                            startBtn.classList.remove('waiting-to-play');
-                            startBtn.classList.add('ready-to-play');
-                            startBtn.innerHTML = `🚀 Start Quiz (${data.count} words)`;
+                            // ✅ Update word count badge AND start quiz button using centralized manager
+                            await WordBankManager.updateAllDisplays(true);
                             
                             // Show quiz-ready notification (async, uses WordBankManager)
-                            showQuizReadyNotification();
-                        }
-
-                        // Show success message
+                            showQuizReadyNotification();                        // Show success message
                         setTimeout(() => {
                             if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
                                 try {
