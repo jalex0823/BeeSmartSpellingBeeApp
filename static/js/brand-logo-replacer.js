@@ -85,6 +85,8 @@
   }
 
   function installObserver(){
+    // Debounce observer to prevent rapid-fire calls during page load
+    let timeout = null;
     try {
       const obs = new MutationObserver((mutations)=>{
         let shouldRun = false;
@@ -97,7 +99,11 @@
           }
           if (m.type === 'childList' && (m.addedNodes && m.addedNodes.length)) { shouldRun = true; break; }
         }
-        if (shouldRun) run();
+        if (shouldRun) {
+          // Debounce: wait 100ms before running to batch multiple changes
+          clearTimeout(timeout);
+          timeout = setTimeout(run, 100);
+        }
       });
       obs.observe(document.documentElement || document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src','srcset','style','href'] });
     } catch(_) {}
