@@ -12091,18 +12091,6 @@
         
         console.log('🔧 Loading screen script starting...');
         
-        // ⚠️ SUPER-AGGRESSIVE DEBUG MODE: Force hide loader after 2 seconds NO MATTER WHAT
-        setTimeout(() => {
-            console.error('🚨🚨🚨 DEBUG: 2-second force-hide triggered');
-            const loader = document.getElementById('honeyLoader');
-            if (loader) {
-                loader.style.display = 'none';
-                console.error('🚨 Loader hidden by debug timeout');
-            }
-            document.body.style.pointerEvents = 'auto';
-            document.body.style.overflow = 'auto';
-        }, 2000);
-        
         // Loading System with Progress Tracking and System Checks
         class LoadingSystem {
             constructor() {
@@ -12662,7 +12650,22 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🎬 DOMContentLoaded FIRED!');
             
-            // 🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
+            // � ABSOLUTE NUCLEAR OPTION: Force hide loader after 3 seconds NO MATTER WHAT
+            const NUCLEAR_TIMEOUT = 3000;
+            setTimeout(() => {
+                console.error('💥💥💥 NUCLEAR TIMEOUT: Force-hiding loader after 3 seconds');
+                const loader = document.getElementById('honeyLoader');
+                if (loader && loader.style.display !== 'none') {
+                    loader.style.display = 'none';
+                    loader.remove();
+                    console.error('💥 Loader forcibly removed');
+                }
+                document.body.style.pointerEvents = 'auto';
+                document.body.style.overflow = 'auto';
+                document.body.style.userSelect = 'auto';
+            }, NUCLEAR_TIMEOUT);
+            
+            // �🔝 ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
