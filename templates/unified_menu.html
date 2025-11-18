@@ -4392,11 +4392,37 @@
 
         // Saved Lists count badge helpers
         async function refreshSavedListsBadge(){
+            const badge = document.getElementById('savedListsBadge');
+            if (!badge) return;
+
+            // 🔐 Guests don't have saved lists; skip the fetch entirely
+            if (window.IS_AUTH !== true) {
+                console.log('🔐 Guest mode — skipping /api/saved-lists badge fetch');
+                badge.style.display = 'none';
+                return;
+            }
+
             try {
-                const res = await fetch('/api/saved-lists');
-                const data = await res.json();
-                const badge = document.getElementById('savedListsBadge');
-                if (!badge) return;
+                const res = await fetch('/api/saved-lists', {
+                    credentials: 'same-origin'
+                });
+
+                if (!res.ok) {
+                    // 401 / 403 / 500 => just hide the badge, no error UI
+                    console.warn('⚠️ /api/saved-lists returned', res.status, '- hiding badge');
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (jsonErr) {
+                    console.warn('⚠️ Could not parse /api/saved-lists JSON:', jsonErr);
+                    badge.style.display = 'none';
+                    return;
+                }
+
                 if (data && data.ok && Array.isArray(data.lists)){
                     const count = data.lists.length;
                     if (count > 0){
@@ -4409,8 +4435,8 @@
                     badge.style.display = 'none';
                 }
             } catch(e){
-                const badge = document.getElementById('savedListsBadge');
-                if (badge) badge.style.display = 'none';
+                console.warn('⚠️ Saved lists badge fetch failed:', e);
+                badge.style.display = 'none';
             }
         }
 
@@ -5101,12 +5127,32 @@
             }
 
             async function loadSaved(){
+                // 🔐 Guests should see a friendly message instead of hammering the API
+                if (window.IS_AUTH !== true) {
+                    container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">🔐 You need to be logged in to view saved lists.</div>';
+                    return;
+                }
+
                 try {
-                    const res = await fetch('/api/saved-lists');
+                    const res = await fetch('/api/saved-lists', {
+                        credentials: 'same-origin'
+                    });
+
+                    if (!res.ok) {
+                        container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">⚠️ Could not load lists (server error).</div>';
+                        return;
+                    }
+
                     const data = await res.json();
-                    if (data.ok){ renderLists(data.lists); }
-                    else { container.innerHTML = '<div>Could not load lists.</div>'; }
-                } catch(e){ container.innerHTML = '<div>Error loading lists.</div>'; }
+                    if (data.ok){ 
+                        renderLists(data.lists); 
+                    } else { 
+                        container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">⚠️ Could not load lists.</div>'; 
+                    }
+                } catch(e){ 
+                    console.warn('⚠️ Error loading saved lists:', e);
+                    container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">⚠️ Error loading lists.</div>'; 
+                }
             }
 
             function saveCurrent(){
@@ -12446,39 +12492,6 @@
                         // Preload the 3D model
                         if (typeof SmartyBee3D !== 'undefined' && typeof THREE !== 'undefined') {
                             window.mascotBeePreloaded = new SmartyBee3D('mascot3DPreload', avatarOptions);
-                            
-                            // 🎭 AUTO-TRIGGER RANDOM THEMED ANIMATION ON MENU LOAD 🎭
-                            // Wait for model to fully load, then start a random persona animation
-                            const waitForModelLoad = setInterval(() => {
-                                if (window.mascotBeePreloaded && window.mascotBeePreloaded.bee) {
-                                    clearInterval(waitForModelLoad);
-                                    // Delay 1.5s after menu appears to let user see the avatar first
-                                    setTimeout(() => {
-                                        console.log('🎭 Auto-triggering random themed animation on menu load');
-                                        try {
-                                            // Get avatar ID from avatarOptions
-                                            const avatarId = avatarOptions.avatarId || 'mascot-bee';
-                                            
-                                            // Perform the rotation animation
-                                            if (typeof performFullRotation === 'function') {
-                                                performFullRotation(window.mascotBeePreloaded, avatarId);
-                                            }
-                                            
-                                            // Also play visual effect overlay
-                                            const container = document.getElementById('mascot3DPreload');
-                                            if (container && typeof playThemedAvatarEffect === 'function') {
-                                                playThemedAvatarEffect(avatarId, container);
-                                            }
-                                        } catch (e) {
-                                            console.warn('Could not auto-trigger animation:', e);
-                                        }
-                                    }, 1500);
-                                }
-                            }, 100); // Check every 100ms
-                            
-                            // Safety: clear interval after 5 seconds if model never loads
-                            setTimeout(() => clearInterval(waitForModelLoad), 5000);
-                            
                             console.log('✅ 3D Mascot preloaded successfully during loading screen');
                             resolve();
                         } else {
