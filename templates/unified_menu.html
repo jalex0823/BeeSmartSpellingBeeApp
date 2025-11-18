@@ -2329,7 +2329,7 @@
             pointer-events: none; /* not clickable until enabled */
         " disabled aria-disabled="true">Tap to Start ✨</button>
         
-        <!-- Emergency Bypass Button (appears after 5 seconds if loading hangs) -->
+        <!-- Emergency Bypass Button (always visible beneath system checks) -->
         <button id="emergencyBypassBtn" style="
             position: relative;
             z-index: 10;
@@ -2344,22 +2344,28 @@
             font-weight: 700;
             font-size: 1rem;
             cursor: pointer;
-            display: none;
-            opacity: 0;
+            display: block;
+            opacity: 1;
             transition: all 0.3s ease;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             width: clamp(220px, 60vw, 380px);
             text-align: center;
         " onclick="
-            if (confirm('⚠️ Skip loading checks?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
+            if (confirm('⚠️ Skip loading checks and enter app now?\\n\\nThis may cause issues if resources aren\\'t ready. Continue anyway?')) {
                 const loader = document.getElementById('honeyLoader');
                 if (loader) {
                     if (window.matrixRain) window.matrixRain.stop();
-                    loader.style.display = 'none';
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = '1';
+                    loader.style.pointerEvents = 'none';
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    setTimeout(() => { loader.style.display = 'none'; }, 350);
+                    document.dispatchEvent(new Event('honeyLoaderFinished'));
                     console.warn('🚨 EMERGENCY BYPASS: User skipped loading screen');
                 }
             }
-        ">⚠️ Skip Loading (Emergency)</button>
+        ">🚨 Emergency Bypass</button>
         
         <!-- System Checks Display -->
         <div id="systemChecks" style="
@@ -3198,22 +3204,6 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
-                <!-- Word List Count Badge -->
-                <div id="wordListCountBadge" style="
-                    display: inline-block;
-                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                    color: white;
-                    padding: 12px 20px;
-                    border-radius: 12px;
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    margin-bottom: 15px;
-                    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                ">
-                    📚 Word List: <span id="wordListCount">0</span> words
-                </div>
-                
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title="💾 Save your word list with definitions">
                     💾 Export List
                 </button>
@@ -3415,28 +3405,7 @@
                 
                 console.log(`🔄 Updating all displays with count: ${count}`);
                 
-                // Update word list count badge
-                const countEl = document.getElementById('wordListCount');
-                if (countEl) {
-                    countEl.textContent = count.toString();
-                }
-                
-                // Update badge styling
-                const badgeEl = document.getElementById('wordListCountBadge');
-                if (badgeEl) {
-                    if (count === 0) {
-                        badgeEl.style.background = 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)';
-                        badgeEl.style.boxShadow = '0 4px 15px rgba(158, 158, 158, 0.3)';
-                    } else if (count < 5) {
-                        badgeEl.style.background = 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)';
-                        badgeEl.style.boxShadow = '0 4px 15px rgba(255, 152, 0, 0.3)';
-                    } else {
-                        badgeEl.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
-                        badgeEl.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.3)';
-                    }
-                }
-                
-                // Update Start Quiz button
+                // Update Start Quiz button (primary word count display)
                 const quizBtn = document.getElementById('startQuizBtn');
                 if (quizBtn) {
                     if (count > 0) {
@@ -12415,14 +12384,41 @@
                 await this.delay(200);
                 this.updateProgress(60, '🎯 Systems ready');
                 
-                // Check 8: Word List (DEFERRED - will check after loading completes)
-                const check8 = this.addCheck('Word List', 'Deferred...', '⏳');
+                // Check 8: Word List Validation (fetch actual count from library)
+                const check8 = this.addCheck('Word List', 'Validating...', '⏳');
                 await this.delay(200);
-                // SKIP wordbank fetch during loading - this was blocking the event loop!
-                // Wordbank will be initialized in finishLoading() via initializeWordCount()
-                this.updateCheck(check8, 'Ready to upload', '✅', 60);
-                this.updateProgress(60, '📚 Word system ready');
-                console.log('✅ Word list check deferred to post-loading');
+                try {
+                    // Fetch word count from the actual library
+                    const wordbankRes = await this.fetchWithTimeout('/api/wordbank', {
+                        cache: 'no-store',
+                        credentials: 'same-origin',
+                        headers: { 'Cache-Control': 'no-cache' }
+                    }, 3000);
+                    
+                    if (wordbankRes.ok) {
+                        const wordbankData = await wordbankRes.json();
+                        const wordCount = (wordbankData.words && wordbankData.words.length) || 0;
+                        
+                        if (wordCount > 0) {
+                            this.updateCheck(check8, `${wordCount} words loaded`, '✅', 60);
+                            this.updateProgress(60, `📚 ${wordCount} words ready`);
+                            console.log(`✅ Word list validated: ${wordCount} words`);
+                        } else {
+                            this.updateCheck(check8, '0 words - upload needed', '⚠️', 60);
+                            this.updateProgress(60, '📚 No words loaded');
+                            console.warn('⚠️ Wordbank is empty - user needs to upload');
+                        }
+                    } else {
+                        this.updateCheck(check8, 'Check failed', '⚠️', 60);
+                        this.updateProgress(60, '⚠️ Word check error');
+                        console.warn('⚠️ Wordbank fetch returned non-OK:', wordbankRes.status);
+                    }
+                } catch (wordbankError) {
+                    console.warn('Wordbank validation failed:', wordbankError);
+                    this.updateCheck(check8, 'Ready to upload', '⚠️', 60);
+                    this.updateProgress(60, '📚 Word system ready');
+                }
+                console.log('✅ Word list check complete');
                 
                 // Check 9: GPA, Grade & Points Validation (DEFERRED)
                 const check9 = this.addCheck('Stats Validation', 'Deferred...', '⏳');
@@ -12573,9 +12569,10 @@
                 console.log(`✅ Loading complete in ${elapsed}ms`);
                 
                 this.updateProgress(100, '🎉 Ready to spell!');
-                // Auto-dismiss after brief celebration
-                await this.delay(1000);
-                this.dismissLoader();
+                
+                // ✅ Enable the "Tap to Start" button - require user interaction
+                console.log('🎯 All checks complete - waiting for user to tap...');
+                this.presentTapToStart();
                 
                 // ✅ NOW safe to initialize word count (after loading completes)
                 if (typeof initializeWordCount === 'function') {
@@ -12617,17 +12614,14 @@
             const loader = document.getElementById('honeyLoader');
             if (loader) loader.style.display = 'flex';
             
-            // Show emergency bypass button after 5 seconds
+            // Show emergency bypass button immediately
             const bypassBtn = document.getElementById('emergencyBypassBtn');
-            setTimeout(() => {
-                if (bypassBtn && loader && loader.style.display !== 'none') {
-                    bypassBtn.style.display = 'block';
-                    setTimeout(() => {
-                        bypassBtn.style.opacity = '1';
-                    }, 50);
-                    console.warn('⚠️ Emergency bypass button now available');
-                }
-            }, 5000);
+            if (bypassBtn) {
+                bypassBtn.style.display = 'block';
+                bypassBtn.style.opacity = '1';
+                console.log('🚨 Emergency bypass button visible');
+            }
+            
             if (loader) {
                 loader.style.display = 'flex';
                 loader.style.opacity = '1';
