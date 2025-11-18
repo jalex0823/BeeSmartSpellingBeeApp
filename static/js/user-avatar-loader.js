@@ -148,7 +148,7 @@ class UserAvatarLoader {
         console.log('📡 Loading avatar catalog from database...');
         
         try {
-            const response = await this._safeFetch('/api/avatars', {}, 1500, 1);
+            const response = await this._safeFetch('/api/avatars', {}, 5000, 2);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

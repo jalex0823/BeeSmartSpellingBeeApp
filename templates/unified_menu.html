@@ -6891,7 +6891,7 @@
                     }
                     return data;
                 })
-                .then(data => {
+                .then(async data => {
                 console.log('🧪 DEBUG: Response data:', data);
                 
                 // Stop simulated progress
@@ -6900,7 +6900,7 @@
                 // Complete animation at 100%
                 updateFileUploadProgress(100, '✅ Upload complete!', `Successfully loaded ${data.count || 0} words`);
                 
-                setTimeout(() => {
+                setTimeout(async () => {
                     hideFileUploadProgress();
                     
                     if (data.ok) {
