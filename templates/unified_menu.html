@@ -7054,7 +7054,7 @@
                     // Complete animation at 100%
                     updateFileUploadProgress(100, '✅ OCR complete!', `Found ${data.count || 0} words in image`);
                     
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         hideFileUploadProgress();
                         
                         const magicMessages = [
