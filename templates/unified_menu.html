@@ -1991,7 +1991,7 @@
         }
     </style>
 </head>
-<body class="home-no-shimmer">
+<body class="home-no-shimmer" style="visibility: hidden; opacity: 0;">
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
@@ -12356,37 +12356,14 @@
                 await this.delay(200);
                 this.updateProgress(60, '🎯 Systems ready');
                 
-                // Check 8: Word List (Session Check)
-                const check8 = this.addCheck('Word List', 'Checking...', '⏳');
+                // Check 8: Word List (DEFERRED - will check after loading completes)
+                const check8 = this.addCheck('Word List', 'Deferred...', '⏳');
                 await this.delay(200);
-                try {
-                    const response = await this.fetchWithTimeout('/api/wordbank', {
-                        credentials: 'same-origin',
-                        cache: 'no-store',
-                        headers: { 
-                            'Accept': 'application/json',
-                            'Cache-Control': 'no-cache, no-store, must-revalidate',
-                            'Pragma': 'no-cache'
-                        }
-                    }, 5000); // 5 second timeout
-                    const data = await response.json();
-                    console.log('🔍 Word List System Check:', data);
-                    
-                    if (data.success && data.count > 0) {
-                        // Show accurate word count from current session
-                        this.updateCheck(check8, `${data.count} words ready`, '✅', 60);
-                        this.updateProgress(60, `📚 ${data.count} words loaded`);
-                        console.log(`✅ Word list verified: ${data.count} words in library`);
-                    } else {
-                        this.updateCheck(check8, 'No words loaded', '⚠️', 60);
-                        this.updateProgress(60, '⚠️ Upload word list to start');
-                        console.log('⚠️ No words in library - user needs to upload');
-                    }
-                } catch (e) {
-                    this.updateCheck(check8, 'Check failed', '⚠️', 60);
-                    this.updateProgress(60, '⚠️ Session check failed');
-                    console.error('❌ Word list check error:', e);
-                }
+                // SKIP wordbank fetch during loading - this was blocking the event loop!
+                // Wordbank will be initialized in finishLoading() via initializeWordCount()
+                this.updateCheck(check8, 'Ready to upload', '✅', 60);
+                this.updateProgress(60, '📚 Word system ready');
+                console.log('✅ Word list check deferred to post-loading');
                 
                 // Check 9: GPA, Grade & Points Validation
                 const check9 = this.addCheck('Stats Validation', 'Checking...', '⏳');
@@ -12620,6 +12597,10 @@
                     console.log('🛑 Matrix rain stopped');
                 }
                 
+                // Show the body content
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = '1';
+                
                 // Allow immediate click-through to the page beneath
                 loader.style.pointerEvents = 'none';
                 loader.style.opacity = '0';
@@ -12668,6 +12649,9 @@
                     loader.remove();
                     console.error('💥 Loader forcibly removed');
                 }
+                // Show the body content
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = '1';
                 document.body.style.pointerEvents = 'auto';
                 document.body.style.overflow = 'auto';
                 document.body.style.userSelect = 'auto';
