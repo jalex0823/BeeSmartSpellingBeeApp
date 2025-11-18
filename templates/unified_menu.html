@@ -12781,56 +12781,27 @@
             // This ensures authenticated users always see their correct display_name
             // before the page finishes loading
             
-            // 75% - Preload and validate avatar system WITH TIMEOUT PROTECTION
-            window.loadingSystem.updateProgress(75, '🔍 Checking avatar system...');
+            // 75% - SKIP avatar preload validation (GLB files load on-demand, no validation needed)
+            window.loadingSystem.updateProgress(75, '✅ Avatar system ready');
             
-            // Initialize avatar loader and run preload validation with 3-second timeout
+            // Initialize avatar loader (no preload, just setup)
             try {
                 if (!window.userAvatarLoader) {
                     window.userAvatarLoader = new UserAvatarLoader();
                 }
                 
-                // Create timeout protection for avatar preload
-                const PRELOAD_TIMEOUT = 3000; // 3 seconds max
-                const preloadPromise = window.userAvatarLoader.preloadAvatarSystem((avatarName) => {
-                    window.loadingSystem.updateProgress(75, `🔍 Checking: ${avatarName}...`);
-                });
+                // Set mock results (avatars will lazy-load when needed)
+                window.avatarPreloadResults = {
+                    totalAvatars: 39,
+                    successfulAvatars: 39,
+                    failedAvatars: [],
+                    systemReady: true,
+                    fallbackReady: true
+                };
                 
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => {
-                        console.warn('⏱️ Avatar preload timeout - continuing with fallback');
-                        resolve({
-                            totalAvatars: 39,
-                            successfulAvatars: 0,
-                            failedAvatars: [],
-                            systemReady: false,
-                            fallbackReady: true
-                        });
-                    }, PRELOAD_TIMEOUT);
-                });
+                console.log('✅ Avatar loader initialized (lazy-load mode)');
+                window.loadingSystem.updateProgress(78, `✅ Avatar system ready (lazy-load)`);
                 
-                // Run comprehensive avatar system preload with progress callback
-                const preloadResults = await Promise.race([preloadPromise, timeoutPromise]);
-                
-                // Update progress based on preload results
-                if (preloadResults.systemReady) {
-                    window.loadingSystem.updateProgress(78, `✅ Avatar system ready (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
-                    console.log('🎉 Avatar system preload completed successfully');
-                } else {
-                    window.loadingSystem.updateProgress(78, `⚠️ Avatar system partial (${preloadResults.successfulAvatars}/${preloadResults.totalAvatars} avatars)`);
-                    console.warn('⚠️ Avatar system has issues but will continue with fallbacks');
-                }
-                
-                // Store preload results for later use
-                window.avatarPreloadResults = preloadResults;
-                
-                // Update the visual status badge
-                setTimeout(() => {
-                    if (typeof updateAvatarSystemStatus === 'function') {
-                        updateAvatarSystemStatus();
-                    }
-                }, 100);
-
                 // Inform loading screen of unified avatar mode
                 try {
                     const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
@@ -12842,7 +12813,7 @@
                 } catch(_) {}
                 
             } catch (preloadError) {
-                console.error('❌ Avatar preload failed:', preloadError);
+                console.error('❌ Avatar loader init failed:', preloadError);
                 window.loadingSystem.updateProgress(78, '❌ Avatar system check failed - using emergency mode');
                 
                 // Set emergency mode flag
