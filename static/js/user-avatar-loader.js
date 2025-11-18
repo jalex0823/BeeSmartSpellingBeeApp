@@ -50,8 +50,8 @@ class UserAvatarLoader {
         // Initialize fallback avatar
         this._initFallback();
         
-        // Quick DB connection check
-        this.verifyDatabaseConnection();
+        // DISABLED: Quick DB connection check - was blocking loader
+        // this.verifyDatabaseConnection();
     }
 
     /**
