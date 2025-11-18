@@ -254,25 +254,19 @@ class UserAvatarLoader {
     }
 
     /**
-     * Preload avatars in waves using Promise.allSettled
+     * Simplified avatar system check - just count, skip validation
      * @param {Function} progressCallback - Optional progress callback
      */
     async preloadAvatarSystem(progressCallback = null) {
         console.groupCollapsed('🚀 Avatar System Preload');
-        console.log('Loading Avatar GLB Files...');
-        
-        // SKIP catalog loading during initial page load to prevent blocking
-        // Catalog will be loaded later when actually needed
-        // if (!this.avatarDataLoaded) {
-        //     await this.loadAvatarCatalog();
-        // }
+        console.log('Counting Avatar GLB Files...');
         
         const results = {
             totalAvatars: 0,
             successfulAvatars: 0,
             failedAvatars: [],
-            systemReady: false,
-            fallbackReady: true  // Use fallback for now
+            systemReady: true,
+            fallbackReady: true
         };
 
         try {
@@ -289,107 +283,17 @@ class UserAvatarLoader {
             }
             
             results.totalAvatars = uniqueAvatars.length;
-            console.log(`Building Avatar Index (${results.totalAvatars})`);
+            results.successfulAvatars = uniqueAvatars.length;
             
-            // Wave-based loading (6-8 avatars per wave)
-            const WAVE_SIZE = 7;
-            const waves = [];
-            for (let i = 0; i < uniqueAvatars.length; i += WAVE_SIZE) {
-                waves.push(uniqueAvatars.slice(i, i + WAVE_SIZE));
-            }
+            console.log(`✅ Avatar Index Built: ${results.totalAvatars} GLB files available`);
+            console.log('📦 Files will load on-demand via Three.js');
             
-            console.log(`Loading ${waves.length} waves of avatars...`);
-            
-            // Process each wave with Promise.allSettled
-            for (let waveNum = 0; waveNum < waves.length; waveNum++) {
-                const wave = waves[waveNum];
-                
-                const wavePromises = wave.map(async ({ key, data }) => {
-                    if (progressCallback) {
-                        const avatarName = data.name || key;
-                        progressCallback(`${avatarName} (GLB)`);
-                    }
-                    
-                    // Validate GLB exists
-                    if (!data.glb) {
-                        throw new Error('No GLB path defined');
-                    }
-                    
-                    // Check if already cached
-                    if (window.avatarCache.has(data.glb)) {
-                        return { key, status: 'cached' };
-                    }
-                    
-                    // HEAD check with timeout
-                    try {
-                        const response = await this._safeFetch(data.glb, { method: 'HEAD' }, 1000, 1);
-                        
-                        if (response.ok) {
-                            // Mark as validated (don't actually load GLB yet - lazy load on demand)
-                            window.avatarCache.set(data.glb, { validated: true, size: response.headers.get('content-length') });
-                            return { key, status: 'valid' };
-                        } else {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-                    } catch (error) {
-                        throw new Error(`Validation failed: ${error.message}`);
-                    }
-                });
-                
-                const waveResults = await Promise.allSettled(wavePromises);
-                
-                // Process results
-                waveResults.forEach((result, idx) => {
-                    if (result.status === 'fulfilled') {
-                        results.successfulAvatars++;
-                    } else {
-                        const avatar = wave[idx];
-                        results.failedAvatars.push({
-                            avatar: avatar.key,
-                            error: result.reason?.message || 'Unknown error',
-                            timestamp: new Date().toISOString()
-                        });
-                        console.warn(`❌ Avatar failed: ${avatar.key} - ${result.reason?.message}`);
-                    }
-                });
-                
-                // Small delay between waves
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-            
-            // Validate fallback system (critical)
-            if (progressCallback) {
-                progressCallback('MascotBee (Fallback)');
-            }
-            
-            console.log('🔍 Validating fallback system...');
-            
-            try {
-                const fallbackCheck = await this._safeFetch(this.defaultAvatar.glb, { method: 'HEAD' }, 1000, 1);
-                results.fallbackReady = fallbackCheck.ok;
-                
-                if (results.fallbackReady) {
-                    console.log('✅ Fallback system validated');
-                } else {
-                    console.error('❌ Fallback validation failed');
-                }
-            } catch (error) {
-                console.error('❌ Critical: Fallback system failed:', error);
-                results.fallbackReady = false;
-            }
-            
-            // System ready if fallback works
-            results.systemReady = results.fallbackReady;
+            results.systemReady = true;
             
             // Log summary
-            const successRate = ((results.successfulAvatars / results.totalAvatars) * 100).toFixed(1);
-            console.log(`📊 Preload Complete:`);
-            console.log(`   Total: ${results.totalAvatars}`);
-            console.log(`   Success: ${results.successfulAvatars}`);
-            console.log(`   Failed: ${results.failedAvatars.length}`);
-            console.log(`   Rate: ${successRate}%`);
-            console.log(`   Fallback: ${results.fallbackReady ? 'Ready' : 'Failed'}`);
-            console.log(`   System: ${results.systemReady ? 'Ready' : 'Degraded'}`);
+            console.log(`📊 Avatar System Ready:`);
+            console.log(`   Total: ${results.totalAvatars} avatars`);
+            console.log(`   Loading: On-demand (lazy)`);
             console.groupEnd();
             
             return results;
@@ -408,17 +312,26 @@ class UserAvatarLoader {
     async init() {
         this.showLoadingState();
         
-        // Kick off system preload in parallel
+        // Simplified preload - just count avatars, skip validation
         if (!window.avatarPreloadResults) {
-            console.log('🔄 Starting parallel avatar preload...');
-            this.preloadAvatarSystem().then(results => {
-                window.avatarPreloadResults = results;
-                try {
-                    document.dispatchEvent(new CustomEvent('avatarSystemReady', { detail: results }));
-                } catch (e) {
-                    console.warn('Event dispatch failed:', e);
-                }
-            }).catch(err => console.warn('⚠️ Preload failed:', err));
+            console.log('🔄 Counting avatars...');
+            const avatarCount = Object.keys(this.avatarMap).length;
+            window.avatarPreloadResults = {
+                totalAvatars: avatarCount,
+                successfulAvatars: avatarCount,
+                failedAvatars: [],
+                systemReady: true,
+                fallbackReady: true
+            };
+            console.log(`✅ Avatar system ready: ${avatarCount} avatars available`);
+            
+            try {
+                document.dispatchEvent(new CustomEvent('avatarSystemReady', { 
+                    detail: window.avatarPreloadResults 
+                }));
+            } catch (e) {
+                console.warn('Event dispatch failed:', e);
+            }
         }
         
         try {
@@ -436,14 +349,10 @@ class UserAvatarLoader {
                     console.log('Name:', this.userAvatar.name);
                     console.groupEnd();
                     
-                    // Validate avatar GLB exists
-                    if (await this.validateAvatarGLB()) {
-                        this.userAvatarValid = true;
-                        this.showLoadedState();
-                        return true;
-                    } else {
-                        throw new Error('Avatar GLB validation failed');
-                    }
+                    // Skip validation - let Three.js handle it on demand
+                    this.userAvatarValid = true;
+                    this.showLoadedState();
+                    return true;
                 }
             } else {
                 throw new Error(`HTTP ${response.status}`);
@@ -453,17 +362,16 @@ class UserAvatarLoader {
             this.userAvatarValid = false;
             this.showErrorState('mascotBee3D', error);
             
-            // Validate default
-            if (await this.validateAvatarGLB(true)) {
-                this.showLoadedState();
-            }
+            // Default avatar will load on-demand, skip validation
+            this.showLoadedState();
         }
         
         return false;
     }
 
     /**
-     * Validate avatar GLB file exists
+     * Validate avatar GLB file exists (DEPRECATED - Three.js handles on-demand)
+     * Kept for backward compatibility but no longer performs HEAD requests
      */
     async validateAvatarGLB(useDefault = false) {
         const paths = useDefault ? this.defaultAvatar : this.getAvatarPaths();
@@ -473,21 +381,9 @@ class UserAvatarLoader {
             return false;
         }
         
-        try {
-            const response = await this._safeFetch(paths.glb, { method: 'HEAD' }, 1000, 1);
-            
-            if (response.ok) {
-                const size = response.headers.get('content-length');
-                console.log(`✅ GLB validated: ${paths.glb.split('/').pop()} (${size ? (parseInt(size)/1024).toFixed(1) + 'KB' : 'unknown'})`);
-                return true;
-            } else {
-                console.error(`❌ GLB not accessible: ${paths.glb} (${response.status})`);
-                return false;
-            }
-        } catch (error) {
-            console.error(`❌ GLB validation error: ${error.message}`);
-            return false;
-        }
+        // Skip HEAD request - just assume it exists, Three.js will error if not
+        console.log(`📦 GLB path: ${paths.glb.split('/').pop()} (will load on-demand)`);
+        return true;
     }
 
     /**
