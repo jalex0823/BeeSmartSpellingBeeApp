@@ -12570,9 +12570,10 @@
                 
                 this.updateProgress(100, '🎉 Ready to spell!');
                 
-                // ✅ Enable the "Tap to Start" button - require user interaction
-                console.log('🎯 All checks complete - waiting for user to tap...');
-                this.presentTapToStart();
+                // ✅ Auto-dismiss loader after validation passes
+                console.log('🎯 All checks complete - auto-starting app...');
+                await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause to show 100%
+                this.dismissLoader();
                 
                 // ✅ NOW safe to initialize word count (after loading completes)
                 if (typeof initializeWordCount === 'function') {
@@ -12651,7 +12652,8 @@
                 console.trace();
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
-                    window.loadingSystem.dismissLoader();
+                    // Auto-dismiss on timeout too
+                    setTimeout(() => window.loadingSystem.dismissLoader(), 500);
                 } else {
                     // Last resort: manually hide loader
                     const loader = document.getElementById('honeyLoader');
