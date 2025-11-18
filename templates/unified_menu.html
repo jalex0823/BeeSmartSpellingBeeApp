@@ -6929,11 +6929,6 @@
                         
                         // Show quiz-ready notification (async, uses WordBankManager)
                         showQuizReadyNotification();
-                    }
-                    
-                    // DON'T call updateWordCount() - it causes race condition and re-disables button
-                    // The button is already enabled above with the correct count from upload response
-                    console.log('✅ Text upload complete - quiz button enabled with', data.count, 'words');
                     } else {
                         console.log('🧪 DEBUG: Upload failed with data:', data);
                         
