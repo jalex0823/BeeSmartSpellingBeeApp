@@ -4234,7 +4234,7 @@ def process_upload_with_progress(session_id, request_obj):
         deduped = filtered
         print(f"✅ {len(deduped)} words passed kid-friendly filter")
         
-        update_upload_progress(session_id, "enriching", "Bees are flying to collect definitions...", "bees_fetching_definitions", 55)
+        update_upload_progress(session_id, "enriching", "Bees are pre-loading definitions from internal dictionary...", "bees_fetching_definitions", 55)
         
         # Enhanced enrichment with progress tracking and VALIDATION
         enriched = []
@@ -4246,7 +4246,7 @@ def process_upload_with_progress(session_id, request_obj):
             hint = r.get("hint", "").strip()
             
             progress = 55 + int((i + 1) / len(deduped) * 35)  # 55-90%
-            update_upload_progress(session_id, "enriching", f"Getting definition for: {word}", "bees_fetching_definitions", progress, word)
+            update_upload_progress(session_id, "enriching", f"📖 Pre-loading definition: {word}", "bees_fetching_definitions", progress, word)
             
             # ✅ ALWAYS enrich with internal dictionary for consistency
             # This ensures all words have complete definitions BEFORE quiz starts
@@ -4314,8 +4314,8 @@ def process_upload_with_progress(session_id, request_obj):
             session.modified = True
             time.sleep(0.2)
         
-        update_upload_progress(session_id, "completed", f"Success! {len(filtered_enriched)} words ready for spelling practice!", "bees_celebrating", 100)
-        complete_upload_session(session_id, True, f"🐝 Amazing! The bees collected {len(filtered_enriched)} spelling words and are ready for the quiz!")
+        update_upload_progress(session_id, "completed", f"✅ {len(filtered_enriched)} words with pre-loaded definitions ready!", "bees_celebrating", 100)
+        complete_upload_session(session_id, True, f"🐝 Amazing! {len(filtered_enriched)} words enriched with definitions - quiz starts instantly!")
         
     except Exception as e:
         complete_upload_session(session_id, False, f"Oops! The bees encountered an error: {str(e)}")
