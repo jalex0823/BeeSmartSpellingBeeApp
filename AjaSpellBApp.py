@@ -9679,6 +9679,8 @@ def api_get_avatars():
                 # Enrichment
                 for avatar in avatars:
                     base_path = f"/static/assets/avatars/{avatar.folder_path}"
+                    # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
+                    # All avatars are GLB format now. Database schema migration pending to rename obj_file → glb_file
                     is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
                     desc = avatar.description
                     if (avatar.slug or '').lower() in ('obee', 'o-bee'):
@@ -9729,19 +9731,14 @@ def api_get_avatars():
                     thumb_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
                     thumb_cb = _cachebust_url(thumb_url) if thumb_url else None
 
-                    # Build urls object with GLB support
-                    model_obj_url = f"{base_path}/{avatar.obj_file}"
+                    # Build URLs object - GLB-only (all avatars are GLB format)
+                    glb_url = f"{base_path}/{avatar.obj_file}"  # Field name is legacy but contains GLB path
                     urls_obj = {
-                        'model_obj': model_obj_url,
-                        'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-                        'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+                        'glb': glb_url,  # Primary GLB file path (GLTFLoader uses this)
+                        'model_obj': glb_url,  # DEPRECATED: Backward compatibility alias
                         'thumbnail': thumb_cb,
                         'preview': thumb_cb,
                     }
-                    
-                    # If it's a GLB file, add explicit glb key for GLTFLoader
-                    if is_glb:
-                        urls_obj['glb'] = model_obj_url
 
                     enriched_avatars.append({
                         'id': avatar.slug,
