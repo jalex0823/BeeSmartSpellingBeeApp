@@ -12447,14 +12447,44 @@
                 }
                 console.log('✅ Stats check deferred to post-loading');
                 
-                // Check 10: Internal Dictionary System (Pre-enriched Definitions) - DEFERRED
-                const check10 = this.addCheck('Dictionary System', 'Ready...', '✅');
+                // Check 10: Internal Dictionary System - PRELOAD BUILT-IN DICTIONARY
+                const check10 = this.addCheck('Dictionary System', 'Preloading...', '⏳');
                 await this.delay(200);
-                // SKIP dictionary status fetch - it's always available in backend
-                // No need to validate during loading
-                this.updateCheck(check10, 'Internal dictionary ready', '✅', 75);
-                this.updateProgress(75, '📖 Definitions ready');
-                console.log('✅ Dictionary check skipped (always available)');
+                try {
+                    // Preload the built-in dictionary by fetching a test word
+                    // This forces the backend to load Simple Wiktionary into memory
+                    const dictPreloadRes = await this.fetchWithTimeout('/api/word-info/preload', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        },
+                        body: JSON.stringify({ words: ['hello', 'world', 'test'] })
+                    }, 5000);
+                    
+                    if (dictPreloadRes.ok) {
+                        const dictData = await dictPreloadRes.json();
+                        const wordCount = dictData.preloaded || 3;
+                        this.updateCheck(check10, `Dictionary preloaded (${wordCount} entries cached)`, '✅', 75);
+                        this.updateProgress(75, `📖 Dictionary ready (${wordCount} words cached)`);
+                        console.log(`✅ Dictionary preloaded successfully: ${wordCount} entries`);
+                        window.dictionaryPreloaded = true;
+                    } else {
+                        // Fallback: dictionary will load on-demand
+                        this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
+                        this.updateProgress(75, '📖 Dictionary ready (will load on-demand)');
+                        console.warn('⚠️ Dictionary preload failed, will load on-demand');
+                        window.dictionaryPreloaded = false;
+                    }
+                } catch (dictError) {
+                    // Fallback: dictionary will load on-demand
+                    console.warn('Dictionary preload failed:', dictError);
+                    this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
+                    this.updateProgress(75, '📖 Dictionary ready (on-demand)');
+                    window.dictionaryPreloaded = false;
+                }
+                console.log('✅ Dictionary check complete');
                 
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue

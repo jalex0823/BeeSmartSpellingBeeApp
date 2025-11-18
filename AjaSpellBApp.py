@@ -4487,31 +4487,31 @@ def api_upload():
 
     # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
     # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
-    print(f"DEBUG /api/upload: Starting enrichment for {len(deduped)} words...")
+    print(f"📚 Enriching {len(deduped)} words using built-in dictionary...")
     import time
     enrichment_start = time.time()
     
+    # PRE-LOAD dictionary ONCE to avoid repeated lazy-loading
+    global DICTIONARY_CACHE
+    if not DICTIONARY_CACHE:
+        DICTIONARY_CACHE = load_dictionary_cache()
+    ensure_simple_wiktionary_loaded()  # Pre-load Wiktionary once
+    
     enriched = []
-    for idx, r in enumerate(deduped):
+    for r in deduped:
         word = r["word"]
         sentence = r.get("sentence", "").strip()
         hint = r.get("hint", "").strip()
         
-        if idx % 10 == 0 and idx > 0:
-            print(f"DEBUG /api/upload: Enriched {idx}/{len(deduped)} words...")
-        
         # If no sentence/definition provided, use built-in dictionary
         if not sentence and not hint:
-            print(f"DEBUG /api/upload: Enriching '{word}' (no sentence/hint provided)...")
             auto_definition = get_word_info(word)
-            print(f"DEBUG /api/upload: Got definition for '{word}': {auto_definition[:100]}...")
             enriched.append({
                 "word": word,
                 "sentence": auto_definition,
                 "hint": ""
             })
         else:
-            print(f"DEBUG /api/upload: Skipping enrichment for '{word}' (sentence='{sentence[:50] if sentence else ''}', hint='{hint[:50] if hint else ''}')")
             # If user provided a sentence, ensure it has a blank for the word
             if sentence and "_____" not in sentence:
                 # Try to replace the word with blank (case-insensitive)
@@ -4538,7 +4538,7 @@ def api_upload():
             })
     
     enrichment_time = time.time() - enrichment_start
-    print(f"DEBUG /api/upload: Enrichment completed in {enrichment_time:.2f} seconds for {len(enriched)} words")
+    print(f"✅ Enrichment completed in {enrichment_time:.2f}s for {len(enriched)} words")
     
     # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
     enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
@@ -4551,14 +4551,11 @@ def api_upload():
         deduped = deduped[:MAX_RECORDS]
 
     # CRITICAL VALIDATION: Check all definitions before quiz can start
-    print("DEBUG /api/upload: Validating wordbank definitions before storing...")
     is_valid, validation_error = validate_wordbank_definitions(deduped)
     
     if not is_valid:
-        print(f"ERROR /api/upload: Wordbank validation failed: {validation_error}")
+        print(f"❌ Wordbank validation failed: {validation_error}")
         return jsonify({"error": validation_error}), 400
-
-    print(f"DEBUG /api/upload: Processing {len(deduped)} words. Session before: {list(session.keys())}")
     
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
@@ -4577,24 +4574,17 @@ def api_upload():
     # Double-check quiz state was saved (Railway can drop session between requests)
     saved_state = get_quiz_state()
     if not saved_state:
-        print("ERROR /api/upload: Quiz state failed to persist! Retrying init...")
+        print("⚠️ Quiz state failed to persist! Retrying init...")
         init_quiz_state()
         session.modified = True
         time.sleep(0.2)
     
     # Verify wordbank was set correctly
     verify_wb = get_wordbank()
-    print(f"DEBUG /api/upload: After upload - set {len(deduped)} words, verified {len(verify_wb)} words in session")
-    print(f"DEBUG /api/upload: Session after: {list(session.keys())}")
-    print(f"DEBUG /api/upload: Session storage_id: {session.get('wordbank_storage_id')}")
-    print(f"DEBUG /api/upload: Session cookie will be: {session.sid if hasattr(session, 'sid') else 'N/A'}")
-    
-    # Debug: Print first word to verify format
-    if deduped:
-        print(f"DEBUG /api/upload: First word example: {deduped[0]}")
-    
     if len(verify_wb) != len(deduped):
-        print(f"WARNING /api/upload: Wordbank size mismatch! Set {len(deduped)}, got {len(verify_wb)}")
+        print(f"⚠️ Wordbank size mismatch! Set {len(deduped)}, got {len(verify_wb)}")
+    else:
+        print(f"✅ Successfully uploaded {len(deduped)} words")
     
     return jsonify({"ok": True, "count": len(deduped)})
 
@@ -5978,6 +5968,50 @@ def api_dictionary_lookup():
         "found": found_in_wiktionary or found_in_cache,
         "source": source  # ✅ All sources are internal (simple_wiktionary, internal_cache, or smart_fallback)
     })
+
+@app.route("/api/word-info/preload", methods=["POST"])
+def api_word_info_preload():
+    """
+    Preload the built-in dictionary during loading screen.
+    This forces Simple Wiktionary to load into memory so word processing is faster.
+    Accepts a list of common words to cache definitions for.
+    """
+    try:
+        data = request.get_json() or {}
+        words = data.get('words', ['hello', 'world', 'test', 'example', 'dictionary'])
+        
+        # Force-load Simple Wiktionary into memory
+        wiktionary = ensure_simple_wiktionary_loaded()
+        preloaded_count = 0
+        
+        # Pre-cache definitions for common words
+        for word in words:
+            try:
+                # This will cache the definition in DICTIONARY_CACHE
+                definition = get_word_info(word)
+                if definition:
+                    preloaded_count += 1
+            except Exception as e:
+                print(f"⚠️ Failed to preload '{word}': {e}")
+                continue
+        
+        print(f"✅ Dictionary preloaded: {preloaded_count}/{len(words)} words cached")
+        
+        return jsonify({
+            "success": True,
+            "preloaded": preloaded_count,
+            "total_requested": len(words),
+            "wiktionary_loaded": wiktionary is not None,
+            "cache_size": len(DICTIONARY_CACHE)
+        })
+        
+    except Exception as e:
+        print(f"❌ Dictionary preload failed: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "preloaded": 0
+        }), 500
 
 @app.route("/api/session_debug", methods=["GET"])
 def api_session_debug():
