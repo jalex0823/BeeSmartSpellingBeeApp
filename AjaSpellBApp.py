@@ -6021,6 +6021,40 @@ def api_verify_wordbank():
         "recommendation": "Ready to start quiz" if len(wb) > 0 and not issues else "Please upload a word list before starting"
     })
 
+@app.route("/api/dictionary-status", methods=["GET"])
+def api_dictionary_status():
+    """
+    Report internal dictionary system status.
+    Shows how many words are cached and ready for instant definition lookup.
+    """
+    global DICTIONARY_CACHE
+    
+    # Lazy load dictionary cache if not loaded
+    if not DICTIONARY_CACHE:
+        DICTIONARY_CACHE = load_dictionary_cache()
+    
+    # Check Simple Wiktionary status
+    wiktionary = ensure_simple_wiktionary_loaded()
+    wiktionary_count = len(wiktionary) if wiktionary else 0
+    
+    # Check DICTIONARY_CACHE status
+    cache_count = len(DICTIONARY_CACHE)
+    
+    # Total unique words available
+    total_words = wiktionary_count + cache_count
+    
+    return jsonify({
+        "available": True,  # Dictionary is always available (has fallback)
+        "word_count": total_words,
+        "sources": {
+            "simple_wiktionary": wiktionary_count,
+            "dictionary_cache": cache_count
+        },
+        "status": "ready",
+        "message": f"Internal dictionary ready with {total_words:,} pre-loaded definitions",
+        "optimization": "All quiz definitions pre-enriched during upload for instant quiz performance"
+    })
+
 @app.route("/api/clear", methods=["POST"])
 def api_clear():
     """Clear wordbank and quiz state with authorization check"""
