@@ -2105,20 +2105,11 @@ def get_wordbank() -> List[Dict[str, str]]:
             print(f"DEBUG get_wordbank: Migrating {len(wb)} words from session to WORD_STORAGE")
             set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
 
-    # Smart default load for brand-new sessions with nothing uploaded yet
-    # ⚠️ CRITICAL: Only load defaults if user has NEVER uploaded anything
-    if not wb and not session.get("skip_default_load", False) and not session.get("has_uploaded_once", False):
-        print("DEBUG get_wordbank: New/empty session detected, loading default demo words")
-        default_words = load_default_wordbank()
-        if default_words:
-            set_wordbank(default_words, is_user_upload=False)
-            wb = default_words
-            session["using_default_words"] = True
-    elif not wb and session.get("has_uploaded_once", False):
-        # 🔧 FIX: User previously uploaded but wordbank empty (session/storage loss)
-        print("⚠️ WARNING get_wordbank: User uploaded before but wordbank empty (server restart?)")
-        print("⚠️ WARNING get_wordbank: NOT loading defaults - user must re-upload")
-
+    # NO DEFAULT LOADING - Users must upload or type their own words
+    # Wordbank starts empty until user provides words
+    if not wb:
+        print("DEBUG get_wordbank: Wordbank is empty - user needs to upload or add words")
+    
     session["wordbank_count"] = len(wb)
     return wb
 
