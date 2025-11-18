@@ -8,8 +8,8 @@
     'use strict';
     
     // MASTER LOGO PATH - Change this to update logo everywhere
-    const MASTER_LOGO_PATH = '/static/images/BeeSmartSpellingBeeApplication.png';
-    const LOGO_VERSION = '20251112'; // Update this when logo changes to bust cache
+    const MASTER_LOGO_PATH = '/static/BeeSmartLogo.png';
+    const LOGO_VERSION = '20251117'; // Update this when logo changes to bust cache
     
     // Generate versioned logo URL
     const LOGO_URL = `${MASTER_LOGO_PATH}?v=${LOGO_VERSION}`;
