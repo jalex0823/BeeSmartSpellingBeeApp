@@ -29,10 +29,10 @@
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Matrix Rain Effect -->
     <script src="{{ url_for('static', filename='js/matrix-rain.js') }}"></script>
-    <!-- Three.js core MUST load before loaders; use ordered non-async scripts to avoid race causing THREE undefined -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
+    <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
