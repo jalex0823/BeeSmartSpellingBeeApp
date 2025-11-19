@@ -300,6 +300,12 @@ def save_dictionary_cache(cache_data):
 # Dictionary cache - loaded on-demand by get_word_info(), not at startup
 DICTIONARY_CACHE = {}
 
+# In-memory acceleration structures
+from collections import OrderedDict
+WORD_INFO_CACHE_MAX = 3000  # soft cap for LRU
+WORD_INFO_CACHE = OrderedDict()  # LRU of formatted definition sentences
+SIMPLE_WIKTIONARY_INDEX = None  # set of lowercase words for O(1) membership
+
 # Simple English Wiktionary - Lazy load on first use (for Random Word feature)
 # This improves Railway startup time by ~2-3 seconds
 SIMPLE_WIKTIONARY = None  # Loaded on-demand when random words are requested
@@ -310,7 +316,7 @@ def ensure_simple_wiktionary_loaded():
     Lazy-load Simple Wiktionary only when needed.
     This prevents blocking Railway app startup with 50K+ word dictionary load.
     """
-    global SIMPLE_WIKTIONARY, SIMPLE_WIKTIONARY_LOADED
+    global SIMPLE_WIKTIONARY, SIMPLE_WIKTIONARY_LOADED, SIMPLE_WIKTIONARY_INDEX
     
     if SIMPLE_WIKTIONARY_LOADED:
         return SIMPLE_WIKTIONARY
@@ -318,7 +324,13 @@ def ensure_simple_wiktionary_loaded():
     print("📚 Loading Simple English Wiktionary on-demand (first use)...")
     SIMPLE_WIKTIONARY = load_simple_wiktionary()
     SIMPLE_WIKTIONARY_LOADED = True
-    print(f"✅ Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready")
+    # Build fast index (lowercase keys already) for O(1) membership checks
+    try:
+        SIMPLE_WIKTIONARY_INDEX = set(SIMPLE_WIKTIONARY.keys())
+        print(f"✅ Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready (index built)")
+    except Exception as _idx_err:
+        SIMPLE_WIKTIONARY_INDEX = None
+        print(f"⚠️ Failed building wiktionary index: {_idx_err}")
     return SIMPLE_WIKTIONARY
 
 print("✅ Dictionary resources initialized (on-demand loading enabled)")
@@ -721,67 +733,94 @@ def _filter_definition(definition, word):
     
     return filtered
 
+def _cache_word_info(word_lower: str, formatted: str):
+    """LRU cache helper for formatted word info responses."""
+    try:
+        if not formatted:
+            return
+        if word_lower in WORD_INFO_CACHE:
+            WORD_INFO_CACHE.move_to_end(word_lower)
+            WORD_INFO_CACHE[word_lower] = formatted
+        else:
+            WORD_INFO_CACHE[word_lower] = formatted
+            if len(WORD_INFO_CACHE) > WORD_INFO_CACHE_MAX:
+                # Pop oldest
+                WORD_INFO_CACHE.popitem(last=False)
+    except Exception:
+        pass
+
 def get_word_info(word):
-    """Get definition and example sentence for a word. 
-    Priority: 1) Simple Wiktionary (50K words), 2) Cached definitions, 3) Smart fallback
-    Returns: Formatted definition string OR "Definition not available" for spelling-only quiz.
-    
-    ✅ USES ONLY BUILT-IN DICTIONARY - NO EXTERNAL API CALLS
+    """Fast word enrichment: definition + example sentence with blanks.
+    Priority:
+      1) Simple Wiktionary (indexed) – kid-friendly
+      2) Persistent DICTIONARY_CACHE (previous enrichments)
+      3) Smart fallback generator
+    All paths blank out the target word safely.
     """
-    global DICTIONARY_CACHE
-    
-    # Lazy load dictionary cache on first use
+    global DICTIONARY_CACHE, SIMPLE_WIKTIONARY_INDEX
+
+    if not word:
+        return "Definition not available for this word. Listen carefully and spell _____ correctly"
+
+    word_lower = word.lower().strip()
+
+    # Fast LRU hit
+    if word_lower in WORD_INFO_CACHE:
+        return WORD_INFO_CACHE[word_lower]
+
+    # Ensure caches
     if not DICTIONARY_CACHE:
         DICTIONARY_CACHE = load_dictionary_cache()
-    
-    word_lower = word.lower()
-    
-    # PRIORITY 1: Check Simple English Wiktionary FIRST (50K+ words, kid-friendly)
-    # Lazy-load if not already loaded (first use only)
     wiktionary = ensure_simple_wiktionary_loaded()
-    
-    if wiktionary and word_lower in wiktionary:
-        word_data = wiktionary[word_lower]
+
+    # PRIORITY 1: Simple Wiktionary via index (constant time membership)
+    if SIMPLE_WIKTIONARY_INDEX and word_lower in SIMPLE_WIKTIONARY_INDEX:
+        word_data = wiktionary.get(word_lower, {})
         definition = word_data.get("definition", "")
         example = word_data.get("example", "")
-        
         if definition:
-            # If we have an example, use it; otherwise create generic sentence
             if example and len(example) > 10:
                 example = _blank_word(example, word)
-                print(f"📖 Found '{word}' in Simple Wiktionary with example")
-                # Filter definition to remove target word
                 definition = _filter_definition(definition, word)
-                return f"{definition}. Fill in the blank: {example}"
+                formatted = f"{definition}. Fill in the blank: {example}"
+                print(f"📖 (indexed) '{word}' → wiktionary+example")
             else:
-                # Have definition but no example
-                print(f"📖 Found '{word}' in Simple Wiktionary (no example)")
-                return f"{definition}. Fill in the blank: Can you spell _____ correctly?"
-    
-    # PRIORITY 2: Check previously cached definitions (from old API calls or manual entries)
+                formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+                print(f"📖 (indexed) '{word}' → wiktionary (no example)")
+            _cache_word_info(word_lower, formatted)
+            return formatted
+
+    # PRIORITY 2: Persistent DICTIONARY_CACHE
     if word_lower in DICTIONARY_CACHE:
         word_data = DICTIONARY_CACHE[word_lower]
         definition = word_data.get("definition", "")
         example = word_data.get("example", "")
-        if definition and example:
-            definition = _filter_definition(definition, word)
-            example = _blank_word(example, word)
-            print(f"✅ Found '{word}' in dictionary cache")
-            return f"{definition}. Fill in the blank: {example}"
+        if definition:
+            if example:
+                definition = _filter_definition(definition, word)
+                example = _blank_word(example, word)
+                formatted = f"{definition}. Fill in the blank: {example}"
+            else:
+                formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
+            print(f"✅ Cache hit '{word}'")
+            _cache_word_info(word_lower, formatted)
+            return formatted
     
-    # PRIORITY 3: Smart fallback - NO EXTERNAL API CALLS
-    # This generates a helpful prompt even if word is not in our dictionary
+    # PRIORITY 3: Smart fallback - deterministic enrichment
     try:
         fb = generate_smart_fallback(word)
         definition = fb.get("definition", "A word to spell")
         example = fb.get("example", "Can you spell _____ correctly?")
         example = _blank_word(example, word)
-        print(f"🟨 Using smart fallback for '{word}' ({fb.get('source','fallback')})")
-        return f"{definition}. Fill in the blank: {example}"
+        formatted = f"{definition}. Fill in the blank: {example}"
+        print(f"🟨 Fallback '{word}' ({fb.get('source','fallback')})")
+        _cache_word_info(word_lower, formatted)
+        return formatted
     except Exception as _e:
-        # Absolute last resort
+        formatted = "Definition not available for this word. Listen carefully and spell _____ correctly"
+        _cache_word_info(word_lower, formatted)
         print(f"⚠️ Fallback failed for '{word}': {_e}")
-        return "Definition not available for this word. Listen carefully and spell _____ correctly"
+        return formatted
 
 
 def validate_wordbank_definitions(wordbank: List[Dict]) -> tuple[bool, str]:
