@@ -5253,40 +5253,41 @@ def check_newly_unlocked_avatars(old_honey_points, new_honey_points):
     try:
         from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
         from models import Avatar
-        
+
         newly_unlocked = []
-        
-        for avatar_config in AVATARS_CATALOG:
+
+        # Use AVATAR_CATALOG directly (AVATARS_CATALOG alias may not yet be set here)
+        for avatar_config in AVATAR_CATALOG:
             avatar_slug = avatar_config.get('id')
             if not avatar_slug:
                 continue
-            
+
             # Check if avatar was locked before but unlocked now
             old_status = check_avatar_unlocked(avatar_slug, old_honey_points, [])
             new_status = check_avatar_unlocked(avatar_slug, new_honey_points, [])
-            
+
             # Skip if was already unlocked or still locked
             if old_status.get('unlocked') or not new_status.get('unlocked'):
                 continue
-            
+
             # Get avatar details from database
             avatar = Avatar.query.filter_by(slug=avatar_slug, is_active=True).first()
             if not avatar:
                 continue
-            
+
             # Build thumbnail URL
             base_path = f"/static/assets/avatars/{avatar.folder_path}"
             thumbnail_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
-            
+
             newly_unlocked.append({
                 'slug': avatar.slug,
                 'name': avatar.name,
                 'description': avatar.description or f'{avatar.name} is now available!',
                 'thumbnail': thumbnail_url
             })
-        
+
         return newly_unlocked
-    
+
     except Exception as e:
         print(f"⚠️ Error checking newly unlocked avatars: {e}")
         return []
@@ -5596,7 +5597,8 @@ def api_answer():
                     purchased_avatars = current_user.purchased_avatars or []
                     
                     # Find avatars that were locked before but are now unlocked
-                    for avatar_data in AVATARS_CATALOG:
+                    # Iterate the catalog directly; alias may not be available yet
+                    for avatar_data in AVATAR_CATALOG:
                         avatar_id = avatar_data.get('id')
                         # Check if avatar was locked with old points but unlocked with new points
                         old_unlock_result = check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
@@ -6003,6 +6005,114 @@ def api_word_info_preload():
             "error": str(e),
             "preloaded": 0
         }), 500
+
+# ===============================
+# Word Info Prefetch (Progress)
+# ===============================
+from threading import Thread, Lock
+import uuid as _uuid
+
+PREFETCH_JOBS = {}
+PREFETCH_JOBS_LOCK = Lock()
+
+def _start_prefetch_job(words, mode='both'):
+    """Create and start a background job to warm up definitions/sentences.
+    Returns a job_id string.
+    """
+    job_id = str(_uuid.uuid4())
+    job = {
+        'id': job_id,
+        'total': len(words),
+        'current': 0,
+        'done': False,
+        'cancelled': False,
+        'errors': 0,
+        'mode': mode,
+        'last_word': None,
+    }
+    with PREFETCH_JOBS_LOCK:
+        PREFETCH_JOBS[job_id] = job
+
+    def worker():
+        try:
+            for w in words:
+                with PREFETCH_JOBS_LOCK:
+                    if job.get('cancelled'):
+                        break
+                try:
+                    # Warm cache by calling get_word_info (uses internal sources only)
+                    _ = get_word_info(w)
+                except Exception as ex:
+                    print(f"⚠️ Prefetch error for '{w}': {ex}")
+                    with PREFETCH_JOBS_LOCK:
+                        job['errors'] += 1
+                finally:
+                    with PREFETCH_JOBS_LOCK:
+                        job['current'] += 1
+                        job['last_word'] = w
+            with PREFETCH_JOBS_LOCK:
+                if not job.get('cancelled'):
+                    job['done'] = True
+        except Exception as e:
+            print(f"❌ Prefetch job crashed: {e}")
+            with PREFETCH_JOBS_LOCK:
+                job['errors'] += 1
+                job['done'] = True
+
+    Thread(target=worker, daemon=True).start()
+    return job_id
+
+@app.route('/api/word-info/prefetch/start', methods=['POST'])
+def api_word_info_prefetch_start():
+    """Start prefetching word info for the current wordbank.
+    Returns a job_id to poll for progress.
+    """
+    try:
+        data = request.get_json() or {}
+        mode = data.get('mode', 'both')
+        # Get current wordbank words
+        rows = get_wordbank() or []
+        words = [r.get('word') for r in rows if isinstance(r, dict) and r.get('word')]
+        if not words:
+            return jsonify({'success': False, 'error': 'No words to prefetch', 'total': 0}), 400
+
+        job_id = _start_prefetch_job(words, mode=mode)
+        with PREFETCH_JOBS_LOCK:
+            total = PREFETCH_JOBS[job_id]['total']
+        return jsonify({'success': True, 'job_id': job_id, 'total': total})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/word-info/prefetch/status', methods=['GET'])
+def api_word_info_prefetch_status():
+    job_id = request.args.get('id')
+    if not job_id:
+        return jsonify({'success': False, 'error': 'Missing id'}), 400
+    with PREFETCH_JOBS_LOCK:
+        job = PREFETCH_JOBS.get(job_id)
+        if not job:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        total = max(job.get('total') or 0, 1)
+        current = min(job.get('current') or 0, total)
+        done = bool(job.get('done'))
+        cancelled = bool(job.get('cancelled'))
+        last_word = job.get('last_word')
+        errors = job.get('errors')
+        progress = current / float(total)
+    return jsonify({'success': True, 'job_id': job_id, 'total': total, 'current': current, 'progress': progress, 'done': done, 'cancelled': cancelled, 'last_word': last_word, 'errors': errors})
+
+@app.route('/api/word-info/prefetch/cancel', methods=['POST'])
+def api_word_info_prefetch_cancel():
+    data = request.get_json() or {}
+    job_id = data.get('id')
+    if not job_id:
+        return jsonify({'success': False, 'error': 'Missing id'}), 400
+    with PREFETCH_JOBS_LOCK:
+        job = PREFETCH_JOBS.get(job_id)
+        if not job:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        job['cancelled'] = True
+    return jsonify({'success': True})
 
 @app.route("/api/session_debug", methods=["GET"])
 def api_session_debug():
