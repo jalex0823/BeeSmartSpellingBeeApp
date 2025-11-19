@@ -455,18 +455,20 @@ class UserAvatarLoader {
                     const height = Math.max(120, Math.floor(rect.height));
                     
                     // Create 3D instance
-                    // Make main-page avatar larger on screen without changing container size
+                    // Make main-page avatar larger on screen and reduce animations
                     const isMainHero = containerId === 'mascotBee3D';
                     new window.SmartyBee3D(containerId, {
                         width,
                         height,
-                        autoRotate: true,
-                        enableInteraction: true,
+                        // Keep the hero static by default on the home screen
+                        autoRotate: isMainHero ? false : true,
+                        enableInteraction: isMainHero ? false : true,
+                        idleAnimation: isMainHero ? false : true,
                         glbPath: data.glb,
                         modelPath: data.glb,
                         // Hero framing: bring camera closer for larger on-screen presence
-                        zoom: isMainHero ? 1.25 : 1.0,
-                        cameraDistanceFactor: 1.8,
+                        zoom: isMainHero ? 1.8 : 1.0,
+                        cameraDistanceFactor: isMainHero ? 1.6 : 1.8,
                         verticalOffset: 0.35
                     });
                     

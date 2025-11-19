@@ -32,7 +32,10 @@
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     
-    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed')"></script>
+    <!-- Three.js Loaders - Must load after Three.js core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" onerror="console.warn('OBJLoader CDN failed'); window.OBJ_LOADER_FAILED = true;"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js" onerror="console.warn('MTLLoader CDN failed'); window.MTL_LOADER_FAILED = true;"></script>
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
@@ -3217,8 +3220,11 @@
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title="💾 Save your word list with definitions">
                     💾 Export List
                 </button>
-                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); importWordList();" title="📥 Load a previously saved CSV word list">
-                    📥 Import CSV File
+                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); importWordList();" title="📥 Load a previously saved word list (CSV, TXT, JSON, DOCX, PDF)">
+                    📥 Import Word List
+                </button>
+                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); refreshCurrentWords();" title="🔄 Refresh current word list and update counts">
+                    🔄 Refresh Words
                 </button>
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); clearAll();" title="🗑️ Start fresh with a new word list">
                     🧹 Start Fresh
@@ -3260,7 +3266,7 @@
             </section>
             
             <!-- Hidden file input for import -->
-            <input type="file" id="importFileInput" accept=".json,.csv" style="display: none;" onchange="handleImportFile(this)">
+            <input type="file" id="importFileInput" accept=".json,.csv,.txt,.docx,.pdf,text/*" style="display: none;" onchange="handleImportFile(this)">
         </div>
     </div>
 
@@ -7489,60 +7495,56 @@
                     
                     const wordCount = data.wordbank_count || 0;
                     
-                    // 🎲 NEW: If wordbank is empty, offer random 10-word list
+                    // Helper: quick navigate to quiz with friendly loading + sound
+                    const navigateToQuiz = () => {
+                        if (window.magicalEffects) {
+                            window.magicalEffects.playChimeSounds();
+                        }
+                        showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                        setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                    };
+                    
+                    // 🎯 Resilience: if verify claims 0 words, re-check main wordbank endpoint (race after upload)
                     if (wordCount === 0) {
-                        showRandomWordListModal(
-                            // onConfirm - User wants random words
-                            () => {
-                                console.log('🎲 User accepted random word list');
-                                showLoadingMessage('🎲 Selecting 10 random words for you...');
-                                
-                                // Call the random words API (difficulty 2 = Easy, 10 words)
-                                fetch('/api/random-words', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        difficulty: 2,
-                                        count: 10
-                                    })
-                                })
-                                .then(response => response.json())
-                                .then(randomData => {
-                                    if (randomData.success && randomData.count > 0) {
-                                        console.log(`✅ Loaded ${randomData.count} random words`);
-                                        showSuccessMessage(`Great! ${randomData.count} random words loaded! 🎲🐝`);
-                                        
-                                        // Update word count displays
-                                        WordBankManager.updateAllDisplays(true);
-                                        
-                                        // Now start the quiz
-                                        setTimeout(() => {
-                                            if (window.magicalEffects) {
-                                                window.magicalEffects.playChimeSounds();
-                                            }
-                                            showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                                            setTimeout(() => {
-                                                window.location.href = '/quiz';
-                                            }, 150);
-                                        }, 800);
-                                    } else {
-                                        showErrorMessage('Could not load random words. Please try uploading your own word list! 📝');
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('❌ Failed to load random words:', error);
-                                    showErrorMessage('Oops! Could not load random words. Please try uploading your own list! 📝');
-                                });
-                            },
-                            // onCancel - User declined random words
-                            () => {
-                                console.log('🚫 User declined random word list');
-                                // Modal closes, nothing happens
+                        return WordBankManager.getCount(true).then(cnt => {
+                            if (cnt > 0) {
+                                console.log('🔁 Verify said 0, but primary wordbank shows', cnt, '→ proceeding to quiz');
+                                navigateToQuiz();
+                                return;
                             }
-                        );
-                        return;
+                            // Still empty → offer random words
+                            showRandomWordListModal(
+                                // onConfirm - User wants random words
+                                () => {
+                                    console.log('🎲 User accepted random word list');
+                                    showLoadingMessage('🎲 Selecting 10 random words for you...');
+                                    
+                                    // Call the random words API (difficulty 2 = Easy, 10 words)
+                                    fetch('/api/random-words', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ difficulty: 2, count: 10 })
+                                    })
+                                    .then(response => response.json())
+                                    .then(randomData => {
+                                        if (randomData.success && randomData.count > 0) {
+                                            console.log(`✅ Loaded ${randomData.count} random words`);
+                                            showSuccessMessage(`Great! ${randomData.count} random words loaded! 🎲🐝`);
+                                            WordBankManager.updateAllDisplays(true);
+                                            setTimeout(navigateToQuiz, 800);
+                                        } else {
+                                            showErrorMessage('Could not load random words. Please try uploading your own word list! 📝');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('❌ Failed to load random words:', error);
+                                        showErrorMessage('Oops! Could not load random words. Please try uploading your own list! 📝');
+                                    });
+                                },
+                                // onCancel - User declined random words
+                                () => { console.log('🚫 User declined random word list'); }
+                            );
+                        });
                     }
                     
                     // Log first few words for user verification
@@ -7551,20 +7553,22 @@
                         console.log(`📚 Quiz will use ${wordCount} words. Preview: ${previewWords}...`);
                     }
                     
-                    // Play magical sound
-                    if (window.magicalEffects) {
-                        window.magicalEffects.playChimeSounds();
-                    }
-                    
-                    // Show loading briefly, then navigate
-                    showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                    setTimeout(() => {
-                        window.location.href = '/quiz';
-                    }, 150);
+                    // Proceed to quiz
+                    navigateToQuiz();
                 })
                 .catch(error => {
                     console.error('❌ Pre-quiz wordbank verification failed:', error);
-                    showErrorMessage('Oops! Please try uploading your word list again.');
+                    // Soft fallback: if the primary wordbank endpoint shows words, proceed anyway (handles verify lag/missing route)
+                    WordBankManager.getCount(true).then(cnt => {
+                        if (cnt > 0) {
+                            console.log('🛟 Verify failed but', cnt, 'words detected via /api/wordbank → starting quiz');
+                            if (window.magicalEffects) { window.magicalEffects.playChimeSounds(); }
+                            showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                            setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                        } else {
+                            showErrorMessage('Oops! Please try uploading your word list again.');
+                        }
+                    });
                 });
         }
         
@@ -7686,6 +7690,20 @@
         function create3DBeeHiveAnimation() {
             const container = document.getElementById('beeHiveLoader');
             if (!container) return;
+            
+            // Check if Three.js and loaders are available
+            if (typeof THREE === 'undefined') {
+                console.warn('⚠️ Three.js not loaded - using fallback animation');
+                createFallbackBeeAnimation(container);
+                return;
+            }
+            
+            // Check if loaders are available
+            if (typeof THREE.OBJLoader === 'undefined' || typeof THREE.MTLLoader === 'undefined') {
+                console.warn('⚠️ Three.js loaders not loaded - using simple 3D animation');
+                createSimple3DAnimation(container);
+                return;
+            }
             
             // Clear any existing content
             container.innerHTML = '';
@@ -7885,6 +7903,82 @@
                     container.cleanup();
                 }
                 overlay.style.display = 'none';
+            }
+        }
+
+        // Fallback animations for when Three.js isn't available
+        function createFallbackBeeAnimation(container) {
+            container.innerHTML = `
+                <div style="
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(45deg, #FFD700, #FFA500);
+                    border-radius: 50%;
+                ">
+                    <div style="
+                        font-size: 4rem;
+                        animation: buzzing 1s ease-in-out infinite;
+                    ">🐝</div>
+                </div>
+                <style>
+                    @keyframes buzzing {
+                        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                        25% { transform: translate(2px, -2px) rotate(2deg); }
+                        50% { transform: translate(-2px, 0px) rotate(-1deg); }
+                        75% { transform: translate(1px, 2px) rotate(1deg); }
+                    }
+                </style>
+            `;
+        }
+
+        function createSimple3DAnimation(container) {
+            try {
+                container.innerHTML = '';
+                
+                // Create simple Three.js scene without loaders
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(45, 200 / 200, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ 
+                    alpha: true, 
+                    antialias: true 
+                });
+                
+                renderer.setSize(200, 200);
+                renderer.setClearColor(0x000000, 0);
+                container.appendChild(renderer.domElement);
+                
+                // Simple golden sphere as beehive
+                const geometry = new THREE.SphereGeometry(1, 8, 6);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: 0xFFD700,
+                    wireframe: true
+                });
+                const hive = new THREE.Mesh(geometry, material);
+                scene.add(hive);
+                
+                camera.position.z = 3;
+                
+                // Simple rotation animation
+                function animate() {
+                    requestAnimationFrame(animate);
+                    hive.rotation.x += 0.01;
+                    hive.rotation.y += 0.01;
+                    renderer.render(scene, camera);
+                }
+                animate();
+                
+                // Store cleanup function
+                container.cleanup = function() {
+                    renderer.dispose();
+                };
+                
+            } catch (error) {
+                console.warn('Simple 3D animation failed:', error);
+                createFallbackBeeAnimation(container);
             }
         }
         
@@ -9028,6 +9122,31 @@
         `;
         document.head.appendChild(animationStyles);
         
+        // Refresh current word list function
+        async function refreshCurrentWords() {
+            console.log('🔄 Refreshing current word list...');
+            
+            try {
+                showLoadingMessage('🔄 Refreshing word list and updating counts...');
+                
+                // Force refresh word bank manager cache
+                WordBankManager.invalidateCache();
+                
+                // Update all displays with fresh data
+                await WordBankManager.updateAllDisplays(true);
+                
+                hideLoadingMessage();
+                showSuccessMessage('✨ Word list refreshed successfully! 🔄');
+                
+                console.log('✅ Word list refresh completed');
+                
+            } catch (error) {
+                console.error('❌ Error refreshing word list:', error);
+                hideLoadingMessage();
+                showErrorMessage('❌ Failed to refresh word list. Please try again.');
+            }
+        }
+        
         function clearAll() {
             console.log('🔧 clearAll function called');
             
@@ -9091,9 +9210,18 @@
                         }
                         
                         // User confirmed twice, proceed with deletion
-                        showLoadingMessage('🧹 Clearing all word lists and progress...');
+                        showLoadingMessage('🧹 Clearing all word lists and progress...<div id="emergencyEscape" style="display: none; margin-top: 15px;"><button onclick="window.location.reload()" style="background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">🆘 Force Refresh</button></div>');
                         
-                        fetch('/api/clear', {
+                        // Show emergency escape button after 5 seconds
+                        const emergencyTimer = setTimeout(() => {
+                            const escapeButton = document.getElementById('emergencyEscape');
+                            if (escapeButton) {
+                                escapeButton.style.display = 'block';
+                            }
+                        }, 5000);
+                        
+                        // Add timeout handling to prevent infinite loading
+                        const clearRequest = fetch('/api/clear', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -9105,8 +9233,21 @@
                                 confirmed: true,
                                 word_count: wordCount
                             })
+                        });
+
+                        // Timeout after 10 seconds if request doesn't complete
+                        const timeoutPromise = new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000);
+                        });
+
+                        Promise.race([clearRequest, timeoutPromise])
+                        .then(response => {
+                            clearTimeout(emergencyTimer); // Clear the emergency timer on success
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
                         })
-                        .then(response => response.json())
                         .then(data => {
                             hideLoadingMessage();
                             if (data.ok) {
@@ -9150,6 +9291,7 @@
                             }
                         })
                         .catch(error => {
+                            clearTimeout(emergencyTimer); // Clear the emergency timer on error
                             hideLoadingMessage();
                             console.error('Clear error:', error);
                             showErrorMessage('❌ Failed to clear data. Please try again.');
@@ -9220,11 +9362,14 @@
             const filename = file.name;
             const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
             
-            if (ext !== '.json' && ext !== '.csv') {
-                showErrorMessage('Please upload a .json or .csv file');
+            // Accept text files, CSV files, JSON files, and document files (like Upload does)
+            if (ext !== '.json' && ext !== '.csv' && ext !== '.txt' && ext !== '.docx' && ext !== '.pdf') {
+                showErrorMessage('Please upload a .json, .csv, .txt, .docx, or .pdf file');
                 input.value = ''; // Reset file input
                 return;
             }
+            
+            console.log('📥 Starting import for file:', filename, 'type:', ext);
             
             // Show animated progress indicator
             showFileUploadProgress(filename);
@@ -9257,14 +9402,14 @@
                 body: formData
             })
             .then(response => response.json())
-            .then(data => {
+            .then(async data => {
                 // Stop simulated progress
                 clearInterval(progressInterval);
                 
                 // Complete animation at 100%
                 updateFileUploadProgress(100, '✅ Import complete!', `Loaded ${data.count || 0} words`);
                 
-                setTimeout(() => {
+                setTimeout(async () => {
                     hideFileUploadProgress();
                     input.value = ''; // Reset file input
                 
@@ -9274,37 +9419,26 @@
                     const wordPlural = wordCount === 1 ? 'word' : 'words';
                     showSuccessMessage(`🎉 Successfully imported ${wordCount} ${wordPlural}!`);
                     
-                    // Enable Start Quiz button IMMEDIATELY (mobile fix)
-                    if (data.count > 0) {
-                        const btn = document.getElementById('startQuizBtn');
-                        btn.disabled = false;
-                        btn.removeAttribute('disabled');
-                        btn.innerHTML = `🚀 Start Quiz (${data.count} words)`;
-                        btn.classList.add('ready-to-play');
-                        btn.classList.remove('waiting-to-play');
-                        
-                        // Force style update for mobile
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                        btn.style.pointerEvents = 'auto';
-                        
-                        // Force reflow
-                        btn.offsetHeight;
-                        
-                        // Show quiz-ready notification (async, uses WordBankManager)
-                        showQuizReadyNotification();
-                        
-                        console.log('✅ Quiz button enabled after import:', {
-                            disabled: btn.disabled,
-                            hasDisabledAttr: btn.hasAttribute('disabled'),
-                            classes: btn.className,
-                            wordCount: data.count
-                        });
-                    }
+                    // ✅ Use centralized WordBankManager to update all displays consistently
+                    await WordBankManager.updateAllDisplays(true);
                     
-                        // Then update word count display (redundant but ensures consistency)
-                        setTimeout(() => updateWordCount(), 500);
-                    } else {
+                    // Persist latest word list for mobile restore (fetch enriched list)
+                    try { 
+                        fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
+                            .then(r=>r.json()).then(wb=>{ 
+                                if(wb && wb.words && window.persistUploadedWords){ 
+                                    window.persistUploadedWords(wb.words); 
+                                } 
+                            }); 
+                    } catch(_){ }
+                    
+                    console.log('✅ Import complete - WordBankManager updated displays:', wordCount, 'words');
+                    
+                    // Show quiz-ready notification (async, uses WordBankManager)
+                    if (wordCount > 0) {
+                        showQuizReadyNotification();
+                    }
+                } else {
                         showErrorMessage(data.error || 'Import failed. Please check your file format.');
                     }
                 }, 500); // Show completion message briefly
@@ -9773,7 +9907,7 @@
                     { name: 'Super Bee', file: 'SuperBee.glb' },
                     { name: 'Queen Bee', file: 'QueenBee.glb' },
                     { name: 'J‑Rock Bee', file: 'JRockBee.glb' },
-                    { name: 'Knight Bee', file: 'BeeKnight.glb' }
+                    { name: 'Knight Bee', file: 'KnightBee.glb' }
                 ];
                 const pool = [
                     { name: 'Brother Bee', file: 'BrotherBee.glb' },
@@ -9807,6 +9941,32 @@
                 }
                 const candidates = priority.concat(leftovers.slice(0, Math.max(0, wantTotal - priority.length)));
 
+                // Fallback function for when GLTFLoader is not available
+                function createCarouselFallback(container) {
+                    container.innerHTML = `
+                        <div style="
+                            width: 100%;
+                            height: 180px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: linear-gradient(45deg, #FFD700, #FFA500);
+                            border-radius: 12px;
+                            color: #5A2C15;
+                            font-size: 1rem;
+                            text-align: center;
+                            padding: 20px;
+                            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.3);
+                        ">
+                            <div>
+                                <div style="font-size: 3rem; margin-bottom: 10px;">🐝</div>
+                                <div style="font-weight: 600;">Avatar Preview</div>
+                                <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;">Loading avatars...</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 // Three.js scene setup
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(45, 240/180, 0.1, 1000);
@@ -9831,6 +9991,13 @@
                 const dir = new THREE.DirectionalLight(0xffffff, 0.9);
                 dir.position.set(4, 6, 6);
                 scene.add(dir);
+
+                // Check if GLTFLoader is available
+                if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
+                    console.warn('GLTFLoader not available - using fallback');
+                    createCarouselFallback(canvasWrap);
+                    return;
+                }
 
                 const loader = new THREE.GLTFLoader();
                 let currentGroup = null;   // currently visible group (model + podium)

@@ -143,12 +143,79 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 0.6rem;
-        background: rgba(255, 255, 255, 0.88);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
         border-radius: 20px;
         padding: 1rem;
         box-shadow: 0 12px 25px rgba(255, 193, 7, 0.25);
         border: 2px solid rgba(255, 193, 7, 0.35);
         margin-bottom: 0.75rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    
+    /* New header layout with progress on left, exit on right */
+    .quiz-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    
+    .progress-percentage {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #FF6B35;
+        background: linear-gradient(135deg, #FFE082 0%, #FFD54F 100%);
+        padding: 0.4rem 0.8rem;
+        border-radius: 16px;
+        border: 2px solid rgba(255, 107, 53, 0.3);
+        box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+    }
+    
+    /* Enhanced Exit Button (top-right) */
+    .exit-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .exit-button:hover {
+        background: linear-gradient(135deg, #F7931E 0%, #FF6B35 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .exit-button .exit-icon {
+        font-size: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .exit-button:hover .exit-icon {
+        transform: scale(1.1);
     }
     
     /* Honey Jar centered at top */
@@ -662,6 +729,28 @@ if ('speechSynthesis' in window) {
     
     /* Mobile responsiveness */
     @media (max-width: 768px) {
+        /* Mobile header layout adjustments */
+        .quiz-header-top {
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .progress-section {
+            align-items: center;
+            text-align: center;
+        }
+        
+        .progress-percentage {
+            font-size: 1rem;
+            padding: 0.3rem 0.6rem;
+        }
+        
+        .exit-button {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.7rem;
+        }
+        
         .jar-svg {
             width: 140px; /* Slightly smaller for space */
             height: 160px;
@@ -2742,15 +2831,16 @@ if ('speechSynthesis' in window) {
 <div class="quiz-container quiz-shell">
     <!-- Quiz Header -->
     <div class="quiz-header">
-        <!-- Back button and question count -->
-        <div class="progress-info">
-            <div class="progress-text">
-                <a href="#" onclick="confirmBackToMenu(event)" class="back-button">
-                    <span class="arrow">🔙</span>
-                    <span>Back to Menu</span>
-                </a>
+        <!-- Exit button (top-right) and Progress (top-left) -->
+        <div class="quiz-header-top">
+            <div class="progress-section">
+                <div class="progress-percentage" id="progressPercentage">Progress: 0% (0 of 0 words)</div>
                 <span id="progressText">Question 1 of 10</span>
             </div>
+            <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
+                <span class="exit-icon">�</span>
+                <span>Exit Quiz</span>
+            </a>
         </div>
 
         <div class="score-display">
@@ -5190,7 +5280,7 @@ class QuizManager {
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
-            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
+            this.updateProgressDisplays(questionNumber, this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -6066,7 +6156,7 @@ class QuizManager {
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
-            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
+            this.updateProgressDisplays(questionNumber, this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -6794,6 +6884,27 @@ class QuizManager {
         
         // 🌈 Update themed background based on progress
         this.updateThemedBackground(correct, this.totalWords);
+    }
+    
+    /**
+     * Update both progress text and percentage displays
+     * @param {number} current - Current word index (1-based)
+     * @param {number} total - Total number of words
+     */
+    updateProgressDisplays(current, total) {
+        // Update traditional question counter
+        const progressText = document.getElementById('progressText');
+        if (progressText) {
+            progressText.textContent = `Question ${current} of ${total}`;
+        }
+        
+        // Update new percentage display
+        const progressPercentage = document.getElementById('progressPercentage');
+        if (progressPercentage && total > 0) {
+            const percentage = Math.round(((current - 1) / total) * 100);
+            const completed = current - 1;
+            progressPercentage.textContent = `Progress: ${percentage}% (${completed} of ${total} words)`;
+        }
     }
     
     updateThemedBackground(correct, total) {
@@ -8067,12 +8178,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // ✅ Update progress text with actual word count on page load
+            // ✅ Update progress text and percentage with actual word count on page load
             const totalWords = data.words.length;
             const progressText = document.getElementById('progressText');
+            const progressPercentage = document.getElementById('progressPercentage');
             if (progressText) {
                 progressText.textContent = `Question 1 of ${totalWords}`;
                 console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
+            }
+            if (progressPercentage) {
+                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
             }
 
             window.quizManager = new QuizManager({ delight, smartyBee });

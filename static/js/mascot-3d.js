@@ -16,6 +16,8 @@ class SmartyBee3D {
             height: options.height || 200,
             autoRotate: options.autoRotate !== false,
             enableInteraction: options.enableInteraction !== false,
+            // Allow disabling the subtle idle animation for static display (e.g., home screen)
+            idleAnimation: options.idleAnimation !== false,
             // Build paths from injected base to avoid root-relative 404s
             modelBase: (typeof window !== 'undefined' && window.BEE_MODEL_BASE) ? window.BEE_MODEL_BASE : '/static/models/',
             modelName: options.modelName || 'MascotBee_1019174653_texture',
@@ -681,7 +683,10 @@ class SmartyBee3D {
 
             switch (this.currentAnimation) {
                 case 'idle':
-                    this.idleAnimation();
+                    // Respect idleAnimation flag to allow static poses on certain pages
+                    if (this.options.idleAnimation !== false) {
+                        this.idleAnimation();
+                    }
                     break;
                 case 'celebrate':
                     this.celebrateAnimation();

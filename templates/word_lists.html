@@ -1054,16 +1054,41 @@ async function useListInQuiz(id) {
         // Load the list
         const res = await fetch('/api/saved-lists/load', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'},
+            credentials: 'same-origin',
+            cache: 'no-store',
             body: JSON.stringify({ id })
         });
         
         const data = await res.json();
         if (data.ok) {
             showToast(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words)`, 'success');
-            setTimeout(() => {
+
+            // Double-check server-side wordbank before navigating (avoid "Oops upload words" race)
+            try {
+                const verifyRes = await fetch(`/api/wordbank/verify?_=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+                });
+                const verify = await verifyRes.json();
+
+                if (verify.wordbank_count && verify.wordbank_count > 0) {
+                    // Prefer the unified prefetch flow if available globally
+                    if (typeof window.showLoadingMessage === 'function' && typeof window.prefetchAndNavigate === 'function') {
+                        showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                        prefetchAndNavigate();
+                    } else {
+                        // Fallback: direct navigation
+                        window.location.href = '/quiz';
+                    }
+                } else {
+                    showToast('❌ Word list did not load into your session. Please try again.', 'error');
+                }
+            } catch (e) {
+                console.warn('Wordbank verify failed, navigating anyway:', e);
                 window.location.href = '/quiz';
-            }, 1000);
+            }
         } else {
             showToast(data.error || 'Failed to load list', 'error');
         }

@@ -733,6 +733,85 @@ def _filter_definition(definition, word):
     
     return filtered
 
+def _get_inappropriate_vocab() -> set:
+    """Return the most comprehensive set of inappropriate vocabulary available.
+    Prefer the enhanced list from content_filter_guardian if importable; otherwise
+    fall back to the base INAPPROPRIATE_WORDS defined in this module.
+    """
+    try:
+        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
+        return set(_ALL)
+    except Exception:
+        return set(INAPPROPRIATE_WORDS)
+
+def sanitize_kid_friendly_text(text: str) -> str:
+    """Sanitize definition/example text for kid-friendliness.
+    Strategy:
+      - Split into sentences and drop any sentence that contains clearly inappropriate
+        words (exact-token matches) or the special substring 'sex'.
+      - Also drop sentences that contain any longer (len>4) inappropriate word as a substring.
+      - If everything is removed or text becomes too short, return a neutral fallback.
+    Never modifies the answer blanks ("_____").
+    """
+    if not text:
+        return ""
+
+    original = text
+    vocab = _get_inappropriate_vocab()
+
+    # Simple sentence splitter (keep punctuation boundaries)
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    kept: list[str] = []
+    for s in sentences:
+        s_lower = s.lower()
+
+        # Preserve answer blanks
+        if not s.strip():
+            continue
+
+        # Special-case: block any sentence containing 'sex'
+        if "sex" in s_lower:
+            continue
+
+        # Tokenize and check exact matches
+        tokens = re.findall(r"[a-z]+", s_lower)
+        token_set = set(tokens)
+        if any(tok in vocab for tok in token_set):
+            continue
+
+        # Substring rule for longer inappropriate words
+        if any(len(bad) > 4 and bad in s_lower for bad in vocab):
+            continue
+
+        kept.append(s)
+
+    cleaned = " ".join(kept).strip()
+    # If nothing left or too short, return a safe generic
+    if not cleaned or len(cleaned) < 8:
+        # Preserve a friendly, neutral prompt depending on the context of usage
+        return "A kid-friendly description is unavailable. Please listen and spell the word you hear."
+
+    return cleaned
+
+def parse_enriched_info(raw: str, word: str) -> tuple[str, str]:
+    """Split combined enrichment string into (definition, sentence), then blank + sanitize.
+    Expected format contains 'Fill in the blank:'. If missing, treat all as definition.
+    Never reveals the answer; idempotent with existing blanks.
+    """
+    if not raw:
+        return "", ""
+    try:
+        if "Fill in the blank:" in raw:
+            before, after = raw.split("Fill in the blank:", 1)
+            d = sanitize_kid_friendly_text(_blank_word(before.strip(), word))
+            s = sanitize_kid_friendly_text(_blank_word(after.strip(), word))
+            return d, s
+        else:
+            d = sanitize_kid_friendly_text(_blank_word(raw.strip(), word))
+            return d, ""
+    except Exception:
+        return "", ""
+
 def _cache_word_info(word_lower: str, formatted: str):
     """LRU cache helper for formatted word info responses."""
     try:
@@ -784,11 +863,13 @@ def get_word_info(word):
         example = word_data.get("example", "")
         if definition:
             if example and len(example) > 10:
-                example = _blank_word(example, word)
-                definition = _filter_definition(definition, word)
+                # Sanitize and blank both definition and example for safety
+                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
+                example = sanitize_kid_friendly_text(_blank_word(example, word))
                 formatted = f"{definition}. Fill in the blank: {example}"
                 print(f"📖 (indexed) '{word}' → wiktionary+example")
             else:
+                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
                 print(f"📖 (indexed) '{word}' → wiktionary (no example)")
             _cache_word_info(word_lower, formatted)
@@ -801,10 +882,11 @@ def get_word_info(word):
         example = word_data.get("example", "")
         if definition:
             if example:
-                definition = _filter_definition(definition, word)
-                example = _blank_word(example, word)
+                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
+                example = sanitize_kid_friendly_text(_blank_word(example, word))
                 formatted = f"{definition}. Fill in the blank: {example}"
             else:
+                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
             print(f"✅ Cache hit '{word}'")
             _cache_word_info(word_lower, formatted)
@@ -813,9 +895,8 @@ def get_word_info(word):
     # PRIORITY 3: Smart fallback - deterministic enrichment
     try:
         fb = generate_smart_fallback(word)
-        definition = fb.get("definition", "A word to spell")
-        example = fb.get("example", "Can you spell _____ correctly?")
-        example = _blank_word(example, word)
+        definition = sanitize_kid_friendly_text(fb.get("definition", "A word to spell"))
+        example = sanitize_kid_friendly_text(_blank_word(fb.get("example", "Can you spell _____ correctly?"), word))
         formatted = f"{definition}. Fill in the blank: {example}"
         print(f"🟨 Fallback '{word}' ({fb.get('source','fallback')})")
         _cache_word_info(word_lower, formatted)
@@ -867,7 +948,7 @@ def _normalize_for_compare(word: str) -> str:
     return re.sub(r"[^0-9a-z]+", "", word.lower())
 
 
-from typing import Union  # ensure Union available for Python <3.10 compatibility
+from typing import Union, Set  # ensure Union and Set available for Python <3.10 compatibility
 
 def deduplicate_words(words: List[Union[Dict, str]]) -> List[Dict]:
     """Dedupe words using normalization rules; preserve first occurrence and existing metadata.
@@ -2176,9 +2257,14 @@ def get_wordbank() -> List[Dict[str, str]]:
             print(f"⚠️ WARNING get_wordbank: storage_id={storage_id} exists but WORD_STORAGE is empty (server restart?)")
     
     # Fallback: try legacy direct session storage (migrate to WORD_STORAGE)
+    # BUT respect explicit clear operation - don't restore if user cleared intentionally
     if not wb:
         legacy = session.get(DATA_KEY)
-        if isinstance(legacy, list) and legacy:
+        was_cleared = session.get("wordbank_cleared", False)
+        
+        if was_cleared:
+            print("DEBUG get_wordbank: Wordbank was intentionally cleared - not restoring from fallback")
+        elif isinstance(legacy, list) and legacy:
             wb = legacy
             print(f"DEBUG get_wordbank: Migrating {len(wb)} words from session to WORD_STORAGE")
             set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
@@ -2212,8 +2298,20 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     
     # Only store lightweight metadata in session
     session["wordbank_count"] = len(rows)
-    session.pop(DATA_KEY, None)  # Remove any old direct session storage
+    # Provide a tiny durability fallback for very small lists (survive dev reloads)
+    # We avoid bloating cookies: only persist if JSON size <= ~2KB
+    try:
+        payload = json.dumps(rows, ensure_ascii=False)
+        if len(payload.encode('utf-8')) <= 2048:
+            session[DATA_KEY] = rows  # allows get_wordbank() to migrate after reload
+            print(f"DEBUG set_wordbank: Stored compact fallback list in session (len={len(rows)})")
+        else:
+            session.pop(DATA_KEY, None)
+    except Exception as _e:
+        # On any failure, ensure legacy key is cleared
+        session.pop(DATA_KEY, None)
     session.modified = True
+    session.permanent = True  # Strengthen persistence on mobile browsers
 
     if is_user_upload:
         session["has_uploaded_once"] = True
@@ -4991,10 +5089,10 @@ def api_next():
     hint = (word_rec.get("hint") or "").strip()
     existing_def = (word_rec.get("definition") or "").strip()
 
-    # Blanking safety for existing fields
-    sentence = _blank_word(sentence, word)
-    hint = _blank_word(hint, word)
-    existing_def = _blank_word(existing_def, word)
+    # Blanking + sanitization safety for existing fields
+    sentence = sanitize_kid_friendly_text(_blank_word(sentence, word))
+    hint = sanitize_kid_friendly_text(_blank_word(hint, word))
+    existing_def = sanitize_kid_friendly_text(_blank_word(existing_def, word))
 
     definition = existing_def
     definition_source = "definition_field" if existing_def else "none"
@@ -5005,8 +5103,8 @@ def api_next():
         try:
             enriched = get_word_info(word)  # returns combined formatted string
             parsed_def, parsed_sentence = _parse_enriched(enriched)
-            parsed_def = _blank_word(parsed_def, word)
-            parsed_sentence = _blank_word(parsed_sentence, word)
+            parsed_def = sanitize_kid_friendly_text(_blank_word(parsed_def, word))
+            parsed_sentence = sanitize_kid_friendly_text(_blank_word(parsed_sentence, word))
 
             # Adopt parsed definition if non-empty
             if parsed_def:
@@ -5042,9 +5140,9 @@ def api_next():
         definition_source = "hint"
         has_definition = True
 
-    # Final blanking pass (idempotent)
-    definition = _blank_word(definition or "", word)
-    sentence = _blank_word(sentence or "", word)
+    # Final blanking + sanitization pass (idempotent)
+    definition = sanitize_kid_friendly_text(_blank_word(definition or "", word))
+    sentence = sanitize_kid_friendly_text(_blank_word(sentence or "", word))
 
     return jsonify({
         "done": False,
@@ -5105,9 +5203,9 @@ def api_pronounce():
         except:
             definition = "Please spell the word you hear."
     
-    # Ensure word is blanked in the definition
-    if current_word and current_word in definition:
-        definition = _blank_word(definition, current_word)
+    # Ensure word is blanked and content sanitized
+    if current_word:
+        definition = sanitize_kid_friendly_text(_blank_word(definition, current_word))
     
     # Fallback to hint if definition is still empty
     if not definition or definition.startswith("Definition not available"):
@@ -5121,11 +5219,15 @@ def api_pronounce():
     phonetic_lookup = cached_entry.get("phonetic", "")
     spelled_out = build_phonetic_spelling(current_word)
 
+    # Also sanitize sentence and hint for safety
+    safe_sentence = sanitize_kid_friendly_text(_blank_word(word_rec.get("sentence", ""), current_word))
+    safe_hint = sanitize_kid_friendly_text(_blank_word(word_rec.get("hint", ""), current_word))
+
     return jsonify({
         "word": current_word,
         "definition": definition,
-        "sentence": word_rec.get("sentence", ""),
-        "hint": word_rec.get("hint", ""),
+        "sentence": safe_sentence,
+        "hint": safe_hint,
         "phonetic": phonetic_lookup,
         "phonetic_spelling": spelled_out
     })
@@ -5148,9 +5250,10 @@ def api_hint():
     session[QUIZ_STATE_KEY] = state
 
     word_rec = wb[order[idx]]
+    current_word = word_rec.get("word", "")
     return jsonify({
-        "hint": word_rec.get("hint", ""),
-        "sentence": word_rec.get("sentence", "")
+        "hint": sanitize_kid_friendly_text(_blank_word(word_rec.get("hint", ""), current_word)),
+        "sentence": sanitize_kid_friendly_text(_blank_word(word_rec.get("sentence", ""), current_word))
     })
 
 # --- 🎯 LEVEL PROGRESSION SYSTEM ------------------------------------------
@@ -6182,7 +6285,7 @@ PREFETCH_METRICS = {
     "last_prefetch_total_ms": 0.0,
 }
 
-def _start_prefetch_job(words, mode='both'):
+def _start_prefetch_job(words, mode='both', storage_id: Optional[str] = None):
     """Create and start a background job to warm up definitions/sentences.
     Returns a job_id string.
     """
@@ -6218,7 +6321,26 @@ def _start_prefetch_job(words, mode='both'):
                         if job.get('cancelled'):
                             break
                     try:
-                        _ = _bulk_map.get(w.lower()) or get_word_info(w)
+                        formatted = _bulk_map.get(w.lower()) or get_word_info(w)
+                        # If requested, persist enriched definition/sentence back to current wordbank
+                        if storage_id and mode in ('persist', 'both'):
+                            try:
+                                d, s = parse_enriched_info(formatted, w)
+                                if d or s:
+                                    with WORD_STORAGE_LOCK:
+                                        rows = WORD_STORAGE.get(storage_id)
+                                        if isinstance(rows, list):
+                                            for rec in rows:
+                                                rw = (rec.get('word') or '').strip()
+                                                if rw and rw.lower() == w.lower():
+                                                    # Only set if empty to avoid clobbering user-provided content
+                                                    if d and not (rec.get('definition') or '').strip():
+                                                        rec['definition'] = d
+                                                    if s and not (rec.get('sentence') or '').strip():
+                                                        rec['sentence'] = s
+                                    # no session writes here; safe in background
+                            except Exception as _persist_ex:
+                                print(f"⚠️ Prefetch persist failed for '{w}': {_persist_ex}")
                     except Exception as ex:
                         print(f"⚠️ Prefetch error for '{w}': {ex}")
                         with PREFETCH_JOBS_LOCK:
@@ -6258,14 +6380,16 @@ def api_word_info_prefetch_start():
     """
     try:
         data = request.get_json() or {}
-        mode = data.get('mode', 'both')
+        mode = data.get('mode', 'both')  # 'warm' | 'persist' | 'both'
         # Get current wordbank words
         rows = get_wordbank() or []
         words = [r.get('word') for r in rows if isinstance(r, dict) and r.get('word')]
         if not words:
             return jsonify({'success': False, 'error': 'No words to prefetch', 'total': 0}), 400
 
-        job_id = _start_prefetch_job(words, mode=mode)
+        # Pass current storage_id for persistence when requested
+        storage_id = session.get('wordbank_storage_id')
+        job_id = _start_prefetch_job(words, mode=mode, storage_id=storage_id)
         with PREFETCH_JOBS_LOCK:
             total = PREFETCH_JOBS[job_id]['total']
         return jsonify({'success': True, 'job_id': job_id, 'total': total})
@@ -6407,7 +6531,7 @@ def api_clear():
                 removed = WORD_STORAGE.pop(storage_id, None)
                 print(f"DEBUG /api/clear: Removed {len(removed) if removed else 0} words from WORD_STORAGE")
         
-        # Clear all session data
+        # Clear all session data thoroughly
         session.pop("wordbank_storage_id", None)
         session.pop(DATA_KEY, None)
         session.pop(QUIZ_STATE_KEY, None)
@@ -6418,6 +6542,12 @@ def api_clear():
         # This ensures refresh button truly clears EVERYTHING including default word list
         session.pop("skip_default_load", None)  # Remove flag
         session.pop("has_uploaded_once", None)  # Remove flag
+        
+        # CRITICAL: Explicitly set empty word list to prevent restoration from fallback
+        # This prevents get_wordbank() from finding session fallback data after reload
+        session[DATA_KEY] = []  # Set explicit empty list instead of removing key
+        session["wordbank_count"] = 0
+        session["wordbank_cleared"] = True  # Flag that clear was intentional
         
         # Set flag to explicitly prevent auto-loading defaults after clear
         # User must manually upload or select "Random Words" to get any words
@@ -6489,8 +6619,22 @@ def api_build_dictionary():
             
             if wiktionary and word_lower in wiktionary:
                 word_data = wiktionary[word_lower]
-                # Cache the Wiktionary entry
-                cache_entry = {word_lower: word_data}
+                # Sanitize before caching to prevent storing inappropriate content
+                try:
+                    safe_def = sanitize_kid_friendly_text(_filter_definition(word_data.get("definition", ""), word))
+                    safe_ex = sanitize_kid_friendly_text(_blank_word(word_data.get("example", ""), word))
+                except Exception:
+                    safe_def = word_data.get("definition", "")
+                    safe_ex = _blank_word(word_data.get("example", ""), word)
+
+                sanitized = dict(word_data)
+                if safe_def:
+                    sanitized["definition"] = safe_def
+                if safe_ex:
+                    sanitized["example"] = safe_ex
+
+                # Cache the sanitized Wiktionary entry
+                cache_entry = {word_lower: sanitized}
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
                 results["api_lookups"] += 1
@@ -6499,7 +6643,13 @@ def api_build_dictionary():
                 # Generate fallback for words not in Wiktionary
                 fallback_data = generate_smart_fallback(word)
                 fallback_data["created"] = datetime.now().isoformat()
-                
+                # Sanitize fallback data before caching (belt-and-suspenders)
+                try:
+                    fallback_data["definition"] = sanitize_kid_friendly_text(fallback_data.get("definition", ""))
+                    fallback_data["example"] = sanitize_kid_friendly_text(_blank_word(fallback_data.get("example", ""), word))
+                except Exception:
+                    pass
+
                 cache_entry = {word_lower: fallback_data}
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
