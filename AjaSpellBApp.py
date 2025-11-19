@@ -122,18 +122,17 @@ def load_simple_wiktionary():
                     try:
                         entry = json.loads(line.strip())
                         word = entry.get('word', '').lower().strip()
-                        
+
                         # Extract definition and example
                         senses = entry.get('senses', [])
                         if senses and word:
                             first_sense = senses[0]
                             glosses = first_sense.get('glosses', [])
                             examples = first_sense.get('examples', [])
-                            
+
                             definition = glosses[0] if glosses else ""
                             example_obj = examples[0] if examples else {}
                             example = example_obj.get('text', '') if isinstance(example_obj, dict) else ""
-                            
                             if definition:  # Only store words with definitions
                                 words[word] = {
                                     "definition": definition,
@@ -142,9 +141,8 @@ def load_simple_wiktionary():
                                 }
                     except json.JSONDecodeError:
                         continue  # Skip malformed lines
-                    except Exception as e:
+                    except Exception:
                         continue  # Skip problematic entries
-                        
             print(f"✅ Loaded {len(words):,} words from Simple English Wiktionary")
             return words
         else:
@@ -903,21 +901,54 @@ def enrich_with_definitions(words: List[Dict]) -> List[Dict]:
     """Batch enrich records with sentences using cached get_word_info.
     Avoid repeated per-record overhead by leveraging LRU/cache.
     """
-    enriched: List[Dict] = []
-    # Pre-strip all words to minimize repeated work
+    unique_words: List[str] = []
+    seen: Set[str] = set()
     for rec in words:
         w = (rec.get("word") or "").strip()
         if not w:
             continue
-        sentence = (rec.get("sentence") or "").strip()
+        wl = w.lower()
+        if wl in seen:
+            continue
+        seen.add(wl)
+        unique_words.append(w)
+
+    word_info_map = bulk_word_info(unique_words)
+
+    enriched: List[Dict] = []
+    for rec in words:
+        w = (rec.get("word") or "").strip()
+        if not w:
+            continue
         hint = (rec.get("hint") or "").strip()
+        sentence = (rec.get("sentence") or "").strip()
         if not sentence:
-            try:
-                sentence = get_word_info(w)
-            except Exception:
-                sentence = "Listen carefully and spell _____ correctly."
+            sentence = word_info_map.get(w.lower()) or "Listen carefully and spell _____ correctly."
         enriched.append({"word": w, "sentence": sentence, "hint": hint})
     return enriched
+
+# ---------------------------
+# Bulk Word Info Enrichment
+# ---------------------------
+def bulk_word_info(words: List[str]) -> Dict[str, str]:
+    """Efficiently enrich a list of words, returning a mapping of lowercased word -> formatted sentence.
+    Leverages internal LRU & persistent caches. Ensures each word looked up at most once.
+    Safe failures fall back to a generic spelling prompt.
+    """
+    results: Dict[str, str] = {}
+    for w in words:
+        if not w:
+            continue
+        wl = w.lower().strip()
+        if wl in results:
+            continue
+        try:
+            formatted = get_word_info(w)
+        except Exception as ex:
+            print(f"⚠️ bulk_word_info failed for '{w}': {ex}")
+            formatted = "Listen carefully and spell _____ correctly."
+        results[wl] = formatted
+    return results
 
 
 def log_error(message: str):
@@ -4942,30 +4973,78 @@ def api_next():
     word_rec = wb[order[idx]]
     word = word_rec.get("word", "")
     
-    # Get definition/sentence/hint - prioritize sentence, then hint, then definition
+    # ---------------- Quiz content assembly & enrichment ----------------
+    # Separate definition vs. sample sentence; never substitute sentence for definition.
+    def _parse_enriched(raw: str) -> tuple[str, str]:
+        """Split combined enrichment into (definition, sentence).
+        Expected format contains 'Fill in the blank:'; if missing, treat entire string as definition.
+        Returned values are blanked for safety.
+        """
+        if not raw:
+            return "", ""
+        if "Fill in the blank:" in raw:
+            before, after = raw.split("Fill in the blank:", 1)
+            return before.strip(), after.strip()
+        return raw.strip(), ""
+
     sentence = (word_rec.get("sentence") or "").strip()
     hint = (word_rec.get("hint") or "").strip()
+    existing_def = (word_rec.get("definition") or "").strip()
 
-    # Apply backend blanker to ensure target word is hidden
+    # Blanking safety for existing fields
     sentence = _blank_word(sentence, word)
     hint = _blank_word(hint, word)
+    existing_def = _blank_word(existing_def, word)
 
-    if sentence:
-        definition = sentence
-        has_definition = True
-        definition_source = "sentence"
-    elif hint:
+    definition = existing_def
+    definition_source = "definition_field" if existing_def else "none"
+    has_definition = bool(definition)
+
+    # If we lack a definition, attempt live dictionary enrichment (even if we already have a sentence).
+    if not has_definition:
+        try:
+            enriched = get_word_info(word)  # returns combined formatted string
+            parsed_def, parsed_sentence = _parse_enriched(enriched)
+            parsed_def = _blank_word(parsed_def, word)
+            parsed_sentence = _blank_word(parsed_sentence, word)
+
+            # Adopt parsed definition if non-empty
+            if parsed_def:
+                definition = parsed_def
+                definition_source = "dictionary_lookup"
+                has_definition = True
+            # Adopt sentence if we didn't already have one
+            if parsed_sentence and not sentence:
+                sentence = parsed_sentence
+            # Persist enriched fields back to word record for future reuse in session
+            updated = False
+            if sentence and not word_rec.get("sentence"):
+                word_rec["sentence"] = sentence
+                updated = True
+            if definition and not word_rec.get("definition"):
+                word_rec["definition"] = definition
+                updated = True
+            if updated:
+                try:
+                    set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
+                except Exception as _persist_err:
+                    print(f"⚠️ Failed to persist enrichment for '{word}': {_persist_err}")
+        except Exception as ex:
+            print(f"⚠️ Dictionary enrichment failed for '{word}': {ex}")
+            if not definition:
+                definition = "Listen carefully and spell the word you hear."
+                definition_source = "fallback"
+                has_definition = False
+
+    # If still no definition but we have a hint, use hint as gentle contextual prompt.
+    if not has_definition and hint:
         definition = f"Hint: {hint}"
-        has_definition = True
         definition_source = "hint"
-    elif word_rec.get("definition"):
-        definition = _blank_word((word_rec.get("definition") or "").strip(), word)
-        has_definition = bool(definition)
-        definition_source = "definition_field"
-    else:
-        definition = "Listen carefully and spell the word you hear."
-        has_definition = False
-        definition_source = "fallback"
+        has_definition = True
+
+    # Final blanking pass (idempotent)
+    definition = _blank_word(definition or "", word)
+    sentence = _blank_word(sentence or "", word)
 
     return jsonify({
         "done": False,
@@ -6058,6 +6137,16 @@ def api_dictionary_stats():
     """Expose internal dictionary/cache performance statistics."""
     try:
         ensure_simple_wiktionary_loaded()
+        prefetch_snapshot = {}
+        try:
+            if 'PREFETCH_METRICS_LOCK' in globals() and 'PREFETCH_METRICS' in globals():
+                lock_obj = globals().get('PREFETCH_METRICS_LOCK')
+                metrics_obj = globals().get('PREFETCH_METRICS')
+                if lock_obj and metrics_obj:
+                    with lock_obj:
+                        prefetch_snapshot = dict(metrics_obj)
+        except Exception as ex:
+            print(f"⚠️ Failed snapshotting prefetch metrics: {ex}")
         return jsonify({
             "ok": True,
             "wiktionary_loaded": SIMPLE_WIKTIONARY_LOADED,
@@ -6067,7 +6156,8 @@ def api_dictionary_stats():
             "lru_capacity": WORD_INFO_CACHE_MAX,
             "lru_hits": _WORD_INFO_HITS,
             "lru_misses": _WORD_INFO_MISSES,
-            "index_built": SIMPLE_WIKTIONARY_INDEX is not None
+            "index_built": SIMPLE_WIKTIONARY_INDEX is not None,
+            "prefetch_metrics": prefetch_snapshot
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -6080,6 +6170,17 @@ import uuid as _uuid
 
 PREFETCH_JOBS = {}
 PREFETCH_JOBS_LOCK = Lock()
+
+# Prefetch performance metrics (aggregate across jobs)
+PREFETCH_METRICS_LOCK = Lock()
+PREFETCH_METRICS = {
+    "total_batches": 0,
+    "total_words_processed": 0,
+    "last_batch_ms": 0.0,
+    "avg_batch_ms": 0.0,
+    "total_batch_ms": 0.0,
+    "last_prefetch_total_ms": 0.0,
+}
 
 def _start_prefetch_job(words, mode='both'):
     """Create and start a background job to warm up definitions/sentences.
@@ -6101,6 +6202,7 @@ def _start_prefetch_job(words, mode='both'):
 
     def worker():
         try:
+            start_total = time.time()
             # Use bulk enrichment pattern in small batches to reduce lock churn
             BATCH_SIZE = 25
             total_words = len(words)
@@ -6108,13 +6210,15 @@ def _start_prefetch_job(words, mode='both'):
                 with PREFETCH_JOBS_LOCK:
                     if job.get('cancelled'):
                         break
+                batch_start = time.time()
                 batch = words[i:i+BATCH_SIZE]
+                _bulk_map = bulk_word_info(batch)
                 for w in batch:
                     with PREFETCH_JOBS_LOCK:
                         if job.get('cancelled'):
                             break
                     try:
-                        _ = get_word_info(w)
+                        _ = _bulk_map.get(w.lower()) or get_word_info(w)
                     except Exception as ex:
                         print(f"⚠️ Prefetch error for '{w}': {ex}")
                         with PREFETCH_JOBS_LOCK:
@@ -6123,11 +6227,21 @@ def _start_prefetch_job(words, mode='both'):
                         with PREFETCH_JOBS_LOCK:
                             job['current'] += 1
                             job['last_word'] = w
+                batch_ms = (time.time() - batch_start) * 1000.0
+                with PREFETCH_METRICS_LOCK:
+                    PREFETCH_METRICS['total_batches'] += 1
+                    PREFETCH_METRICS['total_words_processed'] += len(batch)
+                    PREFETCH_METRICS['last_batch_ms'] = batch_ms
+                    PREFETCH_METRICS['total_batch_ms'] += batch_ms
+                    PREFETCH_METRICS['avg_batch_ms'] = PREFETCH_METRICS['total_batch_ms'] / max(PREFETCH_METRICS['total_batches'], 1)
                 # Optional micro-sleep to yield CPU (avoid long tight loop on large lists)
                 time.sleep(0.001)
             with PREFETCH_JOBS_LOCK:
                 if not job.get('cancelled'):
                     job['done'] = True
+            total_ms = (time.time() - start_total) * 1000.0
+            with PREFETCH_METRICS_LOCK:
+                PREFETCH_METRICS['last_prefetch_total_ms'] = total_ms
         except Exception as e:
             print(f"❌ Prefetch job crashed: {e}")
             with PREFETCH_JOBS_LOCK:
