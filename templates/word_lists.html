@@ -326,7 +326,20 @@
 
     .lists-grid {
         display: grid;
-        gap: 1.5rem;
+        gap: 1.25rem;
+        grid-template-columns: 1fr; /* single column by default (mobile-first) */
+    }
+    @media (min-width: 640px) { /* sm */
+        .lists-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+    }
+    @media (min-width: 1024px) { /* lg */
+        .lists-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1.75rem;
+        }
     }
 
     .list-card {
@@ -380,7 +393,22 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 1.5rem;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .list-icon {
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        background: #FFF5CC;
+        border: 2px solid rgba(255, 215, 0, 0.6);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
     }
 
     .list-info {
@@ -919,9 +947,10 @@ function createListCard(list) {
     return `
         <div class="list-card" data-list-id="${list.id}">
             <div class="list-card-header">
+                <div class="list-icon" aria-hidden="true">📚</div>
                 <div class="list-info">
                     <div class="list-name">
-                        📚 ${list.name || 'Unnamed List'}
+                        ${list.name || 'Unnamed List'}
                         <span class="word-count-badge">
                             📝 ${list.word_count || 0} ${(list.word_count || 0) === 1 ? 'word' : 'words'}
                         </span>
@@ -929,7 +958,7 @@ function createListCard(list) {
                     ${list.description ? `<div class="list-description">${list.description}</div>` : ''}
                     <div class="list-meta">
                         <div class="meta-item">
-                            <span class="meta-icon">�</span>
+                            <span class="meta-icon">📅</span>
                             <span>Updated ${updatedDate}</span>
                         </div>
                         ${isNew ? '<span class="badge badge-new">New</span>' : ''}
@@ -948,7 +977,7 @@ function createListCard(list) {
                     🎯 Use in Quiz
                 </button>
                 <button class="list-btn btn-view" data-action="view" data-id="${list.id}" data-name="${list.name || 'Unnamed List'}">
-                    �️ View Details
+                    🔍 View Details
                 </button>
                 <button class="list-btn btn-delete" data-action="delete" data-id="${list.id}" data-name="${list.name}" data-count="${list.word_count}">
                     🗑️ Delete
