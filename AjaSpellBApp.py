@@ -305,6 +305,8 @@ from collections import OrderedDict
 WORD_INFO_CACHE_MAX = 3000  # soft cap for LRU
 WORD_INFO_CACHE = OrderedDict()  # LRU of formatted definition sentences
 SIMPLE_WIKTIONARY_INDEX = None  # set of lowercase words for O(1) membership
+_WORD_INFO_HITS = 0
+_WORD_INFO_MISSES = 0
 
 # Simple English Wiktionary - Lazy load on first use (for Random Word feature)
 # This improves Railway startup time by ~2-3 seconds
@@ -766,7 +768,11 @@ def get_word_info(word):
 
     # Fast LRU hit
     if word_lower in WORD_INFO_CACHE:
+        global _WORD_INFO_HITS
+        _WORD_INFO_HITS += 1
         return WORD_INFO_CACHE[word_lower]
+    global _WORD_INFO_MISSES
+    _WORD_INFO_MISSES += 1
 
     # Ensure caches
     if not DICTIONARY_CACHE:
@@ -894,17 +900,19 @@ def deduplicate_words(words: List[Union[Dict, str]]) -> List[Dict]:
 
 
 def enrich_with_definitions(words: List[Dict]) -> List[Dict]:
-    """Ensure each record has kid-friendly text without revealing spelling.
-    Uses get_word_info() to build a sentence if missing; leaves existing values intact.
+    """Batch enrich records with sentences using cached get_word_info.
+    Avoid repeated per-record overhead by leveraging LRU/cache.
     """
     enriched: List[Dict] = []
+    # Pre-strip all words to minimize repeated work
     for rec in words:
         w = (rec.get("word") or "").strip()
+        if not w:
+            continue
         sentence = (rec.get("sentence") or "").strip()
         hint = (rec.get("hint") or "").strip()
         if not sentence:
             try:
-                # get_word_info returns a definition + blanked example; use as the quiz sentence
                 sentence = get_word_info(w)
             except Exception:
                 sentence = "Listen carefully and spell _____ correctly."
@@ -6045,6 +6053,25 @@ def api_word_info_preload():
             "preloaded": 0
         }), 500
 
+@app.route("/api/dictionary/stats", methods=["GET"])
+def api_dictionary_stats():
+    """Expose internal dictionary/cache performance statistics."""
+    try:
+        ensure_simple_wiktionary_loaded()
+        return jsonify({
+            "ok": True,
+            "wiktionary_loaded": SIMPLE_WIKTIONARY_LOADED,
+            "wiktionary_size": len(SIMPLE_WIKTIONARY) if SIMPLE_WIKTIONARY_LOADED else 0,
+            "persistent_cache_size": len(DICTIONARY_CACHE),
+            "lru_size": len(WORD_INFO_CACHE),
+            "lru_capacity": WORD_INFO_CACHE_MAX,
+            "lru_hits": _WORD_INFO_HITS,
+            "lru_misses": _WORD_INFO_MISSES,
+            "index_built": SIMPLE_WIKTIONARY_INDEX is not None
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 # ===============================
 # Word Info Prefetch (Progress)
 # ===============================
@@ -6074,21 +6101,30 @@ def _start_prefetch_job(words, mode='both'):
 
     def worker():
         try:
-            for w in words:
+            # Use bulk enrichment pattern in small batches to reduce lock churn
+            BATCH_SIZE = 25
+            total_words = len(words)
+            for i in range(0, total_words, BATCH_SIZE):
                 with PREFETCH_JOBS_LOCK:
                     if job.get('cancelled'):
                         break
-                try:
-                    # Warm cache by calling get_word_info (uses internal sources only)
-                    _ = get_word_info(w)
-                except Exception as ex:
-                    print(f"⚠️ Prefetch error for '{w}': {ex}")
+                batch = words[i:i+BATCH_SIZE]
+                for w in batch:
                     with PREFETCH_JOBS_LOCK:
-                        job['errors'] += 1
-                finally:
-                    with PREFETCH_JOBS_LOCK:
-                        job['current'] += 1
-                        job['last_word'] = w
+                        if job.get('cancelled'):
+                            break
+                    try:
+                        _ = get_word_info(w)
+                    except Exception as ex:
+                        print(f"⚠️ Prefetch error for '{w}': {ex}")
+                        with PREFETCH_JOBS_LOCK:
+                            job['errors'] += 1
+                    finally:
+                        with PREFETCH_JOBS_LOCK:
+                            job['current'] += 1
+                            job['last_word'] = w
+                # Optional micro-sleep to yield CPU (avoid long tight loop on large lists)
+                time.sleep(0.001)
             with PREFETCH_JOBS_LOCK:
                 if not job.get('cancelled'):
                     job['done'] = True
