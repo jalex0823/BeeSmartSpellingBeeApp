@@ -1281,46 +1281,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 </script>
-{% endblock %}
-
-            <div class="stat-value" id="totalWordsCount">0</div>
-            <div class="stat-label">Total Words</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">⭐</div>
-            <div class="stat-value" id="largestListCount">0</div>
-            <div class="stat-label">Largest List</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-value" id="avgWordsCount">0</div>
-            <div class="stat-label">Avg Words/List</div>
-        </div>
-    </div>
-
-    <!-- Lists Section -->
-    <div class="lists-section">
-        <div class="lists-header">
-            <h2>📋 Your Saved Lists</h2>
-            <div class="search-filter">
-                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search lists...">
-                <select class="sort-dropdown" id="sortDropdown">
-                    <option value="recent">Most Recent</option>
-                    <option value="name">Name (A-Z)</option>
-                    <option value="words">Most Words</option>
-                    <option value="oldest">Oldest First</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="listsContainer">
-            <!-- Lists will be loaded here -->
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
 // Global state
