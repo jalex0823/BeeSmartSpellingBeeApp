@@ -9132,11 +9132,26 @@
                 // Force refresh word bank manager cache
                 WordBankManager.invalidateCache();
                 
+                // Fetch current wordbank from server to verify count
+                const response = await fetch('/api/wordbank', {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await response.json();
+                const wordCount = data.words ? data.words.length : 0;
+                
+                console.log('🔍 Server wordbank count:', wordCount);
+                
                 // Update all displays with fresh data
                 await WordBankManager.updateAllDisplays(true);
                 
                 hideLoadingMessage();
-                showSuccessMessage('✨ Word list refreshed successfully! 🔄');
+                
+                if (wordCount === 0) {
+                    showSuccessMessage('✨ Word list refreshed: 0 words (empty) 🔄');
+                } else {
+                    showSuccessMessage(`✨ Word list refreshed: ${wordCount} words 🔄`);
+                }
                 
                 console.log('✅ Word list refresh completed');
                 
@@ -12741,7 +12756,7 @@
                 const check8 = this.addCheck('Word List', 'Validating...', '⏳');
                 await this.delay(200);
                 try {
-                    // Fetch word count from the actual library
+                    // Fetch word count from the actual library - this reflects TRUE current state
                     const wordbankRes = await this.fetchWithTimeout('/api/wordbank', {
                         cache: 'no-store',
                         credentials: 'same-origin',
@@ -12752,14 +12767,16 @@
                         const wordbankData = await wordbankRes.json();
                         const wordCount = (wordbankData.words && wordbankData.words.length) || 0;
                         
+                        // 🔍 IMPORTANT: This shows ACTUAL words in your current session
+                        // NOT defaults - this is what's really in your wordbank right now
                         if (wordCount > 0) {
-                            this.updateCheck(check8, `${wordCount} words loaded`, '✅', 60);
+                            this.updateCheck(check8, `${wordCount} words in session`, '✅', 60);
                             this.updateProgress(60, `📚 ${wordCount} words ready`);
-                            console.log(`✅ Word list validated: ${wordCount} words`);
+                            console.log(`✅ Word list validated: ${wordCount} words (from your session, not defaults)`);
                         } else {
-                            this.updateCheck(check8, '0 words - upload needed', '⚠️', 60);
-                            this.updateProgress(60, '📚 No words loaded');
-                            console.warn('⚠️ Wordbank is empty - user needs to upload');
+                            this.updateCheck(check8, '0 words - empty wordbank', 'ℹ️', 60);
+                            this.updateProgress(60, '📚 Wordbank empty');
+                            console.log('ℹ️ Wordbank is empty - no defaults loaded (user must upload)');
                         }
                     } else {
                         this.updateCheck(check8, 'Check failed', '⚠️', 60);
@@ -12768,10 +12785,10 @@
                     }
                 } catch (wordbankError) {
                     console.warn('Wordbank validation failed:', wordbankError);
-                    this.updateCheck(check8, 'Ready to upload', '⚠️', 60);
+                    this.updateCheck(check8, 'Ready to upload', 'ℹ️', 60);
                     this.updateProgress(60, '📚 Word system ready');
                 }
-                console.log('✅ Word list check complete');
+                console.log('✅ Word list check complete - showing true session state');  
                 
                 // Check 9: GPA, Grade & Points Validation (DEFERRED)
                 const check9 = this.addCheck('Stats Validation', 'Deferred...', '⏳');

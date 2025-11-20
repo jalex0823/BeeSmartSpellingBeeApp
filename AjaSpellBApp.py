@@ -4173,20 +4173,34 @@ def api_battle_export_DEPRECATED(battle_code):
 
 @app.route("/api/wordbank", methods=["GET"])
 def api_get_wordbank():
+    """
+    Returns the ACTUAL current wordbank from session storage.
+    NEVER returns defaults - only what user has uploaded/entered.
+    If empty, returns [] (empty list) - user must upload their own words.
+    """
     # Enhanced debugging for mobile troubleshooting
     storage_id = session.get("wordbank_storage_id")
     words = get_wordbank()
+    was_cleared = session.get("wordbank_cleared", False)
+    has_uploaded = session.get("has_uploaded_once", False)
     
     print(f"DEBUG /api/wordbank: session_id={session.get('session_id', 'NONE')}, "
           f"storage_id={storage_id}, word_count={len(words)}, "
+          f"was_cleared={was_cleared}, has_uploaded={has_uploaded}, "
           f"session_keys={list(session.keys())}, "
           f"user_agent={request.headers.get('User-Agent', 'UNKNOWN')[:50]}")
     
-    # Check if storage exists in WORD_STORAGE
+    # Check if storage exists in WORD_STORAGE (this is NOT a default - it's real user data)
     if storage_id:
         with WORD_STORAGE_LOCK:
             stored_words = WORD_STORAGE.get(storage_id, [])
             print(f"DEBUG /api/wordbank: WORD_STORAGE contains {len(stored_words)} words for storage_id={storage_id}")
+            if len(stored_words) > 0:
+                print(f"ℹ️ /api/wordbank: Returning {len(stored_words)} REAL words from user's session (NOT defaults)")
+            else:
+                print(f"ℹ️ /api/wordbank: Returning 0 words - wordbank is empty (no defaults loaded)")
+    else:
+        print(f"ℹ️ /api/wordbank: No storage_id - fresh session with no words uploaded yet")
     
     # Return both 'words' (for backward compatibility) and 'success'/'count' (for LoadingSystem)
     response = jsonify({
@@ -6562,6 +6576,12 @@ def api_clear():
         session[DATA_KEY] = []  # Set explicit empty list instead of removing key
         session["wordbank_count"] = 0
         session["wordbank_cleared"] = True  # Flag that clear was intentional
+        
+        # Clear from WORD_STORAGE again to be absolutely certain
+        if storage_id:
+            with WORD_STORAGE_LOCK:
+                WORD_STORAGE[storage_id] = []  # Ensure it's empty, not deleted
+                print(f"DEBUG /api/clear: Set WORD_STORAGE[{storage_id}] to empty list []")
         
         # Set flag to explicitly prevent auto-loading defaults after clear
         # User must manually upload or select "Random Words" to get any words
