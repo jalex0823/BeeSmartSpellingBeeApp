@@ -45,11 +45,11 @@ def migrate_buzz_dust_fields():
             
             # Define new columns to add
             new_columns = {
-                'total_buzz_dust': 'INTEGER DEFAULT 0',
-                'bee_class': 'VARCHAR(20) DEFAULT \'novice\'',
-                'last_rank_up_at': 'TIMESTAMP',
-                'current_streak': 'INTEGER DEFAULT 0',
-                'longest_streak': 'INTEGER DEFAULT 0'
+                'total_buzz_dust': 'INTEGER DEFAULT 0 NULL',
+                'bee_class': 'VARCHAR(20) DEFAULT \'novice\' NULL',
+                'last_rank_up_at': 'TIMESTAMP NULL',
+                'current_streak': 'INTEGER DEFAULT 0 NULL',
+                'longest_streak': 'INTEGER DEFAULT 0 NULL'
             }
             
             # Add missing columns
