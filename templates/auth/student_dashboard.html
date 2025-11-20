@@ -753,6 +753,18 @@
                 <div class="stat-value" id="dash-best-streak">{{ current_user.best_streak or 0 }}</div>
                 <div class="stat-label">Best Streak</div>
             </div>
+
+            <!-- 🐝 Buzz Dust Gamification Card -->
+            <div class="stat-card stat-highlight" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
+                <div id="dash-buzz-dust-badge" style="margin-bottom: 0.5rem;">
+                    <img src="{{ url_for('static', filename='assets/badges/1_NoviceBee.png') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
+                </div>
+                <div class="stat-value" id="dash-buzz-dust-total" style="font-size: 2rem; color: #8B4513;">{{ current_user.total_buzz_dust or 0 }}</div>
+                <div class="stat-label" style="color: #5A2C15; font-weight: 700;">✨ Buzz Dust</div>
+                <div class="stat-sublabel" style="color: #8B4513; font-size: 0.9rem; margin-top: 0.3rem;">
+                    🐝 <span id="dash-bee-class">{{ current_user.bee_class or 'Novice Bee' }}</span>
+                </div>
+            </div>
                 </div>
                 <script>
                 (function(){
@@ -788,6 +800,25 @@
                             if($('#dash-gpa-secondary')) $('#dash-gpa-secondary').textContent = gpaText;
                             if($('#dash-accuracy')) $('#dash-accuracy').textContent = Number(s.average_accuracy||0).toFixed(1) + '%';
                             if($('#dash-best-streak')) $('#dash-best-streak').textContent = s.best_streak||0;
+                            
+                            // 🐝 Fetch Buzz Dust data
+                            fetch('/api/buzz-dust/info', {credentials: 'same-origin'})
+                                .then(res => res.ok ? res.json() : null)
+                                .then(buzzData => {
+                                    if (buzzData && buzzData.current_class) {
+                                        const buzzTotal = $('#dash-buzz-dust-total');
+                                        const beeClass = $('#dash-bee-class');
+                                        const badgeImg = $('#dash-buzz-dust-badge-img');
+                                        
+                                        if (buzzTotal) buzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
+                                        if (beeClass) beeClass.textContent = buzzData.current_class.label || 'Novice Bee';
+                                        if (badgeImg && buzzData.current_class.badge_url) {
+                                            badgeImg.src = buzzData.current_class.badge_url;
+                                            badgeImg.alt = buzzData.current_class.label + ' Badge';
+                                        }
+                                    }
+                                })
+                                .catch(e => console.log('Buzz Dust fetch error:', e));
                         }catch(e){/*silent*/}
                     }
                     refresh();

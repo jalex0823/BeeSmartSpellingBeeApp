@@ -11299,7 +11299,12 @@ def api_get_user_stats():
                 'total_quizzes_completed': int(getattr(current_user, 'total_quizzes_completed', 0) or 0),
                 'best_streak': int(getattr(current_user, 'best_streak', 0) or 0),
                 'best_grade': getattr(current_user, 'best_grade', None),
-                'current_speed_round_streak': int(current_sr_streak or 0)
+                'current_speed_round_streak': int(current_sr_streak or 0),
+                # 🐝 Buzz Dust Gamification Fields
+                'total_buzz_dust': int(getattr(current_user, 'total_buzz_dust', 0) or 0),
+                'bee_class': getattr(current_user, 'bee_class', 'Novice Bee'),
+                'current_streak': int(getattr(current_user, 'current_streak', 0) or 0),
+                'longest_streak': int(getattr(current_user, 'longest_streak', 0) or 0)
             }
         })
         try:
@@ -11330,7 +11335,12 @@ def _build_stats_payload_for_user(u: User) -> Dict[str, object]:
         'total_lifetime_points': int(getattr(u, 'total_lifetime_points', 0) or 0),
         'total_quizzes_completed': int(getattr(u, 'total_quizzes_completed', 0) or 0),
         'best_streak': int(getattr(u, 'best_streak', 0) or 0),
-        'best_grade': getattr(u, 'best_grade', None)
+        'best_grade': getattr(u, 'best_grade', None),
+        # 🐝 Buzz Dust Gamification Fields
+        'total_buzz_dust': int(getattr(u, 'total_buzz_dust', 0) or 0),
+        'bee_class': getattr(u, 'bee_class', 'Novice Bee'),
+        'current_streak': int(getattr(u, 'current_streak', 0) or 0),
+        'longest_streak': int(getattr(u, 'longest_streak', 0) or 0)
     }
 
 def _is_authorized_to_view_user(target: User) -> bool:

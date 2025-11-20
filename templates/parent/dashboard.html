@@ -446,6 +446,12 @@
                 <div class="stat-value" id="family-total-points">{{ family_stats.total_points|format_number }}</div>
                 <div class="stat-label">Total Points</div>
             </div>
+
+            <div class="stat-card" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
+                <div class="stat-icon">✨</div>
+                <div class="stat-value" id="family-total-buzz-dust" style="color: #8B4513;">0</div>
+                <div class="stat-label" style="color: #5A2C15; font-weight: 700;">🐝 Total Buzz Dust</div>
+            </div>
         </div>
 
         <!-- Redeem BeeKey for Children (Centered Card) -->
@@ -507,7 +513,8 @@
                             <th onclick="sortTable(3)">Quizzes <span class="sort-arrow">⬍</span></th>
                             <th onclick="sortTable(4)">Accuracy <span class="sort-arrow">⬍</span></th>
                             <th onclick="sortTable(5)">Points <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(6)">Last Active <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(6)">✨ Buzz Dust <span class="sort-arrow">⬍</span></th>
+                            <th onclick="sortTable(7)">Last Active <span class="sort-arrow">⬍</span></th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -540,6 +547,10 @@
                                 <span id="student-{{ student.id }}-acc-text">{{ "%.0f"|format(accuracy) }}%</span>
                             </td>
                             <td><strong id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
+                            <td style="color: #8B4513; font-weight: 600;">
+                                <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
+                                <div style="font-size: 0.75rem; color: #666; margin-top: 0.2rem;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
+                            </td>
                             <td>
                                 {% if student.last_login %}
                                     {{ student.last_login.strftime('%b %d') }}
@@ -820,19 +831,28 @@
                     const body = await resp.json();
                     if(!resp.ok || body.status!=='success') return;
                     const results = body.results||{};
-                    let totalQuizzes = 0, totalPoints=0, accSum=0, count=0;
+                    let totalQuizzes = 0, totalPoints=0, totalBuzzDust=0, accSum=0, count=0;
                     for(const [id, stats] of Object.entries(results)){
                         updateRow(id, stats);
                         totalQuizzes += Number(stats.total_quizzes_completed||0);
                         totalPoints += Number(stats.total_lifetime_points||0);
+                        totalBuzzDust += Number(stats.total_buzz_dust||0);
                         accSum += Number(stats.average_accuracy||0);
                         count += 1;
+                        
+                        // 🐝 Update individual Buzz Dust display
+                        const buzzEl = document.getElementById(`student-${id}-buzz-dust`);
+                        if(buzzEl) buzzEl.textContent = numberWithCommas(stats.total_buzz_dust||0);
+                        const beeClassEl = document.getElementById(`student-${id}-bee-class`);
+                        if(beeClassEl && stats.bee_class) beeClassEl.textContent = '🐝 ' + stats.bee_class;
                     }
                     const avgAcc = count? Math.round(accSum/count) : 0;
                     const elQ = document.getElementById('family-total-quizzes');
                     if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
                     const elP = document.getElementById('family-total-points');
                     if(elP) elP.textContent = numberWithCommas(totalPoints);
+                    const elBuzz = document.getElementById('family-total-buzz-dust');
+                    if(elBuzz) elBuzz.textContent = numberWithCommas(totalBuzzDust);
                     const elA = document.getElementById('family-avg-accuracy');
                     if(elA) elA.textContent = `${avgAcc}%`;
                 }catch(e){ /* silent */ }
