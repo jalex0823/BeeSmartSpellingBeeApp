@@ -9,6 +9,17 @@
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
             <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👑 Admin Dashboard</h1>
             <p style="margin: 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
+            
+            <!-- Buzz Dust Rank Badge -->
+            <div id="admin-buzz-dust-rank" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
+                    <img id="admin-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
+                    <div style="text-align: left;">
+                        <div id="admin-rank-name" style="font-size: 0.875rem; font-weight: 700; opacity: 0.9;">Loading...</div>
+                        <div id="admin-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900;">0 ✨</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -101,6 +112,41 @@
                 closeRefreshModal();
             }
         });
+        
+        // Fetch and display admin's Buzz Dust rank
+        async function loadAdminBuzzDust() {
+            try {
+                const res = await fetch('/api/buzz-dust/info', {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                const data = await res.json();
+                
+                if (data.ok) {
+                    const rankEl = document.getElementById('admin-rank-name');
+                    const badgeEl = document.getElementById('admin-rank-badge');
+                    const amountEl = document.getElementById('admin-buzz-dust-amount');
+                    
+                    if (rankEl) rankEl.textContent = data.rank_name || 'Novice Bee';
+                    if (amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                    
+                    if (badgeEl && data.badge_image) {
+                        badgeEl.src = data.badge_image;
+                        badgeEl.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading Buzz Dust:', error);
+            }
+        }
+        
+        // Helper function for number formatting
+        function numberWithCommas(x) {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        // Load on page load
+        window.addEventListener('load', loadAdminBuzzDust);
     </script>
 
     <!-- System Statistics -->

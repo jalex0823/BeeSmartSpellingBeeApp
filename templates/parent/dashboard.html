@@ -402,6 +402,17 @@
                 <div>
                     <h1>👨‍👩‍👧‍👦 Parent Dashboard</h1>
                     <p class="subtitle">Welcome, {{ current_user.display_name }}!</p>
+                    
+                    <!-- Buzz Dust Rank Badge -->
+                    <div id="parent-buzz-dust-rank" style="margin-top: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 0.75rem 1.25rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);">
+                            <img id="parent-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
+                            <div style="text-align: left;">
+                                <div id="parent-rank-name" style="font-size: 0.875rem; font-weight: 700; color: #5A2C15;">Loading...</div>
+                                <div id="parent-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900; color: #8B4513;">0 ✨</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button onclick="window.location.reload()" class="copy-btn" style="background: #4CAF50; height: fit-content;" title="Refresh to see latest stats">
                     🔄 Refresh Data
@@ -857,9 +868,40 @@
                     if(elA) elA.textContent = `${avgAcc}%`;
                 }catch(e){ /* silent */ }
             }
+            
+            // 🐝 Fetch and display parent's own Buzz Dust rank
+            async function loadParentBuzzDust() {
+                try {
+                    const res = await fetch('/api/buzz-dust/info', {
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+                    const data = await res.json();
+                    
+                    if (data.ok) {
+                        const rankEl = document.getElementById('parent-rank-name');
+                        const badgeEl = document.getElementById('parent-rank-badge');
+                        const amountEl = document.getElementById('parent-buzz-dust-amount');
+                        
+                        if (rankEl) rankEl.textContent = data.rank_name || 'Novice Bee';
+                        if (amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                        
+                        if (badgeEl && data.badge_image) {
+                            badgeEl.src = data.badge_image;
+                            badgeEl.style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading Buzz Dust:', error);
+                }
+            }
+            
             document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollFamily(); });
             setInterval(pollFamily, 12000);
-            window.addEventListener('load', pollFamily);
+            window.addEventListener('load', () => {
+                pollFamily();
+                loadParentBuzzDust(); // Load parent's Buzz Dust
+            });
         })();
     </script>
 </body>
