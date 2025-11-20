@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Points & Buzz Dust – How Your Score Works | BeeSmart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .explanation-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE6CC 100%);
+            min-height: 100vh;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: #2a1b10;
+            margin: 0 0 8px 0;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .section-heading {
+            font-size: 1.5rem;
+            margin: 0 0 16px 0;
+            color: #2a1b10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-heading .emoji {
+            font-size: 1.8rem;
+        }
+
+        .section p {
+            line-height: 1.6;
+            color: #444;
+            margin: 12px 0;
+        }
+
+        .bullet-list {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+
+        .bullet-list li {
+            margin: 8px 0;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .highlight-box {
+            background: #FFF9E6;
+            border-left: 4px solid #FFB800;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 8px;
+        }
+
+        .highlight-box strong {
+            color: #FF9500;
+            font-size: 1.1rem;
+        }
+
+        .bee-classes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .bee-class-card {
+            background: linear-gradient(135deg, #2a1b10 0%, #4a3218 100%);
+            color: #ffe9a3;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .bee-class-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .bee-class-card .badge-image {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+            transition: transform 0.3s;
+        }
+
+        .bee-class-card:hover .badge-image {
+            transform: scale(1.1);
+        }
+
+        .bee-class-card .emoji {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .bee-class-card .label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .bee-class-card .description {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .footer-note {
+            background: #E8F4F8;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-style: italic;
+            color: #2C5F7C;
+            margin-top: 16px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table th {
+            background: #FFF9E6;
+            font-weight: 700;
+            color: #2a1b10;
+        }
+
+        .comparison-table tr:hover {
+            background: #FFFBF0;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 24px;
+            background: #FFB800;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+            text-align: center;
+        }
+
+        .back-button:hover {
+            background: #FF9500;
+        }
+
+        @media (max-width: 600px) {
+            .explanation-container {
+                padding: 16px;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .section-heading {
+                font-size: 1.3rem;
+            }
+
+            .bee-classes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="explanation-container">
+        <div class="page-header">
+            <h1>🐝 Points & Buzz Dust</h1>
+            <p>How Your Score Works in BeeSmart</p>
+        </div>
+
+        <!-- Section 1: Points -->
+        <section class="section">
+            <h2 class="section-heading">
+                <span class="emoji">🧠</span>
+                <span>What Are Points?</span>
+            </h2>
+            
+            <p><strong>Points show how well you spelled the words in each quiz.</strong></p>
+            
+            <p>Teachers and parents use Points to understand grades and progress.</p>
+            
+            <p><strong>Points are based on:</strong></p>
+            <ul class="bullet-list">
+                <li>Correct answers</li>
+                <li>Question difficulty</li>
+                <li>Quiz length</li>
+            </ul>
+
+            <div class="highlight-box">
+                <strong>Points = your school score.</strong><br>
+                They help measure learning, not game rank.
+            </div>
+        </section>
+
+        <!-- Section 2: Buzz Dust -->
+        <section class="section">
+            <h2 class="section-heading">
+                <span class="emoji">✨</span>
+                <span>What Is Buzz Dust?</span>
+            </h2>
+            
+            <p><strong>Buzz Dust is magic XP you earn while learning.</strong></p>
+            
+            <p>Every time you spell words, you generate Buzz Dust for the hive.</p>
+            
+            <p><strong>Buzz Dust is used to:</strong></p>
+            <ul class="bullet-list">
+                <li>Unlock Bee Classes (ranks)</li>
+                <li>Earn badges & avatars</li>
+                <li>Climb the leaderboards</li>
+            </ul>
+
+            <div class="highlight-box">
+                <strong>Buzz Dust = your game progress.</strong><br>
+                It makes learning feel like an adventure.
+            </div>
+        </section>
+
+        <!-- Section 3: How They Work Together -->
+        <section class="section">
+            <h2 class="section-heading">
+                <span class="emoji">🐝</span>
+                <span>Do Points and Buzz Dust Affect Each Other?</span>
+            </h2>
+            
+            <p><strong>Points stay separate for grades and GPA.</strong></p>
+            <p><strong>Buzz Dust is extra and used only for ranks and rewards.</strong></p>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>What It Means</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>High Buzz Dust + High Points</td>
+                        <td>You're practicing a lot AND doing great! 🌟</td>
+                    </tr>
+                    <tr>
+                        <td>Great Grades + Modest Buzz Dust</td>
+                        <td>Excellent work, but fewer quizzes taken</td>
+                    </tr>
+                    <tr>
+                        <td>Huge Buzz Dust + Mixed Grades</td>
+                        <td>Lots of practice! Keep it up to improve grades</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p style="margin-top: 20px;"><strong>Both are good—and both help you grow.</strong></p>
+        </section>
+
+        <!-- Section 4: Bee Classes -->
+        <section class="section">
+            <h2 class="section-heading">
+                <span class="emoji">🏆</span>
+                <span>Bee Classes (Ranks)</span>
+            </h2>
+            
+            <p>As you earn Buzz Dust, you'll progress through these Bee Classes:</p>
+
+            <div class="bee-classes-grid">
+                {% for bee_class in bee_classes %}
+                <div class="bee-class-card">
+                    <img src="{{ url_for('static', filename='assets/badges/' + bee_class.badge_image) }}" 
+                         alt="{{ bee_class.label }}" 
+                         class="badge-image"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="emoji" style="display:none;">{{ bee_class.emoji }}</span>
+                    <div class="label">{{ bee_class.label }}</div>
+                    <div class="description">{{ bee_class.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="footer-note">
+                📌 Ranks are unlocked by Buzz Dust, not grades.
+            </div>
+        </section>
+
+        <!-- Back Button -->
+        <div style="text-align: center;">
+            <a href="{{ url_for('unified_menu') }}" class="back-button">← Back to Menu</a>
+        </div>
+    </div>
+</body>
+</html>

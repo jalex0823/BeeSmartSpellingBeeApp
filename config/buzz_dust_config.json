@@ -1,0 +1,87 @@
+{
+  "buzz_dust": {
+    "multiplier": 0.10,
+    "description": "Base multiplier applied to points to generate Buzz Dust",
+    "bonuses": {
+      "perfect_round": 25,
+      "daily_challenge": 50,
+      "no_hint": 10,
+      "speed_bonus_base": 5,
+      "streaks": {
+        "5": 5,
+        "10": 15,
+        "20": 40,
+        "50": 100,
+        "100": 250
+      }
+    }
+  },
+  "bee_classes": [
+    {
+      "id": "novice",
+      "label": "Novice Bee",
+      "emoji": "🐝",
+      "badge_image": "Novice.png",
+      "min_buzz_dust": 0,
+      "description": "Just getting started on your spelling journey",
+      "color": "#FFF9E6",
+      "badge_color": "#FFD700"
+    },
+    {
+      "id": "apprentice",
+      "label": "Apprentice Bee",
+      "emoji": "📚",
+      "badge_image": "Apprentice.png",
+      "min_buzz_dust": 500,
+      "description": "Learning the hive way",
+      "color": "#E8F4F8",
+      "badge_color": "#4A90E2"
+    },
+    {
+      "id": "scholar",
+      "label": "Scholar Bee",
+      "emoji": "🎓",
+      "badge_image": "Scholar.png",
+      "min_buzz_dust": 2500,
+      "description": "Dedicated learner",
+      "color": "#F0E6FF",
+      "badge_color": "#9B59B6"
+    },
+    {
+      "id": "elite",
+      "label": "Elite Bee",
+      "emoji": "🏆",
+      "badge_image": "Elete.png",
+      "min_buzz_dust": 10000,
+      "description": "Spelling champion",
+      "color": "#FFE6E6",
+      "badge_color": "#E74C3C"
+    },
+    {
+      "id": "magistrate",
+      "label": "Magistrate Bee",
+      "emoji": "👑",
+      "badge_image": "Magistrate.png",
+      "min_buzz_dust": 50000,
+      "description": "Hive leader",
+      "color": "#FFF0E6",
+      "badge_color": "#E67E22"
+    },
+    {
+      "id": "master",
+      "label": "Buzz Dust Master",
+      "emoji": "✨",
+      "badge_image": "BuzzDustMaster.png",
+      "min_buzz_dust": 100000,
+      "description": "Legendary BeeSmart hero",
+      "color": "#FFD700",
+      "badge_color": "#F39C12"
+    }
+  ],
+  "ui_settings": {
+    "rank_up_animation_duration_ms": 2000,
+    "show_buzz_dust_in_quiz_results": true,
+    "show_points_to_parents_teachers": true,
+    "leaderboard_default_tab": "buzz_dust"
+  }
+}

@@ -227,6 +227,20 @@ def home_root_direct():
 def home_preview():
     return render_template('honey_home.html')
 
+
+@app.route('/points-buzz-dust-explanation')
+def points_buzz_dust_explanation():
+    """Show Points vs Buzz Dust explanation screen"""
+    try:
+        from buzz_dust_helpers import get_all_bee_classes
+        bee_classes = get_all_bee_classes()
+        return render_template('points_buzz_dust_explanation.html', bee_classes=bee_classes)
+    except Exception as e:
+        print(f"Error loading explanation page: {e}")
+        # Fallback with minimal data
+        return render_template('points_buzz_dust_explanation.html', bee_classes=[])
+
+
 def _safe_template(name):
     """Small helper to render a template if present without crashing the app."""
     try:
@@ -7079,6 +7093,88 @@ def api_beekey_redeem_for_linked():
         "total_linked_users": len(linked_users),
         "message": f"Successfully unlocked {len(avatars)} avatar(s) for {unlocked_count} user(s)"
     })
+
+
+# ----------------------------------------------------------------------------
+# Buzz Dust & Ranking System API
+# ----------------------------------------------------------------------------
+@app.route('/api/buzz-dust/info', methods=['GET'])
+@login_required
+def api_buzz_dust_info():
+    """Get current user's Buzz Dust and rank information"""
+    try:
+        from buzz_dust_helpers import get_rank_progress, get_all_bee_classes
+        
+        rank_progress = get_rank_progress(current_user.total_buzz_dust or 0)
+        
+        return jsonify({
+            'success': True,
+            'total_buzz_dust': current_user.total_buzz_dust or 0,
+            'current_class': rank_progress['current_class'],
+            'next_class': rank_progress['next_class'],
+            'progress_percent': rank_progress['progress_percent'],
+            'dust_needed': rank_progress['dust_needed'],
+            'at_max_rank': rank_progress['at_max_rank'],
+            'all_classes': get_all_bee_classes()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/buzz-dust/leaderboard', methods=['GET'])
+def api_buzz_dust_leaderboard():
+    """Get Buzz Dust leaderboard (public or filtered by role)"""
+    try:
+        from buzz_dust_helpers import get_leaderboard_data
+        
+        limit = min(int(request.args.get('limit', 50)), 100)
+        role_filter = request.args.get('role')  # Optional: 'student', 'teacher', etc.
+        
+        leaderboard = get_leaderboard_data(limit=limit, role_filter=role_filter)
+        
+        return jsonify({
+            'success': True,
+            'leaderboard': leaderboard,
+            'limit': limit
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/check-rank-up', methods=['GET'])
+@login_required
+def api_check_rank_up():
+    """Check if user has ranked up (called after quiz completion)"""
+    try:
+        from buzz_dust_helpers import get_bee_class
+        
+        # Check if there's a recent rank-up in session
+        ranked_up = session.pop('ranked_up', False)
+        
+        if ranked_up:
+            old_class_id = session.pop('old_class_id', 'novice')
+            new_class_id = current_user.bee_class or 'novice'
+            
+            from buzz_dust_helpers import get_all_bee_classes
+            all_classes = get_all_bee_classes()
+            
+            old_class = next((c for c in all_classes if c['id'] == old_class_id), all_classes[0])
+            new_class = next((c for c in all_classes if c['id'] == new_class_id), all_classes[0])
+            
+            return jsonify({
+                'success': True,
+                'ranked_up': True,
+                'old_class': old_class,
+                'new_class': new_class,
+                'total_buzz_dust': current_user.total_buzz_dust or 0
+            })
+        
+        return jsonify({
+            'success': True,
+            'ranked_up': False
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ----------------------------------------------------------------------------

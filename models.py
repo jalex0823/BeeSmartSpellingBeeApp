@@ -70,6 +70,13 @@ class User(UserMixin, db.Model):
     best_grade = db.Column(db.String(5))  # A+, A, A-, B+, etc.
     best_streak = db.Column(db.Integer, default=0)
     
+    # ✨ Buzz Dust & Ranking System (Gamification)
+    total_buzz_dust = db.Column(db.Integer, default=0, index=True)  # Cumulative XP for ranking
+    bee_class = db.Column(db.String(20), default='novice', index=True)  # Current rank: novice, apprentice, scholar, elite, magistrate, master
+    last_rank_up_at = db.Column(db.DateTime)  # When user last achieved a new rank
+    current_streak = db.Column(db.Integer, default=0)  # Current consecutive correct answers
+    longest_streak = db.Column(db.Integer, default=0)  # All-time longest streak
+    
     # Relationships
     quiz_sessions = db.relationship('QuizSession', backref='user', lazy=True, cascade='all, delete-orphan')
     quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')
