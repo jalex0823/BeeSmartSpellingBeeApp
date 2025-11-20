@@ -11,6 +11,7 @@
         --bee-brown: #5A2C15;
         --pollen-yellow: #FFE5B4;
         --hive-gray: #F5F5DC;
+        --honeycomb-border: #D4A417;
     }
 
     body {
@@ -18,69 +19,124 @@
         min-height: 100vh;
         font-family: 'Nunito', sans-serif;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        overflow-x: hidden;
+    }
+
+    /* Floating Bee Animation */
+    .floating-bee {
+        position: fixed;
+        font-size: 3rem;
+        animation: floatAcross 15s linear infinite;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    @keyframes floatAcross {
+        0% { left: -100px; top: 20%; transform: rotate(10deg); }
+        25% { top: 30%; transform: rotate(-5deg); }
+        50% { top: 25%; transform: rotate(15deg); }
+        75% { top: 35%; transform: rotate(-10deg); }
+        100% { left: 110%; top: 20%; transform: rotate(10deg); }
     }
 
     .word-lists-container {
         max-width: 1400px;
         margin: 0 auto;
         padding: 1rem;
+        position: relative;
+        z-index: 2;
     }
 
-    .header-section {
-        background: white;
-        border-radius: 20px;
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        border: 3px solid var(--honey-gold);
+    /* Hive Stats Bar */
+    .hive-stats-bar {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        border-radius: 24px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        border: 4px solid var(--honeycomb-border);
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
     }
-    
+
     @media (min-width: 768px) {
-        .word-lists-container {
+        .hive-stats-bar {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
             padding: 2rem;
-        }
-        
-        .header-section {
-            border-radius: 24px;
-            padding: 2rem;
-            margin-bottom: 2rem;
         }
     }
 
-    .header-content {
+    .hive-stat {
+        text-align: center;
+        color: var(--bee-brown);
+    }
+
+    .hive-stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .hive-stat-value {
+        font-size: 2rem;
+        font-weight: 900;
+        margin: 0.25rem 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .hive-stat-label {
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        opacity: 0.9;
+    }
+
+    /* Header Section */
+    .hive-header {
+        background: white;
+        border-radius: 24px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 4px solid var(--honey-gold);
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
     }
 
-    .header-title {
+    @media (min-width: 768px) {
+        .hive-header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+        }
+    }
+
+    .hive-title {
         display: flex;
         align-items: center;
         gap: 1rem;
     }
 
-    .header-title h1 {
-        font-size: 1.75rem;
+    .hive-title h1 {
+        font-size: 2rem;
         color: var(--bee-brown);
         margin: 0;
         font-weight: 900;
     }
 
-    .header-title .bee-icon {
-        font-size: 2rem;
+    .hive-title .bee-icon {
+        font-size: 3rem;
         animation: float 3s ease-in-out infinite;
-    }
-    
-    @media (min-width: 768px) {
-        .header-title h1 {
-            font-size: 2.5rem;
-        }
-        
-        .header-title .bee-icon {
-            font-size: 3rem;
-        }
     }
 
     @keyframes float {
@@ -88,13 +144,19 @@
         50% { transform: translateY(-10px); }
     }
 
-    .header-actions {
+    @media (min-width: 768px) {
+        .hive-title h1 {
+            font-size: 2.5rem;
+        }
+    }
+
+    .hive-actions {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         flex-wrap: wrap;
     }
 
-    .action-button {
+    .bee-button {
         padding: 0.875rem 1.5rem;
         border: none;
         border-radius: 16px;
@@ -108,194 +170,303 @@
         gap: 0.5rem;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         white-space: nowrap;
-        min-height: 48px; /* Better mobile touch target */
+        min-height: 48px;
     }
-    
+
     @media (min-width: 768px) {
-        .action-button {
-            padding: 1rem 2rem;
+        .bee-button {
+            padding: 1rem 1.75rem;
             font-size: 1.1rem;
         }
     }
 
-    .btn-primary {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        color: var(--bee-brown);
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
-    }
-
-    .btn-secondary {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-        color: white;
-    }
-
-    .btn-secondary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(33, 150, 243, 0.4);
-    }
-
-    .btn-home {
+    .bee-button.btn-home {
         background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
         color: white;
     }
 
-    .btn-home:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4);
-    }
-
-    .stats-section {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    @media (min-width: 640px) {
-        .stats-section {
-            grid-template-columns: repeat(4, 1fr);
-        }
-    }
-    
-    @media (min-width: 768px) {
-        .stats-section {
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-    }
-
-    .stat-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.25rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        border: 2px solid var(--honey-gold);
-        transition: transform 0.3s ease;
-        text-align: center;
-    }
-    
-    @media (min-width: 768px) {
-        .stat-card {
-            border-radius: 20px;
-            padding: 1.5rem;
-        }
-    }
-
-    .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-    }
-
-    .stat-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 900;
+    .bee-button.btn-new {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
         color: var(--bee-brown);
-        margin: 0.5rem 0;
-        line-height: 1;
     }
 
-    .stat-label {
-        font-size: 0.85rem;
-        color: #666;
-        font-weight: 600;
-    }
-    
-    @media (min-width: 768px) {
-        .stat-icon {
-            font-size: 2.5rem;
-        }
-        
-        .stat-value {
-            font-size: 2.5rem;
-        }
-        
-        .stat-label {
-            font-size: 1rem;
-        }
+    .bee-button.btn-upload {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
     }
 
-    .lists-section {
+    .bee-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Search and Sort */
+    .search-sort-bar {
         background: white;
         border-radius: 20px;
-        padding: 1.25rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         border: 3px solid var(--honey-gold);
-    }
-    
-    @media (min-width: 768px) {
-        .lists-section {
-            border-radius: 24px;
-            padding: 2rem;
-        }
-    }
-
-    .lists-header {
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid var(--pollen-yellow);
     }
 
-    .lists-header h2 {
-        font-size: 1.5rem;
-        color: var(--bee-brown);
-        margin: 0;
-        font-weight: 800;
-    }
-    
     @media (min-width: 768px) {
-        .lists-header {
+        .search-sort-bar {
             flex-direction: row;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-        }
-        
-        .lists-header h2 {
-            font-size: 2rem;
+            justify-content: space-between;
         }
     }
 
-    .search-filter {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: stretch;
-        width: 100%;
+    .search-box-container {
+        position: relative;
+        flex: 1;
     }
 
     .search-box {
-        padding: 0.75rem 1rem;
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
         border: 2px solid var(--honey-gold);
         border-radius: 12px;
         font-size: 1rem;
-        width: 100%;
         transition: all 0.3s ease;
-        min-height: 48px; /* Better mobile touch target */
+        min-height: 48px;
     }
-    
+
+    .search-box:focus {
+        outline: none;
+        border-color: var(--honey-amber);
+        box-shadow: 0 0 0 3px rgba(255, 165, 0, 0.2);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.25rem;
+        pointer-events: none;
+    }
+
+    .sort-dropdown {
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--honey-gold);
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: white;
+        min-height: 48px;
+        min-width: 180px;
+    }
+
+    /* Honeycomb Grid */
+    .honeycomb-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 2rem;
+        padding: 1rem;
+    }
+
     @media (min-width: 768px) {
-        .search-filter {
-            flex-direction: row;
-            gap: 1rem;
-            align-items: center;
-            width: auto;
+        .honeycomb-grid {
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2.5rem;
         }
-        
-        .search-box {
-            padding: 0.75rem 1.5rem;
-            width: 300px;
+    }
+
+    /* Hexagonal Cell */
+    .honeycomb-cell {
+        position: relative;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        aspect-ratio: 1 / 1.15;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .honeycomb-cell:hover {
+        transform: scale(1.05) rotate(2deg);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+    }
+
+    .honeycomb-cell-inner {
+        position: absolute;
+        top: 5%;
+        left: 5%;
+        right: 5%;
+        bottom: 5%;
+        background: white;
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem 1rem;
+        gap: 0.5rem;
+    }
+
+    .honeycomb-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .honeycomb-name {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--bee-brown);
+        text-align: center;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 90%;
+        line-height: 1.2;
+    }
+
+    .honeycomb-count {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--honey-amber);
+        margin: 0.25rem 0;
+    }
+
+    .honeycomb-label {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .honeycomb-date {
+        font-size: 0.7rem;
+        color: #999;
+        margin-top: 0.25rem;
+    }
+
+    /* Action Buttons on Cell */
+    .honeycomb-actions {
+        position: absolute;
+        bottom: 15%;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .honeycomb-cell:hover .honeycomb-actions {
+        opacity: 1;
+    }
+
+    .honeycomb-action-btn {
+        background: white;
+        border: 2px solid var(--honey-gold);
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .honeycomb-action-btn:hover {
+        background: var(--honey-gold);
+        transform: scale(1.1);
+    }
+
+    /* Empty State */
+    .empty-hive {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 24px;
+        border: 4px dashed var(--honey-gold);
+        margin: 2rem 0;
+    }
+
+    .empty-hive-icon {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-hive h3 {
+        font-size: 2rem;
+        color: var(--bee-brown);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-hive p {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+
+    /* Toast Notifications */
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        animation: slideUp 0.3s ease;
+        z-index: 10000;
+        max-width: 90%;
+    }
+
+    @media (min-width: 640px) {
+        .toast {
+            left: auto;
+            right: 2rem;
+            transform: none;
+            max-width: 400px;
+        }
+    }
+
+    .toast.success {
+        border-left-color: #4CAF50;
+    }
+
+    .toast.error {
+        border-left-color: #f44336;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateX(-50%) translateY(100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @media (min-width: 640px) {
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     }
 
@@ -725,79 +896,393 @@
         }
     }
 
-    .badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .badge-new {
-        background: #4CAF50;
-        color: white;
-    }
-
-    .badge-large {
-        background: #FF9800;
-        color: white;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Floating Bee Animation -->
+<div class="floating-bee">🐝</div>
+
 <div class="word-lists-container">
-    <!-- Breadcrumb Navigation -->
-    <div style="margin-bottom: 1rem;">
-        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #5A2C15; font-weight: 600; flex-wrap: wrap;">
-            <a href="/" style="color: #FF8F00; text-decoration: none; transition: color 0.3s; display: flex; align-items: center; gap: 0.25rem;" onmouseover="this.style.color='#FF6B00'" onmouseout="this.style.color='#FF8F00'">
-                <span>🏠</span>
-                <span style="display: none;">Home</span>
-            </a>
-            <span style="color: #D2691E;">›</span>
-            <span style="color: #5A2C15;">📚 My Word Lists</span>
+    <!-- Hive Stats Bar -->
+    <div class="hive-stats-bar">
+        <div class="hive-stat">
+            <span class="hive-stat-icon">🐝</span>
+            <div class="hive-stat-value" id="statsBeesInHive">0</div>
+            <div class="hive-stat-label">Bees in the Hive</div>
+        </div>
+        <div class="hive-stat">
+            <span class="hive-stat-icon">🍯</span>
+            <div class="hive-stat-value" id="statsHoneyStored">0</div>
+            <div class="hive-stat-label">Honey Stored</div>
+        </div>
+        <div class="hive-stat">
+            <span class="hive-stat-icon">⬡</span>
+            <div class="hive-stat-value" id="statsLargestHoneycomb">0</div>
+            <div class="hive-stat-label">Largest Honeycomb</div>
+        </div>
+        <div class="hive-stat">
+            <span class="hive-stat-icon">⚡</span>
+            <div class="hive-stat-value" id="statsWorkerBeePace">0</div>
+            <div class="hive-stat-label">Worker Bee Pace</div>
         </div>
     </div>
-    
-    <style>
-        @media (min-width: 640px) {
-            .word-lists-container > div:first-child a span:last-child {
-                display: inline !important;
-            }
-        }
-    </style>
 
     <!-- Header Section -->
-    <div class="header-section">
-        <div class="header-content">
-            <div class="header-title">
-                <span class="bee-icon">🐝</span>
-                <h1>My Word Lists</h1>
-            </div>
-            <div class="header-actions">
-                <button class="action-button btn-home" onclick="window.location.href='/'">
-                    🏠 Back to Home
-                </button>
-                <button class="action-button btn-primary" onclick="createNewList()">
-                    ➕ Create New List
-                </button>
-                <button class="action-button btn-secondary" onclick="window.location.href='/upload'">
-                    📤 Upload Words
-                </button>
-            </div>
+    <div class="hive-header">
+        <div class="hive-title">
+            <span class="bee-icon">🐝</span>
+            <h1>My Hive</h1>
+        </div>
+        <div class="hive-actions">
+            <button class="bee-button btn-home" onclick="window.location.href='/'">
+                🏠 Back to Hive
+            </button>
+            <button class="bee-button btn-new" onclick="createNewComb()">
+                ➕ New Comb
+            </button>
+            <button class="bee-button btn-upload" onclick="window.location.href='/upload'">
+                🍯 Pour In Words
+            </button>
         </div>
     </div>
 
-    <!-- Stats Section -->
-    <div class="stats-section">
-        <div class="stat-card">
-            <div class="stat-icon">📚</div>
-            <div class="stat-value" id="totalListsCount">0</div>
-            <div class="stat-label">Total Word Lists</div>
+    <!-- Search and Sort Bar -->
+    <div class="search-sort-bar">
+        <div class="search-box-container">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                id="searchBox" 
+                class="search-box" 
+                placeholder="Search honeycombs..."
+                oninput="filterHoneycombs()"
+            >
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">📝</div>
+        <select id="sortDropdown" class="sort-dropdown" onchange="sortHoneycombs()">
+            <option value="recent">Recent First</option>
+            <option value="name">Name A-Z</option>
+            <option value="largest">Largest First</option>
+            <option value="smallest">Smallest First</option>
+        </select>
+    </div>
+
+    <!-- Honeycomb Grid -->
+    <div id="honeycombGrid" class="honeycomb-grid">
+        <!-- Loading state -->
+        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+            <div style="font-size: 1.2rem; color: var(--bee-brown); font-weight: 700;">Loading your hive...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allLists = [];
+let filteredLists = [];
+
+// Load word lists on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWordLists();
+});
+
+// Load all word lists from API
+async function loadWordLists() {
+    try {
+        const res = await fetch('/api/saved-lists', {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok && data.lists) {
+            allLists = data.lists;
+            filteredLists = [...allLists];
+            updateStats();
+            renderHoneycombs();
+        } else {
+            console.error('Failed to load lists:', data.error);
+            displayEmptyHive();
+        }
+    } catch (error) {
+        console.error('Error loading lists:', error);
+        displayEmptyHive();
+    }
+}
+
+// Update hive statistics
+function updateStats() {
+    const totalLists = allLists.length;
+    const totalWords = allLists.reduce((sum, list) => sum + (list.word_count || 0), 0);
+    const largestList = allLists.length > 0 
+        ? Math.max(...allLists.map(list => list.word_count || 0)) 
+        : 0;
+    const avgWords = totalLists > 0 ? Math.round(totalWords / totalLists) : 0;
+
+    document.getElementById('statsBeesInHive').textContent = totalLists;
+    document.getElementById('statsHoneyStored').textContent = totalWords;
+    document.getElementById('statsLargestHoneycomb').textContent = largestList;
+    document.getElementById('statsWorkerBeePace').textContent = avgWords;
+}
+
+// Render honeycomb cells
+function renderHoneycombs() {
+    const grid = document.getElementById('honeycombGrid');
+    
+    if (filteredLists.length === 0) {
+        displayEmptyHive();
+        return;
+    }
+    
+    grid.innerHTML = '';
+    
+    filteredLists.forEach(list => {
+        const cell = createHoneycombCell(list);
+        grid.appendChild(cell);
+    });
+}
+
+// Create a single honeycomb cell
+function createHoneycombCell(list) {
+    const cell = document.createElement('div');
+    cell.className = 'honeycomb-cell';
+    cell.onclick = () => useListInQuiz(list.id);
+    
+    const formattedDate = list.updated_at 
+        ? new Date(list.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : 'Unknown';
+    
+    cell.innerHTML = `
+        <div class="honeycomb-cell-inner">
+            <div class="honeycomb-icon">📝</div>
+            <div class="honeycomb-name">${escapeHtml(list.name)}</div>
+            <div class="honeycomb-count">${list.word_count || 0}</div>
+            <div class="honeycomb-label">Words</div>
+            <div class="honeycomb-date">${formattedDate}</div>
+        </div>
+        <div class="honeycomb-actions">
+            <button class="honeycomb-action-btn" onclick="event.stopPropagation(); uploadToList(${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}');" title="Add Words">
+                📤
+            </button>
+            <button class="honeycomb-action-btn" onclick="event.stopPropagation(); deleteList(${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}', ${list.word_count || 0});" title="Delete">
+                🗑️
+            </button>
+        </div>
+    `;
+    
+    return cell;
+}
+
+// Filter honeycombs by search query
+function filterHoneycombs() {
+    const query = document.getElementById('searchBox').value.toLowerCase().trim();
+    
+    if (!query) {
+        filteredLists = [...allLists];
+    } else {
+        filteredLists = allLists.filter(list => 
+            list.name.toLowerCase().includes(query)
+        );
+    }
+    
+    sortHoneycombs();
+}
+
+// Sort honeycombs by selected criteria
+function sortHoneycombs() {
+    const sortBy = document.getElementById('sortDropdown').value;
+    
+    switch (sortBy) {
+        case 'name':
+            filteredLists.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'largest':
+            filteredLists.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
+            break;
+        case 'smallest':
+            filteredLists.sort((a, b) => (a.word_count || 0) - (b.word_count || 0));
+            break;
+        case 'recent':
+        default:
+            filteredLists.sort((a, b) => {
+                const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
+                const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
+                return dateB - dateA;
+            });
+            break;
+    }
+    
+    renderHoneycombs();
+}
+
+// Use list in quiz
+async function useListInQuiz(id) {
+    try {
+        // Check current wordbank
+        const wordbankRes = await fetch('/api/wordbank');
+        const wordbankData = await wordbankRes.json();
+        const currentCount = wordbankData.words ? wordbankData.words.length : 0;
+        
+        if (currentCount > 0) {
+            const confirmed = await showBeeConfirm({
+                title: '⚠️ Override Current Words?',
+                message: `You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`,
+                confirmText: 'Yes, Override',
+                cancelText: 'Cancel'
+            });
+            
+            if (!confirmed) return;
+        }
+        
+        // Load the list
+        const res = await fetch('/api/saved-lists/load', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'},
+            credentials: 'same-origin',
+            cache: 'no-store',
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words)`, 'success');
+
+            // Verify wordbank before navigating
+            try {
+                const verifyRes = await fetch(`/api/wordbank/verify?_=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+                });
+                const verify = await verifyRes.json();
+
+                if (verify.wordbank_count && verify.wordbank_count > 0) {
+                    // Use prefetch flow if available
+                    if (typeof window.showLoadingMessage === 'function' && typeof window.prefetchAndNavigate === 'function') {
+                        showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                        prefetchAndNavigate();
+                    } else {
+                        window.location.href = '/quiz';
+                    }
+                } else {
+                    showToast('❌ Word list did not load into your session. Please try again.', 'error');
+                }
+            } catch (e) {
+                console.warn('Wordbank verify failed, navigating anyway:', e);
+                window.location.href = '/quiz';
+            }
+        } else {
+            showToast(data.error || 'Failed to load list', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to load list', 'error');
+    }
+}
+
+// Upload to list
+function uploadToList(id, name) {
+    window.location.href = `/upload?list_id=${id}&list_name=${encodeURIComponent(name)}`;
+}
+
+// Delete list
+async function deleteList(id, name, count) {
+    const confirmed = await showBeeConfirm({
+        title: '🗑️ Delete Honeycomb?',
+        message: `Are you sure you want to permanently delete:\n\n📚 "${name}"\n(${count} words)\n\nThis cannot be undone!`,
+        confirmText: 'Yes, Delete',
+        cancelText: 'Cancel'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+        const res = await fetch('/api/saved-lists/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ "${name}" deleted successfully`, 'success');
+            await loadWordLists();
+        } else {
+            showToast(data.error || 'Delete failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Delete failed', 'error');
+    }
+}
+
+// Create new comb
+function createNewComb() {
+    window.location.href = '/upload';
+}
+
+// Display empty state
+function displayEmptyHive() {
+    const grid = document.getElementById('honeycombGrid');
+    grid.innerHTML = `
+        <div class="empty-hive" style="grid-column: 1 / -1;">
+            <div class="empty-hive-icon">🐝</div>
+            <h3>No honeycombs yet!</h3>
+            <p>Start building your hive by creating your first honeycomb.</p>
+            <button class="bee-button btn-new" onclick="createNewComb()">
+                ➕ Create First Honeycomb
+            </button>
+        </div>
+    `;
+    
+    // Update stats to zero
+    document.getElementById('statsBeesInHive').textContent = '0';
+    document.getElementById('statsHoneyStored').textContent = '0';
+    document.getElementById('statsLargestHoneycomb').textContent = '0';
+    document.getElementById('statsWorkerBeePace').textContent = '0';
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span style="font-size: 1.5rem;">${type === 'success' ? '✅' : '❌'}</span>
+        <span style="font-weight: 600;">${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(100px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Bee confirm dialog (reuse from main app)
+function showBeeConfirm(options) {
+    return new Promise((resolve) => {
+        if (window.BeeSmart && window.BeeSmart.showConfirm) {
+            window.BeeSmart.showConfirm(options).then(resolve);
+        } else {
+            // Fallback to native confirm
+            const result = confirm(options.message);
+            resolve(result);
+        }
+    });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
+
             <div class="stat-value" id="totalWordsCount">0</div>
             <div class="stat-label">Total Words</div>
         </div>
