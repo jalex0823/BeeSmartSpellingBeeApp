@@ -2408,6 +2408,36 @@ def list_saved_wordlists():
     try:
         # Guests are not allowed to use Saved Lists API
         if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required to use Saved Lists", "auth_required": True}), 403
+        
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        lists = (
+            WordList.query
+            .filter(WordList.created_by_user_id == user.id)
+            .order_by(WordList.updated_at.desc())
+            .all()
+        )
+
+        data = []
+        for wl in lists:
+            data.append({
+                "id": wl.id,
+                "uuid": wl.uuid,
+                "name": wl.list_name,
+                "description": wl.description or "",
+                "word_count": wl.word_count or 0,
+                "created_at": wl.created_at.isoformat() if wl.created_at else None,
+                "updated_at": wl.updated_at.isoformat() if wl.updated_at else None,
+            })
+
+        return jsonify({"ok": True, "lists": data})
+    except Exception as e:
+        print(f"ERROR /api/saved-lists GET: {e}")
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Failed to retrieve saved lists"}), 500
 
 
 @app.route("/api/saved-lists/<int:list_id>", methods=["GET"])
@@ -2445,35 +2475,6 @@ def get_saved_wordlist(list_id):
     except Exception as e:
         print(f"ERROR /api/saved-lists/{list_id} GET: {e}")
         return jsonify({"ok": False, "error": "Failed to load list"}), 500
-            return jsonify({"ok": False, "error": "Login required to use Saved Lists", "auth_required": True}), 403
-        user = get_or_create_guest_user()
-        if not user:
-            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
-
-        lists = (
-            WordList.query
-            .filter(WordList.created_by_user_id == user.id)
-            .order_by(WordList.updated_at.desc())
-            .all()
-        )
-
-        data = []
-        for wl in lists:
-            data.append({
-                "id": wl.id,
-                "uuid": wl.uuid,
-                "name": wl.list_name,
-                "description": wl.description or "",
-                "word_count": wl.word_count or 0,
-                "created_at": wl.created_at.isoformat() if wl.created_at else None,
-                "updated_at": wl.updated_at.isoformat() if wl.updated_at else None,
-            })
-
-        return jsonify({"ok": True, "lists": data})
-    except Exception as e:
-        print(f"ERROR /api/saved-lists GET: {e}")
-        db.session.rollback()
-        return jsonify({"ok": False, "error": "Failed to retrieve saved lists"}), 500
 
 
 @app.route("/api/saved-lists/save", methods=["POST"])
