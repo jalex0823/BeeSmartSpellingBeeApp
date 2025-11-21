@@ -12635,7 +12635,7 @@
             }
             
             async runSystemChecks() {
-                console.log('🚀 === STARTING SYSTEM CHECKS (10 checks) ===');
+                console.log('🚀 === STARTING SYSTEM CHECKS (10 checks total) ===');
                 
                 // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
                 try {
@@ -14220,7 +14220,7 @@
             
             function initUserAvatar3D(avatar) {
                 // Load user's custom 3D avatar - UPGRADED to match honeycomb picker quality
-                return new Promise((resolveAvatar, rejectAvatar) => {
+                return new Promise(async (resolveAvatar, rejectAvatar) => {
                     const container = document.getElementById('mascotBee3D');
                     if (!container) {
                         rejectAvatar(new Error('Container not found'));
