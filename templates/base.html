@@ -31,7 +31,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
 
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
@@ -313,7 +312,7 @@
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false" style="display: none;">
     <img src="" alt="BeeSmart Logo" class="crest-logo brand-logo" decoding="async" />
         <div class="checks" id="loadingChecks" aria-live="polite" style="display: none;">
-            <!-- Dynamic check items inserted by loading-screen.js -->
+            <!-- Loading check items -->
         </div>
         <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready" style="display: none;">Tap to Start</button>
         <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()" style="display: none;">Skip</button>
@@ -786,7 +785,6 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/loading-screen.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
 
     <!-- PWA Service Worker Registration -->

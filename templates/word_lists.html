@@ -1002,6 +1002,9 @@ async function loadWordLists() {
             filteredLists = [...allLists];
             updateStats();
             renderHoneycombs();
+        } else if (data.auth_required) {
+            // User not logged in - show login prompt
+            displayLoginRequired();
         } else {
             console.error('Failed to load lists:', data.error);
             displayEmptyHive();
@@ -1233,6 +1236,27 @@ function displayEmptyHive() {
             <p>Start building your hive by creating your first honeycomb.</p>
             <button class="bee-button btn-new" onclick="createNewComb()">
                 ➕ Create First Honeycomb
+            </button>
+        </div>
+    `;
+    
+    // Update stats to zero
+    document.getElementById('statsBeesInHive').textContent = '0';
+    document.getElementById('statsHoneyStored').textContent = '0';
+    document.getElementById('statsLargestHoneycomb').textContent = '0';
+    document.getElementById('statsWorkerBeePace').textContent = '0';
+}
+
+// Display login required message
+function displayLoginRequired() {
+    const grid = document.getElementById('honeycombGrid');
+    grid.innerHTML = `
+        <div class="empty-hive" style="grid-column: 1 / -1;">
+            <div class="empty-hive-icon">🔒</div>
+            <h3>Login Required</h3>
+            <p>Please log in to access your saved word lists.</p>
+            <button class="bee-button btn-new" onclick="window.location.href='/login'">
+                🔑 Go to Login
             </button>
         </div>
     `;
