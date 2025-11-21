@@ -2408,6 +2408,43 @@ def list_saved_wordlists():
     try:
         # Guests are not allowed to use Saved Lists API
         if not current_user.is_authenticated:
+
+
+@app.route("/api/saved-lists/<int:list_id>", methods=["GET"])
+def get_saved_wordlist(list_id):
+    """Get details of a specific saved word list."""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required"}), 403
+        
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+        
+        # Find the list
+        wl = WordList.query.filter_by(id=list_id, created_by_user_id=user.id).first()
+        
+        if not wl:
+            return jsonify({"ok": False, "error": "List not found"}), 404
+        
+        # Get all words in the list
+        items = WordListItem.query.filter_by(word_list_id=wl.id).order_by(WordListItem.position).all()
+        words = [item.word_data.get('word', '') for item in items if item.word_data]
+        
+        return jsonify({
+            "ok": True,
+            "list": {
+                "id": wl.id,
+                "name": wl.list_name,
+                "word_count": len(items),
+                "words": words,
+                "created_at": wl.created_at.isoformat() if wl.created_at else None,
+                "updated_at": wl.updated_at.isoformat() if wl.updated_at else None
+            }
+        })
+    except Exception as e:
+        print(f"ERROR /api/saved-lists/{list_id} GET: {e}")
+        return jsonify({"ok": False, "error": "Failed to load list"}), 500
             return jsonify({"ok": False, "error": "Login required to use Saved Lists", "auth_required": True}), 403
         user = get_or_create_guest_user()
         if not user:
@@ -2582,15 +2619,18 @@ def load_saved_wordlist():
 
 
 @app.route("/api/saved-lists/delete", methods=["POST"])
-def delete_saved_wordlist():
+@app.route("/api/saved-lists/<int:list_id>", methods=["DELETE"])
+def delete_saved_wordlist(list_id=None):
     try:
         # Guests are not allowed to delete lists
         if not current_user.is_authenticated:
             print(f"DEBUG /api/saved-lists/delete: User not authenticated")
             return jsonify({"ok": False, "error": "Login required to delete saved lists", "auth_required": True}), 403
         
-        payload = request.get_json(silent=True) or {}
-        list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
+        # Get list_id from URL parameter or POST body
+        if list_id is None:
+            payload = request.get_json(silent=True) or {}
+            list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
         
         print(f"DEBUG /api/saved-lists/delete: Received payload={payload}, list_id={list_id}")
         

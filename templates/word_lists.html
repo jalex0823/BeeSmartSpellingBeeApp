@@ -442,6 +442,23 @@
 {% endblock %}
 
 {% block content %}
+<!-- Kid-Friendly Bee Modal -->
+<div class="bee-modal-overlay" id="beeModal">
+  <div class="bee-modal">
+    <div class="bee-modal-header">
+      <div class="bee-modal-icon" id="modalIcon">🐝</div>
+      <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
+    </div>
+    <div class="bee-modal-body" id="modalBody">
+      Are you sure about this?
+    </div>
+    <div class="bee-modal-actions" id="modalActions">
+      <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
+      <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
+    </div>
+  </div>
+</div>
+
 <div class="hive-page">
 
   <!-- Floating background bee -->
@@ -625,7 +642,9 @@ function createHoneycombCell(list, hiveIndex) {
     cell.href = '#';
     cell.onclick = (e) => {
         e.preventDefault();
-        useListInQuiz(list.id);
+        if (!e.target.closest('.hive-cell-action-btn')) {
+            useListInQuiz(list.id);
+        }
     };
     
     cell.dataset.name = (list.name || '').toLowerCase();
@@ -637,6 +656,12 @@ function createHoneycombCell(list, hiveIndex) {
         : new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
     
     cell.innerHTML = `
+      <!-- Action buttons -->
+      <div class="hive-cell-actions">
+        <button class="hive-cell-action-btn view" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}')">👁️</button>
+        <button class="hive-cell-action-btn delete" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}')">🗑️</button>
+      </div>
+
       <!-- word count badge -->
       <div class="hive-cell-badge">
         <span class="icon">≡</span>
@@ -753,7 +778,13 @@ async function useListInQuiz(id) {
         const currentCount = wordbankData.words ? wordbankData.words.length : 0;
         
         if (currentCount > 0) {
-            const confirmed = confirm(`You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`);
+            const confirmed = await showBeeModal(
+                '🍯',
+                'Replace Current Words?',
+                `You have ${currentCount} word(s) already loaded!\n\nLoading this list will replace them with new spelling honey.\n\nReady to swap?`,
+                'Yes, Load It!',
+                'primary'
+            );
             if (!confirmed) return;
         }
         
@@ -784,7 +815,7 @@ async function useListInQuiz(id) {
 
 // Create new word list
 async function createNewComb() {
-    const name = prompt('Enter a name for your new word hive:');
+    const name = await showBeePrompt('🐝', 'Create New Word Hive!', 'What should we call this honeycomb?');
     if (!name || !name.trim()) return;
     
     try {
@@ -843,6 +874,159 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Bee Modal System
+let modalResolve = null;
+
+function showBeeModal(icon, title, message, confirmText = 'OK', confirmType = 'primary') {
+    return new Promise((resolve) => {
+        modalResolve = resolve;
+        
+        document.getElementById('modalIcon').textContent = icon;
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalBody').innerHTML = message.replace(/\n/g, '<br>');
+        
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = `bee-modal-btn ${confirmType}`;
+        
+        document.getElementById('beeModal').classList.add('active');
+    });
+}
+
+function showBeePrompt(icon, title, message) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('beeModal');
+        const modal = overlay.querySelector('.bee-modal');
+        
+        modal.innerHTML = `
+            <div class="bee-modal-header">
+                <div class="bee-modal-icon" style="animation: wiggle 1s ease infinite;">${icon}</div>
+                <h2 class="bee-modal-title">${title}</h2>
+            </div>
+            <div class="bee-modal-body">${message}</div>
+            <input type="text" id="beePromptInput" style="
+                width: 100%;
+                padding: 0.875rem;
+                border: 3px solid #ffc94a;
+                border-radius: 12px;
+                font-size: 1.1rem;
+                margin-bottom: 1rem;
+                font-family: inherit;
+                box-sizing: border-box;
+            " />
+            <div class="bee-modal-actions">
+                <button class="bee-modal-btn secondary" onclick="closeBeePrompt('')">Cancel</button>
+                <button class="bee-modal-btn primary" onclick="closeBeePrompt(document.getElementById('beePromptInput').value)">Create</button>
+            </div>
+        `;
+        
+        modalResolve = resolve;
+        overlay.classList.add('active');
+        
+        setTimeout(() => {
+            const input = document.getElementById('beePromptInput');
+            if (input) {
+                input.focus();
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        closeBeePrompt(input.value);
+                    }
+                });
+            }
+        }, 100);
+    });
+}
+
+function closeBeePrompt(value) {
+    document.getElementById('beeModal').classList.remove('active');
+    if (modalResolve) {
+        modalResolve(value);
+        modalResolve = null;
+    }
+}
+
+function confirmBeeModal() {
+    document.getElementById('beeModal').classList.remove('active');
+    if (modalResolve) {
+        modalResolve(true);
+        modalResolve = null;
+    }
+}
+
+function closeBeeModal() {
+    document.getElementById('beeModal').classList.remove('active');
+    if (modalResolve) {
+        modalResolve(false);
+        modalResolve = null;
+    }
+}
+
+// View word list details
+async function viewWordList(event, listId, listName) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+        const res = await fetch(`/api/saved-lists/${listId}`);
+        const data = await res.json();
+        
+        if (data.ok && data.list) {
+            const words = data.list.words || [];
+            const wordPreview = words.slice(0, 10).join(', ');
+            const moreWords = words.length > 10 ? `... and ${words.length - 10} more` : '';
+            
+            await showBeeModal(
+                '👁️',
+                `${listName}`,
+                `<strong>Total Words:</strong> ${words.length}<br><br><strong>Words:</strong><br>${wordPreview}${moreWords}`,
+                'Close',
+                'primary'
+            );
+        } else {
+            showToast('❌ Could not load word list details', 'error');
+        }
+    } catch (error) {
+        console.error('Error viewing list:', error);
+        showToast('❌ Error viewing list', 'error');
+    }
+}
+
+// Delete word list
+async function deleteWordList(event, listId, listName) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const confirmed = await showBeeModal(
+        '🗑️',
+        'Delete Word Hive?',
+        `Are you sure you want to delete "${listName}"?<br><br>This honeycomb will buzz away forever! 🐝💨`,
+        'Yes, Delete It',
+        'danger'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        const res = await fetch(`/api/saved-lists/${listId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin'
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+            showToast('✅ Word hive deleted!', 'success');
+            await loadWordLists();
+        } else {
+            showToast('❌ ' + (data.error || 'Failed to delete list'), 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting list:', error);
+        showToast('❌ Error deleting list', 'error');
+    }
 }
 </script>
 
