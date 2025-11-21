@@ -372,6 +372,9 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
+<!-- Bee Swarm Voice Visualizer Background -->
+<div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;"></div>
+
 <div class="quiz-main-container">
     <div class="fairy-decoration">🧚‍♀️</div>
     
@@ -965,6 +968,23 @@ class MagicalSpellingBee {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // 🐝 Initialize Bee Swarm Voice Visualizer Background
+    const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+    if (visualizerContainer) {
+        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}')
+            .then(module => {
+                const BeeSwarm = module.default;
+                BeeSwarm.init(visualizerContainer, {
+                    autoStart: true,
+                    showControls: false,
+                    particleCount: 4000,  // Magical quiz gets full effect
+                    zIndex: 0
+                });
+                console.log('🐝 Magical Quiz: Bee swarm visualizer active');
+            })
+            .catch(err => console.log('Visualizer not loaded:', err));
+    }
+    
     new MagicalSpellingBee();
 });
 </script>

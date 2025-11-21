@@ -8516,6 +8516,12 @@ def test_glb_avatars():
     return render_template('test_glb_avatars.html')
 
 
+@app.route('/visualizer')
+def bee_swarm_visualizer():
+    """Bee swarm voice visualizer - interactive audio visualization"""
+    return render_template('bee_swarm_visualizer.html')
+
+
 @app.route('/teacher/dashboard')
 @login_required
 def teacher_dashboard():

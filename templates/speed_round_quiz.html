@@ -600,6 +600,9 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
+<!-- Bee Swarm Voice Visualizer Background -->
+<div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;"></div>
+
 <!-- ⚠️ ERROR BOUNDARY ⚠️ -->
 <div id="errorBoundary" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 215, 0, 0.25); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center;">
     <div style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 50%, #FFDAB9 100%); border-radius: 30px; padding: 3rem; max-width: 600px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(255, 140, 0, 0.35); border: 5px solid #FF6B6B;">
@@ -911,6 +914,23 @@ function maskTargetWord(text, targetWord) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // 🐝 Initialize Bee Swarm Voice Visualizer Background
+    const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+    if (visualizerContainer) {
+        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}')
+            .then(module => {
+                const BeeSwarm = module.default;
+                BeeSwarm.init(visualizerContainer, {
+                    autoStart: true,
+                    showControls: false,
+                    particleCount: 3000,  // Lighter for speed round
+                    zIndex: 0
+                });
+                console.log('🐝 Speed Round: Bee swarm visualizer active');
+            })
+            .catch(err => console.log('Visualizer not loaded:', err));
+    }
+    
     // iOS Critical Fix: Set up event listeners IMMEDIATELY on page load
     // Don't wait for speech synthesis to complete
     setupEventListeners();

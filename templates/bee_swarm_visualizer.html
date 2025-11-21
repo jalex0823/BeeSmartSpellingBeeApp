@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bee Swarm Voice Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin:0; height:100%; background:#050505; overflow:hidden; font-family:system-ui; }
+    #ui {
+      position: fixed; inset: 16px auto auto 16px; z-index: 10;
+      display:flex; gap:8px; align-items:center;
+      background:rgba(0,0,0,.5); padding:10px 12px; border-radius:12px;
+      color:#fff; backdrop-filter: blur(6px);
+    }
+    button{
+      border:0; padding:8px 12px; border-radius:10px; cursor:pointer;
+      background:#FFD540; color:#2b1a00; font-weight:700;
+      box-shadow:0 0 0 2px rgba(255,213,64,.2) inset;
+    }
+    button:active{ transform: translateY(1px); }
+    .chip { font-size:12px; opacity:.8; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="ui">
+    <button id="startBtn">Start Mic</button>
+    <span class="chip" id="ampChip">amp: 0.00</span>
+    <span class="chip">🐝 Bee Swarm Mode</span>
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    // -------------------------
+    // 1) BASIC THREE SCENE
+    // -------------------------
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050505, 0.07);
+
+    const camera = new THREE.PerspectiveCamera(
+      60, window.innerWidth / window.innerHeight, 0.1, 200
+    );
+    camera.position.set(0, 0, 24);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Subtle background stars
+    {
+      const starGeo = new THREE.BufferGeometry();
+      const N = 1200;
+      const pos = new Float32Array(N * 3);
+      for (let i=0;i<N;i++){
+        pos[i*3+0]=(Math.random()-0.5)*160;
+        pos[i*3+1]=(Math.random()-0.5)*160;
+        pos[i*3+2]=(Math.random()-0.5)*160;
+      }
+      starGeo.setAttribute("position", new THREE.BufferAttribute(pos,3));
+      const starMat = new THREE.PointsMaterial({ size:0.25, transparent:true, opacity:0.25 });
+      const stars = new THREE.Points(starGeo, starMat);
+      scene.add(stars);
+    }
+
+    // -------------------------
+    // 2) PARTICLE SYSTEM
+    // -------------------------
+    const COUNT = 6000;
+    const positions = new Float32Array(COUNT * 3);
+    const velocities = new Float32Array(COUNT * 3);
+    const targets   = new Float32Array(COUNT * 3);
+    const colors    = new Float32Array(COUNT * 3);
+
+    // Honey / golden brown palette
+    const honey     = new THREE.Color("#FFD540");
+    const goldenBr  = new THREE.Color("#B86B1A");
+    const darkAmber = new THREE.Color("#7A3E00");
+
+    function randomHoneyColor(){
+      const t = Math.random();
+      let c = honey.clone();
+      if (t < 0.70) c.lerp(goldenBr, t/0.70);
+      else c.lerp(darkAmber, (t-0.70)/0.30);
+
+      const hsl = {};
+      c.getHSL(hsl);
+      hsl.h += (Math.random()-0.5)*0.02;
+      hsl.s = THREE.MathUtils.clamp(hsl.s + (Math.random()-0.5)*0.08, 0, 1);
+      hsl.l = THREE.MathUtils.clamp(hsl.l + (Math.random()-0.5)*0.08, 0, 1);
+      c.setHSL(hsl.h, hsl.s, hsl.l);
+      return c;
+    }
+
+    function setHiveTargets(){
+      const radiusBase = 7.5;
+      for (let i=0;i<COUNT;i++){
+        const a = i * 0.03;
+        const r = radiusBase + 0.9*Math.sin(i*0.015);
+        const y = (Math.sin(i*0.008) * 1.6);
+
+        targets[i*3+0] = Math.cos(a) * r;
+        targets[i*3+1] = y;
+        targets[i*3+2] = Math.sin(a) * r;
+      }
+    }
+
+    for (let i=0;i<COUNT;i++){
+      positions[i*3+0] = (Math.random()-0.5) * 30;
+      positions[i*3+1] = (Math.random()-0.5) * 18;
+      positions[i*3+2] = (Math.random()-0.5) * 30;
+
+      velocities[i*3+0] = (Math.random()-0.5) * 0.02;
+      velocities[i*3+1] = (Math.random()-0.5) * 0.02;
+      velocities[i*3+2] = (Math.random()-0.5) * 0.02;
+
+      const c = randomHoneyColor();
+      colors[i*3+0] = c.r;
+      colors[i*3+1] = c.g;
+      colors[i*3+2] = c.b;
+    }
+    setHiveTargets();
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+    const BASE_POINT_SIZE = 0.13;   // base bee size
+    const mat = new THREE.PointsMaterial({
+      size: BASE_POINT_SIZE,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    const bees = new THREE.Points(geo, mat);
+    scene.add(bees);
+
+    // -------------------------
+    // 3) AUDIO SETUP (MIC)
+    // -------------------------
+    let analyser, audioData, audioStarted = false;
+    let amplitude = 0;
+    let ampSmooth = 0;
+
+    async function startMic(){
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      audioData = new Uint8Array(analyser.frequencyBinCount);
+
+      src.connect(analyser);
+      audioStarted = true;
+    }
+
+    document.getElementById("startBtn").onclick = async () => {
+      try{
+        await startMic();
+        document.getElementById("startBtn").textContent = "Mic Live ✅";
+      }catch(e){
+        alert("Mic permission denied or unavailable.");
+        console.error(e);
+      }
+    };
+
+    function updateAmplitude(){
+      if(!audioStarted) { amplitude = 0; return; }
+      analyser.getByteTimeDomainData(audioData);
+
+      let sum = 0;
+      for (let i=0;i<audioData.length;i++){
+        const v = (audioData[i]-128)/128;
+        sum += v*v;
+      }
+      const rms = Math.sqrt(sum / audioData.length);
+      amplitude = THREE.MathUtils.clamp(rms * 2.2, 0, 1);
+    }
+
+    // -------------------------
+    // 4) SWARM DYNAMICS
+    // -------------------------
+    const tSpeedBase = 0.015;
+    const noiseBase  = 0.025;
+    const buzzBase   = 0.004;
+    const damp       = 0.93;
+
+    function swarmStep(time){
+      const posAttr = geo.getAttribute("position");
+
+      ampSmooth = ampSmooth * 0.9 + amplitude * 0.1;
+
+      const attractStrength = tSpeedBase + ampSmooth * 0.08;
+      const noiseStrength   = noiseBase  + ampSmooth * 0.22;
+      const buzzStrength    = buzzBase   + ampSmooth * 0.02;
+
+      for (let i=0;i<COUNT;i++){
+        const ix = i*3;
+
+        const px = positions[ix+0];
+        const py = positions[ix+1];
+        const pz = positions[ix+2];
+
+        const tx = targets[ix+0];
+        const ty = targets[ix+1];
+        const tz = targets[ix+2];
+
+        let vx = velocities[ix+0];
+        let vy = velocities[ix+1];
+        let vz = velocities[ix+2];
+
+        vx += (tx - px) * attractStrength;
+        vy += (ty - py) * attractStrength;
+        vz += (tz - pz) * attractStrength;
+
+        const n1 = Math.sin(time*0.001 + px*0.7 + i*0.0007);
+        const n2 = Math.cos(time*0.0013 + pz*0.7 + i*0.0009);
+        const n3 = Math.sin(time*0.0011 + py*0.9 + i*0.0005);
+
+        vx += n1 * noiseStrength;
+        vy += n3 * noiseStrength * 0.65;
+        vz += n2 * noiseStrength;
+
+        vx += (Math.random()-0.5) * buzzStrength;
+        vy += (Math.random()-0.5) * buzzStrength;
+        vz += (Math.random()-0.5) * buzzStrength;
+
+        vx *= damp; vy *= damp; vz *= damp;
+
+        positions[ix+0] = px + vx;
+        positions[ix+1] = py + vy;
+        positions[ix+2] = pz + vz;
+
+        velocities[ix+0] = vx;
+        velocities[ix+1] = vy;
+        velocities[ix+2] = vz;
+
+        posAttr.setXYZ(i, positions[ix+0], positions[ix+1], positions[ix+2]);
+      }
+
+      posAttr.needsUpdate = true;
+    }
+
+    // -------------------------
+    // 5) PULSE (SOFT & GENTLE)
+    // -------------------------
+    function pulseStep(time){
+      // Soft breathing
+      const breathe = 0.05 * Math.sin(time * 0.002);   // slower, softer
+      const audioPulse = ampSmooth * 0.45;             // gentler response
+      const pulse = breathe + audioPulse;
+
+      // Particle scale (very subtle)
+      mat.size = BASE_POINT_SIZE * (1 + pulse * 0.12);
+
+      // Soft honey glow
+      mat.opacity = THREE.MathUtils.clamp(
+        0.60 + pulse * 0.18,
+        0.60,
+        0.85
+      );
+
+      // Swarm-wide soft expansion
+      const swarmScale = 1 + pulse * 0.06;
+      bees.scale.setScalar(swarmScale);
+    }
+
+    // -------------------------
+    // 6) ANIMATE
+    // -------------------------
+    const ampChip = document.getElementById("ampChip");
+
+    function animate(time){
+      requestAnimationFrame(animate);
+
+      updateAmplitude();
+      ampChip.textContent = `amp: ${amplitude.toFixed(2)}`;
+
+      swarmStep(time);
+      pulseStep(time);   // <-- NEW pulse call
+
+      camera.position.x = Math.sin(time*0.0002)*0.8;
+      camera.position.y = Math.cos(time*0.0002)*0.6;
+      camera.lookAt(0,0,0);
+
+      renderer.render(scene, camera);
+    }
+    animate(0);
+
+    // -------------------------
+    // 7) OPTIONAL: LOGO TARGETS
+    // -------------------------
+    async function setLogoTargets(url){
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await img.decode();
+
+      const canvas = document.createElement("canvas");
+      const w = canvas.width = img.width;
+      const h = canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img,0,0);
+
+      const data = ctx.getImageData(0,0,w,h).data;
+      const pts = [];
+      for (let y=0;y<h;y+=2){
+        for (let x=0;x<w;x+=2){
+          const a = data[(y*w + x)*4 + 3];
+          if(a > 40) pts.push({x,y});
+        }
+      }
+
+      for (let i=0;i<COUNT;i++){
+        const p = pts[i % pts.length];
+        const nx = (p.x / w - 0.5) * 14;
+        const ny = -(p.y / h - 0.5) * 8;
+        const nz = (Math.random()-0.5) * 1.5;
+        targets[i*3+0]=nx; targets[i*3+1]=ny; targets[i*3+2]=nz;
+      }
+    }
+
+    // If you want to test with the image you uploaded, uncomment:
+    // setLogoTargets("/mnt/data/c6a074ec-8b2c-45d4-819b-f1621c8db9c5.png");
+
+  </script>
+</body>
+</html>
