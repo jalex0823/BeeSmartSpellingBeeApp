@@ -820,28 +820,57 @@
             // 🐝 Fetch and display teacher's own Buzz Dust rank
             async function loadTeacherBuzzDust() {
                 try {
+                    console.log('🐝 Loading teacher Buzz Dust info...');
                     const res = await fetch('/api/buzz-dust/info', {
                         credentials: 'same-origin',
                         cache: 'no-store'
                     });
+                    
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    }
+                    
                     const data = await res.json();
+                    console.log('✅ Teacher Buzz Dust data received:', data);
                     
                     if (data.ok) {
                         const rankEl = document.getElementById('teacher-rank-name');
                         const badgeEl = document.getElementById('teacher-rank-badge');
                         const amountEl = document.getElementById('teacher-buzz-dust-amount');
                         
-                        if (rankEl) rankEl.textContent = data.rank_name || 'Novice Bee';
-                        if (amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                        if (rankEl) {
+                            rankEl.textContent = data.rank_name || 'Novice Bee';
+                            console.log('✅ Teacher rank name updated:', data.rank_name);
+                        }
+                        if (amountEl) {
+                            amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                            console.log('✅ Teacher Buzz Dust amount updated:', data.total_buzz_dust);
+                        }
                         
                         if (badgeEl && data.badge_image) {
                             badgeEl.src = data.badge_image;
                             badgeEl.style.display = 'block';
+                            console.log('✅ Teacher badge image updated:', data.badge_image);
                         }
+                    } else {
+                        console.error('❌ API returned ok=false:', data);
+                        const rankEl = document.getElementById('teacher-rank-name');
+                        if (rankEl) rankEl.textContent = 'Novice Bee';
                     }
                 } catch (error) {
-                    console.error('Error loading Buzz Dust:', error);
+                    console.error('❌ Error loading teacher Buzz Dust:', error);
+                    const rankEl = document.getElementById('teacher-rank-name');
+                    const amountEl = document.getElementById('teacher-buzz-dust-amount');
+                    if (rankEl) rankEl.textContent = 'Novice Bee';
+                    if (amountEl) amountEl.textContent = '0 ✨';
                 }
+            }
+            
+            // Load Buzz Dust immediately when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadTeacherBuzzDust);
+            } else {
+                loadTeacherBuzzDust();
             }
             
             // Initial + interval
@@ -851,7 +880,6 @@
             setInterval(pollClass, 12000);
             window.addEventListener('load', () => {
                 pollClass();
-                loadTeacherBuzzDust(); // Load teacher's Buzz Dust
             });
         })();
     </script>

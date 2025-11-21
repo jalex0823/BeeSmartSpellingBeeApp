@@ -872,35 +872,63 @@
             // 🐝 Fetch and display parent's own Buzz Dust rank
             async function loadParentBuzzDust() {
                 try {
+                    console.log('🐝 Loading parent Buzz Dust info...');
                     const res = await fetch('/api/buzz-dust/info', {
                         credentials: 'same-origin',
                         cache: 'no-store'
                     });
+                    
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    }
+                    
                     const data = await res.json();
+                    console.log('✅ Parent Buzz Dust data received:', data);
                     
                     if (data.ok) {
                         const rankEl = document.getElementById('parent-rank-name');
                         const badgeEl = document.getElementById('parent-rank-badge');
                         const amountEl = document.getElementById('parent-buzz-dust-amount');
                         
-                        if (rankEl) rankEl.textContent = data.rank_name || 'Novice Bee';
-                        if (amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                        if (rankEl) {
+                            rankEl.textContent = data.rank_name || 'Novice Bee';
+                            console.log('✅ Parent rank name updated:', data.rank_name);
+                        }
+                        if (amountEl) {
+                            amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                            console.log('✅ Parent Buzz Dust amount updated:', data.total_buzz_dust);
+                        }
                         
                         if (badgeEl && data.badge_image) {
                             badgeEl.src = data.badge_image;
                             badgeEl.style.display = 'block';
+                            console.log('✅ Parent badge image updated:', data.badge_image);
                         }
+                    } else {
+                        console.error('❌ API returned ok=false:', data);
+                        const rankEl = document.getElementById('parent-rank-name');
+                        if (rankEl) rankEl.textContent = 'Novice Bee';
                     }
                 } catch (error) {
-                    console.error('Error loading Buzz Dust:', error);
+                    console.error('❌ Error loading parent Buzz Dust:', error);
+                    const rankEl = document.getElementById('parent-rank-name');
+                    const amountEl = document.getElementById('parent-buzz-dust-amount');
+                    if (rankEl) rankEl.textContent = 'Novice Bee';
+                    if (amountEl) amountEl.textContent = '0 ✨';
                 }
+            }
+            
+            // Load Buzz Dust immediately when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadParentBuzzDust);
+            } else {
+                loadParentBuzzDust();
             }
             
             document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollFamily(); });
             setInterval(pollFamily, 12000);
             window.addEventListener('load', () => {
                 pollFamily();
-                loadParentBuzzDust(); // Load parent's Buzz Dust
             });
         })();
     </script>

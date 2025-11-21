@@ -116,27 +116,51 @@
         // Fetch and display admin's Buzz Dust rank
         async function loadAdminBuzzDust() {
             try {
+                console.log('🐝 Loading admin Buzz Dust info...');
                 const res = await fetch('/api/buzz-dust/info', {
                     credentials: 'same-origin',
                     cache: 'no-store'
                 });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
                 const data = await res.json();
+                console.log('✅ Buzz Dust data received:', data);
                 
                 if (data.ok) {
                     const rankEl = document.getElementById('admin-rank-name');
                     const badgeEl = document.getElementById('admin-rank-badge');
                     const amountEl = document.getElementById('admin-buzz-dust-amount');
                     
-                    if (rankEl) rankEl.textContent = data.rank_name || 'Novice Bee';
-                    if (amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                    if (rankEl) {
+                        rankEl.textContent = data.rank_name || 'Novice Bee';
+                        console.log('✅ Rank name updated:', data.rank_name);
+                    }
+                    if (amountEl) {
+                        amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
+                        console.log('✅ Buzz Dust amount updated:', data.total_buzz_dust);
+                    }
                     
                     if (badgeEl && data.badge_image) {
                         badgeEl.src = data.badge_image;
                         badgeEl.style.display = 'block';
+                        console.log('✅ Badge image updated:', data.badge_image);
                     }
+                } else {
+                    console.error('❌ API returned ok=false:', data);
+                    // Fallback display
+                    const rankEl = document.getElementById('admin-rank-name');
+                    if (rankEl) rankEl.textContent = 'Novice Bee';
                 }
             } catch (error) {
-                console.error('Error loading Buzz Dust:', error);
+                console.error('❌ Error loading Buzz Dust:', error);
+                // Fallback display
+                const rankEl = document.getElementById('admin-rank-name');
+                const amountEl = document.getElementById('admin-buzz-dust-amount');
+                if (rankEl) rankEl.textContent = 'Novice Bee';
+                if (amountEl) amountEl.textContent = '0 ✨';
             }
         }
         
@@ -145,8 +169,13 @@
             return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
         
-        // Load on page load
-        window.addEventListener('load', loadAdminBuzzDust);
+        // Load immediately when DOM is ready (faster than window.load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadAdminBuzzDust);
+        } else {
+            // DOM already loaded, execute immediately
+            loadAdminBuzzDust();
+        }
     </script>
 
     <!-- System Statistics -->
