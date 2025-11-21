@@ -10941,6 +10941,9 @@ def api_get_avatar(avatar_id):
         
         # Build avatar info dict with all URLs
         base_path = f"/static/assets/avatars/{avatar.folder_path}"
+        # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
+        is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+        
         avatar_info = {
             'id': avatar.slug,
             'name': avatar.name,
@@ -10949,7 +10952,7 @@ def api_get_avatar(avatar_id):
             'category': avatar.category,
             'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
             'preview_url': f"{base_path}/{avatar.thumbnail_file}",
-            'model_obj_url': f"{base_path}/{avatar.obj_file}",
+            'glb_url': f"{base_path}/{avatar.obj_file}" if is_glb else None,  # GLB files stored in obj_file field
             'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
             'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
             'fallback_url': "/static/assets/avatars/fallback.png",
@@ -11560,9 +11563,9 @@ def api_get_my_avatar():
                 'avatar': {
                     'avatar_id': 'mascot-bee',
                     'variant': 'default',
-                    'name': 'MascotBee',
+                    'name': 'Mascot Bee Avatar',
                     'urls': {
-                        'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                        'glb': '/static/assets/avatars/glb_files/MascotBee.glb',
                         'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                     }
                 },
@@ -11579,9 +11582,9 @@ def api_get_my_avatar():
                 'avatar': {
                     'avatar_id': 'mascot-bee',
                     'variant': 'default',
-                    'name': 'MascotBee',
+                    'name': 'Mascot Bee Avatar',
                     'urls': {
-                        'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                        'glb': '/static/assets/avatars/glb_files/MascotBee.glb',
                         'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                     }
                 },
@@ -11604,9 +11607,9 @@ def api_get_my_avatar():
             'avatar': {
                 'avatar_id': 'mascot-bee',
                 'variant': 'default',
-                'name': 'MascotBee',
+                'name': 'Mascot Bee Avatar',
                 'urls': {
-                    'model_obj': '/static/assets/avatars/glb_files/MascotBee.glb',
+                    'glb': '/static/assets/avatars/glb_files/MascotBee.glb',
                     'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png'
                 }
             },

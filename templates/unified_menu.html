@@ -2593,6 +2593,33 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
+                <!-- Scrolling Buzz Dust Progress Ticker (above badge) -->
+                <div id="buzz-dust-ticker" style="
+                    position: relative;
+                    background: linear-gradient(90deg, rgba(255, 201, 74, 0.2) 0%, rgba(244, 166, 35, 0.3) 50%, rgba(255, 201, 74, 0.2) 100%);
+                    border: 2px solid rgba(255, 201, 74, 0.4);
+                    border-radius: 20px;
+                    padding: 0.75rem 1rem;
+                    margin: 2rem auto 0.5rem auto;
+                    max-width: 380px;
+                    overflow: hidden;
+                    display: none;
+                    box-shadow: 0 4px 12px rgba(255, 201, 74, 0.2);
+                ">
+                    <div style="position: relative; width: 100%; overflow: hidden;">
+                        <div id="ticker-text" style="
+                            white-space: nowrap;
+                            animation: scroll-ticker 20s linear infinite;
+                            font-size: 1rem;
+                            font-weight: 600;
+                            color: #7a4b2b;
+                            display: inline-block;
+                        ">
+                            🐝 Collect more buzz dust to rank up! ✨
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Combined Rank + Name Badge (authenticated users only) -->
                 <div id="student-buzz-dust-rank" style="
                     position: relative;
@@ -2600,7 +2627,7 @@
                     border: 2px solid rgba(138, 43, 226, 0.3);
                     border-radius: 20px;
                     padding: 1.25rem 1.75rem;
-                    margin: 2rem auto 0.75rem auto;
+                    margin: 0.5rem auto 0.75rem auto;
                     display: inline-flex;
                     align-items: center;
                     gap: 1rem;
@@ -2617,35 +2644,10 @@
                     </div>
                 </div>
                 
-                <!-- Scrolling Buzz Dust Progress Ticker -->
-                <div id="buzz-dust-ticker" style="
-                    position: relative;
-                    background: linear-gradient(90deg, rgba(255, 201, 74, 0.2) 0%, rgba(244, 166, 35, 0.3) 50%, rgba(255, 201, 74, 0.2) 100%);
-                    border: 2px solid rgba(255, 201, 74, 0.4);
-                    border-radius: 20px;
-                    padding: 0.75rem 1rem;
-                    margin: 0.5rem auto 0.75rem auto;
-                    max-width: 380px;
-                    overflow: hidden;
-                    display: none;
-                    box-shadow: 0 4px 12px rgba(255, 201, 74, 0.2);
-                ">
-                    <div id="ticker-text" style="
-                        white-space: nowrap;
-                        animation: scroll-left 15s linear infinite;
-                        font-size: 1rem;
-                        font-weight: 600;
-                        color: #7a4b2b;
-                        display: inline-block;
-                    ">
-                        🐝 Collect more buzz dust to rank up! ✨
-                    </div>
-                </div>
-                
                 <style>
-                    @keyframes scroll-left {
+                    @keyframes scroll-ticker {
                         0% { transform: translateX(100%); }
-                        100% { transform: translateX(-100%); }
+                        100% { transform: translateX(-150%); }
                     }
                 </style>
                 {% endif %}
@@ -14326,11 +14328,12 @@
                         directionalLight.position.set(5, 5, 5);
                         scene.add(directionalLight);
                         
-                        // GLB-only model URL - Use .glb property for GLB avatars
-                        const modelUrl = avatar && avatar.urls ? (avatar.urls.glb || avatar.urls.model_obj) : null;
+                        // GLB-only model URL - Use .glb property ONLY (no .obj fallback)
+                        const modelUrl = avatar && avatar.urls ? avatar.urls.glb : null;
                         if (!modelUrl || !/\.glb(\?.*)?$/i.test(modelUrl)) {
-                            console.error('❌ Invalid avatar URL:', modelUrl, 'Full avatar object:', avatar);
-                            throw new Error('Avatar model is not a GLB file');
+                            console.error('❌ Invalid GLB avatar URL:', modelUrl);
+                            console.error('Avatar object:', JSON.stringify(avatar, null, 2));
+                            throw new Error('Avatar must be GLB format. OBJ files are not supported.');
                         }
                         
                         console.log('✅ Using GLB model URL:', modelUrl);

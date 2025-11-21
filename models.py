@@ -138,22 +138,25 @@ class User(UserMixin, db.Model):
             avatar = Avatar.get_by_slug('cool-bee')
         
         if not avatar:
-            # Ultimate fallback
+            # Ultimate fallback - GLB format only
             return {
-                'id': 'cool-bee',
-                'name': 'Cool Bee',
+                'id': 'mascot-bee',
+                'name': 'Mascot Bee Avatar',
                 'variant': 'default',
                 'urls': {
-                    'model_obj': '/static/assets/avatars/cool-bee/CoolBee.obj',
-                    'model_mtl': '/static/assets/avatars/cool-bee/CoolBee.mtl',
-                    'texture': '/static/assets/avatars/cool-bee/Cool_Bee_1022222744.png',
-                    'thumbnail': '/static/assets/avatars/cool-bee/CoolBee!.png',
-                    'preview': '/static/assets/avatars/cool-bee/CoolBee!.png',
+                    'glb': '/static/assets/avatars/glb_files/MascotBee.glb',
+                    'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png',
+                    'preview': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png',
                 }
             }
         
         # Build avatar info from database
         base_path = f"/static/assets/avatars/{avatar.folder_path}"
+        
+        # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
+        # All avatars are GLB format now. Database schema uses obj_file for historical reasons.
+        is_glb = avatar.obj_file and avatar.obj_file.lower().endswith('.glb')
+        
         info = {
             'id': avatar.slug,
             'name': avatar.name,
@@ -162,29 +165,26 @@ class User(UserMixin, db.Model):
             'category': avatar.category,
             'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
             'preview_url': f"{base_path}/{avatar.thumbnail_file}",
-            'model_obj_url': f"{base_path}/{avatar.obj_file}",
-            'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-            'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-            'fallback_url': "/static/assets/avatars/mascot-bee/MascotBee!.png"
+            'model_file_url': f"{base_path}/{avatar.obj_file}",  # Contains GLB path despite name
+            'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
         }
         
-        # Build URLs dict for backward compatibility
+        # Build URLs dict - GLB format (all avatars are GLB now)
         urls = {
             'thumbnail': info.get('thumbnail_url'),
             'preview': info.get('preview_url'),
-            'model_obj': info.get('model_obj_url'),
-            'model_mtl': info.get('model_mtl_url'),
-            'texture': info.get('texture_url'),
+            'glb': info.get('model_file_url'),  # PRIMARY: GLB file path
+            'model_obj': info.get('model_file_url'),  # DEPRECATED: Backward compatibility alias
             'fallback': info.get('fallback_url'),
         }
         
         # Back-compat top-level fields some templates/tools may still reference
         return {
-            'avatar_id': self.avatar_id or 'cool-bee',
+            'avatar_id': self.avatar_id or 'mascot-bee',
             'variant': (self.avatar_variant or 'default'),
             'name': info.get('name'),
             'thumbnail_url': urls['thumbnail'],
-            'model_url': urls['model_obj'],  # legacy alias
+            'model_url': urls['glb'],  # NOW RETURNS GLB PATH
             'last_updated': self.avatar_last_updated.isoformat() if self.avatar_last_updated else None,
             'locked': self.avatar_locked,
             'urls': urls,

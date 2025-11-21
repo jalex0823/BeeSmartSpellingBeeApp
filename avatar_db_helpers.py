@@ -39,6 +39,9 @@ def get_avatar_info_db(avatar_id, variant='default'):
     # Auto-validate MTL references (optional - can import from avatar_catalog if needed)
     # Skipping for now to avoid circular imports
     
+    # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
+    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+    
     return {
         'id': avatar.slug,  # Keep 'id' key for backward compatibility
         'name': avatar.name,
@@ -47,7 +50,7 @@ def get_avatar_info_db(avatar_id, variant='default'):
         'category': avatar.category,
         'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
         'preview_url': f"{base_path}/{avatar.thumbnail_file}",  # Use same as thumbnail
-        'model_obj_url': f"{base_path}/{avatar.obj_file}",
+        'glb_url': f"{base_path}/{avatar.obj_file}" if is_glb else None,  # GLB files stored in obj_file field
         'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
         'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
         'fallback_url': "/static/assets/avatars/fallback.png",
