@@ -20,23 +20,33 @@ def test_glb_avatars():
         avatars = response.json()['avatars']
         print(f"   ✅ Retrieved {len(avatars)} avatars")
         
-        # Separate OBJ and GLB avatars
-        obj_avatars = [a for a in avatars if a['obj_file'] and a['obj_file'].endswith('.obj')]
-        glb_avatars = [a for a in avatars if a['obj_file'] and a['obj_file'].endswith('.glb')]
+        # Check GLB URLs
+        glb_count = 0
+        obj_count = 0
         
-        print(f"   📊 OBJ avatars: {len(obj_avatars)}")
-        print(f"   📊 GLB avatars: {len(glb_avatars)}")
+        for avatar in avatars:
+            if 'urls' in avatar and 'glb' in avatar['urls']:
+                glb_url = avatar['urls']['glb']
+                if '.glb' in glb_url.lower():
+                    glb_count += 1
+                elif '.obj' in glb_url.lower():
+                    obj_count += 1
+                    print(f"      ❌ {avatar['name']} → {glb_url} (SHOULD BE GLB!)")
+        
+        print(f"   📊 GLB avatars: {glb_count}")
+        print(f"   📊 OBJ avatars: {obj_count}")
         
         # List some GLB avatars
-        if glb_avatars:
+        if glb_count > 0:
             print(f"\n   🎮 GLB Avatars Available:")
-            for avatar in glb_avatars[:5]:
-                print(f"      • {avatar['name']} ({avatar['slug']})")
-                print(f"        URL: {avatar['urls']['model_obj']}")
+            for avatar in avatars[:5]:
+                if 'urls' in avatar and 'glb' in avatar['urls']:
+                    print(f"      • {avatar['name']} (id: {avatar.get('id', 'N/A')})")
+                    print(f"        URL: {avatar['urls']['glb']}")
         
         # Step 2: Test selecting a GLB avatar
-        if glb_avatars:
-            test_avatar = glb_avatars[0]  # Try first GLB avatar
+        if glb_count > 0:
+            test_avatar = avatars[0]  # Try first avatar
             print(f"\n2️⃣ Testing GLB avatar selection: {test_avatar['name']}")
             
             # Create a session
