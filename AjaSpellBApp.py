@@ -10452,9 +10452,11 @@ def api_get_avatars():
     # Cache key includes user ID to separate per-user unlock status
     cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
     
-    if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
-        print(f"⚡ Returning cached avatar list for {cache_key}")
-        return jsonify(_AVATAR_CACHE[cache_key])
+    # Allow cache bypass for immediate troubleshooting (e.g., force=1)
+    if request.args.get('force') != '1':
+        if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
+            print(f"⚡ Returning cached avatar list for {cache_key}")
+            return jsonify(_AVATAR_CACHE[cache_key])
     
     try:
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
@@ -10534,10 +10536,20 @@ def api_get_avatars():
                 # Enrichment
                 for avatar in avatars:
                     base_path = f"/static/assets/avatars/{avatar.folder_path}"
-                    # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
-                    # All avatars are GLB format now. Database schema migration pending to rename obj_file → glb_file
-                    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+                    # NOTE: avatar.obj_file is a LEGACY field name. Some records still have .obj from legacy era.
+                    raw_name = avatar.obj_file or ''
+                    is_glb = raw_name.lower().endswith('.glb')
                     desc = avatar.description
+
+                    # HARD OVERRIDE (UNCONDITIONAL): Any legacy .obj gets remapped to glb_files/<Name>.glb
+                    # We no longer skip if the file is missing; we assume all canonical GLBs exist.
+                    if raw_name.lower().endswith('.obj'):
+                        stem = raw_name.rsplit('.', 1)[0]
+                        base_path = "/static/assets/avatars/glb_files"
+                        avatar.folder_path = 'glb_files'
+                        raw_name = f"{stem}.glb"
+                        is_glb = True
+                        print(f"🔁 Remapped legacy OBJ to GLB for avatar: {avatar.slug} -> {raw_name}")
                     if (avatar.slug or '').lower() in ('obee', 'o-bee'):
                         desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
 
@@ -10587,7 +10599,7 @@ def api_get_avatars():
                     thumb_cb = _cachebust_url(thumb_url) if thumb_url else None
 
                     # Build URLs object - GLB-only (all avatars are GLB format)
-                    glb_url = f"{base_path}/{avatar.obj_file}"  # Field name is legacy but contains GLB path
+                    glb_url = f"{base_path}/{raw_name}"  # Always a .glb after override above
                     urls_obj = {
                         'glb': glb_url,  # Primary GLB file path (GLTFLoader uses this)
                         'model_obj': glb_url,  # DEPRECATED: Backward compatibility alias
@@ -10829,6 +10841,16 @@ def api_get_avatars():
         for _av in enriched_avatars:
             _maybe_fix_thumbnail(_av)
 
+        # Post-clean: ensure no .obj URLs survived (safety net)
+        for av in enriched_avatars:
+            urls = av.get('urls') or {}
+            for k in ('glb','model_obj','preview','thumbnail'):
+                v = urls.get(k)
+                if isinstance(v, str) and v.lower().endswith('.obj'):
+                    urls[k] = v[:-4] + '.glb'
+            av['urls'] = urls
+            if av.get('folder') != 'glb_files':
+                av['folder'] = 'glb_files'
         # Final dedupe by slug (in case) and alphabetize for stable hive order
         seen = set()
         deduped = []
