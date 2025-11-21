@@ -3047,6 +3047,54 @@ def word_lists_page():
     """Dedicated word lists management page - robust and dynamic!"""
     return render_template("word_lists.html")
 
+@app.route("/debug/word-lists-version")
+def debug_word_lists_version():
+    """Debug endpoint to verify which version of word_lists.html is deployed"""
+    import os
+    import hashlib
+    
+    try:
+        template_path = os.path.join(app.template_folder, 'word_lists.html')
+        if os.path.exists(template_path):
+            with open(template_path, 'rb') as f:
+                content = f.read()
+                file_hash = hashlib.md5(content).hexdigest()
+                file_size = len(content)
+                line_count = content.count(b'\n') + 1
+            
+            # Check for new design markers
+            has_hive_stats = b'Hive Stats Bar' in content
+            has_floating_bee = b'floating-bee' in content
+            has_honey_gradient = b'linear-gradient(135deg, #FFE5B4' in content
+            has_bounce_animation = b'@keyframes bounce' in content
+            
+            return jsonify({
+                'status': 'NEW VERSION ✅' if (has_hive_stats and has_floating_bee) else 'OLD VERSION ❌',
+                'file_hash': file_hash,
+                'file_size_bytes': file_size,
+                'line_count': line_count,
+                'expected_lines': '~1620',
+                'features_detected': {
+                    'hive_stats_bar': has_hive_stats,
+                    'floating_bee_animation': has_floating_bee,
+                    'honey_gradient_background': has_honey_gradient,
+                    'bounce_animation': has_bounce_animation
+                },
+                'deployment_check': 'PASS' if all([has_hive_stats, has_floating_bee, has_honey_gradient, has_bounce_animation]) else 'FAIL',
+                'recommendation': 'Hard refresh browser (Ctrl+Shift+R)' if file_size > 30000 else 'Redeploy from Git'
+            })
+        else:
+            return jsonify({
+                'status': 'ERROR',
+                'error': 'Template file not found',
+                'template_path': template_path
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'ERROR',
+            'error': str(e)
+        }), 500
+
 @app.route("/magical_quiz")
 def magical_quiz_page():
     """Legacy route - redirects to main quiz"""

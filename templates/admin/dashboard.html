@@ -129,27 +129,30 @@
                 const data = await res.json();
                 console.log('✅ Buzz Dust data received:', data);
                 
-                if (data.ok) {
+                if (data.success && data.current_class) {
                     const rankEl = document.getElementById('admin-rank-name');
                     const badgeEl = document.getElementById('admin-rank-badge');
                     const amountEl = document.getElementById('admin-buzz-dust-amount');
                     
                     if (rankEl) {
-                        rankEl.textContent = data.rank_name || 'Novice Bee';
-                        console.log('✅ Rank name updated:', data.rank_name);
+                        rankEl.textContent = data.current_class.label || 'Novice Bee';
+                        console.log('✅ Rank name updated:', data.current_class.label);
                     }
                     if (amountEl) {
                         amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
                         console.log('✅ Buzz Dust amount updated:', data.total_buzz_dust);
                     }
                     
-                    if (badgeEl && data.badge_image) {
-                        badgeEl.src = data.badge_image;
+                    if (badgeEl && data.current_class.badge_image) {
+                        // Construct the badge URL from badge_image filename
+                        const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
+                        badgeEl.src = badgeUrl;
+                        badgeEl.alt = data.current_class.label + ' Badge';
                         badgeEl.style.display = 'block';
-                        console.log('✅ Badge image updated:', data.badge_image);
+                        console.log('✅ Badge image updated:', badgeUrl);
                     }
                 } else {
-                    console.error('❌ API returned ok=false:', data);
+                    console.error('❌ API returned success=false:', data);
                     // Fallback display
                     const rankEl = document.getElementById('admin-rank-name');
                     if (rankEl) rankEl.textContent = 'Novice Bee';

@@ -15006,14 +15006,14 @@
                 const data = await res.json();
                 console.log('✅ Student Buzz Dust data received:', data);
                 
-                if (data.ok) {
+                if (data.success && data.current_class) {
                     const rankEl = document.getElementById('student-rank-name');
                     const badgeEl = document.getElementById('student-rank-badge');
                     const amountEl = document.getElementById('student-buzz-dust-amount');
                     
                     if (rankEl) {
-                        rankEl.textContent = data.rank_name || 'Novice Bee';
-                        console.log('✅ Student rank name updated:', data.rank_name);
+                        rankEl.textContent = data.current_class.label || 'Novice Bee';
+                        console.log('✅ Student rank name updated:', data.current_class.label);
                     }
                     if (amountEl) {
                         const formatted = (data.total_buzz_dust || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -15021,13 +15021,16 @@
                         console.log('✅ Student Buzz Dust amount updated:', data.total_buzz_dust);
                     }
                     
-                    if (badgeEl && data.badge_image) {
-                        badgeEl.src = data.badge_image;
+                    if (badgeEl && data.current_class.badge_image) {
+                        // Construct the badge URL from badge_image filename
+                        const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
+                        badgeEl.src = badgeUrl;
+                        badgeEl.alt = data.current_class.label + ' Badge';
                         badgeEl.style.display = 'block';
-                        console.log('✅ Student badge image updated:', data.badge_image);
+                        console.log('✅ Student badge image updated:', badgeUrl);
                     }
                 } else {
-                    console.error('❌ API returned ok=false:', data);
+                    console.error('❌ API returned success=false:', data);
                     const rankEl = document.getElementById('student-rank-name');
                     if (rankEl) rankEl.textContent = 'Novice Bee';
                 }
