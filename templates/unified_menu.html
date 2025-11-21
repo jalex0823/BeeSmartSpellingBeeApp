@@ -2591,6 +2591,30 @@
                     👋 Welcome {% if current_user.is_authenticated %}{{ current_user.display_name or current_user.username or 'User' }}{% else %}NewBee{% endif %}
                 </div>
                 
+                {% if current_user.is_authenticated %}
+                <!-- Buzz Dust Rank Badge (authenticated users only) -->
+                <div id="student-buzz-dust-rank" style="
+                    position: relative;
+                    background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(75, 0, 130, 0.15) 100%);
+                    border: 2px solid rgba(138, 43, 226, 0.3);
+                    border-radius: 16px;
+                    padding: 0.75rem 1.25rem;
+                    margin: 0.75rem auto;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.2);
+                    max-width: 280px;
+                ">
+                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 42px; height: 42px; display: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+                    <div style="text-align: left; flex: 1;">
+                        <div id="student-rank-name" style="font-size: 0.8rem; font-weight: 700; color: #5A2C15; opacity: 0.9;">Loading...</div>
+                        <div id="student-buzz-dust-amount" style="font-size: 1.1rem; font-weight: 900; color: #8B008B;">0 ✨</div>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
                 <img src="" alt="BeeSmart Logo" class="brand-logo crest-logo" style="
                     width: clamp(180px, 40vw, 320px);
@@ -9989,9 +10013,17 @@
                 camera.lookAt(new THREE.Vector3(0, 0.1, 0));
 
                 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // Premium resolution
                 renderer.setSize(240, 180);
                 renderer.setClearColor(0x000000, 0);
+                
+                // Premium rendering for carousel
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                if (typeof THREE.sRGBEncoding !== 'undefined') {
+                    renderer.outputEncoding = THREE.sRGBEncoding;
+                    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                }
 
                 const canvas = renderer.domElement;
                 canvas.style.position = 'absolute';
@@ -10173,8 +10205,30 @@
                             }
 
                             const model = gltf.scene;
-                            // Prepare model visuals
-                            model.traverse((child) => { if (child.isMesh) { child.castShadow = false; child.receiveShadow = false; } });
+                            
+                            // 🎨 PREMIUM TEXTURE OPTIMIZATION for carousel GLB files
+                            const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+                            model.traverse((child) => { 
+                                if (child.isMesh) { 
+                                    child.castShadow = true; 
+                                    child.receiveShadow = true;
+                                    
+                                    // Apply premium texture filtering
+                                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                                    materials.forEach(mat => {
+                                        if (!mat) return;
+                                        // Optimize all texture maps
+                                        Object.keys(mat).forEach(key => {
+                                            const value = mat[key];
+                                            if (value && value.isTexture) {
+                                                value.anisotropy = maxAnisotropy;
+                                                value.encoding = THREE.sRGBEncoding;
+                                                value.needsUpdate = true;
+                                            }
+                                        });
+                                    });
+                                } 
+                            });
 
                             // Center and scale consistently into the 240x180 viewport
                             const box0 = new THREE.Box3().setFromObject(model);
@@ -14185,14 +14239,30 @@
                         camera.position.set(0, 0.5, 3.2);
                         camera.lookAt(new THREE.Vector3(0, 0.1, 0));
                         
-                        // UPGRADED: Full-size renderer for maximum quality (no scaling needed)
-                        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                        // 🎨 PREMIUM QUALITY RENDERER - Best possible GLB display
+                        const renderer = new THREE.WebGLRenderer({ 
+                            antialias: true,      // Smooth edges
+                            alpha: true,          // Transparent background
+                            powerPreference: 'high-performance',
+                            precision: 'highp'    // High precision shaders
+                        });
+                        
+                        // Full resolution with device pixel ratio for crisp rendering
+                        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2); // Max 2x for performance
+                        renderer.setPixelRatio(pixelRatio);
                         renderer.setSize(width, height);
                         renderer.setClearColor(0x000000, 0); // Fully transparent background
                         
-                        // Color management for better rendering
+                        // Premium rendering features
+                        renderer.shadowMap.enabled = true;
+                        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+                        renderer.physicallyCorrectLights = true;
+                        
+                        // Color management for accurate colors
                         if (typeof THREE.sRGBEncoding !== 'undefined') {
                             renderer.outputEncoding = THREE.sRGBEncoding;
+                            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                            renderer.toneMappingExposure = 1.0;
                         }
                         
                         // Configure container and canvas for proper layering
@@ -14225,12 +14295,23 @@
                             throw new Error('Avatar model is not a GLB file');
                         }
                         
-                        // Load GLB file using GLTFLoader
+                        // Load GLB file using GLTFLoader - WAIT for it to load first
                         console.log('🌟 Loading GLB avatar...');
                         
-                        if (typeof THREE.GLTFLoader === 'undefined') {
-                            throw new Error('GLTFLoader not loaded - ensure three-gltf-loader is included');
-                        }
+                        // Wait for GLTFLoader to be available (max 5 seconds)
+                        const waitForGLTFLoader = async () => {
+                            const maxWait = 5000; // 5 seconds
+                            const startTime = Date.now();
+                            
+                            while (typeof THREE.GLTFLoader === 'undefined') {
+                                if (Date.now() - startTime > maxWait) {
+                                    throw new Error('GLTFLoader failed to load within 5 seconds');
+                                }
+                                await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
+                            }
+                        };
+                        
+                        await waitForGLTFLoader();
                         
                         const gltfLoader = new THREE.GLTFLoader();
                         window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
@@ -14241,13 +14322,41 @@
                                 console.log('✅ GLB model loaded successfully');
                                 const object = gltf.scene;
                                 
-                                // Disable shadows for performance
+                                // 🎨 PREMIUM TEXTURE & MATERIAL OPTIMIZATION
+                                const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+                                console.log(`🔥 Applying ${maxAnisotropy}x anisotropic filtering`);
+                                
                                 object.traverse((child) => {
                                     if (child.isMesh) {
-                                        child.castShadow = false;
-                                        child.receiveShadow = false;
+                                        // Enable shadows for depth and realism
+                                        child.castShadow = true;
+                                        child.receiveShadow = true;
+                                        
+                                        // Optimize materials
+                                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+                                        materials.forEach(mat => {
+                                            if (!mat) return;
+                                            
+                                            // Apply anisotropic filtering to ALL textures for crisp quality
+                                            Object.keys(mat).forEach(key => {
+                                                const value = mat[key];
+                                                if (value && value.isTexture) {
+                                                    value.anisotropy = maxAnisotropy;
+                                                    value.encoding = THREE.sRGBEncoding;
+                                                    value.needsUpdate = true;
+                                                }
+                                            });
+                                            
+                                            // Enhanced material properties
+                                            if (mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial) {
+                                                mat.envMapIntensity = 0.8;
+                                                mat.needsUpdate = true;
+                                            }
+                                        });
                                     }
                                 });
+                                
+                                console.log('✨ Textures optimized with premium filtering');
                                 
                                 // Professional centering and scaling
                                 const box = new THREE.Box3().setFromObject(object);
@@ -14877,6 +14986,66 @@
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
+
+        // 🐝 Load student's Buzz Dust rank (authenticated users only)
+        {% if current_user.is_authenticated %}
+        async function loadStudentBuzzDust() {
+            try {
+                console.log('🐝 Loading student Buzz Dust info...');
+                const res = await fetch('/api/buzz-dust/info', {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                const data = await res.json();
+                console.log('✅ Student Buzz Dust data received:', data);
+                
+                if (data.ok) {
+                    const rankEl = document.getElementById('student-rank-name');
+                    const badgeEl = document.getElementById('student-rank-badge');
+                    const amountEl = document.getElementById('student-buzz-dust-amount');
+                    
+                    if (rankEl) {
+                        rankEl.textContent = data.rank_name || 'Novice Bee';
+                        console.log('✅ Student rank name updated:', data.rank_name);
+                    }
+                    if (amountEl) {
+                        const formatted = (data.total_buzz_dust || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        amountEl.textContent = formatted + ' ✨';
+                        console.log('✅ Student Buzz Dust amount updated:', data.total_buzz_dust);
+                    }
+                    
+                    if (badgeEl && data.badge_image) {
+                        badgeEl.src = data.badge_image;
+                        badgeEl.style.display = 'block';
+                        console.log('✅ Student badge image updated:', data.badge_image);
+                    }
+                } else {
+                    console.error('❌ API returned ok=false:', data);
+                    const rankEl = document.getElementById('student-rank-name');
+                    if (rankEl) rankEl.textContent = 'Novice Bee';
+                }
+            } catch (error) {
+                console.error('❌ Error loading student Buzz Dust:', error);
+                const rankEl = document.getElementById('student-rank-name');
+                const amountEl = document.getElementById('student-buzz-dust-amount');
+                if (rankEl) rankEl.textContent = 'Novice Bee';
+                if (amountEl) amountEl.textContent = '0 ✨';
+            }
+        }
+        
+        // Load immediately when DOM is ready (faster than window.load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadStudentBuzzDust);
+        } else {
+            // DOM already loaded, execute immediately
+            loadStudentBuzzDust();
+        }
+        {% endif %}
 
     </script>
 </body>

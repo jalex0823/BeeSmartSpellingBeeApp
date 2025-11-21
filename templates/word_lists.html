@@ -1317,20 +1317,7 @@ async function loadWordLists() {
     }
 }
 
-// Update statistics
-function updateStats() {
-    const totalLists = allLists.length;
-    const totalWords = allLists.reduce((sum, list) => sum + (list.word_count || 0), 0);
-    const largestList = Math.max(...allLists.map(l => l.word_count || 0), 0);
-    const avgWords = totalLists > 0 ? Math.round(totalWords / totalLists) : 0;
-    
-    document.getElementById('totalListsCount').textContent = totalLists;
-    document.getElementById('totalWordsCount').textContent = totalWords.toLocaleString();
-    document.getElementById('largestListCount').textContent = largestList.toLocaleString();
-    document.getElementById('avgWordsCount').textContent = avgWords.toLocaleString();
-}
-
-// Filter and display lists
+// Filter and display lists (REMOVED DUPLICATE updateStats function)
 function filterAndDisplayLists() {
     const searchTerm = document.getElementById('searchBox').value.toLowerCase();
     const sortBy = document.getElementById('sortDropdown').value;

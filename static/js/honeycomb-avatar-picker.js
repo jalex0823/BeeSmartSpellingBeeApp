@@ -150,9 +150,23 @@ async function render3DThumb(container, avatar) {
         const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
         camera.position.set(0, 0.5, 2.5);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // 🎨 PREMIUM QUALITY RENDERER for thumbnails
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: 'high-performance',
+            precision: 'highp'
+        });
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        renderer.setPixelRatio(pixelRatio);
         renderer.setSize(100, 100);
         renderer.setClearColor(0x000000, 0);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        if (typeof THREE.sRGBEncoding !== 'undefined') {
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        }
         container.appendChild(renderer.domElement);
         
         // Lighting
@@ -171,6 +185,28 @@ async function render3DThumb(container, avatar) {
                 avatar.urls.model_obj,
                 (gltf) => {
                     const model = gltf.scene;
+                    
+                    // 🎨 PREMIUM TEXTURE OPTIMIZATION
+                    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            const materials = Array.isArray(child.material) ? child.material : [child.material];
+                            materials.forEach(mat => {
+                                if (!mat) return;
+                                Object.keys(mat).forEach(key => {
+                                    const value = mat[key];
+                                    if (value && value.isTexture) {
+                                        value.anisotropy = maxAnisotropy;
+                                        value.encoding = THREE.sRGBEncoding;
+                                        value.needsUpdate = true;
+                                    }
+                                });
+                            });
+                        }
+                    });
                     
                     // Center and scale
                     const box = new THREE.Box3().setFromObject(model);
@@ -266,9 +302,23 @@ async function render3DPreview(container, avatar) {
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
     camera.position.set(0, 0.5, 3);
     
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // 🎨 PREMIUM PREVIEW RENDERER
+    const renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        powerPreference: 'high-performance',
+        precision: 'highp'
+    });
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(0x000000, 0);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (typeof THREE.sRGBEncoding !== 'undefined') {
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    }
     container.appendChild(renderer.domElement);
     
     // Lighting
@@ -286,6 +336,28 @@ async function render3DPreview(container, avatar) {
             avatar.urls.model_obj,
             (gltf) => {
                 const model = gltf.scene;
+                
+                // 🎨 PREMIUM TEXTURE OPTIMIZATION for preview
+                const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        
+                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+                        materials.forEach(mat => {
+                            if (!mat) return;
+                            Object.keys(mat).forEach(key => {
+                                const value = mat[key];
+                                if (value && value.isTexture) {
+                                    value.anisotropy = maxAnisotropy;
+                                    value.encoding = THREE.sRGBEncoding;
+                                    value.needsUpdate = true;
+                                }
+                            });
+                        });
+                    }
+                });
                 
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3()).length();

@@ -757,12 +757,23 @@
             <!-- 🐝 Buzz Dust Gamification Card -->
             <div class="stat-card stat-highlight" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
                 <div id="dash-buzz-dust-badge" style="margin-bottom: 0.5rem;">
-                    <img src="{{ url_for('static', filename='assets/badges/1_NoviceBee.png') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
+                    <img src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
                 </div>
                 <div class="stat-value" id="dash-buzz-dust-total" style="font-size: 2rem; color: #8B4513;">{{ current_user.total_buzz_dust or 0 }}</div>
                 <div class="stat-label" style="color: #5A2C15; font-weight: 700;">✨ Buzz Dust</div>
                 <div class="stat-sublabel" style="color: #8B4513; font-size: 0.9rem; margin-top: 0.3rem;">
                     🐝 <span id="dash-bee-class">{{ current_user.bee_class or 'Novice Bee' }}</span>
+                </div>
+                
+                <!-- Progress to Next Rank -->
+                <div id="dash-rank-progress" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid rgba(139, 69, 19, 0.2); display: none;">
+                    <div style="font-size: 0.75rem; color: #5A2C15; margin-bottom: 0.4rem; font-weight: 600;">
+                        Next: <span id="dash-next-rank-name">--</span>
+                    </div>
+                    <div style="background: rgba(139, 69, 19, 0.2); border-radius: 10px; height: 8px; overflow: hidden; margin-bottom: 0.3rem;">
+                        <div id="dash-rank-progress-bar" style="background: linear-gradient(90deg, #8B4513 0%, #D2691E 100%); height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+                    </div>
+                    <div id="dash-rank-progress-text" style="font-size: 0.7rem; color: #8B4513; font-weight: 500;">--</div>
                 </div>
             </div>
                 </div>
@@ -812,9 +823,62 @@
                                         
                                         if (buzzTotal) buzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
                                         if (beeClass) beeClass.textContent = buzzData.current_class.label || 'Novice Bee';
-                                        if (badgeImg && buzzData.current_class.badge_url) {
-                                            badgeImg.src = buzzData.current_class.badge_url;
-                                            badgeImg.alt = buzzData.current_class.label + ' Badge';
+                        if (badgeImg && buzzData.current_class.badge_image) {
+                            // Construct the badge URL from badge_image filename
+                            const badgeUrl = `/static/assets/badges/${buzzData.current_class.badge_image}`;
+                            badgeImg.src = badgeUrl;
+                            badgeImg.alt = buzzData.current_class.label + ' Badge';
+                            console.log('✅ Main Buzz Dust badge updated:', badgeUrl);
+                        }                                        // Update rank progress if there's a next rank
+                                        if (buzzData.next_class && buzzData.next_class.threshold) {
+                                            const progressContainer = $('#dash-rank-progress');
+                                            const nextRankName = $('#dash-next-rank-name');
+                                            const progressBar = $('#dash-rank-progress-bar');
+                                            const progressText = $('#dash-rank-progress-text');
+                                            
+                                            const current = buzzData.total_buzz_dust || 0;
+                                            const currentThreshold = buzzData.current_class.threshold || 0;
+                                            const nextThreshold = buzzData.next_class.threshold;
+                                            const needed = nextThreshold - current;
+                                            const progress = ((current - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
+                                            
+                                            if (progressContainer) progressContainer.style.display = 'block';
+                                            if (nextRankName) nextRankName.textContent = buzzData.next_class.label;
+                                            if (progressBar) progressBar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+                                            if (progressText) {
+                                                progressText.textContent = needed > 0 
+                                                    ? `${needed.toLocaleString()} more ✨ needed` 
+                                                    : 'Ready to rank up! 🎉';
+                                            }
+                                        }
+                                        
+                                        // 🎯 Update Badge Collection rank card
+                                        const collectionRankName = $('#collection-rank-name');
+                                        const collectionBuzzTotal = $('#collection-buzz-dust-total');
+                                        const collectionBadgeImg = $('#collection-rank-badge-img');
+                                        const collectionProgressText = $('#collection-rank-progress-text');
+                                        
+                                        if (collectionRankName) collectionRankName.textContent = buzzData.current_class.label || 'Novice Bee';
+                                        if (collectionBuzzTotal) collectionBuzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
+                                        if (collectionBadgeImg && buzzData.current_class.badge_image) {
+                                            // Construct the badge URL from badge_image filename
+                                            const badgeUrl = `/static/assets/badges/${buzzData.current_class.badge_image}`;
+                                            collectionBadgeImg.src = badgeUrl;
+                                            collectionBadgeImg.alt = buzzData.current_class.label + ' Rank Badge';
+                                            console.log('✅ Collection badge updated:', badgeUrl);
+                                        }
+                                        
+                                        // Update collection progress text
+                                        if (collectionProgressText) {
+                                            if (buzzData.next_class && buzzData.next_class.threshold) {
+                                                const current = buzzData.total_buzz_dust || 0;
+                                                const needed = buzzData.next_class.threshold - current;
+                                                collectionProgressText.textContent = needed > 0
+                                                    ? `${needed.toLocaleString()} to ${buzzData.next_class.label}`
+                                                    : `Max Rank Achieved! 👑`;
+                                            } else {
+                                                collectionProgressText.textContent = 'Max Rank! 👑';
+                                            }
                                         }
                                     }
                                 })
@@ -857,6 +921,50 @@
 
             <!-- Badge Grid -->
             <div class="badge-grid">
+                <!-- 🐝 Buzz Dust Rank Badge (Always First) -->
+                <div class="badge-display-card badge-legendary buzz-dust-rank-badge" 
+                     id="collection-buzz-dust-badge"
+                     style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%); 
+                            border: 3px solid #8B4513; 
+                            position: relative; 
+                            overflow: visible;
+                            cursor: pointer;
+                            transition: all 0.3s ease;"
+                     onmouseover="this.style.transform='translateY(-8px) scale(1.05)'; this.style.boxShadow='0 12px 32px rgba(139, 69, 19, 0.4)';"
+                     onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';"
+                     title="Your current Buzz Dust rank - earn more by completing quizzes!">
+                    <div class="badge-rarity-label" style="background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%); color: white; font-weight: 700;">RANK</div>
+                    <div style="margin: 1rem 0;">
+                        <img id="collection-rank-badge-img" 
+                             src="{{ url_for('static', filename='assets/badges/Novice.png') }}" 
+                             alt="Buzz Dust Rank Badge" 
+                             style="width: 80px; 
+                                    height: 80px; 
+                                    border-radius: 50%; 
+                                    border: 4px solid #8B4513; 
+                                    box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3),
+                                                inset 0 2px 8px rgba(255, 255, 255, 0.3);
+                                    background: white;
+                                    padding: 4px;
+                                    transition: all 0.3s ease;">
+                    </div>
+                    <div class="badge-name" style="color: #5A2C15; font-size: 1.1rem; font-weight: 700;" id="collection-rank-name">Novice Bee</div>
+                    <div class="badge-stats" style="flex-direction: column; gap: 0.5rem;">
+                        <span class="points-total" style="font-size: 1.3rem; color: #8B4513; font-weight: 900;">
+                            <span id="collection-buzz-dust-total">0</span> ✨
+                        </span>
+                        <span class="earn-count" style="font-size: 0.85rem; color: #8B4513;" id="collection-rank-progress-text">
+                            Loading...
+                        </span>
+                    </div>
+                    <!-- Sparkle effect on hover -->
+                    <div style="position: absolute; top: 10px; right: 10px; font-size: 1.5rem; opacity: 0; transition: opacity 0.3s ease;" 
+                         onmouseover="this.parentElement.addEventListener('mouseenter', () => this.style.opacity='1');"
+                         onmouseout="this.parentElement.addEventListener('mouseleave', () => this.style.opacity='0');">
+                        ✨
+                    </div>
+                </div>
+                
                 {% for badge_type, stats in badge_collection.items() %}
                 <div class="badge-display-card badge-{{ stats.rarity }}" data-badge="{{ badge_type }}" title="{{ stats.description }}">
                     <div class="badge-rarity-label">{{ stats.rarity }}</div>

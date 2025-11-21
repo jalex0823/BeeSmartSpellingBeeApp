@@ -245,15 +245,33 @@
         }
         
         .modal-content {
-            background: linear-gradient(135deg, #fff9e6, #ffe8b3);
-            border: 4px solid #ff8f00;
-            border-radius: 25px;
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B4 20%, #FFD98E 40%, #FFC947 60%, #FFB300 80%, #FF8F00 100%);
+            border: 5px solid #FF6B00;
+            border-radius: 28px;
             padding: 40px;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 40px rgba(255, 107, 0, 0.5), 0 0 0 3px rgba(255, 215, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.4);
             animation: modalBounce 0.5s ease;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-content::before {
+            content: '🐝💥🐝';
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            font-size: 2rem;
+            opacity: 0.3;
+            animation: floatAcross 8s linear infinite;
+        }
+        
+        @keyframes floatAcross {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         @keyframes modalBounce {
@@ -278,17 +296,29 @@
             width: 100%;
             padding: 15px;
             font-size: 1.2rem;
-            border: 3px solid #ff8f00;
-            border-radius: 12px;
+            border: 4px solid #FF8F00;
+            border-radius: 16px;
             margin-bottom: 20px;
             box-sizing: border-box;
             text-align: center;
+            background: linear-gradient(135deg, #FFFBEA 0%, #FFF4D6 100%);
+            color: #5A3A1A;
+            font-weight: 700;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
         
         .modal-input:focus {
             outline: none;
-            border-color: #4caf50;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.4), inset 0 2px 4px rgba(76, 175, 80, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .modal-input::placeholder {
+            color: #A0826D;
+            font-style: italic;
         }
         
         .modal-buttons {
