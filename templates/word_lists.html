@@ -3,1012 +3,549 @@
 {% block title %}My Word Lists - BeeSmart Spelling{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <style>
     :root {
-        --honey-gold: #FFD700;
-        --honey-amber: #FFA500;
-        --bee-brown: #5A2C15;
-        --pollen-yellow: #FFE5B4;
-        --hive-gray: #F5F5DC;
-        --honeycomb-border: #D4A417;
+      --honey-light: #ffe9a6;
+      --honey: #ffc94a;
+      --honey-deep: #f4a623;
+      --honey-pink: #ffbccf;
+      --bee-brown: #7a4b2b;
+      --bee-black: #222222;
+      --bg-gradient: linear-gradient(135deg, #ffd1dc 0%, #ffe6b3 50%, #ffd6f2 100%);
+      --card-radius: 24px;
+      --shadow-soft: 0 14px 35px rgba(0, 0, 0, 0.12);
+      --transition-fast: 0.18s ease-out;
+      --transition-med: 0.3s ease-out;
     }
 
     body {
-        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 50%, #FFA500 100%);
-        min-height: 100vh;
-        font-family: 'Nunito', sans-serif;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        overflow-x: hidden;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--bee-black);
+      min-height: 100vh;
     }
 
-    /* Floating Bee Animation */
-    .floating-bee {
-        position: fixed;
-        font-size: 3rem;
-        animation: floatAcross 15s linear infinite;
-        z-index: 1;
-        pointer-events: none;
+    .hive-page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 18px 60px;
+      position: relative;
+      overflow: hidden;
     }
 
-    @keyframes floatAcross {
-        0% { left: -100px; top: 20%; transform: rotate(10deg); }
-        25% { top: 30%; transform: rotate(-5deg); }
-        50% { top: 25%; transform: rotate(15deg); }
-        75% { top: 35%; transform: rotate(-10deg); }
-        100% { left: 110%; top: 20%; transform: rotate(10deg); }
+    /* Floating bee animation in background */
+    .hive-floating-bee {
+      position: fixed;
+      right: -60px;
+      bottom: 60px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle at 30% 30%, #fff7e2 0, #ffc94a 40%, #f1972c 85%);
+      border-radius: 50%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.85;
+      animation: beeFloat 12s ease-in-out infinite;
+      z-index: 100;
     }
 
-    .word-lists-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 1rem;
-        position: relative;
-        z-index: 2;
+    .hive-floating-bee span {
+      font-size: 46px;
+      transform: translateY(-4px);
     }
 
-    /* Hive Stats Bar */
-    .hive-stats-bar {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        border-radius: 24px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-        border: 4px solid var(--honeycomb-border);
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+    @keyframes beeFloat {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(-40px, -20px) rotate(-4deg); }
+      50% { transform: translate(-10px, -50px) rotate(3deg); }
+      75% { transform: translate(-50px, -10px) rotate(-2deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
     }
 
-    @media (min-width: 768px) {
-        .hive-stats-bar {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-            padding: 2rem;
-        }
+    /* Header */
+
+    .hive-breadcrumb {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .hive-stat {
-        text-align: center;
-        color: var(--bee-brown);
+    .hive-breadcrumb a {
+      color: var(--bee-brown);
+      text-decoration: none;
+      font-weight: 600;
     }
 
-    .hive-stat-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-        display: block;
-        animation: bounce 2s ease-in-out infinite;
+    .hive-breadcrumb span.separator {
+      opacity: 0.6;
     }
 
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
+    .hive-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
     }
 
-    .hive-stat-value {
-        font-size: 2rem;
-        font-weight: 900;
-        margin: 0.25rem 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    .hive-title-row h1 {
+      margin: 0;
+      font-size: 32px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .hive-stat-label {
-        font-size: 0.9rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        opacity: 0.9;
-    }
-
-    /* Header Section */
-    .hive-header {
-        background: white;
-        border-radius: 24px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        border: 4px solid var(--honey-gold);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    @media (min-width: 768px) {
-        .hive-header {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem;
-        }
-    }
-
-    .hive-title {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .hive-title h1 {
-        font-size: 2rem;
-        color: var(--bee-brown);
-        margin: 0;
-        font-weight: 900;
-    }
-
-    .hive-title .bee-icon {
-        font-size: 3rem;
-        animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-
-    @media (min-width: 768px) {
-        .hive-title h1 {
-            font-size: 2.5rem;
-        }
+    .hive-title-row h1 span.icon {
+      font-size: 32px;
     }
 
     .hive-actions {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    .bee-button {
-        padding: 0.875rem 1.5rem;
-        border: none;
-        border-radius: 16px;
-        font-size: 1rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        white-space: nowrap;
-        min-height: 48px;
+    .hive-btn {
+      border: none;
+      outline: none;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      background: white;
+      color: var(--bee-black);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
     }
 
-    @media (min-width: 768px) {
-        .bee-button {
-            padding: 1rem 1.75rem;
-            font-size: 1.1rem;
-        }
+    .hive-btn span.icon {
+      font-size: 18px;
     }
 
-    .bee-button.btn-home {
-        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-        color: white;
+    .hive-btn.primary {
+      background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
+      color: #3e260b;
     }
 
-    .bee-button.btn-new {
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        color: var(--bee-brown);
+    .hive-btn.secondary {
+      background: white;
     }
 
-    .bee-button.btn-upload {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-        color: white;
+    .hive-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
     }
 
-    .bee-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    .hive-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
     }
 
-    /* Search and Sort */
-    .search-sort-bar {
-        background: white;
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        border: 3px solid var(--honey-gold);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+    /* Hive stats bar */
+
+    .hive-stats-bar {
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow-soft);
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
     }
 
-    @media (min-width: 768px) {
-        .search-sort-bar {
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .hive-stats-bar:before {
+      content: "";
+      position: absolute;
+      inset: -40px;
+      background-image: radial-gradient(circle at 0 0, rgba(255, 201, 74, 0.2) 0, transparent 50%),
+                        radial-gradient(circle at 100% 100%, rgba(255, 182, 193, 0.25) 0, transparent 55%);
+      opacity: 0.8;
+      pointer-events: none;
     }
 
-    .search-box-container {
-        position: relative;
-        flex: 1;
+    .hive-stat {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
-    .search-box {
-        width: 100%;
-        padding: 0.875rem 1rem 0.875rem 3rem;
-        border: 2px solid var(--honey-gold);
-        border-radius: 12px;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        min-height: 48px;
+    .hive-stat-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--honey-light) 0, var(--honey) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
     }
 
-    .search-box:focus {
-        outline: none;
-        border-color: var(--honey-amber);
-        box-shadow: 0 0 0 3px rgba(255, 165, 0, 0.2);
+    .hive-stat-text {
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
     }
 
-    .search-icon {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 1.25rem;
-        pointer-events: none;
+    .hive-stat-label {
+      opacity: 0.7;
     }
 
-    .sort-dropdown {
-        padding: 0.875rem 1rem;
-        border: 2px solid var(--honey-gold);
-        border-radius: 12px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        background: white;
-        min-height: 48px;
-        min-width: 180px;
+    .hive-stat-value {
+      font-weight: 700;
+      font-size: 18px;
     }
 
-    /* Honeycomb Grid */
-    .honeycomb-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 2rem;
-        padding: 1rem;
+    /* Controls row */
+
+    .hive-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
     }
 
-    @media (min-width: 768px) {
-        .honeycomb-grid {
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 2.5rem;
-        }
+    .hive-search-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      padding: 6px 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      min-width: 240px;
+      max-width: 360px;
+      flex: 1;
     }
 
-    /* Hexagonal Cell */
-    .honeycomb-cell {
-        position: relative;
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-        aspect-ratio: 1 / 1.15;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    .hive-search-wrapper span {
+      font-size: 18px;
     }
 
-    .honeycomb-cell:hover {
-        transform: scale(1.05) rotate(2deg);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+    .hive-search-wrapper input {
+      border: none;
+      outline: none;
+      flex: 1;
+      font-size: 14px;
+      background: transparent;
     }
 
-    .honeycomb-cell-inner {
-        position: absolute;
-        top: 5%;
-        left: 5%;
-        right: 5%;
-        bottom: 5%;
-        background: white;
-        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        padding: 2rem 1rem 1.5rem;
-        gap: 0.35rem;
+    .hive-sort-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
     }
 
-    .honeycomb-icon {
-        font-size: 2rem;
-        margin-top: auto;
-        margin-bottom: 0.25rem;
+    .hive-sort-wrapper select {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 12px;
+      font-size: 13px;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.95);
+      outline: none;
+      cursor: pointer;
     }
 
-    .honeycomb-name {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: var(--bee-brown);
-        text-align: center;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        max-width: 90%;
-        line-height: 1.2;
-        margin-bottom: 0.25rem;
+    /* Hive grid – honeycomb */
+
+    .hive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px;
+      padding-top: 4px;
     }
 
-    .honeycomb-meta {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--bee-brown);
-        text-align: center;
+    .hive-cell {
+      position: relative;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      /* hexagon shape via clip-path */
+      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+      background: radial-gradient(circle at 30% 20%, #fff7e2 0, var(--honey) 40%, var(--honey-deep) 100%);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+      padding: 50px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
+      min-height: 200px;
     }
 
-    .honeycomb-count {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: var(--honey-amber);
-        margin: 0.25rem 0;
+    .hive-cell::before {
+      /* subtle highlight overlay */
+      content: "";
+      position: absolute;
+      inset: 2px;
+      clip-path: inherit;
+      background: radial-gradient(circle at 20% 0, rgba(255, 255, 255, 0.65) 0, transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
     }
 
-    .honeycomb-label {
-        font-size: 0.75rem;
-        color: #666;
-        font-weight: 600;
-        text-transform: uppercase;
+    .hive-cell-inner {
+      position: relative;
+      z-index: 1;
+      text-align: center;
     }
 
-    .honeycomb-date {
-        font-size: 0.75rem;
-        color: #666;
-        font-weight: 600;
-        text-align: center;
+    .hive-cell-name {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 8px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
-    .honeycomb-hive-info {
-        font-size: 0.8rem;
-        color: var(--bee-brown);
-        font-weight: 700;
-        text-align: center;
-        margin-top: 0.15rem;
+    .hive-cell-meta {
+      font-size: 12px;
+      opacity: 0.9;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
-    .honeycomb-source {
-        font-size: 0.75rem;
-        color: #666;
-        font-weight: 600;
-        text-align: center;
+    .hive-cell-meta span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
 
-    /* Action Buttons on Cell */
-    .honeycomb-actions {
-        position: absolute;
-        bottom: 15%;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 0.5rem;
-        opacity: 0;
-        transition: opacity 0.3s ease;
+    .hive-cell-meta span .icon {
+      font-size: 12px;
     }
 
-    .honeycomb-cell:hover .honeycomb-actions {
-        opacity: 1;
+    .hive-cell-badge {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--bee-brown);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
-    .honeycomb-action-btn {
-        background: white;
-        border: 2px solid var(--honey-gold);
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .hive-cell-favorite {
+      position: absolute;
+      top: 6px;
+      right: 9px;
+      font-size: 16px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
 
-    .honeycomb-action-btn:hover {
-        background: var(--honey-gold);
-        transform: scale(1.1);
+    .hive-cell:hover {
+      transform: translateY(-6px) scale(1.03) rotate(2deg);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+      filter: brightness(1.05);
     }
 
-    /* Empty State */
-    .empty-hive {
-        text-align: center;
-        padding: 4rem 2rem;
-        background: white;
-        border-radius: 24px;
-        border: 4px dashed var(--honey-gold);
-        margin: 2rem 0;
+    .hive-cell:active {
+      transform: translateY(-2px) scale(1.01);
     }
 
-    .empty-hive-icon {
-        font-size: 5rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
+    /* Empty state */
+    .hive-empty {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: var(--card-radius);
+      padding: 48px 24px;
+      text-align: center;
+      box-shadow: var(--shadow-soft);
     }
 
-    .empty-hive h3 {
-        font-size: 2rem;
-        color: var(--bee-brown);
-        margin-bottom: 0.5rem;
+    .hive-empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
     }
 
-    .empty-hive p {
-        font-size: 1.1rem;
-        color: #666;
-        margin-bottom: 2rem;
+    .hive-empty h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: var(--bee-brown);
     }
 
-    /* Toast Notifications */
-    .toast {
-        position: fixed;
-        bottom: 2rem;
-        left: 50%;
-        transform: translateX(-50%);
-        background: white;
-        padding: 1rem 1.5rem;
-        border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        border-left: 4px solid;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        animation: slideUp 0.3s ease;
-        z-index: 10000;
-        max-width: 90%;
+    .hive-empty p {
+      margin: 0 0 20px;
+      font-size: 15px;
+      opacity: 0.8;
     }
 
-    @media (min-width: 640px) {
-        .toast {
-            left: auto;
-            right: 2rem;
-            transform: none;
-            max-width: 400px;
-        }
-    }
-
-    .toast.success {
-        border-left-color: #4CAF50;
-    }
-
-    .toast.error {
-        border-left-color: #f44336;
-    }
-
-    @keyframes slideUp {
-        from {
-            transform: translateX(-50%) translateY(100px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-    }
-
-    @media (min-width: 640px) {
-        @keyframes slideUp {
-            from {
-                transform: translateY(100px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-    }
-
-    .search-box:focus {
-        outline: none;
-        border-color: var(--honey-amber);
-        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
-    }
-
-    .sort-dropdown {
-        padding: 0.75rem 1rem;
-        border: 2px solid var(--honey-gold);
-        border-radius: 12px;
-        font-size: 1rem;
-        background: white;
-        cursor: pointer;
-        font-weight: 600;
-        width: 100%;
-        min-height: 48px; /* Better mobile touch target */
-    }
-    
-    @media (min-width: 768px) {
-        .sort-dropdown {
-            padding: 0.75rem 1.5rem;
-            width: auto;
-        }
-    }
-
-    .lists-grid {
-        display: grid;
-        gap: 1.25rem;
-        grid-template-columns: 1fr; /* single column by default (mobile-first) */
-    }
-    @media (min-width: 640px) { /* sm */
-        .lists-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 1.5rem;
-        }
-    }
-    @media (min-width: 1024px) { /* lg */
-        .lists-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1.75rem;
-        }
-    }
-
-    .list-card {
-        background: linear-gradient(135deg, #fff 0%, #FFF9E6 100%);
-        border: 3px solid rgba(255, 215, 0, 0.4);
-        border-radius: 16px;
-        padding: 1.25rem;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    }
-    
-    @media (min-width: 768px) {
-        .list-card {
-            border-radius: 20px;
-            padding: 2rem;
-        }
-    }
-
-    .list-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 8px;
-        background: linear-gradient(90deg, #FFD700, #FFA500, #FF6B00, #FFA500, #FFD700);
-        background-size: 200% 100%;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        animation: shimmer 3s linear infinite;
-    }
-
-    @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-    }
-
-    .list-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 16px 40px rgba(255, 215, 0, 0.3);
-        border-color: var(--honey-amber);
-    }
-
-    .list-card:hover::before {
-        opacity: 1;
-    }
-
-    .list-card-header {
-        display: flex;
-        justify-content: space-between;
+    /* Responsive tweaks */
+    @media (max-width: 640px) {
+      .hive-title-row {
         align-items: flex-start;
-        gap: 1rem;
-        margin-bottom: 1.25rem;
+      }
+
+      .hive-title-row h1 {
+        font-size: 26px;
+      }
+
+      .hive-stats-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hive-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+        gap: 14px;
+      }
+
+      .hive-cell {
+        min-height: 180px;
+        padding: 40px 16px;
+      }
     }
 
-    .list-icon {
-        flex-shrink: 0;
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        background: #FFF5CC;
-        border: 2px solid rgba(255, 215, 0, 0.6);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    @media (max-width: 430px) {
+      .hive-stats-bar {
+        grid-template-columns: 1fr 1fr;
+      }
+      .hive-grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+      .hive-cell {
+        min-height: 160px;
+        padding: 35px 12px;
+      }
     }
-
-    .list-info {
-        flex: 1;
-    }
-
-    .list-name {
-        font-size: 1.35rem;
-        font-weight: 900;
-        color: var(--bee-brown);
-        margin: 0 0 0.75rem 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        line-height: 1.3;
-        word-break: break-word;
-    }
-
-    .word-count-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-        color: var(--bee-brown);
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 1rem;
-        font-weight: 800;
-        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
-        border: 2px solid rgba(255, 140, 0, 0.3);
-        align-self: flex-start;
-    }
-    
-    @media (min-width: 640px) {
-        .list-name {
-            flex-direction: row;
-            align-items: center;
-            font-size: 1.5rem;
-        }
-        
-        .word-count-badge {
-            font-size: 1.1rem;
-            padding: 0.5rem 1.25rem;
-        }
-    }
-    
-    @media (min-width: 768px) {
-        .list-name {
-            font-size: 1.75rem;
-        }
-        
-        .word-count-badge {
-            font-size: 1.25rem;
-        }
-    }
-
-    .list-description {
-        color: #666;
-        font-size: 0.95rem;
-        margin: 0.75rem 0;
-        line-height: 1.5;
-    }
-    
-    @media (min-width: 768px) {
-        .list-description {
-            font-size: 1.05rem;
-            line-height: 1.6;
-        }
-    }
-
-    .list-meta {
-        display: flex;
-        gap: 1.5rem;
-        margin-top: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .meta-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.85rem;
-        color: #666;
-        font-weight: 600;
-    }
-
-    .meta-icon {
-        font-size: 1rem;
-    }
-    
-    @media (min-width: 768px) {
-        .meta-item {
-            font-size: 0.95rem;
-        }
-        
-        .meta-icon {
-            font-size: 1.2rem;
-        }
-    }
-
-    .list-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        margin-top: 1.25rem;
-        padding-top: 1.25rem;
-        border-top: 2px solid rgba(255, 215, 0, 0.3);
-    }
-
-    .list-btn {
-        padding: 0.875rem 1.25rem;
-        border: none;
-        border-radius: 14px;
-        font-size: 0.95rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        min-height: 48px; /* Better mobile touch target */
-        width: 100%;
-    }
-    
-    @media (min-width: 640px) {
-        .list-actions {
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        
-        .list-btn {
-            flex: 1;
-            min-width: 140px;
-            width: auto;
-        }
-    }
-    
-    @media (min-width: 768px) {
-        .list-actions {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-        }
-        
-        .list-btn {
-            padding: 1rem 1.75rem;
-            font-size: 1.05rem;
-            min-width: 160px;
-        }
-    }
-
-    .btn-use {
-        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-        color: white;
-        border: 2px solid rgba(76, 175, 80, 0.3);
-    }
-
-    .btn-use:hover {
-        transform: scale(1.05) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-    }
-
-    .btn-view {
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-        color: white;
-        border: 2px solid rgba(33, 150, 243, 0.3);
-    }
-
-    .btn-view:hover {
-        transform: scale(1.05) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
-    }
-
-    .btn-edit {
-        background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
-        color: white;
-        border: 2px solid rgba(156, 39, 176, 0.3);
-    }
-
-    .btn-edit:hover {
-        transform: scale(1.05) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
-    }
-
-    .btn-upload {
-        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-        color: white;
-        border: 2px solid rgba(255, 152, 0, 0.3);
-    }
-
-    .btn-upload:hover {
-        transform: scale(1.05) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
-    }
-
-    .btn-delete {
-        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-        color: white;
-        border: 2px solid rgba(244, 67, 54, 0.3);
-    }
-
-    .btn-delete:hover {
-        transform: scale(1.05) translateY(-2px);
-        box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1.5rem;
-    }
-
-    .empty-state-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    .empty-state h3 {
-        font-size: 1.5rem;
-        color: var(--bee-brown);
-        margin-bottom: 1rem;
-    }
-
-    .empty-state p {
-        font-size: 1rem;
-        color: #666;
-        margin-bottom: 2rem;
-    }
-    
-    @media (min-width: 768px) {
-        .empty-state {
-            padding: 4rem 2rem;
-        }
-        
-        .empty-state-icon {
-            font-size: 5rem;
-        }
-        
-        .empty-state h3 {
-            font-size: 2rem;
-        }
-        
-        .empty-state p {
-            font-size: 1.2rem;
-        }
-    }
-
-    .loading-spinner {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 4rem;
-    }
-
-    .spinner {
-        width: 60px;
-        height: 60px;
-        border: 6px solid var(--pollen-yellow);
-        border-top: 6px solid var(--honey-gold);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* Toast notifications */
-    .toast {
-        position: fixed;
-        bottom: 1.5rem;
-        right: 1.5rem;
-        left: 1.5rem;
-        background: white;
-        padding: 1rem 1.25rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        border-left: 4px solid var(--honey-gold);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    }
-    
-    @media (min-width: 640px) {
-        .toast {
-            left: auto;
-            right: 2rem;
-            bottom: 2rem;
-            max-width: 400px;
-        }
-    }
-
-    .toast.success {
-        border-left-color: #4CAF50;
-    }
-
-    .toast.error {
-        border-left-color: #f44336;
-    }
-
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Floating Bee Animation -->
-<div class="floating-bee">🐝</div>
+<div class="hive-page">
 
-<div class="word-lists-container">
-    <!-- Hive Stats Bar -->
-    <div class="hive-stats-bar">
-        <div class="hive-stat">
-            <span class="hive-stat-icon">🐝</span>
-            <div class="hive-stat-value" id="statsBeesInHive">0</div>
-            <div class="hive-stat-label">Bees in the Hive</div>
-        </div>
-        <div class="hive-stat">
-            <span class="hive-stat-icon">🍯</span>
-            <div class="hive-stat-value" id="statsHoneyStored">0</div>
-            <div class="hive-stat-label">Honey Stored</div>
-        </div>
-        <div class="hive-stat">
-            <span class="hive-stat-icon">⬡</span>
-            <div class="hive-stat-value" id="statsLargestHoneycomb">0</div>
-            <div class="hive-stat-label">Largest Honeycomb</div>
-        </div>
-        <div class="hive-stat">
-            <span class="hive-stat-icon">⚡</span>
-            <div class="hive-stat-value" id="statsWorkerBeePace">0</div>
-            <div class="hive-stat-label">Worker Bee Pace</div>
-        </div>
+  <!-- Floating background bee -->
+  <div class="hive-floating-bee" aria-hidden="true">
+    <span>🐝</span>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="hive-breadcrumb">
+    <span>🏠</span>
+    <a href="/">Home</a>
+    <span class="separator">›</span>
+    <span>MyWord Hives</span>
+  </div>
+
+  <!-- Title + actions -->
+  <div class="hive-title-row">
+    <h1>
+      <span class="icon">🍯</span>
+      <span>My Word Hives</span>
+    </h1>
+
+    <div class="hive-actions">
+      <button class="hive-btn secondary" onclick="window.location.href='/'">
+        <span class="icon">🏠</span>
+        Back to Hive
+      </button>
+
+      <button class="hive-btn primary" onclick="createNewComb()">
+        <span class="icon">➕</span>
+        New Comb
+      </button>
+
+      <button class="hive-btn secondary" onclick="window.location.href='/upload'">
+        <span class="icon">🍯</span>
+        Pour In Words
+      </button>
+    </div>
+  </div>
+
+  <!-- Hive stats bar -->
+  <div class="hive-stats-bar">
+    <div class="hive-stat">
+      <div class="hive-stat-icon">🐝</div>
+      <div class="hive-stat-text">
+        <span class="hive-stat-label">Bees in the Hive</span>
+        <span class="hive-stat-value" id="statsBeesInHive">0</span>
+      </div>
+    </div>
+    <div class="hive-stat">
+      <div class="hive-stat-icon">🍯</div>
+      <div class="hive-stat-text">
+        <span class="hive-stat-label">Honey Stored (Words)</span>
+        <span class="hive-stat-value" id="statsHoneyStored">0</span>
+      </div>
+    </div>
+    <div class="hive-stat">
+      <div class="hive-stat-icon">🌻</div>
+      <div class="hive-stat-text">
+        <span class="hive-stat-label">Largest Honeycomb</span>
+        <span class="hive-stat-value" id="statsLargestHoneycomb">0</span>
+      </div>
+    </div>
+    <div class="hive-stat">
+      <div class="hive-stat-icon">🔨</div>
+      <div class="hive-stat-text">
+        <span class="hive-stat-label">Worker Bee Pace</span>
+        <span class="hive-stat-value" id="statsWorkerBeePace">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls: search + sort -->
+  <div class="hive-controls">
+    <div class="hive-search-wrapper">
+      <span>🐝</span>
+      <input
+        id="hiveSearchInput"
+        type="text"
+        placeholder="Search hives..."
+        autocomplete="off"
+      />
     </div>
 
-    <!-- Breadcrumb Navigation -->
-    <div style="margin-bottom: 1.5rem; padding: 0 0.5rem;">
-        <a href="/" style="text-decoration: none; color: var(--bee-brown); font-weight: 600; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-            🏠 Home
-        </a>
-        <span style="color: var(--bee-brown); opacity: 0.6; margin: 0 0.5rem;">></span>
-        <span style="color: var(--bee-brown); font-weight: 700;">MyWord Hives</span>
+    <div class="hive-sort-wrapper">
+      <span>Sort by:</span>
+      <select id="hiveSortSelect">
+        <option value="recent">Most Recent</option>
+        <option value="name">Name (A–Z)</option>
+        <option value="largest">Largest First</option>
+        <option value="smallest">Smallest First</option>
+      </select>
     </div>
+  </div>
 
-    <!-- Header Section -->
-    <div class="hive-header">
-        <div class="hive-title">
-            <span class="bee-icon">🐝</span>
-            <h1>My Word Hives</h1>
-        </div>
-        <div class="hive-actions">
-            <button class="bee-button btn-home" onclick="window.location.href='/'">
-                🏠 Back to Hive
-            </button>
-            <button class="bee-button btn-new" onclick="createNewComb()">
-                ➕ New Comb
-            </button>
-            <button class="bee-button btn-upload" onclick="window.location.href='/upload'">
-                🍯 Pour In Words
-            </button>
-        </div>
+  <!-- Honeycomb grid -->
+  <div class="hive-grid" id="hiveGrid">
+    <!-- Loading state -->
+    <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+      <div style="font-size: 1.2rem; color: var(--bee-brown); font-weight: 700;">Loading your hive...</div>
     </div>
+  </div>
 
-    <!-- Search and Sort Bar -->
-    <div class="search-sort-bar">
-        <div class="search-box-container">
-            <span class="search-icon">🔍</span>
-            <input 
-                type="text" 
-                id="searchBox" 
-                class="search-box" 
-                placeholder="Search honeycombs..."
-                oninput="filterHoneycombs()"
-            >
-        </div>
-        <select id="sortDropdown" class="sort-dropdown" onchange="sortHoneycombs()">
-            <option value="recent">Recent First</option>
-            <option value="name">Name A-Z</option>
-            <option value="largest">Largest First</option>
-            <option value="smallest">Smallest First</option>
-        </select>
-    </div>
-
-    <!-- Honeycomb Grid -->
-    <div id="honeycombGrid" class="honeycomb-grid">
-        <!-- Loading state -->
-        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
-            <div style="font-size: 1.2rem; color: var(--bee-brown); font-weight: 700;">Loading your hive...</div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -1066,7 +603,7 @@ function updateStats() {
 
 // Render honeycomb cells
 function renderHoneycombs() {
-    const grid = document.getElementById('honeycombGrid');
+    const grid = document.getElementById('hiveGrid');
     
     if (filteredLists.length === 0) {
         displayEmptyHive();
@@ -1075,84 +612,137 @@ function renderHoneycombs() {
     
     grid.innerHTML = '';
     
-    filteredLists.forEach(list => {
-        const cell = createHoneycombCell(list);
+    filteredLists.forEach((list, index) => {
+        const cell = createHoneycombCell(list, index + 1);
         grid.appendChild(cell);
     });
 }
 
 // Create a single honeycomb cell
-function createHoneycombCell(list) {
-    const cell = document.createElement('div');
-    cell.className = 'honeycomb-cell';
-    cell.onclick = () => useListInQuiz(list.id);
+function createHoneycombCell(list, hiveIndex) {
+    const cell = document.createElement('a');
+    cell.className = 'hive-cell';
+    cell.href = '#';
+    cell.onclick = (e) => {
+        e.preventDefault();
+        useListInQuiz(list.id);
+    };
+    
+    cell.dataset.name = (list.name || '').toLowerCase();
+    cell.dataset.words = list.word_count || 0;
+    cell.dataset.updated = list.updated_at || list.created_at || '';
     
     const formattedDate = list.updated_at 
-        ? new Date(list.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        : 'Unknown';
+        ? new Date(list.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        : new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
     
     cell.innerHTML = `
-        <div class="honeycomb-cell-inner">
-            <div class="honeycomb-icon">📝</div>
-            <div class="honeycomb-name">${escapeHtml(list.name)}</div>
-            <div class="honeycomb-count">${list.word_count || 0}</div>
-            <div class="honeycomb-label">Words</div>
-            <div class="honeycomb-date">${formattedDate}</div>
+      <!-- word count badge -->
+      <div class="hive-cell-badge">
+        <span class="icon">≡</span>
+        <span>${list.word_count || 0} words</span>
+      </div>
+
+      <div class="hive-cell-inner">
+        <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+        <div class="hive-cell-meta">
+          <span>
+            <span class="icon">📅</span>
+            ${formattedDate}
+          </span>
+          <span>
+            <span class="icon">📅</span>
+            Hive ${hiveIndex}
+          </span>
+          <span>
+            <span class="icon">⏱</span>
+            Hive ${Math.floor(Math.random() * 3) + 1} ${Math.random() > 0.5 ? '🎵' : ''}
+          </span>
+          <span style="margin-top: 8px; font-size: 24px;">🐝</span>
         </div>
-        <div class="honeycomb-actions">
-            <button class="honeycomb-action-btn" onclick="event.stopPropagation(); uploadToList(${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}');" title="Add Words">
-                📤
-            </button>
-            <button class="honeycomb-action-btn" onclick="event.stopPropagation(); deleteList(${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}', ${list.word_count || 0});" title="Delete">
-                🗑️
-            </button>
-        </div>
+      </div>
     `;
     
     return cell;
 }
 
-// Filter honeycombs by search query
-function filterHoneycombs() {
-    const query = document.getElementById('searchBox').value.toLowerCase().trim();
-    
-    if (!query) {
-        filteredLists = [...allLists];
-    } else {
-        filteredLists = allLists.filter(list => 
-            list.name.toLowerCase().includes(query)
-        );
-    }
-    
-    sortHoneycombs();
+// Display empty hive state
+function displayEmptyHive() {
+    const grid = document.getElementById('hiveGrid');
+    grid.innerHTML = `
+        <div class="hive-empty" style="grid-column: 1 / -1;">
+            <div class="hive-empty-icon">🐝</div>
+            <h2>No honeycombs yet!</h2>
+            <p>Create your first word hive to start storing spelling honey.</p>
+            <button class="hive-btn primary" onclick="createNewComb()">
+                <span class="icon">➕</span>
+                Create Word Hive
+            </button>
+        </div>
+    `;
 }
 
-// Sort honeycombs by selected criteria
-function sortHoneycombs() {
-    const sortBy = document.getElementById('sortDropdown').value;
-    
-    switch (sortBy) {
-        case 'name':
-            filteredLists.sort((a, b) => a.name.localeCompare(b.name));
-            break;
-        case 'largest':
-            filteredLists.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
-            break;
-        case 'smallest':
-            filteredLists.sort((a, b) => (a.word_count || 0) - (b.word_count || 0));
-            break;
-        case 'recent':
-        default:
-            filteredLists.sort((a, b) => {
-                const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
-                const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
-                return dateB - dateA;
-            });
-            break;
-    }
-    
-    renderHoneycombs();
+// Display login required
+function displayLoginRequired() {
+    const grid = document.getElementById('hiveGrid');
+    grid.innerHTML = `
+        <div class="hive-empty" style="grid-column: 1 / -1;">
+            <div class="hive-empty-icon">🔒</div>
+            <h2>Login Required</h2>
+            <p>Please log in to view your word hives.</p>
+            <button class="hive-btn primary" onclick="window.location.href='/login'">
+                <span class="icon">🔑</span>
+                Log In
+            </button>
+        </div>
+    `;
 }
+
+// Filter and sort functionality
+(function () {
+    const searchInput = document.getElementById("hiveSearchInput");
+    const sortSelect = document.getElementById("hiveSortSelect");
+
+    function applyFilterAndSort() {
+        const term = (searchInput.value || "").toLowerCase().trim();
+        const sortBy = sortSelect.value;
+
+        // Filter
+        if (!term) {
+            filteredLists = [...allLists];
+        } else {
+            filteredLists = allLists.filter(list => 
+                (list.name || '').toLowerCase().includes(term)
+            );
+        }
+
+        // Sort
+        switch (sortBy) {
+            case 'name':
+                filteredLists.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                break;
+            case 'largest':
+                filteredLists.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
+                break;
+            case 'smallest':
+                filteredLists.sort((a, b) => (a.word_count || 0) - (b.word_count || 0));
+                break;
+            case 'recent':
+            default:
+                filteredLists.sort((a, b) => {
+                    const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
+                    const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
+                    return dateB - dateA;
+                });
+                break;
+        }
+
+        renderHoneycombs();
+    }
+
+    searchInput.addEventListener("input", applyFilterAndSort);
+    sortSelect.addEventListener("change", applyFilterAndSort);
+})();
 
 // Use list in quiz
 async function useListInQuiz(id) {
@@ -1163,13 +753,7 @@ async function useListInQuiz(id) {
         const currentCount = wordbankData.words ? wordbankData.words.length : 0;
         
         if (currentCount > 0) {
-            const confirmed = await showBeeConfirm({
-                title: '⚠️ Override Current Words?',
-                message: `You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`,
-                confirmText: 'Yes, Override',
-                cancelText: 'Cancel'
-            });
-            
+            const confirmed = confirm(`You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`);
             if (!confirmed) return;
         }
         
@@ -1183,160 +767,107 @@ async function useListInQuiz(id) {
         });
         
         const data = await res.json();
+        
         if (data.ok) {
-            showToast(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words)`, 'success');
-
-            // Verify wordbank before navigating
-            try {
-                const verifyRes = await fetch(`/api/wordbank/verify?_=${Date.now()}`, {
-                    cache: 'no-store',
-                    credentials: 'same-origin',
-                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-                });
-                const verify = await verifyRes.json();
-
-                if (verify.wordbank_count && verify.wordbank_count > 0) {
-                    // Use prefetch flow if available
-                    if (typeof window.showLoadingMessage === 'function' && typeof window.prefetchAndNavigate === 'function') {
-                        showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                        prefetchAndNavigate();
-                    } else {
-                        window.location.href = '/quiz';
-                    }
-                } else {
-                    showToast('❌ Word list did not load into your session. Please try again.', 'error');
-                }
-            } catch (e) {
-                console.warn('Wordbank verify failed, navigating anyway:', e);
+            showToast('✅ Word list loaded! Ready to quiz.', 'success');
+            setTimeout(() => {
                 window.location.href = '/quiz';
-            }
+            }, 800);
         } else {
-            showToast(data.error || 'Failed to load list', 'error');
+            showToast('❌ ' + (data.error || 'Failed to load list'), 'error');
         }
     } catch (error) {
-        console.error('Error:', error);
-        showToast('Failed to load list', 'error');
+        console.error('Error loading list:', error);
+        showToast('❌ Error loading list', 'error');
     }
 }
 
-// Upload to list
-function uploadToList(id, name) {
-    window.location.href = `/upload?list_id=${id}&list_name=${encodeURIComponent(name)}`;
-}
-
-// Delete list
-async function deleteList(id, name, count) {
-    const confirmed = await showBeeConfirm({
-        title: '🗑️ Delete Honeycomb?',
-        message: `Are you sure you want to permanently delete:\n\n📚 "${name}"\n(${count} words)\n\nThis cannot be undone!`,
-        confirmText: 'Yes, Delete',
-        cancelText: 'Cancel'
-    });
-    
-    if (!confirmed) return;
+// Create new word list
+async function createNewComb() {
+    const name = prompt('Enter a name for your new word hive:');
+    if (!name || !name.trim()) return;
     
     try {
-        const res = await fetch('/api/saved-lists/delete', {
+        const res = await fetch('/api/saved-lists/create', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id })
+            credentials: 'same-origin',
+            body: JSON.stringify({ name: name.trim() })
         });
         
         const data = await res.json();
+        
         if (data.ok) {
-            showToast(`✅ "${name}" deleted successfully`, 'success');
-            await loadWordLists();
+            showToast('✅ Word hive created!', 'success');
+            await loadWordLists(); // Reload the list
         } else {
-            showToast(data.error || 'Delete failed', 'error');
+            showToast('❌ ' + (data.error || 'Failed to create list'), 'error');
         }
     } catch (error) {
-        console.error('Error:', error);
-        showToast('Delete failed', 'error');
+        console.error('Error creating list:', error);
+        showToast('❌ Error creating list', 'error');
     }
 }
 
-// Create new comb
-function createNewComb() {
-    window.location.href = '/upload';
-}
-
-// Display empty state
-function displayEmptyHive() {
-    const grid = document.getElementById('honeycombGrid');
-    grid.innerHTML = `
-        <div class="empty-hive" style="grid-column: 1 / -1;">
-            <div class="empty-hive-icon">🐝</div>
-            <h3>No honeycombs yet!</h3>
-            <p>Start building your hive by creating your first honeycomb.</p>
-            <button class="bee-button btn-new" onclick="createNewComb()">
-                ➕ Create First Honeycomb
-            </button>
-        </div>
-    `;
+// Toast notification
+function showToast(message, type = 'success') {
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) existingToast.remove();
     
-    // Update stats to zero
-    document.getElementById('statsBeesInHive').textContent = '0';
-    document.getElementById('statsHoneyStored').textContent = '0';
-    document.getElementById('statsLargestHoneycomb').textContent = '0';
-    document.getElementById('statsWorkerBeePace').textContent = '0';
-}
-
-// Display login required message
-function displayLoginRequired() {
-    const grid = document.getElementById('honeycombGrid');
-    grid.innerHTML = `
-        <div class="empty-hive" style="grid-column: 1 / -1;">
-            <div class="empty-hive-icon">🔒</div>
-            <h3>Login Required</h3>
-            <p>Please log in to access your saved word lists.</p>
-            <button class="bee-button btn-new" onclick="window.location.href='/login'">
-                🔑 Go to Login
-            </button>
-        </div>
-    `;
-    
-    // Update stats to zero
-    document.getElementById('statsBeesInHive').textContent = '0';
-    document.getElementById('statsHoneyStored').textContent = '0';
-    document.getElementById('statsLargestHoneycomb').textContent = '0';
-    document.getElementById('statsWorkerBeePace').textContent = '0';
-}
-
-// Show toast notification
-function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <span style="font-size: 1.5rem;">${type === 'success' ? '✅' : '❌'}</span>
-        <span style="font-weight: 600;">${message}</span>
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-left: 4px solid ${type === 'success' ? '#4CAF50' : '#f44336'};
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
     `;
+    toast.textContent = message;
     document.body.appendChild(toast);
     
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(100px)';
+        toast.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// Bee confirm dialog (reuse from main app)
-function showBeeConfirm(options) {
-    return new Promise((resolve) => {
-        if (window.BeeSmart && window.BeeSmart.showConfirm) {
-            window.BeeSmart.showConfirm(options).then(resolve);
-        } else {
-            // Fallback to native confirm
-            const result = confirm(options.message);
-            resolve(result);
-        }
-    });
-}
-
-// Escape HTML to prevent XSS
+// Helper function to escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 </script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+</style>
+
 {% endblock %}
