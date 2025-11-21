@@ -252,28 +252,34 @@ async function loadAvatars() {
             throw new Error('Invalid API response format');
         }
         
-        const rawAvatars = apiAvatars.map(avatar => ({
-            slug: avatar.id,
-            name: avatar.name,
-            description: avatar.description,
-            category: avatar.category,
-            folder_path: avatar.folder,
-            is_glb: avatar.is_glb || false,
-            // Store full URLs from API
-            obj_file_url: avatar.urls ? avatar.urls.model_obj : avatar.model_obj_url || avatar.obj_file_url,
-            mtl_file_url: avatar.urls ? avatar.urls.model_mtl : avatar.model_mtl_url || avatar.mtl_file_url,
-            // Also store filenames for detection
-            obj_file: (avatar.urls && avatar.urls.model_obj ? avatar.urls.model_obj : (avatar.model_obj_url || avatar.obj_file_url || '')).split('/').pop() || null,
-            mtl_file: (avatar.urls && avatar.urls.model_mtl ? avatar.urls.model_mtl : (avatar.model_mtl_url || avatar.mtl_file_url || '')).split('/').pop() || null,
-            thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
-            // NEW: Lock status from monetization system
-            is_locked: avatar.is_locked || false,
-            unlock_message: avatar.unlock_message || '',
-            // NEW: Numeric unlock info for computing remaining points
-            unlock_points: typeof avatar.unlock_points === 'number' ? avatar.unlock_points : null,
-            tier: avatar.tier || null,
-            price: typeof avatar.price === 'number' ? avatar.price : null,
-        }));
+        const rawAvatars = apiAvatars.map(avatar => {
+            // 🔧 FIX: Prioritize GLB URL from urls.glb field (primary), fallback to model_obj (legacy alias)
+            const glbUrl = avatar.urls ? (avatar.urls.glb || avatar.urls.model_obj) : (avatar.model_obj_url || avatar.obj_file_url);
+            const isGlbFormat = avatar.is_glb || (glbUrl && glbUrl.toLowerCase().endsWith('.glb'));
+            
+            return {
+                slug: avatar.id,
+                name: avatar.name,
+                description: avatar.description,
+                category: avatar.category,
+                folder_path: avatar.folder,
+                is_glb: isGlbFormat,
+                // Store full URLs from API - GLB-only (all avatars are GLB now)
+                obj_file_url: glbUrl,
+                mtl_file_url: null, // No MTL files for GLB avatars
+                // Also store filenames for detection
+                obj_file: (glbUrl || '').split('/').pop() || null,
+                mtl_file: null,
+                thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
+                // NEW: Lock status from monetization system
+                is_locked: avatar.is_locked || false,
+                unlock_message: avatar.unlock_message || '',
+                // NEW: Numeric unlock info for computing remaining points
+                unlock_points: typeof avatar.unlock_points === 'number' ? avatar.unlock_points : null,
+                tier: avatar.tier || null,
+                price: typeof avatar.price === 'number' ? avatar.price : null,
+            };
+        });
 
         // Helper: normalize string to a canonical key
         const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');

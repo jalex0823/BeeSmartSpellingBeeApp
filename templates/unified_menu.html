@@ -12859,39 +12859,41 @@
                 }
                 console.log('✅ Stats check deferred to post-loading');
                 
-                // Check 10: Internal Dictionary System - PRELOAD BUILT-IN DICTIONARY
-                const check10 = this.addCheck('Dictionary System', 'Preloading...', '⏳');
+                // Check 10: Internal Dictionary System - SKIP PRELOAD, SHOW ACTUAL SESSION STATE
+                const check10 = this.addCheck('Dictionary System', 'Checking...', '⏳');
                 await this.delay(200);
                 try {
-                    // Preload the built-in dictionary by fetching a test word
-                    // This forces the backend to load Simple Wiktionary into memory
-                    const dictPreloadRes = await this.fetchWithTimeout('/api/word-info/preload', {
-                        method: 'POST',
+                    // Fetch actual wordbank to show consistent count with Check 8
+                    const wordbankRes = await this.fetchWithTimeout('/api/wordbank', {
+                        cache: 'no-store',
                         credentials: 'same-origin',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Cache-Control': 'no-cache'
-                        },
-                        body: JSON.stringify({ words: ['hello', 'world', 'test'] })
-                    }, 5000);
+                        headers: { 'Cache-Control': 'no-cache' }
+                    }, 3000);
                     
-                    if (dictPreloadRes.ok) {
-                        const dictData = await dictPreloadRes.json();
-                        const wordCount = dictData.preloaded || 3;
-                        this.updateCheck(check10, `Dictionary preloaded (${wordCount} entries cached)`, '✅', 75);
-                        this.updateProgress(75, `📖 Dictionary ready (${wordCount} words cached)`);
-                        console.log(`✅ Dictionary preloaded successfully: ${wordCount} entries`);
-                        window.dictionaryPreloaded = true;
+                    if (wordbankRes.ok) {
+                        const wordbankData = await wordbankRes.json();
+                        const wordCount = (wordbankData.words && wordbankData.words.length) || 0;
+                        
+                        if (wordCount > 0) {
+                            this.updateCheck(check10, `Ready (${wordCount} words to define)`, '✅', 75);
+                            this.updateProgress(75, `📖 Dictionary ready for ${wordCount} words`);
+                            console.log(`✅ Dictionary ready for ${wordCount} words in session`);
+                        } else {
+                            this.updateCheck(check10, 'Ready (0 words)', '✅', 75);
+                            this.updateProgress(75, '📖 Dictionary ready (add words to quiz)');
+                            console.log('✅ Dictionary ready - no words in session yet');
+                        }
+                        window.dictionaryPreloaded = false; // On-demand loading
                     } else {
                         // Fallback: dictionary will load on-demand
                         this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
-                        this.updateProgress(75, '📖 Dictionary ready (will load on-demand)');
-                        console.warn('⚠️ Dictionary preload failed, will load on-demand');
+                        this.updateProgress(75, '📖 Dictionary ready (on-demand)');
+                        console.warn('⚠️ Dictionary check failed, will load on-demand');
                         window.dictionaryPreloaded = false;
                     }
                 } catch (dictError) {
                     // Fallback: dictionary will load on-demand
-                    console.warn('Dictionary preload failed:', dictError);
+                    console.warn('Dictionary check failed:', dictError);
                     this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
                     this.updateProgress(75, '📖 Dictionary ready (on-demand)');
                     window.dictionaryPreloaded = false;
