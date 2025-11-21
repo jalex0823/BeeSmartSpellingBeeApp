@@ -2616,6 +2616,38 @@
                         <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 ✨</div>
                     </div>
                 </div>
+                
+                <!-- Scrolling Buzz Dust Progress Ticker -->
+                <div id="buzz-dust-ticker" style="
+                    position: relative;
+                    background: linear-gradient(90deg, rgba(255, 201, 74, 0.2) 0%, rgba(244, 166, 35, 0.3) 50%, rgba(255, 201, 74, 0.2) 100%);
+                    border: 2px solid rgba(255, 201, 74, 0.4);
+                    border-radius: 20px;
+                    padding: 0.75rem 1rem;
+                    margin: 0.5rem auto 0.75rem auto;
+                    max-width: 380px;
+                    overflow: hidden;
+                    display: none;
+                    box-shadow: 0 4px 12px rgba(255, 201, 74, 0.2);
+                ">
+                    <div id="ticker-text" style="
+                        white-space: nowrap;
+                        animation: scroll-left 15s linear infinite;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        color: #7a4b2b;
+                        display: inline-block;
+                    ">
+                        🐝 Collect more buzz dust to rank up! ✨
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes scroll-left {
+                        0% { transform: translateX(100%); }
+                        100% { transform: translateX(-100%); }
+                    }
+                </style>
                 {% endif %}
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
@@ -14294,11 +14326,14 @@
                         directionalLight.position.set(5, 5, 5);
                         scene.add(directionalLight);
                         
-                        // GLB-only model URL
-                        const modelUrl = avatar && avatar.urls ? avatar.urls.model_obj : null;
+                        // GLB-only model URL - Use .glb property for GLB avatars
+                        const modelUrl = avatar && avatar.urls ? (avatar.urls.glb || avatar.urls.model_obj) : null;
                         if (!modelUrl || !/\.glb(\?.*)?$/i.test(modelUrl)) {
+                            console.error('❌ Invalid avatar URL:', modelUrl, 'Full avatar object:', avatar);
                             throw new Error('Avatar model is not a GLB file');
                         }
+                        
+                        console.log('✅ Using GLB model URL:', modelUrl);
                         
                         // Load GLB file using GLTFLoader - WAIT for it to load first
                         console.log('🌟 Loading GLB avatar...');
@@ -15031,6 +15066,23 @@
                         badgeEl.alt = data.current_class.label + ' Badge';
                         badgeEl.style.display = 'block';
                         console.log('✅ Student badge image updated:', badgeUrl);
+                    }
+                    
+                    // Update progress ticker
+                    const tickerEl = document.getElementById('buzz-dust-ticker');
+                    const tickerTextEl = document.getElementById('ticker-text');
+                    
+                    if (tickerEl && tickerTextEl && data.next_class) {
+                        const nextRank = data.next_class.label;
+                        const needed = data.dust_needed || 0;
+                        const formatted = needed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        
+                        tickerTextEl.textContent = `🐝 Collect ${formatted} more Buzz Dust to become a ${nextRank}! ✨`;
+                        tickerEl.style.display = 'block';
+                        console.log('✅ Progress ticker updated:', nextRank, needed);
+                    } else if (tickerEl && data.at_max_rank) {
+                        tickerTextEl.textContent = `👑 You've reached the highest rank: ${data.current_class.label}! You're a legend! ✨`;
+                        tickerEl.style.display = 'block';
                     }
                 } else {
                     console.error('❌ API returned success=false:', data);
