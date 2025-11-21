@@ -1195,6 +1195,20 @@ def _ensure_db_initialized() -> None:
                 print("🐝 Initializing database schema (create_all)")
                 db.create_all()
                 print("✅ Database tables created")
+            
+            # Migration: Add is_favorite column if missing
+            try:
+                columns = [col['name'] for col in inspector.get_columns('word_lists')]
+                if 'is_favorite' not in columns:
+                    print("🔧 Adding is_favorite column to word_lists table...")
+                    db.session.execute(text(
+                        "ALTER TABLE word_lists ADD COLUMN is_favorite BOOLEAN DEFAULT FALSE"
+                    ))
+                    db.session.commit()
+                    print("✅ Added is_favorite column")
+            except Exception as e:
+                print(f"⚠️ is_favorite migration: {e}")
+                db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
         print(f"⚠️ DB initialization check failed: {e}")
