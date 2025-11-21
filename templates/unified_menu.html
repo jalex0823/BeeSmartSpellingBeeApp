@@ -2587,30 +2587,33 @@
                     margin: 2rem auto 0.5rem auto; /* INCREASED: More space above welcome (was 0) */
                     white-space: nowrap;
                     z-index: 35;
+                    {% if current_user.is_authenticated %}display: none;{% endif %}
                 ">
-                    👋 Welcome {% if current_user.is_authenticated %}{{ current_user.display_name or current_user.username or 'User' }}{% else %}NewBee{% endif %}
+                    👋 Welcome {% if not current_user.is_authenticated %}NewBee{% endif %}
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Buzz Dust Rank Badge (authenticated users only) -->
+                <!-- Combined Rank + Name Badge (authenticated users only) -->
                 <div id="student-buzz-dust-rank" style="
                     position: relative;
                     background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(75, 0, 130, 0.15) 100%);
                     border: 2px solid rgba(138, 43, 226, 0.3);
-                    border-radius: 16px;
-                    padding: 1rem 1.5rem;
-                    margin: 0.75rem auto;
+                    border-radius: 20px;
+                    padding: 1.25rem 1.75rem;
+                    margin: 2rem auto 0.75rem auto;
                     display: inline-flex;
                     align-items: center;
-                    gap: 0.75rem;
+                    gap: 1rem;
                     backdrop-filter: blur(10px);
-                    box-shadow: 0 4px 12px rgba(138, 43, 226, 0.2);
-                    max-width: 340px;
+                    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
+                    max-width: 380px;
                 ">
-                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 64px; height: 64px; display: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 72px; height: 72px; display: none; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));">
                     <div style="text-align: left; flex: 1;">
-                        <div id="student-rank-name" style="font-size: 1.1rem; font-weight: 700; color: #5A2C15; opacity: 0.9;">Loading...</div>
-                        <div id="student-buzz-dust-amount" style="font-size: 1.4rem; font-weight: 900; color: #8B008B;">0 ✨</div>
+                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
+                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
+                        </div>
+                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 ✨</div>
                     </div>
                 </div>
                 {% endif %}
@@ -15007,13 +15010,13 @@
                 console.log('✅ Student Buzz Dust data received:', data);
                 
                 if (data.success && data.current_class) {
-                    const rankEl = document.getElementById('student-rank-name');
+                    const rankTitleEl = document.getElementById('rank-title');
                     const badgeEl = document.getElementById('student-rank-badge');
                     const amountEl = document.getElementById('student-buzz-dust-amount');
                     
-                    if (rankEl) {
-                        rankEl.textContent = data.current_class.label || 'Novice Bee';
-                        console.log('✅ Student rank name updated:', data.current_class.label);
+                    if (rankTitleEl) {
+                        rankTitleEl.textContent = data.current_class.label || 'Novice Bee';
+                        console.log('✅ Student rank title updated:', data.current_class.label);
                     }
                     if (amountEl) {
                         const formatted = (data.total_buzz_dust || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -15031,14 +15034,14 @@
                     }
                 } else {
                     console.error('❌ API returned success=false:', data);
-                    const rankEl = document.getElementById('student-rank-name');
-                    if (rankEl) rankEl.textContent = 'Novice Bee';
+                    const rankTitleEl = document.getElementById('rank-title');
+                    if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
                 }
             } catch (error) {
                 console.error('❌ Error loading student Buzz Dust:', error);
-                const rankEl = document.getElementById('student-rank-name');
+                const rankTitleEl = document.getElementById('rank-title');
                 const amountEl = document.getElementById('student-buzz-dust-amount');
-                if (rankEl) rankEl.textContent = 'Novice Bee';
+                if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
                 if (amountEl) amountEl.textContent = '0 ✨';
             }
         }
