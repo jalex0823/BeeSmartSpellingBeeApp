@@ -2431,6 +2431,7 @@ def list_saved_wordlists():
                 "word_count": wl.word_count or 0,
                 "created_at": wl.created_at.isoformat() if wl.created_at else None,
                 "updated_at": wl.updated_at.isoformat() if wl.updated_at else None,
+                "is_favorite": getattr(wl, 'is_favorite', False),  # Include favorite status
             })
 
         return jsonify({"ok": True, "lists": data})
@@ -2681,6 +2682,165 @@ def delete_saved_wordlist(list_id=None):
         print(f"ERROR /api/saved-lists/delete: {e}")
         db.session.rollback()
         return jsonify({"ok": False, "error": "Failed to delete list"}), 500
+
+
+@app.route("/api/saved-lists/favorite", methods=["POST"])
+def favorite_saved_wordlist():
+    """Toggle favorite/pin status for a saved word list."""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required", "auth_required": True}), 403
+        
+        data = request.get_json() or {}
+        list_id = data.get("id")
+        is_fav = bool(data.get("is_favorite", False))
+
+        if not list_id:
+            return jsonify({"ok": False, "error": "Missing list id"}), 400
+
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        # Try numeric ID first, fallback to UUID
+        wl = None
+        try:
+            numeric_id = int(str(list_id))
+            wl = WordList.query.filter_by(id=numeric_id, created_by_user_id=user.id).first()
+        except:
+            wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
+
+        if not wl:
+            return jsonify({"ok": False, "error": "List not found"}), 404
+
+        wl.is_favorite = is_fav
+        wl.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({"ok": True, "id": wl.id, "is_favorite": wl.is_favorite})
+
+    except Exception as e:
+        print(f"ERROR /api/saved-lists/favorite: {e}")
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/saved-lists/rename", methods=["POST"])
+def rename_saved_wordlist():
+    """Rename a saved word list."""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required", "auth_required": True}), 403
+        
+        data = request.get_json() or {}
+        list_id = data.get("id")
+        new_name = (data.get("new_name") or "").strip()
+
+        if not list_id:
+            return jsonify({"ok": False, "error": "Missing list id"}), 400
+
+        if not new_name:
+            return jsonify({"ok": False, "error": "Name cannot be empty"}), 400
+
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        # Try numeric ID first, fallback to UUID
+        wl = None
+        try:
+            numeric_id = int(str(list_id))
+            wl = WordList.query.filter_by(id=numeric_id, created_by_user_id=user.id).first()
+        except:
+            wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
+
+        if not wl:
+            return jsonify({"ok": False, "error": "List not found"}), 404
+
+        wl.list_name = new_name
+        wl.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({"ok": True, "id": wl.id, "name": wl.list_name})
+
+    except Exception as e:
+        print(f"ERROR /api/saved-lists/rename: {e}")
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/saved-lists/<int:list_id>", methods=["PUT"])
+def update_saved_wordlist(list_id):
+    """Update a saved word list (name and words)."""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({"ok": False, "error": "Login required", "auth_required": True}), 403
+        
+        data = request.get_json() or {}
+        new_name = (data.get("name") or "").strip()
+        words = data.get("words") or []
+
+        if not new_name:
+            return jsonify({"ok": False, "error": "Name cannot be empty"}), 400
+        
+        if not isinstance(words, list):
+            return jsonify({"ok": False, "error": "Words must be a list"}), 400
+
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+
+        wl = WordList.query.filter_by(id=list_id, created_by_user_id=user.id).first()
+        if not wl:
+            return jsonify({"ok": False, "error": "List not found"}), 404
+
+        # Update list name
+        wl.list_name = new_name
+        
+        # Parse words - handle both string and dict formats
+        parsed_words = []
+        for item in words:
+            if isinstance(item, dict):
+                word = item.get('word', '').strip()
+                sentence = item.get('sentence', '').strip()
+                hint = item.get('hint', '').strip()
+                if word:
+                    parsed_words.append({
+                        'word': word,
+                        'sentence': sentence or word,
+                        'hint': hint or ''
+                    })
+            elif isinstance(item, str):
+                word = item.strip()
+                if word:
+                    parsed_words.append({
+                        'word': word,
+                        'sentence': word,
+                        'hint': ''
+                    })
+        
+        # Update words and count
+        wl.words_json = json.dumps(parsed_words)
+        wl.word_count = len(parsed_words)
+        wl.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({
+            "ok": True,
+            "list": {
+                "id": wl.id,
+                "name": wl.list_name,
+                "word_count": wl.word_count,
+                "words": parsed_words
+            }
+        })
+
+    except Exception as e:
+        print(f"ERROR /api/saved-lists/{list_id} PUT: {e}")
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.route("/api/upload-to-saved-list", methods=["POST"])
 def upload_to_saved_list():

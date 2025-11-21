@@ -858,6 +858,7 @@ class WordList(db.Model):
     difficulty_level = db.Column(db.String(20))
     word_count = db.Column(db.Integer, default=0)
     is_public = db.Column(db.Boolean, default=False, index=True)
+    is_favorite = db.Column(db.Boolean, default=False, index=True)  # Pin/favorite lists
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     times_used = db.Column(db.Integer, default=0)
