@@ -2598,19 +2598,19 @@
                     background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(75, 0, 130, 0.15) 100%);
                     border: 2px solid rgba(138, 43, 226, 0.3);
                     border-radius: 16px;
-                    padding: 0.75rem 1.25rem;
+                    padding: 1rem 1.5rem;
                     margin: 0.75rem auto;
                     display: inline-flex;
                     align-items: center;
                     gap: 0.75rem;
                     backdrop-filter: blur(10px);
                     box-shadow: 0 4px 12px rgba(138, 43, 226, 0.2);
-                    max-width: 280px;
+                    max-width: 340px;
                 ">
-                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 42px; height: 42px; display: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 64px; height: 64px; display: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
                     <div style="text-align: left; flex: 1;">
-                        <div id="student-rank-name" style="font-size: 0.8rem; font-weight: 700; color: #5A2C15; opacity: 0.9;">Loading...</div>
-                        <div id="student-buzz-dust-amount" style="font-size: 1.1rem; font-weight: 900; color: #8B008B;">0 ✨</div>
+                        <div id="student-rank-name" style="font-size: 1.1rem; font-weight: 700; color: #5A2C15; opacity: 0.9;">Loading...</div>
+                        <div id="student-buzz-dust-amount" style="font-size: 1.4rem; font-weight: 900; color: #8B008B;">0 ✨</div>
                     </div>
                 </div>
                 {% endif %}
@@ -2641,7 +2641,7 @@
                     <div class="preview-avatar-container" style="
                         width: 100%;
                         max-width: 600px;
-                        height: 500px;
+                        height: 400px;
                         background: transparent;
                         border: 0;
                         border-radius: 30px;
@@ -14237,8 +14237,8 @@
                         
                         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
                         
-                        // Camera positioning for full bee visibility
-                        camera.position.set(0, 0.5, 3.2);
+                        // Camera positioning for full bee visibility - CLOSER for larger appearance
+                        camera.position.set(0, 0.5, 2.2);
                         camera.lookAt(new THREE.Vector3(0, 0.1, 0));
                         
                         // 🎨 PREMIUM QUALITY RENDERER - Best possible GLB display
