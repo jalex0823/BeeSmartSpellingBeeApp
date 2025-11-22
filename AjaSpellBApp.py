@@ -2793,10 +2793,10 @@ def debug_tiles_test():
         # 🎯 Test Quiz Functionality 
         tiles_test["tests"]["quiz_functionality"] = {"status": "testing"}
         try:
-            # Test quiz session management
-            from helpers import init_quiz_state, get_wordbank
+            # Test quiz-related endpoints
+            recent_sessions = QuizSession.query.limit(5).all()
             
-            # Test wordbank functionality
+            # Test wordbank functionality (using local function)
             wordbank = get_wordbank()
             
             # Test quiz state initialization
@@ -2804,6 +2804,7 @@ def debug_tiles_test():
             
             tiles_test["tests"]["quiz_functionality"] = {
                 "status": "success",
+                "recent_sessions": len(recent_sessions),
                 "wordbank_available": wordbank is not None,
                 "wordbank_size": len(wordbank) if isinstance(wordbank, list) else 0,
                 "quiz_state_exists": bool(quiz_state),
