@@ -2452,17 +2452,25 @@ except Exception as e:
 def list_saved_wordlists():
     """Return the current user's saved word lists (persisted; not cleared by /api/clear)."""
     try:
-        print(f"DEBUG /api/saved-lists GET: Starting request")
-        print(f"DEBUG /api/saved-lists GET: Session keys: {list(session.keys())}")
-        print(f"DEBUG /api/saved-lists GET: current_user.is_authenticated: {current_user.is_authenticated}")
+        print(f"🔍 DEBUG /api/saved-lists GET: Starting request")
+        print(f"🔍 DEBUG /api/saved-lists GET: Session keys: {list(session.keys())}")
+        print(f"🔍 DEBUG /api/saved-lists GET: current_user.is_authenticated: {current_user.is_authenticated}")
+        
+        # Test database connection first
+        try:
+            db.session.execute('SELECT 1')
+            print(f"✅ DEBUG /api/saved-lists GET: Database connection successful")
+        except Exception as db_test_error:
+            print(f"❌ ERROR /api/saved-lists GET: Database connection failed: {db_test_error}")
+            return jsonify({"ok": False, "error": "Database connection failed", "details": str(db_test_error)}), 500
         
         # Allow both authenticated and guest users to access saved lists
         user = get_or_create_guest_user()
         if not user:
-            print(f"ERROR /api/saved-lists GET: Failed to resolve user")
+            print(f"❌ ERROR /api/saved-lists GET: Failed to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user. Please try refreshing the page."}), 500
 
-        print(f"DEBUG /api/saved-lists GET: User resolved: id={user.id}, username={user.username}")
+        print(f"✅ DEBUG /api/saved-lists GET: User resolved: id={user.id}, username={user.username}")
         
         lists = (
             WordList.query
@@ -10497,9 +10505,33 @@ def api_get_avatars():
     - Alphabetize the final hive list for stable ordering
     - Include unlock status based on user's honey points and purchases
     """
-    # Check cache first
-    global _AVATAR_CACHE
-    current_time = time.time()
+    try:
+        print(f"🔍 DEBUG /api/avatars GET: Starting request")
+        
+        # Test database connection first
+        try:
+            db.session.execute('SELECT 1')
+            print(f"✅ DEBUG /api/avatars GET: Database connection successful")
+        except Exception as db_test_error:
+            print(f"❌ ERROR /api/avatars GET: Database connection failed: {db_test_error}")
+            # Return minimal fallback avatar list
+            return jsonify({
+                "ok": True, 
+                "avatars": [{
+                    "id": "bee",
+                    "name": "Default Bee Avatar",
+                    "description": "The classic bee avatar",
+                    "category": "free",
+                    "is_locked": False,
+                    "urls": {"glb": "/static/assets/avatars/glb_files/Bee.glb", "thumbnail": "/static/assets/avatars/glb_files/AvatarThumbnails/Bee!.png"}
+                }],
+                "user_info": {"honey_points": 0, "is_premium": False},
+                "debug": "Database unavailable - fallback mode"
+            })
+        
+        # Check cache first
+        global _AVATAR_CACHE
+        current_time = time.time()
     
     # Use cache for both authenticated and unauthenticated users
     # Cache key includes user ID to separate per-user unlock status
