@@ -25,7 +25,7 @@ const BeeSwarmVisualizer = {
   colors: null,
   geo: null,
   mat: null,
-  BASE_POINT_SIZE: 0.13,
+  BASE_POINT_SIZE: 0.18,  // Increased bee size for better visibility
   
   // Animation params
   tSpeedBase: 0.015,
@@ -116,22 +116,36 @@ const BeeSwarmVisualizer = {
     this.colors = new Float32Array(this.COUNT * 3);
     this.baseColors = new Float32Array(this.COUNT * 3); // Store original honey shades
     
-    // Honey / golden brown palette
-    const honey = new THREE.Color("#FFD540");
-    const goldenBr = new THREE.Color("#B86B1A");
-    const darkAmber = new THREE.Color("#7A3E00");
+    // Honey / golden brown palette - Enhanced for better visibility
+    const honey = new THREE.Color("#FFD540");      // Bright golden honey
+    const goldenBr = new THREE.Color("#B86B1A");   // Rich golden brown
+    const darkAmber = new THREE.Color("#8B4513");  // Saddle brown
+    const lightHoney = new THREE.Color("#FFF8DC"); // Cornsilk
+    const deepAmber = new THREE.Color("#D2691E");  // Chocolate
     
     const randomHoneyColor = () => {
-      const t = Math.random();
-      let c = honey.clone();
-      if (t < 0.70) c.lerp(goldenBr, t / 0.70);
-      else c.lerp(darkAmber, (t - 0.70) / 0.30);
+      const colorChoice = Math.random();
+      let c;
       
+      // Distribute colors more evenly with better honey shades
+      if (colorChoice < 0.30) {
+        c = honey.clone(); // 30% bright honey
+      } else if (colorChoice < 0.55) {
+        c = goldenBr.clone(); // 25% golden brown  
+      } else if (colorChoice < 0.75) {
+        c = lightHoney.clone(); // 20% light honey
+      } else if (colorChoice < 0.90) {
+        c = deepAmber.clone(); // 15% deep amber
+      } else {
+        c = darkAmber.clone(); // 10% dark amber
+      }
+      
+      // Add slight variation to avoid uniformity
       const hsl = {};
       c.getHSL(hsl);
-      hsl.h += (Math.random() - 0.5) * 0.02;
-      hsl.s = THREE.MathUtils.clamp(hsl.s + (Math.random() - 0.5) * 0.08, 0, 1);
-      hsl.l = THREE.MathUtils.clamp(hsl.l + (Math.random() - 0.5) * 0.08, 0, 1);
+      hsl.h += (Math.random() - 0.5) * 0.03; // Slightly more hue variation
+      hsl.s = THREE.MathUtils.clamp(hsl.s + (Math.random() - 0.5) * 0.1, 0.3, 1); // Ensure good saturation
+      hsl.l = THREE.MathUtils.clamp(hsl.l + (Math.random() - 0.5) * 0.1, 0.2, 0.9); // Prevent too dark/light
       c.setHSL(hsl.h, hsl.s, hsl.l);
       return c;
     };
