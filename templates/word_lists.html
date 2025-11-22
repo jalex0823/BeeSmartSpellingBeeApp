@@ -100,7 +100,7 @@
   }
 
   /* buttons */
-  .hive-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .hive-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
   .hive-btn{
     border:none; outline:none; cursor:pointer;
     border-radius:var(--radius-pill);
@@ -435,7 +435,7 @@
     <h1><span class="icon">🍯</span>My Word Lists</h1>
     <div class="hive-actions">
       <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
-      <button class="hive-btn primary" onclick="createNewComb()">➕ New Comb</button>
+      <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
       <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
     </div>
   </div>
@@ -569,9 +569,11 @@
     try{
       const res = await fetch("/api/saved-lists",{credentials:"same-origin",cache:"no-store"});
       const data = await res.json();
+      console.log('📋 Word lists API response:', data);
 
       if(data.ok && data.lists){
         allLists = data.lists;
+        console.log('✅ Loaded', allLists.length, 'word lists');
         // merge server favorites if present
         for(const l of allLists){
           if(l.is_favorite) localFavs.add(l.id);
@@ -580,12 +582,14 @@
         updateStats();
         renderHoneycombs();
       }else if(data.auth_required){
+        console.log('🔒 Auth required');
         displayLoginRequired();
       }else{
+        console.log('📭 No lists found, showing empty state');
         displayEmptyHive();
       }
     }catch(err){
-      console.error(err);
+      console.error('❌ Error loading word lists:', err);
       displayEmptyHive();
     }
   }
@@ -594,16 +598,15 @@
     const totalLists = allLists.length;
     const totalWords = allLists.reduce((s,l)=>s+(l.word_count||0),0);
     const largestList = totalLists?Math.max(...allLists.map(l=>l.word_count||0)):0;
-    const avgWords = totalLists?Math.round(totalWords/totalLists):0;
 
     statsBeesInHive.textContent = totalLists;
     statsHoneyStored.textContent = totalWords;
     statsLargestHoneycomb.textContent = largestList;
-    statsWorkerBeePace.textContent = avgWords;
   }
 
   function renderHoneycombs(){
     const grid = document.getElementById("hiveGrid");
+    console.log('🎨 Rendering honeycombs, filteredLists.length:', filteredLists.length);
     if(!filteredLists.length){ displayEmptyHive(); return; }
 
     // pin favorites to top always
@@ -614,7 +617,11 @@
     });
 
     grid.innerHTML = "";
-    favFirst.forEach((list,ix)=> grid.appendChild(createHoneycombCell(list,ix+1)));
+    favFirst.forEach((list,ix)=> {
+      console.log('🔶 Creating cell for list:', list.name);
+      grid.appendChild(createHoneycombCell(list,ix+1));
+    });
+    console.log('✅ Rendered', favFirst.length, 'honeycomb cells');
   }
 
   function createHoneycombCell(list,hiveIndex){
