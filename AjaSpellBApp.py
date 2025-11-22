@@ -1686,20 +1686,37 @@ def get_or_create_guest_user():
     Allows progress tracking without requiring signup.
     Returns User object (guest or authenticated).
     """
-    if current_user.is_authenticated:
-        return current_user
-    
-    # Check if this session has a guest user ID
-    guest_user_id = session.get("guest_user_id")
-    
-    if guest_user_id:
-        # Try to retrieve existing guest user
-        guest_user = User.query.get(guest_user_id)
-        if guest_user:
-            return guest_user
-    
-    # Create new guest user
     try:
+        print(f"DEBUG get_or_create_guest_user: Starting guest user resolution")
+        
+        # Test database connection first
+        try:
+            db.session.execute('SELECT 1')
+            print(f"DEBUG get_or_create_guest_user: Database connection OK")
+        except Exception as db_e:
+            print(f"ERROR get_or_create_guest_user: Database connection failed: {db_e}")
+            return None
+        
+        if current_user.is_authenticated:
+            print(f"DEBUG get_or_create_guest_user: Authenticated user: {current_user.username}")
+            return current_user
+        
+        # Check if this session has a guest user ID
+        guest_user_id = session.get("guest_user_id")
+        print(f"DEBUG get_or_create_guest_user: Session guest_user_id: {guest_user_id}")
+        
+        if guest_user_id:
+            # Try to retrieve existing guest user
+            print(f"DEBUG get_or_create_guest_user: Looking up guest user with id: {guest_user_id}")
+            guest_user = User.query.get(guest_user_id)
+            if guest_user:
+                print(f"DEBUG get_or_create_guest_user: Found existing guest user: {guest_user.username}")
+                return guest_user
+            else:
+                print(f"DEBUG get_or_create_guest_user: Guest user id {guest_user_id} not found in database")
+        
+        # Create new guest user
+        print(f"DEBUG get_or_create_guest_user: Creating new guest user")
         guest_username = f"guest_{uuid.uuid4().hex[:8]}"
         guest_user = User(
             username=guest_username,
@@ -1713,19 +1730,34 @@ def get_or_create_guest_user():
         )
         guest_user.set_password(str(uuid.uuid4()))  # Random password (user can't login)
         
+        print(f"DEBUG get_or_create_guest_user: Adding guest user to database: {guest_username}")
         db.session.add(guest_user)
-        db.session.commit()
+        db.session.flush()  # Get the ID without committing
         
-        # Store guest user ID in session
+        # Store guest user ID in session BEFORE committing
         session["guest_user_id"] = guest_user.id
         session["is_guest"] = True
+        print(f"DEBUG get_or_create_guest_user: Stored guest_user_id in session: {guest_user.id}")
         
+        db.session.commit()
         print(f"✅ Created guest user: {guest_username} (ID: {guest_user.id})")
         return guest_user
         
     except Exception as e:
-        print(f"⚠️ Failed to create guest user: {e}")
+        print(f"⚠️ Failed to create guest user: {type(e).__name__}: {e}")
+        import traceback
+        print(f"⚠️ Guest user creation traceback: {traceback.format_exc()}")
         db.session.rollback()
+        
+        # Last resort: Try to create a minimal session without database
+        print(f"DEBUG get_or_create_guest_user: Attempting session-only fallback")
+        session_guest_id = session.get("fallback_guest_id")
+        if not session_guest_id:
+            session_guest_id = f"fallback_{uuid.uuid4().hex[:8]}"
+            session["fallback_guest_id"] = session_guest_id
+            session["is_guest"] = True
+        
+        # Return None to indicate failure - calling code should handle this gracefully
         return None
 
 # ============================================================================
@@ -2420,20 +2452,26 @@ except Exception as e:
 def list_saved_wordlists():
     """Return the current user's saved word lists (persisted; not cleared by /api/clear)."""
     try:
-        # Guests are not allowed to use Saved Lists API
-        if not current_user.is_authenticated:
-            return jsonify({"ok": False, "error": "Login required to use Saved Lists", "auth_required": True}), 403
+        print(f"DEBUG /api/saved-lists GET: Starting request")
+        print(f"DEBUG /api/saved-lists GET: Session keys: {list(session.keys())}")
+        print(f"DEBUG /api/saved-lists GET: current_user.is_authenticated: {current_user.is_authenticated}")
         
+        # Allow both authenticated and guest users to access saved lists
         user = get_or_create_guest_user()
         if not user:
-            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+            print(f"ERROR /api/saved-lists GET: Failed to resolve user")
+            return jsonify({"ok": False, "error": "Unable to resolve user. Please try refreshing the page."}), 500
 
+        print(f"DEBUG /api/saved-lists GET: User resolved: id={user.id}, username={user.username}")
+        
         lists = (
             WordList.query
             .filter(WordList.created_by_user_id == user.id)
             .order_by(WordList.updated_at.desc())
             .all()
         )
+        
+        print(f"DEBUG /api/saved-lists GET: Found {len(lists)} lists for user {user.id}")
 
         data = []
         for wl in lists:
@@ -2450,7 +2488,9 @@ def list_saved_wordlists():
 
         return jsonify({"ok": True, "lists": data})
     except Exception as e:
-        print(f"ERROR /api/saved-lists GET: {e}")
+        print(f"ERROR /api/saved-lists GET: {type(e).__name__}: {e}")
+        import traceback
+        print(f"ERROR /api/saved-lists GET: Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({"ok": False, "error": "Failed to retrieve saved lists"}), 500
 
@@ -2459,14 +2499,25 @@ def list_saved_wordlists():
 def get_saved_wordlist(list_id):
     """Get details of a specific saved word list."""
     try:
+        print(f"DEBUG /api/saved-lists/{list_id} GET: Starting request")
+        print(f"DEBUG /api/saved-lists/{list_id} GET: Session keys: {list(session.keys())}")
+        
         user = get_or_create_guest_user()
         if not user:
+            print(f"ERROR /api/saved-lists/{list_id} GET: Failed to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
         
+        print(f"DEBUG /api/saved-lists/{list_id} GET: User resolved: id={user.id}, username={user.username}")
+        
         # Find the list
+        print(f"DEBUG /api/saved-lists/{list_id} GET: Looking for list with id={list_id}, user_id={user.id}")
         wl = WordList.query.filter_by(id=list_id, created_by_user_id=user.id).first()
         
         if not wl:
+            # Debug: Show all lists for this user
+            all_lists = WordList.query.filter_by(created_by_user_id=user.id).all()
+            list_info = [(l.id, l.list_name) for l in all_lists]
+            print(f"DEBUG /api/saved-lists/{list_id} GET: List not found. User has {len(all_lists)} lists: {list_info}")
             return jsonify({"ok": False, "error": "List not found"}), 404
         
         # Get all words in the list
@@ -2485,7 +2536,9 @@ def get_saved_wordlist(list_id):
             }
         })
     except Exception as e:
-        print(f"ERROR /api/saved-lists/{list_id} GET: {e}")
+        print(f"ERROR /api/saved-lists/{list_id} GET: {type(e).__name__}: {e}")
+        import traceback
+        print(f"ERROR /api/saved-lists/{list_id} GET: Traceback: {traceback.format_exc()}")
         return jsonify({"ok": False, "error": "Failed to load list"}), 500
 
 
@@ -2632,10 +2685,13 @@ def load_saved_wordlist():
 @app.route("/api/saved-lists/<int:list_id>", methods=["DELETE"])
 def delete_saved_wordlist(list_id=None):
     try:
+        print(f"DEBUG /api/saved-lists/delete: Starting request, list_id={list_id}")
+        print(f"DEBUG /api/saved-lists/delete: Session keys: {list(session.keys())}")
+        
         # Allow all users (guests and authenticated) to delete their own lists
         user = get_or_create_guest_user()
         if not user:
-            print(f"DEBUG /api/saved-lists/delete: Unable to resolve user")
+            print(f"ERROR /api/saved-lists/delete: Unable to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
         
         # Get list_id from URL parameter or POST body
