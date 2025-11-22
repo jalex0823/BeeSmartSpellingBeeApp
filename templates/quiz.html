@@ -8289,13 +8289,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    fetch('/api/wordbank', {
-        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-        cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    })
+    try {
+        fetch('/api/wordbank', {
+            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (!data.words || data.words.length === 0) {
