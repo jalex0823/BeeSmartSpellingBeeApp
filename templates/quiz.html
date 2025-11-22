@@ -8109,26 +8109,40 @@ unlockiOSAudio();
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-    // 🐝 Initialize Bee Swarm Voice Visualizer Background
-    const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
-    if (visualizerContainer) {
-        // Import and initialize without controls (background only)
-        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=' + Date.now())
-            .then(module => {
-                const BeeSwarm = module.default;
-                BeeSwarm.init(visualizerContainer, {
-                    autoStart: true,
-                    showControls: false,
-                    particleCount: 18000,  // Very dense hive with radial wave
-                    zIndex: 0
+        // 🐝 Initialize Bee Swarm Voice Visualizer Background
+        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+            console.log('🔍 Visualizer container check:', visualizerContainer ? 'FOUND' : 'NOT FOUND');
+        
+        if (visualizerContainer) {
+            console.log('🚀 Starting bee swarm visualizer import...');
+            // Import and initialize without controls (background only)
+            import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=' + Date.now())
+                .then(module => {
+                    console.log('✅ Module loaded:', module);
+                    const BeeSwarm = module.default;
+                    if (!BeeSwarm) {
+                        console.error('❌ BeeSwarm export is undefined!');
+                        return;
+                    }
+                    console.log('🎯 Initializing BeeSwarm with 18000 particles...');
+                    BeeSwarm.init(visualizerContainer, {
+                        autoStart: true,
+                        showControls: false,
+                        particleCount: 18000,  // Very dense hive with radial wave
+                        zIndex: 0
+                    });
+                    console.log('🐝 Bee swarm visualizer initialized in background with 18000 particles');
+                })
+                .catch(err => {
+                    console.error('❌ Visualizer failed to load:', err);
+                    console.error('Error details:', err.message, err.stack);
                 });
-                console.log('🐝 Bee swarm visualizer initialized in background with 18000 particles');
-            })
-            .catch(err => console.error('Visualizer failed to load:', err));
-    }
-    
-    // 🎭 Initialize morphing controller
-    window.morphController = new MorphController('morphContainer');
+        } else {
+            console.error('❌ beeSwarmVisualizerContainer not found in DOM!');
+        }
+        
+        // 🎭 Initialize morphing controller
+        window.morphController = new MorphController('morphContainer');
     console.log('🎭 Morph controller initialized');
     
     const delight = new BeeDelightManager();
