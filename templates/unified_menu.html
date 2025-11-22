@@ -2626,14 +2626,16 @@
                     display: none;
                     box-shadow: 0 4px 12px rgba(255, 201, 74, 0.2);
                 ">
-                    <div style="position: relative; width: 100%; overflow: hidden;">
+                    <div style="position: relative; width: 100%; overflow: hidden; height: 28px;">
                         <div id="ticker-text" style="
+                            position: absolute;
                             white-space: nowrap;
-                            animation: scroll-ticker 20s linear infinite;
+                            animation: scroll-ticker 25s linear infinite;
                             font-size: 1rem;
                             font-weight: 600;
                             color: #7a4b2b;
                             display: inline-block;
+                            will-change: transform;
                         ">
                             🐝 Collect more buzz dust to rank up! ✨
                         </div>
@@ -2666,8 +2668,16 @@
                 
                 <style>
                     @keyframes scroll-ticker {
-                        0% { transform: translateX(100%); }
-                        100% { transform: translateX(-150%); }
+                        0% { 
+                            transform: translateX(100%); 
+                        }
+                        100% { 
+                            transform: translateX(-100%); 
+                        }
+                    }
+                    
+                    #ticker-text {
+                        animation-play-state: running !important;
                     }
                 </style>
                 {% endif %}
