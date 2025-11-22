@@ -4467,9 +4467,16 @@
             }
 
             try {
+                // ISSUE #6 FIX: Add timeout to prevent hanging requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                
                 const res = await fetch('/api/saved-lists', {
-                    credentials: 'same-origin'
+                    credentials: 'same-origin',
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
 
                 if (!res.ok) {
                     // 401 / 403 / 500 => just hide the badge, no error UI
@@ -4480,14 +4487,20 @@
 
                 let data = null;
                 try {
-                    data = await res.json();
+                    // ISSUE #6 FIX: Validate response is valid JSON
+                    const text = await res.text();
+                    if (!text || text.trim() === '') {
+                        throw new Error('Empty response from server');
+                    }
+                    data = JSON.parse(text);
                 } catch (jsonErr) {
                     console.warn('⚠️ Could not parse /api/saved-lists JSON:', jsonErr);
                     badge.style.display = 'none';
                     return;
                 }
 
-                if (data && data.ok && Array.isArray(data.lists)){
+                // ISSUE #6 FIX: Validate data structure before accessing properties
+                if (data && typeof data === 'object' && data.ok && Array.isArray(data.lists)){
                     const count = data.lists.length;
                     if (count > 0){
                         badge.textContent = count > 99 ? '99+' : String(count);
@@ -4496,10 +4509,17 @@
                         badge.style.display = 'none';
                     }
                 } else {
+                    // Invalid data structure - hide badge
+                    console.warn('⚠️ Invalid data structure from /api/saved-lists:', data);
                     badge.style.display = 'none';
                 }
             } catch(e){
-                console.warn('⚠️ Saved lists badge fetch failed:', e);
+                // ISSUE #6 FIX: Handle network errors, aborts, and other exceptions
+                if (e.name === 'AbortError') {
+                    console.warn('⚠️ Saved lists fetch timed out after 10s');
+                } else {
+                    console.warn('⚠️ Saved lists badge fetch failed:', e.message || e);
+                }
                 badge.style.display = 'none';
             }
         }
@@ -15059,88 +15079,152 @@
         {% if current_user.is_authenticated %}
         async function loadStudentBuzzDust() {
             try {
-                console.log('🐝 Loading student Buzz Dust info...');
+                console.log('🐝 [TICKER] Starting Buzz Dust load...');
+                console.log('🐝 [TICKER] Authentication state:', {% if current_user.is_authenticated %}true{% else %}false{% endif %});
+                console.log('🐝 [TICKER] Current user:', '{{ current_user.username if current_user.is_authenticated else "Guest" }}');
+                
                 const res = await fetch('/api/buzz-dust/info', {
                     credentials: 'same-origin',
                     cache: 'no-store'
                 });
                 
+                console.log('🐝 [TICKER] Fetch response status:', res.status, res.statusText);
+                
                 if (!res.ok) {
+                    console.error('❌ [TICKER] HTTP error:', res.status, res.statusText);
+                    const errorText = await res.text();
+                    console.error('❌ [TICKER] Error response body:', errorText);
                     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
                 }
                 
                 const data = await res.json();
-                console.log('✅ Student Buzz Dust data received:', data);
+                console.log('✅ [TICKER] Full API response:', JSON.stringify(data, null, 2));
                 
-                if (data.success && data.current_class) {
-                    const rankTitleEl = document.getElementById('rank-title');
-                    const badgeEl = document.getElementById('student-rank-badge');
-                    const amountEl = document.getElementById('student-buzz-dust-amount');
-                    
-                    if (rankTitleEl) {
-                        rankTitleEl.textContent = data.current_class.label || 'Novice Bee';
-                        console.log('✅ Student rank title updated:', data.current_class.label);
-                    }
-                    if (amountEl) {
-                        const formatted = (data.total_buzz_dust || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                        amountEl.textContent = formatted + ' ✨';
-                        console.log('✅ Student Buzz Dust amount updated:', data.total_buzz_dust);
-                    }
-                    
-                    if (badgeEl && data.current_class.badge_image) {
-                        // Construct the badge URL from badge_image filename
-                        const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                        badgeEl.src = badgeUrl;
-                        badgeEl.alt = data.current_class.label + ' Badge';
-                        badgeEl.style.display = 'block';
-                        console.log('✅ Student badge image updated:', badgeUrl);
-                    }
-                    
-                    // Update progress ticker
-                    const tickerEl = document.getElementById('buzz-dust-ticker');
-                    const tickerTextEl = document.getElementById('ticker-text');
-                    
-                    if (tickerEl && tickerTextEl) {
-                        if (data.at_max_rank) {
-                            // Maximum rank achieved
-                            tickerTextEl.textContent = `👑 You've reached the highest rank: ${data.current_class.label}! You're a legend! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('✅ Progress ticker: Max rank achieved');
-                        } else if (data.next_class) {
-                            // Show progress to next rank
-                            const nextRank = data.next_class.label;
-                            const needed = data.dust_needed || (data.next_class.min_points - (data.total_buzz_dust || 0));
-                            const formatted = needed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                            
-                            tickerTextEl.textContent = `🐝 Earn ${formatted} more Buzz Dust to reach ${nextRank}! Keep spelling! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('✅ Progress ticker updated:', nextRank, 'needed:', needed);
-                        } else {
-                            // Fallback if no next class data
-                            tickerTextEl.textContent = `🐝 Keep practicing to earn more Buzz Dust and rank up! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('⚠️ Progress ticker: No next class data, showing generic message');
-                        }
-                    }
-                } else {
-                    console.error('❌ API returned success=false:', data);
-                    const rankTitleEl = document.getElementById('rank-title');
-                    if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
+                // Validate response structure
+                if (!data) {
+                    console.error('❌ [TICKER] API returned null/undefined data');
+                    throw new Error('No data returned from API');
                 }
+                
+                if (!data.current_class) {
+                    console.error('❌ [TICKER] Missing current_class in response:', data);
+                    throw new Error('Invalid response structure: missing current_class');
+                }
+                
+                // Update rank title
+                const rankTitleEl = document.getElementById('rank-title');
+                if (rankTitleEl) {
+                    const rankLabel = data.current_class.label || 'Novice Bee';
+                    rankTitleEl.textContent = rankLabel;
+                    console.log('✅ [TICKER] Rank title updated:', rankLabel);
+                } else {
+                    console.warn('⚠️ [TICKER] Element #rank-title not found in DOM');
+                }
+                
+                // Update Buzz Dust amount
+                const amountEl = document.getElementById('student-buzz-dust-amount');
+                if (amountEl) {
+                    const buzzDust = data.total_buzz_dust || 0;
+                    const formatted = buzzDust.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    amountEl.textContent = formatted + ' ✨';
+                    console.log('✅ [TICKER] Buzz Dust amount updated:', buzzDust);
+                } else {
+                    console.warn('⚠️ [TICKER] Element #student-buzz-dust-amount not found in DOM');
+                }
+                
+                // Update badge image
+                const badgeEl = document.getElementById('student-rank-badge');
+                if (badgeEl && data.current_class.badge_image) {
+                    const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
+                    badgeEl.src = badgeUrl;
+                    badgeEl.alt = data.current_class.label + ' Badge';
+                    badgeEl.style.display = 'block';
+                    console.log('✅ [TICKER] Badge image updated:', badgeUrl);
+                } else if (!badgeEl) {
+                    console.warn('⚠️ [TICKER] Element #student-rank-badge not found in DOM');
+                } else {
+                    console.warn('⚠️ [TICKER] No badge_image in response:', data.current_class);
+                }
+                
+                // Update progress ticker - CRITICAL SECTION
+                const tickerEl = document.getElementById('buzz-dust-ticker');
+                const tickerTextEl = document.getElementById('ticker-text');
+                
+                console.log('🔍 [TICKER] Ticker elements found:', {
+                    tickerEl: !!tickerEl,
+                    tickerTextEl: !!tickerTextEl,
+                    at_max_rank: data.at_max_rank,
+                    has_next_class: !!data.next_class
+                });
+                
+                if (tickerEl && tickerTextEl) {
+                    let tickerMessage = '';
+                    
+                    if (data.at_max_rank) {
+                        // Maximum rank achieved
+                        tickerMessage = `👑 You've reached the highest rank: ${data.current_class.label}! You're a legend! ✨`;
+                        console.log('✅ [TICKER] Max rank message set');
+                    } else if (data.next_class && data.next_class.label) {
+                        // Show progress to next rank
+                        const nextRank = data.next_class.label;
+                        const needed = data.dust_needed || (data.next_class.min_points - (data.total_buzz_dust || 0));
+                        const formatted = needed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        
+                        tickerMessage = `🐝 Earn ${formatted} more Buzz Dust to reach ${nextRank}! Keep spelling! ✨`;
+                        console.log('✅ [TICKER] Progress message set:', { nextRank, needed, formatted });
+                    } else {
+                        // Fallback if no next class data
+                        tickerMessage = `🐝 Keep practicing to earn more Buzz Dust and rank up! ✨`;
+                        console.log('⚠️ [TICKER] Using generic fallback message');
+                    }
+                    
+                    tickerTextEl.textContent = tickerMessage;
+                    tickerEl.style.display = 'block';
+                    tickerEl.style.visibility = 'visible';
+                    console.log('✅ [TICKER] Ticker text updated:', tickerMessage.substring(0, 50) + '...');
+                    console.log('✅ [TICKER] Ticker visibility:', window.getComputedStyle(tickerEl).display);
+                } else {
+                    if (!tickerEl) console.error('❌ [TICKER] Element #buzz-dust-ticker not found in DOM!');
+                    if (!tickerTextEl) console.error('❌ [TICKER] Element #ticker-text not found in DOM!');
+                }
+                
+                console.log('🎉 [TICKER] loadStudentBuzzDust completed successfully');
+                
             } catch (error) {
-                console.error('❌ Error loading student Buzz Dust:', error);
+                console.error('❌ [TICKER] Fatal error in loadStudentBuzzDust:', error);
+                console.error('❌ [TICKER] Error stack:', error.stack);
+                
+                // Set safe fallback values
                 const rankTitleEl = document.getElementById('rank-title');
                 const amountEl = document.getElementById('student-buzz-dust-amount');
-                if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
-                if (amountEl) amountEl.textContent = '0 ✨';
+                const tickerTextEl = document.getElementById('ticker-text');
+                
+                if (rankTitleEl) {
+                    rankTitleEl.textContent = 'Novice Bee';
+                    console.log('🔧 [TICKER] Fallback: rank set to Novice Bee');
+                }
+                if (amountEl) {
+                    amountEl.textContent = '0 ✨';
+                    console.log('🔧 [TICKER] Fallback: Buzz Dust set to 0');
+                }
+                if (tickerTextEl) {
+                    tickerTextEl.textContent = '🐝 Start practicing to earn Buzz Dust and rank up! ✨';
+                    console.log('🔧 [TICKER] Fallback: Generic ticker message set');
+                }
             }
         }
         
         // Load immediately when DOM is ready (faster than window.load)
+        console.log('🐝 [TICKER] Setting up DOMContentLoaded listener');
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadStudentBuzzDust);
+            console.log('🐝 [TICKER] DOM still loading, adding event listener');
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('🐝 [TICKER] DOMContentLoaded fired, calling loadStudentBuzzDust');
+                loadStudentBuzzDust();
+            });
         } else {
             // DOM already loaded, execute immediately
+            console.log('🐝 [TICKER] DOM already ready, calling loadStudentBuzzDust immediately');
             loadStudentBuzzDust();
         }
         {% endif %}

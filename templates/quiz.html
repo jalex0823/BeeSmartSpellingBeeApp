@@ -8284,9 +8284,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             'Cache-Control': 'no-cache'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
-        if (!data.words || data.words.length === 0) {
+        // ISSUE #4 FIX: Defensive validation of word data
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response format from API');
+        }
+        
+        if (!Array.isArray(data.words)) {
+            throw new Error('Invalid word data returned from API - expected array');
+        }
+        
+        if (data.words.length === 0) {
             BeeSmart.showError('No words loaded for the quiz!');
             setTimeout(() => window.location.href = '/', 2800);
             return;
@@ -8296,12 +8310,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalWords = data.words.length;
         const progressText = document.getElementById('progressText');
         const progressPercentage = document.getElementById('progressPercentage');
+        
+        // ISSUE #4 FIX: Validate DOM elements exist before accessing
         if (progressText) {
             progressText.textContent = `Question 1 of ${totalWords}`;
             console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
+        } else {
+            console.warn('⚠️ progressText element not found in DOM');
         }
+        
         if (progressPercentage) {
             progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+        } else {
+            console.warn('⚠️ progressPercentage element not found in DOM');
         }
 
         window.quizManager = new QuizManager({ delight, smartyBee });
@@ -8315,45 +8336,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
-window.addEventListener('beforeunload', async (event) => {
+window.addEventListener('beforeunload', (event) => {
     // 🛑 CRITICAL: Stop all quiz activities before leaving
     console.log('🛑 Page unloading - stopping all quiz activities...');
     
-    // Stop speech synthesis immediately (most important)
-    if ('speechSynthesis' in window) {
-        speechSynthesis.cancel();
-        console.log('🔇 Speech synthesis stopped on unload');
-    }
-    
-    // Clear all timers
-    if (window.spellingQuiz) {
-        if (window.spellingQuiz.countdownTimer) {
-            clearInterval(window.spellingQuiz.countdownTimer);
-        }
-        if (window.spellingQuiz.currentWordTimeout) {
-            clearTimeout(window.spellingQuiz.currentWordTimeout);
-        }
-    }
-    
-    // Save progress
+    // ISSUE #5 FIX: Add capability check before using speechSynthesis
     try {
-        // Use sendBeacon for reliable delivery even during page unload
-        const response = await fetch('/api/save-partial-progress', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            keepalive: true  // Ensures request completes even if page is closing
-        });
-        
-        if (response.ok) {
-            console.log('✅ Partial quiz progress saved');
+        if ('speechSynthesis' in window && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            console.log('🔇 Speech synthesis stopped on unload');
         }
+    } catch (speechError) {
+        console.warn('⚠️ Speech synthesis cleanup failed:', speechError);
+    }
+    
+    // ISSUE #5 FIX: Clear all timers with proper null checks
+    try {
+        if (window.spellingQuiz) {
+            if (window.spellingQuiz.countdownTimer) {
+                clearInterval(window.spellingQuiz.countdownTimer);
+            }
+            if (window.spellingQuiz.currentWordTimeout) {
+                clearTimeout(window.spellingQuiz.currentWordTimeout);
+            }
+        }
+    } catch (timerError) {
+        console.warn('⚠️ Timer cleanup failed:', timerError);
+    }
+    
+    // ISSUE #5 FIX: Save progress with quizManager check and no async/await in beforeunload
+    try {
+        // Use sendBeacon for reliable synchronous delivery during unload (no async needed)
+        const progressData = {};
+        
+        // Safely try to get saveProgress data if quizManager exists
+        if (window.quizManager && typeof window.quizManager.saveProgress === 'function') {
+            try {
+                // Call saveProgress synchronously if possible (don't await)
+                window.quizManager.saveProgress();
+            } catch (saveError) {
+                console.warn('⚠️ QuizManager saveProgress failed:', saveError);
+            }
+        }
+        
+        // Use sendBeacon for guaranteed delivery (synchronous, no await needed)
+        const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+        const beaconSent = navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log(beaconSent ? '✅ Progress beacon sent' : '⚠️ Beacon send failed');
     } catch (error) {
-        // Use sendBeacon as fallback (more reliable during unload)
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('💾 Progress save sent via beacon');
+        console.warn('⚠️ Progress save failed:', error);
     }
 });
 
