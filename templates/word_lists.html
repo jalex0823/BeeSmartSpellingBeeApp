@@ -166,14 +166,28 @@
     font-weight:800;
   }
 
-  /* honeycomb grid */
+  /* centered card container */
+  .hive-card{
+    background:rgba(255,255,255,0.7);
+    backdrop-filter:blur(10px);
+    border-radius:var(--radius-xl);
+    padding:24px;
+    margin:0 auto;
+    max-width:900px;
+    box-shadow:var(--shadow-med);
+    position:relative;
+    z-index:1;
+  }
+
+  /* honeycomb grid - responsive 2-3 columns */
   .hive-grid{
-    --cell-w:190px;
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(var(--cell-w),1fr));
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
     gap:18px 14px;
     padding-top:6px;
-    position:relative; z-index:1;
+    position:relative;
+    justify-items:center;
+    max-width:100%;
   }
 
   /* wobble */
@@ -189,7 +203,9 @@
     clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
     box-shadow:var(--shadow-med);
-    min-height:210px;
+    width:100%;
+    max-width:180px;
+    min-height:200px;
     display:flex; align-items:center; justify-content:center;
     padding:20px 16px 18px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
@@ -234,19 +250,30 @@
 
   /* actions */
   .hive-cell-actions{
-    position:absolute; top:10px; right:12px; z-index:3;
+    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:3;
     display:flex; gap:6px;
   }
   .hive-cell-action-btn{
     width:34px; height:34px; border:none; cursor:pointer;
     border-radius:50%; font-size:16px; font-weight:900;
     display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.95);
-    box-shadow:0 4px 12px rgba(0,0,0,.2);
-    transition:transform var(--transition-fast), filter var(--transition-fast);
+    background:rgba(255,255,255,0);
+    backdrop-filter:blur(4px);
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    transition:transform var(--transition-fast), background var(--transition-fast);
   }
-  .hive-cell-action-btn:hover{transform:translateY(-2px) scale(1.06)}
+  .hive-cell-action-btn:hover{
+    transform:translateY(-2px) scale(1.06);
+    background:rgba(255,255,255,.3);
+  }
   .hive-cell-action-btn.favorite{font-size:17px}
+  .hive-cell-action-btn.quiz{
+    font-size:18px;
+    background:rgba(255,201,74,0.2);
+  }
+  .hive-cell-action-btn.quiz:hover{
+    background:rgba(255,201,74,0.4);
+  }
 
   .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
   .hive-cell-name{
@@ -260,14 +287,6 @@
     display:flex; flex-direction:column; gap:6px; opacity:.96;
   }
   .hive-cell-meta .row{display:flex; align-items:center; justify-content:center; gap:6px;}
-
-  .hive-cell-cta{
-    margin-top:10px; font-size:12px; font-weight:900;
-    color:#50300f; background:rgba(255,255,255,.9);
-    padding:5px 9px; border-radius:var(--radius-pill);
-    display:inline-flex; align-items:center; gap:6px;
-    box-shadow:0 2px 8px rgba(0,0,0,.12);
-  }
 
   /* empty state */
   .hive-empty{
@@ -338,12 +357,14 @@
 
   @media (max-width:720px){
     .hive-title-row h1{font-size:26px}
-    .hive-grid{--cell-w:160px}
-    .hive-cell{min-height:190px}
+    .buzz-dust-container{padding:1.5rem !important;margin:1.5rem auto !important}
+    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px 12px;}
+    .hive-cell{max-width:160px;min-height:190px}
   }
   @media (max-width:480px){
-    .hive-grid{--cell-w:145px;gap:14px 10px}
-    .hive-cell{min-height:175px;padding:18px 12px}
+    .buzz-dust-container{padding:1rem !important;margin:1rem 0.5rem !important}
+    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px 10px;}
+    .hive-cell{max-width:145px;min-height:175px;padding:18px 12px}
     .hive-cell-name{font-size:16px}
   }
 </style>
@@ -425,29 +446,66 @@
     </div>
   </div>
 
-  <div class="hive-stats-bar">
-    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Bees in the Hive</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Honey Stored (Words)</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">🌻</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Honeycomb</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">🔨</div><div class="hive-stat-text"><span class="hive-stat-label">Worker Bee Pace</span><span class="hive-stat-value" id="statsWorkerBeePace">0</span></div></div>
-  </div>
-
-  <div class="hive-controls">
-    <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
-    <div class="hive-sort-wrapper">Sort by:
-      <select id="hiveSortSelect">
-        <option value="recent">Most Recent</option>
-        <option value="name">Name (A–Z)</option>
-        <option value="largest">Largest First</option>
-        <option value="smallest">Smallest First</option>
-      </select>
+  <!-- Current Badge Display -->
+  <div id="current-badge-display" style="
+    background:rgba(255,255,255,0.9);
+    border-radius:var(--radius-xl);
+    padding:1.5rem;
+    margin:0 auto 1.5rem;
+    max-width:400px;
+    text-align:center;
+    box-shadow:var(--shadow-soft);
+    display:none;
+  ">
+    <div style="font-size:0.875rem;font-weight:700;color:#7a4b2b;margin-bottom:0.5rem;">Your Current Badge</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;">
+      <img id="current-badge-icon" src="" alt="Current Badge" style="width:64px;height:64px;display:none;">
+      <div style="text-align:left;">
+        <div id="current-badge-name" style="font-size:1.5rem;font-weight:900;color:#8B008B;">Loading...</div>
+        <div id="current-buzz-dust" style="font-size:1.125rem;font-weight:700;color:#7a4b2b;">0 ✨ Buzz Dust</div>
+      </div>
+    </div>
+    <div id="next-badge-progress" style="margin-top:1rem;font-size:0.875rem;color:#666;font-weight:600;display:none;">
+      <div style="margin-bottom:0.25rem;">Progress to <span id="next-badge-name" style="color:#8B008B;font-weight:800;"></span></div>
+      <div style="background:#e0e0e0;border-radius:10px;height:8px;overflow:hidden;">
+        <div id="badge-progress-bar" style="background:linear-gradient(90deg,var(--honey),var(--honey-deep));height:100%;width:0%;transition:width 0.5s ease;"></div>
+      </div>
+      <div style="margin-top:0.25rem;font-size:0.75rem;"><span id="buzz-dust-needed">0</span> more Buzz Dust needed</div>
     </div>
   </div>
 
-  <div class="hive-grid" id="hiveGrid">
-    <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
-      <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
-      <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
+  <div class="hive-stats-bar">
+    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Hives</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">✨</div><div class="hive-stat-text"><span class="hive-stat-label">Total Words</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Hive</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
+  </div>
+
+  <!-- Buzz Dust Grid Container -->
+  <div class="buzz-dust-container" style="
+    max-width:1180px;
+    margin:2rem auto;
+    background:rgba(255,255,255,0.95);
+    border-radius:26px;
+    padding:2rem;
+    box-shadow:var(--shadow-soft);
+  ">
+    <div class="hive-controls">
+      <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
+      <div class="hive-sort-wrapper">Sort by:
+        <select id="hiveSortSelect">
+          <option value="recent">Most Recent</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="largest">Largest First</option>
+          <option value="smallest">Smallest First</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="hive-grid" id="hiveGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
+        <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
+        <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -468,8 +526,48 @@
   let pressTimer = null;
   let sheetTarget = null;
 
+  async function loadBuzzDustInfo(){
+    try{
+      const res = await fetch('/api/buzz-dust/info',{credentials:'same-origin',cache:'no-store'});
+      const data = await res.json();
+      
+      if(data.success && data.current_class){
+        const badgeDisplay = document.getElementById('current-badge-display');
+        const badgeIcon = document.getElementById('current-badge-icon');
+        const badgeName = document.getElementById('current-badge-name');
+        const buzzDust = document.getElementById('current-buzz-dust');
+        const nextProgress = document.getElementById('next-badge-progress');
+        const nextName = document.getElementById('next-badge-name');
+        const progressBar = document.getElementById('badge-progress-bar');
+        const buzzNeeded = document.getElementById('buzz-dust-needed');
+        
+        badgeName.textContent = data.current_class.label || 'Novice Bee';
+        buzzDust.textContent = `${(data.total_buzz_dust||0).toLocaleString()} ✨ Buzz Dust`;
+        
+        if(data.current_class.badge_image){
+          badgeIcon.src = `/static/assets/badges/${data.current_class.badge_image}`;
+          badgeIcon.style.display = 'block';
+        }
+        
+        if(data.next_class && !data.at_max_rank){
+          nextName.textContent = data.next_class.label;
+          const needed = data.next_class.min_points - data.total_buzz_dust;
+          const progress = Math.min(100, (data.total_buzz_dust / data.next_class.min_points) * 100);
+          progressBar.style.width = progress + '%';
+          buzzNeeded.textContent = needed.toLocaleString();
+          nextProgress.style.display = 'block';
+        }
+        
+        badgeDisplay.style.display = 'block';
+      }
+    }catch(err){
+      console.error('Failed to load Buzz Dust info:',err);
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
     runBeeFlyover();
+    await loadBuzzDustInfo();
     await loadWordLists();
   });
 
@@ -572,14 +670,9 @@
 
       <div class="hive-cell-inner">
         <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
-
         <div class="hive-cell-meta">
-          <div class="row">📅 ${formattedDate}</div>
-          <div class="row">🍯 Hive ${hiveIndex}</div>
-          ${isFav ? `<div class="row">⭐ Pinned Hive</div>` : `<div class="row">🐝 Tap to quiz</div>`}
+          <div class="row">🐝 Tap to quiz</div>
         </div>
-
-        <div class="hive-cell-cta">▶ Start Quiz</div>
       </div>
     `;
     return cell;
