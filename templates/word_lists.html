@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Word Hives - BeeSmart{% endblock %}
+{% block title %}My Word Lists - BeeSmart{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -90,7 +90,7 @@
   }
 
   .hive-title-row{
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
     gap:12px; margin-bottom:14px; position:relative; z-index:1;
   }
   .hive-title-row h1{
@@ -128,6 +128,7 @@
     gap:8px;
     margin:12px 0 16px;
     position:relative; z-index:1;
+    justify-items:center;
   }
   .hive-stat{display:flex; gap:10px; align-items:center;}
   .hive-stat-icon{
@@ -142,7 +143,7 @@
 
   /* controls */
   .hive-controls{
-    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
     margin:10px 0 18px; position:relative; z-index:1;
   }
   .hive-search-wrapper{
@@ -204,8 +205,8 @@
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
     box-shadow:var(--shadow-med);
     width:100%;
-    max-width:180px;
-    min-height:200px;
+    max-width:140px;
+    min-height:160px;
     display:flex; align-items:center; justify-content:center;
     padding:20px 16px 18px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
@@ -391,7 +392,7 @@
   <div class="bee-modal">
     <div class="bee-modal-header">
       <div class="bee-modal-icon">✏️</div>
-      <h2 class="bee-modal-title">Edit Word Hive</h2>
+      <h2 class="bee-modal-title">Edit Word List</h2>
     </div>
 
     <div class="bee-modal-body">
@@ -430,15 +431,8 @@
 </div>
 
 <div class="hive-page">
-  <div class="hive-breadcrumb">
-    <span>🏠</span>
-    <a href="/">Home</a>
-    <span class="separator">›</span>
-    <span>My Word Hives</span>
-  </div>
-
   <div class="hive-title-row">
-    <h1><span class="icon">🍯</span>My Word Hives</h1>
+    <h1><span class="icon">🍯</span>My Word Lists</h1>
     <div class="hive-actions">
       <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
       <button class="hive-btn primary" onclick="createNewComb()">➕ New Comb</button>
@@ -475,7 +469,7 @@
   </div>
 
   <div class="hive-stats-bar">
-    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Hives</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Lists</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
     <div class="hive-stat"><div class="hive-stat-icon">✨</div><div class="hive-stat-text"><span class="hive-stat-label">Total Words</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
     <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Hive</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
   </div>
@@ -683,8 +677,8 @@
       <div class="hive-empty">
         <div style="font-size:64px;margin-bottom:10px;">🐝</div>
         <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">No honeycombs yet!</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word hive to start storing spelling honey.</p>
-        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word Hive</button>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word list to start storing spelling honey.</p>
+        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
       </div>
     `;
   }
@@ -694,7 +688,7 @@
       <div class="hive-empty">
         <div style="font-size:64px;margin-bottom:10px;">🔒</div>
         <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Login Required</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word hives.</p>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word lists.</p>
         <button class="hive-btn primary" onclick="window.location.href='/login'">🔑 Log In</button>
       </div>
     `;
@@ -768,7 +762,7 @@
 
       const data = await res.json();
       if(data.ok){
-        showToast("✅ Word hive loaded! Heading to quiz…","success");
+        showToast("✅ Word list loaded! Heading to quiz…","success");
         setTimeout(()=>window.location.href="/quiz",700);
       }else{
         showToast("❌ "+(data.error||"Failed to load list"),"error");
@@ -781,7 +775,7 @@
 
   // CREATE
   async function createNewComb(){
-    const name = await showBeePrompt("🐝","Create New Word Hive!","What should we call this honeycomb?");
+    const name = await showBeePrompt("🐝","Create New Word List!","What should we call this list?");
     if(!name||!name.trim()) return;
 
     try{
@@ -793,7 +787,7 @@
       });
       const data = await res.json();
       if(data.ok){
-        showToast("✅ Word hive created!","success");
+        showToast("✅ Word list created!","success");
         await loadWordLists();
       }else{
         showToast("❌ "+(data.error||"Failed to create hive"),"error");
@@ -830,7 +824,7 @@
 
     const confirmed = await showBeeModal(
       "🗑️",
-      "Delete Word Hive?",
+      "Delete Word List?",
       `Delete "<strong>${listName}</strong>"?<br><br>This honeycomb will be gone forever.`,
       "Yes, Delete It",
       "danger"
@@ -847,7 +841,7 @@
       if(data.ok){
         localFavs.delete(listId);
         persistFavs();
-        showToast("✅ Word hive deleted!","success");
+        showToast("✅ Word list deleted!","success");
         await loadWordLists();
       }else{
         showToast("❌ "+(data.error||"Failed to delete hive"),"error");
