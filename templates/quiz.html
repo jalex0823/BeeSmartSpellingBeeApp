@@ -8415,9 +8415,13 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    navigator.sendBeacon('/api/save-partial-progress', blob);
-    console.log('✅ Final cleanup complete');
+    try {
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('✅ Final cleanup complete');
+    } catch (error) {
+        console.warn('⚠️ Final cleanup failed:', error);
+    }
 });
 
 // Themed avatar effects system for quiz
