@@ -8587,6 +8587,8 @@
                 // Small delay for iOS to process cancellation
                 setTimeout(() => {
                     const utterance = new SpeechSynthesisUtterance(word);
+                    // Swarm mouth integration events
+                    window.dispatchEvent(new CustomEvent("quiz-speech-start"));
                     // Natural default pacing with optional global override (dictionary context)
                     const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;
                     const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0;
@@ -8631,12 +8633,21 @@
                     
                     utterance.onend = function() {
                         visualizer.classList.remove('speaking');
+                        window.dispatchEvent(new CustomEvent("quiz-speech-end"));
                     };
                     
                     utterance.onerror = function(event) {
                         console.error('Speech error:', event);
                         visualizer.classList.remove('speaking');
+                        window.dispatchEvent(new CustomEvent("quiz-speech-end"));
                     };
+
+                    // Boundary pulses (words / phoneme boundaries trigger micro mouth pops)
+                    try {
+                        utterance.onboundary = () => {
+                            window.dispatchEvent(new CustomEvent("quiz-speech-boundary"));
+                        };
+                    } catch(e) { /* non-critical */ }
                     
                     window.speechSynthesis.speak(utterance);
                 }, 100);
