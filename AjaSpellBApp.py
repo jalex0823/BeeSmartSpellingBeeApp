@@ -2459,9 +2459,6 @@ def list_saved_wordlists():
 def get_saved_wordlist(list_id):
     """Get details of a specific saved word list."""
     try:
-        if not current_user.is_authenticated:
-            return jsonify({"ok": False, "error": "Login required"}), 403
-        
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -2496,9 +2493,10 @@ def get_saved_wordlist(list_id):
 def save_current_wordlist():
     """Persist the current in-session wordbank to the database with a user-provided name."""
     try:
-        # Guests are not allowed to save lists
-        if not current_user.is_authenticated:
-            return jsonify({"ok": False, "error": "Login required to save lists", "auth_required": True}), 403
+        # Allow all users (guests and authenticated) to save lists
+        user = get_or_create_guest_user()
+        if not user:
+            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
         payload = request.get_json(silent=True) or {}
         list_name = (payload.get("list_name") or "").strip()
         description = (payload.get("description") or "").strip()
@@ -2514,10 +2512,6 @@ def save_current_wordlist():
         
         if not words:
             return jsonify({"ok": False, "error": "No words available to save. Please upload or paste words first."}), 400
-
-        user = get_or_create_guest_user()
-        if not user:
-            return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
 
         # Create WordList record
         wl = WordList(
@@ -2638,28 +2632,25 @@ def load_saved_wordlist():
 @app.route("/api/saved-lists/<int:list_id>", methods=["DELETE"])
 def delete_saved_wordlist(list_id=None):
     try:
-        # Guests are not allowed to delete lists
-        if not current_user.is_authenticated:
-            print(f"DEBUG /api/saved-lists/delete: User not authenticated")
-            return jsonify({"ok": False, "error": "Login required to delete saved lists", "auth_required": True}), 403
-        
-        # Get list_id from URL parameter or POST body
-        if list_id is None:
-            payload = request.get_json(silent=True) or {}
-            list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
-        
-        print(f"DEBUG /api/saved-lists/delete: Received payload={payload}, list_id={list_id}")
-        
-        if not list_id:
-            print(f"DEBUG /api/saved-lists/delete: Missing list ID in payload")
-            return jsonify({"ok": False, "error": "Missing list id"}), 400
-
-        print(f"DEBUG /api/saved-lists/delete: Attempting to delete list_id={list_id}")
-
+        # Allow all users (guests and authenticated) to delete their own lists
         user = get_or_create_guest_user()
         if not user:
             print(f"DEBUG /api/saved-lists/delete: Unable to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
+        
+        # Get list_id from URL parameter or POST body
+        payload = None
+        if list_id is None:
+            payload = request.get_json(silent=True) or {}
+            list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
+        
+        print(f"DEBUG /api/saved-lists/delete: Received list_id={list_id}")
+        
+        if not list_id:
+            print(f"DEBUG /api/saved-lists/delete: Missing list ID")
+            return jsonify({"ok": False, "error": "Missing list id"}), 400
+
+        print(f"DEBUG /api/saved-lists/delete: Attempting to delete list_id={list_id}")
 
         print(f"DEBUG /api/saved-lists/delete: User resolved: id={user.id}, username={user.username}")
 

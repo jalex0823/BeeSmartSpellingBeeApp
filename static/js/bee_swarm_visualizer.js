@@ -12,11 +12,10 @@ const BeeSwarmVisualizer = {
   camera: null,
   renderer: null,
   bees: null,
-  analyser: null,
-  audioData: null,
-  audioStarted: false,
+  container: null,
   amplitude: 0,
   ampSmooth: 0,
+  isActive: false,
   
   // Particle data
   COUNT: 25000,
@@ -41,71 +40,73 @@ const BeeSwarmVisualizer = {
    */
   init(container, options = {}) {
     const opts = {
-      autoStart: false,
-      showControls: true,
-      particleCount: 25000,
-      background: '#050505',
-      zIndex: 0,
+      autoStart: true,
+      showControls: false,
+      particleCount: 8000,
+      background: 'transparent',
+      zIndex: 1,
       ...options
     };
     
+    this.container = container;
     this.COUNT = opts.particleCount;
     
-    // Setup scene
+    // Setup scene to fit container
     this.initScene(container, opts);
     this.initParticles();
     this.animate(0);
     
-    if (opts.showControls) {
-      this.addControls(container);
-    }
+    // Connect to speech synthesis events
+    this.setupSpeechIntegration();
     
-    if (opts.autoStart) {
-      this.startMic();
-    }
+    console.log('🐝 Bee swarm visualizer initialized for quiz voice integration');
     
     return this;
   },
   
   initScene(container, opts) {
+    // Create scene
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(parseInt(opts.background.replace('#', '0x')), 0.07);
     
-    this.camera = new THREE.PerspectiveCamera(
-      60, container.clientWidth / container.clientHeight, 0.1, 200
-    );
-    this.camera.position.set(0, 0, 24);
+    // Get container dimensions
+    const rect = container.getBoundingClientRect();
+    const width = rect.width || 860;
+    const height = rect.height || 260;
     
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Setup camera for contained view
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    this.camera.position.set(0, 0, 15);
+    
+    // Setup renderer with transparent background
+    this.renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      premultipliedAlpha: false
+    });
+    this.renderer.setSize(width, height);
+    this.renderer.setClearColor(0x000000, 0); // Transparent
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    
+    // Position canvas properly in container
     this.renderer.domElement.style.position = 'absolute';
     this.renderer.domElement.style.top = '0';
     this.renderer.domElement.style.left = '0';
-    this.renderer.domElement.style.zIndex = opts.zIndex;
     this.renderer.domElement.style.pointerEvents = 'none';
+    this.renderer.domElement.style.zIndex = '1';
+    
+    // Add canvas to container
     container.appendChild(this.renderer.domElement);
     
-    // Resize handler
-    window.addEventListener("resize", () => {
-      this.camera.aspect = container.clientWidth / container.clientHeight;
+    // Handle resize
+    window.addEventListener('resize', () => {
+      const newRect = container.getBoundingClientRect();
+      const newWidth = newRect.width || 860;
+      const newHeight = newRect.height || 260;
+      
+      this.camera.aspect = newWidth / newHeight;
       this.camera.updateProjectionMatrix();
-      this.renderer.setSize(container.clientWidth, container.clientHeight);
+      this.renderer.setSize(newWidth, newHeight);
     });
-    
-    // Subtle background stars
-    const starGeo = new THREE.BufferGeometry();
-    const N = 1200;
-    const pos = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      pos[i * 3 + 0] = (Math.random() - 0.5) * 160;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 160;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 160;
-    }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    const starMat = new THREE.PointsMaterial({ size: 0.25, transparent: true, opacity: 0.25 });
-    const stars = new THREE.Points(starGeo, starMat);
-    this.scene.add(stars);
   },
   
   initParticles() {
@@ -185,40 +186,48 @@ const BeeSwarmVisualizer = {
     this.scene.add(this.bees);
   },
   
-  async startMic() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(stream);
-      
-      this.analyser = ctx.createAnalyser();
-      this.analyser.fftSize = 1024;
-      this.audioData = new Uint8Array(this.analyser.frequencyBinCount);
-      
-      src.connect(this.analyser);
-      this.audioStarted = true;
-      return true;
-    } catch (e) {
-      console.error('Mic permission denied or unavailable:', e);
-      return false;
+  /**
+   * Setup integration with quiz speech synthesis
+   */
+  setupSpeechIntegration() {
+    // Listen for speech synthesis events from quiz
+    window.addEventListener('quiz-speech-start', () => {
+      this.isActive = true;
+      console.log('🐝 Speech started - activating bee swarm');
+    });
+    
+    window.addEventListener('quiz-speech-end', () => {
+      this.isActive = false;
+      console.log('🐝 Speech ended - calming bee swarm');
+    });
+    
+    // Monitor global speech synthesis state
+    if (typeof speechSynthesis !== 'undefined') {
+      setInterval(() => {
+        this.updateSpeechAmplitude();
+      }, 50);
     }
   },
   
-  updateAmplitude() {
-    if (!this.audioStarted) {
+  /**
+   * Update amplitude based on speech synthesis state
+   */
+  updateSpeechAmplitude() {
+    if (typeof speechSynthesis === 'undefined') {
       this.amplitude = 0;
       return;
     }
-    this.analyser.getByteTimeDomainData(this.audioData);
     
-    let sum = 0;
-    for (let i = 0; i < this.audioData.length; i++) {
-      const v = (this.audioData[i] - 128) / 128;
-      sum += v * v;
+    // Check if speech is currently active
+    const isSpeaking = speechSynthesis.speaking;
+    
+    if (isSpeaking && this.isActive) {
+      // Simulate amplitude based on speech activity
+      this.amplitude = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+    } else {
+      // Gradually fade amplitude
+      this.amplitude *= 0.95;
     }
-    const rms = Math.sqrt(sum / this.audioData.length);
-    // Increased sensitivity for more dramatic voice response
-    this.amplitude = THREE.MathUtils.clamp(rms * 4.5, 0, 1);
   },
   
   swarmStep(time) {
@@ -281,13 +290,13 @@ const BeeSwarmVisualizer = {
     posAttr.needsUpdate = true;
   },
   
-  pulseStep(time) {
-    // Radial wave that pulses from center outward and back
-    const waveSpeed = 0.002;
-    // Stronger audio pulse influence for more dramatic voice sync
-    const audioPulse = this.ampSmooth * 0.6;
+  /**
+   * Update particle colors based on speech activity
+   */
+  updateColors(time) {
+    const waveSpeed = 0.003;
+    const speechPulse = this.ampSmooth * 0.5;
     
-    const posAttr = this.geo.getAttribute("position");
     const colorAttr = this.geo.getAttribute("color");
     
     for (let i = 0; i < this.COUNT; i++) {
@@ -296,97 +305,52 @@ const BeeSwarmVisualizer = {
       const py = this.positions[ix + 1];
       const pz = this.positions[ix + 2];
       
-      // Distance from center (0,0,0)
+      // Distance from center for wave effect
       const dist = Math.sqrt(px * px + py * py + pz * pz);
+      const wave = Math.sin(dist * 0.5 - time * waveSpeed) * 0.5 + 0.5;
       
-      // Wave travels outward based on distance and time
-      const wave = Math.sin(dist * 0.3 - time * waveSpeed) * 0.5 + 0.5;
-      const pulse = wave * (1 + audioPulse);
+      // Brightness modulation
+      const brightness = 0.7 + (wave * speechPulse * 0.3);
       
-      // Modulate brightness based on wave while keeping base honey shade
-      // Increased brightness range for more dramatic voice response
-      const brightness = 0.4 + pulse * 0.6;
+      // Get base color and apply brightness
       const baseR = this.baseColors[ix + 0];
       const baseG = this.baseColors[ix + 1];
       const baseB = this.baseColors[ix + 2];
       
       colorAttr.setXYZ(i, 
-        baseR * brightness,
-        baseG * brightness,
-        baseB * brightness
+        Math.min(1, baseR * brightness),
+        Math.min(1, baseG * brightness),
+        Math.min(1, baseB * brightness)
       );
     }
     
     colorAttr.needsUpdate = true;
     
-    // More dramatic size pulsing in sync with voice
-    this.mat.size = this.BASE_POINT_SIZE * (1 + audioPulse * 0.25);
-    this.mat.opacity = 0.70 + audioPulse * 0.15;
+    // Update particle size based on speech
+    this.mat.size = this.BASE_POINT_SIZE * (1 + speechPulse * 0.3);
+    this.mat.opacity = 0.8 + speechPulse * 0.2;
   },
   
   animate(time) {
+    if (!this.scene) return;
+    
     requestAnimationFrame((t) => this.animate(t));
     
-    this.updateAmplitude();
+    // Update amplitude from speech
+    this.updateSpeechAmplitude();
+    
+    // Smooth amplitude
+    this.ampSmooth = this.ampSmooth * 0.9 + this.amplitude * 0.1;
+    
+    // Update swarm dynamics
     this.swarmStep(time);
-    this.pulseStep(time);
     
-    this.camera.position.x = Math.sin(time * 0.0002) * 0.8;
-    this.camera.position.y = Math.cos(time * 0.0002) * 0.6;
-    this.camera.lookAt(0, 0, 0);
+    // Update colors based on speech activity
+    this.updateColors(time);
     
+    // Render the scene
     this.renderer.render(this.scene, this.camera);
-  },
-  
-  addControls(container) {
-    const ui = document.createElement('div');
-    ui.style.cssText = `
-      position: fixed; inset: 16px auto auto 16px; z-index: 10;
-      display:flex; gap:8px; align-items:center;
-      background:rgba(0,0,0,.5); padding:10px 12px; border-radius:12px;
-      color:#fff; backdrop-filter: blur(6px);
-    `;
-    
-    const btn = document.createElement('button');
-    btn.id = 'beeSwarmStartBtn';
-    btn.textContent = 'Start Mic';
-    btn.style.cssText = `
-      border:0; padding:8px 12px; border-radius:10px; cursor:pointer;
-      background:#FFD540; color:#2b1a00; font-weight:700;
-      box-shadow:0 0 0 2px rgba(255,213,64,.2) inset;
-    `;
-    btn.onclick = async () => {
-      const success = await this.startMic();
-      if (success) {
-        btn.textContent = 'Mic Live ✅';
-      } else {
-        alert('Mic permission denied or unavailable.');
-      }
-    };
-    
-    const ampChip = document.createElement('span');
-    ampChip.id = 'beeSwarmAmpChip';
-    ampChip.className = 'chip';
-    ampChip.style.cssText = 'font-size:12px; opacity:.8;';
-    ampChip.textContent = 'amp: 0.00';
-    
-    const modeChip = document.createElement('span');
-    modeChip.className = 'chip';
-    modeChip.style.cssText = 'font-size:12px; opacity:.8;';
-    modeChip.textContent = '🐝 Bee Swarm Mode';
-    
-    ui.appendChild(btn);
-    ui.appendChild(ampChip);
-    ui.appendChild(modeChip);
-    container.appendChild(ui);
-    
-    // Update amplitude display
-    setInterval(() => {
-      if (ampChip) {
-        ampChip.textContent = `amp: ${this.amplitude.toFixed(2)}`;
-      }
-    }, 100);
-  },
+  },,
   
   destroy() {
     if (this.renderer) {

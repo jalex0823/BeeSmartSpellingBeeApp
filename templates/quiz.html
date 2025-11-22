@@ -3069,7 +3069,8 @@ if ('speechSynthesis' in window) {
                             </div>
                             
                             <div class="dotwave-wrapper">
-                                <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
+                                <div id="beeSwarmContainer" style="width: 860px; height: 260px; position: relative; background: transparent;"></div>
+                                <canvas id="dotWaveCanvas" width="860" height="260" style="display: none;"></canvas>
                             </div>
                             
                             <!-- Definition display inside visualizer -->
@@ -3724,12 +3725,15 @@ class BeeSoundboard {
         
         if (this.cachedVoice) {
             utterance.voice = this.cachedVoice;
-        }            // Sync visual display with announcer + morph to voice visualizer
+        }            // Sync visual display with announcer + morph to voice visualizer + bee swarm integration
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
                 if (statusEl) statusEl.textContent = this.cachedVoice
                     ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
                     : '🎙️ Speaking';
+                
+                // Trigger bee swarm activation
+                window.dispatchEvent(new CustomEvent('quiz-speech-start'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
@@ -3764,12 +3768,18 @@ class BeeSoundboard {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '🐝 Ready';
                 
+                // Trigger bee swarm deactivation
+                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+                
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
+                
+                // Trigger bee swarm deactivation on error
+                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
@@ -8265,9 +8275,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (fallbackError) {
             console.error('❌ Could not hide avatar container:', fallbackError);
         }
-    } catch (initError) {
-        console.error('❌ Quiz initialization error:', initError);
-        BeeSmart.showError('Failed to initialize quiz. Please refresh the page.');
     }
 
     fetch('/api/wordbank', {
@@ -8822,14 +8829,14 @@ function playThemedSound(soundType) {
     }
     
     function initBeeSwarm() {
-        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+        const visualizerContainer = document.getElementById('beeSwarmContainer');
         
         if (!visualizerContainer) {
-            console.error('❌ beeSwarmVisualizerContainer not found!');
+            console.error('❌ beeSwarmContainer not found!');
             return;
         }
         
-        console.log('🚀 Initializing bee swarm visualizer...');
+        console.log('🚀 Initializing bee swarm visualizer in quiz voice visualizer...');
         console.log('📦 Container dimensions:', {
             width: visualizerContainer.clientWidth,
             height: visualizerContainer.clientHeight,
@@ -8841,10 +8848,11 @@ function playThemedSound(soundType) {
             BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 18000,  // Very dense hive with radial wave
-                zIndex: 5
+                particleCount: 8000,  // Optimized for quiz voice sync
+                background: 'transparent',
+                zIndex: 1
             });
-            console.log('✅ Bee swarm visualizer initialized successfully');
+            console.log('✅ Bee swarm visualizer initialized successfully for quiz voice integration');
         } catch (error) {
             console.error('❌ Failed to initialize bee swarm:', error);
         }
