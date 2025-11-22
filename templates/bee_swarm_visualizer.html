@@ -31,9 +31,9 @@
 </head>
 <body>
   <div id="ui">
-    <button id="startBtn">Start Mic</button>
+    <button id="startBtn">Start Demo</button>
     <span class="chip" id="ampChip">amp: 0.00</span>
-    <span class="chip">🐝 Bee Swarm Mode</span>
+    <span class="chip">🐝 Bee Swarm Mode (No Mic)</span>
   </div>
 
   <script type="module">
@@ -158,46 +158,35 @@
     scene.add(bees);
 
     // -------------------------
-    // 3) AUDIO SETUP (MIC)
+    // 3) SIMULATED AUDIO (NO MICROPHONE)
     // -------------------------
-    let analyser, audioData, audioStarted = false;
     let amplitude = 0;
     let ampSmooth = 0;
+    let audioStarted = false;
 
-    async function startMic(){
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(stream);
-
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 1024;
-      audioData = new Uint8Array(analyser.frequencyBinCount);
-
-      src.connect(analyser);
+    function startSimulatedAudio(){
       audioStarted = true;
+      console.log('✅ Started simulated audio mode');
     }
 
     document.getElementById("startBtn").onclick = async () => {
       try{
-        await startMic();
-        document.getElementById("startBtn").textContent = "Mic Live ✅";
+        startSimulatedAudio();
+        document.getElementById("startBtn").textContent = "Audio Simulation ✅";
       }catch(e){
-        alert("Mic permission denied or unavailable.");
         console.error(e);
       }
     };
 
     function updateAmplitude(){
-      if(!audioStarted) { amplitude = 0; return; }
-      analyser.getByteTimeDomainData(audioData);
-
-      let sum = 0;
-      for (let i=0;i<audioData.length;i++){
-        const v = (audioData[i]-128)/128;
-        sum += v*v;
+      if(!audioStarted) { 
+        amplitude = 0; 
+        return; 
       }
-      const rms = Math.sqrt(sum / audioData.length);
-      amplitude = THREE.MathUtils.clamp(rms * 2.2, 0, 1);
+      
+      // Simulate audio amplitude with gentle wave pattern
+      amplitude = 0.2 + Math.sin(Date.now() * 0.005) * 0.15 + Math.random() * 0.1;
+      amplitude = Math.max(0, Math.min(1, amplitude));
     }
 
     // -------------------------
