@@ -2447,7 +2447,108 @@ try:
 except Exception as e:
     print(f"⚠️ Battle API registration failed: {e}")
 
+# --- Routes: Health Check for API Debugging ----------------------------------
+@app.route("/api/debug/health", methods=["GET"])
+def api_debug_health():
+    """Simple health check endpoint to test basic API functionality without complex dependencies."""
+    try:
+        health_info = {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "session_keys": list(session.keys()),
+            "user_authenticated": current_user.is_authenticated if current_user else False,
+            "db_test": "pending"
+        }
+        
+        # Test basic database connectivity
+        try:
+            result = db.session.execute('SELECT 1 as test').first()
+            health_info["db_test"] = "success"
+            health_info["db_result"] = result.test if result else "no_result"
+        except Exception as db_error:
+            health_info["db_test"] = "failed"
+            health_info["db_error"] = str(db_error)
+        
+        # Test models import
+        try:
+            from models import User, WordList
+            health_info["models_import"] = "success"
+            health_info["wordlist_model"] = str(WordList.__tablename__)
+        except Exception as import_error:
+            health_info["models_import"] = "failed"
+            health_info["import_error"] = str(import_error)
+        
+        return jsonify(health_info)
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "type": type(e).__name__
+        }), 500
+
 # --- Routes: Saved Word Lists (Persistent) -----------------------------------
+@app.route("/api/debug/saved-lists-test", methods=["GET"])
+def debug_saved_lists_test():
+    """Step-by-step test of saved-lists functionality for debugging."""
+    debug_steps = {}
+    
+    try:
+        # Step 1: Test database connection
+        debug_steps["step_1_db_connection"] = "testing"
+        db.session.execute('SELECT 1')
+        debug_steps["step_1_db_connection"] = "success"
+        
+        # Step 2: Test models import
+        debug_steps["step_2_models_import"] = "testing"
+        from models import WordList, User
+        debug_steps["step_2_models_import"] = "success"
+        
+        # Step 3: Test user resolution
+        debug_steps["step_3_user_resolution"] = "testing"
+        user = get_or_create_guest_user()
+        debug_steps["step_3_user_resolution"] = "success" if user else "failed"
+        debug_steps["user_id"] = user.id if user else None
+        debug_steps["user_type"] = "authenticated" if current_user.is_authenticated else "guest"
+        
+        # Step 4: Test WordList query (without execution)
+        debug_steps["step_4_query_build"] = "testing"
+        if user:
+            query = WordList.query.filter(WordList.created_by_user_id == user.id)
+            debug_steps["step_4_query_build"] = "success"
+            debug_steps["query_sql"] = str(query)
+            
+            # Step 5: Test query execution
+            debug_steps["step_5_query_execution"] = "testing"
+            lists = query.all()
+            debug_steps["step_5_query_execution"] = "success"
+            debug_steps["lists_found"] = len(lists)
+        else:
+            debug_steps["step_4_query_build"] = "skipped_no_user"
+            debug_steps["step_5_query_execution"] = "skipped_no_user"
+        
+        return jsonify({
+            "status": "debug_complete",
+            "steps": debug_steps,
+            "session_info": {
+                "keys": list(session.keys()),
+                "guest_user_id": session.get("guest_user_id"),
+                "is_guest": session.get("is_guest")
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        debug_steps["error"] = str(e)
+        debug_steps["error_type"] = type(e).__name__
+        debug_steps["traceback"] = traceback.format_exc()
+        
+        return jsonify({
+            "status": "debug_failed",
+            "steps": debug_steps,
+            "error": str(e)
+        }), 500
+
 @app.route("/api/saved-lists", methods=["GET"])
 def list_saved_wordlists():
     """Return the current user's saved word lists (persisted; not cleared by /api/clear)."""
