@@ -11038,18 +11038,17 @@ def api_get_avatars():
         # Check cache first
         global _AVATAR_CACHE
         current_time = time.time()
-    
-    # Use cache for both authenticated and unauthenticated users
-    # Cache key includes user ID to separate per-user unlock status
-    cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
-    
-    # Allow cache bypass for immediate troubleshooting (e.g., force=1)
-    if request.args.get('force') != '1':
-        if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
-            print(f"⚡ Returning cached avatar list for {cache_key}")
-            return jsonify(_AVATAR_CACHE[cache_key])
-    
-    try:
+        
+        # Use cache for both authenticated and unauthenticated users
+        # Cache key includes user ID to separate per-user unlock status
+        cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+        
+        # Allow cache bypass for immediate troubleshooting (e.g., force=1)
+        if request.args.get('force') != '1':
+            if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
+                print(f"⚡ Returning cached avatar list for {cache_key}")
+                return jsonify(_AVATAR_CACHE[cache_key])
+        
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
         try:
             from models import Avatar, User
