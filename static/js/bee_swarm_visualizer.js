@@ -217,17 +217,20 @@ const BeeSwarmVisualizer = {
       sum += v * v;
     }
     const rms = Math.sqrt(sum / this.audioData.length);
-    this.amplitude = THREE.MathUtils.clamp(rms * 2.2, 0, 1);
+    // Increased sensitivity for more dramatic voice response
+    this.amplitude = THREE.MathUtils.clamp(rms * 4.5, 0, 1);
   },
   
   swarmStep(time) {
     const posAttr = this.geo.getAttribute("position");
     
-    this.ampSmooth = this.ampSmooth * 0.9 + this.amplitude * 0.1;
+    // Faster response to voice with less smoothing
+    this.ampSmooth = this.ampSmooth * 0.7 + this.amplitude * 0.3;
     
-    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.08;
-    const noiseStrength = this.noiseBase + this.ampSmooth * 0.22;
-    const buzzStrength = this.buzzBase + this.ampSmooth * 0.02;
+    // More dramatic voice influence on swarm behavior
+    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.18;
+    const noiseStrength = this.noiseBase + this.ampSmooth * 0.45;
+    const buzzStrength = this.buzzBase + this.ampSmooth * 0.04;
     
     for (let i = 0; i < this.COUNT; i++) {
       const ix = i * 3;
@@ -281,7 +284,8 @@ const BeeSwarmVisualizer = {
   pulseStep(time) {
     // Radial wave that pulses from center outward and back
     const waveSpeed = 0.002;
-    const audioPulse = this.ampSmooth * 0.3;
+    // Stronger audio pulse influence for more dramatic voice sync
+    const audioPulse = this.ampSmooth * 0.6;
     
     const posAttr = this.geo.getAttribute("position");
     const colorAttr = this.geo.getAttribute("color");
@@ -300,7 +304,8 @@ const BeeSwarmVisualizer = {
       const pulse = wave * (1 + audioPulse);
       
       // Modulate brightness based on wave while keeping base honey shade
-      const brightness = 0.5 + pulse * 0.5;
+      // Increased brightness range for more dramatic voice response
+      const brightness = 0.4 + pulse * 0.6;
       const baseR = this.baseColors[ix + 0];
       const baseG = this.baseColors[ix + 1];
       const baseB = this.baseColors[ix + 2];
@@ -314,9 +319,9 @@ const BeeSwarmVisualizer = {
     
     colorAttr.needsUpdate = true;
     
-    // Fixed size and opacity (no global pulse)
-    this.mat.size = this.BASE_POINT_SIZE * (1 + audioPulse * 0.12);
-    this.mat.opacity = 0.70;
+    // More dramatic size pulsing in sync with voice
+    this.mat.size = this.BASE_POINT_SIZE * (1 + audioPulse * 0.25);
+    this.mat.opacity = 0.70 + audioPulse * 0.15;
   },
   
   animate(time) {
