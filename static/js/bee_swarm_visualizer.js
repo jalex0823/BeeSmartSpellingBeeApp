@@ -350,7 +350,7 @@ const BeeSwarmVisualizer = {
     
     // Render the scene
     this.renderer.render(this.scene, this.camera);
-  },,
+  },
   
   destroy() {
     if (this.renderer) {
