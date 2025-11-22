@@ -96,9 +96,37 @@
         console.log('🔐 Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
     </script>
     <script>
+        // EMERGENCY: Force hide all loading overlays - call manually if page is stuck
+        window.emergencyHideAllLoaders = function() {
+            console.warn('🚨 EMERGENCY: Forcing all loaders to hide');
+            const loaders = ['loadingOverlay', 'honeyLoader', 'avatarLoadingOverlay'];
+            loaders.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'none';
+                    el.style.visibility = 'hidden';
+                    el.style.opacity = '0';
+                    console.log('✅ Hid', id);
+                }
+            });
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.overflow = 'auto';
+            console.log('✅ Page unlocked - you can interact now');
+        };
+        
+        // Auto-trigger emergency hide after 10 seconds if page is stuck
+        setTimeout(() => {
+            const honeyLoader = document.getElementById('honeyLoader');
+            if (honeyLoader && honeyLoader.style.display !== 'none') {
+                console.error('🚨 Page stuck on loading for 10+ seconds - auto-hiding loaders');
+                window.emergencyHideAllLoaders();
+            }
+        }, 10000);
+    </script>
+    <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
-            const VERSION = 'unified_menu_v2.1-' + Date.now();
+            const VERSION = 'unified_menu_v2.2-EMERGENCY-FIX';
             console.log('\u2728 BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
             // Disable distracting floating decorations on the home screen
             // This hides sparkles/fairies and prevents their initialization later.
