@@ -25,13 +25,13 @@ const BeeSwarmVisualizer = {
   colors: null,
   geo: null,
   mat: null,
-  BASE_POINT_SIZE: 0.18,  // Increased bee size for better visibility
+  BASE_POINT_SIZE: 0.12,  // Smaller particles for denser, more compact appearance
   
-  // Animation params
-  tSpeedBase: 0.015,
-  noiseBase: 0.025,
-  buzzBase: 0.004,
-  damp: 0.93,
+  // Animation params - tighter for compact swarm
+  tSpeedBase: 0.025,  // Faster attraction to targets
+  noiseBase: 0.012,   // Less noise for tighter formation
+  buzzBase: 0.002,    // Minimal random buzz for compactness
+  damp: 0.95,         // Higher damping for smoother, tighter movement
   
   /**
    * Initialize the visualizer
@@ -151,22 +151,36 @@ const BeeSwarmVisualizer = {
     };
     
     const setHiveTargets = () => {
-      const radiusBase = 7.5;
+      // Create a compact mouth/wave-like curved shape
+      const width = 3.5;  // Much narrower horizontal spread
+      const height = 2.0; // Compact vertical spread
+      const depth = 1.2;  // Very shallow depth for flat mouth shape
+      
       for (let i = 0; i < this.COUNT; i++) {
-        const a = i * 0.03;
-        const r = radiusBase + 0.9 * Math.sin(i * 0.015);
-        const y = Math.sin(i * 0.008) * 1.6;
+        // Parametric position along the mouth curve
+        const t = (i / this.COUNT) * Math.PI * 2;
+        const layer = Math.floor(i / (this.COUNT / 5)); // 5 layers for density
         
-        this.targets[i * 3 + 0] = Math.cos(a) * r;
-        this.targets[i * 3 + 1] = y;
-        this.targets[i * 3 + 2] = Math.sin(a) * r;
+        // Mouth curve - creates a curved, smile-like formation
+        const angle = t * 0.8; // Compress angle for tighter packing
+        const curveHeight = Math.sin(angle) * 0.4; // Gentle curve like a smile
+        
+        // Tight spiral pattern for compactness
+        const spiralRadius = (i / this.COUNT) * 2.5;
+        const spiralAngle = i * 0.12; // Denser spiral
+        
+        // Combine mouth curve with tight clustering
+        this.targets[i * 3 + 0] = Math.cos(spiralAngle) * spiralRadius * width;
+        this.targets[i * 3 + 1] = Math.sin(spiralAngle) * spiralRadius * height + curveHeight;
+        this.targets[i * 3 + 2] = (Math.sin(t) * 0.3 + layer * 0.15) * depth;
       }
     };
     
     for (let i = 0; i < this.COUNT; i++) {
-      this.positions[i * 3 + 0] = (Math.random() - 0.5) * 30;
-      this.positions[i * 3 + 1] = (Math.random() - 0.5) * 18;
-      this.positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
+      // Start particles much closer together for immediate compactness
+      this.positions[i * 3 + 0] = (Math.random() - 0.5) * 8;
+      this.positions[i * 3 + 1] = (Math.random() - 0.5) * 5;
+      this.positions[i * 3 + 2] = (Math.random() - 0.5) * 3;
       
       this.velocities[i * 3 + 0] = (Math.random() - 0.5) * 0.02;
       this.velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
@@ -250,10 +264,10 @@ const BeeSwarmVisualizer = {
     // Faster response to voice with less smoothing
     this.ampSmooth = this.ampSmooth * 0.7 + this.amplitude * 0.3;
     
-    // More dramatic voice influence on swarm behavior
-    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.18;
-    const noiseStrength = this.noiseBase + this.ampSmooth * 0.45;
-    const buzzStrength = this.buzzBase + this.ampSmooth * 0.04;
+    // Voice influence while maintaining compactness
+    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.12;
+    const noiseStrength = this.noiseBase + this.ampSmooth * 0.15;  // Reduced for tighter formation
+    const buzzStrength = this.buzzBase + this.ampSmooth * 0.02;    // Minimal buzz
     
     for (let i = 0; i < this.COUNT; i++) {
       const ix = i * 3;
