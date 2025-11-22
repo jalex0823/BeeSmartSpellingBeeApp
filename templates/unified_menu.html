@@ -2620,7 +2620,8 @@
                     margin: 2rem auto 0.5rem auto;
                     max-width: 380px;
                     overflow: hidden;
-                    display: block;
+                    display: block !important;
+                    visibility: visible !important;
                     box-shadow: 0 4px 12px rgba(255, 201, 74, 0.3), 0 0 20px rgba(255, 201, 74, 0.2);
                 ">
                     <div class="ticker-container" style="position: relative; width: 100%; overflow: hidden; height: 1.5rem;">
@@ -15038,89 +15039,6 @@
             // Update status periodically
             setInterval(updateAvatarSystemStatus, 10000);
         });
-
-        // 🐝 Load student's Buzz Dust rank function (for system checks and main page)
-        {% if current_user.is_authenticated %}
-        async function loadStudentBuzzDust() {
-            try {
-                console.log('🐝 Loading student Buzz Dust info...');
-                const res = await fetch('/api/buzz-dust/info', {
-                    credentials: 'same-origin',
-                    cache: 'no-store'
-                });
-                
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                }
-                
-                const data = await res.json();
-                console.log('✅ Student Buzz Dust data received:', data);
-                
-                if (data.success && data.current_class) {
-                    const rankTitleEl = document.getElementById('rank-title');
-                    const badgeEl = document.getElementById('student-rank-badge');
-                    const amountEl = document.getElementById('student-buzz-dust-amount');
-                    
-                    if (rankTitleEl) {
-                        rankTitleEl.textContent = data.current_class.label || 'Novice Bee';
-                        console.log('✅ Student rank title updated:', data.current_class.label);
-                    }
-                    if (amountEl) {
-                        const formatted = (data.total_buzz_dust || 0).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
-                        amountEl.textContent = formatted + ' ✨';
-                        console.log('✅ Student Buzz Dust amount updated:', data.total_buzz_dust);
-                    }
-                    
-                    if (badgeEl && data.current_class.badge_image) {
-                        // Construct the badge URL from badge_image filename
-                        const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                        badgeEl.src = badgeUrl;
-                        badgeEl.alt = data.current_class.label + ' Badge';
-                        badgeEl.style.display = 'block';
-                        console.log('✅ Student badge image updated:', badgeUrl);
-                    }
-                    
-                    // Update progress ticker
-                    const tickerEl = document.getElementById('buzz-dust-ticker');
-                    const tickerTextEl = document.getElementById('ticker-text');
-                    
-                    if (tickerEl && tickerTextEl) {
-                        if (data.at_max_rank) {
-                            // Maximum rank achieved
-                            tickerTextEl.textContent = `👑 You've reached the highest rank: ${data.current_class.label}! You're a legend! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('✅ Progress ticker: Max rank achieved');
-                        } else if (data.next_class) {
-                            // Show progress to next rank
-                            const nextRank = data.next_class.label;
-                            const needed = data.dust_needed || (data.next_class.min_points - (data.total_buzz_dust || 0));
-                            const formatted = needed.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
-                            
-                            tickerTextEl.textContent = `🐝 Earn ${formatted} more Buzz Dust to reach ${nextRank}! Keep spelling! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('✅ Progress ticker updated:', nextRank, 'needed:', needed);
-                        } else {
-                            // Fallback if no next class data
-                            tickerTextEl.textContent = `🐝 Keep practicing to earn more Buzz Dust and rank up! ✨`;
-                            tickerEl.style.display = 'block';
-                            console.log('⚠️ Progress ticker: No next class data, showing generic message');
-                        }
-                    }
-                } else {
-                    console.error('❌ API returned success=false:', data);
-                    const rankTitleEl = document.getElementById('rank-title');
-                    if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
-                }
-            } catch (error) {
-                console.error('❌ Error loading student Buzz Dust:', error);
-                const rankTitleEl = document.getElementById('rank-title');
-                const amountEl = document.getElementById('student-buzz-dust-amount');
-                if (rankTitleEl) rankTitleEl.textContent = 'Novice Bee';
-                if (amountEl) amountEl.textContent = '0 ✨';
-                throw error; // Re-throw for system checks
-            }
-        }
-        {% endif %}
 
         // 🔝 ADDITIONAL SCROLL-TO-TOP - Handle any edge cases with cached content
         window.addEventListener('load', () => {
