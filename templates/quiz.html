@@ -8287,6 +8287,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (fallbackError) {
             console.error('❌ Could not hide avatar container:', fallbackError);
         }
+    } catch (initError) {
+        console.error('❌ Quiz initialization error:', initError);
+        BeeSmart.showError('Failed to initialize quiz. Please refresh the page.');
     }
 
     fetch('/api/wordbank', {
