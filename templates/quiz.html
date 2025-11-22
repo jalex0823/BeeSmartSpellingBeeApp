@@ -8289,50 +8289,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    try {
-        fetch('/api/wordbank', {
-            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-            cache: 'no-store',
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.words || data.words.length === 0) {
-                BeeSmart.showError('No words loaded for the quiz!');
-                setTimeout(() => window.location.href = '/', 2800);
-                return;
-            }
-
-            // ✅ Update progress text and percentage with actual word count on page load
-            const totalWords = data.words.length;
-            const progressText = document.getElementById('progressText');
-            const progressPercentage = document.getElementById('progressPercentage');
-            if (progressText) {
-                progressText.textContent = `Question 1 of ${totalWords}`;
-                console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
-            }
-            if (progressPercentage) {
-                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
-            }
-
-            window.quizManager = new QuizManager({ delight, smartyBee });
-        })
-        .catch(error => {
-            console.error('Failed to check word bank:', error);
-            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
-            setTimeout(() => window.location.href = '/', 2800);
-        });
-    } catch (error) {
-        console.error('🚨 Critical initialization error:', error);
-        if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
-            BeeSmart.showError('Quiz initialization failed. Redirecting to main menu...');
-        } else {
-            alert('Quiz initialization failed. Redirecting to main menu...');
+    fetch('/api/wordbank', {
+        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache'
         }
-        setTimeout(() => window.location.href = '/', 2000);
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.words || data.words.length === 0) {
+            BeeSmart.showError('No words loaded for the quiz!');
+            setTimeout(() => window.location.href = '/', 2800);
+            return;
+        }
+
+        // ✅ Update progress text and percentage with actual word count on page load
+        const totalWords = data.words.length;
+        const progressText = document.getElementById('progressText');
+        const progressPercentage = document.getElementById('progressPercentage');
+        if (progressText) {
+            progressText.textContent = `Question 1 of ${totalWords}`;
+            console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
+        }
+        if (progressPercentage) {
+            progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+        }
+
+        window.quizManager = new QuizManager({ delight, smartyBee });
+    })
+    .catch(error => {
+        console.error('Failed to check word bank:', error);
+        BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+        setTimeout(() => window.location.href = '/', 2800);
+    });
 });
 
 // 💾 Save partial progress before user leaves
