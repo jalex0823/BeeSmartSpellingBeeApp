@@ -4284,20 +4284,26 @@
                     // This was blocking the loader by fetching /api/battles/live immediately
                     window.deferredBattleCheck = async function checkBattleAvailability(){
                         try {
-                            const resp = await fetch('/api/battles/live', { method: 'GET' });
-                            if (!resp.ok) throw new Error('Battle API unavailable');
+                            const resp = await fetch('/api/battles/live', { method: 'GET', cache: 'no-store' });
+                            if (!resp.ok) {
+                                // Battle feature not available yet - silently disable tile
+                                throw new Error('Battle API unavailable');
+                            }
                             // ok: leave tile enabled and populate badge
                             let data = [];
                             try { data = await resp.json(); } catch(_) { data = []; }
                             const list = Array.isArray(data) ? data : (Array.isArray(data && data.battles) ? data.battles : []);
                             setBattleStatusBadge({ online: true, count: list.length });
                         } catch (e) {
+                            // Battle feature not implemented yet - lock the tile
                             const battleTile = document.getElementById('tileBattle');
                             lockMenuTile(battleTile, {
                                 title: '⏳ Battle of the Bees',
                                 message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! 🐝',
                                 buttonText: 'Got it'
                             });
+                            setBattleStatusBadge({ online: false, count: 0 });
+                        }
                             setBattleStatusBadge({ online: false, count: 0 });
                         }
                     };
