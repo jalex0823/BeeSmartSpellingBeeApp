@@ -114,14 +114,14 @@
             console.log('✅ Page unlocked - you can interact now');
         };
         
-        // Auto-trigger emergency hide after 10 seconds if page is stuck
+        // Auto-trigger emergency hide after 8 seconds if page is stuck
         setTimeout(() => {
             const honeyLoader = document.getElementById('honeyLoader');
             if (honeyLoader && honeyLoader.style.display !== 'none') {
-                console.error('🚨 Page stuck on loading for 10+ seconds - auto-hiding loaders');
+                console.error('🚨 Page stuck on loading for 8+ seconds - auto-hiding loaders');
                 window.emergencyHideAllLoaders();
             }
-        }, 10000);
+        }, 8000);
     </script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
@@ -13096,6 +13096,11 @@
                 console.log(`✅ Loading complete in ${elapsed}ms`);
                 
                 this.updateProgress(100, '🎉 Ready to spell!');
+                
+                // ✅ CRITICAL FIX: Dispatch honeyLoaderFinished BEFORE presentTapToStart
+                // This allows avatar loader to initialize while user sees "Tap to Start"
+                console.log('🍯 Dispatching honeyLoaderFinished event (loading complete)');
+                document.dispatchEvent(new Event('honeyLoaderFinished'));
                 
                 // ✅ Enable the "Tap to Start" button - REQUIRE user interaction
                 console.log('🎯 All checks complete - waiting for user to tap Start button...');
