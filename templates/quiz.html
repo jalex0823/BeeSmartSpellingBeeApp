@@ -2870,7 +2870,7 @@ if ('speechSynthesis' in window) {
 
 {% block content %}
 <!-- Bee Swarm Voice Visualizer Background -->
-<div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;"></div>
+<div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:5; pointer-events:none;"></div>
 
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -8111,32 +8111,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // 🐝 Initialize Bee Swarm Voice Visualizer Background
         const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
-            console.log('🔍 Visualizer container check:', visualizerContainer ? 'FOUND' : 'NOT FOUND');
+        console.log('🔍 Visualizer container check:', visualizerContainer ? 'FOUND' : 'NOT FOUND');
         
         if (visualizerContainer) {
-            console.log('🚀 Starting bee swarm visualizer import...');
-            // Import and initialize without controls (background only)
-            import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=' + Date.now())
-                .then(module => {
-                    console.log('✅ Module loaded:', module);
-                    const BeeSwarm = module.default;
-                    if (!BeeSwarm) {
-                        console.error('❌ BeeSwarm export is undefined!');
-                        return;
-                    }
-                    console.log('🎯 Initializing BeeSwarm with 18000 particles...');
-                    BeeSwarm.init(visualizerContainer, {
-                        autoStart: true,
-                        showControls: false,
-                        particleCount: 18000,  // Very dense hive with radial wave
-                        zIndex: 0
-                    });
-                    console.log('🐝 Bee swarm visualizer initialized in background with 18000 particles');
-                })
-                .catch(err => {
-                    console.error('❌ Visualizer failed to load:', err);
-                    console.error('Error details:', err.message, err.stack);
-                });
+            console.log('🐝 Bee swarm visualizer container found but initialization deferred to module script');
         } else {
             console.error('❌ beeSwarmVisualizerContainer not found in DOM!');
         }
@@ -8831,4 +8809,46 @@ function playThemedSound(soundType) {
     }
 }
 </script>
+
+<!-- 🐝 Bee Swarm Visualizer Module Script -->
+<script type="module">
+    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}';
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBeeSwarm);
+    } else {
+        initBeeSwarm();
+    }
+    
+    function initBeeSwarm() {
+        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+        
+        if (!visualizerContainer) {
+            console.error('❌ beeSwarmVisualizerContainer not found!');
+            return;
+        }
+        
+        console.log('🚀 Initializing bee swarm visualizer...');
+        console.log('📦 Container dimensions:', {
+            width: visualizerContainer.clientWidth,
+            height: visualizerContainer.clientHeight,
+            offsetWidth: visualizerContainer.offsetWidth,
+            offsetHeight: visualizerContainer.offsetHeight
+        });
+        
+        try {
+            BeeSwarmVisualizer.init(visualizerContainer, {
+                autoStart: true,
+                showControls: false,
+                particleCount: 18000,  // Very dense hive with radial wave
+                zIndex: 5
+            });
+            console.log('✅ Bee swarm visualizer initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize bee swarm:', error);
+        }
+    }
+</script>
+
 {% endblock %}
