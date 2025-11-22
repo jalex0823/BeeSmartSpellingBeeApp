@@ -2607,7 +2607,7 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Scrolling Buzz Dust Progress Ticker (above badge) - HIDDEN per user request -->
+                <!-- Scrolling Buzz Dust Progress Ticker (above badge) -->
                 <div id="buzz-dust-ticker" style="
                     position: relative;
                     background: linear-gradient(90deg, rgba(255, 201, 74, 0.35) 0%, rgba(244, 166, 35, 0.45) 50%, rgba(255, 201, 74, 0.35) 100%);
@@ -2617,7 +2617,7 @@
                     margin: 2rem auto 0.5rem auto;
                     max-width: 380px;
                     overflow: hidden;
-                    display: none;
+                    display: block;
                     box-shadow: 0 4px 12px rgba(255, 201, 74, 0.3), 0 0 20px rgba(255, 201, 74, 0.2);
                 ">
                     <div class="ticker-container" style="position: relative; width: 100%; overflow: hidden; height: 1.5rem;">
@@ -2644,7 +2644,7 @@
                     border: 2px solid rgba(138, 43, 226, 0.3);
                     border-radius: 20px;
                     padding: 1.25rem 1.75rem;
-                    margin: 2rem auto 0.75rem auto;
+                    margin: 0.5rem auto 0.75rem auto;
                     display: inline-flex;
                     align-items: center;
                     gap: 1rem;
