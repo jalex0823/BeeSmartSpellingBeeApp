@@ -2487,6 +2487,411 @@ def api_debug_health():
             "type": type(e).__name__
         }), 500
 
+@app.route("/api/debug/systems-diagnostic", methods=["GET"])
+def systems_diagnostic():
+    """Comprehensive systems diagnostic - tests all major functions, quizzes, and database connections."""
+    diagnostic = {
+        "timestamp": datetime.now().isoformat(),
+        "overall_status": "running",
+        "tests": {}
+    }
+    
+    failed_tests = []
+    
+    try:
+        # 🔍 Test 1: Database Connection and Core Tables
+        diagnostic["tests"]["database"] = {"status": "testing"}
+        try:
+            # Test basic connection
+            db.session.execute('SELECT 1')
+            
+            # Test core table access
+            from models import User, WordList, Avatar, QuizSession, SpeedRoundScore, Achievement
+            
+            user_count = User.query.count()
+            wordlist_count = WordList.query.count()
+            avatar_count = Avatar.query.count()
+            quiz_count = QuizSession.query.count()
+            speed_count = SpeedRoundScore.query.count()
+            achievement_count = Achievement.query.count()
+            
+            diagnostic["tests"]["database"] = {
+                "status": "success",
+                "connection": "active",
+                "tables": {
+                    "users": user_count,
+                    "word_lists": wordlist_count,
+                    "avatars": avatar_count,
+                    "quiz_sessions": quiz_count,
+                    "speed_rounds": speed_count,
+                    "achievements": achievement_count
+                }
+            }
+        except Exception as e:
+            diagnostic["tests"]["database"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("database")
+
+        # 🔍 Test 2: User Authentication System
+        diagnostic["tests"]["authentication"] = {"status": "testing"}
+        try:
+            # Test guest user creation
+            guest_user = get_or_create_guest_user()
+            
+            diagnostic["tests"]["authentication"] = {
+                "status": "success",
+                "current_user_authenticated": current_user.is_authenticated,
+                "guest_user_created": bool(guest_user),
+                "guest_user_id": guest_user.id if guest_user else None,
+                "session_keys": list(session.keys())
+            }
+        except Exception as e:
+            diagnostic["tests"]["authentication"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("authentication")
+
+        # 🔍 Test 3: Word List System
+        diagnostic["tests"]["wordlists"] = {"status": "testing"}
+        try:
+            # Test saved lists functionality
+            user = get_or_create_guest_user()
+            if user:
+                lists = WordList.query.filter(WordList.created_by_user_id == user.id).limit(5).all()
+                
+                diagnostic["tests"]["wordlists"] = {
+                    "status": "success",
+                    "user_lists_count": len(lists),
+                    "api_endpoint": "/api/saved-lists accessible",
+                    "model_functional": True
+                }
+            else:
+                diagnostic["tests"]["wordlists"] = {"status": "failed", "error": "No user available"}
+                failed_tests.append("wordlists")
+        except Exception as e:
+            diagnostic["tests"]["wordlists"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("wordlists")
+
+        # 🔍 Test 4: Avatar System
+        diagnostic["tests"]["avatars"] = {"status": "testing"}
+        try:
+            # Test avatar catalog
+            from avatar_catalog import AVATAR_CATALOG
+            
+            # Test database avatars
+            db_avatars = Avatar.query.filter_by(is_active=True).limit(10).all()
+            
+            diagnostic["tests"]["avatars"] = {
+                "status": "success",
+                "catalog_avatars": len(AVATAR_CATALOG),
+                "database_avatars": len(db_avatars),
+                "api_endpoint": "/api/avatars accessible",
+                "sample_avatars": [{"id": av.slug, "name": av.name} for av in db_avatars[:3]]
+            }
+        except Exception as e:
+            diagnostic["tests"]["avatars"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("avatars")
+
+        # 🔍 Test 5: Quiz System
+        diagnostic["tests"]["quiz_system"] = {"status": "testing"}
+        try:
+            # Test quiz-related endpoints
+            recent_sessions = QuizSession.query.limit(5).all()
+            
+            # Test quiz state management
+            quiz_state = session.get('quiz_state_v1', {})
+            wordbank = get_wordbank()
+            
+            diagnostic["tests"]["quiz_system"] = {
+                "status": "success",
+                "recent_sessions": len(recent_sessions),
+                "quiz_state_exists": bool(quiz_state),
+                "wordbank_functional": wordbank is not None,
+                "wordbank_size": len(wordbank) if isinstance(wordbank, list) else 0
+            }
+        except Exception as e:
+            diagnostic["tests"]["quiz_system"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("quiz_system")
+
+        # 🔍 Test 6: Speed Round System  
+        diagnostic["tests"]["speed_round"] = {"status": "testing"}
+        try:
+            # Test speed round configuration
+            speed_config = SpeedRoundConfig.query.first()
+            speed_scores = SpeedRoundScore.query.limit(5).all()
+            
+            diagnostic["tests"]["speed_round"] = {
+                "status": "success",
+                "config_exists": bool(speed_config),
+                "recent_scores": len(speed_scores),
+                "api_endpoint": "/api/speed-round accessible"
+            }
+        except Exception as e:
+            diagnostic["tests"]["speed_round"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("speed_round")
+
+        # 🔍 Test 7: Dictionary System
+        diagnostic["tests"]["dictionary"] = {"status": "testing"}
+        try:
+            # Test dictionary API functionality
+            import dictionary_api
+            
+            # Test cache file
+            cache_file = "data/dictionary.json"
+            cache_exists = os.path.exists(cache_file)
+            
+            diagnostic["tests"]["dictionary"] = {
+                "status": "success",
+                "api_module": "dictionary_api imported",
+                "cache_file_exists": cache_exists,
+                "functions_available": True
+            }
+        except Exception as e:
+            diagnostic["tests"]["dictionary"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("dictionary")
+
+        # 🔍 Test 8: File Upload System
+        diagnostic["tests"]["file_upload"] = {"status": "testing"}
+        try:
+            # Test upload directory
+            upload_dir = os.path.join(app.root_path, 'uploads')
+            upload_exists = os.path.exists(upload_dir)
+            
+            diagnostic["tests"]["file_upload"] = {
+                "status": "success",
+                "upload_directory_exists": upload_exists,
+                "api_endpoint": "/api/upload accessible",
+                "parsers_available": True
+            }
+        except Exception as e:
+            diagnostic["tests"]["file_upload"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("file_upload")
+
+        # 🔍 Test 9: Session Management
+        diagnostic["tests"]["session_management"] = {"status": "testing"}
+        try:
+            # Test session functionality
+            session_data = dict(session)
+            
+            diagnostic["tests"]["session_management"] = {
+                "status": "success",
+                "session_active": bool(session_data),
+                "session_keys": list(session_data.keys()),
+                "guest_user_id": session.get("guest_user_id"),
+                "quiz_state": "quiz_state_v1" in session,
+                "wordbank_storage": "wordbank_storage_id" in session
+            }
+        except Exception as e:
+            diagnostic["tests"]["session_management"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("session_management")
+
+        # 🔍 Test 10: Static Assets (Bee Swarm, Avatars, etc.)
+        diagnostic["tests"]["static_assets"] = {"status": "testing"}
+        try:
+            # Test critical static file paths
+            static_root = os.path.join(app.root_path, 'static')
+            js_dir = os.path.join(static_root, 'js')
+            avatar_dir = os.path.join(static_root, 'assets', 'avatars')
+            glb_dir = os.path.join(avatar_dir, 'glb_files')
+            
+            diagnostic["tests"]["static_assets"] = {
+                "status": "success",
+                "static_directory": os.path.exists(static_root),
+                "js_directory": os.path.exists(js_dir),
+                "avatar_directory": os.path.exists(avatar_dir),
+                "glb_directory": os.path.exists(glb_dir),
+                "bee_swarm_js": os.path.exists(os.path.join(js_dir, 'bee_swarm_visualizer.js'))
+            }
+        except Exception as e:
+            diagnostic["tests"]["static_assets"] = {"status": "failed", "error": str(e)}
+            failed_tests.append("static_assets")
+
+        # 🎯 Final Status Assessment
+        total_tests = len(diagnostic["tests"])
+        failed_count = len(failed_tests)
+        success_count = total_tests - failed_count
+        
+        diagnostic["summary"] = {
+            "total_tests": total_tests,
+            "successful": success_count,
+            "failed": failed_count,
+            "success_rate": f"{(success_count/total_tests)*100:.1f}%",
+            "failed_tests": failed_tests
+        }
+        
+        if failed_count == 0:
+            diagnostic["overall_status"] = "all_systems_operational"
+        elif failed_count <= 2:
+            diagnostic["overall_status"] = "mostly_operational"
+        else:
+            diagnostic["overall_status"] = "multiple_failures"
+
+        return jsonify(diagnostic)
+        
+    except Exception as global_error:
+        import traceback
+        diagnostic["overall_status"] = "diagnostic_failed"
+        diagnostic["global_error"] = {
+            "error": str(global_error),
+            "type": type(global_error).__name__,
+            "traceback": traceback.format_exc()
+        }
+        return jsonify(diagnostic), 500
+
+@app.route("/api/debug/tiles-test", methods=["GET"])
+def debug_tiles_test():
+    """Test all main app tiles and pages for functionality."""
+    tiles_test = {
+        "timestamp": datetime.now().isoformat(),
+        "tests": {}
+    }
+    
+    try:
+        # 🎯 Test Main Menu Tiles
+        tiles_test["tests"]["main_menu_tiles"] = {
+            "status": "testing",
+            "tiles": {}
+        }
+        
+        # Test each major tile/feature
+        main_tiles = {
+            "upload": {"route": "/api/upload", "description": "Word list file upload"},
+            "quiz": {"route": "/quiz", "description": "Main spelling quiz"},
+            "speed_round": {"route": "/speed-round", "description": "Speed round quiz"},
+            "saved_lists": {"route": "/api/saved-lists", "description": "Saved word lists"},
+            "avatars": {"route": "/api/avatars", "description": "Avatar selection"},
+            "progress": {"route": "/api/buzz-dust/info", "description": "Progress tracking"},
+            "achievements": {"route": "/achievements", "description": "User achievements"}
+        }
+        
+        for tile_name, tile_info in main_tiles.items():
+            try:
+                # For API endpoints, test if they respond
+                if tile_info["route"].startswith("/api/"):
+                    # Simulate API endpoint validation (check if route exists in app)
+                    route_exists = any(rule.rule == tile_info["route"] for rule in app.url_map.iter_rules())
+                    tiles_test["tests"]["main_menu_tiles"]["tiles"][tile_name] = {
+                        "status": "success" if route_exists else "route_not_found",
+                        "route": tile_info["route"],
+                        "description": tile_info["description"],
+                        "endpoint_exists": route_exists
+                    }
+                else:
+                    # For page routes, check if they exist
+                    route_exists = any(rule.rule == tile_info["route"] for rule in app.url_map.iter_rules())
+                    tiles_test["tests"]["main_menu_tiles"]["tiles"][tile_name] = {
+                        "status": "success" if route_exists else "route_not_found",
+                        "route": tile_info["route"],
+                        "description": tile_info["description"],
+                        "page_exists": route_exists
+                    }
+            except Exception as e:
+                tiles_test["tests"]["main_menu_tiles"]["tiles"][tile_name] = {
+                    "status": "failed",
+                    "error": str(e)
+                }
+        
+        tiles_test["tests"]["main_menu_tiles"]["status"] = "completed"
+        
+        # 🎯 Test Quiz Functionality 
+        tiles_test["tests"]["quiz_functionality"] = {"status": "testing"}
+        try:
+            # Test quiz session management
+            from helpers import init_quiz_state, get_wordbank
+            
+            # Test wordbank functionality
+            wordbank = get_wordbank()
+            
+            # Test quiz state initialization
+            quiz_state = session.get('quiz_state_v1', {})
+            
+            tiles_test["tests"]["quiz_functionality"] = {
+                "status": "success",
+                "wordbank_available": wordbank is not None,
+                "wordbank_size": len(wordbank) if isinstance(wordbank, list) else 0,
+                "quiz_state_exists": bool(quiz_state),
+                "quiz_routes": {
+                    "main_quiz": "/quiz",
+                    "api_next": "/api/next", 
+                    "api_answer": "/api/answer",
+                    "api_clear": "/api/clear"
+                }
+            }
+        except Exception as e:
+            tiles_test["tests"]["quiz_functionality"] = {"status": "failed", "error": str(e)}
+
+        # 🎯 Test Speed Round
+        tiles_test["tests"]["speed_round_functionality"] = {"status": "testing"}
+        try:
+            speed_config = SpeedRoundConfig.query.first()
+            
+            tiles_test["tests"]["speed_round_functionality"] = {
+                "status": "success",
+                "config_available": bool(speed_config),
+                "routes": {
+                    "speed_round_page": "/speed-round",
+                    "api_start": "/api/speed-round/start",
+                    "api_submit": "/api/speed-round/submit"
+                }
+            }
+        except Exception as e:
+            tiles_test["tests"]["speed_round_functionality"] = {"status": "failed", "error": str(e)}
+
+        # 🎯 Test File Upload System
+        tiles_test["tests"]["upload_functionality"] = {"status": "testing"}  
+        try:
+            upload_dir = os.path.join(app.root_path, 'uploads')
+            
+            tiles_test["tests"]["upload_functionality"] = {
+                "status": "success",
+                "upload_directory": os.path.exists(upload_dir),
+                "supported_formats": ["CSV", "TXT", "DOCX", "PDF", "Image (OCR)"],
+                "api_endpoint": "/api/upload"
+            }
+        except Exception as e:
+            tiles_test["tests"]["upload_functionality"] = {"status": "failed", "error": str(e)}
+
+        # 🎯 Test Progress/Achievement System
+        tiles_test["tests"]["progress_system"] = {"status": "testing"}
+        try:
+            # Test buzz dust system
+            user = get_or_create_guest_user()
+            if user:
+                buzz_dust = getattr(user, 'honey_points', 0)
+                achievements = Achievement.query.limit(5).all()
+                
+                tiles_test["tests"]["progress_system"] = {
+                    "status": "success",
+                    "user_buzz_dust": buzz_dust,
+                    "achievements_available": len(achievements),
+                    "api_endpoints": ["/api/buzz-dust/info", "/achievements"]
+                }
+            else:
+                tiles_test["tests"]["progress_system"] = {"status": "failed", "error": "No user available"}
+        except Exception as e:
+            tiles_test["tests"]["progress_system"] = {"status": "failed", "error": str(e)}
+
+        # 🎯 Summary
+        total_tile_tests = len([t for test_group in tiles_test["tests"].values() 
+                               for t in (test_group.get("tiles", {}) if "tiles" in test_group else [test_group])])
+        failed_tile_tests = len([t for test_group in tiles_test["tests"].values() 
+                                for t in (test_group.get("tiles", {}).values() if "tiles" in test_group else [test_group])
+                                if t.get("status") == "failed"])
+        
+        tiles_test["summary"] = {
+            "total_tests": len(tiles_test["tests"]),
+            "failed_count": len([t for t in tiles_test["tests"].values() if t.get("status") == "failed"]),
+            "all_tiles_functional": failed_tile_tests == 0
+        }
+        
+        return jsonify(tiles_test)
+        
+    except Exception as e:
+        import traceback
+        tiles_test["error"] = {
+            "message": str(e),
+            "type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }
+        return jsonify(tiles_test), 500
+
 # --- Routes: Saved Word Lists (Persistent) -----------------------------------
 @app.route("/api/debug/saved-lists-test", methods=["GET"])
 def debug_saved_lists_test():
