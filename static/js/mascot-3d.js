@@ -190,40 +190,57 @@ class SmartyBee3D {
     }
 
     loadModel() {
-        const mtlLoader = new THREE.MTLLoader();
-        const objLoader = new THREE.OBJLoader();
-
         // New: GLB support using GLTFLoader when a .glb is provided
         // Accept either explicit options.glbPath or a modelPath ending with .glb/.gltf
         // GLB is the PREFERRED format: single file, embedded textures, faster loading
-        try {
-            const explicitGlb = this.options.glbPath;
-            const inferredGlb = (this.options.modelPath && /\.(glb|gltf)(\?.*)?$/i.test(this.options.modelPath)) ? this.options.modelPath : null;
-            const glbPath = explicitGlb || inferredGlb;
-            
-            if (glbPath) {
-                // Verify GLTFLoader is available
-                if (typeof THREE.GLTFLoader === 'undefined') {
-                    console.error('❌ GLTFLoader not loaded. Cannot render GLB. Falling back to OBJ pipeline if available.');
-                    // Don't return - let it fall through to OBJ loader
-                } else {
-                    console.log('🎯 GLB MODE ACTIVATED - Loading single-file 3D model');
-                    const cacheBuster = Date.now();
-                    const glbUrl = glbPath + (glbPath.includes('?') ? `&v=${cacheBuster}` : `?v=${cacheBuster}`);
-                    const gltfLoader = new THREE.GLTFLoader();
-                    console.log('🐝 Loading GLB model:', glbUrl);
-                    
-                    // Add timeout protection for GLB loading
-                    const loadTimeout = setTimeout(() => {
-                        console.error('❌ GLB loading timeout (10s) - file may be corrupted or too large');
-                        console.log('🔄 Attempting OBJ fallback...');
-                        // Fallback will be handled by continuing to OBJ/MTL code below
-                    }, 10000);
-                    
-                    gltfLoader.load(
-                        glbUrl,
-                        (gltf) => {
-                            clearTimeout(loadTimeout);
+        const explicitGlb = this.options.glbPath;
+        const inferredGlb = (this.options.modelPath && /\.(glb|gltf)(\?.*)?$/i.test(this.options.modelPath)) ? this.options.modelPath : null;
+        const glbPath = explicitGlb || inferredGlb;
+        
+        if (glbPath) {
+            // GLB path - use GLTF loader only
+            this.loadGLB(glbPath);
+            return;
+        }
+        
+        // Fallback to OBJ/MTL for legacy models
+        if (typeof THREE.MTLLoader === 'undefined' || typeof THREE.OBJLoader === 'undefined') {
+            console.error('❌ MTLLoader/OBJLoader not available and no GLB provided');
+            this.addFallbackBee();
+            return;
+        }
+        
+        const mtlLoader = new THREE.MTLLoader();
+        const objLoader = new THREE.OBJLoader();
+        
+        // Load OBJ/MTL model (legacy path)
+        this.loadOBJ(mtlLoader, objLoader);
+    }
+    
+    loadGLB(glbPath) {
+        // Verify GLTFLoader is available
+        if (typeof THREE.GLTFLoader === 'undefined') {
+            console.error('❌ GLTFLoader not loaded. Cannot render GLB.');
+            this.addFallbackBee();
+            return;
+        }
+        
+        console.log('🎯 GLB MODE ACTIVATED - Loading single-file 3D model');
+        const cacheBuster = Date.now();
+        const glbUrl = glbPath + (glbPath.includes('?') ? `&v=${cacheBuster}` : `?v=${cacheBuster}`);
+        const gltfLoader = new THREE.GLTFLoader();
+        console.log('🐝 Loading GLB model:', glbUrl);
+        
+        // Add timeout protection for GLB loading
+        const loadTimeout = setTimeout(() => {
+            console.error('❌ GLB loading timeout (10s) - file may be corrupted or too large');
+            this.addFallbackBee();
+        }, 10000);
+        
+        gltfLoader.load(
+            glbUrl,
+            (gltf) => {
+                clearTimeout(loadTimeout);
                             try {
                                 const object = gltf.scene || gltf.scenes?.[0];
                                 if (!object) {
@@ -332,19 +349,13 @@ class SmartyBee3D {
                             console.error('❌ Error loading GLB model:', error);
                             console.error('   File path:', glbPath);
                             console.error('   Error details:', error.message || error);
-                            console.log('🔄 Attempting OBJ fallback if available...');
-                            // Let execution continue to OBJ/MTL pipeline below as fallback
+                            this.addFallbackBee();
                         }
                     );
-                    // If GLB branch was taken successfully, return so we don't run OBJ logic
-                    return;
-                }
-            }
-        } catch (e) {
-            console.warn('⚠️ GLB detection/initialization failed, falling back to OBJ:', e);
-        }
-
-    // Resolve base and filenames (OBJ/MTL path)
+    }
+    
+    loadOBJ(mtlLoader, objLoader) {
+        // Resolve base and filenames (OBJ/MTL path)
         let base, mtlPath, objPath, texPath, mtlFilename, objFilename;
         
         // Check if absolute paths are provided

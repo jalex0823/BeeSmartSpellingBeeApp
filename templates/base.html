@@ -531,8 +531,11 @@
     
     <!-- Three.js for 3D Mascot -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OBJ/MTL loaders for legacy OBJ avatars - using unpkg for reliable CDN -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <!-- GLTF/GLB loader so GLB avatars work across all pages (quiz, results, etc.) -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     
     <!-- User Avatar System -->

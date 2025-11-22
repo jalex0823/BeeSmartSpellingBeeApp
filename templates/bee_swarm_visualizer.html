@@ -80,11 +80,12 @@
     // -------------------------
     // 2) PARTICLE SYSTEM
     // -------------------------
-    const COUNT = 6000;
+    const COUNT = 25000;
     const positions = new Float32Array(COUNT * 3);
     const velocities = new Float32Array(COUNT * 3);
-    const targets   = new Float32Array(COUNT * 3);
-    const colors    = new Float32Array(COUNT * 3);
+    const targets = new Float32Array(COUNT * 3);
+    const colors = new Float32Array(COUNT * 3);
+    const baseColors = new Float32Array(COUNT * 3); // Store original honey shades
 
     // Honey / golden brown palette
     const honey     = new THREE.Color("#FFD540");
@@ -132,6 +133,10 @@
       colors[i*3+0] = c.r;
       colors[i*3+1] = c.g;
       colors[i*3+2] = c.b;
+      // Store base color for wave modulation
+      baseColors[i*3+0] = c.r;
+      baseColors[i*3+1] = c.g;
+      baseColors[i*3+2] = c.b;
     }
     setHiveTargets();
 
@@ -260,27 +265,47 @@
     }
 
     // -------------------------
-    // 5) PULSE (SOFT & GENTLE)
+    // 5) PULSE (RADIAL WAVE)
     // -------------------------
     function pulseStep(time){
-      // Soft breathing
-      const breathe = 0.05 * Math.sin(time * 0.002);   // slower, softer
-      const audioPulse = ampSmooth * 0.45;             // gentler response
-      const pulse = breathe + audioPulse;
-
-      // Particle scale (very subtle)
-      mat.size = BASE_POINT_SIZE * (1 + pulse * 0.12);
-
-      // Soft honey glow
-      mat.opacity = THREE.MathUtils.clamp(
-        0.60 + pulse * 0.18,
-        0.60,
-        0.85
-      );
-
-      // Swarm-wide soft expansion
-      const swarmScale = 1 + pulse * 0.06;
-      bees.scale.setScalar(swarmScale);
+      // Radial wave that pulses from center outward and back
+      const waveSpeed = 0.002;
+      const audioPulse = ampSmooth * 0.3;
+      
+      const posAttr = geo.getAttribute("position");
+      const colorAttr = geo.getAttribute("color");
+      
+      for (let i = 0; i < COUNT; i++) {
+        const ix = i * 3;
+        const px = positions[ix + 0];
+        const py = positions[ix + 1];
+        const pz = positions[ix + 2];
+        
+        // Distance from center (0,0,0)
+        const dist = Math.sqrt(px * px + py * py + pz * pz);
+        
+        // Wave travels outward based on distance and time
+        const wave = Math.sin(dist * 0.3 - time * waveSpeed) * 0.5 + 0.5;
+        const pulse = wave * (1 + audioPulse);
+        
+        // Modulate brightness based on wave while keeping base honey shade
+        const brightness = 0.5 + pulse * 0.5;
+        const baseR = baseColors[ix + 0];
+        const baseG = baseColors[ix + 1];
+        const baseB = baseColors[ix + 2];
+        
+        colorAttr.setXYZ(i, 
+          baseR * brightness,
+          baseG * brightness,
+          baseB * brightness
+        );
+      }
+      
+      colorAttr.needsUpdate = true;
+      
+      // Fixed size and opacity (no global pulse)
+      mat.size = BASE_POINT_SIZE * (1 + audioPulse * 0.12);
+      mat.opacity = 0.70;
     }
 
     // -------------------------

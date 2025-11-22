@@ -13371,15 +13371,6 @@
                     if (loader) loader.remove();
                 }
                 clearTimeout(emergencyTimeout);
-            } finally {
-                // ABSOLUTE FAILSAFE: Ensure loader is gone after 12 seconds no matter what
-                setTimeout(() => {
-                    const loader = document.getElementById('honeyLoader');
-                    if (loader && loader.style.display !== 'none') {
-                        console.error('🚨 FAILSAFE: Force-hiding loader after 12s');
-                        loader.style.display = 'none';
-                    }
-                }, 12000);
             }
 
             // Final sanity: reflect actual container visibility in logs
