@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.1.3-2025-11-17-sw-fix';
+const CACHE_VERSION = 'beesmart-v1.2.0-2025-11-21-cleanup';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -73,7 +73,12 @@ self.addEventListener('fetch', (event) => {
   // Default: network-first for all other requests (API calls, etc.)
   event.respondWith(
     fetch(request).catch((err) => {
-      console.warn('[SW] Network fetch failed for:', url.pathname, err);
+      // Suppress warnings for expected API failures (battles, stats when offline)
+      const isExpectedFailure = url.pathname.includes('/api/battles/') || 
+                                url.pathname.includes('/api/users/stats');
+      if (!isExpectedFailure) {
+        console.warn('[SW] Network fetch failed for:', url.pathname, err);
+      }
       return caches.match(request).then(cached => cached || new Response('Offline', { status: 503 }));
     })
   );
