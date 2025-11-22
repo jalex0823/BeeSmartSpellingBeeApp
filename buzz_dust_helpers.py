@@ -65,7 +65,11 @@ def get_bee_class(total_buzz_dust: int) -> Dict[str, any]:
         else:
             break
     
-    return current_class
+    # Add min_points alias for frontend compatibility
+    result = current_class.copy()
+    result['min_points'] = result.get('min_buzz_dust', 0)
+    
+    return result
 
 
 def get_next_bee_class(total_buzz_dust: int) -> Optional[Dict[str, any]]:
@@ -77,7 +81,10 @@ def get_next_bee_class(total_buzz_dust: int) -> Optional[Dict[str, any]]:
     current_index = next((i for i, c in enumerate(BEE_CLASSES) if c['id'] == current['id']), 0)
     
     if current_index < len(BEE_CLASSES) - 1:
-        return BEE_CLASSES[current_index + 1]
+        next_class = BEE_CLASSES[current_index + 1].copy()
+        # Add min_points alias for frontend compatibility
+        next_class['min_points'] = next_class.get('min_buzz_dust', 0)
+        return next_class
     
     return None  # Already at max rank
 
