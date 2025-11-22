@@ -4284,14 +4284,8 @@
                     // This was blocking the loader by fetching /api/battles/live immediately
                     window.deferredBattleCheck = async function checkBattleAvailability(){
                         try {
-                            const resp = await fetch('/api/battles/live', { method: 'GET' });
-                            if (!resp.ok) throw new Error('Battle API unavailable');
-                            // ok: leave tile enabled and populate badge
-                            let data = [];
-                            try { data = await resp.json(); } catch(_) { data = []; }
-                            const list = Array.isArray(data) ? data : (Array.isArray(data && data.battles) ? data.battles : []);
-                            setBattleStatusBadge({ online: true, count: list.length });
-                        } catch (e) {
+                            // Silently skip battle check - endpoint not active
+                            // Just lock the tile without making a failing API call
                             const battleTile = document.getElementById('tileBattle');
                             lockMenuTile(battleTile, {
                                 title: '⏳ Battle of the Bees',
@@ -4299,25 +4293,19 @@
                                 buttonText: 'Got it'
                             });
                             setBattleStatusBadge({ online: false, count: 0 });
+                        } catch (e) {
+                            console.warn('⚠️ Battle check skipped:', e);
                         }
                     };
                     // Don't call immediately - will be called in finishLoading()
 
 
-                    // Light polling to keep the badge fresh (only when tab is visible)
+                    // Light polling disabled - battles not active
+                    // Prevents 404 errors from /api/battles/live polling
                     let __battleBadgePoll;
                     const __poll = async () => {
-                        if (document.hidden) return; // respect battery and CPU
-                        try {
-                            const resp = await fetch('/api/battles/live', { method: 'GET', cache: 'no-store' });
-                            if (!resp.ok) { setBattleStatusBadge({ online: false, count: 0 }); return; }
-                            let data = [];
-                            try { data = await resp.json(); } catch(_) { data = []; }
-                            const list = Array.isArray(data) ? data : (Array.isArray(data && data.battles) ? data.battles : []);
-                            setBattleStatusBadge({ online: true, count: list.length });
-                        } catch(_) {
-                            setBattleStatusBadge({ online: false, count: 0 });
-                        }
+                        // Battles endpoint not active - skip polling
+                        return;
                     };
                     // Start after first check; poll every 60s
                     __battleBadgePoll = setInterval(__poll, 60000);
