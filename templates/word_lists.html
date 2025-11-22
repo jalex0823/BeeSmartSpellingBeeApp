@@ -399,6 +399,121 @@
     .hive-cell-name{font-size:12px}
     .hive-cell-meta{font-size:9px}
   }
+
+  /* =========================================================
+     MOBILE + AESTHETIC POLISH OVERRIDES
+     ========================================================= */
+
+  .hive-page{
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-bottom: max(90px, env(safe-area-inset-bottom));
+  }
+
+  .hive-page > div:first-child{
+    margin-bottom: 1.6rem !important;
+  }
+
+  .hive-actions{
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .hive-btn{
+    min-height: 44px;
+    padding: 11px 18px;
+  }
+  @media (max-width:520px){
+    .hive-btn{
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+  }
+
+  :root{
+    --hex-w: clamp(96px, 22vw, 120px);
+    --hex-h: calc(var(--hex-w) * 1.15);
+  }
+
+  .hive-grid{
+    grid-template-columns: repeat(auto-fit, minmax(var(--hex-w), 1fr));
+    gap: clamp(14px, 3.5vw, 30px) clamp(10px, 3vw, 24px);
+  }
+
+  .hive-cell{
+    max-width: var(--hex-w);
+    min-height: var(--hex-h);
+    padding: clamp(8px, 2vw, 14px);
+  }
+
+  @media (max-width:640px){
+    .hive-cell:nth-child(odd),
+    .hive-cell:nth-child(even){
+      transform: translateY(0) !important;
+    }
+  }
+
+  .hive-cell-actions{
+    top: 8px;
+    gap: 6px;
+  }
+  .hive-cell-action-btn{
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    box-shadow: 0 3px 8px rgba(0,0,0,.18);
+  }
+
+  .hive-cell-name{
+    font-size: clamp(12px, 2.8vw, 14px);
+    margin-top: 10px;
+    text-shadow: none;
+  }
+
+  .hive-cell-badge{
+    top: 46px;
+    font-size: 10.5px;
+    padding: 4px 9px;
+  }
+
+  @media (max-width:640px){
+    .hive-controls{
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .hive-search-wrapper{
+      min-width: 0;
+      width: 100%;
+      max-width: none;
+    }
+    .hive-sort-wrapper{
+      width: 100%;
+      justify-content: space-between;
+    }
+    .hive-sort-wrapper select{
+      width: 55%;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce){
+    .hive-card,
+    .buzz-dust-container,
+    .hive-actions{
+      backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .hive-cell:hover{ animation: none; }
+  }
+
 </style>
 {% endblock %}
 
@@ -508,14 +623,7 @@
   </div>
 
   <!-- Buzz Dust Grid Container -->
-  <div class="buzz-dust-container" style="
-    max-width:1180px;
-    margin:2.5rem auto 3rem;
-    background:rgba(255,255,255,0.95);
-    border-radius:26px;
-    padding:2.5rem;
-    box-shadow:var(--shadow-soft);
-  ">
+  <div class="buzz-dust-container">
     <div class="hive-controls" style="margin-bottom:1.5rem;">
       <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
       <div class="hive-sort-wrapper">Sort by:
@@ -612,7 +720,8 @@
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    runBeeFlyover();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion) runBeeFlyover();
     await loadBuzzDustInfo();
     await loadWordLists();
   });
@@ -1140,26 +1249,36 @@
     `;
   }
 
-  // TOAST
-  function showToast(message,type="success"){
-    document.querySelector(".toast")?.remove();
-    const toast=document.createElement("div");
-    toast.className="toast "+type;
-    toast.style.cssText=`
-      position:fixed;bottom:1.5rem;right:1.5rem;
-      background:white;padding:.9rem 1.2rem;border-radius:12px;
-      box-shadow:0 10px 30px rgba(0,0,0,0.2);
-      border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
-      z-index:10000;font-weight:900;max-width:420px;
-      animation:slideIn .25s ease;
-    `;
-    toast.innerHTML=message;
-    document.body.appendChild(toast);
-    setTimeout(()=>{
-      toast.style.animation="slideOut .25s ease";
-      setTimeout(()=>toast.remove(),250);
-    },2600);
+// TOAST
+function showToast(message,type="success"){
+  document.querySelector(".toast")?.remove();
+  const toast=document.createElement("div");
+  toast.className="toast "+type;
+  toast.style.cssText=`
+    position:fixed;
+    bottom:1.2rem;
+    right:1.5rem;
+    background:white;
+    padding:.9rem 1.2rem;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
+    z-index:10000;
+    font-weight:900;
+    max-width:420px;
+    animation:slideIn .25s ease;
+  `;
+  if (window.innerWidth < 520) {
+    toast.style.right = "50%";
+    toast.style.transform = "translateX(50%)";
+    toast.style.maxWidth = "92vw";
   }
+  toast.textContent=message;
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.classList.add("show"),10);
+  setTimeout(()=>toast.remove(),2200);
+}
+
   const style=document.createElement("style");
   style.textContent=`
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
