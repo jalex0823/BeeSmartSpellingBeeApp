@@ -8276,6 +8276,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('❌ Could not hide avatar container:', fallbackError);
         }
     }
+    } catch (initError) {
+        // Catch errors from the outer try block (morph controller, delight manager, avatar init)
+        console.error('❌ Quiz initialization error:', initError);
+        console.error('Error details:', initError.stack);
+        // Continue with quiz even if initialization fails
+    }
 
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
@@ -8332,7 +8338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
         setTimeout(() => window.location.href = '/', 2800);
     });
-});
+});  // End DOMContentLoaded
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
