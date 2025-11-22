@@ -1,550 +1,440 @@
 {% extends "base.html" %}
 
-{% block title %}My Word Lists - BeeSmart Spelling{% endblock %}
+{% block title %}My Word Hives - BeeSmart{% endblock %}
 
 {% block extra_css %}
 <style>
-    :root {
-      --honey-light: #ffe9a6;
-      --honey: #ffc94a;
-      --honey-deep: #f4a623;
-      --honey-pink: #ffbccf;
-      --bee-brown: #7a4b2b;
-      --bee-black: #222222;
-      --bg-gradient: linear-gradient(135deg, #ffd1dc 0%, #ffe6b3 50%, #ffd6f2 100%);
-      --card-radius: 24px;
-      --shadow-soft: 0 14px 35px rgba(0, 0, 0, 0.12);
-      --transition-fast: 0.18s ease-out;
-      --transition-med: 0.3s ease-out;
-    }
+  :root{
+    --honey-light:#fff3c4;
+    --honey:#ffc94a;
+    --honey-deep:#f4a623;
+    --honey-amber:#e78d17;
+    --bee-brown:#7a4b2b;
+    --bee-black:#1f1f1f;
 
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg-gradient);
-      color: var(--bee-black);
-      min-height: 100vh;
-    }
+    --bg-gradient: radial-gradient(circle at 20% 10%, #ffe6ef 0%, transparent 40%),
+                   radial-gradient(circle at 90% 10%, #ffefc9 0%, transparent 45%),
+                   linear-gradient(135deg,#ffd1dc 0%,#ffe6b3 55%,#ffd6f2 100%);
 
-    .hive-page {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 32px 18px 60px;
-      position: relative;
-      overflow: hidden;
-    }
+    --radius-xl:26px;
+    --radius-pill:999px;
 
-    /* Floating bee animation in background */
-    .hive-floating-bee {
-      position: fixed;
-      right: -60px;
-      bottom: 60px;
-      width: 120px;
-      height: 120px;
-      background: radial-gradient(circle at 30% 30%, #fff7e2 0, #ffc94a 40%, #f1972c 85%);
-      border-radius: 50%;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.85;
-      animation: beeFloat 12s ease-in-out infinite;
-      z-index: 100;
-    }
+    --shadow-soft:0 10px 26px rgba(0,0,0,.12);
+    --shadow-med:0 16px 40px rgba(0,0,0,.18);
+    --shadow-deep:0 22px 60px rgba(0,0,0,.25);
 
-    .hive-floating-bee span {
-      font-size: 46px;
-      transform: translateY(-4px);
-    }
+    --transition-fast:.16s ease-out;
+    --transition-med:.28s ease-out;
+  }
 
-    @keyframes beeFloat {
-      0% { transform: translate(0, 0) rotate(0deg); }
-      25% { transform: translate(-40px, -20px) rotate(-4deg); }
-      50% { transform: translate(-10px, -50px) rotate(3deg); }
-      75% { transform: translate(-50px, -10px) rotate(-2deg); }
-      100% { transform: translate(0, 0) rotate(0deg); }
-    }
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--bg-gradient);
+    color:var(--bee-black);
+    min-height:100vh;
+  }
 
-    /* Header */
+  .hive-page{
+    max-width:1180px;
+    margin:0 auto;
+    padding:28px 18px 80px;
+    position:relative;
+  }
 
-    .hive-breadcrumb {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+  /* watermark */
+  .hive-page::after{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(circle at 20px 20px, rgba(255,201,74,0.09) 2px, transparent 3px),
+      radial-gradient(circle at 60px 60px, rgba(255,201,74,0.07) 2px, transparent 3px);
+    background-size:90px 90px;
+    pointer-events:none;
+    opacity:.45;
+    z-index:0;
+  }
 
-    .hive-breadcrumb a {
-      color: var(--bee-brown);
-      text-decoration: none;
-      font-weight: 600;
-    }
+  /* flyover bee */
+  .bee-flyover{
+    position:fixed;
+    top:70px; left:-120px;
+    font-size:30px;
+    z-index:9998;
+    pointer-events:none;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
+    transition:transform 2.8s cubic-bezier(.15,.7,.2,1);
+  }
+  .bee-trail{
+    position:fixed; top:86px; left:-120px;
+    width:10px; height:10px;
+    border-radius:50%;
+    background:rgba(255,201,74,.9);
+    box-shadow:0 0 12px rgba(255,201,74,.9);
+    z-index:9997; pointer-events:none;
+    animation:trailFade 1.1s ease forwards;
+  }
+  @keyframes trailFade{
+    from{transform:scale(1);opacity:1}
+    to{transform:scale(2.3);opacity:0}
+  }
 
-    .hive-breadcrumb span.separator {
-      opacity: 0.6;
-    }
+  /* breadcrumb */
+  .hive-breadcrumb{
+    font-size:14px; opacity:.8; margin-bottom:8px;
+    display:flex; align-items:center; gap:6px;
+    position:relative; z-index:1;
+  }
+  .hive-breadcrumb a{
+    color:var(--bee-brown); text-decoration:none; font-weight:800;
+  }
 
-    .hive-title-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 22px;
-    }
+  .hive-title-row{
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:12px; margin-bottom:14px; position:relative; z-index:1;
+  }
+  .hive-title-row h1{
+    margin:0; font-size:30px; letter-spacing:.02em;
+    display:flex; align-items:center; gap:10px;
+    text-shadow:0 1px 0 rgba(255,255,255,.6);
+  }
 
-    .hive-title-row h1 {
-      margin: 0;
-      font-size: 32px;
-      letter-spacing: 0.02em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+  /* buttons */
+  .hive-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .hive-btn{
+    border:none; outline:none; cursor:pointer;
+    border-radius:var(--radius-pill);
+    padding:10px 18px; font-size:15px; font-weight:800;
+    display:flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.95);
+    box-shadow:var(--shadow-soft);
+    transition:transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .hive-btn.primary{
+    background:linear-gradient(135deg,var(--honey),var(--honey-deep));
+    color:#3e260b;
+  }
+  .hive-btn:hover{transform:translateY(-2px); box-shadow:var(--shadow-med)}
+  .hive-btn:active{transform:translateY(0); box-shadow:var(--shadow-soft)}
 
-    .hive-title-row h1 span.icon {
-      font-size: 32px;
-    }
+  /* stats */
+  .hive-stats-bar{
+    background:rgba(255,255,255,.9);
+    border-radius:var(--radius-xl);
+    box-shadow:var(--shadow-soft);
+    padding:12px 16px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:8px;
+    margin:12px 0 16px;
+    position:relative; z-index:1;
+  }
+  .hive-stat{display:flex; gap:10px; align-items:center;}
+  .hive-stat-icon{
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,var(--honey-light),var(--honey));
+    font-size:18px;
+  }
+  .hive-stat-text{display:flex; flex-direction:column; font-size:12px;}
+  .hive-stat-label{opacity:.72; font-weight:700;}
+  .hive-stat-value{font-weight:900; font-size:18px;}
 
-    .hive-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
+  /* controls */
+  .hive-controls{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+    margin:10px 0 18px; position:relative; z-index:1;
+  }
+  .hive-search-wrapper{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,.94);
+    border-radius:var(--radius-pill);
+    padding:7px 12px;
+    box-shadow:var(--shadow-soft);
+    min-width:260px; flex:1; max-width:420px;
+  }
+  .hive-search-wrapper input{
+    border:none; outline:none; flex:1; font-size:14px; background:transparent;
+  }
+  .hive-sort-wrapper{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#573517;}
+  .hive-sort-wrapper select{
+    border:none; outline:none; cursor:pointer;
+    border-radius:var(--radius-pill);
+    padding:7px 12px;
+    background:rgba(255,255,255,.97);
+    box-shadow:var(--shadow-soft);
+    font-weight:800;
+  }
 
-    .hive-btn {
-      border: none;
-      outline: none;
-      border-radius: 999px;
-      padding: 10px 20px;
-      font-size: 15px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      background: white;
-      color: var(--bee-black);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
-    }
+  /* honeycomb grid */
+  .hive-grid{
+    --cell-w:190px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(var(--cell-w),1fr));
+    gap:18px 14px;
+    padding-top:6px;
+    position:relative; z-index:1;
+  }
 
-    .hive-btn span.icon {
-      font-size: 18px;
-    }
+  /* wobble */
+  @keyframes buzzWobble{
+    0%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
+    30%{transform:translateY(-10px) scale(1.04) rotate(-1.2deg)}
+    60%{transform:translateY(-10px) scale(1.04) rotate(1deg)}
+    100%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
+  }
 
-    .hive-btn.primary {
-      background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
-      color: #3e260b;
-    }
+  .hive-cell{
+    position:relative; text-decoration:none; color:inherit; cursor:pointer;
+    clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
+    background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
+    box-shadow:var(--shadow-med);
+    min-height:210px;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px 16px 18px;
+    transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
+  }
+  .hive-cell:nth-child(odd){transform:translateY(8px)}
+  .hive-cell:nth-child(even){transform:translateY(-8px)}
+  .hive-cell::before{
+    content:""; position:absolute; inset:2px; clip-path:inherit;
+    background:radial-gradient(circle at 20% 0, rgba(255,255,255,.7), transparent 60%);
+    opacity:.9; pointer-events:none;
+  }
+  .hive-cell:hover{
+    animation:buzzWobble .35s ease-out 1;
+    box-shadow:var(--shadow-deep);
+    filter:brightness(1.06);
+  }
 
-    .hive-btn.secondary {
-      background: white;
-    }
+  /* FAVORITE glow ring */
+  .hive-cell.is-favorite{
+    box-shadow:
+      0 0 0 3px rgba(255,255,255,.9),
+      0 0 0 7px rgba(255,201,74,.95),
+      0 0 30px rgba(255,201,74,.9),
+      var(--shadow-deep);
+    animation: favPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes favPulse{
+    0%,100%{filter:brightness(1.05)}
+    50%{filter:brightness(1.12)}
+  }
 
-    .hive-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
-    }
+  /* badge */
+  .hive-cell-badge{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.96);
+    border-radius:var(--radius-pill);
+    padding:5px 10px; font-size:12px; font-weight:900;
+    color:var(--bee-brown);
+    box-shadow:0 3px 10px rgba(0,0,0,.15);
+    z-index:2; display:flex; align-items:center; gap:6px;
+  }
 
-    .hive-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
-    }
+  /* actions */
+  .hive-cell-actions{
+    position:absolute; top:10px; right:12px; z-index:3;
+    display:flex; gap:6px;
+  }
+  .hive-cell-action-btn{
+    width:34px; height:34px; border:none; cursor:pointer;
+    border-radius:50%; font-size:16px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.95);
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    transition:transform var(--transition-fast), filter var(--transition-fast);
+  }
+  .hive-cell-action-btn:hover{transform:translateY(-2px) scale(1.06)}
+  .hive-cell-action-btn.favorite{font-size:17px}
 
-    /* Hive stats bar */
+  .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
+  .hive-cell-name{
+    font-weight:900; font-size:18px; margin-top:10px; margin-bottom:8px;
+    text-shadow:0 1px 2px rgba(0,0,0,.2);
+    line-height:1.2; max-height:2.4em; overflow:hidden;
+  }
 
-    .hive-stats-bar {
-      background: rgba(255, 255, 255, 0.88);
-      border-radius: var(--card-radius);
-      box-shadow: var(--shadow-soft);
-      padding: 14px 18px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px;
-      margin-bottom: 22px;
-      position: relative;
-      overflow: hidden;
-    }
+  .hive-cell-meta{
+    font-size:12px; font-weight:800; color:#3a250f;
+    display:flex; flex-direction:column; gap:6px; opacity:.96;
+  }
+  .hive-cell-meta .row{display:flex; align-items:center; justify-content:center; gap:6px;}
 
-    .hive-stats-bar:before {
-      content: "";
-      position: absolute;
-      inset: -40px;
-      background-image: radial-gradient(circle at 0 0, rgba(255, 201, 74, 0.2) 0, transparent 50%),
-                        radial-gradient(circle at 100% 100%, rgba(255, 182, 193, 0.25) 0, transparent 55%);
-      opacity: 0.8;
-      pointer-events: none;
-    }
+  .hive-cell-cta{
+    margin-top:10px; font-size:12px; font-weight:900;
+    color:#50300f; background:rgba(255,255,255,.9);
+    padding:5px 9px; border-radius:var(--radius-pill);
+    display:inline-flex; align-items:center; gap:6px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
 
-    .hive-stat {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+  /* empty state */
+  .hive-empty{
+    grid-column:1/-1;
+    background:rgba(255,255,255,.95);
+    border-radius:var(--radius-xl);
+    padding:44px 24px; text-align:center;
+    box-shadow:var(--shadow-soft);
+  }
 
-    .hive-stat-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--honey-light) 0, var(--honey) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-    }
+  /* modal overlay */
+  .bee-modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    display:none; align-items:center; justify-content:center;
+    z-index:9999; padding:20px;
+  }
+  .bee-modal-overlay.active{display:flex}
+  .bee-modal{
+    width:min(700px,96vw);
+    background:rgba(255,255,255,.98);
+    border-radius:22px; box-shadow:var(--shadow-deep);
+    padding:18px 18px 14px;
+    animation:popIn .18s ease-out;
+  }
+  @keyframes popIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .bee-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .bee-modal-icon{
+    width:44px;height:44px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--honey-light),var(--honey));
+    font-size:22px;
+  }
+  .bee-modal-title{margin:0;font-size:20px;font-weight:900;color:#3b2410}
+  .bee-modal-body{font-size:15px;line-height:1.45;color:#2a1a0d;padding:6px 4px 12px}
+  .bee-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px}
+  .bee-modal-btn{
+    border:none;cursor:pointer;font-weight:900;
+    border-radius:var(--radius-pill);padding:8px 14px;font-size:14px;
+    box-shadow:var(--shadow-soft);background:white;
+    transition:transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .bee-modal-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-med)}
+  .bee-modal-btn.primary{background:linear-gradient(135deg,var(--honey),var(--honey-deep));color:#3e260b}
+  .bee-modal-btn.secondary{background:#f3f3f3}
+  .bee-modal-btn.danger{background:linear-gradient(135deg,#ffb3b3,#ff6b6b);color:#3b0a0a}
 
-    .hive-stat-text {
-      display: flex;
-      flex-direction: column;
-      font-size: 13px;
-    }
+  /* action sheet for long-press */
+  .bee-sheet{
+    position:fixed; left:50%; bottom:-380px; transform:translateX(-50%);
+    width:min(520px,96vw);
+    background:rgba(255,255,255,.98);
+    border-radius:18px 18px 0 0;
+    box-shadow:var(--shadow-deep);
+    padding:14px;
+    z-index:9999;
+    transition:bottom .22s ease-out;
+  }
+  .bee-sheet.active{bottom:0}
+  .bee-sheet-title{font-weight:900;font-size:16px;margin:4px 0 10px;color:#3b2410}
+  .bee-sheet-btn{
+    width:100%; text-align:left; border:none; cursor:pointer;
+    border-radius:12px; padding:12px 12px; margin:6px 0;
+    font-weight:900; font-size:15px;
+    background:#fff; box-shadow:var(--shadow-soft);
+    display:flex; align-items:center; gap:10px;
+  }
+  .bee-sheet-btn.danger{background:#fff0f0}
 
-    .hive-stat-label {
-      opacity: 0.7;
-    }
-
-    .hive-stat-value {
-      font-weight: 700;
-      font-size: 18px;
-    }
-
-    /* Controls row */
-
-    .hive-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
-    }
-
-    .hive-search-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 999px;
-      padding: 6px 12px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-      min-width: 240px;
-      max-width: 360px;
-      flex: 1;
-    }
-
-    .hive-search-wrapper span {
-      font-size: 18px;
-    }
-
-    .hive-search-wrapper input {
-      border: none;
-      outline: none;
-      flex: 1;
-      font-size: 14px;
-      background: transparent;
-    }
-
-    .hive-sort-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-    }
-
-    .hive-sort-wrapper select {
-      border-radius: 999px;
-      border: none;
-      padding: 6px 12px;
-      font-size: 13px;
-      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.15);
-      background: rgba(255, 255, 255, 0.95);
-      outline: none;
-      cursor: pointer;
-    }
-
-    /* Hive grid – honeycomb */
-
-    .hive-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 18px;
-      padding-top: 4px;
-    }
-
-    .hive-cell {
-      position: relative;
-      cursor: pointer;
-      text-decoration: none;
-      color: inherit;
-      /* hexagon shape via clip-path */
-      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-      background: radial-gradient(circle at 30% 20%, #fff7e2 0, var(--honey) 40%, var(--honey-deep) 100%);
-      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
-      padding: 50px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
-      min-height: 200px;
-    }
-
-    .hive-cell::before {
-      /* subtle highlight overlay */
-      content: "";
-      position: absolute;
-      inset: 2px;
-      clip-path: inherit;
-      background: radial-gradient(circle at 20% 0, rgba(255, 255, 255, 0.65) 0, transparent 55%);
-      opacity: 0.9;
-      pointer-events: none;
-    }
-
-    .hive-cell-inner {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
-
-    .hive-cell-name {
-      font-weight: 700;
-      font-size: 18px;
-      margin-bottom: 8px;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .hive-cell-meta {
-      font-size: 12px;
-      opacity: 0.9;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .hive-cell-meta span {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-
-    .hive-cell-meta span .icon {
-      font-size: 12px;
-    }
-
-    .hive-cell-badge {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1;
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.95);
-      color: var(--bee-brown);
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .hive-cell-favorite {
-      position: absolute;
-      top: 6px;
-      right: 9px;
-      font-size: 16px;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-
-    .hive-cell:hover {
-      transform: translateY(-6px) scale(1.03) rotate(2deg);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
-      filter: brightness(1.05);
-    }
-
-    .hive-cell:active {
-      transform: translateY(-2px) scale(1.01);
-    }
-
-    /* Empty state */
-    .hive-empty {
-      margin-top: 24px;
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: var(--card-radius);
-      padding: 48px 24px;
-      text-align: center;
-      box-shadow: var(--shadow-soft);
-    }
-
-    .hive-empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-
-    .hive-empty h2 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      color: var(--bee-brown);
-    }
-
-    .hive-empty p {
-      margin: 0 0 20px;
-      font-size: 15px;
-      opacity: 0.8;
-    }
-
-    /* Responsive tweaks */
-    @media (max-width: 640px) {
-      .hive-title-row {
-        align-items: flex-start;
-      }
-
-      .hive-title-row h1 {
-        font-size: 26px;
-      }
-
-      .hive-stats-bar {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .hive-grid {
-        grid-template-columns: repeat(2, minmax(140px, 1fr));
-        gap: 14px;
-      }
-
-      .hive-cell {
-        min-height: 180px;
-        padding: 40px 16px;
-      }
-    }
-
-    @media (max-width: 430px) {
-      .hive-stats-bar {
-        grid-template-columns: 1fr 1fr;
-      }
-      .hive-grid {
-        grid-template-columns: repeat(2, minmax(120px, 1fr));
-      }
-      .hive-cell {
-        min-height: 160px;
-        padding: 35px 12px;
-      }
-    }
+  @media (max-width:720px){
+    .hive-title-row h1{font-size:26px}
+    .hive-grid{--cell-w:160px}
+    .hive-cell{min-height:190px}
+  }
+  @media (max-width:480px){
+    .hive-grid{--cell-w:145px;gap:14px 10px}
+    .hive-cell{min-height:175px;padding:18px 12px}
+    .hive-cell-name{font-size:16px}
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Kid-Friendly Bee Modal -->
+<!-- Confirm/Info Modal -->
 <div class="bee-modal-overlay" id="beeModal">
   <div class="bee-modal">
     <div class="bee-modal-header">
       <div class="bee-modal-icon" id="modalIcon">🐝</div>
       <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
     </div>
-    <div class="bee-modal-body" id="modalBody">
-      Are you sure about this?
-    </div>
-    <div class="bee-modal-actions" id="modalActions">
+    <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
+    <div class="bee-modal-actions">
       <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
       <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
     </div>
   </div>
 </div>
 
-<div class="hive-page">
+<!-- Edit Modal -->
+<div class="bee-modal-overlay" id="editModal">
+  <div class="bee-modal">
+    <div class="bee-modal-header">
+      <div class="bee-modal-icon">✏️</div>
+      <h2 class="bee-modal-title">Edit Word Hive</h2>
+    </div>
 
-  <!-- Floating background bee -->
-  <div class="hive-floating-bee" aria-hidden="true">
-    <span>🐝</span>
+    <div class="bee-modal-body">
+      <label style="font-weight:900;">Hive Name</label>
+      <input id="editName" type="text" style="
+        width:100%; padding:.8rem; font-size:1.05rem; font-weight:800;
+        border:3px solid var(--honey); border-radius:12px; outline:none; margin:6px 0 14px;
+      " />
+
+      <label style="font-weight:900;">Words (one per line)</label>
+      <textarea id="editWords" rows="10" style="
+        width:100%; padding:.8rem; font-size:1rem; font-weight:700;
+        border:3px solid var(--honey); border-radius:12px; outline:none; margin-top:6px;
+      "></textarea>
+      <div style="font-size:12px;opacity:.75;margin-top:6px;">
+        Tip: Blank lines will be ignored.
+      </div>
+    </div>
+
+    <div class="bee-modal-actions">
+      <button class="bee-modal-btn secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="bee-modal-btn primary" onclick="saveEditModal()">Save Changes</button>
+    </div>
   </div>
+</div>
 
-  <!-- Breadcrumb -->
+<!-- Long-Press Action Sheet -->
+<div class="bee-sheet" id="beeSheet">
+  <div class="bee-sheet-title" id="beeSheetTitle">Hive Actions</div>
+  <button class="bee-sheet-btn" id="sheetQuizBtn">▶ Start Quiz</button>
+  <button class="bee-sheet-btn" id="sheetViewBtn">👁️ View Hive</button>
+  <button class="bee-sheet-btn" id="sheetEditBtn">✏️ Edit Hive</button>
+  <button class="bee-sheet-btn" id="sheetFavBtn">⭐ Pin / Unpin</button>
+  <button class="bee-sheet-btn danger" id="sheetDeleteBtn">🗑️ Delete Hive</button>
+  <button class="bee-sheet-btn" onclick="closeBeeSheet()">Close</button>
+</div>
+
+<div class="hive-page">
   <div class="hive-breadcrumb">
     <span>🏠</span>
     <a href="/">Home</a>
     <span class="separator">›</span>
-    <span>MyWord Hives</span>
+    <span>My Word Hives</span>
   </div>
 
-  <!-- Title + actions -->
   <div class="hive-title-row">
-    <h1>
-      <span class="icon">🍯</span>
-      <span>My Word Hives</span>
-    </h1>
-
+    <h1><span class="icon">🍯</span>My Word Hives</h1>
     <div class="hive-actions">
-      <button class="hive-btn secondary" onclick="window.location.href='/'">
-        <span class="icon">🏠</span>
-        Back to Hive
-      </button>
-
-      <button class="hive-btn primary" onclick="createNewComb()">
-        <span class="icon">➕</span>
-        New Comb
-      </button>
-
-      <button class="hive-btn secondary" onclick="window.location.href='/upload'">
-        <span class="icon">🍯</span>
-        Pour In Words
-      </button>
+      <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
+      <button class="hive-btn primary" onclick="createNewComb()">➕ New Comb</button>
+      <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
     </div>
   </div>
 
-  <!-- Hive stats bar -->
   <div class="hive-stats-bar">
-    <div class="hive-stat">
-      <div class="hive-stat-icon">🐝</div>
-      <div class="hive-stat-text">
-        <span class="hive-stat-label">Bees in the Hive</span>
-        <span class="hive-stat-value" id="statsBeesInHive">0</span>
-      </div>
-    </div>
-    <div class="hive-stat">
-      <div class="hive-stat-icon">🍯</div>
-      <div class="hive-stat-text">
-        <span class="hive-stat-label">Honey Stored (Words)</span>
-        <span class="hive-stat-value" id="statsHoneyStored">0</span>
-      </div>
-    </div>
-    <div class="hive-stat">
-      <div class="hive-stat-icon">🌻</div>
-      <div class="hive-stat-text">
-        <span class="hive-stat-label">Largest Honeycomb</span>
-        <span class="hive-stat-value" id="statsLargestHoneycomb">0</span>
-      </div>
-    </div>
-    <div class="hive-stat">
-      <div class="hive-stat-icon">🔨</div>
-      <div class="hive-stat-text">
-        <span class="hive-stat-label">Worker Bee Pace</span>
-        <span class="hive-stat-value" id="statsWorkerBeePace">0</span>
-      </div>
-    </div>
+    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Bees in the Hive</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Honey Stored (Words)</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🌻</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Honeycomb</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🔨</div><div class="hive-stat-text"><span class="hive-stat-label">Worker Bee Pace</span><span class="hive-stat-value" id="statsWorkerBeePace">0</span></div></div>
   </div>
 
-  <!-- Controls: search + sort -->
   <div class="hive-controls">
-    <div class="hive-search-wrapper">
-      <span>🐝</span>
-      <input
-        id="hiveSearchInput"
-        type="text"
-        placeholder="Search hives..."
-        autocomplete="off"
-      />
-    </div>
-
-    <div class="hive-sort-wrapper">
-      <span>Sort by:</span>
+    <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
+    <div class="hive-sort-wrapper">Sort by:
       <select id="hiveSortSelect">
         <option value="recent">Most Recent</option>
         <option value="name">Name (A–Z)</option>
@@ -554,504 +444,565 @@
     </div>
   </div>
 
-  <!-- Honeycomb grid -->
   <div class="hive-grid" id="hiveGrid">
-    <!-- Loading state -->
-    <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
-      <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
-      <div style="font-size: 1.2rem; color: var(--bee-brown); font-weight: 700;">Loading your hive...</div>
+    <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
+      <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
+      <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
     </div>
   </div>
-
 </div>
 
 <script>
-let allLists = [];
-let filteredLists = [];
+  let allLists = [];
+  let filteredLists = [];
+  let modalResolve = null;
 
-// Load word lists on page load
-document.addEventListener('DOMContentLoaded', async () => {
+  // favorites stored locally unless API exists
+  const favKey = "beesmart_favorites";
+  const localFavs = new Set(JSON.parse(localStorage.getItem(favKey) || "[]"));
+
+  // edit modal state
+  let editTarget = null;
+
+  // long press sheet state
+  let pressTimer = null;
+  let sheetTarget = null;
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    runBeeFlyover();
     await loadWordLists();
-});
+  });
 
-// Load all word lists from API
-async function loadWordLists() {
-    try {
-        const res = await fetch('/api/saved-lists', {
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' }
-        });
-        
-        const data = await res.json();
-        
-        if (data.ok && data.lists) {
-            allLists = data.lists;
-            filteredLists = [...allLists];
-            updateStats();
-            renderHoneycombs();
-        } else if (data.auth_required) {
-            // User not logged in - show login prompt
-            displayLoginRequired();
-        } else {
-            console.error('Failed to load lists:', data.error);
-            displayEmptyHive();
+  async function loadWordLists(){
+    try{
+      const res = await fetch("/api/saved-lists",{credentials:"same-origin",cache:"no-store"});
+      const data = await res.json();
+
+      if(data.ok && data.lists){
+        allLists = data.lists;
+        // merge server favorites if present
+        for(const l of allLists){
+          if(l.is_favorite) localFavs.add(l.id);
         }
-    } catch (error) {
-        console.error('Error loading lists:', error);
+        filteredLists = [...allLists];
+        updateStats();
+        renderHoneycombs();
+      }else if(data.auth_required){
+        displayLoginRequired();
+      }else{
         displayEmptyHive();
+      }
+    }catch(err){
+      console.error(err);
+      displayEmptyHive();
     }
-}
+  }
 
-// Update hive statistics
-function updateStats() {
+  function updateStats(){
     const totalLists = allLists.length;
-    const totalWords = allLists.reduce((sum, list) => sum + (list.word_count || 0), 0);
-    const largestList = allLists.length > 0 
-        ? Math.max(...allLists.map(list => list.word_count || 0)) 
-        : 0;
-    const avgWords = totalLists > 0 ? Math.round(totalWords / totalLists) : 0;
+    const totalWords = allLists.reduce((s,l)=>s+(l.word_count||0),0);
+    const largestList = totalLists?Math.max(...allLists.map(l=>l.word_count||0)):0;
+    const avgWords = totalLists?Math.round(totalWords/totalLists):0;
 
-    document.getElementById('statsBeesInHive').textContent = totalLists;
-    document.getElementById('statsHoneyStored').textContent = totalWords;
-    document.getElementById('statsLargestHoneycomb').textContent = largestList;
-    document.getElementById('statsWorkerBeePace').textContent = avgWords;
-}
+    statsBeesInHive.textContent = totalLists;
+    statsHoneyStored.textContent = totalWords;
+    statsLargestHoneycomb.textContent = largestList;
+    statsWorkerBeePace.textContent = avgWords;
+  }
 
-// Render honeycomb cells
-function renderHoneycombs() {
-    const grid = document.getElementById('hiveGrid');
-    
-    if (filteredLists.length === 0) {
-        displayEmptyHive();
-        return;
-    }
-    
-    grid.innerHTML = '';
-    
-    filteredLists.forEach((list, index) => {
-        const cell = createHoneycombCell(list, index + 1);
-        grid.appendChild(cell);
+  function renderHoneycombs(){
+    const grid = document.getElementById("hiveGrid");
+    if(!filteredLists.length){ displayEmptyHive(); return; }
+
+    // pin favorites to top always
+    const favFirst = [...filteredLists].sort((a,b)=>{
+      const af = localFavs.has(a.id)?1:0;
+      const bf = localFavs.has(b.id)?1:0;
+      return bf-af;
     });
-}
 
-// Create a single honeycomb cell
-function createHoneycombCell(list, hiveIndex) {
-    const cell = document.createElement('a');
-    cell.className = 'hive-cell';
-    cell.href = '#';
-    cell.onclick = (e) => {
-        e.preventDefault();
-        if (!e.target.closest('.hive-cell-action-btn')) {
-            useListInQuiz(list.id);
-        }
+    grid.innerHTML = "";
+    favFirst.forEach((list,ix)=> grid.appendChild(createHoneycombCell(list,ix+1)));
+  }
+
+  function createHoneycombCell(list,hiveIndex){
+    const cell = document.createElement("a");
+    cell.className = "hive-cell";
+    cell.href="#";
+    cell.dataset.name=(list.name||"").toLowerCase();
+    cell.dataset.words=list.word_count||0;
+    cell.dataset.updated=list.updated_at||list.created_at||"";
+    if(localFavs.has(list.id)) cell.classList.add("is-favorite");
+
+    // tap to quiz unless on buttons
+    cell.onclick=(e)=>{
+      e.preventDefault();
+      if(!e.target.closest(".hive-cell-action-btn")){
+        useListInQuiz(list.id);
+      }
     };
-    
-    cell.dataset.name = (list.name || '').toLowerCase();
-    cell.dataset.words = list.word_count || 0;
-    cell.dataset.updated = list.updated_at || list.created_at || '';
-    
-    const formattedDate = list.updated_at 
-        ? new Date(list.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-        : new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    
+
+    // long press mobile
+    cell.addEventListener("touchstart",(e)=>{
+      pressTimer = setTimeout(()=> openBeeSheet(list), 520);
+    },{passive:true});
+    cell.addEventListener("touchend",()=> clearTimeout(pressTimer));
+    cell.addEventListener("touchmove",()=> clearTimeout(pressTimer));
+
+    const formattedDate = (list.updated_at||list.created_at)
+      ? new Date(list.updated_at||list.created_at).toLocaleDateString()
+      : "No date yet";
+
+    const isFav = localFavs.has(list.id);
+    const star = isFav ? "⭐" : "☆";
+
     cell.innerHTML = `
-      <!-- Action buttons -->
       <div class="hive-cell-actions">
-        <button class="hive-cell-action-btn view" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}')">👁️</button>
-        <button class="hive-cell-action-btn delete" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g, "\\'")}')">🗑️</button>
+        <button class="hive-cell-action-btn favorite" title="Pin hive"
+          onclick="toggleFavorite(event, ${list.id})">${star}</button>
+        <button class="hive-cell-action-btn view" title="View list"
+          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
+        <button class="hive-cell-action-btn edit" title="Edit list"
+          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
+        <button class="hive-cell-action-btn delete" title="Delete list"
+          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
       </div>
 
-      <!-- word count badge -->
-      <div class="hive-cell-badge">
-        <span class="icon">≡</span>
-        <span>${list.word_count || 0} words</span>
-      </div>
+      <div class="hive-cell-badge">≡ ${list.word_count||0} words</div>
 
       <div class="hive-cell-inner">
         <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+
         <div class="hive-cell-meta">
-          <span>
-            <span class="icon">📅</span>
-            ${formattedDate}
-          </span>
-          <span>
-            <span class="icon">📅</span>
-            Hive ${hiveIndex}
-          </span>
-          <span>
-            <span class="icon">⏱</span>
-            Hive ${Math.floor(Math.random() * 3) + 1} ${Math.random() > 0.5 ? '🎵' : ''}
-          </span>
-          <span style="margin-top: 8px; font-size: 24px;">🐝</span>
+          <div class="row">📅 ${formattedDate}</div>
+          <div class="row">🍯 Hive ${hiveIndex}</div>
+          ${isFav ? `<div class="row">⭐ Pinned Hive</div>` : `<div class="row">🐝 Tap to quiz</div>`}
         </div>
+
+        <div class="hive-cell-cta">▶ Start Quiz</div>
       </div>
     `;
-    
     return cell;
-}
+  }
 
-// Display empty hive state
-function displayEmptyHive() {
-    const grid = document.getElementById('hiveGrid');
-    grid.innerHTML = `
-        <div class="hive-empty" style="grid-column: 1 / -1;">
-            <div class="hive-empty-icon">🐝</div>
-            <h2>No honeycombs yet!</h2>
-            <p>Create your first word hive to start storing spelling honey.</p>
-            <button class="hive-btn primary" onclick="createNewComb()">
-                <span class="icon">➕</span>
-                Create Word Hive
-            </button>
-        </div>
+  function displayEmptyHive(){
+    hiveGrid.innerHTML = `
+      <div class="hive-empty">
+        <div style="font-size:64px;margin-bottom:10px;">🐝</div>
+        <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">No honeycombs yet!</h2>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word hive to start storing spelling honey.</p>
+        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word Hive</button>
+      </div>
     `;
-}
+  }
 
-// Display login required
-function displayLoginRequired() {
-    const grid = document.getElementById('hiveGrid');
-    grid.innerHTML = `
-        <div class="hive-empty" style="grid-column: 1 / -1;">
-            <div class="hive-empty-icon">🔒</div>
-            <h2>Login Required</h2>
-            <p>Please log in to view your word hives.</p>
-            <button class="hive-btn primary" onclick="window.location.href='/login'">
-                <span class="icon">🔑</span>
-                Log In
-            </button>
-        </div>
+  function displayLoginRequired(){
+    hiveGrid.innerHTML = `
+      <div class="hive-empty">
+        <div style="font-size:64px;margin-bottom:10px;">🔒</div>
+        <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Login Required</h2>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word hives.</p>
+        <button class="hive-btn primary" onclick="window.location.href='/login'">🔑 Log In</button>
+      </div>
     `;
-}
+  }
 
-// Filter and sort functionality
-(function () {
+  // Search + Sort
+  (function(){
     const searchInput = document.getElementById("hiveSearchInput");
     const sortSelect = document.getElementById("hiveSortSelect");
 
-    function applyFilterAndSort() {
-        const term = (searchInput.value || "").toLowerCase().trim();
-        const sortBy = sortSelect.value;
+    function applyFilterAndSort(){
+      const term=(searchInput.value||"").toLowerCase().trim();
+      const sortBy=sortSelect.value;
 
-        // Filter
-        if (!term) {
-            filteredLists = [...allLists];
-        } else {
-            filteredLists = allLists.filter(list => 
-                (list.name || '').toLowerCase().includes(term)
-            );
-        }
+      filteredLists = !term
+        ? [...allLists]
+        : allLists.filter(l=>(l.name||"").toLowerCase().includes(term));
 
-        // Sort
-        switch (sortBy) {
-            case 'name':
-                filteredLists.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                break;
-            case 'largest':
-                filteredLists.sort((a, b) => (b.word_count || 0) - (a.word_count || 0));
-                break;
-            case 'smallest':
-                filteredLists.sort((a, b) => (a.word_count || 0) - (b.word_count || 0));
-                break;
-            case 'recent':
-            default:
-                filteredLists.sort((a, b) => {
-                    const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
-                    const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
-                    return dateB - dateA;
-                });
-                break;
-        }
+      // sort non-favs only; favs pinned later
+      switch(sortBy){
+        case "name":
+          filteredLists.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+          break;
+        case "largest":
+          filteredLists.sort((a,b)=>(b.word_count||0)-(a.word_count||0));
+          break;
+        case "smallest":
+          filteredLists.sort((a,b)=>(a.word_count||0)-(b.word_count||0));
+          break;
+        case "recent":
+        default:
+          filteredLists.sort((a,b)=>{
+            const da=a.updated_at?new Date(a.updated_at):new Date(0);
+            const db=b.updated_at?new Date(b.updated_at):new Date(0);
+            return db-da;
+          });
+      }
 
-        renderHoneycombs();
+      renderHoneycombs();
     }
 
-    searchInput.addEventListener("input", applyFilterAndSort);
-    sortSelect.addEventListener("change", applyFilterAndSort);
-})();
+    searchInput.addEventListener("input",applyFilterAndSort);
+    sortSelect.addEventListener("change",applyFilterAndSort);
+  })();
 
-// Use list in quiz
-async function useListInQuiz(id) {
-    try {
-        // Check current wordbank
-        const wordbankRes = await fetch('/api/wordbank');
-        const wordbankData = await wordbankRes.json();
-        const currentCount = wordbankData.words ? wordbankData.words.length : 0;
-        
-        if (currentCount > 0) {
-            const confirmed = await showBeeModal(
-                '🍯',
-                'Replace Current Words?',
-                `You have ${currentCount} word(s) already loaded!\n\nLoading this list will replace them with new spelling honey.\n\nReady to swap?`,
-                'Yes, Load It!',
-                'primary'
-            );
-            if (!confirmed) return;
-        }
-        
-        // Load the list
-        const res = await fetch('/api/saved-lists/load', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'},
-            credentials: 'same-origin',
-            cache: 'no-store',
-            body: JSON.stringify({ id })
-        });
-        
-        const data = await res.json();
-        
-        if (data.ok) {
-            showToast('✅ Word list loaded! Ready to quiz.', 'success');
-            setTimeout(() => {
-                window.location.href = '/quiz';
-            }, 800);
-        } else {
-            showToast('❌ ' + (data.error || 'Failed to load list'), 'error');
-        }
-    } catch (error) {
-        console.error('Error loading list:', error);
-        showToast('❌ Error loading list', 'error');
+  // QUIZ LOAD
+  async function useListInQuiz(id){
+    try{
+      const wbRes = await fetch("/api/wordbank");
+      const wbData = await wbRes.json();
+      const currentCount = wbData.words ? wbData.words.length : 0;
+
+      if(currentCount>0){
+        const confirmed = await showBeeModal(
+          "🍯",
+          "Replace Current Words?",
+          `You already have ${currentCount} word(s) loaded.<br><br>Loading this hive will replace them.`,
+          "Yes, Load It!",
+          "primary"
+        );
+        if(!confirmed) return;
+      }
+
+      const res = await fetch("/api/saved-lists/load",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Cache-Control":"no-cache"},
+        credentials:"same-origin",
+        cache:"no-store",
+        body:JSON.stringify({id})
+      });
+
+      const data = await res.json();
+      if(data.ok){
+        showToast("✅ Word hive loaded! Heading to quiz…","success");
+        setTimeout(()=>window.location.href="/quiz",700);
+      }else{
+        showToast("❌ "+(data.error||"Failed to load list"),"error");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("❌ Error loading list","error");
     }
-}
+  }
 
-// Create new word list
-async function createNewComb() {
-    const name = await showBeePrompt('🐝', 'Create New Word Hive!', 'What should we call this honeycomb?');
-    if (!name || !name.trim()) return;
-    
-    try {
-        const res = await fetch('/api/saved-lists/create', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'same-origin',
-            body: JSON.stringify({ name: name.trim() })
-        });
-        
-        const data = await res.json();
-        
-        if (data.ok) {
-            showToast('✅ Word hive created!', 'success');
-            await loadWordLists(); // Reload the list
-        } else {
-            showToast('❌ ' + (data.error || 'Failed to create list'), 'error');
-        }
-    } catch (error) {
-        console.error('Error creating list:', error);
-        showToast('❌ Error creating list', 'error');
+  // CREATE
+  async function createNewComb(){
+    const name = await showBeePrompt("🐝","Create New Word Hive!","What should we call this honeycomb?");
+    if(!name||!name.trim()) return;
+
+    try{
+      const res = await fetch("/api/saved-lists/create",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"same-origin",
+        body:JSON.stringify({name:name.trim()})
+      });
+      const data = await res.json();
+      if(data.ok){
+        showToast("✅ Word hive created!","success");
+        await loadWordLists();
+      }else{
+        showToast("❌ "+(data.error||"Failed to create hive"),"error");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("❌ Error creating hive","error");
     }
-}
+  }
 
-// Toast notification
-function showToast(message, type = 'success') {
-    const existingToast = document.querySelector('.toast');
-    if (existingToast) existingToast.remove();
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        background: white;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        border-left: 4px solid ${type === 'success' ? '#4CAF50' : '#f44336'};
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        max-width: 400px;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Bee Modal System
-let modalResolve = null;
-
-function showBeeModal(icon, title, message, confirmText = 'OK', confirmType = 'primary') {
-    return new Promise((resolve) => {
-        modalResolve = resolve;
-        
-        document.getElementById('modalIcon').textContent = icon;
-        document.getElementById('modalTitle').textContent = title;
-        document.getElementById('modalBody').innerHTML = message.replace(/\n/g, '<br>');
-        
-        const confirmBtn = document.getElementById('modalConfirmBtn');
-        confirmBtn.textContent = confirmText;
-        confirmBtn.className = `bee-modal-btn ${confirmType}`;
-        
-        document.getElementById('beeModal').classList.add('active');
-    });
-}
-
-function showBeePrompt(icon, title, message) {
-    return new Promise((resolve) => {
-        const overlay = document.getElementById('beeModal');
-        const modal = overlay.querySelector('.bee-modal');
-        
-        modal.innerHTML = `
-            <div class="bee-modal-header">
-                <div class="bee-modal-icon" style="animation: wiggle 1s ease infinite;">${icon}</div>
-                <h2 class="bee-modal-title">${title}</h2>
-            </div>
-            <div class="bee-modal-body">${message}</div>
-            <input type="text" id="beePromptInput" style="
-                width: 100%;
-                padding: 0.875rem;
-                border: 3px solid #ffc94a;
-                border-radius: 12px;
-                font-size: 1.1rem;
-                margin-bottom: 1rem;
-                font-family: inherit;
-                box-sizing: border-box;
-            " />
-            <div class="bee-modal-actions">
-                <button class="bee-modal-btn secondary" onclick="closeBeePrompt('')">Cancel</button>
-                <button class="bee-modal-btn primary" onclick="closeBeePrompt(document.getElementById('beePromptInput').value)">Create</button>
-            </div>
-        `;
-        
-        modalResolve = resolve;
-        overlay.classList.add('active');
-        
-        setTimeout(() => {
-            const input = document.getElementById('beePromptInput');
-            if (input) {
-                input.focus();
-                input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        closeBeePrompt(input.value);
-                    }
-                });
-            }
-        }, 100);
-    });
-}
-
-function closeBeePrompt(value) {
-    document.getElementById('beeModal').classList.remove('active');
-    if (modalResolve) {
-        modalResolve(value);
-        modalResolve = null;
+  // VIEW
+  async function viewWordList(event,listId,listName){
+    event.preventDefault(); event.stopPropagation();
+    try{
+      const res = await fetch(`/api/saved-lists/${listId}`);
+      const data = await res.json();
+      if(data.ok && data.list){
+        const words = data.list.words||[];
+        const preview = words.slice(0,12).join(", ");
+        const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
+        await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
+      }else{
+        showToast("❌ Could not load hive details","error");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("❌ Error viewing hive","error");
     }
-}
+  }
 
-function confirmBeeModal() {
-    document.getElementById('beeModal').classList.remove('active');
-    if (modalResolve) {
-        modalResolve(true);
-        modalResolve = null;
-    }
-}
+  // DELETE
+  async function deleteWordList(event,listId,listName){
+    event.preventDefault(); event.stopPropagation();
 
-function closeBeeModal() {
-    document.getElementById('beeModal').classList.remove('active');
-    if (modalResolve) {
-        modalResolve(false);
-        modalResolve = null;
-    }
-}
-
-// View word list details
-async function viewWordList(event, listId, listName) {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    try {
-        const res = await fetch(`/api/saved-lists/${listId}`);
-        const data = await res.json();
-        
-        if (data.ok && data.list) {
-            const words = data.list.words || [];
-            const wordPreview = words.slice(0, 10).join(', ');
-            const moreWords = words.length > 10 ? `... and ${words.length - 10} more` : '';
-            
-            await showBeeModal(
-                '👁️',
-                `${listName}`,
-                `<strong>Total Words:</strong> ${words.length}<br><br><strong>Words:</strong><br>${wordPreview}${moreWords}`,
-                'Close',
-                'primary'
-            );
-        } else {
-            showToast('❌ Could not load word list details', 'error');
-        }
-    } catch (error) {
-        console.error('Error viewing list:', error);
-        showToast('❌ Error viewing list', 'error');
-    }
-}
-
-// Delete word list
-async function deleteWordList(event, listId, listName) {
-    event.preventDefault();
-    event.stopPropagation();
-    
     const confirmed = await showBeeModal(
-        '🗑️',
-        'Delete Word Hive?',
-        `Are you sure you want to delete "${listName}"?<br><br>This honeycomb will buzz away forever! 🐝💨`,
-        'Yes, Delete It',
-        'danger'
+      "🗑️",
+      "Delete Word Hive?",
+      `Delete "<strong>${listName}</strong>"?<br><br>This honeycomb will be gone forever.`,
+      "Yes, Delete It",
+      "danger"
     );
-    
-    if (!confirmed) return;
-    
-    try {
-        const res = await fetch(`/api/saved-lists/${listId}`, {
-            method: 'DELETE',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'same-origin'
-        });
-        
-        const data = await res.json();
-        
-        if (data.ok) {
-            showToast('✅ Word hive deleted!', 'success');
-            await loadWordLists();
-        } else {
-            showToast('❌ ' + (data.error || 'Failed to delete list'), 'error');
-        }
-    } catch (error) {
-        console.error('Error deleting list:', error);
-        showToast('❌ Error deleting list', 'error');
+    if(!confirmed) return;
+
+    try{
+      const res = await fetch(`/api/saved-lists/${listId}`,{
+        method:"DELETE",
+        headers:{"Content-Type":"application/json"},
+        credentials:"same-origin"
+      });
+      const data = await res.json();
+      if(data.ok){
+        localFavs.delete(listId);
+        persistFavs();
+        showToast("✅ Word hive deleted!","success");
+        await loadWordLists();
+      }else{
+        showToast("❌ "+(data.error||"Failed to delete hive"),"error");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("❌ Error deleting hive","error");
     }
-}
+  }
+
+  // FAVORITE / PIN
+  async function toggleFavorite(event,listId){
+    event.preventDefault(); event.stopPropagation();
+    const isFav = localFavs.has(listId);
+    if(isFav) localFavs.delete(listId); else localFavs.add(listId);
+    persistFavs();
+
+    // sparkle burst
+    burstSparkles(event.clientX, event.clientY);
+
+    // try server persist if endpoint exists
+    try{
+      await fetch("/api/saved-lists/favorite",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"same-origin",
+        body:JSON.stringify({id:listId,is_favorite:!isFav})
+      });
+    }catch(_){ /* silent fallback */ }
+
+    renderHoneycombs();
+  }
+
+  function persistFavs(){
+    localStorage.setItem(favKey, JSON.stringify([...localFavs]));
+  }
+
+  function burstSparkles(x,y){
+    const emojis = ["✨","⭐","💛","🍯"];
+    for(let i=0;i<8;i++){
+      const s=document.createElement("div");
+      s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      s.style.position="fixed";
+      s.style.left=x+"px";
+      s.style.top=y+"px";
+      s.style.fontSize=(12+Math.random()*10)+"px";
+      s.style.zIndex=10000;
+      s.style.pointerEvents="none";
+      const dx=(Math.random()-0.5)*120;
+      const dy=(Math.random()-0.8)*140;
+      const dur=600+Math.random()*300;
+
+      s.animate([
+        {transform:"translate(0,0) scale(1)",opacity:1},
+        {transform:`translate(${dx}px,${dy}px) scale(1.6)`,opacity:0}
+      ],{duration:dur,easing:"ease-out"});
+
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(),dur+50);
+    }
+  }
+
+  // EDIT MODAL
+  async function openEditModal(event,listId,listName){
+    event.preventDefault(); event.stopPropagation();
+    try{
+      const res = await fetch(`/api/saved-lists/${listId}`);
+      const data = await res.json();
+      if(!data.ok || !data.list){ showToast("❌ Cannot open editor","error"); return; }
+
+      editTarget = { id:listId };
+      editName.value = data.list.name || listName;
+      editWords.value = (data.list.words||[]).join("\n");
+      editModal.classList.add("active");
+    }catch(err){
+      console.error(err);
+      showToast("❌ Editor failed to load words","error");
+    }
+  }
+
+  function closeEditModal(){
+    editModal.classList.remove("active");
+    editTarget=null;
+  }
+
+  async function saveEditModal(){
+    if(!editTarget) return;
+    const newName = (editName.value||"").trim();
+    const words = (editWords.value||"")
+      .split(/\r?\n/).map(w=>w.trim()).filter(Boolean);
+
+    if(!newName){ showToast("❌ Name cannot be empty","error"); return; }
+    if(words.length===0){ showToast("❌ Add at least 1 word","error"); return; }
+
+    try{
+      const res = await fetch(`/api/saved-lists/${editTarget.id}`,{
+        method:"PUT",
+        headers:{"Content-Type":"application/json"},
+        credentials:"same-origin",
+        body:JSON.stringify({name:newName, words})
+      });
+      const data = await res.json();
+      if(data.ok){
+        showToast("✅ Hive updated!","success");
+        closeEditModal();
+        await loadWordLists();
+      }else{
+        showToast("❌ "+(data.error||"Save failed"),"error");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("❌ Save endpoint missing or failed","error");
+    }
+  }
+
+  // LONG-PRESS ACTION SHEET
+  function openBeeSheet(list){
+    sheetTarget = list;
+    beeSheetTitle.textContent = list.name || "Hive Actions";
+    beeSheet.classList.add("active");
+
+    sheetQuizBtn.onclick = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
+    sheetViewBtn.onclick = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name); };
+    sheetEditBtn.onclick = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name); };
+    sheetFavBtn.onclick  = (e)=>{ closeBeeSheet(); toggleFavorite(fakeEvent(e), list.id); };
+    sheetDeleteBtn.onclick=(e)=>{ closeBeeSheet(); deleteWordList(fakeEvent(e), list.id, list.name); };
+  }
+
+  function closeBeeSheet(){
+    beeSheet.classList.remove("active");
+    sheetTarget=null;
+  }
+
+  function fakeEvent(e){
+    return { preventDefault(){}, stopPropagation(){}, clientX:e?.clientX||innerWidth/2, clientY:e?.clientY||innerHeight/2 };
+  }
+
+  // MODAL (confirm/info)
+  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary"){
+    return new Promise(resolve=>{
+      modalResolve=resolve;
+      modalIcon.textContent=icon;
+      modalTitle.textContent=title;
+      modalBody.innerHTML=message;
+      modalConfirmBtn.textContent=confirmText;
+      modalConfirmBtn.className="bee-modal-btn "+confirmType;
+      beeModal.classList.add("active");
+    });
+  }
+  function confirmBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(true); modalResolve=null; }
+  function closeBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(false); modalResolve=null; }
+
+  // PROMPT (create)
+  function showBeePrompt(icon,title,message){
+    return new Promise(resolve=>{
+      modalResolve=resolve;
+      const modal = beeModal.querySelector(".bee-modal");
+      modal.innerHTML=`
+        <div class="bee-modal-header">
+          <div class="bee-modal-icon">${icon}</div>
+          <h2 class="bee-modal-title">${title}</h2>
+        </div>
+        <div class="bee-modal-body">${message}</div>
+        <input id="beePromptInput" type="text" style="
+          width:100%; padding:.9rem; font-size:1.05rem; font-weight:700;
+          border:3px solid var(--honey); border-radius:12px; outline:none; margin: 6px 0 12px;
+        "/>
+        <div class="bee-modal-actions">
+          <button class="bee-modal-btn secondary" onclick="closeBeePrompt('')">Cancel</button>
+          <button class="bee-modal-btn primary" onclick="closeBeePrompt(document.getElementById('beePromptInput').value)">Create</button>
+        </div>
+      `;
+      beeModal.classList.add("active");
+      setTimeout(()=>document.getElementById("beePromptInput")?.focus(),80);
+    });
+  }
+  function closeBeePrompt(value){
+    beeModal.classList.remove("active");
+    modalResolve?.(value);
+    modalResolve=null;
+    // restore modal HTML
+    const modal = beeModal.querySelector(".bee-modal");
+    modal.innerHTML=`
+      <div class="bee-modal-header">
+        <div class="bee-modal-icon" id="modalIcon">🐝</div>
+        <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
+      </div>
+      <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
+      <div class="bee-modal-actions">
+        <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
+        <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
+      </div>
+    `;
+  }
+
+  // TOAST
+  function showToast(message,type="success"){
+    document.querySelector(".toast")?.remove();
+    const toast=document.createElement("div");
+    toast.className="toast "+type;
+    toast.style.cssText=`
+      position:fixed;bottom:1.5rem;right:1.5rem;
+      background:white;padding:.9rem 1.2rem;border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+      border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
+      z-index:10000;font-weight:900;max-width:420px;
+      animation:slideIn .25s ease;
+    `;
+    toast.innerHTML=message;
+    document.body.appendChild(toast);
+    setTimeout(()=>{
+      toast.style.animation="slideOut .25s ease";
+      setTimeout(()=>toast.remove(),250);
+    },2600);
+  }
+  const style=document.createElement("style");
+  style.textContent=`
+    @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
+  `;
+  document.head.appendChild(style);
+
+  // helpers
+  function escapeHtml(text){ const d=document.createElement("div"); d.textContent=text||""; return d.innerHTML; }
+
+  // Bee flyover
+  function runBeeFlyover(){
+    const bee=document.createElement("div");
+    bee.className="bee-flyover";
+    bee.textContent="🐝";
+    document.body.appendChild(bee);
+
+    let trailTimer= setInterval(()=>{
+      const t=document.createElement("div");
+      t.className="bee-trail";
+      t.style.left=(bee.getBoundingClientRect().left+8)+"px";
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(),1200);
+    },180);
+
+    requestAnimationFrame(()=>{
+      bee.style.transform=`translateX(${innerWidth+240}px) translateY(-20px)`;
+    });
+
+    setTimeout(()=>{
+      clearInterval(trailTimer);
+      bee.remove();
+    },3200);
+  }
 </script>
-
-<style>
-@keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-}
-</style>
-
 {% endblock %}
