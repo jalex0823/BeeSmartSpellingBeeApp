@@ -199,8 +199,8 @@
   .hive-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-    gap:24px 16px;
-    padding-top:8px;
+    gap:32px 24px;
+    padding-top:16px;
     position:relative;
     justify-items:center;
     max-width:100%;
@@ -304,10 +304,12 @@
 
   .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
   .hive-cell-name{
-    font-weight:900; font-size:13px; margin-top:4px; margin-bottom:4px;
-    text-shadow:0 1px 2px rgba(0,0,0,.2);
-    line-height:1.1; max-height:2.2em; overflow:hidden;
+    font-weight:900; font-size:12px; margin-top:6px; margin-bottom:6px;
+    text-shadow:0 1px 2px rgba(0,0,0,.3);
+    line-height:1.2; max-height:2.4em; overflow:hidden;
     word-break:break-word;
+    color:#2b1a00;
+    padding:0 4px;
   }
 
   .hive-cell-meta{
@@ -460,12 +462,12 @@
   <button class="bee-sheet-btn" onclick="closeBeeSheet()">Close</button>
 </div>
 
-<div class="hive-page">
-  <div style="text-align:center;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto;">
-    <h1 style="margin:0 0 1rem 0;font-size:32px;font-weight:900;display:inline-flex;align-items:center;gap:10px;text-shadow:0 1px 0 rgba(255,255,255,.6);"><span class="icon">🍯</span>My Word Lists</h1>
+<div class="hive-page" style="padding-top:2rem;">
+  <div style="text-align:center;margin-bottom:3rem;max-width:900px;margin-left:auto;margin-right:auto;">
+    <h1 style="margin:0 0 2.5rem 0;font-size:32px;font-weight:900;display:inline-flex;align-items:center;gap:10px;text-shadow:0 1px 0 rgba(255,255,255,.6);"><span class="icon">🍯</span>My Word Lists</h1>
   </div>
   
-  <div class="hive-actions">
+  <div class="hive-actions" style="margin-bottom:2.5rem;">
     <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
     <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
     <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
@@ -476,7 +478,7 @@
     background:rgba(255,255,255,0.9);
     border-radius:var(--radius-xl);
     padding:1.5rem;
-    margin:0 auto 1.5rem;
+    margin:0 auto 2.5rem;
     max-width:400px;
     text-align:center;
     box-shadow:var(--shadow-soft);
@@ -499,7 +501,7 @@
     </div>
   </div>
 
-  <div class="hive-stats-bar">
+  <div class="hive-stats-bar" style="margin-bottom:2.5rem;">
     <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Lists</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
     <div class="hive-stat"><div class="hive-stat-icon">✨</div><div class="hive-stat-text"><span class="hive-stat-label">Total Words</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
     <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Hive</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
@@ -508,13 +510,13 @@
   <!-- Buzz Dust Grid Container -->
   <div class="buzz-dust-container" style="
     max-width:1180px;
-    margin:2rem auto;
+    margin:2.5rem auto 3rem;
     background:rgba(255,255,255,0.95);
     border-radius:26px;
-    padding:2rem;
+    padding:2.5rem;
     box-shadow:var(--shadow-soft);
   ">
-    <div class="hive-controls">
+    <div class="hive-controls" style="margin-bottom:1.5rem;">
       <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
       <div class="hive-sort-wrapper">Sort by:
         <select id="hiveSortSelect">
