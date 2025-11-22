@@ -100,7 +100,14 @@
   }
 
   /* buttons */
-  .hive-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  .hive-actions{
+    display:flex; 
+    gap:10px; 
+    flex-wrap:wrap; 
+    justify-content:center;
+    margin:0 auto;
+    max-width:900px;
+  }
   .hive-btn{
     border:none; outline:none; cursor:pointer;
     border-radius:var(--radius-pill);
@@ -126,7 +133,8 @@
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
     gap:8px;
-    margin:12px 0 16px;
+    margin:12px auto 16px;
+    max-width:900px;
     position:relative; z-index:1;
     justify-items:center;
   }
@@ -143,8 +151,15 @@
 
   /* controls */
   .hive-controls{
-    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center;
-    margin:10px 0 18px; position:relative; z-index:1;
+    display:flex; 
+    flex-wrap:wrap; 
+    gap:10px; 
+    align-items:center; 
+    justify-content:center;
+    margin:10px auto 18px; 
+    position:relative; 
+    z-index:1;
+    max-width:900px;
   }
   .hive-search-wrapper{
     display:flex; align-items:center; gap:8px;
@@ -180,12 +195,12 @@
     z-index:1;
   }
 
-  /* honeycomb grid - responsive 2-3 columns */
+  /* honeycomb grid - responsive 3-4 columns */
   .hive-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-    gap:18px 14px;
-    padding-top:6px;
+    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:24px 16px;
+    padding-top:8px;
     position:relative;
     justify-items:center;
     max-width:100%;
@@ -201,15 +216,16 @@
 
   .hive-cell{
     position:relative; text-decoration:none; color:inherit; cursor:pointer;
-    clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
+    clip-path:polygon(25% 5%,75% 5%,98% 50%,75% 95%,25% 95%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
     box-shadow:var(--shadow-med);
     width:100%;
-    max-width:140px;
-    min-height:160px;
+    max-width:100px;
+    min-height:115px;
     display:flex; align-items:center; justify-content:center;
-    padding:20px 16px 18px;
+    padding:12px 10px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
+    user-select:none;
   }
   .hive-cell:nth-child(odd){transform:translateY(8px)}
   .hive-cell:nth-child(even){transform:translateY(-8px)}
@@ -222,6 +238,15 @@
     animation:buzzWobble .35s ease-out 1;
     box-shadow:var(--shadow-deep);
     filter:brightness(1.06);
+  }
+  .hive-cell:active{
+    transform:scale(.94) translateY(2px)!important;
+    filter:brightness(1.12) saturate(1.2);
+    box-shadow:0 0 20px rgba(255,201,74,.8), var(--shadow-deep);
+  }
+  @keyframes clickRipple{
+    0%{transform:scale(.8);opacity:1}
+    100%{transform:scale(2.5);opacity:0}
   }
 
   /* FAVORITE glow ring */
@@ -240,27 +265,28 @@
 
   /* badge */
   .hive-cell-badge{
-    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    position:absolute; top:42px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.96);
     border-radius:var(--radius-pill);
-    padding:5px 10px; font-size:12px; font-weight:900;
+    padding:3px 8px; font-size:10px; font-weight:900;
     color:var(--bee-brown);
-    box-shadow:0 3px 10px rgba(0,0,0,.15);
-    z-index:2; display:flex; align-items:center; gap:6px;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+    z-index:2; display:flex; align-items:center; gap:4px;
   }
 
   /* actions */
   .hive-cell-actions{
-    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:3;
-    display:flex; gap:6px;
+    position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:3;
+    display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
+    max-width:90%;
   }
   .hive-cell-action-btn{
-    width:34px; height:34px; border:none; cursor:pointer;
-    border-radius:50%; font-size:16px; font-weight:900;
+    width:26px; height:26px; border:none; cursor:pointer;
+    border-radius:50%; font-size:13px; font-weight:900;
     display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,0);
+    background:rgba(255,255,255,.85);
     backdrop-filter:blur(4px);
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    box-shadow:0 1px 4px rgba(0,0,0,.2);
     transition:transform var(--transition-fast), background var(--transition-fast);
   }
   .hive-cell-action-btn:hover{
@@ -278,14 +304,15 @@
 
   .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
   .hive-cell-name{
-    font-weight:900; font-size:18px; margin-top:10px; margin-bottom:8px;
+    font-weight:900; font-size:13px; margin-top:4px; margin-bottom:4px;
     text-shadow:0 1px 2px rgba(0,0,0,.2);
-    line-height:1.2; max-height:2.4em; overflow:hidden;
+    line-height:1.1; max-height:2.2em; overflow:hidden;
+    word-break:break-word;
   }
 
   .hive-cell-meta{
-    font-size:12px; font-weight:800; color:#3a250f;
-    display:flex; flex-direction:column; gap:6px; opacity:.96;
+    font-size:10px; font-weight:800; color:#3a250f;
+    display:flex; flex-direction:column; gap:3px; opacity:.96;
   }
   .hive-cell-meta .row{display:flex; align-items:center; justify-content:center; gap:6px;}
 
@@ -300,19 +327,19 @@
 
   /* modal overlay */
   .bee-modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    position:fixed; inset:0; background:rgba(0,0,0,.55);
     display:none; align-items:center; justify-content:center;
     z-index:9999; padding:20px;
   }
   .bee-modal-overlay.active{display:flex}
   .bee-modal{
-    width:min(700px,96vw);
+    width:min(340px,90vw);
     background:rgba(255,255,255,.98);
-    border-radius:22px; box-shadow:var(--shadow-deep);
-    padding:18px 18px 14px;
-    animation:popIn .18s ease-out;
+    border-radius:18px; box-shadow:var(--shadow-deep);
+    padding:20px;
+    animation:popIn .2s cubic-bezier(.34,1.56,.64,1);
   }
-  @keyframes popIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes popIn{from{transform:scale(.85) rotateZ(-2deg);opacity:0}to{transform:scale(1) rotateZ(0);opacity:1}}
   .bee-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
   .bee-modal-icon{
     width:44px;height:44px;border-radius:50%;
@@ -321,13 +348,14 @@
     font-size:22px;
   }
   .bee-modal-title{margin:0;font-size:20px;font-weight:900;color:#3b2410}
-  .bee-modal-body{font-size:15px;line-height:1.45;color:#2a1a0d;padding:6px 4px 12px}
-  .bee-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px}
+  .bee-modal-body{font-size:14px;line-height:1.5;color:#2a1a0d;padding:8px 4px 14px}
+  .bee-modal-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding-top:10px}
   .bee-modal-btn{
     border:none;cursor:pointer;font-weight:900;
-    border-radius:var(--radius-pill);padding:8px 14px;font-size:14px;
+    border-radius:12px;padding:12px 20px;font-size:15px;
     box-shadow:var(--shadow-soft);background:white;
     transition:transform var(--transition-fast), box-shadow var(--transition-fast);
+    width:100%;
   }
   .bee-modal-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-med)}
   .bee-modal-btn.primary{background:linear-gradient(135deg,var(--honey),var(--honey-deep));color:#3e260b}
@@ -359,14 +387,15 @@
   @media (max-width:720px){
     .hive-title-row h1{font-size:26px}
     .buzz-dust-container{padding:1.5rem !important;margin:1.5rem auto !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px 12px;}
-    .hive-cell{max-width:160px;min-height:190px}
+    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 14px;}
+    .hive-cell{max-width:110px;min-height:125px}
   }
   @media (max-width:480px){
     .buzz-dust-container{padding:1rem !important;margin:1rem 0.5rem !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px 10px;}
-    .hive-cell{max-width:145px;min-height:175px;padding:18px 12px}
-    .hive-cell-name{font-size:16px}
+    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:18px 12px;}
+    .hive-cell{max-width:100px;min-height:115px;padding:10px 8px}
+    .hive-cell-name{font-size:12px}
+    .hive-cell-meta{font-size:9px}
   }
 </style>
 {% endblock %}
@@ -381,8 +410,9 @@
     </div>
     <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
     <div class="bee-modal-actions">
-      <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
       <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
+      <button class="bee-modal-btn danger" id="modalDeleteBtn" onclick="deleteCurrentWords()" style="display:none">🗑️ Delete Current Words</button>
+      <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -431,13 +461,14 @@
 </div>
 
 <div class="hive-page">
-  <div class="hive-title-row">
-    <h1><span class="icon">🍯</span>My Word Lists</h1>
-    <div class="hive-actions">
-      <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
-      <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
-      <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
-    </div>
+  <div style="text-align:center;margin-bottom:1.5rem;max-width:900px;margin-left:auto;margin-right:auto;">
+    <h1 style="margin:0 0 1rem 0;font-size:32px;font-weight:900;display:inline-flex;align-items:center;gap:10px;text-shadow:0 1px 0 rgba(255,255,255,.6);"><span class="icon">🍯</span>My Word Lists</h1>
+  </div>
+  
+  <div class="hive-actions">
+    <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
+    <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
+    <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
   </div>
 
   <!-- Current Badge Display -->
@@ -519,6 +550,25 @@
   // long press sheet state
   let pressTimer = null;
   let sheetTarget = null;
+
+  // Sound effects
+  const sounds = {
+    click: new Audio('/static/SoundFxs/timer_beep.mp3'),
+    success: new Audio('/static/SoundFxs/we-can-be-bees.mp3'),
+    error: new Audio('/static/SoundFxs/salamisound-5949974-bee-or-wasp-in-flight-fast.mp3')
+  };
+
+  function playSound(type) {
+    try {
+      if (sounds[type]) {
+        sounds[type].currentTime = 0;
+        sounds[type].volume = 0.2;
+        sounds[type].play().catch(() => {}); // Silent fail if autoplay blocked
+      }
+    } catch(e) {
+      // Silent fail
+    }
+  }
 
   async function loadBuzzDustInfo(){
     try{
@@ -637,6 +687,7 @@
     cell.onclick=(e)=>{
       e.preventDefault();
       if(!e.target.closest(".hive-cell-action-btn")){
+        playSound('click');
         useListInQuiz(list.id);
       }
     };
@@ -754,7 +805,8 @@
           "Replace Current Words?",
           `You already have ${currentCount} word(s) loaded.<br><br>Loading this hive will replace them.`,
           "Yes, Load It!",
-          "primary"
+          "primary",
+          true  // Show delete button
         );
         if(!confirmed) return;
       }
@@ -987,7 +1039,7 @@
   }
 
   // MODAL (confirm/info)
-  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary"){
+  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary",showDelete=false){
     return new Promise(resolve=>{
       modalResolve=resolve;
       modalIcon.textContent=icon;
@@ -995,11 +1047,53 @@
       modalBody.innerHTML=message;
       modalConfirmBtn.textContent=confirmText;
       modalConfirmBtn.className="bee-modal-btn "+confirmType;
+      
+      // Show/hide delete button
+      const deleteBtn = document.getElementById("modalDeleteBtn");
+      if(deleteBtn) {
+        deleteBtn.style.display = showDelete ? "block" : "none";
+      }
+      
       beeModal.classList.add("active");
     });
   }
-  function confirmBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(true); modalResolve=null; }
-  function closeBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(false); modalResolve=null; }
+  function confirmBeeModal(){ 
+    playSound('click');
+    beeModal.classList.remove("active"); 
+    modalResolve?.(true); 
+    modalResolve=null; 
+  }
+  function closeBeeModal(){ 
+    playSound('click');
+    beeModal.classList.remove("active"); 
+    modalResolve?.(false); 
+    modalResolve=null; 
+  }
+
+  // Delete current wordbank words
+  async function deleteCurrentWords(){
+    try{
+      playSound('click');
+      const res = await fetch('/api/clear', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json'}
+      });
+      const data = await res.json();
+      if(data.success){
+        playSound('success');
+        showToast("✅ Current words deleted!","success");
+        closeBeeModal();
+      } else {
+        playSound('error');
+        showToast("❌ Failed to delete words","error");
+      }
+    } catch(err){
+      console.error(err);
+      playSound('error');
+      showToast("❌ Error deleting words","error");
+    }
+  }
 
   // PROMPT (create)
   function showBeePrompt(icon,title,message){
