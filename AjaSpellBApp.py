@@ -2487,6 +2487,37 @@ def api_debug_health():
             "type": type(e).__name__
         }), 500
 
+@app.route("/api/debug/session", methods=["GET"])
+def api_debug_session():
+    """Debug endpoint to check current session state and wordbank"""
+    session.permanent = True
+    
+    storage_id = session.get("wordbank_storage_id")
+    session_id = session.get("session_id")
+    
+    result = {
+        "session_id": session_id,
+        "storage_id": storage_id,
+        "session_keys": list(session.keys()),
+        "cookies_received": list(request.cookies.keys()),
+        "has_uploaded_once": session.get("has_uploaded_once", False),
+        "wordbank_count_session": session.get("wordbank_count", 0),
+    }
+    
+    # Check WORD_STORAGE
+    with WORD_STORAGE_LOCK:
+        result["word_storage_keys"] = list(WORD_STORAGE.keys())
+        if storage_id:
+            result["words_in_storage"] = len(WORD_STORAGE.get(storage_id, []))
+        else:
+            result["words_in_storage"] = 0
+    
+    # Check wordbank via get_wordbank()
+    wb = get_wordbank()
+    result["wordbank_via_get"] = len(wb)
+    
+    return jsonify(result)
+
 @app.route("/api/debug/systems-diagnostic", methods=["GET"])
 def systems_diagnostic():
     """Comprehensive systems diagnostic - tests all major functions, quizzes, and database connections."""
