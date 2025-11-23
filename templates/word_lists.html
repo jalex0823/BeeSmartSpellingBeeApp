@@ -1,1368 +1,1228 @@
 {% extends "base.html" %}
 
-{% block title %}My Word Lists - BeeSmart{% endblock %}
+{% block title %}My Word Lists - BeeSmart Spelling{% endblock %}
 
-{% block extra_css %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <style>
-  :root{
-    --honey-light:#fff3c4;
-    --honey:#ffc94a;
-    --honey-deep:#f4a623;
-    --honey-amber:#e78d17;
-    --bee-brown:#7a4b2b;
-    --bee-black:#1f1f1f;
-
-    --bg-gradient: radial-gradient(circle at 20% 10%, #ffe6ef 0%, transparent 40%),
-                   radial-gradient(circle at 90% 10%, #ffefc9 0%, transparent 45%),
-                   linear-gradient(135deg,#ffd1dc 0%,#ffe6b3 55%,#ffd6f2 100%);
-
-    --radius-xl:26px;
-    --radius-pill:999px;
-
-    --shadow-soft:0 10px 26px rgba(0,0,0,.12);
-    --shadow-med:0 16px 40px rgba(0,0,0,.18);
-    --shadow-deep:0 22px 60px rgba(0,0,0,.25);
-
-    --transition-fast:.16s ease-out;
-    --transition-med:.28s ease-out;
-  }
-
-  body{
-    margin:0;
-    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
-    background:var(--bg-gradient);
-    color:var(--bee-black);
-    min-height:100vh;
-  }
-
-  .hive-page{
-    max-width:1180px;
-    margin:0 auto;
-    padding:28px 18px 80px;
-    position:relative;
-  }
-
-  /* watermark */
-  .hive-page::after{
-    content:"";
-    position:fixed; inset:0;
-    background-image:
-      radial-gradient(circle at 20px 20px, rgba(255,201,74,0.09) 2px, transparent 3px),
-      radial-gradient(circle at 60px 60px, rgba(255,201,74,0.07) 2px, transparent 3px);
-    background-size:90px 90px;
-    pointer-events:none;
-    opacity:.45;
-    z-index:0;
-  }
-
-  /* flyover bee */
-  .bee-flyover{
-    position:fixed;
-    top:70px; left:-120px;
-    font-size:30px;
-    z-index:9998;
-    pointer-events:none;
-    filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
-    transition:transform 2.8s cubic-bezier(.15,.7,.2,1);
-  }
-  .bee-trail{
-    position:fixed; top:86px; left:-120px;
-    width:10px; height:10px;
-    border-radius:50%;
-    background:rgba(255,201,74,.9);
-    box-shadow:0 0 12px rgba(255,201,74,.9);
-    z-index:9997; pointer-events:none;
-    animation:trailFade 1.1s ease forwards;
-  }
-  @keyframes trailFade{
-    from{transform:scale(1);opacity:1}
-    to{transform:scale(2.3);opacity:0}
-  }
-
-  /* breadcrumb */
-  .hive-breadcrumb{
-    font-size:14px; opacity:.8; margin-bottom:8px;
-    display:flex; align-items:center; gap:6px;
-    position:relative; z-index:1;
-  }
-  .hive-breadcrumb a{
-    color:var(--bee-brown); text-decoration:none; font-weight:800;
-  }
-
-  .hive-title-row{
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
-    gap:12px; margin-bottom:14px; position:relative; z-index:1;
-  }
-  .hive-title-row h1{
-    margin:0; font-size:30px; letter-spacing:.02em;
-    display:flex; align-items:center; gap:10px;
-    text-shadow:0 1px 0 rgba(255,255,255,.6);
-  }
-
-  /* buttons */
-  .hive-actions{
-    display:flex; 
-    gap:10px; 
-    flex-wrap:wrap; 
-    justify-content:center;
-    margin:0 auto;
-    max-width:900px;
-  }
-  .hive-btn{
-    border:none; outline:none; cursor:pointer;
-    border-radius:var(--radius-pill);
-    padding:10px 18px; font-size:15px; font-weight:800;
-    display:flex; align-items:center; gap:8px;
-    background:rgba(255,255,255,.95);
-    box-shadow:var(--shadow-soft);
-    transition:transform var(--transition-fast), box-shadow var(--transition-fast);
-  }
-  .hive-btn.primary{
-    background:linear-gradient(135deg,var(--honey),var(--honey-deep));
-    color:#3e260b;
-  }
-  .hive-btn:hover{transform:translateY(-2px); box-shadow:var(--shadow-med)}
-  .hive-btn:active{transform:translateY(0); box-shadow:var(--shadow-soft)}
-
-  /* stats */
-  .hive-stats-bar{
-    background:rgba(255,255,255,.9);
-    border-radius:var(--radius-xl);
-    box-shadow:var(--shadow-soft);
-    padding:12px 16px;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-    gap:8px;
-    margin:12px auto 16px;
-    max-width:900px;
-    position:relative; z-index:1;
-    justify-items:center;
-  }
-  .hive-stat{display:flex; gap:10px; align-items:center;}
-  .hive-stat-icon{
-    width:36px; height:36px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(135deg,var(--honey-light),var(--honey));
-    font-size:18px;
-  }
-  .hive-stat-text{display:flex; flex-direction:column; font-size:12px;}
-  .hive-stat-label{opacity:.72; font-weight:700;}
-  .hive-stat-value{font-weight:900; font-size:18px;}
-
-  /* controls */
-  .hive-controls{
-    display:flex; 
-    flex-wrap:wrap; 
-    gap:10px; 
-    align-items:center; 
-    justify-content:center;
-    margin:10px auto 18px; 
-    position:relative; 
-    z-index:1;
-    max-width:900px;
-  }
-  .hive-search-wrapper{
-    display:flex; align-items:center; gap:8px;
-    background:rgba(255,255,255,.94);
-    border-radius:var(--radius-pill);
-    padding:7px 12px;
-    box-shadow:var(--shadow-soft);
-    min-width:260px; flex:1; max-width:420px;
-  }
-  .hive-search-wrapper input{
-    border:none; outline:none; flex:1; font-size:14px; background:transparent;
-  }
-  .hive-sort-wrapper{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#573517;}
-  .hive-sort-wrapper select{
-    border:none; outline:none; cursor:pointer;
-    border-radius:var(--radius-pill);
-    padding:7px 12px;
-    background:rgba(255,255,255,.97);
-    box-shadow:var(--shadow-soft);
-    font-weight:800;
-  }
-
-  /* centered card container */
-  .hive-card{
-    background:rgba(255,255,255,0.7);
-    backdrop-filter:blur(10px);
-    border-radius:var(--radius-xl);
-    padding:24px;
-    margin:0 auto;
-    max-width:900px;
-    box-shadow:var(--shadow-med);
-    position:relative;
-    z-index:1;
-  }
-
-  /* honeycomb grid - responsive 3-4 columns */
-  .hive-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-    gap:32px 24px;
-    padding-top:16px;
-    position:relative;
-    justify-items:center;
-    max-width:100%;
-  }
-
-  /* wobble */
-  @keyframes buzzWobble{
-    0%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
-    30%{transform:translateY(-10px) scale(1.04) rotate(-1.2deg)}
-    60%{transform:translateY(-10px) scale(1.04) rotate(1deg)}
-    100%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
-  }
-
-  .hive-cell{
-    position:relative; text-decoration:none; color:inherit; cursor:pointer;
-    clip-path:polygon(25% 5%,75% 5%,98% 50%,75% 95%,25% 95%,2% 50%);
-    background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
-    box-shadow:var(--shadow-med);
-    width:100%;
-    max-width:100px;
-    min-height:115px;
-    display:flex; align-items:center; justify-content:center;
-    padding:12px 10px;
-    transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
-    animation: hexFadeIn .35s ease forwards;
-    user-select:none;
-  }
-  .hive-cell:nth-child(odd){transform:translateY(8px)}
-  .hive-cell:nth-child(even){transform:translateY(-8px)}
-  .hive-cell::before{
-    content:""; position:absolute; inset:2px; clip-path:inherit;
-    background:radial-gradient(circle at 20% 0, rgba(255,255,255,.7), transparent 60%);
-    opacity:.9; pointer-events:none;
-  }
-  .hive-cell:hover{
-    animation:buzzWobble .35s ease-out 1;
-    box-shadow:var(--shadow-deep);
-    filter:brightness(1.06);
-  }
-  .hive-cell:active{
-    transform:scale(.94) translateY(2px)!important;
-    filter:brightness(1.12) saturate(1.2);
-    box-shadow:0 0 20px rgba(255,201,74,.8), var(--shadow-deep);
-  }
-  @keyframes clickRipple{
-    0%{transform:scale(.8);opacity:1}
-    100%{transform:scale(2.5);opacity:0}
-  }
-
-  /* Fade-in animation for hexes */
-  @keyframes hexFadeIn{
-    0%{opacity:0; transform:translateY(12px) scale(.96);}
-    100%{opacity:1; transform:translateY(0) scale(1);}
-  }
-
-  /* FAVORITE glow ring */
-  .hive-cell.is-favorite{
-    box-shadow:
-      0 0 0 3px rgba(255,255,255,.9),
-      0 0 0 7px rgba(255,201,74,.95),
-      0 0 30px rgba(255,201,74,.9),
-      var(--shadow-deep);
-    animation: favPulse 2.4s ease-in-out infinite;
-  }
-  @keyframes favPulse{
-    0%,100%{filter:brightness(1.05)}
-    50%{filter:brightness(1.12)}
-  }
-
-  /* badge */
-  .hive-cell-badge{
-    position:absolute; top:42px; left:50%; transform:translateX(-50%);
-    background:rgba(255,255,255,.96);
-    border-radius:var(--radius-pill);
-    padding:3px 8px; font-size:10px; font-weight:900;
-    color:var(--bee-brown);
-    box-shadow:0 2px 6px rgba(0,0,0,.15);
-    z-index:2; display:flex; align-items:center; gap:4px;
-  }
-
-  /* actions */
-  .hive-cell-actions{
-    position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:3;
-    display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
-    max-width:90%;
-  }
-  .hive-cell-action-btn{
-    width:26px; height:26px; border:none; cursor:pointer;
-    border-radius:50%; font-size:13px; font-weight:900;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.85);
-    backdrop-filter:blur(4px);
-    box-shadow:0 1px 4px rgba(0,0,0,.2);
-    transition:transform var(--transition-fast), background var(--transition-fast);
-  }
-  .hive-cell-action-btn:hover{
-    transform:translateY(-2px) scale(1.06);
-    background:rgba(255,255,255,.3);
-  }
-  .hive-cell-action-btn.favorite{font-size:17px}
-  .hive-cell-action-btn.quiz{
-    font-size:18px;
-    background:rgba(255,201,74,0.2);
-  }
-  .hive-cell-action-btn.quiz:hover{
-    background:rgba(255,201,74,0.4);
-  }
-
-  .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
-  .hive-cell-name{
-    font-weight:900; font-size:12px; margin-top:6px; margin-bottom:6px;
-    text-shadow:0 1px 2px rgba(0,0,0,.3);
-    line-height:1.2; max-height:2.4em; overflow:hidden;
-    word-break:break-word;
-    color:#2b1a00;
-    padding:0 4px;
-  }
-
-  .hive-cell-meta{
-    font-size:10px; font-weight:800; color:#3a250f;
-    display:flex; flex-direction:column; gap:3px; opacity:.96;
-  }
-  .hive-cell-meta .row{display:flex; align-items:center; justify-content:center; gap:6px;}
-
-  /* Earned Buzz-Dust tag */
-  .hive-earned-tag{
-    margin-top:4px;
-    font-size:10px;
-    font-weight:900;
-    color:#7a4b2b;
-    background:rgba(255,255,255,0.7);
-    padding:3px 6px;
-    border-radius:8px;
-    box-shadow:0 2px 4px rgba(0,0,0,.10);
-  }
-
-  /* empty state */
-  .hive-empty{
-    grid-column:1/-1;
-    background:rgba(255,255,255,.95);
-    border-radius:var(--radius-xl);
-    padding:44px 24px; text-align:center;
-    box-shadow:var(--shadow-soft);
-  }
-
-  /* modal overlay */
-  .bee-modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.55);
-    display:none; align-items:center; justify-content:center;
-    z-index:9999; padding:20px;
-  }
-  .bee-modal-overlay.active{display:flex}
-  .bee-modal{
-    width:min(340px,90vw);
-    background:rgba(255,255,255,.98);
-    border-radius:18px; box-shadow:var(--shadow-deep);
-    padding:20px;
-    animation:popIn .2s cubic-bezier(.34,1.56,.64,1);
-  }
-  @keyframes popIn{from{transform:scale(.85) rotateZ(-2deg);opacity:0}to{transform:scale(1) rotateZ(0);opacity:1}}
-  .bee-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-  .bee-modal-icon{
-    width:44px;height:44px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,var(--honey-light),var(--honey));
-    font-size:22px;
-  }
-  .bee-modal-title{margin:0;font-size:20px;font-weight:900;color:#3b2410}
-  .bee-modal-body{font-size:14px;line-height:1.5;color:#2a1a0d;padding:8px 4px 14px}
-  .bee-modal-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding-top:10px}
-  .bee-modal-btn{
-    border:none;cursor:pointer;font-weight:900;
-    border-radius:12px;padding:12px 20px;font-size:15px;
-    box-shadow:var(--shadow-soft);background:white;
-    transition:transform var(--transition-fast), box-shadow var(--transition-fast);
-    width:100%;
-  }
-  .bee-modal-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-med)}
-  .bee-modal-btn.primary{background:linear-gradient(135deg,var(--honey),var(--honey-deep));color:#3e260b}
-  .bee-modal-btn.secondary{background:#f3f3f3}
-  .bee-modal-btn.danger{background:linear-gradient(135deg,#ffb3b3,#ff6b6b);color:#3b0a0a}
-
-  /* action sheet for long-press */
-  .bee-sheet{
-    position:fixed; left:50%; bottom:-380px; transform:translateX(-50%);
-    width:min(520px,96vw);
-    background:rgba(255,255,255,.98);
-    border-radius:18px 18px 0 0;
-    box-shadow:var(--shadow-deep);
-    padding:14px;
-    z-index:9999;
-    transition:bottom .22s ease-out;
-  }
-  .bee-sheet.active{bottom:0}
-  .bee-sheet-title{font-weight:900;font-size:16px;margin:4px 0 10px;color:#3b2410}
-  .bee-sheet-btn{
-    width:100%; text-align:left; border:none; cursor:pointer;
-    border-radius:12px; padding:12px 12px; margin:6px 0;
-    font-weight:900; font-size:15px;
-    background:#fff; box-shadow:var(--shadow-soft);
-    display:flex; align-items:center; gap:10px;
-  }
-  .bee-sheet-btn.danger{background:#fff0f0}
-
-  @media (max-width:720px){
-    .hive-title-row h1{font-size:26px}
-    .buzz-dust-container{padding:1.5rem !important;margin:1.5rem auto !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 14px;}
-    .hive-cell{max-width:110px;min-height:125px}
-  }
-  @media (max-width:480px){
-    .buzz-dust-container{padding:1rem !important;margin:1rem 0.5rem !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:18px 12px;}
-    .hive-cell{max-width:100px;min-height:115px;padding:10px 8px}
-    .hive-cell-name{font-size:12px}
-    .hive-cell-meta{font-size:9px}
-  }
-
-  /* =========================================================
-     MOBILE + AESTHETIC POLISH OVERRIDES
-     ========================================================= */
-
-  .hive-page{
-    padding-left: max(14px, env(safe-area-inset-left));
-    padding-right: max(14px, env(safe-area-inset-right));
-    padding-bottom: max(90px, env(safe-area-inset-bottom));
-  }
-
-  .hive-page > div:first-child{
-    margin-bottom: 1.6rem !important;
-  }
-
-  .hive-actions{
-    position: sticky;
-    top: 10px;
-    z-index: 5;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(8px);
-    padding: 10px;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft);
-  }
-
-  .hive-btn{
-    min-height: 44px;
-    padding: 11px 18px;
-  }
-  @media (max-width:520px){
-    .hive-btn{
-      flex: 1 1 auto;
-      justify-content: center;
+    :root {
+        --honey-gold: #FFD700;
+        --honey-amber: #FFA500;
+        --bee-brown: #5A2C15;
+        --pollen-yellow: #FFE5B4;
+        --hive-gray: #F5F5DC;
     }
-  }
 
-  :root{
-    --hex-w: clamp(96px, 22vw, 120px);
-    --hex-h: calc(var(--hex-w) * 1.15);
-  }
-
-  .hive-grid{
-    grid-template-columns: repeat(auto-fit, minmax(var(--hex-w), 1fr));
-    gap: clamp(14px, 3.5vw, 30px) clamp(10px, 3vw, 24px);
-  }
-
-  .hive-cell{
-    max-width: var(--hex-w);
-    min-height: var(--hex-h);
-    padding: clamp(8px, 2vw, 14px);
-  }
-
-  @media (max-width:640px){
-    .hive-cell:nth-child(odd),
-    .hive-cell:nth-child(even){
-      transform: translateY(0) !important;
+    body {
+        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 50%, #FFA500 100%);
+        min-height: 100vh;
+        font-family: 'Nunito', sans-serif;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
-  }
 
-  .hive-cell-actions{
-    top: 8px;
-    gap: 6px;
-  }
-  .hive-cell-action-btn{
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
-    box-shadow: 0 3px 8px rgba(0,0,0,.18);
-  }
-
-  .hive-cell-name{
-    font-size: clamp(12px, 2.8vw, 14px);
-    margin-top: 10px;
-    text-shadow: none;
-  }
-
-  .hive-cell-badge{
-    top: 46px;
-    font-size: 10.5px;
-    padding: 4px 9px;
-  }
-
-  @media (max-width:640px){
-    .hive-controls{
-      flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
+    .word-lists-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1rem;
     }
-    .hive-search-wrapper{
-      min-width: 0;
-      width: 100%;
-      max-width: none;
-    }
-    .hive-sort-wrapper{
-      width: 100%;
-      justify-content: space-between;
-    }
-    .hive-sort-wrapper select{
-      width: 55%;
-    }
-  }
 
-  @media (prefers-reduced-transparency: reduce){
-    .hive-card,
-    .buzz-dust-container,
-    .hive-actions{
-      backdrop-filter: none;
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 3px solid var(--honey-gold);
     }
-  }
+    
+    @media (min-width: 768px) {
+        .word-lists-container {
+            padding: 2rem;
+        }
+        
+        .header-section {
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+    }
 
-  @media (prefers-reduced-motion: reduce){
-    .hive-cell:hover{ animation: none; }
-  }
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
 
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .header-title h1 {
+        font-size: 1.75rem;
+        color: var(--bee-brown);
+        margin: 0;
+        font-weight: 900;
+    }
+
+    .header-title .bee-icon {
+        font-size: 2rem;
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @media (min-width: 768px) {
+        .header-title h1 {
+            font-size: 2.5rem;
+        }
+        
+        .header-title .bee-icon {
+            font-size: 3rem;
+        }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .action-button {
+        padding: 0.875rem 1.5rem;
+        border: none;
+        border-radius: 16px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        white-space: nowrap;
+        min-height: 48px; /* Better mobile touch target */
+    }
+    
+    @media (min-width: 768px) {
+        .action-button {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: var(--bee-brown);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-home {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+    }
+
+    .btn-home:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4);
+    }
+
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (min-width: 640px) {
+        .stats-section {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .stats-section {
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 2px solid var(--honey-gold);
+        transition: transform 0.3s ease;
+        text-align: center;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-card {
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 900;
+        color: var(--bee-brown);
+        margin: 0.5rem 0;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 600;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-icon {
+            font-size: 2.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+        }
+    }
+
+    .lists-section {
+        background: white;
+        border-radius: 20px;
+        padding: 1.25rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 3px solid var(--honey-gold);
+    }
+    
+    @media (min-width: 768px) {
+        .lists-section {
+            border-radius: 24px;
+            padding: 2rem;
+        }
+    }
+
+    .lists-header {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--pollen-yellow);
+    }
+
+    .lists-header h2 {
+        font-size: 1.5rem;
+        color: var(--bee-brown);
+        margin: 0;
+        font-weight: 800;
+    }
+    
+    @media (min-width: 768px) {
+        .lists-header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .lists-header h2 {
+            font-size: 2rem;
+        }
+    }
+
+    .search-filter {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .search-box {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--honey-gold);
+        border-radius: 12px;
+        font-size: 1rem;
+        width: 100%;
+        transition: all 0.3s ease;
+        min-height: 48px; /* Better mobile touch target */
+    }
+    
+    @media (min-width: 768px) {
+        .search-filter {
+            flex-direction: row;
+            gap: 1rem;
+            align-items: center;
+            width: auto;
+        }
+        
+        .search-box {
+            padding: 0.75rem 1.5rem;
+            width: 300px;
+        }
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: var(--honey-amber);
+        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+    }
+
+    .sort-dropdown {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--honey-gold);
+        border-radius: 12px;
+        font-size: 1rem;
+        background: white;
+        cursor: pointer;
+        font-weight: 600;
+        width: 100%;
+        min-height: 48px; /* Better mobile touch target */
+    }
+    
+    @media (min-width: 768px) {
+        .sort-dropdown {
+            padding: 0.75rem 1.5rem;
+            width: auto;
+        }
+    }
+
+    .lists-grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: 1fr; /* single column by default (mobile-first) */
+    }
+    @media (min-width: 640px) { /* sm */
+        .lists-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+    }
+    @media (min-width: 1024px) { /* lg */
+        .lists-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1.75rem;
+        }
+    }
+
+    .list-card {
+        background: linear-gradient(135deg, #fff 0%, #FFF9E6 100%);
+        border: 3px solid rgba(255, 215, 0, 0.4);
+        border-radius: 16px;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+    
+    @media (min-width: 768px) {
+        .list-card {
+            border-radius: 20px;
+            padding: 2rem;
+        }
+    }
+
+    .list-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: linear-gradient(90deg, #FFD700, #FFA500, #FF6B00, #FFA500, #FFD700);
+        background-size: 200% 100%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .list-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px rgba(255, 215, 0, 0.3);
+        border-color: var(--honey-amber);
+    }
+
+    .list-card:hover::before {
+        opacity: 1;
+    }
+
+    .list-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .list-icon {
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        background: #FFF5CC;
+        border: 2px solid rgba(255, 215, 0, 0.6);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+
+    .list-info {
+        flex: 1;
+    }
+
+    .list-name {
+        font-size: 1.35rem;
+        font-weight: 900;
+        color: var(--bee-brown);
+        margin: 0 0 0.75rem 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .word-count-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: var(--bee-brown);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 1rem;
+        font-weight: 800;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+        border: 2px solid rgba(255, 140, 0, 0.3);
+        align-self: flex-start;
+    }
+    
+    @media (min-width: 640px) {
+        .list-name {
+            flex-direction: row;
+            align-items: center;
+            font-size: 1.5rem;
+        }
+        
+        .word-count-badge {
+            font-size: 1.1rem;
+            padding: 0.5rem 1.25rem;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .list-name {
+            font-size: 1.75rem;
+        }
+        
+        .word-count-badge {
+            font-size: 1.25rem;
+        }
+    }
+
+    .list-description {
+        color: #666;
+        font-size: 0.95rem;
+        margin: 0.75rem 0;
+        line-height: 1.5;
+    }
+    
+    @media (min-width: 768px) {
+        .list-description {
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+    }
+
+    .list-meta {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .meta-icon {
+        font-size: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .meta-item {
+            font-size: 0.95rem;
+        }
+        
+        .meta-icon {
+            font-size: 1.2rem;
+        }
+    }
+
+    .list-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .list-btn {
+        padding: 0.875rem 1.25rem;
+        border: none;
+        border-radius: 14px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        min-height: 48px; /* Better mobile touch target */
+        width: 100%;
+    }
+    
+    @media (min-width: 640px) {
+        .list-actions {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .list-btn {
+            flex: 1;
+            min-width: 140px;
+            width: auto;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .list-actions {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+        }
+        
+        .list-btn {
+            padding: 1rem 1.75rem;
+            font-size: 1.05rem;
+            min-width: 160px;
+        }
+    }
+
+    .btn-use {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border: 2px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .btn-use:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+        border: 2px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-view:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-edit {
+        background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+        color: white;
+        border: 2px solid rgba(156, 39, 176, 0.3);
+    }
+
+    .btn-edit:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
+    }
+
+    .btn-upload {
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        color: white;
+        border: 2px solid rgba(255, 152, 0, 0.3);
+    }
+
+    .btn-upload:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+    }
+
+    .btn-delete {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        color: white;
+        border: 2px solid rgba(244, 67, 54, 0.3);
+    }
+
+    .btn-delete:hover {
+        transform: scale(1.05) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        color: var(--bee-brown);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 2rem;
+    }
+    
+    @media (min-width: 768px) {
+        .empty-state {
+            padding: 4rem 2rem;
+        }
+        
+        .empty-state-icon {
+            font-size: 5rem;
+        }
+        
+        .empty-state h3 {
+            font-size: 2rem;
+        }
+        
+        .empty-state p {
+            font-size: 1.2rem;
+        }
+    }
+
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 4rem;
+    }
+
+    .spinner {
+        width: 60px;
+        height: 60px;
+        border: 6px solid var(--pollen-yellow);
+        border-top: 6px solid var(--honey-gold);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Toast notifications */
+    .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        left: 1.5rem;
+        background: white;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-left: 4px solid var(--honey-gold);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    }
+    
+    @media (min-width: 640px) {
+        .toast {
+            left: auto;
+            right: 2rem;
+            bottom: 2rem;
+            max-width: 400px;
+        }
+    }
+
+    .toast.success {
+        border-left-color: #4CAF50;
+    }
+
+    .toast.error {
+        border-left-color: #f44336;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-new {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .badge-large {
+        background: #FF9800;
+        color: white;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Confirm/Info Modal -->
-<div class="bee-modal-overlay" id="beeModal">
-  <div class="bee-modal">
-    <div class="bee-modal-header">
-      <div class="bee-modal-icon" id="modalIcon">🐝</div>
-      <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
+<div class="word-lists-container">
+    <!-- Breadcrumb Navigation -->
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #5A2C15; font-weight: 600; flex-wrap: wrap;">
+            <a href="/" style="color: #FF8F00; text-decoration: none; transition: color 0.3s; display: flex; align-items: center; gap: 0.25rem;" onmouseover="this.style.color='#FF6B00'" onmouseout="this.style.color='#FF8F00'">
+                <span>🏠</span>
+                <span style="display: none;">Home</span>
+            </a>
+            <span style="color: #D2691E;">›</span>
+            <span style="color: #5A2C15;">📚 My Word Lists</span>
+        </div>
     </div>
-    <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
-    <div class="bee-modal-actions">
-      <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
-      <button class="bee-modal-btn danger" id="modalDeleteBtn" onclick="deleteCurrentWords()" style="display:none">🗑️ Delete Current Words</button>
-      <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
-    </div>
-  </div>
-</div>
+    
+    <style>
+        @media (min-width: 640px) {
+            .word-lists-container > div:first-child a span:last-child {
+                display: inline !important;
+            }
+        }
+    </style>
 
-<!-- Edit Modal -->
-<div class="bee-modal-overlay" id="editModal">
-  <div class="bee-modal">
-    <div class="bee-modal-header">
-      <div class="bee-modal-icon">✏️</div>
-      <h2 class="bee-modal-title">Edit Word List</h2>
-    </div>
-
-    <div class="bee-modal-body">
-      <label style="font-weight:900;">Hive Name</label>
-      <input id="editName" type="text" style="
-        width:100%; padding:.8rem; font-size:1.05rem; font-weight:800;
-        border:3px solid var(--honey); border-radius:12px; outline:none; margin:6px 0 14px;
-      " />
-
-      <label style="font-weight:900;">Words (one per line)</label>
-      <textarea id="editWords" rows="10" style="
-        width:100%; padding:.8rem; font-size:1rem; font-weight:700;
-        border:3px solid var(--honey); border-radius:12px; outline:none; margin-top:6px;
-      "></textarea>
-      <div style="font-size:12px;opacity:.75;margin-top:6px;">
-        Tip: Blank lines will be ignored.
-      </div>
-    </div>
-
-    <div class="bee-modal-actions">
-      <button class="bee-modal-btn secondary" onclick="closeEditModal()">Cancel</button>
-      <button class="bee-modal-btn primary" onclick="saveEditModal()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<!-- Long-Press Action Sheet -->
-<div class="bee-sheet" id="beeSheet">
-  <div class="bee-sheet-title" id="beeSheetTitle">Hive Actions</div>
-  <button class="bee-sheet-btn" id="sheetQuizBtn">▶ Start Quiz</button>
-  <button class="bee-sheet-btn" id="sheetViewBtn">👁️ View Hive</button>
-  <button class="bee-sheet-btn" id="sheetEditBtn">✏️ Edit Hive</button>
-  <button class="bee-sheet-btn" id="sheetFavBtn">⭐ Pin / Unpin</button>
-  <button class="bee-sheet-btn danger" id="sheetDeleteBtn">🗑️ Delete Hive</button>
-  <button class="bee-sheet-btn" onclick="closeBeeSheet()">Close</button>
-</div>
-
-<div class="hive-page" style="padding-top:2rem;">
-  <div style="text-align:center;margin-bottom:3rem;max-width:900px;margin-left:auto;margin-right:auto;">
-    <h1 style="margin:0 0 2.5rem 0;font-size:32px;font-weight:900;display:inline-flex;align-items:center;gap:10px;text-shadow:0 1px 0 rgba(255,255,255,.6);"><span class="icon">🍯</span>My Word Lists</h1>
-  </div>
-  
-  <div class="hive-actions" style="margin-bottom:2.5rem;">
-    <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
-    <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
-    <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
-  </div>
-
-  <!-- Current Badge Display -->
-  <div id="current-badge-display" style="
-    background:rgba(255,255,255,0.9);
-    border-radius:var(--radius-xl);
-    padding:1.5rem;
-    margin:0 auto 2.5rem;
-    max-width:400px;
-    text-align:center;
-    box-shadow:var(--shadow-soft);
-    display:none;
-  ">
-    <div style="font-size:0.875rem;font-weight:700;color:#7a4b2b;margin-bottom:0.5rem;">Your Current Badge</div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;">
-      <img id="current-badge-icon" src="" alt="Current Badge" style="width:64px;height:64px;display:none;">
-      <div style="text-align:left;">
-        <div id="current-badge-name" style="font-size:1.5rem;font-weight:900;color:#8B008B;">Loading...</div>
-        <div id="current-buzz-dust" style="font-size:1.125rem;font-weight:700;color:#7a4b2b;">0 ✨ Buzz Dust</div>
-      </div>
-    </div>
-    <div id="next-badge-progress" style="margin-top:1rem;font-size:0.875rem;color:#666;font-weight:600;display:none;">
-      <div style="margin-bottom:0.25rem;">Progress to <span id="next-badge-name" style="color:#8B008B;font-weight:800;"></span></div>
-      <div style="background:#e0e0e0;border-radius:10px;height:8px;overflow:hidden;">
-        <div id="badge-progress-bar" style="background:linear-gradient(90deg,var(--honey),var(--honey-deep));height:100%;width:0%;transition:width 0.5s ease;"></div>
-      </div>
-      <div style="margin-top:0.25rem;font-size:0.75rem;"><span id="buzz-dust-needed">0</span> more Buzz Dust needed</div>
-    </div>
-  </div>
-
-  <div class="hive-stats-bar" style="margin-bottom:2.5rem;">
-    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Lists</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">✨</div><div class="hive-stat-text"><span class="hive-stat-label">Total Words</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Hive</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
-  </div>
-
-  <!-- Buzz Dust Grid Container -->
-  <div class="buzz-dust-container">
-    <div class="hive-controls" style="margin-bottom:1.5rem;">
-      <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
-      <div class="hive-sort-wrapper">Sort by:
-        <select id="hiveSortSelect">
-          <option value="recent">Most Recent</option>
-          <option value="name">Name (A–Z)</option>
-          <option value="largest">Largest First</option>
-          <option value="smallest">Smallest First</option>
-        </select>
-      </div>
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <span class="bee-icon">🐝</span>
+                <h1>My Word Lists</h1>
+            </div>
+            <div class="header-actions">
+                <button class="action-button btn-home" onclick="window.location.href='/'">
+                    🏠 Back to Home
+                </button>
+                <button class="action-button btn-primary" onclick="createNewList()">
+                    ➕ Create New List
+                </button>
+                <button class="action-button btn-secondary" onclick="window.location.href='/upload'">
+                    📤 Upload Words
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div class="hive-grid" id="hiveGrid">
-      <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
-        <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
-        <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
-      </div>
+    <!-- Stats Section -->
+    <div class="stats-section">
+        <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-value" id="totalListsCount">0</div>
+            <div class="stat-label">Total Word Lists</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-value" id="totalWordsCount">0</div>
+            <div class="stat-label">Total Words</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-value" id="largestListCount">0</div>
+            <div class="stat-label">Largest List</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-value" id="avgWordsCount">0</div>
+            <div class="stat-label">Avg Words/List</div>
+        </div>
     </div>
-  </div>
+
+    <!-- Lists Section -->
+    <div class="lists-section">
+        <div class="lists-header">
+            <h2>📋 Your Saved Lists</h2>
+            <div class="search-filter">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search lists...">
+                <select class="sort-dropdown" id="sortDropdown">
+                    <option value="recent">Most Recent</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="words">Most Words</option>
+                    <option value="oldest">Oldest First</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="listsContainer">
+            <!-- Lists will be loaded here -->
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-  let allLists = [];
-  let filteredLists = [];
-  let modalResolve = null;
+// Global state
+let allLists = [];
+let filteredLists = [];
 
-  // favorites stored locally unless API exists
-  const favKey = "beesmart_favorites";
-  const localFavs = new Set(JSON.parse(localStorage.getItem(favKey) || "[]"));
+// Load lists on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadWordLists();
+    
+    // Setup search
+    document.getElementById('searchBox').addEventListener('input', filterAndDisplayLists);
+    document.getElementById('sortDropdown').addEventListener('change', filterAndDisplayLists);
+});
 
-  // edit modal state
-  let editTarget = null;
-
-  // long press sheet state
-  let pressTimer = null;
-  let sheetTarget = null;
-
-  // Sound effects
-  const sounds = {
-    click: new Audio('/static/SoundFxs/timer_beep.mp3'),
-    success: new Audio('/static/SoundFxs/we-can-be-bees.mp3'),
-    error: new Audio('/static/SoundFxs/salamisound-5949974-bee-or-wasp-in-flight-fast.mp3')
-  };
-
-  function playSound(type) {
+// Load word lists from API
+async function loadWordLists() {
     try {
-      if (sounds[type]) {
-        sounds[type].currentTime = 0;
-        sounds[type].volume = 0.2;
-        sounds[type].play().catch(() => {}); // Silent fail if autoplay blocked
-      }
-    } catch(e) {
-      // Silent fail
-    }
-  }
-
-  async function loadBuzzDustInfo(){
-    try{
-      const res = await fetch('/api/buzz-dust/info',{credentials:'same-origin',cache:'no-store'});
-      const data = await res.json();
-      
-      if(data.success && data.current_class){
-        const badgeDisplay = document.getElementById('current-badge-display');
-        const badgeIcon = document.getElementById('current-badge-icon');
-        const badgeName = document.getElementById('current-badge-name');
-        const buzzDust = document.getElementById('current-buzz-dust');
-        const nextProgress = document.getElementById('next-badge-progress');
-        const nextName = document.getElementById('next-badge-name');
-        const progressBar = document.getElementById('badge-progress-bar');
-        const buzzNeeded = document.getElementById('buzz-dust-needed');
+        const response = await fetch('/api/saved-lists', {
+            credentials: 'same-origin'  // Include session cookie
+        });
         
-        badgeName.textContent = data.current_class.label || 'Novice Bee';
-        buzzDust.textContent = `${(data.total_buzz_dust||0).toLocaleString()} ✨ Buzz Dust`;
-        
-        if(data.current_class.badge_image){
-          badgeIcon.src = `/static/assets/badges/${data.current_class.badge_image}`;
-          badgeIcon.style.display = 'block';
+        // Check for authentication errors
+        if (response.status === 401 || response.status === 403) {
+            console.log('🔐 Authentication required for word lists');
+            displayAuthRequiredState();
+            return;
         }
         
-        if(data.next_class && !data.at_max_rank){
-          nextName.textContent = data.next_class.label;
-          const needed = data.next_class.min_points - data.total_buzz_dust;
-          const progress = Math.min(100, (data.total_buzz_dust / data.next_class.min_points) * 100);
-          progressBar.style.width = progress + '%';
-          buzzNeeded.textContent = needed.toLocaleString();
-          nextProgress.style.display = 'block';
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
         
-        badgeDisplay.style.display = 'block';
-      }
-    }catch(err){
-      console.error('Failed to load Buzz Dust info:',err);
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduceMotion) runBeeFlyover();
-    await loadBuzzDustInfo();
-    await loadWordLists();
-  });
-
-  async function loadWordLists(){
-    try{
-      const res = await fetch("/api/saved-lists",{credentials:"same-origin",cache:"no-store"});
-      const data = await res.json();
-      console.log('📋 Word lists API response:', data);
-
-      if(data.ok && data.lists){
-        allLists = data.lists;
-        console.log('✅ Loaded', allLists.length, 'word lists');
-        // merge server favorites if present
-        for(const l of allLists){
-          if(l.is_favorite) localFavs.add(l.id);
+        const data = await response.json();
+        
+        if (data.ok && data.lists) {
+            allLists = data.lists;
+            filteredLists = [...allLists];
+            updateStats();
+            filterAndDisplayLists();
+        } else {
+            displayEmptyState();
         }
-        filteredLists = [...allLists];
-        updateStats();
-        renderHoneycombs();
-      }else if(data.auth_required){
-        console.log('🔒 Auth required');
-        displayLoginRequired();
-      }else{
-        console.log('📭 No lists found, showing empty state');
-        displayEmptyHive();
-      }
-    }catch(err){
-      console.error('❌ Error loading word lists:', err);
-      displayEmptyHive();
+    } catch (error) {
+        console.error('Error loading lists:', error);
+        // Don't show error toast for auth issues
+        if (error.message && !error.message.includes('401') && !error.message.includes('403')) {
+            showToast('Failed to load word lists', 'error');
+        }
+        displayEmptyState();
     }
-  }
-
-  function updateStats(){
-    const totalLists = allLists.length;
-    const totalWords = allLists.reduce((s,l)=>s+(l.word_count||0),0);
-    const largestList = totalLists?Math.max(...allLists.map(l=>l.word_count||0)):0;
-
-    statsBeesInHive.textContent = totalLists;
-    statsHoneyStored.textContent = totalWords;
-    statsLargestHoneycomb.textContent = largestList;
-  }
-
-  function renderHoneycombs(){
-    const grid = document.getElementById("hiveGrid");
-    console.log('🎨 Rendering honeycombs, filteredLists.length:', filteredLists.length);
-    if(!filteredLists.length){ displayEmptyHive(); return; }
-
-    // pin favorites to top always
-    const favFirst = [...filteredLists].sort((a,b)=>{
-      const af = localFavs.has(a.id)?1:0;
-      const bf = localFavs.has(b.id)?1:0;
-      return bf-af;
-    });
-
-    grid.innerHTML = "";
-    favFirst.forEach((list,ix)=> {
-      console.log('🔶 Creating cell for list:', list.name);
-      const cell = createHoneycombCell(list,ix+1);
-      grid.appendChild(cell);
-      // Staggered fade-in for premium feel
-      cell.style.animationDelay = `${ix * 0.05}s`;
-    });
-    console.log('✅ Rendered', favFirst.length, 'honeycomb cells');
-  }
-
-  function createHoneycombCell(list,hiveIndex){
-    const cell = document.createElement("a");
-    cell.className = "hive-cell";
-    cell.href="#";
-    cell.dataset.name=(list.name||"").toLowerCase();
-    cell.dataset.words=list.word_count||0;
-    cell.dataset.updated=list.updated_at||list.created_at||"";
-    if(localFavs.has(list.id)) cell.classList.add("is-favorite");
-
-    // tap to quiz unless on buttons
-    cell.onclick=(e)=>{
-      e.preventDefault();
-      if(!e.target.closest(".hive-cell-action-btn")){
-        playSound('click');
-        useListInQuiz(list.id);
-      }
-    };
-
-    // long press mobile
-    cell.addEventListener("touchstart",(e)=>{
-      pressTimer = setTimeout(()=> openBeeSheet(list), 520);
-    },{passive:true});
-    cell.addEventListener("touchend",()=> clearTimeout(pressTimer));
-    cell.addEventListener("touchmove",()=> clearTimeout(pressTimer));
-
-    const formattedDate = (list.updated_at||list.created_at)
-      ? new Date(list.updated_at||list.created_at).toLocaleDateString()
-      : "No date yet";
-
-    const isFav = localFavs.has(list.id);
-    const star = isFav ? "⭐" : "☆";
-    const earned = Number(list.total_buzz_earned||0);
-
-    cell.innerHTML = `
-      <div class="hive-cell-actions">
-        <button class="hive-cell-action-btn favorite" title="Pin hive"
-          onclick="toggleFavorite(event, ${list.id})">${star}</button>
-        <button class="hive-cell-action-btn view" title="View list"
-          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
-        <button class="hive-cell-action-btn rename" title="Rename list"
-          onclick="renameList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🏷️</button>
-        <button class="hive-cell-action-btn edit" title="Edit list"
-          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
-        <button class="hive-cell-action-btn delete" title="Delete list"
-          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
-      </div>
-
-      <div class="hive-cell-badge">≡ ${list.word_count||0} words</div>
-
-      <div class="hive-cell-inner">
-        <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
-        <div class="hive-cell-meta">
-          <div class="row">🐝 Tap to quiz</div>
-          <div class="hive-earned-tag">Earned: ${earned.toLocaleString()} ✨</div>
-        </div>
-      </div>
-    `;
-    return cell;
-  }
-
-  function displayEmptyHive(){
-    hiveGrid.innerHTML = `
-      <div class="hive-empty">
-        <div style="font-size:64px;margin-bottom:10px;">🐝</div>
-        <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">No honeycombs yet!</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word list to start storing spelling honey.</p>
-        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
-      </div>
-    `;
-  }
-
-  function displayLoginRequired(){
-    hiveGrid.innerHTML = `
-      <div class="hive-empty">
-        <div style="font-size:64px;margin-bottom:10px;">🔒</div>
-        <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Login Required</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word lists.</p>
-        <button class="hive-btn primary" onclick="window.location.href='/login'">🔑 Log In</button>
-      </div>
-    `;
-  }
-
-  // Search + Sort
-  (function(){
-    const searchInput = document.getElementById("hiveSearchInput");
-    const sortSelect = document.getElementById("hiveSortSelect");
-
-    function applyFilterAndSort(){
-      const term=(searchInput.value||"").toLowerCase().trim();
-      const sortBy=sortSelect.value;
-
-      filteredLists = !term
-        ? [...allLists]
-        : allLists.filter(l=>(l.name||"").toLowerCase().includes(term));
-
-      // sort non-favs only; favs pinned later
-      switch(sortBy){
-        case "name":
-          filteredLists.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
-          break;
-        case "largest":
-          filteredLists.sort((a,b)=>(b.word_count||0)-(a.word_count||0));
-          break;
-        case "smallest":
-          filteredLists.sort((a,b)=>(a.word_count||0)-(b.word_count||0));
-          break;
-        case "recent":
-        default:
-          filteredLists.sort((a,b)=>{
-            const da=a.updated_at?new Date(a.updated_at):new Date(0);
-            const db=b.updated_at?new Date(b.updated_at):new Date(0);
-            return db-da;
-          });
-      }
-
-      renderHoneycombs();
-    }
-
-    searchInput.addEventListener("input",applyFilterAndSort);
-    sortSelect.addEventListener("change",applyFilterAndSort);
-  })();
-
-  // QUIZ LOAD
-  async function useListInQuiz(id){
-    try{
-      const wbRes = await fetch("/api/wordbank");
-      const wbData = await wbRes.json();
-      const currentCount = wbData.words ? wbData.words.length : 0;
-
-      if(currentCount>0){
-        const confirmed = await showBeeModal(
-          "🍯",
-          "Replace Current Words?",
-          `You already have ${currentCount} word(s) loaded.<br><br>Loading this hive will replace them.`,
-          "Yes, Load It!",
-          "primary",
-          true  // Show delete button
-        );
-        if(!confirmed) return;
-      }
-
-      const res = await fetch("/api/saved-lists/load",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Cache-Control":"no-cache"},
-        credentials:"same-origin",
-        cache:"no-store",
-        body:JSON.stringify({id})
-      });
-
-      const data = await res.json();
-      if(data.ok){
-        showToast("✅ Word list loaded! Heading to quiz…","success");
-        setTimeout(()=>window.location.href="/quiz",700);
-      }else{
-        showToast("❌ "+(data.error||"Failed to load list"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error loading list","error");
-    }
-  }
-
-  // CREATE
-  async function createNewComb(){
-    const name = await showBeePrompt("🐝","Create New Word List!","What should we call this list?");
-    if(!name||!name.trim()) return;
-
-    try{
-      const res = await fetch("/api/saved-lists/create",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin",
-        body:JSON.stringify({name:name.trim()})
-      });
-      const data = await res.json();
-      if(data.ok){
-        showToast("✅ Word list created!","success");
-        await loadWordLists();
-      }else{
-        showToast("❌ "+(data.error||"Failed to create hive"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error creating hive","error");
-    }
-  }
-
-  // VIEW
-  async function viewWordList(event,listId,listName){
-    event.preventDefault(); event.stopPropagation();
-    try{
-      const res = await fetch(`/api/saved-lists/${listId}`);
-      const data = await res.json();
-      if(data.ok && data.list){
-        const words = data.list.words||[];
-        const preview = words.slice(0,12).join(", ");
-        const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
-        await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
-      }else{
-        showToast("❌ Could not load hive details","error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error viewing hive","error");
-    }
-  }
-
-  // RENAME (1-tap)
-  async function renameList(event,listId,currentName){
-    event.preventDefault(); event.stopPropagation();
-    const proposed = (window.prompt("Rename this hive:", currentName)||"").trim();
-    if(!proposed || proposed === currentName) return;
-    try{
-      const res = await fetch(`/api/saved-lists/${listId}`,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin",
-        body:JSON.stringify({name:proposed})
-      });
-      const data = await res.json();
-      if(data.ok){
-        showToast("✅ Hive renamed!","success");
-        await loadWordLists();
-      }else{
-        showToast("❌ "+(data.error||"Rename failed"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error renaming hive","error");
-    }
-  }
-
-  // DELETE
-  async function deleteWordList(event,listId,listName){
-    event.preventDefault(); event.stopPropagation();
-
-    const confirmed = await showBeeModal(
-      "🗑️",
-      "Delete Word List?",
-      `Delete "<strong>${listName}</strong>"?<br><br>This honeycomb will be gone forever.`,
-      "Yes, Delete It",
-      "danger"
-    );
-    if(!confirmed) return;
-
-    try{
-      const res = await fetch(`/api/saved-lists/${listId}`,{
-        method:"DELETE",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin"
-      });
-      const data = await res.json();
-      if(data.ok){
-        localFavs.delete(listId);
-        persistFavs();
-        showToast("✅ Word list deleted!","success");
-        await loadWordLists();
-      }else{
-        showToast("❌ "+(data.error||"Failed to delete hive"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error deleting hive","error");
-    }
-  }
-
-  // FAVORITE / PIN
-  async function toggleFavorite(event,listId){
-    event.preventDefault(); event.stopPropagation();
-    const isFav = localFavs.has(listId);
-    if(isFav) localFavs.delete(listId); else localFavs.add(listId);
-    persistFavs();
-
-    // sparkle burst
-    burstSparkles(event.clientX, event.clientY);
-
-    // try server persist if endpoint exists
-    try{
-      await fetch("/api/saved-lists/favorite",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin",
-        body:JSON.stringify({id:listId,is_favorite:!isFav})
-      });
-    }catch(_){ /* silent fallback */ }
-
-    renderHoneycombs();
-  }
-
-  function persistFavs(){
-    localStorage.setItem(favKey, JSON.stringify([...localFavs]));
-  }
-
-  function burstSparkles(x,y){
-    const emojis = ["✨","⭐","💛","🍯"];
-    for(let i=0;i<8;i++){
-      const s=document.createElement("div");
-      s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
-      s.style.position="fixed";
-      s.style.left=x+"px";
-      s.style.top=y+"px";
-      s.style.fontSize=(12+Math.random()*10)+"px";
-      s.style.zIndex=10000;
-      s.style.pointerEvents="none";
-      const dx=(Math.random()-0.5)*120;
-      const dy=(Math.random()-0.8)*140;
-      const dur=600+Math.random()*300;
-
-      s.animate([
-        {transform:"translate(0,0) scale(1)",opacity:1},
-        {transform:`translate(${dx}px,${dy}px) scale(1.6)`,opacity:0}
-      ],{duration:dur,easing:"ease-out"});
-
-      document.body.appendChild(s);
-      setTimeout(()=>s.remove(),dur+50);
-    }
-  }
-
-  // EDIT MODAL
-  async function openEditModal(event,listId,listName){
-    event.preventDefault(); event.stopPropagation();
-    try{
-      const res = await fetch(`/api/saved-lists/${listId}`);
-      const data = await res.json();
-      if(!data.ok || !data.list){ showToast("❌ Cannot open editor","error"); return; }
-
-      editTarget = { id:listId };
-      editName.value = data.list.name || listName;
-      editWords.value = (data.list.words||[]).join("\n");
-      editModal.classList.add("active");
-    }catch(err){
-      console.error(err);
-      showToast("❌ Editor failed to load words","error");
-    }
-  }
-
-  function closeEditModal(){
-    editModal.classList.remove("active");
-    editTarget=null;
-  }
-
-  async function saveEditModal(){
-    if(!editTarget) return;
-    const newName = (editName.value||"").trim();
-    const words = (editWords.value||"")
-      .split(/\r?\n/).map(w=>w.trim()).filter(Boolean);
-
-    if(!newName){ showToast("❌ Name cannot be empty","error"); return; }
-    if(words.length===0){ showToast("❌ Add at least 1 word","error"); return; }
-
-    try{
-      const res = await fetch(`/api/saved-lists/${editTarget.id}`,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin",
-        body:JSON.stringify({name:newName, words})
-      });
-      const data = await res.json();
-      if(data.ok){
-        showToast("✅ Hive updated!","success");
-        closeEditModal();
-        await loadWordLists();
-      }else{
-        showToast("❌ "+(data.error||"Save failed"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Save endpoint missing or failed","error");
-    }
-  }
-
-  // LONG-PRESS ACTION SHEET
-  function openBeeSheet(list){
-    sheetTarget = list;
-    beeSheetTitle.textContent = list.name || "Hive Actions";
-    beeSheet.classList.add("active");
-
-    sheetQuizBtn.onclick = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
-    sheetViewBtn.onclick = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name); };
-    sheetEditBtn.onclick = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name); };
-    sheetFavBtn.onclick  = (e)=>{ closeBeeSheet(); toggleFavorite(fakeEvent(e), list.id); };
-    sheetDeleteBtn.onclick=(e)=>{ closeBeeSheet(); deleteWordList(fakeEvent(e), list.id, list.name); };
-  }
-
-  function closeBeeSheet(){
-    beeSheet.classList.remove("active");
-    sheetTarget=null;
-  }
-
-  function fakeEvent(e){
-    return { preventDefault(){}, stopPropagation(){}, clientX:e?.clientX||innerWidth/2, clientY:e?.clientY||innerHeight/2 };
-  }
-
-  // MODAL (confirm/info)
-  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary",showDelete=false){
-    return new Promise(resolve=>{
-      modalResolve=resolve;
-      modalIcon.textContent=icon;
-      modalTitle.textContent=title;
-      modalBody.innerHTML=message;
-      modalConfirmBtn.textContent=confirmText;
-      modalConfirmBtn.className="bee-modal-btn "+confirmType;
-      
-      // Show/hide delete button
-      const deleteBtn = document.getElementById("modalDeleteBtn");
-      if(deleteBtn) {
-        deleteBtn.style.display = showDelete ? "block" : "none";
-      }
-      
-      beeModal.classList.add("active");
-    });
-  }
-  function confirmBeeModal(){ 
-    playSound('click');
-    beeModal.classList.remove("active"); 
-    modalResolve?.(true); 
-    modalResolve=null; 
-  }
-  function closeBeeModal(){ 
-    playSound('click');
-    beeModal.classList.remove("active"); 
-    modalResolve?.(false); 
-    modalResolve=null; 
-  }
-
-  // Delete current wordbank words
-  async function deleteCurrentWords(){
-    try{
-      playSound('click');
-      const res = await fetch('/api/clear', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {'Content-Type': 'application/json'}
-      });
-      const data = await res.json();
-      if(data.success){
-        playSound('success');
-        showToast("✅ Current words deleted!","success");
-        closeBeeModal();
-      } else {
-        playSound('error');
-        showToast("❌ Failed to delete words","error");
-      }
-    } catch(err){
-      console.error(err);
-      playSound('error');
-      showToast("❌ Error deleting words","error");
-    }
-  }
-
-  // PROMPT (create)
-  function showBeePrompt(icon,title,message){
-    return new Promise(resolve=>{
-      modalResolve=resolve;
-      const modal = beeModal.querySelector(".bee-modal");
-      modal.innerHTML=`
-        <div class="bee-modal-header">
-          <div class="bee-modal-icon">${icon}</div>
-          <h2 class="bee-modal-title">${title}</h2>
-        </div>
-        <div class="bee-modal-body">${message}</div>
-        <input id="beePromptInput" type="text" style="
-          width:100%; padding:.9rem; font-size:1.05rem; font-weight:700;
-          border:3px solid var(--honey); border-radius:12px; outline:none; margin: 6px 0 12px;
-        "/>
-        <div class="bee-modal-actions">
-          <button class="bee-modal-btn secondary" onclick="closeBeePrompt('')">Cancel</button>
-          <button class="bee-modal-btn primary" onclick="closeBeePrompt(document.getElementById('beePromptInput').value)">Create</button>
-        </div>
-      `;
-      beeModal.classList.add("active");
-      setTimeout(()=>document.getElementById("beePromptInput")?.focus(),80);
-    });
-  }
-  function closeBeePrompt(value){
-    beeModal.classList.remove("active");
-    modalResolve?.(value);
-    modalResolve=null;
-    // restore modal HTML
-    const modal = beeModal.querySelector(".bee-modal");
-    modal.innerHTML=`
-      <div class="bee-modal-header">
-        <div class="bee-modal-icon" id="modalIcon">🐝</div>
-        <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
-      </div>
-      <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
-      <div class="bee-modal-actions">
-        <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
-        <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
-      </div>
-    `;
-  }
-
-// TOAST
-function showToast(message,type="success"){
-  document.querySelector(".toast")?.remove();
-  const toast=document.createElement("div");
-  toast.className="toast "+type;
-  toast.style.cssText=`
-    position:fixed;
-    bottom:1.2rem;
-    right:1.5rem;
-    background:white;
-    padding:.9rem 1.2rem;
-    border-radius:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.2);
-    border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
-    z-index:10000;
-    font-weight:900;
-    max-width:420px;
-    animation:slideIn .25s ease;
-  `;
-  if (window.innerWidth < 520) {
-    toast.style.right = "50%";
-    toast.style.transform = "translateX(50%)";
-    toast.style.maxWidth = "92vw";
-  }
-  toast.textContent=message;
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.classList.add("show"),10);
-  setTimeout(()=>toast.remove(),2200);
 }
 
-  const style=document.createElement("style");
-  style.textContent=`
-    @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
-    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
-  `;
-  document.head.appendChild(style);
+// Update statistics
+function updateStats() {
+    const totalLists = allLists.length;
+    const totalWords = allLists.reduce((sum, list) => sum + (list.word_count || 0), 0);
+    const largestList = Math.max(...allLists.map(l => l.word_count || 0), 0);
+    const avgWords = totalLists > 0 ? Math.round(totalWords / totalLists) : 0;
+    
+    document.getElementById('totalListsCount').textContent = totalLists;
+    document.getElementById('totalWordsCount').textContent = totalWords.toLocaleString();
+    document.getElementById('largestListCount').textContent = largestList.toLocaleString();
+    document.getElementById('avgWordsCount').textContent = avgWords.toLocaleString();
+}
 
-  // helpers
-  function escapeHtml(text){ const d=document.createElement("div"); d.textContent=text||""; return d.innerHTML; }
-
-  // Bee flyover
-  function runBeeFlyover(){
-    const bee=document.createElement("div");
-    bee.className="bee-flyover";
-    bee.textContent="🐝";
-    document.body.appendChild(bee);
-
-    let trailTimer= setInterval(()=>{
-      const t=document.createElement("div");
-      t.className="bee-trail";
-      t.style.left=(bee.getBoundingClientRect().left+8)+"px";
-      document.body.appendChild(t);
-      setTimeout(()=>t.remove(),1200);
-    },180);
-
-    requestAnimationFrame(()=>{
-      bee.style.transform=`translateX(${innerWidth+240}px) translateY(-20px)`;
+// Filter and display lists
+function filterAndDisplayLists() {
+    const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+    const sortBy = document.getElementById('sortDropdown').value;
+    
+    // Filter
+    filteredLists = allLists.filter(list => {
+        const name = (list.name || '').toLowerCase();
+        const desc = (list.description || '').toLowerCase();
+        return name.includes(searchTerm) || desc.includes(searchTerm);
     });
+    
+    // Sort
+    filteredLists.sort((a, b) => {
+        switch(sortBy) {
+            case 'name':
+                return (a.name || '').localeCompare(b.name || '');
+            case 'words':
+                return (b.word_count || 0) - (a.word_count || 0);
+            case 'oldest':
+                return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            case 'recent':
+            default:
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        }
+    });
+    
+    displayLists();
+}
 
-    setTimeout(()=>{
-      clearInterval(trailTimer);
-      bee.remove();
-    },3200);
-  }
+// Display lists
+function displayLists() {
+    const container = document.getElementById('listsContainer');
+    
+    if (filteredLists.length === 0) {
+        displayEmptyState();
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="lists-grid">
+            ${filteredLists.map(list => createListCard(list)).join('')}
+        </div>
+    `;
+    
+    // Wire up buttons
+    wireListButtons();
+}
+
+// Create list card HTML
+function createListCard(list) {
+    const updatedDate = list.updated_at ? new Date(list.updated_at).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    }) : 'Unknown';
+    const isNew = list.created_at && (new Date() - new Date(list.created_at)) < 7 * 86400000; // 7 days
+    const isLarge = (list.word_count || 0) >= 50;
+    
+    return `
+        <div class="list-card" data-list-id="${list.id}">
+            <div class="list-card-header">
+                <div class="list-icon" aria-hidden="true">📚</div>
+                <div class="list-info">
+                    <div class="list-name">
+                        ${list.name || 'Unnamed List'}
+                        <span class="word-count-badge">
+                            📝 ${list.word_count || 0} ${(list.word_count || 0) === 1 ? 'word' : 'words'}
+                        </span>
+                    </div>
+                    ${list.description ? `<div class="list-description">${list.description}</div>` : ''}
+                    <div class="list-meta">
+                        <div class="meta-item">
+                            <span class="meta-icon">📅</span>
+                            <span>Updated ${updatedDate}</span>
+                        </div>
+                        ${isNew ? '<span class="badge badge-new">New</span>' : ''}
+                        ${isLarge ? '<span class="badge badge-large">Large</span>' : ''}
+                        ${list.uuid ? `
+                        <div class="meta-item">
+                            <span class="meta-icon">🔑</span>
+                            <span>${list.uuid.substring(0, 8)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="list-actions">
+                <button class="list-btn btn-use" data-action="use" data-id="${list.id}" data-uuid="${list.uuid}">
+                    🎯 Use in Quiz
+                </button>
+                <button class="list-btn btn-view" data-action="view" data-id="${list.id}" data-name="${list.name || 'Unnamed List'}">
+                    🔍 View Details
+                </button>
+                <button class="list-btn btn-delete" data-action="delete" data-id="${list.id}" data-name="${list.name}" data-count="${list.word_count}">
+                    🗑️ Delete
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Wire up list buttons
+function wireListButtons() {
+    document.querySelectorAll('[data-action="use"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            await useListInQuiz(id);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="view"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            viewListDetails(id, name);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="upload"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            uploadToList(id, name);
+        });
+    });
+    
+    document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            const count = btn.getAttribute('data-count');
+            await deleteList(id, name, count);
+        });
+    });
+}
+
+// View list details (placeholder - can be expanded later)
+function viewListDetails(id, name) {
+    showToast(`📚 Viewing details for "${name}" - Feature coming soon!`, 'info');
+    // TODO: Could open a modal showing all words in the list, edit capabilities, etc.
+}
+
+// Use list in quiz
+async function useListInQuiz(id) {
+    try {
+        // Check current wordbank
+        const wordbankRes = await fetch('/api/wordbank', {
+            credentials: 'same-origin'
+        });
+        const wordbankData = await wordbankRes.json();
+        const currentCount = wordbankData.words ? wordbankData.words.length : 0;
+        
+        if (currentCount > 0) {
+            const confirmed = await showBeeConfirm({
+                title: '⚠️ Override Current Words?',
+                message: `You have ${currentCount} word(s) loaded.\n\nLoading this list will replace them.\n\nContinue?`,
+                confirmText: 'Yes, Override',
+                cancelText: 'Cancel'
+            });
+            
+            if (!confirmed) return;
+        }
+        
+        // Load the list
+        const res = await fetch('/api/saved-lists/load', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'},
+            credentials: 'same-origin',
+            cache: 'no-store',
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words)`, 'success');
+
+            // Double-check server-side wordbank before navigating (avoid "Oops upload words" race)
+            try {
+                const verifyRes = await fetch(`/api/wordbank/verify?_=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+                });
+                const verify = await verifyRes.json();
+
+                if (verify.wordbank_count && verify.wordbank_count > 0) {
+                    // Prefer the unified prefetch flow if available globally
+                    if (typeof window.showLoadingMessage === 'function' && typeof window.prefetchAndNavigate === 'function') {
+                        showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                        prefetchAndNavigate();
+                    } else {
+                        // Fallback: direct navigation
+                        window.location.href = '/quiz';
+                    }
+                } else {
+                    showToast('❌ Word list did not load into your session. Please try again.', 'error');
+                }
+            } catch (e) {
+                console.warn('Wordbank verify failed, navigating anyway:', e);
+                window.location.href = '/quiz';
+            }
+        } else {
+            showToast(data.error || 'Failed to load list', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to load list', 'error');
+    }
+}
+
+// Upload to list
+function uploadToList(id, name) {
+    // Redirect to upload page with list ID
+    window.location.href = `/upload?list_id=${id}&list_name=${encodeURIComponent(name)}`;
+}
+
+// Delete list
+async function deleteList(id, name, count) {
+    const confirmed = await showBeeConfirm({
+        title: '🗑️ Delete Word List?',
+        message: `Are you sure you want to permanently delete:\n\n📚 "${name}"\n(${count} words)\n\nThis cannot be undone!`,
+        confirmText: 'Yes, Delete',
+        cancelText: 'Cancel'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+        const res = await fetch('/api/saved-lists/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ id })
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+            showToast(`✅ "${name}" deleted successfully`, 'success');
+            await loadWordLists();
+        } else {
+            showToast(data.error || 'Delete failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Delete failed', 'error');
+    }
+}
+
+// Create new list
+function createNewList() {
+    window.location.href = '/upload';
+}
+
+// Display empty state
+function displayEmptyState() {
+    const container = document.getElementById('listsContainer');
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">📚</div>
+            <h3>No Word Lists Yet</h3>
+            <p>Start by creating your first word list!</p>
+            <button class="action-button btn-primary" onclick="createNewList()">
+                ➕ Create Your First List
+            </button>
+        </div>
+    `;
+}
+
+// Display authentication required state
+function displayAuthRequiredState() {
+    const container = document.getElementById('listsContainer');
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">🔐</div>
+            <h3>Login Required</h3>
+            <p>Please log in to view and manage your word lists.</p>
+            <button class="action-button btn-primary" onclick="window.location.href='/login'">
+                🔑 Log In
+            </button>
+        </div>
+    `;
+    
+    // Also update stats to show zeros
+    document.getElementById('totalListsCount').textContent = '0';
+    document.getElementById('totalWordsCount').textContent = '0';
+    document.getElementById('largestListCount').textContent = '0';
+    document.getElementById('avgWordsCount').textContent = '0';
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span style="font-size: 1.5rem;">${type === 'success' ? '✅' : '❌'}</span>
+        <span style="font-weight: 600;">${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Bee confirm dialog (reuse from main app)
+function showBeeConfirm(options) {
+    return new Promise((resolve) => {
+        if (window.BeeSmart && window.BeeSmart.showConfirm) {
+            window.BeeSmart.showConfirm(options).then(resolve);
+        } else {
+            // Fallback to native confirm
+            const result = confirm(options.message);
+            resolve(result);
+        }
+    });
+}
 </script>
 {% endblock %}
