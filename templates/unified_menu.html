@@ -7741,7 +7741,49 @@
                             showLoadingMessage('🌟 Getting your spelling adventure ready...');
                             setTimeout(() => { window.location.href = '/quiz'; }, 150);
                         } else {
-                            showErrorMessage('Oops! Please try uploading your word list again.');
+                            // No words at all → offer random words as fallback
+                            console.log('🎲 No words found - offering random word list');
+                            showRandomWordListModal(
+                                // onConfirm - User wants random words
+                                () => {
+                                    console.log('🎲 User accepted random word list');
+                                    showLoadingMessage('🎲 Selecting 10 random words for you...');
+                                    
+                                    // Call the random words API (difficulty 2 = Easy, 10 words)
+                                    fetch('/api/random-words', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ difficulty: 2, count: 10 })
+                                    })
+                                    .then(response => response.json())
+                                    .then(randomData => {
+                                        if (randomData.success && randomData.count > 0) {
+                                            console.log(`✅ Loaded ${randomData.count} random words`);
+                                            showSuccessMessage(`Great! ${randomData.count} random words loaded! 🎲🐝`);
+                                            WordBankManager.updateAllDisplays(true);
+                                            const navigateToQuiz = () => {
+                                                if (window.magicalEffects) {
+                                                    window.magicalEffects.playChimeSounds();
+                                                }
+                                                showLoadingMessage('🌟 Getting your spelling adventure ready...');
+                                                setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                                            };
+                                            setTimeout(navigateToQuiz, 800);
+                                        } else {
+                                            showErrorMessage('Could not load random words. Please try uploading your own word list! 📝');
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('❌ Failed to load random words:', error);
+                                        showErrorMessage('Oops! Could not load random words. Please try uploading your own list! 📝');
+                                    });
+                                },
+                                // onCancel - User declined random words
+                                () => { 
+                                    console.log('🚫 User declined random word list');
+                                    showNotification('No problem! Upload your own word list when you\'re ready! 📚', 'info');
+                                }
+                            );
                         }
                     });
                 });
