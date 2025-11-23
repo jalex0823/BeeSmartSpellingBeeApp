@@ -77,7 +77,17 @@ const BeeSwarmVisualizer = {
         this.camera.aspect = w/h; this.camera.updateProjectionMatrix();
         this.renderer.setSize(w,h);
         const el = this.renderer.domElement;
-        el.style.position='absolute'; el.style.inset=0; el.style.pointerEvents='none'; el.style.zIndex=opts.zIndex;
+        el.style.position='absolute'; 
+        el.style.inset=0; 
+        el.style.pointerEvents='none'; 
+        el.style.zIndex=opts.zIndex;
+        
+        // ✅ Prevent white flash - hide until first render
+        el.style.background = 'transparent';
+        el.style.opacity = '0';
+        el.style.visibility = 'hidden';
+        el.style.transition = 'opacity 450ms ease';
+        
         container.appendChild(el);
         window.addEventListener('resize', () => {
           const r2 = container.getBoundingClientRect();
@@ -255,7 +265,27 @@ const BeeSwarmVisualizer = {
 
       animate(time){ if(!this.scene || !this.ready) return; requestAnimationFrame(t=>this.animate(t)); this.updateSpeechAmplitude(); this.ampSmooth=this.ampSmooth*0.9+this.amplitude*0.1; this.swarmStep(time); if(this.mat){ this.mat.uniforms.uTime.value=time*0.001; this.mat.uniforms.uPulse.value=this.ampSmooth; this.mat.uniforms.uOpacity.value=0.9; } this.renderer.render(this.scene,this.camera); },
 
-      _performHeavyInit(){ if(this._heavyDone) return; this._heavyDone=true; this.buildTargetsFromMask(opts.maskUrl, opts.sampleStep).then(()=>{ this.initParticles(); this.setupSpeechIntegration(); this.ready=true; if(opts.autoStart) this.animate(performance.now()); }); },
+      _performHeavyInit(){ 
+        if(this._heavyDone) return; 
+        this._heavyDone=true; 
+        this.buildTargetsFromMask(opts.maskUrl, opts.sampleStep).then(()=>{ 
+          this.initParticles(); 
+          this.setupSpeechIntegration(); 
+          this.ready=true; 
+          
+          // ✅ Render once, then fade in canvas (prevents white flash)
+          this.renderer.render(this.scene, this.camera);
+          
+          const el = this.renderer?.domElement;
+          if (el) {
+            el.style.visibility = 'visible';
+            // Next tick so CSS transition applies
+            requestAnimationFrame(() => { el.style.opacity = '1'; });
+          }
+          
+          if(opts.autoStart) this.animate(performance.now()); 
+        }); 
+      },
       start(){ this._performHeavyInit(); },
 
       destroy(){ if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
