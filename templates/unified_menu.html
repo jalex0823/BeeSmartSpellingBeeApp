@@ -2616,34 +2616,27 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Scrolling Buzz Dust Progress Ticker (above badge) -->
+                <!-- Buzz Dust Progress Ticker (above badge) -->
                 <div id="buzz-dust-ticker" style="
                     position: relative;
                     background: linear-gradient(90deg, rgba(255, 201, 74, 0.35) 0%, rgba(244, 166, 35, 0.45) 50%, rgba(255, 201, 74, 0.35) 100%);
                     border: 3px solid rgba(255, 201, 74, 0.6);
                     border-radius: 20px;
-                    padding: 0.85rem 0;
+                    padding: 0.85rem 1rem;
                     margin: 2rem auto 0.5rem auto;
                     max-width: 380px;
-                    overflow: hidden;
                     display: block !important;
                     visibility: visible !important;
                     box-shadow: 0 4px 12px rgba(255, 201, 74, 0.3), 0 0 20px rgba(255, 201, 74, 0.2);
+                    text-align: center;
                 ">
-                    <div class="ticker-container" style="position: relative; width: 100%; overflow: hidden; height: 1.5rem;">
-                        <div id="ticker-text" style="
-                            position: absolute;
-                            white-space: nowrap;
-                            animation: scroll-ticker 15s linear infinite;
-                            font-size: 1.05rem;
-                            font-weight: 800;
-                            color: #5a3a1a;
-                            will-change: transform;
-                            padding: 0 1rem;
-                            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-                        ">
-                            🐝 Loading Buzz Dust progress... ✨
-                        </div>
+                    <div id="ticker-text" style="
+                        font-size: 1.05rem;
+                        font-weight: 800;
+                        color: #5a3a1a;
+                        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+                    ">
+                        🐝 Loading Buzz Dust progress... ✨
                     </div>
                 </div>
                 
@@ -2672,20 +2665,6 @@
                 </div>
                 
                 <style>
-                    @keyframes scroll-ticker {
-                        0% { 
-                            transform: translateX(100%); 
-                        }
-                        100% { 
-                            transform: translateX(-100%); 
-                        }
-                    }
-                    
-                    /* Pause animation on hover for readability */
-                    #buzz-dust-ticker:hover #ticker-text {
-                        animation-play-state: paused;
-                    }
-
                     /* ✨ SPARKLING FAIRY DUST ANIMATIONS ✨ */
                     .fairy-dust-particle {
                         position: absolute;
