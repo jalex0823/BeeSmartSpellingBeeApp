@@ -7671,7 +7671,25 @@
                     const wordCount = data.wordbank_count || 0;
                     
                     // Helper: quick navigate to quiz with friendly loading + sound
-                    const navigateToQuiz = () => {
+                    const navigateToQuiz = async () => {
+                        // 🔒 CRITICAL: Verify session has words before navigating (prevents "lost session" bug)
+                        try {
+                            const verifyResp = await fetch('/api/wordbank', {
+                                credentials: 'same-origin',
+                                headers: { 'Cache-Control': 'no-cache' }
+                            });
+                            const verifyData = await verifyResp.json();
+                            if (!verifyData.success || !verifyData.count || verifyData.count === 0) {
+                                console.error('🚨 Session lost before quiz navigation! Wordbank empty:', verifyData);
+                                showErrorMessage('⚠️ Session issue detected. Please try uploading your words again or use Random Words.');
+                                return; // Don't navigate
+                            }
+                            console.log(`✅ Session verified before quiz: ${verifyData.count} words present`);
+                        } catch (err) {
+                            console.error('❌ Could not verify session before quiz:', err);
+                            // Continue anyway - better to try than block user
+                        }
+                        
                         if (window.magicalEffects) {
                             window.magicalEffects.playChimeSounds();
                         }
@@ -7681,10 +7699,10 @@
                     
                     // 🎯 Resilience: if verify claims 0 words, re-check main wordbank endpoint (race after upload)
                     if (wordCount === 0) {
-                        return WordBankManager.getCount(true).then(cnt => {
+                        return WordBankManager.getCount(true).then(async cnt => {
                             if (cnt > 0) {
                                 console.log('🔁 Verify said 0, but primary wordbank shows', cnt, '→ proceeding to quiz');
-                                navigateToQuiz();
+                                await navigateToQuiz();
                                 return;
                             }
                             // Still empty → offer random words
@@ -7729,7 +7747,7 @@
                     }
                     
                     // Proceed to quiz
-                    navigateToQuiz();
+                    await navigateToQuiz();
                 })
                 .catch(error => {
                     console.error('❌ Pre-quiz wordbank verification failed:', error);
