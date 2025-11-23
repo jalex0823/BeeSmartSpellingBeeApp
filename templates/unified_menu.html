@@ -2679,18 +2679,109 @@
                     #buzz-dust-ticker:hover #ticker-text {
                         animation-play-state: paused;
                     }
+
+                    /* ✨ SPARKLING FAIRY DUST ANIMATIONS ✨ */
+                    .fairy-dust-particle {
+                        position: absolute;
+                        width: 4px;
+                        height: 4px;
+                        background: radial-gradient(circle, #FFD700 0%, #FFA500 50%, transparent 100%);
+                        border-radius: 50%;
+                        pointer-events: none;
+                        animation: fairy-dust-orbit 3s ease-in-out forwards;
+                        box-shadow: 0 0 6px #FFD700, 0 0 12px #FFA500;
+                    }
+                    
+                    .fairy-dust-particle.sparkle {
+                        background: radial-gradient(circle, #FFFFFF 0%, #FFD700 30%, #FFA500 70%, transparent 100%);
+                        animation: fairy-dust-sparkle 2.5s ease-in-out forwards;
+                        box-shadow: 0 0 8px #FFFFFF, 0 0 16px #FFD700;
+                    }
+                    
+                    @keyframes fairy-dust-orbit {
+                        0% {
+                            transform: rotate(0deg) translateX(160px) rotate(0deg) scale(0);
+                            opacity: 0;
+                        }
+                        15% {
+                            opacity: 1;
+                            transform: rotate(54deg) translateX(160px) rotate(-54deg) scale(1);
+                        }
+                        85% {
+                            opacity: 0.8;
+                            transform: rotate(306deg) translateX(160px) rotate(-306deg) scale(1.2);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: rotate(360deg) translateX(160px) rotate(-360deg) scale(0);
+                        }
+                    }
+                    
+                    @keyframes fairy-dust-sparkle {
+                        0% {
+                            transform: rotate(0deg) translateX(140px) rotate(0deg) scale(0);
+                            opacity: 0;
+                            filter: blur(2px);
+                        }
+                        10% {
+                            opacity: 1;
+                            transform: rotate(36deg) translateX(140px) rotate(-36deg) scale(1);
+                            filter: blur(0px);
+                        }
+                        90% {
+                            opacity: 0.9;
+                            transform: rotate(324deg) translateX(140px) rotate(-324deg) scale(1.5);
+                            filter: blur(1px);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: rotate(360deg) translateX(140px) rotate(-360deg) scale(0);
+                            filter: blur(3px);
+                        }
+                    }
+                    
+                    /* Magic shimmer effect */
+                    .fairy-dust-particle::before {
+                        content: '';
+                        position: absolute;
+                        top: -1px;
+                        left: -1px;
+                        right: -1px;
+                        bottom: -1px;
+                        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%);
+                        border-radius: 50%;
+                        animation: shimmer 1.5s ease-in-out infinite;
+                    }
+                    
+                    @keyframes shimmer {
+                        0%, 100% { transform: rotate(0deg); opacity: 0; }
+                        50% { transform: rotate(180deg); opacity: 1; }
+                    }
                 </style>
                 {% endif %}
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <img src="" alt="BeeSmart Logo" class="brand-logo crest-logo" style="
-                    width: clamp(180px, 40vw, 320px);
-                    height: auto;
-                    margin: 6px auto 8px;
-                    display: block;
-                    filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
-                    background: transparent !important;
-                " />
+                <div class="logo-container" style="position: relative; display: inline-block;">
+                    <img src="" alt="BeeSmart Logo" class="brand-logo crest-logo" style="
+                        width: clamp(180px, 40vw, 320px);
+                        height: auto;
+                        margin: 6px auto 8px;
+                        display: block;
+                        filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
+                        background: transparent !important;
+                    " />
+                    <!-- Sparkling fairy dust container -->
+                    <div class="fairy-dust-container" style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        pointer-events: none;
+                        z-index: 100;
+                    ">
+                        <!-- Fairy dust particles will be dynamically created here -->
+                    </div>
+                </div>
                 
                 {% if current_user.is_authenticated %}
                 <!-- 3D Avatar Display (registered users only): UPGRADED for maximum showcase -->
@@ -15239,6 +15330,92 @@
             loadStudentBuzzDust();
         }
         {% endif %}
+
+        // ✨ SPARKLING FAIRY DUST MAGIC ✨ 
+        function createFairyDustEffect() {
+            const container = document.querySelector('.fairy-dust-container');
+            if (!container) {
+                console.log('⚠️ Fairy dust container not found');
+                return;
+            }
+            
+            console.log('✨ Creating magical fairy dust effect around logo...');
+            
+            // Create 12 magical particles
+            const particleCount = 12;
+            const sparkleCount = 8;
+            
+            // Regular fairy dust particles
+            for (let i = 0; i < particleCount; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'fairy-dust-particle';
+                    
+                    // Randomize starting position slightly for organic feel
+                    const angleOffset = (i * (360 / particleCount)) + (Math.random() - 0.5) * 20;
+                    particle.style.transform = `rotate(${angleOffset}deg)`;
+                    
+                    // Random size variation
+                    const size = 3 + Math.random() * 3;
+                    particle.style.width = size + 'px';
+                    particle.style.height = size + 'px';
+                    
+                    // Stagger the animation slightly
+                    particle.style.animationDelay = (Math.random() * 0.5) + 's';
+                    
+                    container.appendChild(particle);
+                    
+                    // Clean up after animation
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }, 3500);
+                }, i * 100); // Stagger creation
+            }
+            
+            // Sparkle particles (brighter, faster)
+            for (let i = 0; i < sparkleCount; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'fairy-dust-particle sparkle';
+                    
+                    // Different orbit radius for layered effect
+                    const angleOffset = (i * (360 / sparkleCount)) + (Math.random() - 0.5) * 30;
+                    sparkle.style.transform = `rotate(${angleOffset}deg)`;
+                    
+                    // Sparkles are slightly larger
+                    const size = 4 + Math.random() * 2;
+                    sparkle.style.width = size + 'px';
+                    sparkle.style.height = size + 'px';
+                    
+                    // Faster, more random timing
+                    sparkle.style.animationDelay = (Math.random() * 0.8) + 's';
+                    
+                    container.appendChild(sparkle);
+                    
+                    // Clean up after animation
+                    setTimeout(() => {
+                        if (sparkle.parentNode) {
+                            sparkle.parentNode.removeChild(sparkle);
+                        }
+                    }, 3000);
+                }, i * 150 + 500); // Start after initial particles
+            }
+            
+            console.log('✨ Fairy dust magic complete! Particles will fade out naturally.');
+        }
+        
+        // Trigger fairy dust when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Wait a moment for logo to appear, then add magic
+                setTimeout(createFairyDustEffect, 800);
+            });
+        } else {
+            // DOM already ready
+            setTimeout(createFairyDustEffect, 800);
+        }
 
     </script>
 </body>
