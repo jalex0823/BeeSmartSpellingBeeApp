@@ -8288,9 +8288,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', outerError.stack);
     }
 
-    // Small delay to ensure browser session cookie is fully established
-    // This prevents race conditions where cookie isn't available yet
+    // Delay to ensure browser session cookie is fully established before fetching wordbank
+    // This prevents race conditions where cookie isn't sent on first request
+    // 300ms gives enough time for session to persist after page navigation
     setTimeout(() => {
+        console.log('🔄 Starting wordbank fetch (with session cookie)...');
         fetch('/api/wordbank', {
             credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
             cache: 'no-store',
@@ -8299,12 +8301,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         })
     .then(response => {
+        console.log(`📡 Wordbank API response: ${response.status} ${response.statusText}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         return response.json();
     })
     .then(data => {
+        console.log('📦 Wordbank data received:', data);
+        
         // ISSUE #4 FIX: Defensive validation of word data
         if (!data || typeof data !== 'object') {
             throw new Error('Invalid response format from API');
@@ -8315,6 +8320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (data.words.length === 0) {
+            console.error('❌ Wordbank is empty! data:', data);
             BeeSmart.showError('No words loaded for the quiz!');
             setTimeout(() => window.location.href = '/', 2800);
             return;
@@ -8346,7 +8352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
         setTimeout(() => window.location.href = '/', 2800);
     });
-    }, 100);  // 100ms delay to ensure session cookie is established
+    }, 300);  // 300ms delay to ensure session cookie is sent with request
 });  // End DOMContentLoaded
 
 // 💾 Save partial progress before user leaves

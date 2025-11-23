@@ -7694,7 +7694,11 @@
                             window.magicalEffects.playChimeSounds();
                         }
                         showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                        setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                        
+                        // 🔒 CRITICAL: Add timestamp to URL to force session cookie refresh
+                        // This helps browsers properly include the session cookie
+                        const quizUrl = `/quiz?t=${Date.now()}&words=${verifyData.count}`;
+                        setTimeout(() => { window.location.href = quizUrl; }, 150);
                     };
                     
                     // 🎯 Resilience: if verify claims 0 words, re-check main wordbank endpoint (race after upload)
@@ -7757,7 +7761,8 @@
                             console.log('🛟 Verify failed but', cnt, 'words detected via /api/wordbank → starting quiz');
                             if (window.magicalEffects) { window.magicalEffects.playChimeSounds(); }
                             showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                            setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                            const quizUrl = `/quiz?t=${Date.now()}&words=${cnt}`;
+                            setTimeout(() => { window.location.href = quizUrl; }, 150);
                         } else {
                             // No words at all → offer random words as fallback
                             console.log('🎲 No words found - offering random word list');
@@ -7784,7 +7789,8 @@
                                                     window.magicalEffects.playChimeSounds();
                                                 }
                                                 showLoadingMessage('🌟 Getting your spelling adventure ready...');
-                                                setTimeout(() => { window.location.href = '/quiz'; }, 150);
+                                                const quizUrl = `/quiz?t=${Date.now()}&words=${randomData.count}`;
+                                                setTimeout(() => { window.location.href = quizUrl; }, 150);
                                             };
                                             setTimeout(navigateToQuiz, 800);
                                         } else {
