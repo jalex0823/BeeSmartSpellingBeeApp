@@ -1691,7 +1691,7 @@ def get_or_create_guest_user():
         
         # Test database connection first
         try:
-            db.session.execute('SELECT 1')
+            db.session.execute(db.text('SELECT 1'))
             print(f"DEBUG get_or_create_guest_user: Database connection OK")
         except Exception as db_e:
             print(f"ERROR get_or_create_guest_user: Database connection failed: {db_e}")
