@@ -6533,7 +6533,17 @@ def api_answer():
     if skip_requested:
         user_input = user_input or "[skipped]"
 
-    is_correct = False if skip_requested else normalize(user_input) == normalize(correct_spelling)
+    # 🐛 DEBUG: Log exact comparison details
+    normalized_input = normalize(user_input)
+    normalized_correct = normalize(correct_spelling)
+    print(f"🔍 ANSWER COMPARISON DEBUG:")
+    print(f"   User input (raw): '{user_input}' (len={len(user_input)})")
+    print(f"   User input (normalized): '{normalized_input}' (len={len(normalized_input)})")
+    print(f"   Correct word (raw): '{correct_spelling}' (len={len(correct_spelling)})")
+    print(f"   Correct word (normalized): '{normalized_correct}' (len={len(normalized_correct)})")
+    print(f"   Match: {normalized_input == normalized_correct}")
+
+    is_correct = False if skip_requested else normalized_input == normalized_correct
 
     # 🍯 HONEY POINTS CALCULATION
     points_earned = 0
