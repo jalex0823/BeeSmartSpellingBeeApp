@@ -12739,6 +12739,82 @@ if not FAST_BOOT:
 else:
     print("⏭️ Skipping init_glb_avatars() at startup (FAST_BOOT)")
 
+# Sync full avatar catalog (ensure all 39 entries exist) - runs after GLB init
+if not FAST_BOOT:
+    try:
+        from avatar_catalog import AVATAR_CATALOG
+        from models import Avatar, db
+        with app.app_context():
+            catalog_total = len(AVATAR_CATALOG)
+            existing_slugs = {a.slug for a in Avatar.query.all()}
+            missing = [entry for entry in AVATAR_CATALOG if entry.get('id') not in existing_slugs]
+            added = 0
+            for entry in missing:
+                slug = entry.get('id')
+                name = entry.get('name')
+                folder = entry.get('folder') or slug
+                obj_file = entry.get('obj_file')
+                # Derive thumbnail path based on folder convention
+                if folder == 'glb_files':
+                    thumb = f"AvatarThumbnails/{obj_file.replace('.glb','')}!.png"
+                else:
+                    # Thumbnail stored alongside dedicated folder
+                    thumb = f"{obj_file.replace('.glb','')}!.png"
+                points_required = entry.get('unlock_points', 0) or 0
+                tier = entry.get('tier')
+                is_premium = tier == 'premium'
+                sort_order = 500 + added  # place after any pre-seeded GLBs unless overridden later
+                avatar = Avatar(
+                    slug=slug,
+                    name=name,  # Preserve full display name with required " Avatar" suffix for compliance
+                    description=entry.get('description',''),
+                    category=entry.get('category','classic'),
+                    folder_path=folder,
+                    obj_file=obj_file,
+                    mtl_file=entry.get('mtl_file'),
+                    texture_file=entry.get('texture_file'),
+                    thumbnail_file=thumb,
+                    unlock_level=1,
+                    points_required=points_required,
+                    is_premium=is_premium,
+                    sort_order=sort_order,
+                    is_active=True
+                )
+                db.session.add(avatar)
+                added += 1
+            if added > 0:
+                db.session.commit()
+                print(f"✅ Avatar catalog sync: {added} missing avatars inserted (total expected: {catalog_total})")
+            else:
+                print(f"✅ Avatar catalog sync: no missing entries (total: {catalog_total})")
+
+            # Enforcement pass: ensure ALL avatar names end with required suffix
+            suffix_fixes = 0
+            all_db_avatars = Avatar.query.all()
+            for a in all_db_avatars:
+                if not a.name.endswith(' Avatar'):
+                    a.name = f"{a.name} Avatar"
+                    suffix_fixes += 1
+            if suffix_fixes > 0:
+                db.session.commit()
+                print(f"🔧 Avatar name compliance: appended suffix to {suffix_fixes} avatars")
+
+            # Deduplicate legacy O Bee slugs: prefer catalog slug 'o-bee'
+            obee_legacy = Avatar.query.filter_by(slug='obee').first()
+            o_bee_catalog = Avatar.query.filter_by(slug='o-bee').first()
+            if obee_legacy and o_bee_catalog:
+                # Deactivate legacy 'obee' to avoid duplicate counting
+                if obee_legacy.is_active:
+                    obee_legacy.is_active = False
+                    db.session.commit()
+                    print("🧹 Deactivated legacy 'obee' avatar (duplicate of 'o-bee')")
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f"⚠️ Avatar catalog sync warning: {e}")
+
 # Validate and fix avatar thumbnail paths on EVERY startup (skipped in FAST_BOOT)
 if not FAST_BOOT:
     try:

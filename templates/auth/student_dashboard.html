@@ -688,22 +688,21 @@
     <div class="container">
         <!-- Header with Avatar -->
         <div class="header">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 2rem; flex-wrap: wrap;">
-                <!-- User Avatar: 3D viewer when selected, image fallback otherwise -->
-                <div style="display:flex; align-items:center; justify-content:center;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <!-- User Avatar: 3D viewer with unified spacing -->
+                <div class="unified-avatar-stage large" aria-label="Student avatar" role="img">
                     <!-- 3D Viewer Wrapper (hidden by default until a user-selected avatar exists) -->
-                    <div id="userAvatar3DWrapper" style="display:none; width: 280px; max-width: 100%;">
+                    <div id="userAvatar3DWrapper" style="display:none; width:100%; height:100%;">
                         {% include 'components/avatar_3d_viewer.html' %}
                     </div>
-
-                    <!-- Static thumbnail fallback (shown if no avatar selected) -->
-                    <div id="userAvatarContainer" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.2); overflow: hidden;">
+                    <!-- Static thumbnail fallback -->
+                    <div id="userAvatarContainer" style="width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.2); overflow: hidden;">
                         <img id="userAvatarImg" src="/static/assets/avatars/fallback.png" alt="Your Avatar" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
                 </div>
                 
                 <!-- Welcome Text -->
-                <div style="text-align: left;">
+                <div style="text-align: center; margin-top: 0.5rem;">
                     <h1>🐝 Welcome, {{ current_user.display_name }}!</h1>
                     <p class="subtitle">Keep buzzing towards spelling mastery! 🏆</p>
                     <a href="/honeycomb-picker" style="display: inline-block; margin-top: 0.5rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;">

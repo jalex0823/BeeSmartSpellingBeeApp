@@ -22,6 +22,10 @@
             </div>
         </div>
     </div>
+    <!-- Admin Avatar (Unified spacing) -->
+    <div class="unified-avatar-stage large" aria-label="Admin avatar" role="img">
+        <div id="adminAvatar3D" class="avatar-fallback">🐝</div>
+    </div>
     
     <!-- Refresh Button Beneath Title -->
     <div style="text-align: center; margin-bottom: 2rem; width: 100%;">
@@ -926,6 +930,29 @@ async function handleAddStudent(event) {
         submitBtn.innerHTML = 'Create Student';
     }
 }
+</script>
+
+<script>
+async function ensureSmartyBeeReady(){
+    if(typeof SmartyBee3D!=='undefined') return; await new Promise(r=>{const i=setInterval(()=>{if(typeof SmartyBee3D!=='undefined'){clearInterval(i);r();}},150);});
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    const el = document.getElementById('adminAvatar3D');
+    if(!el) return;
+    try {
+        await ensureSmartyBeeReady();
+        new SmartyBee3D('adminAvatar3D', {
+            avatarId: window.currentUserAvatarId || 'cutie-bee-avatar',
+            enableAnimation:true,
+            enableRotation:true,
+            scale:1.0,
+            cameraDistance:3.4
+        });
+    } catch(e){
+        console.warn('Admin avatar failed', e);
+        el.textContent='🐝';
+    }
+});
 </script>
 
 {% endblock %}

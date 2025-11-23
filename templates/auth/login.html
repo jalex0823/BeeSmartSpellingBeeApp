@@ -52,7 +52,12 @@
       <h1>Welcome Back</h1>
       <div class="card-sub">Sign in to continue your spelling practice</div>
     </div>
+    
     <div class="card-body">
+      <!-- 3D Avatar Display (Unified spacing) -->
+      <div class="unified-avatar-stage large" aria-label="BeeSmart avatar" role="img">
+        <div id="loginMascotBee3D" class="avatar-fallback" title="Your BeeSmart companion!">🐝</div>
+      </div>
       <div id="errorAlert" class="alert alert-error"></div>
       {% if show_reset_banner %}
         <div id="successAlert" class="alert alert-success">Your password was updated. You can sign in now.</div>
@@ -224,6 +229,29 @@ sendResetBtn.addEventListener('click', async ()=>{
   } finally {
     sendResetBtn.disabled = false;
     sendResetBtn.textContent = 'Send reset link';
+  }
+});
+
+// Load 3D avatar for login page
+async function ensureSmartyBeeReady(){
+  if(typeof SmartyBee3D !== 'undefined') return;
+  await new Promise(r=>{const i=setInterval(()=>{if(typeof SmartyBee3D!=='undefined'){clearInterval(i);r();}},120);});
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('loginMascotBee3D');
+  if(!el) return;
+  try {
+    await ensureSmartyBeeReady();
+    new SmartyBee3D('loginMascotBee3D', {
+      avatarId: 'cutie-bee-avatar',
+      enableAnimation: true,
+      enableRotation: true,
+      scale: 1.0,
+      cameraDistance: 3.4
+    });
+  } catch(e){
+    console.warn('Login avatar failed, showing fallback', e);
+    el.textContent='🐝';
   }
 });
 </script>

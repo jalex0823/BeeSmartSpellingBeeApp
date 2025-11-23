@@ -400,8 +400,13 @@
             <h1>👨‍🏫 Teacher Dashboard</h1>
             <p class="subtitle">Welcome, {{ current_user.display_name }}!</p>
             
+            <!-- 3D Avatar Display (Unified spacing) -->
+            <div class="unified-avatar-stage large" aria-label="Teacher avatar" role="img">
+                <div id="teacherAvatar3D" class="avatar-fallback">🐝</div>
+            </div>
+            
             <!-- Buzz Dust Rank Badge -->
-            <div id="teacher-buzz-dust-rank" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+            <div id="teacher-buzz-dust-rank" style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 0.75rem 1.25rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);">
                     <img id="teacher-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
                     <div style="text-align: left;">
@@ -886,5 +891,27 @@
             });
         })();
     </script>
+<script>
+async function ensureSmartyBeeReady(){
+    if(typeof SmartyBee3D!=='undefined') return; await new Promise(r=>{const i=setInterval(()=>{if(typeof SmartyBee3D!=='undefined'){clearInterval(i);r();}},150);});
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    const el = document.getElementById('teacherAvatar3D');
+    if(!el) return;
+    try {
+        await ensureSmartyBeeReady();
+        new SmartyBee3D('teacherAvatar3D', {
+            avatarId: window.currentUserAvatarId || 'cutie-bee-avatar',
+            enableAnimation:true,
+            enableRotation:true,
+            scale:1.0,
+            cameraDistance:3.4
+        });
+    } catch(e){
+        console.warn('Teacher avatar failed', e);
+        el.textContent='🐝';
+    }
+});
+</script>
 </body>
 </html>

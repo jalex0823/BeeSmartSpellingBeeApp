@@ -484,19 +484,16 @@
         </div>
 
         <!-- My Avatar Section -->
-        <div class="content-section" style="max-width: 400px; margin: 0 auto 2rem auto;">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 1.5rem;">✨ My Avatar</h2>
+        <div class="content-section" style="max-width: 800px; margin: 0 auto 2rem auto;">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 1rem;">✨ My Avatar</h2>
             
-            <!-- 3D Avatar Display -->
-            <div id="parentAvatar3D" style="width: 250px; height: 250px; margin: 0 auto 1.5rem auto; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <div class="avatar-loading" style="text-align: center; color: #8B6914;">
-                    <div style="font-size: 4rem;">🐝</div>
-                    <div style="font-size: 0.875rem; margin-top: 0.5rem;">Loading...</div>
-                </div>
+            <!-- 3D Avatar Display with unified spacing -->
+            <div class="unified-avatar-stage large" aria-label="Parent avatar" role="img">
+                <div id="parentAvatar3D" class="avatar-fallback">🐝</div>
             </div>
             
             <!-- Change Avatar Button -->
-            <a href="/honeycomb-picker" class="btn btn-secondary" style="display: block; text-align: center; width: 100%; max-width: 300px; margin: 0 auto;">
+            <a href="/honeycomb-picker" class="btn btn-secondary" style="display: block; text-align: center; width: 100%; max-width: 300px; margin: 1.5rem auto 0 auto;">
                 🎨 Change Avatar
             </a>
         </div>

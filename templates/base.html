@@ -284,6 +284,24 @@
             color: #1B5E20;
             border-left-color: #66BB6A;
         }
+        /* Unified Avatar Stage (shared across login/register/dashboards) */
+        .unified-avatar-stage {
+            width: 100%;
+            max-width: 800px;
+            height: 360px;
+            margin: 0.75rem auto 1rem auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible; /* let avatar glow/effects escape */
+        }
+        .unified-avatar-stage.large { height: 480px; }
+        .unified-avatar-stage .avatar-fallback { font-size: 4rem; text-align: center; }
+        @media (max-width: 600px) {
+            .unified-avatar-stage { height: 300px; margin: 0.5rem auto 0.75rem auto; }
+            .unified-avatar-stage.large { height: 380px; }
+        }
         
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -310,7 +328,7 @@
 
     <!-- Global Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false" style="display: none;">
-    <img src="" alt="BeeSmart Logo" class="crest-logo brand-logo" decoding="async" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="crest-logo brand-logo" decoding="async" />
         <div class="checks" id="loadingChecks" aria-live="polite" style="display: none;">
             <!-- Loading check items -->
         </div>

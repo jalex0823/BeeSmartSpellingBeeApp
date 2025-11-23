@@ -219,7 +219,12 @@
       <h1>Join the Hive</h1>
       <div class="card-sub">Create your account to start practicing</div>
     </div>
+    
     <div class="card-body">
+      <!-- 3D Avatar Display (Unified spacing) -->
+      <div class="unified-avatar-stage large" aria-label="BeeSmart avatar" role="img">
+        <div id="registerMascotBee3D" class="avatar-fallback" title="Your BeeSmart companion!">🐝</div>
+      </div>
       <div id="alert-container"></div>
 
       <!-- Registration Billing Disclosure -->
@@ -938,6 +943,30 @@ document.addEventListener('DOMContentLoaded', () => {
             backBtn.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
         });
     }
+    
+  // Load 3D avatar for register page
+  loadRegisterAvatar();
 });
+
+async function ensureSmartyBeeReady(){
+  if(typeof SmartyBee3D!=='undefined') return; await new Promise(r=>{const i=setInterval(()=>{if(typeof SmartyBee3D!=='undefined'){clearInterval(i);r();}},120);});
+}
+async function loadRegisterAvatar() {
+  const el = document.getElementById('registerMascotBee3D');
+  if(!el) return;
+  try {
+    await ensureSmartyBeeReady();
+    new SmartyBee3D('registerMascotBee3D', {
+      avatarId: 'cutie-bee-avatar',
+      enableAnimation: true,
+      enableRotation: true,
+      scale: 1.0,
+      cameraDistance: 3.4
+    });
+  } catch(e){
+    console.warn('Register avatar failed, showing fallback', e);
+    el.textContent='🐝';
+  }
+}
 </script>
 {% endblock %}
