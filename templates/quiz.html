@@ -2869,8 +2869,8 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
-<!-- Bee Swarm Voice Visualizer Background -->
-<div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:5; pointer-events:none;"></div>
+<!-- Bee Swarm Voice Visualizer Background - Positioned at timer location -->
+<div id="beeSwarmVisualizerContainer" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; opacity:1; transition: opacity 0.8s ease;"></div>
 
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -3889,6 +3889,18 @@ class MorphController {
         console.log('🎭 Morphing to VOICE visualizer...');
         this.morphing = true;
         
+        // 🐝 Fade in bee swarm visualizer when returning to voice mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            console.log('✨ Fading in bee swarm for voice mode...');
+            beeSwarmContainer.style.transition = 'opacity 0.8s ease-in';
+            beeSwarmContainer.style.opacity = '1';
+            // Resume swarm animation
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = true;
+            }
+        }
+        
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
             window.soundboard.play('morph-to-visualization');
@@ -3917,6 +3929,19 @@ class MorphController {
         
         console.log('🎭 Morphing to HONEY JAR timer...');
         this.morphing = true;
+        
+        // 🐝 Fade out bee swarm visualizer when timer appears
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            console.log('🌫️ Fading out bee swarm as timer appears...');
+            beeSwarmContainer.style.transition = 'opacity 0.8s ease-out';
+            beeSwarmContainer.style.opacity = '0';
+            // Stop swarm animation
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = false;
+                window.beeSwarmViz.amplitude = 0;
+            }
+        }
         
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
@@ -3958,6 +3983,16 @@ class MorphController {
         this.container.classList.add('mode-voice');
         this.currentMode = 'voice';
         this.morphing = false;
+        
+        // 🐝 Ensure bee swarm is visible in voice mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            beeSwarmContainer.style.opacity = '1';
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = true;
+            }
+        }
+        
         console.log('🔄 Reset to VOICE mode');
     }
     
@@ -3969,6 +4004,17 @@ class MorphController {
         this.container.classList.add('mode-timer');
         this.currentMode = 'timer';
         this.morphing = false;
+        
+        // 🐝 Hide bee swarm in timer mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            beeSwarmContainer.style.opacity = '0';
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = false;
+                window.beeSwarmViz.amplitude = 0;
+            }
+        }
+        
         console.log('🔄 Reset to TIMER mode');
     }
     
@@ -8955,7 +9001,7 @@ function playThemedSound(soundType) {
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 12000,  // Dense swarm for dramatic effect
+                particleCount: 5000,  // Reduced for visible individual bees (not lines)
                 background: 'transparent',
                 zIndex: 1
             });

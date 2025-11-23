@@ -32,7 +32,7 @@ const BeeSwarmVisualizer = {
   geo: null,
   mat: null,
 
-  BASE_POINT_SIZE: 0.15,  // Smaller particles for subtle, elegant effect
+  BASE_POINT_SIZE: 0.35,  // Larger particles so bees are visible (not lines)
 
   // Animation parameters - SIGNIFICANTLY increased for dramatic movement
   tSpeedBase: 0.08,      // Much faster attraction to target shape
@@ -218,9 +218,9 @@ const BeeSwarmVisualizer = {
       size: this.BASE_POINT_SIZE,
       vertexColors: true,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.95,  // More opaque for better visibility
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.NormalBlending  // Normal blending for distinct particles
     });
 
     this.bees = new THREE.Points(this.geo, this.mat);
