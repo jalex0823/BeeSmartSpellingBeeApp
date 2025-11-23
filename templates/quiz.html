@@ -8889,40 +8889,59 @@ function playThemedSound(soundType) {
 <script type="module">
     import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}';
     
+    // Store reference globally for debugging and event integration
+    window.beeSwarmViz = null;
+    
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initBeeSwarm);
     } else {
-        initBeeSwarm();
+        // Delay slightly to ensure all elements are rendered
+        setTimeout(initBeeSwarm, 100);
     }
     
     function initBeeSwarm() {
-        const visualizerContainer = document.getElementById('beeSwarmContainer');
+        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
         
         if (!visualizerContainer) {
-            console.error('❌ beeSwarmContainer not found!');
+            console.error('❌ beeSwarmVisualizerContainer not found!');
             return;
         }
         
-        console.log('🚀 Initializing bee swarm visualizer in quiz voice visualizer...');
+        console.log('🚀 Initializing bee swarm visualizer...');
         console.log('📦 Container dimensions:', {
             width: visualizerContainer.clientWidth,
             height: visualizerContainer.clientHeight,
             offsetWidth: visualizerContainer.offsetWidth,
-            offsetHeight: visualizerContainer.offsetHeight
+            offsetHeight: visualizerContainer.offsetHeight,
+            computed: window.getComputedStyle(visualizerContainer).width
         });
         
         try {
-            BeeSwarmVisualizer.init(visualizerContainer, {
+            window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 15000,  // Increased density for more immersive bee swarm
+                particleCount: 12000,  // Dense swarm for dramatic effect
                 background: 'transparent',
                 zIndex: 1
             });
-            console.log('✅ Bee swarm visualizer initialized successfully for quiz voice integration');
+            console.log('✅ Bee swarm visualizer initialized successfully');
+            console.log('🎤 Listening for quiz-speech-start/end events...');
+            
+            // Test animation immediately
+            setTimeout(() => {
+                console.log('🧪 Testing visualizer with mock amplitude...');
+                if (window.beeSwarmViz) {
+                    window.beeSwarmViz.amplitude = 0.8;
+                    window.beeSwarmViz.isActive = true;
+                    setTimeout(() => {
+                        window.beeSwarmViz.isActive = false;
+                    }, 2000);
+                }
+            }, 1000);
         } catch (error) {
             console.error('❌ Failed to initialize bee swarm:', error);
+            console.error('Error stack:', error.stack);
         }
     }
 </script>

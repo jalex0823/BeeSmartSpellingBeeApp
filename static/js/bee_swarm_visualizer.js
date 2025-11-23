@@ -32,7 +32,7 @@ const BeeSwarmVisualizer = {
   geo: null,
   mat: null,
 
-  BASE_POINT_SIZE: 0.2,  // Larger particles for better visibility
+  BASE_POINT_SIZE: 0.35,  // Much larger particles for better visibility across full viewport
 
   // Animation parameters - SIGNIFICANTLY increased for dramatic movement
   tSpeedBase: 0.08,      // Much faster attraction to target shape
@@ -72,8 +72,10 @@ const BeeSwarmVisualizer = {
     this.scene = new THREE.Scene();
 
     const rect = container.getBoundingClientRect();
-    const width = rect.width || 860;
-    const height = rect.height || 260;
+    const width = rect.width || window.innerWidth || 860;
+    const height = rect.height || window.innerHeight || 260;
+    
+    console.log('🎬 BeeSwarmVisualizer scene dimensions:', { width, height });
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     this.camera.position.set(0, 0, 15);
@@ -94,11 +96,13 @@ const BeeSwarmVisualizer = {
     this.renderer.domElement.style.zIndex = "1";
 
     container.appendChild(this.renderer.domElement);
+    
+    console.log('✅ Canvas appended, size:', this.renderer.domElement.width, 'x', this.renderer.domElement.height);
 
     window.addEventListener("resize", () => {
       const r = container.getBoundingClientRect();
-      const w = r.width || 860;
-      const h = r.height || 260;
+      const w = r.width || window.innerWidth || 860;
+      const h = r.height || window.innerHeight || 260;
 
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
