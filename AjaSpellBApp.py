@@ -3037,8 +3037,6 @@ def _normalize_words(words_raw):
 
 @app.route("/api/saved-lists", methods=["GET"])
 def list_saved_wordlists():
-@app.route("/api/saved-lists", methods=["GET"])
-def list_saved_wordlists():
     """GET all saved lists for current user."""
     try:
         user = get_or_create_guest_user()
