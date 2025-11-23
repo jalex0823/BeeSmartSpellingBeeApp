@@ -1759,7 +1759,7 @@ function showFeedback(isCorrect, points, correctSpelling) {
             };
             u.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
             speechSynthesis.speak(u);
-        } catch {}
+        } catch (e) { console.warn('Speech error:', e); }
     })(phrase);
     const feedback = document.createElement('div');
     feedback.className = `feedback-message ${isCorrect ? 'correct' : 'incorrect'}`;
@@ -1807,7 +1807,7 @@ async function completeRound() {
             // small wait so the user hears it before we navigate
             await new Promise(r=>setTimeout(r, 1200));
         }
-    } catch {}
+    } catch (e) { console.warn('End speech error:', e); }
 
     // Show loading
     document.getElementById('loadingOverlay').style.display = 'flex';

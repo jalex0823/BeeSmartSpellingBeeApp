@@ -2629,15 +2629,30 @@
                     visibility: visible !important;
                     box-shadow: 0 4px 12px rgba(255, 201, 74, 0.3), 0 0 20px rgba(255, 201, 74, 0.2);
                     text-align: center;
+                    overflow: visible;
+                    animation: ticker-shimmer 3s ease-in-out infinite;
                 ">
                     <div id="ticker-text" style="
                         font-size: 1.05rem;
                         font-weight: 800;
                         color: #5a3a1a;
                         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+                        position: relative;
+                        z-index: 2;
                     ">
                         🐝 Loading Buzz Dust progress... ✨
                     </div>
+                    <!-- Ticker fairy dust container -->
+                    <div class="ticker-fairy-dust-container" style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        pointer-events: none;
+                        z-index: 1;
+                        width: 100%;
+                        height: 100%;
+                    "></div>
                 </div>
                 
                 <!-- Combined Rank + Name Badge (authenticated users only) -->
@@ -2666,6 +2681,76 @@
                 
                 <style>
                     /* ✨ SPARKLING FAIRY DUST ANIMATIONS ✨ */
+                    
+                    /* Ticker shimmer animation */
+                    @keyframes ticker-shimmer {
+                        0%, 100% {
+                            box-shadow: 0 4px 12px rgba(255, 201, 74, 0.3), 0 0 20px rgba(255, 201, 74, 0.2);
+                            border-color: rgba(255, 201, 74, 0.6);
+                        }
+                        50% {
+                            box-shadow: 0 6px 18px rgba(255, 201, 74, 0.5), 0 0 30px rgba(255, 201, 74, 0.4), 0 0 40px rgba(255, 215, 0, 0.3);
+                            border-color: rgba(255, 215, 0, 0.8);
+                        }
+                    }
+                    
+                    /* Ticker fairy dust particles (smaller, faster) */
+                    .ticker-fairy-dust {
+                        position: absolute;
+                        width: 3px;
+                        height: 3px;
+                        background: radial-gradient(circle, #FFD700 0%, #FFA500 50%, transparent 100%);
+                        border-radius: 50%;
+                        pointer-events: none;
+                        animation: ticker-dust-float 2s ease-in-out forwards;
+                        box-shadow: 0 0 4px #FFD700, 0 0 8px #FFA500;
+                    }
+                    
+                    .ticker-fairy-dust.sparkle {
+                        background: radial-gradient(circle, #FFFFFF 0%, #FFD700 30%, #FFA500 70%, transparent 100%);
+                        box-shadow: 0 0 6px #FFFFFF, 0 0 12px #FFD700;
+                        animation: ticker-dust-sparkle 1.8s ease-in-out forwards;
+                    }
+                    
+                    @keyframes ticker-dust-float {
+                        0% {
+                            transform: translateY(0) translateX(0) scale(0);
+                            opacity: 0;
+                        }
+                        10% {
+                            opacity: 1;
+                            transform: translateY(-5px) translateX(2px) scale(1);
+                        }
+                        90% {
+                            opacity: 0.8;
+                            transform: translateY(-25px) translateX(-8px) scale(1.3);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translateY(-35px) translateX(-12px) scale(0);
+                        }
+                    }
+                    
+                    @keyframes ticker-dust-sparkle {
+                        0% {
+                            transform: translateY(0) translateX(0) rotate(0deg) scale(0);
+                            opacity: 0;
+                        }
+                        15% {
+                            opacity: 1;
+                            transform: translateY(-8px) translateX(5px) rotate(90deg) scale(1);
+                        }
+                        85% {
+                            opacity: 0.9;
+                            transform: translateY(-30px) translateX(-10px) rotate(360deg) scale(1.5);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translateY(-40px) translateX(-15px) rotate(450deg) scale(0);
+                        }
+                    }
+                    
+                    /* Logo fairy dust particles */
                     .fairy-dust-particle {
                         position: absolute;
                         width: 4px;
@@ -15343,6 +15428,9 @@
                     tickerEl.style.visibility = 'visible';
                     console.log('✅ [TICKER] Ticker text updated:', tickerMessage.substring(0, 50) + '...');
                     console.log('✅ [TICKER] Ticker visibility:', window.getComputedStyle(tickerEl).display);
+                    
+                    // ✨ Add magical fairy dust to ticker!
+                    setTimeout(() => createTickerFairyDust(), 300);
                 } else {
                     if (!tickerEl) console.error('❌ [TICKER] Element #buzz-dust-ticker not found in DOM!');
                     if (!tickerTextEl) console.error('❌ [TICKER] Element #ticker-text not found in DOM!');
@@ -15388,6 +15476,98 @@
             loadStudentBuzzDust();
         }
         {% endif %}
+
+        // ✨ TICKER FAIRY DUST MAGIC ✨
+        function createTickerFairyDust() {
+            const container = document.querySelector('.ticker-fairy-dust-container');
+            if (!container) {
+                console.log('⚠️ Ticker fairy dust container not found');
+                return;
+            }
+            
+            console.log('✨ Creating magical fairy dust on Buzz Dust ticker...');
+            
+            // Create continuous sparkles
+            const createBurst = () => {
+                const particleCount = 6;
+                const sparkleCount = 4;
+                
+                // Regular ticker particles (rise from bottom)
+                for (let i = 0; i < particleCount; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.className = 'ticker-fairy-dust';
+                        
+                        // Random horizontal position across ticker width
+                        const xPos = -40 + (Math.random() * 80); // -40% to +40%
+                        particle.style.left = `calc(50% + ${xPos}%)`;
+                        particle.style.bottom = '10%';
+                        
+                        // Random size variation
+                        const size = 2 + Math.random() * 2;
+                        particle.style.width = size + 'px';
+                        particle.style.height = size + 'px';
+                        
+                        // Stagger the animation slightly
+                        particle.style.animationDelay = (Math.random() * 0.3) + 's';
+                        
+                        container.appendChild(particle);
+                        
+                        // Clean up after animation
+                        setTimeout(() => {
+                            if (particle.parentNode) {
+                                particle.parentNode.removeChild(particle);
+                            }
+                        }, 2200);
+                    }, i * 60);
+                }
+                
+                // Sparkle particles (brighter, more random paths)
+                for (let i = 0; i < sparkleCount; i++) {
+                    setTimeout(() => {
+                        const sparkle = document.createElement('div');
+                        sparkle.className = 'ticker-fairy-dust sparkle';
+                        
+                        // More random positioning
+                        const xPos = -45 + (Math.random() * 90);
+                        const yPos = 20 + (Math.random() * 60); // Start from various heights
+                        sparkle.style.left = `calc(50% + ${xPos}%)`;
+                        sparkle.style.bottom = yPos + '%';
+                        
+                        // Sparkles are slightly larger
+                        const size = 3 + Math.random() * 2;
+                        sparkle.style.width = size + 'px';
+                        sparkle.style.height = size + 'px';
+                        
+                        // Faster, more random timing
+                        sparkle.style.animationDelay = (Math.random() * 0.4) + 's';
+                        
+                        container.appendChild(sparkle);
+                        
+                        // Clean up after animation
+                        setTimeout(() => {
+                            if (sparkle.parentNode) {
+                                sparkle.parentNode.removeChild(sparkle);
+                            }
+                        }, 2000);
+                    }, i * 80 + 300);
+                }
+            };
+            
+            // Create initial burst
+            createBurst();
+            
+            // Continue creating bursts every 2.5 seconds for continuous magic
+            const burstInterval = setInterval(createBurst, 2500);
+            
+            // Store interval ID for cleanup if needed
+            if (!window.tickerFairyDustIntervals) {
+                window.tickerFairyDustIntervals = [];
+            }
+            window.tickerFairyDustIntervals.push(burstInterval);
+            
+            console.log('✨ Ticker fairy dust magic activated! Continuous sparkles enabled.');
+        }
 
         // ✨ SPARKLING FAIRY DUST MAGIC ✨ 
         function createFairyDustEffect() {

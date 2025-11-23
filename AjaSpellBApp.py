@@ -4481,6 +4481,9 @@ def api_random_words():
             set_wordbank(random_words)
             init_quiz_state()
             
+            # Mark this as a Random Play session to suppress default words warning
+            session['is_random_play'] = True
+            
             print(f"✅ Generated {len(random_words)} random words at difficulty {difficulty}")
             
             return jsonify({
@@ -6609,6 +6612,31 @@ def api_answer():
         state["session_points"] = state.get("session_points", 0) + points_earned
         if state["streak"] > state.get("max_streak", 0):
             state["max_streak"] = state["streak"]
+        
+        # ✨ BUZZ DUST AWARDING - Award Buzz Dust immediately for correct answers (authenticated users)
+        if current_user.is_authenticated and points_earned > 0:
+            old_buzz_dust = current_user.total_buzz_dust or 0
+            current_user.total_buzz_dust = old_buzz_dust + points_earned
+            
+            # Check for rank advancement
+            from buzz_dust_helpers import get_bee_class
+            old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
+            new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
+            
+            if old_class_id != new_class_id:
+                # User ranked up mid-quiz!
+                session['ranked_up'] = True
+                session['old_class_id'] = old_class_id
+                current_user.bee_class = new_class_id
+                print(f"🎊 MID-QUIZ RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+            
+            # Commit the Buzz Dust update immediately
+            try:
+                db.session.commit()
+                print(f"✨ BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
+            except Exception as e:
+                print(f"⚠️ Failed to commit Buzz Dust award: {e}")
+                db.session.rollback()
     else:
         state["incorrect"] += 1
         state["streak"] = 0
@@ -6790,6 +6818,23 @@ def api_answer():
                     old_honey_points = current_user.honey_points or 0
                     new_honey_points = old_honey_points + total_points
                     current_user.honey_points = new_honey_points
+                    
+                    # ✨ BUZZ DUST AWARDING - Award Buzz Dust for quiz completion
+                    old_buzz_dust = current_user.total_buzz_dust or 0
+                    current_user.total_buzz_dust = old_buzz_dust + total_points
+                    print(f"✨ BUZZ DUST AWARDED: {total_points} Buzz Dust (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    
+                    # Check for rank advancement
+                    from buzz_dust_helpers import get_bee_class
+                    old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
+                    new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
+                    
+                    if old_class_id != new_class_id:
+                        # User ranked up!
+                        session['ranked_up'] = True
+                        session['old_class_id'] = old_class_id
+                        current_user.bee_class = new_class_id
+                        print(f"🎊 RANK UP! {old_class_id} → {new_class_id}")
                     
                     purchased_avatars = current_user.purchased_avatars or []
                     
@@ -7418,12 +7463,14 @@ def api_verify_wordbank():
     has_uploaded = session.get("has_uploaded_once", False)
     using_defaults = session.get("using_default_words", False)
     skip_defaults = session.get("skip_default_load", False)
+    is_random_play = session.get("is_random_play", False)  # Random Play flag
     
     # Detect potential issues
     issues = []
     if len(wb) == 0:
         issues.append("No words loaded - wordbank is empty")
-    if using_defaults and has_uploaded:
+    # Don't warn about default words if this is Random Play mode
+    if using_defaults and has_uploaded and not is_random_play:
         issues.append("WARNING: Using default words but user previously uploaded custom list (possible session loss)")
     if not wb and has_uploaded:
         issues.append("CRITICAL: User uploaded words but wordbank is empty (session lost)")
@@ -7435,6 +7482,7 @@ def api_verify_wordbank():
         "has_uploaded_once": has_uploaded,
         "using_default_words": using_defaults,
         "skip_default_load": skip_defaults,
+        "is_random_play": is_random_play,
         "issues": issues,
         "recommendation": "Ready to start quiz" if len(wb) > 0 and not issues else "Please upload a word list before starting"
     })

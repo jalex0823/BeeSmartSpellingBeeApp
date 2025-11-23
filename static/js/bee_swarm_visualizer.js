@@ -1,6 +1,7 @@
 /**
- * Bee Swarm Voice Visualizer (Mouth Morph Edition)
- * Compact mouth shape that opens/closes with speech amplitude.
+ * Bee Swarm Voice Visualizer
+ * Dense bee-swarm mouth shape that expands/contracts with speech amplitude.
+ * Uses soft bee-dot sprites for realistic particle appearance.
  * Uses global THREE from base.html to avoid multiple Three.js imports
  */
 // Use global THREE instead of importing to avoid conflicts
@@ -18,7 +19,7 @@ const BeeSwarmVisualizer = {
   isActive: false,
 
   // particle data
-  COUNT: 8000,
+  COUNT: 5000,
   positions: null,
   velocities: null,
 
@@ -40,7 +41,7 @@ const BeeSwarmVisualizer = {
   buzzBase: 0.004,       // More random buzz movement
   damp: 0.92,            // Less damping for fluid, bouncy motion
 
-  // mouth morph state
+  // swarm expansion state
   mouthOpen: 0,        // 0..1
   mouthOpenVel: 0,
   mouthPulse: 0,       // snaps on boundaries
@@ -63,7 +64,7 @@ const BeeSwarmVisualizer = {
     this.animate(0);
 
     this.setupSpeechIntegration();
-    console.log("🐝 Bee swarm visualizer initialized (mouth morph ON)");
+    console.log("🐝 Bee swarm visualizer initialized (3D swarm cloud)");
 
     return this;
   },
@@ -110,6 +111,31 @@ const BeeSwarmVisualizer = {
     });
   },
 
+  // create a soft circular "bee dot" sprite so particles don't look like lines
+  makeBeeTexture() {
+    const size = 64;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+
+    const grd = ctx.createRadialGradient(
+      size/2, size/2, 0,
+      size/2, size/2, size/2
+    );
+    grd.addColorStop(0, "rgba(255,255,255,1)");
+    grd.addColorStop(0.35, "rgba(255,255,255,0.9)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  },
+
   initParticles() {
     this.positions = new Float32Array(this.COUNT * 3);
     this.velocities = new Float32Array(this.COUNT * 3);
@@ -147,34 +173,36 @@ const BeeSwarmVisualizer = {
     };
 
     // --- Build CLOSED and OPEN mouth targets ---
+    // FILLED mouth swarm: upper lip + lower lip + inner volume (not just two lines!)
     const buildMouthTargets = (openFactor, outArray) => {
-      const mouthWidth = 5.5;  // Horizontal mouth width
-      const lipCurve = 0.8;    // Smile curve depth
-      const maxOpen = 2.0 * openFactor;  // Vertical opening
+      const mouthWidth = 5.8;
+      const lipCurve = 0.9;
+      const maxOpen = 2.4 * openFactor;
 
-      // Create curved mouth with upper and lower lips
       for (let i = 0; i < this.COUNT; i++) {
-        // Position along mouth (0 to 1)
-        const u = i / this.COUNT;
-        
-        // X position across mouth width with slight random variation
-        const x = (u - 0.5) * mouthWidth + (Math.random() - 0.5) * 0.2;
+        const u = i / this.COUNT; // 0..1 across mouth
+        const x = (u - 0.5) * mouthWidth + (Math.random() - 0.5) * 0.35;
 
-        // Smile curve (parabola) - negative at center, positive at edges
-        const smileCurve = -Math.cos(u * Math.PI * 2) * lipCurve * 0.5;
+        // smile curve (gentle arc)
+        const smileCurve = -Math.cos(u * Math.PI * 2) * lipCurve * 0.45;
 
-        // Determine if this particle is on upper or lower lip
-        const isUpper = (i % 2 === 0);
-        const lipSide = isUpper ? 1 : -1;
-        
-        // Vertical position: smile curve + lip separation
-        // Add some thickness to the lips
-        const lipThickness = (Math.random() - 0.5) * 0.15;
-        const y = smileCurve + lipSide * (maxOpen * 0.5 + lipThickness);
-        
-        // Z-depth variation for 3D effect (thicker in center, thinner at edges)
-        const centerBias = 1.0 - Math.abs(u - 0.5) * 2; // 1 at center, 0 at edges
-        const z = (Math.random() - 0.5) * 0.8 * (0.5 + centerBias * 0.5);
+        const bandPick = Math.random();
+
+        let y;
+        if (bandPick < 0.35) {
+          // upper lip band with thickness
+          y = smileCurve + (maxOpen * 0.55) + (Math.random() - 0.5) * 0.35;
+        } else if (bandPick < 0.70) {
+          // lower lip band with thickness
+          y = smileCurve - (maxOpen * 0.55) + (Math.random() - 0.5) * 0.35;
+        } else {
+          // inner swarm volume (fills mouth)
+          y = smileCurve + (Math.random() - 0.5) * maxOpen * 0.9;
+        }
+
+        // 3D depth — thicker in center, thinner at edges
+        const centerBias = 1.0 - Math.abs(u - 0.5) * 2;
+        const z = (Math.random() - 0.5) * 1.2 * (0.35 + centerBias * 0.65);
 
         outArray[i * 3 + 0] = x;
         outArray[i * 3 + 1] = y;
@@ -182,7 +210,7 @@ const BeeSwarmVisualizer = {
       }
     };
 
-    buildMouthTargets(0.5, this.targetsClosed);  // Subtle closed mouth
+    buildMouthTargets(0.45, this.targetsClosed);  // Subtle closed mouth
     buildMouthTargets(1.0, this.targetsOpen);     // Wide open mouth
 
     // start particles near center so shape forms fast
@@ -220,14 +248,16 @@ const BeeSwarmVisualizer = {
       transparent: true,
       opacity: 0.95,  // More opaque for better visibility
       depthWrite: false,
-      blending: THREE.NormalBlending  // Normal blending for distinct particles
+      blending: THREE.AdditiveBlending,  // Additive blending for glowing effect
+      map: this.makeBeeTexture(),  // Soft bee-dot sprite
+      alphaTest: 0.02
     });
 
     this.bees = new THREE.Points(this.geo, this.mat);
     this.scene.add(this.bees);
   },
 
-  // interpolate between closed/open targets every frame
+  // interpolate between closed/open mouth targets every frame
   updateMouthTargets(openAmount) {
     const o = THREE.MathUtils.clamp(openAmount, 0, 1);
     for (let i = 0; i < this.COUNT * 3; i++) {
@@ -288,7 +318,7 @@ const BeeSwarmVisualizer = {
       0, 1
     );
 
-    // More bouncy mouth physics
+    // Bouncy swarm physics - expands and contracts with speech
     const stiffness = 0.35;  // Very responsive spring
     const damping = 0.70;    // Less damping for bouncier motion
     this.mouthOpenVel = this.mouthOpenVel * damping + (targetOpen - this.mouthOpen) * stiffness;
