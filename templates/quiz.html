@@ -8282,6 +8282,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', initError.stack);
         // Continue with quiz even if initialization fails
     }
+    } catch (outerError) {
+        // Catch errors from the DOMContentLoaded try block
+        console.error('❌ DOMContentLoaded initialization error:', outerError);
+        console.error('Error details:', outerError.stack);
+    }
 
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
