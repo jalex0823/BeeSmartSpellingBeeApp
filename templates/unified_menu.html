@@ -2854,25 +2854,89 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Compact authenticated view: mirror guest layout but keep registered 3D avatar -->
-                <div id="authCompactAvatar" style="text-align:center; max-width:600px; margin: 0 auto;">
-                    <!-- Keep the registered 3D avatar element but use a smaller preview size like guest -->
-                    <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="width:240px; height:180px; margin: 0 auto; cursor: pointer; position: relative;"></div>
-
-                    <!-- Display user/character name (falls back to a friendly name) -->
-                    <div style="font-size:1.05rem; font-weight:700; color:#5A2C15; margin-top:12px;">{{ current_user.display_name or current_user.username or 'Super Bee' }}</div>
-
-                    <!-- Short call-to-action and subscription hint matching guest layout -->
-                    <div style="margin-top:8px; color:#5A2C15;">Join the hive — pick your Bee style!</div>
-                    <a href="/auth/dashboard" style="display:inline-block; margin-top:8px; color:#1a0dab; text-decoration:underline;">Start now</a>
-
-                    <div style="margin-top:10px; color:#8B4513;">${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.</div>
-
-                    <div style="margin-top:14px;">
-                        <a href="https://beesmartspelling.app" target="_blank" rel="noopener noreferrer" style="color:#FF6B00; text-decoration:none;">beesmartspelling.app</a>
+                <!-- 3D Avatar Display (registered users only): Uses morph-container like quiz -->
+                <div class="morph-container mode-voice" style="
+                    width: 100%;
+                    max-width: 800px;
+                    height: 240px;
+                    margin: 0 auto -8px auto;
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: visible;
+                ">
+                    <div class="morph-content" style="width: 100%; height: 100%; position: relative;">
+                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
+                            width: 240px; height: 180px; margin: 0 auto; position: relative; cursor: pointer;
+                        "></div>
                     </div>
+                </div>
+                
+                <!-- Avatar System Status Badge (shows preload results) -->
+                <div id="avatarSystemStatus" style="
+                    display: none;
+                    margin: 8px auto 10px;
+                    padding: 4px 8px;
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 500;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onclick="showAvatarInfoModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAvatarInfoModal();}" tabindex="0" role="button" aria-label="Learn about your avatar" title="Click to learn about your avatar">
+                    <span id="avatarStatusText">Checking...</span>
+                </div>
 
-                    <div id="versionBadgeCompact" style="margin-top:8px; font-size:11px; color:rgba(0,0,0,0.4); font-family:monospace;">v1.6</div>
+                <!-- Battles Status Badge (registered users only; shown when checked) -->
+                <div id="battleStatusBadge" style="
+                    display: none;
+                    margin: 4px auto 8px;
+                    padding: 4px 10px;
+                    background: rgba(0, 0, 0, 0.06);
+                    border-radius: 999px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    text-align: center;
+                    letter-spacing: 0.2px;
+                    color: #5A2C15;
+                    width: fit-content;
+                " aria-live="polite"></div>
+                
+                <!-- Avatar Refresh Button (hidden by default, shows if avatar fails) -->
+                <button id="avatarRefreshBtn" style="
+                    display: none;
+                    margin: 10px auto;
+                    padding: 8px 16px;
+                    background: linear-gradient(135deg, #FFD700, #FFA500);
+                    border: none;
+                    border-radius: 8px;
+                    color: #5A2C15;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 13px;
+                    box-shadow: 0 4px 8px rgba(255, 165, 0, 0.3);
+                    transition: all 0.3s ease;
+                " onclick="refreshAvatar()" 
+                   onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 12px rgba(255, 165, 0, 0.4)'" 
+                   onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 8px rgba(255, 165, 0, 0.3)'">
+                    🔄 Reload Avatar
+                </button>
+                
+                <!-- Interactive Caption under mascot -->
+                <div id="mascotCaption" style="
+                    font-size: 14px;
+                    color: #FF6B00;
+                    font-weight: 600;
+                    margin-top: 2px;
+                    margin-bottom: 4px;
+                    text-align: center;
+                    animation: gentlePulse 2s ease-in-out infinite;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onclick="handleMascotCaptionClick(event)">
+                    ✨ Click on me to see what I do! ✨
                 </div>
                 {% endif %}
 
