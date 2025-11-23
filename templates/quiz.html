@@ -2869,9 +2869,6 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
-<!-- Bee Swarm Voice Visualizer Background - Positioned at timer location -->
-<div id="beeSwarmVisualizerContainer" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; opacity:1; transition: opacity 0.8s ease;"></div>
-
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -2991,6 +2988,9 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
+                <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
+                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; opacity:1; transition: opacity 0.8s ease;"></div>
+                
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
@@ -3739,6 +3739,9 @@ class BeeSoundboard {
             };
             
             utterance.onboundary = (event) => {
+                // Trigger bee swarm mouth pulse on word boundaries
+                window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+                
                 // Word-level micro pauses for natural cadence
                 if (event.name === 'word' || event.charLength > 0) {
                     if (visualizer) {
@@ -4980,6 +4983,11 @@ class QuizManager {
                     window.dispatchEvent(new CustomEvent('quiz-speech-start'));
                     
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                };
+                
+                // Add boundary event for mouth pulses
+                utterance.onboundary = (event) => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
                 };
                 
                 // Add event listeners to resolve promise when speech ends
@@ -6685,6 +6693,10 @@ class QuizManager {
                     window.dispatchEvent(new CustomEvent('quiz-speech-start'));
                 };
                 
+                utterance.onboundary = (event) => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+                };
+                
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
                     // Trigger bee swarm deactivation
@@ -7942,6 +7954,10 @@ function pronounceWordFromReport(word) {
         utterance.onstart = () => {
             // Trigger bee swarm activation
             window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+        };
+        
+        utterance.onboundary = (event) => {
+            window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
         };
         
         utterance.onend = () => {

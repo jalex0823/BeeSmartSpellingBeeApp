@@ -191,10 +191,10 @@ const BeeSwarmVisualizer = {
         let y;
         if (bandPick < 0.35) {
           // upper lip band with thickness
-          y = smileCurve + (maxOpen * 0.55) + (Math.random() - 0.5) * 0.35;
+          y = smileCurve + (maxOpen * 0.55) + (Math.random() - 0.5) * 0.85;
         } else if (bandPick < 0.70) {
           // lower lip band with thickness
-          y = smileCurve - (maxOpen * 0.55) + (Math.random() - 0.5) * 0.35;
+          y = smileCurve - (maxOpen * 0.55) + (Math.random() - 0.5) * 0.85;
         } else {
           // inner swarm volume (fills mouth)
           y = smileCurve + (Math.random() - 0.5) * maxOpen * 0.9;
@@ -269,16 +269,21 @@ const BeeSwarmVisualizer = {
 
   setupSpeechIntegration() {
     window.addEventListener("quiz-speech-start", () => {
+      console.log('🐝 Bee swarm: Speech started - activating animation');
       this.isActive = true;
+      this.amplitude = 0.8;  // Immediate visual feedback
+      this.mouthPulse = 1.2;  // Big initial mouth opening
     });
 
     window.addEventListener("quiz-speech-end", () => {
+      console.log('🐝 Bee swarm: Speech ended - deactivating animation');
       this.isActive = false;
+      this.amplitude = 0;  // Immediate stop
     });
 
-    // Optional sharp syncing if you dispatch this in quiz speech onboundary
+    // Word boundary pulses for dramatic mouth movement
     window.addEventListener("quiz-speech-boundary", () => {
-      this.mouthPulse = 1.0;
+      this.mouthPulse = 1.0;  // Pulse on each word
     });
 
     if (typeof speechSynthesis !== "undefined") {
