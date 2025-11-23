@@ -8118,6 +8118,10 @@ window.addEventListener('error', (event) => {
 unlockiOSAudio();
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // CRITICAL: Declare these at function scope so they're accessible in setTimeout callback
+    let delight = null;
+    let smartyBee = null;
+    
     try {
         // 🐝 Initialize Bee Swarm Voice Visualizer Background
         const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
@@ -8133,13 +8137,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.morphController = new MorphController('morphContainer');
     console.log('🎭 Morph controller initialized');
     
-    const delight = new BeeDelightManager();
+    delight = new BeeDelightManager();
     
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
     
     // Initialize 3D Mascot with user's selected avatar
-    let smartyBee = null;
+    // (smartyBee is already declared at function scope above)
     try {
         console.log('🎯 Quiz page: Starting avatar initialization...');
         
