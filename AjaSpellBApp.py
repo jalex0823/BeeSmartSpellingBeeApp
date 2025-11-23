@@ -3753,9 +3753,14 @@ def quiz_page():
     session_id = session.get("session_id", "NONE")
     storage_id = session.get("wordbank_storage_id", "NONE")
     
+    print(f"\n{'='*60}")
+    print(f"🎯 /quiz ROUTE ACCESSED")
+    print(f"{'='*60}")
     print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
     print(f"DEBUG /quiz: session keys={list(session.keys())}")
-    print(f"DEBUG /quiz: cookies={request.cookies.keys()}")
+    print(f"DEBUG /quiz: cookies={list(request.cookies.keys())}")
+    print(f"DEBUG /quiz: cookie values={dict(request.cookies)}")
+    print(f"DEBUG /quiz: user-agent={request.headers.get('User-Agent', 'UNKNOWN')[:80]}")
     
     # Check WORD_STORAGE
     with WORD_STORAGE_LOCK:
