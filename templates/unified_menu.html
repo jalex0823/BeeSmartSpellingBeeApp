@@ -7673,6 +7673,7 @@
                     // Helper: quick navigate to quiz with friendly loading + sound
                     const navigateToQuiz = async () => {
                         // 🔒 CRITICAL: Verify session has words before navigating (prevents "lost session" bug)
+                        let wordCountForUrl = 0;
                         try {
                             const verifyResp = await fetch('/api/wordbank', {
                                 credentials: 'same-origin',
@@ -7685,6 +7686,7 @@
                                 return; // Don't navigate
                             }
                             console.log(`✅ Session verified before quiz: ${verifyData.count} words present`);
+                            wordCountForUrl = verifyData.count;
                         } catch (err) {
                             console.error('❌ Could not verify session before quiz:', err);
                             // Continue anyway - better to try than block user
@@ -7697,7 +7699,7 @@
                         
                         // 🔒 CRITICAL: Add timestamp to URL to force session cookie refresh
                         // This helps browsers properly include the session cookie
-                        const quizUrl = `/quiz?t=${Date.now()}&words=${verifyData.count}`;
+                        const quizUrl = `/quiz?t=${Date.now()}&words=${wordCountForUrl}`;
                         setTimeout(() => { window.location.href = quizUrl; }, 150);
                     };
                     
