@@ -52,14 +52,18 @@ const BeeSwarmVisualizer = {
       showControls: false,
       particleCount: 8000,
       background: "transparent",
-      zIndex: 1,
+      zIndex: 2,
+      overallScale: 2.2,      // NEW: scales the mouth up
+      cameraZ: 8.5,           // NEW: bring camera closer
       ...options
     };
 
     this.container = container;
     this.COUNT = opts.particleCount;
+    this.overallScale = opts.overallScale;
+    this.cameraZ = opts.cameraZ;
 
-    this.initScene(container);
+    this.initScene(container, opts);   // pass opts ✅
     this.initParticles();
     this.animate(0);
 
@@ -69,7 +73,7 @@ const BeeSwarmVisualizer = {
     return this;
   },
 
-  initScene(container) {
+  initScene(container, opts) {
     this.scene = new THREE.Scene();
 
     const rect = container.getBoundingClientRect();
@@ -79,7 +83,7 @@ const BeeSwarmVisualizer = {
     console.log('🎬 BeeSwarmVisualizer scene dimensions:', { width, height });
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    this.camera.position.set(0, 0, 15);
+    this.camera.position.set(0, 0, this.cameraZ || 8.5);
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -89,16 +93,17 @@ const BeeSwarmVisualizer = {
 
     this.renderer.setSize(width, height);
     this.renderer.setClearColor(0x000000, 0);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // safer ✅
 
     this.renderer.domElement.style.position = "absolute";
     this.renderer.domElement.style.inset = "0";
     this.renderer.domElement.style.pointerEvents = "none";
-    this.renderer.domElement.style.zIndex = "1";
+    this.renderer.domElement.style.zIndex = String(opts?.zIndex ?? 2); // honor opts ✅
 
     container.appendChild(this.renderer.domElement);
     
     console.log('✅ Canvas appended, size:', this.renderer.domElement.width, 'x', this.renderer.domElement.height);
+    console.log('🎯 Camera Z position:', this.cameraZ, '| zIndex:', opts?.zIndex ?? 2);
 
     window.addEventListener("resize", () => {
       const r = container.getBoundingClientRect();
@@ -204,9 +209,11 @@ const BeeSwarmVisualizer = {
         const centerBias = 1.0 - Math.abs(u - 0.5) * 2;
         const z = (Math.random() - 0.5) * 1.2 * (0.35 + centerBias * 0.65);
 
-        outArray[i * 3 + 0] = x;
-        outArray[i * 3 + 1] = y;
-        outArray[i * 3 + 2] = z;
+        // Scale up the mouth using overallScale parameter
+        const s = this.overallScale || 2.2;
+        outArray[i * 3 + 0] = x * s;
+        outArray[i * 3 + 1] = y * s;
+        outArray[i * 3 + 2] = z * s;
       }
     };
 

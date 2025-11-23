@@ -9017,9 +9017,11 @@ function playThemedSound(soundType) {
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 5000,  // Reduced for visible individual bees (not lines)
+                particleCount: 5000,     // Reduced for visible individual bees (not lines)
                 background: 'transparent',
-                zIndex: 1
+                zIndex: 5,               // Match container z-index
+                overallScale: 2.2,       // Scale up mouth for visibility
+                cameraZ: 8.5             // Bring camera closer for better framing
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('🎤 Listening for quiz-speech-start/end events...');
