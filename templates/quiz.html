@@ -4930,6 +4930,9 @@ class QuizManager {
                         status.textContent = '🗣️ Speaking...';
                     }
                     
+                    // Trigger bee swarm activation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                    
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                 };
                 
@@ -4943,6 +4946,9 @@ class QuizManager {
                         status.textContent = '🐝 Ready';
                     }
                     
+                    // Trigger bee swarm deactivation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+                    
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                     
                     resolve();
@@ -4955,6 +4961,9 @@ class QuizManager {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
+                    
+                    // Trigger bee swarm deactivation on error
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     
                     // 🎭 Morph back to timer on error
                     if (window.morphController) {
@@ -6624,13 +6633,23 @@ class QuizManager {
                     }
                 }
                 
+                utterance.onstart = () => {
+                    console.log('Direct speech synthesis started');
+                    // Trigger bee swarm activation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                };
+                
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
+                    // Trigger bee swarm deactivation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
                 utterance.onerror = (event) => {
                     console.error('Speech synthesis error:', event);
+                    // Trigger bee swarm deactivation on error
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
@@ -7873,6 +7892,21 @@ function pronounceWordFromReport(word) {
         utterance.rate = 0.85;  // Natural conversational pace (consistent)
         utterance.pitch = 1.0; // Natural neutral female voice
         utterance.volume = 1.0;
+        
+        utterance.onstart = () => {
+            // Trigger bee swarm activation
+            window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+        };
+        
+        utterance.onend = () => {
+            // Trigger bee swarm deactivation
+            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+        };
+        
+        utterance.onerror = () => {
+            // Trigger bee swarm deactivation on error
+            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+        };
         
         speechSynthesis.speak(utterance);
     }

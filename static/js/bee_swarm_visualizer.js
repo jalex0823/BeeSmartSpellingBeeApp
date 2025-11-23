@@ -32,7 +32,7 @@ const BeeSwarmVisualizer = {
   geo: null,
   mat: null,
 
-  BASE_POINT_SIZE: 0.35,  // Much larger particles for better visibility across full viewport
+  BASE_POINT_SIZE: 0.15,  // Smaller particles for subtle, elegant effect
 
   // Animation parameters - SIGNIFICANTLY increased for dramatic movement
   tSpeedBase: 0.08,      // Much faster attraction to target shape
@@ -148,34 +148,33 @@ const BeeSwarmVisualizer = {
 
     // --- Build CLOSED and OPEN mouth targets ---
     const buildMouthTargets = (openFactor, outArray) => {
-      const mouthWidth = 7.0;  // Wider mouth
-      const lipCurve = 1.5;    // More pronounced curve
-      const maxOpen = 3.0 * openFactor;  // Much larger vertical spread
+      const mouthWidth = 5.5;  // Horizontal mouth width
+      const lipCurve = 0.8;    // Smile curve depth
+      const maxOpen = 2.0 * openFactor;  // Vertical opening
 
-      // Distribute particles in 3D volume instead of layers for fuller shape
+      // Create curved mouth with upper and lower lips
       for (let i = 0; i < this.COUNT; i++) {
-        // Random position along mouth width
-        const u = Math.random(); // 0..1 across mouth
-        const x = (u - 0.5) * mouthWidth;
+        // Position along mouth (0 to 1)
+        const u = i / this.COUNT;
+        
+        // X position across mouth width with slight random variation
+        const x = (u - 0.5) * mouthWidth + (Math.random() - 0.5) * 0.2;
 
-        // Smile curve
-        const smile = -Math.cos(u * Math.PI) * lipCurve * 0.4;
+        // Smile curve (parabola) - negative at center, positive at edges
+        const smileCurve = -Math.cos(u * Math.PI * 2) * lipCurve * 0.5;
 
-        // Random depth position (which lip layer)
-        const depthRand = Math.random();
-        const isUpper = depthRand < 0.5;
+        // Determine if this particle is on upper or lower lip
+        const isUpper = (i % 2 === 0);
         const lipSide = isUpper ? 1 : -1;
         
-        // Vary the spread - more spread at edges of lips
-        const lipBlend = Math.abs(depthRand - 0.5) * 2; // 0 at center, 1 at edges
-        const spread = maxOpen * lipBlend * (0.5 + Math.random() * 0.5); // Add randomness
-
-        // Add some vertical scatter for organic feel
-        const y = smile + lipSide * spread + (Math.random() - 0.5) * 0.3;
+        // Vertical position: smile curve + lip separation
+        // Add some thickness to the lips
+        const lipThickness = (Math.random() - 0.5) * 0.15;
+        const y = smileCurve + lipSide * (maxOpen * 0.5 + lipThickness);
         
-        // Distribute in 3D depth with clustering near center
-        const zFactor = 1.0 - Math.pow(Math.random(), 1.5); // Bias toward center
-        const z = (Math.random() - 0.5) * 2.0 * zFactor; // Wider depth range
+        // Z-depth variation for 3D effect (thicker in center, thinner at edges)
+        const centerBias = 1.0 - Math.abs(u - 0.5) * 2; // 1 at center, 0 at edges
+        const z = (Math.random() - 0.5) * 0.8 * (0.5 + centerBias * 0.5);
 
         outArray[i * 3 + 0] = x;
         outArray[i * 3 + 1] = y;
@@ -183,8 +182,8 @@ const BeeSwarmVisualizer = {
       }
     };
 
-    buildMouthTargets(0.65, this.targetsClosed);  // More visible when "closed"
-    buildMouthTargets(1.0, this.targetsOpen);
+    buildMouthTargets(0.5, this.targetsClosed);  // Subtle closed mouth
+    buildMouthTargets(1.0, this.targetsOpen);     // Wide open mouth
 
     // start particles near center so shape forms fast
     for (let i = 0; i < this.COUNT; i++) {
