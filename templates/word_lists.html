@@ -1002,7 +1002,9 @@
       const data = await res.json();
       if(data.ok && data.list){
         const words = data.list.words||[];
-        const preview = words.slice(0,12).join(", ");
+        // Extract just the word text from each word object
+        const wordTexts = words.map(w => w.word || w);
+        const preview = wordTexts.slice(0,12).join(", ");
         const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
         await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
       }else{
@@ -1135,7 +1137,9 @@
 
       editTarget = { id:listId };
       editName.value = data.list.name || listName;
-      editWords.value = (data.list.words||[]).join("\n");
+      // Extract just the word text from each word object
+      const wordTexts = (data.list.words||[]).map(w => w.word || w);
+      editWords.value = wordTexts.join("\n");
       editModal.classList.add("active");
     }catch(err){
       console.error(err);
