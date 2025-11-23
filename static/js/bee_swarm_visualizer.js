@@ -1,8 +1,10 @@
 /**
  * Bee Swarm Voice Visualizer (Mouth Morph Edition)
  * Compact mouth shape that opens/closes with speech amplitude.
+ * Uses global THREE from base.html to avoid multiple Three.js imports
  */
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+// Use global THREE instead of importing to avoid conflicts
+const THREE = window.THREE;
 
 const BeeSwarmVisualizer = {
   scene: null,
