@@ -79,7 +79,8 @@ if ('speechSynthesis' in window) {
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        padding: 0.75rem 1rem 4rem;
+        /* Reduced top/bottom padding to tighten vertical spacing */
+        padding: 0.35rem 1rem 3rem;
         position: relative;
     }
     
@@ -1519,7 +1520,7 @@ if ('speechSynthesis' in window) {
         .quiz-logo .mascot-3d-container,
         #mascotBee3D {
             width: 130px !important;
-            height: 130px !important;
+            height: 150px !important;  /* Increased to prevent feet clipping */
             margin: 0 auto 0.4rem auto !important;
         }
         
@@ -1730,11 +1731,11 @@ if ('speechSynthesis' in window) {
     #mascotBee3D {
         position: relative;
         width: 200px;
-        height: 200px;
+        height: 210px;  /* Slightly reduced height (still prevents feet clipping) */
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 0.5rem auto;
+        margin: 0.15rem auto 0.35rem auto; /* tighter spacing above/below avatar */
         
         /* ✨ Transparent background with golden glow (Avatar Picker Style) */
         background: transparent;
@@ -1743,12 +1744,12 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 
                     0 0 60px rgba(255, 215, 0, 0.3),
                     inset 0 0 30px rgba(255, 215, 0, 0.1);
-        overflow: visible;
+        overflow: visible;  /* Allow feet to show */
         z-index: 100;
         
         /* Smooth transitions */
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        transform: translateY(-8px);
+        transform: translateY(-14px); /* lift avatar higher toward logo */
         
         /* Interaction */
         pointer-events: auto;
@@ -1773,7 +1774,7 @@ if ('speechSynthesis' in window) {
         position: absolute !important;
         top: 50% !important;
         left: 50% !important;
-        transform: translate(-50%, -50%) !important;
+        transform: translate(-50%, -54%) scale(1.1) !important;  /* shift canvas up a bit to avoid foot clipping after container shrink */
         pointer-events: none;
         z-index: 101 !important;
         background: transparent !important;
@@ -9017,11 +9018,13 @@ function playThemedSound(soundType) {
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 5000,     // Reduced for visible individual bees (not lines)
+                particleCount: 18000,    // High-detail primary setting (will auto-fallback if low perf)
+                sampleStep: 1,            // Finer sampling of mask for dense silhouette
                 background: 'transparent',
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
-                cameraZ: 8.5             // Bring camera closer for better framing
+                cameraZ: 8.5,            // Bring camera closer for better framing
+                maskUrl: '/static/assets/visualizer/lips_mask.png'
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('🎤 Listening for quiz-speech-start/end events...');
@@ -9031,6 +9034,53 @@ function playThemedSound(soundType) {
                 console.log('🧪 Testing visualizer with mock amplitude...');
                 if (window.beeSwarmViz) {
                     window.beeSwarmViz.amplitude = 0.8;
+
+                        // Developer tuning panel (threshold + performance)
+                        const panel = document.createElement('div');
+                        panel.id = 'vizTuningPanel';
+                        panel.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:2000;background:rgba(30,30,35,0.85);color:#ffd566;font:12px/1.4 "Inter",sans-serif;padding:10px 12px;border:1px solid #444;border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,0.4);width:220px;';
+                        panel.innerHTML = `
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <strong style="font-size:12px">Visualizer Tuning</strong>
+                                <button id="vizCloseBtn" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;">✕</button>
+                            </div>
+                            <label style="display:block;margin:6px 0 4px;">Brightness Threshold <span id="thVal">60</span></label>
+                            <input id="thSlider" type="range" min="0" max="255" value="60" style="width:100%;">
+                            <label style="display:block;margin:10px 0 4px;">Performance Mode</label>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <button class="perfBtn" data-mode="high" style="flex:1 1 60px;">High</button>
+                                <button class="perfBtn" data-mode="auto" style="flex:1 1 60px;">Auto</button>
+                                <button class="perfBtn" data-mode="low" style="flex:1 1 60px;">Low</button>
+                            </div>
+                            <label style="display:block;margin:10px 0 4px;">Invert Mask</label>
+                            <button id="invertBtn" style="width:100%;">Invert Off</button>
+                            <div style="margin-top:8px;opacity:0.7;font-size:11px;">Panel is dev-only. Remove for production.</div>
+                        `;
+                        document.body.appendChild(panel);
+                        const thSlider = panel.querySelector('#thSlider');
+                        const thVal = panel.querySelector('#thVal');
+                        const invertBtn = panel.querySelector('#invertBtn');
+                        thSlider.addEventListener('input', () => {
+                            thVal.textContent = thSlider.value;
+                            if(window.beeSwarmViz) {
+                                window.beeSwarmViz.rebuildFromStoredMask({ threshold: parseInt(thSlider.value,10) });
+                            }
+                        });
+                        invertBtn.addEventListener('click', () => {
+                            invertBtn.textContent = invertBtn.textContent.includes('Off') ? 'Invert On' : 'Invert Off';
+                            const invert = invertBtn.textContent.includes('On');
+                            if(window.beeSwarmViz) {
+                                window.beeSwarmViz.rebuildFromStoredMask({ invert });
+                            }
+                        });
+                        panel.querySelectorAll('.perfBtn').forEach(btn => {
+                            btn.style.cssText += 'background:#222;border:1px solid #555;color:#ffd566;padding:4px 6px;border-radius:5px;cursor:pointer;font-size:11px;';
+                            btn.addEventListener('click', () => {
+                                const mode = btn.getAttribute('data-mode');
+                                if(window.beeSwarmViz) window.beeSwarmViz.setPerformanceMode(mode);
+                            });
+                        });
+                        panel.querySelector('#vizCloseBtn').addEventListener('click', () => panel.remove());
                     window.beeSwarmViz.isActive = true;
                     setTimeout(() => {
                         window.beeSwarmViz.isActive = false;

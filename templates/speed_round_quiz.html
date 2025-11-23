@@ -923,7 +923,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 BeeSwarm.init(visualizerContainer, {
                     autoStart: true,
                     showControls: false,
-                    particleCount: 15000,  // Very dense hive with wave
+                    particleCount: 18000,   // High-detail; library will auto-fallback if low performance
+                    sampleStep: 1,
+                    maskUrl: '/static/assets/visualizer/lips_mask.png',
                     zIndex: 0
                 });
                 console.log('🐝 Speed Round: Bee swarm visualizer active');

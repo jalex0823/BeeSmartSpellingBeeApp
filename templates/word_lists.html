@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Word Lists - BeeSmart{% endblock %}
+{% block title %}My Word Hives - BeeSmart{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -90,7 +90,7 @@
   }
 
   .hive-title-row{
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
     gap:12px; margin-bottom:14px; position:relative; z-index:1;
   }
   .hive-title-row h1{
@@ -100,14 +100,7 @@
   }
 
   /* buttons */
-  .hive-actions{
-    display:flex; 
-    gap:10px; 
-    flex-wrap:wrap; 
-    justify-content:center;
-    margin:0 auto;
-    max-width:900px;
-  }
+  .hive-actions{display:flex; gap:10px; flex-wrap:wrap;}
   .hive-btn{
     border:none; outline:none; cursor:pointer;
     border-radius:var(--radius-pill);
@@ -133,10 +126,8 @@
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
     gap:8px;
-    margin:12px auto 16px;
-    max-width:900px;
+    margin:12px 0 16px;
     position:relative; z-index:1;
-    justify-items:center;
   }
   .hive-stat{display:flex; gap:10px; align-items:center;}
   .hive-stat-icon{
@@ -151,15 +142,8 @@
 
   /* controls */
   .hive-controls{
-    display:flex; 
-    flex-wrap:wrap; 
-    gap:10px; 
-    align-items:center; 
-    justify-content:center;
-    margin:10px auto 18px; 
-    position:relative; 
-    z-index:1;
-    max-width:900px;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+    margin:10px 0 18px; position:relative; z-index:1;
   }
   .hive-search-wrapper{
     display:flex; align-items:center; gap:8px;
@@ -182,28 +166,14 @@
     font-weight:800;
   }
 
-  /* centered card container */
-  .hive-card{
-    background:rgba(255,255,255,0.7);
-    backdrop-filter:blur(10px);
-    border-radius:var(--radius-xl);
-    padding:24px;
-    margin:0 auto;
-    max-width:900px;
-    box-shadow:var(--shadow-med);
-    position:relative;
-    z-index:1;
-  }
-
-  /* honeycomb grid - responsive 3-4 columns */
+  /* honeycomb grid */
   .hive-grid{
+    --cell-w:190px;
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-    gap:32px 24px;
-    padding-top:16px;
-    position:relative;
-    justify-items:center;
-    max-width:100%;
+    grid-template-columns:repeat(auto-fill,minmax(var(--cell-w),1fr));
+    gap:18px 14px;
+    padding-top:6px;
+    position:relative; z-index:1;
   }
 
   /* wobble */
@@ -216,17 +186,15 @@
 
   .hive-cell{
     position:relative; text-decoration:none; color:inherit; cursor:pointer;
-    clip-path:polygon(25% 5%,75% 5%,98% 50%,75% 95%,25% 95%,2% 50%);
+    clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
-    box-shadow:var(--shadow-med);
-    width:100%;
-    max-width:100px;
-    min-height:115px;
+    box-shadow:0 10px 26px rgba(0,0,0,.14);
+    min-height:210px;
     display:flex; align-items:center; justify-content:center;
-    padding:12px 10px;
+    padding:20px 16px 18px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
-    animation: hexFadeIn .35s ease forwards;
-    user-select:none;
+    will-change:transform, filter;
+    backface-visibility:hidden;
   }
   .hive-cell:nth-child(odd){transform:translateY(8px)}
   .hive-cell:nth-child(even){transform:translateY(-8px)}
@@ -240,29 +208,14 @@
     box-shadow:var(--shadow-deep);
     filter:brightness(1.06);
   }
-  .hive-cell:active{
-    transform:scale(.94) translateY(2px)!important;
-    filter:brightness(1.12) saturate(1.2);
-    box-shadow:0 0 20px rgba(255,201,74,.8), var(--shadow-deep);
-  }
-  @keyframes clickRipple{
-    0%{transform:scale(.8);opacity:1}
-    100%{transform:scale(2.5);opacity:0}
-  }
-
-  /* Fade-in animation for hexes */
-  @keyframes hexFadeIn{
-    0%{opacity:0; transform:translateY(12px) scale(.96);}
-    100%{opacity:1; transform:translateY(0) scale(1);}
-  }
 
   /* FAVORITE glow ring */
   .hive-cell.is-favorite{
     box-shadow:
       0 0 0 3px rgba(255,255,255,.9),
-      0 0 0 7px rgba(255,201,74,.95),
-      0 0 30px rgba(255,201,74,.9),
-      var(--shadow-deep);
+      0 0 0 7px rgba(255,201,74,.85),
+      0 0 18px rgba(255,201,74,.65),
+      0 10px 30px rgba(0,0,0,.22);
     animation: favPulse 2.4s ease-in-out infinite;
   }
   @keyframes favPulse{
@@ -272,69 +225,50 @@
 
   /* badge */
   .hive-cell-badge{
-    position:absolute; top:42px; left:50%; transform:translateX(-50%);
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,.96);
     border-radius:var(--radius-pill);
-    padding:3px 8px; font-size:10px; font-weight:900;
+    padding:5px 10px; font-size:12px; font-weight:900;
     color:var(--bee-brown);
-    box-shadow:0 2px 6px rgba(0,0,0,.15);
-    z-index:2; display:flex; align-items:center; gap:4px;
+    box-shadow:0 3px 10px rgba(0,0,0,.15);
+    z-index:2; display:flex; align-items:center; gap:6px;
   }
 
   /* actions */
   .hive-cell-actions{
-    position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:3;
-    display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
-    max-width:90%;
+    position:absolute; top:10px; right:12px; z-index:3;
+    display:flex; gap:6px;
   }
   .hive-cell-action-btn{
-    width:26px; height:26px; border:none; cursor:pointer;
-    border-radius:50%; font-size:13px; font-weight:900;
+    width:34px; height:34px; border:none; cursor:pointer;
+    border-radius:50%; font-size:16px; font-weight:900;
     display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.85);
-    backdrop-filter:blur(4px);
-    box-shadow:0 1px 4px rgba(0,0,0,.2);
-    transition:transform var(--transition-fast), background var(--transition-fast);
+    background:rgba(255,255,255,.95);
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    transition:transform var(--transition-fast), filter var(--transition-fast);
   }
-  .hive-cell-action-btn:hover{
-    transform:translateY(-2px) scale(1.06);
-    background:rgba(255,255,255,.3);
-  }
+  .hive-cell-action-btn:hover{transform:translateY(-2px) scale(1.06)}
   .hive-cell-action-btn.favorite{font-size:17px}
-  .hive-cell-action-btn.quiz{
-    font-size:18px;
-    background:rgba(255,201,74,0.2);
-  }
-  .hive-cell-action-btn.quiz:hover{
-    background:rgba(255,201,74,0.4);
-  }
 
   .hive-cell-inner{position:relative; z-index:2; text-align:center; width:100%;}
   .hive-cell-name{
-    font-weight:900; font-size:12px; margin-top:6px; margin-bottom:6px;
-    text-shadow:0 1px 2px rgba(0,0,0,.3);
+    font-weight:900; font-size:18px; margin-top:10px; margin-bottom:8px;
+    text-shadow:0 1px 2px rgba(0,0,0,.2);
     line-height:1.2; max-height:2.4em; overflow:hidden;
-    word-break:break-word;
-    color:#2b1a00;
-    padding:0 4px;
   }
 
   .hive-cell-meta{
-    font-size:10px; font-weight:800; color:#3a250f;
-    display:flex; flex-direction:column; gap:3px; opacity:.96;
+    font-size:12px; font-weight:800; color:#3a250f;
+    display:flex; flex-direction:column; gap:6px; opacity:.96;
   }
   .hive-cell-meta .row{display:flex; align-items:center; justify-content:center; gap:6px;}
 
-  /* Earned Buzz-Dust tag */
-  .hive-earned-tag{
-    margin-top:4px;
-    font-size:10px;
-    font-weight:900;
-    color:#7a4b2b;
-    background:rgba(255,255,255,0.7);
-    padding:3px 6px;
-    border-radius:8px;
-    box-shadow:0 2px 4px rgba(0,0,0,.10);
+  .hive-cell-cta{
+    margin-top:10px; font-size:12px; font-weight:900;
+    color:#50300f; background:rgba(255,255,255,.9);
+    padding:5px 9px; border-radius:var(--radius-pill);
+    display:inline-flex; align-items:center; gap:6px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
   }
 
   /* empty state */
@@ -348,19 +282,19 @@
 
   /* modal overlay */
   .bee-modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.55);
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
     display:none; align-items:center; justify-content:center;
     z-index:9999; padding:20px;
   }
   .bee-modal-overlay.active{display:flex}
   .bee-modal{
-    width:min(340px,90vw);
+    width:min(700px,96vw);
     background:rgba(255,255,255,.98);
-    border-radius:18px; box-shadow:var(--shadow-deep);
-    padding:20px;
-    animation:popIn .2s cubic-bezier(.34,1.56,.64,1);
+    border-radius:22px; box-shadow:var(--shadow-deep);
+    padding:18px 18px 14px;
+    animation:popIn .18s ease-out;
   }
-  @keyframes popIn{from{transform:scale(.85) rotateZ(-2deg);opacity:0}to{transform:scale(1) rotateZ(0);opacity:1}}
+  @keyframes popIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
   .bee-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
   .bee-modal-icon{
     width:44px;height:44px;border-radius:50%;
@@ -369,14 +303,13 @@
     font-size:22px;
   }
   .bee-modal-title{margin:0;font-size:20px;font-weight:900;color:#3b2410}
-  .bee-modal-body{font-size:14px;line-height:1.5;color:#2a1a0d;padding:8px 4px 14px}
-  .bee-modal-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding-top:10px}
+  .bee-modal-body{font-size:15px;line-height:1.45;color:#2a1a0d;padding:6px 4px 12px}
+  .bee-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px}
   .bee-modal-btn{
     border:none;cursor:pointer;font-weight:900;
-    border-radius:12px;padding:12px 20px;font-size:15px;
+    border-radius:var(--radius-pill);padding:8px 14px;font-size:14px;
     box-shadow:var(--shadow-soft);background:white;
     transition:transform var(--transition-fast), box-shadow var(--transition-fast);
-    width:100%;
   }
   .bee-modal-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-med)}
   .bee-modal-btn.primary{background:linear-gradient(135deg,var(--honey),var(--honey-deep));color:#3e260b}
@@ -407,132 +340,19 @@
 
   @media (max-width:720px){
     .hive-title-row h1{font-size:26px}
-    .buzz-dust-container{padding:1.5rem !important;margin:1.5rem auto !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 14px;}
-    .hive-cell{max-width:110px;min-height:125px}
+    .hive-grid{--cell-w:160px}
+    .hive-cell{min-height:190px}
   }
   @media (max-width:480px){
-    .buzz-dust-container{padding:1rem !important;margin:1rem 0.5rem !important}
-    .hive-grid{grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:18px 12px;}
-    .hive-cell{max-width:100px;min-height:115px;padding:10px 8px}
-    .hive-cell-name{font-size:12px}
-    .hive-cell-meta{font-size:9px}
+    .hive-grid{--cell-w:145px;gap:14px 10px}
+    .hive-cell{min-height:175px;padding:18px 12px}
+    .hive-cell-name{font-size:16px}
   }
-
-  /* =========================================================
-     MOBILE + AESTHETIC POLISH OVERRIDES
-     ========================================================= */
-
-  .hive-page{
-    padding-left: max(14px, env(safe-area-inset-left));
-    padding-right: max(14px, env(safe-area-inset-right));
-    padding-bottom: max(90px, env(safe-area-inset-bottom));
-  }
-
-  .hive-page > div:first-child{
-    margin-bottom: 1.6rem !important;
-  }
-
-  .hive-actions{
-    position: sticky;
-    top: 10px;
-    z-index: 5;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(8px);
-    padding: 10px;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft);
-  }
-
-  .hive-btn{
-    min-height: 44px;
-    padding: 11px 18px;
-  }
-  @media (max-width:520px){
-    .hive-btn{
-      flex: 1 1 auto;
-      justify-content: center;
-    }
-  }
-
-  :root{
-    --hex-w: clamp(96px, 22vw, 120px);
-    --hex-h: calc(var(--hex-w) * 1.15);
-  }
-
-  .hive-grid{
-    grid-template-columns: repeat(auto-fit, minmax(var(--hex-w), 1fr));
-    gap: clamp(14px, 3.5vw, 30px) clamp(10px, 3vw, 24px);
-  }
-
-  .hive-cell{
-    max-width: var(--hex-w);
-    min-height: var(--hex-h);
-    padding: clamp(8px, 2vw, 14px);
-  }
-
-  @media (max-width:640px){
-    .hive-cell:nth-child(odd),
-    .hive-cell:nth-child(even){
-      transform: translateY(0) !important;
-    }
-  }
-
-  .hive-cell-actions{
-    top: 8px;
-    gap: 6px;
-  }
-  .hive-cell-action-btn{
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
-    box-shadow: 0 3px 8px rgba(0,0,0,.18);
-  }
-
-  .hive-cell-name{
-    font-size: clamp(12px, 2.8vw, 14px);
-    margin-top: 10px;
-    text-shadow: none;
-  }
-
-  .hive-cell-badge{
-    top: 46px;
-    font-size: 10.5px;
-    padding: 4px 9px;
-  }
-
-  @media (max-width:640px){
-    .hive-controls{
-      flex-direction: column;
-      align-items: stretch;
-      gap: 10px;
-    }
-    .hive-search-wrapper{
-      min-width: 0;
-      width: 100%;
-      max-width: none;
-    }
-    .hive-sort-wrapper{
-      width: 100%;
-      justify-content: space-between;
-    }
-    .hive-sort-wrapper select{
-      width: 55%;
-    }
-  }
-
-  @media (prefers-reduced-transparency: reduce){
-    .hive-card,
-    .buzz-dust-container,
-    .hive-actions{
-      backdrop-filter: none;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce){
-    .hive-cell:hover{ animation: none; }
+    .hive-cell:hover{animation:none}
+    .bee-flyover{transition:none}
+    .hive-cell.is-favorite{animation:none}
   }
-
 </style>
 {% endblock %}
 
@@ -546,9 +366,8 @@
     </div>
     <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
     <div class="bee-modal-actions">
-      <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
-      <button class="bee-modal-btn danger" id="modalDeleteBtn" onclick="deleteCurrentWords()" style="display:none">🗑️ Delete Current Words</button>
       <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
+      <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
     </div>
   </div>
 </div>
@@ -558,7 +377,7 @@
   <div class="bee-modal">
     <div class="bee-modal-header">
       <div class="bee-modal-icon">✏️</div>
-      <h2 class="bee-modal-title">Edit Word List</h2>
+      <h2 class="bee-modal-title">Edit Word Hive</h2>
     </div>
 
     <div class="bee-modal-body">
@@ -572,7 +391,6 @@
       <textarea id="editWords" rows="10" style="
         width:100%; padding:.8rem; font-size:1rem; font-weight:700;
         border:3px solid var(--honey); border-radius:12px; outline:none; margin-top:6px;
-        max-height:300px; overflow-y:auto; resize:vertical;
       "></textarea>
       <div style="font-size:12px;opacity:.75;margin-top:6px;">
         Tip: Blank lines will be ignored.
@@ -597,70 +415,46 @@
   <button class="bee-sheet-btn" onclick="closeBeeSheet()">Close</button>
 </div>
 
-<div class="hive-page" style="padding-top:2rem;">
-  <div style="text-align:center;margin-bottom:3rem;max-width:900px;margin-left:auto;margin-right:auto;">
-    <h1 style="margin:0 0 2.5rem 0;font-size:32px;font-weight:900;display:inline-flex;align-items:center;gap:10px;text-shadow:0 1px 0 rgba(255,255,255,.6);"><span class="icon">🍯</span>My Word Lists</h1>
-  </div>
-  
-  <div class="hive-actions" style="margin-bottom:2.5rem;">
-    <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
-    <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
-    <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
+<div class="hive-page">
+  <div class="hive-breadcrumb">
+    <span>🏠</span>
+    <a href="/">Home</a>
+    <span class="separator">›</span>
+    <span>My Word Hives</span>
   </div>
 
-  <!-- Current Badge Display -->
-  <div id="current-badge-display" style="
-    background:rgba(255,255,255,0.9);
-    border-radius:var(--radius-xl);
-    padding:1.5rem;
-    margin:0 auto 2.5rem;
-    max-width:400px;
-    text-align:center;
-    box-shadow:var(--shadow-soft);
-    display:none;
-  ">
-    <div style="font-size:0.875rem;font-weight:700;color:#7a4b2b;margin-bottom:0.5rem;">Your Current Badge</div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:1rem;">
-      <img id="current-badge-icon" src="" alt="Current Badge" style="width:64px;height:64px;display:none;">
-      <div style="text-align:left;">
-        <div id="current-badge-name" style="font-size:1.5rem;font-weight:900;color:#8B008B;">Loading...</div>
-        <div id="current-buzz-dust" style="font-size:1.125rem;font-weight:700;color:#7a4b2b;">0 ✨ Buzz Dust</div>
-      </div>
-    </div>
-    <div id="next-badge-progress" style="margin-top:1rem;font-size:0.875rem;color:#666;font-weight:600;display:none;">
-      <div style="margin-bottom:0.25rem;">Progress to <span id="next-badge-name" style="color:#8B008B;font-weight:800;"></span></div>
-      <div style="background:#e0e0e0;border-radius:10px;height:8px;overflow:hidden;">
-        <div id="badge-progress-bar" style="background:linear-gradient(90deg,var(--honey),var(--honey-deep));height:100%;width:0%;transition:width 0.5s ease;"></div>
-      </div>
-      <div style="margin-top:0.25rem;font-size:0.75rem;"><span id="buzz-dust-needed">0</span> more Buzz Dust needed</div>
+  <div class="hive-title-row">
+    <h1><span class="icon">🍯</span>My Word Hives</h1>
+    <div class="hive-actions">
+      <button class="hive-btn" onclick="window.location.href='/'">🏠 Back to Hive</button>
+      <button class="hive-btn primary" onclick="createNewComb()">➕ New Comb</button>
+      <button class="hive-btn" onclick="window.location.href='/upload'">🍯 Pour In Words</button>
     </div>
   </div>
 
-  <div class="hive-stats-bar" style="margin-bottom:2.5rem;">
-    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Word Lists</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">✨</div><div class="hive-stat-text"><span class="hive-stat-label">Total Words</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
-    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Hive</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
+  <div class="hive-stats-bar">
+    <div class="hive-stat"><div class="hive-stat-icon">🐝</div><div class="hive-stat-text"><span class="hive-stat-label">Bees in the Hive</span><span class="hive-stat-value" id="statsBeesInHive">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🍯</div><div class="hive-stat-text"><span class="hive-stat-label">Honey Stored (Words)</span><span class="hive-stat-value" id="statsHoneyStored">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🌻</div><div class="hive-stat-text"><span class="hive-stat-label">Largest Honeycomb</span><span class="hive-stat-value" id="statsLargestHoneycomb">0</span></div></div>
+    <div class="hive-stat"><div class="hive-stat-icon">🔨</div><div class="hive-stat-text"><span class="hive-stat-label">Worker Bee Pace</span><span class="hive-stat-value" id="statsWorkerBeePace">0</span></div></div>
   </div>
 
-  <!-- Buzz Dust Grid Container -->
-  <div class="buzz-dust-container">
-    <div class="hive-controls" style="margin-bottom:1.5rem;">
-      <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
-      <div class="hive-sort-wrapper">Sort by:
-        <select id="hiveSortSelect">
-          <option value="recent">Most Recent</option>
-          <option value="name">Name (A–Z)</option>
-          <option value="largest">Largest First</option>
-          <option value="smallest">Smallest First</option>
-        </select>
-      </div>
+  <div class="hive-controls">
+    <div class="hive-search-wrapper"><span>🐝</span><input id="hiveSearchInput" type="text" placeholder="Search hives..." autocomplete="off"/></div>
+    <div class="hive-sort-wrapper">Sort by:
+      <select id="hiveSortSelect">
+        <option value="recent">Most Recent</option>
+        <option value="name">Name (A–Z)</option>
+        <option value="largest">Largest First</option>
+        <option value="smallest">Smallest First</option>
+      </select>
     </div>
+  </div>
 
-    <div class="hive-grid" id="hiveGrid">
-      <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
-        <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
-        <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
-      </div>
+  <div class="hive-grid" id="hiveGrid">
+    <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
+      <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
+      <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your hive...</div>
     </div>
   </div>
 </div>
@@ -681,68 +475,8 @@
   let pressTimer = null;
   let sheetTarget = null;
 
-  // Sound effects
-  const sounds = {
-    click: new Audio('/static/SoundFxs/timer_beep.mp3'),
-    success: new Audio('/static/SoundFxs/we-can-be-bees.mp3'),
-    error: new Audio('/static/SoundFxs/salamisound-5949974-bee-or-wasp-in-flight-fast.mp3')
-  };
-
-  function playSound(type) {
-    try {
-      if (sounds[type]) {
-        sounds[type].currentTime = 0;
-        sounds[type].volume = 0.2;
-        sounds[type].play().catch(() => {}); // Silent fail if autoplay blocked
-      }
-    } catch(e) {
-      // Silent fail
-    }
-  }
-
-  async function loadBuzzDustInfo(){
-    try{
-      const res = await fetch('/api/buzz-dust/info',{credentials:'same-origin',cache:'no-store'});
-      const data = await res.json();
-      
-      if(data.success && data.current_class){
-        const badgeDisplay = document.getElementById('current-badge-display');
-        const badgeIcon = document.getElementById('current-badge-icon');
-        const badgeName = document.getElementById('current-badge-name');
-        const buzzDust = document.getElementById('current-buzz-dust');
-        const nextProgress = document.getElementById('next-badge-progress');
-        const nextName = document.getElementById('next-badge-name');
-        const progressBar = document.getElementById('badge-progress-bar');
-        const buzzNeeded = document.getElementById('buzz-dust-needed');
-        
-        badgeName.textContent = data.current_class.label || 'Novice Bee';
-        buzzDust.textContent = `${(data.total_buzz_dust||0).toLocaleString()} ✨ Buzz Dust`;
-        
-        if(data.current_class.badge_image){
-          badgeIcon.src = `/static/assets/badges/${data.current_class.badge_image}`;
-          badgeIcon.style.display = 'block';
-        }
-        
-        if(data.next_class && !data.at_max_rank){
-          nextName.textContent = data.next_class.label;
-          const needed = data.next_class.min_points - data.total_buzz_dust;
-          const progress = Math.min(100, (data.total_buzz_dust / data.next_class.min_points) * 100);
-          progressBar.style.width = progress + '%';
-          buzzNeeded.textContent = needed.toLocaleString();
-          nextProgress.style.display = 'block';
-        }
-        
-        badgeDisplay.style.display = 'block';
-      }
-    }catch(err){
-      console.error('Failed to load Buzz Dust info:',err);
-    }
-  }
-
   document.addEventListener("DOMContentLoaded", async () => {
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduceMotion) runBeeFlyover();
-    await loadBuzzDustInfo();
+    runBeeFlyover();
     await loadWordLists();
   });
 
@@ -750,11 +484,9 @@
     try{
       const res = await fetch("/api/saved-lists",{credentials:"same-origin",cache:"no-store"});
       const data = await res.json();
-      console.log('📋 Word lists API response:', data);
 
       if(data.ok && data.lists){
         allLists = data.lists;
-        console.log('✅ Loaded', allLists.length, 'word lists');
         // merge server favorites if present
         for(const l of allLists){
           if(l.is_favorite) localFavs.add(l.id);
@@ -763,14 +495,12 @@
         updateStats();
         renderHoneycombs();
       }else if(data.auth_required){
-        console.log('🔒 Auth required');
         displayLoginRequired();
       }else{
-        console.log('📭 No lists found, showing empty state');
         displayEmptyHive();
       }
     }catch(err){
-      console.error('❌ Error loading word lists:', err);
+      console.error(err);
       displayEmptyHive();
     }
   }
@@ -779,15 +509,16 @@
     const totalLists = allLists.length;
     const totalWords = allLists.reduce((s,l)=>s+(l.word_count||0),0);
     const largestList = totalLists?Math.max(...allLists.map(l=>l.word_count||0)):0;
+    const avgWords = totalLists?Math.round(totalWords/totalLists):0;
 
     statsBeesInHive.textContent = totalLists;
     statsHoneyStored.textContent = totalWords;
     statsLargestHoneycomb.textContent = largestList;
+    statsWorkerBeePace.textContent = avgWords;
   }
 
   function renderHoneycombs(){
     const grid = document.getElementById("hiveGrid");
-    console.log('🎨 Rendering honeycombs, filteredLists.length:', filteredLists.length);
     if(!filteredLists.length){ displayEmptyHive(); return; }
 
     // pin favorites to top always
@@ -798,14 +529,7 @@
     });
 
     grid.innerHTML = "";
-    favFirst.forEach((list,ix)=> {
-      console.log('🔶 Creating cell for list:', list.name);
-      const cell = createHoneycombCell(list,ix+1);
-      grid.appendChild(cell);
-      // Staggered fade-in for premium feel
-      cell.style.animationDelay = `${ix * 0.05}s`;
-    });
-    console.log('✅ Rendered', favFirst.length, 'honeycomb cells');
+    favFirst.forEach((list,ix)=> grid.appendChild(createHoneycombCell(list,ix+1)));
   }
 
   function createHoneycombCell(list,hiveIndex){
@@ -821,7 +545,6 @@
     cell.onclick=(e)=>{
       e.preventDefault();
       if(!e.target.closest(".hive-cell-action-btn")){
-        playSound('click');
         useListInQuiz(list.id);
       }
     };
@@ -839,7 +562,6 @@
 
     const isFav = localFavs.has(list.id);
     const star = isFav ? "⭐" : "☆";
-    const earned = Number(list.total_buzz_earned||0);
 
     cell.innerHTML = `
       <div class="hive-cell-actions">
@@ -847,8 +569,6 @@
           onclick="toggleFavorite(event, ${list.id})">${star}</button>
         <button class="hive-cell-action-btn view" title="View list"
           onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
-        <button class="hive-cell-action-btn rename" title="Rename list"
-          onclick="renameList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🏷️</button>
         <button class="hive-cell-action-btn edit" title="Edit list"
           onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
         <button class="hive-cell-action-btn delete" title="Delete list"
@@ -859,10 +579,14 @@
 
       <div class="hive-cell-inner">
         <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+
         <div class="hive-cell-meta">
-          <div class="row">🐝 Tap to quiz</div>
-          <div class="hive-earned-tag">Earned: ${earned.toLocaleString()} ✨</div>
+          <div class="row">📅 ${formattedDate}</div>
+          <div class="row">🍯 Hive ${hiveIndex}</div>
+          ${isFav ? `<div class="row">⭐ Pinned Hive</div>` : `<div class="row">🐝 Tap to quiz</div>`}
         </div>
+
+        <div class="hive-cell-cta">▶ Start Quiz</div>
       </div>
     `;
     return cell;
@@ -873,8 +597,8 @@
       <div class="hive-empty">
         <div style="font-size:64px;margin-bottom:10px;">🐝</div>
         <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">No honeycombs yet!</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word list to start storing spelling honey.</p>
-        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word List</button>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Create your first word hive to start storing spelling honey.</p>
+        <button class="hive-btn primary" onclick="createNewComb()">➕ Create Word Hive</button>
       </div>
     `;
   }
@@ -884,7 +608,7 @@
       <div class="hive-empty">
         <div style="font-size:64px;margin-bottom:10px;">🔒</div>
         <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Login Required</h2>
-        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word lists.</p>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your word hives.</p>
         <button class="hive-btn primary" onclick="window.location.href='/login'">🔑 Log In</button>
       </div>
     `;
@@ -943,8 +667,7 @@
           "Replace Current Words?",
           `You already have ${currentCount} word(s) loaded.<br><br>Loading this hive will replace them.`,
           "Yes, Load It!",
-          "primary",
-          true  // Show delete button
+          "primary"
         );
         if(!confirmed) return;
       }
@@ -959,7 +682,7 @@
 
       const data = await res.json();
       if(data.ok){
-        showToast("✅ Word list loaded! Heading to quiz…","success");
+        showToast("✅ Word hive loaded! Heading to quiz…","success");
         setTimeout(()=>window.location.href="/quiz",700);
       }else{
         showToast("❌ "+(data.error||"Failed to load list"),"error");
@@ -972,11 +695,11 @@
 
   // CREATE
   async function createNewComb(){
-    const name = await showBeePrompt("🐝","Create New Word List!","What should we call this list?");
+    const name = await showBeePrompt("🐝","Create New Word Hive!","What should we call this honeycomb?");
     if(!name||!name.trim()) return;
 
     try{
-      const res = await fetch("/api/saved-lists",{
+      const res = await fetch("/api/saved-lists/create",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         credentials:"same-origin",
@@ -984,7 +707,7 @@
       });
       const data = await res.json();
       if(data.ok){
-        showToast("✅ Word list created!","success");
+        showToast("✅ Word hive created!","success");
         await loadWordLists();
       }else{
         showToast("❌ "+(data.error||"Failed to create hive"),"error");
@@ -1003,9 +726,7 @@
       const data = await res.json();
       if(data.ok && data.list){
         const words = data.list.words||[];
-        // Extract just the word text from each word object
-        const wordTexts = words.map(w => w.word || w);
-        const preview = wordTexts.slice(0,12).join(", ");
+        const preview = words.slice(0,12).join(", ");
         const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
         await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
       }else{
@@ -1017,38 +738,13 @@
     }
   }
 
-  // RENAME (1-tap)
-  async function renameList(event,listId,currentName){
-    event.preventDefault(); event.stopPropagation();
-    const proposed = (window.prompt("Rename this hive:", currentName)||"").trim();
-    if(!proposed || proposed === currentName) return;
-    try{
-      const res = await fetch(`/api/saved-lists/${listId}`,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json"},
-        credentials:"same-origin",
-        body:JSON.stringify({name:proposed})
-      });
-      const data = await res.json();
-      if(data.ok){
-        showToast("✅ Hive renamed!","success");
-        await loadWordLists();
-      }else{
-        showToast("❌ "+(data.error||"Rename failed"),"error");
-      }
-    }catch(err){
-      console.error(err);
-      showToast("❌ Error renaming hive","error");
-    }
-  }
-
   // DELETE
   async function deleteWordList(event,listId,listName){
     event.preventDefault(); event.stopPropagation();
 
     const confirmed = await showBeeModal(
       "🗑️",
-      "Delete Word List?",
+      "Delete Word Hive?",
       `Delete "<strong>${listName}</strong>"?<br><br>This honeycomb will be gone forever.`,
       "Yes, Delete It",
       "danger"
@@ -1065,7 +761,7 @@
       if(data.ok){
         localFavs.delete(listId);
         persistFavs();
-        showToast("✅ Word list deleted!","success");
+        showToast("✅ Word hive deleted!","success");
         await loadWordLists();
       }else{
         showToast("❌ "+(data.error||"Failed to delete hive"),"error");
@@ -1138,9 +834,7 @@
 
       editTarget = { id:listId };
       editName.value = data.list.name || listName;
-      // Extract just the word text from each word object
-      const wordTexts = (data.list.words||[]).map(w => w.word || w);
-      editWords.value = wordTexts.join("\n");
+      editWords.value = (data.list.words||[]).join("\n");
       editModal.classList.add("active");
     }catch(err){
       console.error(err);
@@ -1189,6 +883,7 @@
     beeSheetTitle.textContent = list.name || "Hive Actions";
     beeSheet.classList.add("active");
 
+    // fixed typo: useListInQuiz
     sheetQuizBtn.onclick = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
     sheetViewBtn.onclick = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name); };
     sheetEditBtn.onclick = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name); };
@@ -1206,7 +901,7 @@
   }
 
   // MODAL (confirm/info)
-  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary",showDelete=false){
+  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary"){
     return new Promise(resolve=>{
       modalResolve=resolve;
       modalIcon.textContent=icon;
@@ -1214,53 +909,11 @@
       modalBody.innerHTML=message;
       modalConfirmBtn.textContent=confirmText;
       modalConfirmBtn.className="bee-modal-btn "+confirmType;
-      
-      // Show/hide delete button
-      const deleteBtn = document.getElementById("modalDeleteBtn");
-      if(deleteBtn) {
-        deleteBtn.style.display = showDelete ? "block" : "none";
-      }
-      
       beeModal.classList.add("active");
     });
   }
-  function confirmBeeModal(){ 
-    playSound('click');
-    beeModal.classList.remove("active"); 
-    modalResolve?.(true); 
-    modalResolve=null; 
-  }
-  function closeBeeModal(){ 
-    playSound('click');
-    beeModal.classList.remove("active"); 
-    modalResolve?.(false); 
-    modalResolve=null; 
-  }
-
-  // Delete current wordbank words
-  async function deleteCurrentWords(){
-    try{
-      playSound('click');
-      const res = await fetch('/api/clear', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {'Content-Type': 'application/json'}
-      });
-      const data = await res.json();
-      if(data.success){
-        playSound('success');
-        showToast("✅ Current words deleted!","success");
-        closeBeeModal();
-      } else {
-        playSound('error');
-        showToast("❌ Failed to delete words","error");
-      }
-    } catch(err){
-      console.error(err);
-      playSound('error');
-      showToast("❌ Error deleting words","error");
-    }
-  }
+  function confirmBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(true); modalResolve=null; }
+  function closeBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(false); modalResolve=null; }
 
   // PROMPT (create)
   function showBeePrompt(icon,title,message){
@@ -1305,36 +958,26 @@
     `;
   }
 
-// TOAST
-function showToast(message,type="success"){
-  document.querySelector(".toast")?.remove();
-  const toast=document.createElement("div");
-  toast.className="toast "+type;
-  toast.style.cssText=`
-    position:fixed;
-    bottom:1.2rem;
-    right:1.5rem;
-    background:white;
-    padding:.9rem 1.2rem;
-    border-radius:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.2);
-    border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
-    z-index:10000;
-    font-weight:900;
-    max-width:420px;
-    animation:slideIn .25s ease;
-  `;
-  if (window.innerWidth < 520) {
-    toast.style.right = "50%";
-    toast.style.transform = "translateX(50%)";
-    toast.style.maxWidth = "92vw";
+  // TOAST
+  function showToast(message,type="success"){
+    document.querySelector(".toast")?.remove();
+    const toast=document.createElement("div");
+    toast.className="toast "+type;
+    toast.style.cssText=`
+      position:fixed;bottom:1.5rem;right:1.5rem;
+      background:white;padding:.9rem 1.2rem;border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+      border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
+      z-index:10000;font-weight:900;max-width:420px;
+      animation:slideIn .25s ease;
+    `;
+    toast.innerHTML=message;
+    document.body.appendChild(toast);
+    setTimeout(()=>{
+      toast.style.animation="slideOut .25s ease";
+      setTimeout(()=>toast.remove(),250);
+    },2600);
   }
-  toast.textContent=message;
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.classList.add("show"),10);
-  setTimeout(()=>toast.remove(),2200);
-}
-
   const style=document.createElement("style");
   style.textContent=`
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -1351,23 +994,26 @@ function showToast(message,type="success"){
     bee.className="bee-flyover";
     bee.textContent="🐝";
     document.body.appendChild(bee);
-
-    let trailTimer= setInterval(()=>{
-      const t=document.createElement("div");
-      t.className="bee-trail";
-      t.style.left=(bee.getBoundingClientRect().left+8)+"px";
-      document.body.appendChild(t);
-      setTimeout(()=>t.remove(),1200);
-    },180);
+    let lastTrail=0; let trails=0;
+    function trailLoop(ts){
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ return; }
+      if(trails<14 && ts-lastTrail>170){
+        lastTrail=ts; trails++;
+        const t=document.createElement("div");
+        t.className="bee-trail";
+        t.style.left=(bee.getBoundingClientRect().left+8)+"px";
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(),1200);
+      }
+      if(trails<14) requestAnimationFrame(trailLoop);
+    }
+    requestAnimationFrame(trailLoop);
 
     requestAnimationFrame(()=>{
       bee.style.transform=`translateX(${innerWidth+240}px) translateY(-20px)`;
     });
 
-    setTimeout(()=>{
-      clearInterval(trailTimer);
-      bee.remove();
-    },3200);
+    setTimeout(()=>{ bee.remove(); },3200);
   }
 </script>
 {% endblock %}
