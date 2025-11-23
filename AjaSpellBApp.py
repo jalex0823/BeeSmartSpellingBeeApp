@@ -3746,6 +3746,9 @@ def minimal_main():
 @app.route("/quiz")
 def quiz_page():
     """Interactive quiz page"""
+    # Ensure session persists across page navigation
+    session.permanent = True
+    
     # Enhanced debugging for mobile session issues
     session_id = session.get("session_id", "NONE")
     storage_id = session.get("wordbank_storage_id", "NONE")

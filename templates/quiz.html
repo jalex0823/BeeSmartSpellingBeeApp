@@ -8288,13 +8288,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', outerError.stack);
     }
 
-    fetch('/api/wordbank', {
-        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-        cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    })
+    // Small delay to ensure browser session cookie is fully established
+    // This prevents race conditions where cookie isn't available yet
+    setTimeout(() => {
+        fetch('/api/wordbank', {
+            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
     .then(response => {
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -8343,6 +8346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
         setTimeout(() => window.location.href = '/', 2800);
     });
+    }, 100);  // 100ms delay to ensure session cookie is established
 });  // End DOMContentLoaded
 
 // 💾 Save partial progress before user leaves
