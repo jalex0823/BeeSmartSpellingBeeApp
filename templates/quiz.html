@@ -8985,7 +8985,7 @@ function playThemedSound(soundType) {
 <!-- 🐝 Bee Swarm Visualizer Module Script -->
 <script>window.SHOW_VIZ_TUNING_PANEL = {{ 'true' if (show_viz_tuning|default(False)) else 'false' }};</script>
 <script type="module">
-    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}';
+    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251123-2';
     
     // Store reference globally for debugging and event integration
     window.beeSwarmViz = null;
