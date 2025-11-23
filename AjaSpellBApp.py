@@ -3037,10 +3037,9 @@ def _normalize_words(words_raw):
 
 @app.route("/api/saved-lists", methods=["GET"])
 def list_saved_wordlists():
-    """GET all saved lists for current user.
-
-    NOTE: Inline serialization added to avoid dependency on missing _serialize_word_list helper.
-    """
+@app.route("/api/saved-lists", methods=["GET"])
+def list_saved_wordlists():
+    """GET all saved lists for current user."""
     try:
         user = get_or_create_guest_user()
         if not user:
@@ -3051,20 +3050,7 @@ def list_saved_wordlists():
                  .order_by(WordList.updated_at.desc())
                  .all())
 
-        payload = []
-        for wl in lists:
-            payload.append({
-                "id": wl.id,
-                "name": wl.list_name,
-                "list_name": wl.list_name,  # legacy key preservation
-                "word_count": wl.word_count,
-                "is_favorite": bool(getattr(wl, "is_favorite", False)),
-                "updated_at": wl.updated_at.isoformat() if getattr(wl, "updated_at", None) else None,
-                "created_at": wl.created_at.isoformat() if getattr(wl, "created_at", None) else None,
-                # Placeholder until Buzz Dust earned tracking per list implemented
-                "total_buzz_earned": 0
-            })
-
+        payload = [_serialize_word_list(wl) for wl in lists]
         return jsonify({"ok": True, "lists": payload}), 200
 
     except Exception as e:
