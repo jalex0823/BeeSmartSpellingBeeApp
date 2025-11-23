@@ -17,6 +17,7 @@ const BeeSwarmVisualizer = {
       sampleStep: 2,
       maskBrightnessThreshold: 60,
       maskInvert: false,
+      lazyInit: false, // if true, defer mask + particle build until first speech start
       ...options
     };
 
@@ -223,17 +224,50 @@ const BeeSwarmVisualizer = {
       },
 
       swarmStep(time){
-        const posAttr=this.geo.getAttribute('position'); this.ampSmooth=this.ampSmooth*0.6+this.amplitude*0.4; this.mouthPulse*=0.8; const targetOpen=THREE.MathUtils.clamp(this.ampSmooth*1.4+this.mouthPulse*0.6,0,1); const stiffness=0.35, damping=0.7; this.mouthOpenVel=this.mouthOpenVel*damping+(targetOpen-this.mouthOpen)*stiffness; this.mouthOpen+=this.mouthOpenVel; this.updateMouthTargets(this.mouthOpen); const attractStrength=this.tSpeedBase+this.ampSmooth*0.25; const noiseStrength=this.noiseBase+this.ampSmooth*0.08; const buzzStrength=this.buzzBase+this.ampSmooth*0.01; for(let i=0;i<this.COUNT;i++){ const ix=i*3; const px=this.positions[ix], py=this.positions[ix+1], pz=this.positions[ix+2]; const tx=this.targets[ix], ty=this.targets[ix+1], tz=this.targets[ix+2]; let vx=this.velocities[ix], vy=this.velocities[ix+1], vz=this.velocities[ix+2]; vx+=(tx-px)*attractStrength; vy+=(ty-py)*attractStrength; vz+=(tz-pz)*attractStrength; const n1=Math.sin(time*0.001+px*0.9+i*0.0009); const n2=Math.cos(time*0.0012+pz*0.9+i*0.0011); const n3=Math.sin(time*0.0011+py*1.0+i*0.0008); vx+=n1*noiseStrength; vy+=n3*noiseStrength*0.6; vz+=n2*noiseStrength; vx+=(Math.random()-0.5)*buzzStrength; vy+=(Math.random()-0.5)*buzzStrength; vz+=(Math.random()-0.5)*buzzStrength; vx*=this.damp; vy*=this.damp; vz*=this.damp; this.positions[ix]=px+vx; this.positions[ix+1]=py+vy; this.positions[ix+2]=pz+vz; this.velocities[ix]=vx; this.velocities[ix+1]=vy; this.velocities[ix+2]=vz; posAttr.setXYZ(i,this.positions[ix],this.positions[ix+1],this.positions[ix+2]); } posAttr.needsUpdate=true; },
+        const posAttr=this.geo.getAttribute('position');
+        this.ampSmooth=this.ampSmooth*0.6+this.amplitude*0.4; this.mouthPulse*=0.8;
+        const targetOpen=THREE.MathUtils.clamp(this.ampSmooth*1.4+this.mouthPulse*0.6,0,1);
+        const stiffness=0.35, damping=0.7; this.mouthOpenVel=this.mouthOpenVel*damping+(targetOpen-this.mouthOpen)*stiffness; this.mouthOpen+=this.mouthOpenVel;
+        this.updateMouthTargets(this.mouthOpen);
+        const attractStrength=this.tSpeedBase+this.ampSmooth*0.25;
+        const noiseStrength=this.noiseBase+this.ampSmooth*0.08;
+        const buzzStrength=this.buzzBase+this.ampSmooth*0.01;
+        const tBase=time*0.001;
+        for(let i=0;i<this.COUNT;i++){
+          const ix=i*3;
+          const px=this.positions[ix], py=this.positions[ix+1], pz=this.positions[ix+2];
+          const tx=this.targets[ix], ty=this.targets[ix+1], tz=this.targets[ix+2];
+          let vx=this.velocities[ix], vy=this.velocities[ix+1], vz=this.velocities[ix+2];
+          vx+=(tx-px)*attractStrength; vy+=(ty-py)*attractStrength; vz+=(tz-pz)*attractStrength;
+          // merged trig noise (single sin/cos pair)
+          const base=px*0.6+py*0.4+pz*0.5+i*0.0007;
+          const s=Math.sin(tBase+base);
+          const c=Math.cos(tBase*1.1+base*0.9);
+          vx+=s*noiseStrength; vy+=s*noiseStrength*0.5; vz+=c*noiseStrength;
+          vx+=(Math.random()-0.5)*buzzStrength; vy+=(Math.random()-0.5)*buzzStrength; vz+=(Math.random()-0.5)*buzzStrength;
+          vx*=this.damp; vy*=this.damp; vz*=this.damp;
+          this.positions[ix]=px+vx; this.positions[ix+1]=py+vy; this.positions[ix+2]=pz+vz;
+          this.velocities[ix]=vx; this.velocities[ix+1]=vy; this.velocities[ix+2]=vz;
+          posAttr.setXYZ(i,this.positions[ix],this.positions[ix+1],this.positions[ix+2]);
+        }
+        posAttr.needsUpdate=true;
+      },
 
-      animate(time){ if(!this.scene || !this.ready) return; requestAnimationFrame(t=>this.animate(t)); this.updateSpeechAmplitude(); this.ampSmooth=this.ampSmooth*0.9+this.amplitude*0.1; this.swarmStep(time); this.mat.uniforms.uTime.value=time*0.001; this.mat.uniforms.uPulse.value=this.ampSmooth; this.mat.uniforms.uOpacity.value=0.9; this.renderer.render(this.scene,this.camera); },
+      animate(time){ if(!this.scene || !this.ready) return; requestAnimationFrame(t=>this.animate(t)); this.updateSpeechAmplitude(); this.ampSmooth=this.ampSmooth*0.9+this.amplitude*0.1; this.swarmStep(time); if(this.mat){ this.mat.uniforms.uTime.value=time*0.001; this.mat.uniforms.uPulse.value=this.ampSmooth; this.mat.uniforms.uOpacity.value=0.9; } this.renderer.render(this.scene,this.camera); },
+
+      _performHeavyInit(){ if(this._heavyDone) return; this._heavyDone=true; this.buildTargetsFromMask(opts.maskUrl, opts.sampleStep).then(()=>{ this.initParticles(); this.setupSpeechIntegration(); this.ready=true; if(opts.autoStart) this.animate(performance.now()); }); },
+      start(){ this._performHeavyInit(); },
 
       destroy(){ if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
     };
 
     viz.initThree();
-    viz.buildTargetsFromMask(opts.maskUrl, opts.sampleStep).then(()=>{
-      viz.initParticles(); viz.setupSpeechIntegration(); viz.ready=true; if(opts.autoStart) viz.animate(performance.now());
-    });
+    if(!opts.lazyInit){
+      viz._performHeavyInit();
+    } else {
+      const trigger = () => { window.removeEventListener('quiz-speech-start', trigger); viz.start(); };
+      window.addEventListener('quiz-speech-start', trigger);
+    }
     return viz;
   }
 };

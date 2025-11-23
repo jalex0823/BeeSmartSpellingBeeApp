@@ -8983,6 +8983,7 @@ function playThemedSound(soundType) {
 </script>
 
 <!-- 🐝 Bee Swarm Visualizer Module Script -->
+<script>window.SHOW_VIZ_TUNING_PANEL = {{ 'true' if (show_viz_tuning|default(False)) else 'false' }};</script>
 <script type="module">
     import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}';
     
@@ -9024,7 +9025,8 @@ function playThemedSound(soundType) {
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
-                maskUrl: '/static/assets/visualizer/lips_mask.png'
+                maskUrl: '/static/assets/visualizer/lips_mask.png',
+                lazyInit: true
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('🎤 Listening for quiz-speech-start/end events...');
@@ -9035,7 +9037,8 @@ function playThemedSound(soundType) {
                 if (window.beeSwarmViz) {
                     window.beeSwarmViz.amplitude = 0.8;
 
-                        // Developer tuning panel (threshold + performance)
+                        // Developer tuning panel gated by flag
+                        if (window.SHOW_VIZ_TUNING_PANEL === true || window.SHOW_VIZ_TUNING_PANEL === 'true') {
                         const panel = document.createElement('div');
                         panel.id = 'vizTuningPanel';
                         panel.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:2000;background:rgba(30,30,35,0.85);color:#ffd566;font:12px/1.4 "Inter",sans-serif;padding:10px 12px;border:1px solid #444;border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,0.4);width:220px;';
@@ -9081,6 +9084,7 @@ function playThemedSound(soundType) {
                             });
                         });
                         panel.querySelector('#vizCloseBtn').addEventListener('click', () => panel.remove());
+                        }
                     window.beeSwarmViz.isActive = true;
                     setTimeout(() => {
                         window.beeSwarmViz.isActive = false;
