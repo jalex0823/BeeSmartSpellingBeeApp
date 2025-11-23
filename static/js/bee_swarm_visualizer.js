@@ -32,13 +32,13 @@ const BeeSwarmVisualizer = {
   geo: null,
   mat: null,
 
-  BASE_POINT_SIZE: 0.12,
+  BASE_POINT_SIZE: 0.15,  // Slightly larger particles for better visibility
 
-  // tighter params
-  tSpeedBase: 0.03,
-  noiseBase: 0.006,
-  buzzBase: 0.0012,
-  damp: 0.965,
+  // Animation parameters - increased for more dynamic movement
+  tSpeedBase: 0.05,      // Faster attraction to target shape (was 0.03)
+  noiseBase: 0.012,      // More breathing motion (was 0.006)
+  buzzBase: 0.002,       // More random buzz movement (was 0.0012)
+  damp: 0.95,            // Less damping for more fluid motion (was 0.965)
 
   // mouth morph state
   mouthOpen: 0,        // 0..1
@@ -148,7 +148,7 @@ const BeeSwarmVisualizer = {
       const lipCurve = 0.9;
       const maxOpen = 2.2 * openFactor;
 
-      const layers = 6; // fewer layers for 8k count
+      const layers = 8; // More layers for better depth
       const perLayer = Math.floor(this.COUNT / layers);
 
       for (let i = 0; i < this.COUNT; i++) {
@@ -165,8 +165,8 @@ const BeeSwarmVisualizer = {
         const lipBlend = isUpper ? layerT / 0.5 : (layerT - 0.5) / 0.5;
         const spread = maxOpen * lipBlend;
 
-        const y = smile + lipSide * spread + (Math.random() - 0.5) * 0.05;
-        const z = (Math.random() - 0.5) * 0.5;
+        const y = smile + lipSide * spread + (Math.random() - 0.5) * 0.08;
+        const z = (Math.random() - 0.5) * 0.8; // More depth variation
 
         outArray[i * 3 + 0] = x;
         outArray[i * 3 + 1] = y;
@@ -174,7 +174,7 @@ const BeeSwarmVisualizer = {
       }
     };
 
-    buildMouthTargets(0.04, this.targetsClosed);
+    buildMouthTargets(0.35, this.targetsClosed);  // Increased from 0.04 to 0.35 for visible closed state
     buildMouthTargets(1.0, this.targetsOpen);
 
     // start particles near center so shape forms fast
@@ -266,26 +266,26 @@ const BeeSwarmVisualizer = {
     const posAttr = this.geo.getAttribute("position");
 
     // smoother amplitude
-    this.ampSmooth = this.ampSmooth * 0.75 + this.amplitude * 0.25;
+    this.ampSmooth = this.ampSmooth * 0.7 + this.amplitude * 0.3;  // Faster response (was 0.75/0.25)
 
     // mouth opening target
-    this.mouthPulse *= 0.88;
+    this.mouthPulse *= 0.85;  // Slightly faster pulse decay (was 0.88)
     const targetOpen = THREE.MathUtils.clamp(
-      this.ampSmooth * 1.15 + this.mouthPulse * 0.6,
+      this.ampSmooth * 1.3 + this.mouthPulse * 0.7,  // More responsive (was 1.15/0.6)
       0, 1
     );
 
-    // smooth mouth motion
-    const stiffness = 0.18;
-    const damping = 0.7;
+    // smooth mouth motion with more responsive physics
+    const stiffness = 0.25;  // More responsive spring (was 0.18)
+    const damping = 0.75;    // Better damping (was 0.7)
     this.mouthOpenVel = this.mouthOpenVel * damping + (targetOpen - this.mouthOpen) * stiffness;
     this.mouthOpen += this.mouthOpenVel;
 
     this.updateMouthTargets(this.mouthOpen);
 
-    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.12;
-    const noiseStrength   = this.noiseBase + this.ampSmooth * 0.03;
-    const buzzStrength    = this.buzzBase  + this.ampSmooth * 0.004;
+    const attractStrength = this.tSpeedBase + this.ampSmooth * 0.18;  // Stronger speech-based attraction (was 0.12)
+    const noiseStrength   = this.noiseBase + this.ampSmooth * 0.05;   // More breathing motion (was 0.03)
+    const buzzStrength    = this.buzzBase  + this.ampSmooth * 0.006;  // More buzz energy (was 0.004)
 
     for (let i = 0; i < this.COUNT; i++) {
       const ix = i * 3;
