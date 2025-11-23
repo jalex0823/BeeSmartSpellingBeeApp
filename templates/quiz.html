@@ -8293,6 +8293,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 300ms gives enough time for session to persist after page navigation
     setTimeout(() => {
         console.log('🔄 Starting wordbank fetch (with session cookie)...');
+        console.log('🍪 Current cookies:', document.cookie);
+        console.log('🔗 Current URL:', window.location.href);
+        
         fetch('/api/wordbank', {
             credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
             cache: 'no-store',
@@ -8303,24 +8306,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     .then(response => {
         console.log(`📡 Wordbank API response: ${response.status} ${response.statusText}`);
         if (!response.ok) {
+            console.error(`❌ Wordbank fetch failed with status ${response.status}`);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         return response.json();
     })
     .then(data => {
         console.log('📦 Wordbank data received:', data);
+        console.log(`📊 Word count: ${data.words ? data.words.length : 0}`);
+        console.log(`✅ Success flag: ${data.success}`);
         
         // ISSUE #4 FIX: Defensive validation of word data
         if (!data || typeof data !== 'object') {
+            console.error('❌ Invalid response format:', data);
             throw new Error('Invalid response format from API');
         }
         
         if (!Array.isArray(data.words)) {
+            console.error('❌ Words is not an array:', data.words);
             throw new Error('Invalid word data returned from API - expected array');
         }
         
         if (data.words.length === 0) {
-            console.error('❌ Wordbank is empty! data:', data);
+            console.error('❌ Wordbank is empty! Showing error and redirecting...');
             BeeSmart.showError('No words loaded for the quiz!');
             setTimeout(() => window.location.href = '/', 2800);
             return;
