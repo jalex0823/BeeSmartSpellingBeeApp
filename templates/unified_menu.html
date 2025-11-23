@@ -2854,33 +2854,19 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- 3D Avatar Display (registered users only): UPGRADED for maximum showcase -->
-                <div class="avatar-preview-panel" style="
-                    background: transparent;   /* override picker panel bg */
-                    border: 0;                 /* no outer panel border */
-                    padding: 0;                /* flush to preview box */
-                    box-shadow: none;          /* remove panel glow */
-                    max-width: 100%;
-                    margin: 0 auto 16px auto;
+                <!-- 3D Avatar Display (registered users only): Uses morph-container like quiz -->
+                <div class="morph-container mode-voice" style="
+                    width: 100%;
+                    max-width: 800px;
+                    height: 620px;
+                    margin: 0 auto 8px auto;
+                    position: relative;
                     display: flex;
+                    align-items: center;
                     justify-content: center;
+                    overflow: visible;
                 ">
-                    <!-- UPGRADED: Larger centered container for maximum avatar showcase -->
-                    <div class="preview-avatar-container" style="
-                        width: 100%;
-                        max-width: 800px;
-                        height: 550px;
-                        background: transparent;
-                        border: 0;
-                        border-radius: 30px;
-                        box-shadow: none;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        overflow: visible;
-                        position: relative;
-                        margin: 0 auto;
-                    ">
+                    <div class="morph-content" style="width: 100%; height: 100%; position: relative;">
                         <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
                             width: 100%; height: 100%; position: relative;
                             cursor: pointer;
@@ -2944,8 +2930,8 @@
                     font-size: 14px;
                     color: #FF6B00;
                     font-weight: 600;
-                    margin-top: 8px;
-                    margin-bottom: 10px;
+                    margin-top: 2px;
+                    margin-bottom: 4px;
                     text-align: center;
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;

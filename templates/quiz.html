@@ -2990,7 +2990,7 @@ if ('speechSynthesis' in window) {
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
                 <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
-                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; opacity:1; transition: opacity 0.8s ease;"></div>
+                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none;"></div>
                 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
@@ -9026,10 +9026,10 @@ function playThemedSound(soundType) {
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
                 maskUrl: '/static/assets/visualizer/lips_mask.png',
-                lazyInit: true
+                lazyInit: true            // Defer heavy init until first speech event
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
-            console.log('🎤 Listening for quiz-speech-start/end events...');
+            console.log('🎤 Canvas will be created on first speech event...');
             
             // Test animation immediately
             setTimeout(() => {

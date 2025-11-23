@@ -261,11 +261,15 @@ const BeeSwarmVisualizer = {
       destroy(){ if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
     };
 
-    viz.initThree();
     if(!opts.lazyInit){
+      viz.initThree();
       viz._performHeavyInit();
     } else {
-      const trigger = () => { window.removeEventListener('quiz-speech-start', trigger); viz.start(); };
+      const trigger = () => { 
+        window.removeEventListener('quiz-speech-start', trigger); 
+        viz.initThree();
+        viz.start(); 
+      };
       window.addEventListener('quiz-speech-start', trigger);
     }
     return viz;
