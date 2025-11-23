@@ -975,7 +975,7 @@
     if(!name||!name.trim()) return;
 
     try{
-      const res = await fetch("/api/saved-lists/create",{
+      const res = await fetch("/api/saved-lists",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         credentials:"same-origin",
