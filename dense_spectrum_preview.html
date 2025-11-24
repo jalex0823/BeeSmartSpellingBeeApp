@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dense Frequency Spectrum - BeeSmart Style</title>
     <style>
+        /* --- ADDED TO PREVENT WHITE BOX FLASH --- */
+        #visualizer-container,
+        .visualizer-container,
+        .viz-wrapper,
+        .viz-canvas {
+            background: transparent !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 400ms ease;
+        }
+        /* --- END --- */
+
         body {
             background: #1a1a2e;
             color: white;
@@ -19,11 +31,16 @@
         }
         
         .visualizer-container {
-            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            width: 100%;
+            height: 260px;              /* or whatever mouth height you want */
             margin: 20px 0;
-            padding: 30px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0;                 /* remove padding so no "panel" */
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: visible;
+            pointer-events: none;
         }
         
         .visualizer-canvas {
@@ -199,6 +216,12 @@
         
         function startAnimation() {
             if (!isAnimating) {
+                const container = document.querySelector('.visualizer-container');
+                if (container) {
+                    container.style.visibility = 'visible';
+                    container.style.opacity = '1';
+                }
+                
                 isAnimating = true;
                 animate();
             }
