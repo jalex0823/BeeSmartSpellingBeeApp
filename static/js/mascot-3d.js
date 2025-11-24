@@ -205,7 +205,11 @@ class SmartyBee3D {
         
         // Fallback to OBJ/MTL for legacy models
         if (typeof THREE.MTLLoader === 'undefined' || typeof THREE.OBJLoader === 'undefined') {
-            console.error('❌ MTLLoader/OBJLoader not available and no GLB provided');
+            // OBJ/MTL loaders are not present in this environment. Use fallback quietly.
+            // This avoids noisy console errors in environments where legacy loaders are not bundled.
+            if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+                console.debug('MTL/OBJ loaders missing — using fallback mascot (silent).');
+            }
             this.addFallbackBee();
             return;
         }

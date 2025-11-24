@@ -4,14 +4,22 @@
 
 {% block content %}
 <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
+    <!-- Admin avatar moved into title card and mild DOM cleanup applied below -->
     <!-- Centered Admin Title Bar -->
     <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
             <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👑 Admin Dashboard</h1>
             <p style="margin: 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
             
+            <!-- Admin Avatar: centered between crest and rank badge -->
+            <div style="margin-top: 0.5rem; display:flex; justify-content:center; align-items:center;">
+                <div class="unified-avatar-stage medium" aria-label="Admin avatar" role="img" style="width:96px; height:96px;">
+                    <div id="adminAvatar3D" class="avatar-fallback" style="font-size:2rem; line-height:1;">🐝</div>
+                </div>
+            </div>
+
             <!-- Buzz Dust Rank Badge -->
-            <div id="admin-buzz-dust-rank" style="margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+            <div id="admin-buzz-dust-rank" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
                     <img id="admin-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
                     <div style="text-align: left;">
@@ -22,10 +30,7 @@
             </div>
         </div>
     </div>
-    <!-- Admin Avatar (Unified spacing) -->
-    <div class="unified-avatar-stage large" aria-label="Admin avatar" role="img">
-        <div id="adminAvatar3D" class="avatar-fallback">🐝</div>
-    </div>
+    <!-- Note: original avatar block removed (avatar moved into the header) -->
     
     <!-- Refresh Button Beneath Title -->
     <div style="text-align: center; margin-bottom: 2rem; width: 100%;">
@@ -182,6 +187,72 @@
         } else {
             // DOM already loaded, execute immediately
             loadAdminBuzzDust();
+        }
+    </script>
+
+    <style>
+        /* Hide mascot/orb on admin dashboard - CSS-based approach */
+        #mascotBee3D,
+        #mascotBee3D canvas,
+        .bee-mascot,
+        .decorative-orb,
+        .honey-orb,
+        .floating-orb,
+        .particle-container,
+        .morph-container {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+        }
+    </style>
+
+    <script>
+        // Additional DOM-based removal as backup for dynamically-loaded elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const toRemove = ['#mascotBee3D', '.bee-mascot', '.decorative-orb', '.honey-orb', '.floating-orb', '.particle-container', '.morph-container'];
+            toRemove.forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => {
+                    el.style.display = 'none';
+                    el.style.visibility = 'hidden';
+                    el.remove();
+                });
+            });
+
+            // Tighten any leftover spacing around the header avatar
+            const avatar = document.querySelector('.unified-avatar-stage.medium');
+            if (avatar) {
+                avatar.style.marginTop = '0.5rem';
+                avatar.style.marginBottom = '0';
+                avatar.style.width = '88px';
+                avatar.style.height = '88px';
+            }
+        });
+
+        // Watch for any new mascot/orb elements and remove them
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length) {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.id === 'mascotBee3D' || node.classList?.contains('bee-mascot') || 
+                            node.classList?.contains('morph-container') || node.classList?.contains('decorative-orb')) {
+                            node.remove();
+                        }
+                    });
+                }
+            });
+        });
+
+        // Start observing when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                observer.observe(document.body, { childList: true, subtree: true });
+            });
+        } else {
+            observer.observe(document.body, { childList: true, subtree: true });
         }
     </script>
 

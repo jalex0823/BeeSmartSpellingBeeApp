@@ -218,6 +218,41 @@ button.speak {
 }
 .bee-mascot.is-happy { animation: mascotLoop 1.6s ease-in-out; }
 .bee-mascot.is-sad { animation: mascotSad 0.9s ease-in-out; }
+
+/* Visualizer & FX overrides: ensure no fallback pill hides WebGL canvas */
+#beeSwarmVisualizerContainer,
+#quizFxLayer,
+.fx-box,
+.visualizer-fx {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+/* Ensure any canvas inserted is on top and fully visible when initialized */
+#beeSwarmVisualizerContainer canvas,
+#beeSwarmVisualizerContainer > canvas,
+.visualizer-fx canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Specific override for quiz FX layer per bug report */
+#quizFxLayer {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  pointer-events: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
 .bee-mascot.is-speaking { animation: mascotBuzz 0.6s ease-in-out infinite; }
 
 @keyframes mascotLoop {
