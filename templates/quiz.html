@@ -8383,12 +8383,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', initError.stack);
         // Continue with quiz even if initialization fails
     }
-    } catch (outerError) {
-        // Catch errors from the DOMContentLoaded try block
-        console.error('❌ DOMContentLoaded initialization error:', outerError);
-        console.error('Error details:', outerError.stack);
-    }
-
     // Delay to ensure browser session cookie is fully established before fetching wordbank
     // This prevents race conditions where cookie isn't sent on first request
     // 300ms gives enough time for session to persist after page navigation
