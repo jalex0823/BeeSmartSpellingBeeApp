@@ -1,13 +1,11 @@
 {% extends "base.html" %}
 <!-- QUIZ VERSION: 2025-11-21-syntax-fix -->
-<!-- QUIZ TEMPLATE VERSION: 2025-11-24-01 -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
-<script>window.QUIZ_TEMPLATE_VERSION = '2025-11-24-02';</script>
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
@@ -2992,7 +2990,7 @@ if ('speechSynthesis' in window) {
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
                 <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
-                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; background:transparent;"></div>
+                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none;"></div>
                 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
@@ -8385,9 +8383,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', initError.stack);
         // Continue with quiz even if initialization fails
     }
-    
+    } catch (outerError) {
+        // Catch errors from the DOMContentLoaded try block
+        console.error('❌ DOMContentLoaded initialization error:', outerError);
+        console.error('Error details:', outerError.stack);
     }
-    
+
     // Delay to ensure browser session cookie is fully established before fetching wordbank
     // This prevents race conditions where cookie isn't sent on first request
     // 300ms gives enough time for session to persist after page navigation
@@ -9024,9 +9025,9 @@ function playThemedSound(soundType) {
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
-                maskUrl: '/static/assets/masks/lips_mask_double.png',
+                maskUrl: '/static/assets/visualizer/lips_mask.png',
                 lazyInit: true            // Defer heavy init until first speech event
-              });
+            });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('🎤 Canvas will be created on first speech event...');
             
