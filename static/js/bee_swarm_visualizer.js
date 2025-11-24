@@ -35,6 +35,8 @@ const BeeSwarmVisualizer = {
       // config/state
       container,
       COUNT: opts.particleCount,
+      // Use frame-driven amplitude updates on high-performance devices to reduce timers
+      _useFrameAmplitude: !lowPerf,
       overallScale: opts.overallScale,
       cameraZ: opts.cameraZ,
       maskThreshold: opts.maskBrightnessThreshold,
@@ -247,7 +249,8 @@ const BeeSwarmVisualizer = {
         window.addEventListener('quiz-speech-start',()=>{ this.isActive=true; this.amplitude=0.7; this.mouthPulse=1.2; });
         window.addEventListener('quiz-speech-end',()=>{ this.isActive=false; this.amplitude=0; });
         window.addEventListener('quiz-speech-boundary',()=>{ this.mouthPulse=0.9; });
-        if(typeof speechSynthesis!=='undefined' && !this._speechTimer){
+        // If device is low-perf, use interval polling to avoid per-frame work; otherwise update per-frame
+        if(typeof speechSynthesis!=='undefined' && !this._speechTimer && !this._useFrameAmplitude){
           this._speechTimer = setInterval(()=>this.updateSpeechAmplitude(),50);
         }
       },
@@ -290,7 +293,8 @@ const BeeSwarmVisualizer = {
       animate(time){
         if(!this.scene || !this.ready) return;
         requestAnimationFrame(t=>this.animate(t));
-        // Speech amplitude is polled on an interval (setupSpeechIntegration) to avoid double-polling
+        // On high-performance devices, update amplitude every frame for tighter responsiveness
+        if(this._useFrameAmplitude) this.updateSpeechAmplitude();
         this.ampSmooth = this.ampSmooth*0.9 + this.amplitude*0.1;
         this.swarmStep(time);
         if(this.mat){
