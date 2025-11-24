@@ -939,3 +939,22 @@ lottie-player {
   white-space: nowrap;
   border: 0;
 }
+
+/* 🔥 KILL ANY WHITE PANEL BEHIND BEESWARM */
+#beeSwarmVisualizerContainer,
+#beeSwarmVisualizerContainer * ,
+#beeSwarmContainer,
+#beeSwarmContainer canvas,
+#voiceVisualizer,
+#voiceVisualizer * {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    outline: none !important;
+}
+
+/* If you have ANY global canvas styling, this wins for the visualizer */
+#beeSwarmVisualizerContainer canvas {
+    background-color: transparent !important;
+}

@@ -6,6 +6,11 @@ const THREE = window.THREE;
 
 const BeeSwarmVisualizer = {
   init(container, options = {}) {
+    container.style.background = "transparent";
+    container.style.border = "none";
+    container.style.boxShadow = "none";
+    container.style.filter = "none";
+    
     const opts = {
       autoStart: true,
       particleCount: 7000, // lighter default to reduce GPU/CPU load

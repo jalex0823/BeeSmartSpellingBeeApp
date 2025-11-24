@@ -2990,7 +2990,7 @@ if ('speechSynthesis' in window) {
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
                 <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
-                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none;"></div>
+                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:860px; height:260px; z-index:5; pointer-events:none; visibility:visible; opacity:1;"></div>
                 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
@@ -9097,6 +9097,33 @@ function playThemedSound(soundType) {
             console.error('Error stack:', error.stack);
         }
     }
+</script>
+<script type="module">
+  import BeeSwarmVisualizer from "/static/js/bee_swarm_visualizer.js";
+
+  const swarmContainer = document.getElementById("beeSwarmVisualizerContainer");
+
+  // Safety: make sure container is visible
+  swarmContainer.style.visibility = "visible";
+  swarmContainer.style.opacity = "1";
+
+  BeeSwarmVisualizer.init(swarmContainer, {
+    maskUrl: "/static/assets/masks/lips_mask_double.png",
+    sampleStep: 2,
+    particleCount: 12000,
+    zIndex: 5,
+
+    // If you want it to appear immediately without waiting for speech:
+    lazyInit: false,
+    autoStart: true,
+    showControls: false
+  });
+
+  // Optional fade-in (if you kept opacity:0 in HTML)
+  requestAnimationFrame(() => {
+    swarmContainer.style.transition = "opacity 0.8s ease-out";
+    swarmContainer.style.opacity = "1";
+  });
 </script>
 
 {% endblock %}
