@@ -664,22 +664,20 @@ class SmartyBee3D {
     }
 
     addFallbackBee() {
-        // Lightweight 3D fallback so UI still looks alive if OBJ/MTL missing
+        // Legacy fallback visuals removed: we no longer add a 3D sphere or emoji fallback.
+        // Modern flow expects GLB models; if a GLB is not available we simply leave the
+        // scene empty to avoid duplicate/incorrect visuals (sphere + sprite) on dashboards.
         try {
-            const geom = new THREE.SphereGeometry(1, 20, 20);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xffdd00, metalness: 0.2, roughness: 0.6 });
-            const bee = new THREE.Mesh(geom, mat);
-            bee.position.set(0, 1, 0);
-            this.scene.add(bee);
-            
-            // AVATAR CLIPPING FIX: Move fallback bee up to show bottom
-            bee.position.y += 0.35;
-            
-            this.bee = bee;
-            console.warn('Fallback 3D bee added (OBJ not available).');
+            // Ensure there is no bee model present
+            this.bee = null;
+            // Clear any previously injected fallback markup in the container
+            if (this.container && this.container.innerHTML) {
+                this.container.innerHTML = '';
+            }
+            console.warn('Fallback visuals suppressed (GLB-only mode).');
         } catch (e) {
-            console.error('Failed to add fallback 3D bee, showing image instead.', e);
-            this.showFallbackImage();
+            // Swallow errors - nothing to render as fallback
+            console.warn('Suppressed fallback visuals but encountered an error:', e);
         }
     }
 
