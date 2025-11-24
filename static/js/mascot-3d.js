@@ -203,22 +203,9 @@ class SmartyBee3D {
             return;
         }
         
-        // Fallback to OBJ/MTL for legacy models
-        if (typeof THREE.MTLLoader === 'undefined' || typeof THREE.OBJLoader === 'undefined') {
-            // OBJ/MTL loaders are not present in this environment. Use fallback quietly.
-            // This avoids noisy console errors in environments where legacy loaders are not bundled.
-            if (typeof console !== 'undefined' && typeof console.debug === 'function') {
-                console.debug('MTL/OBJ loaders missing — using fallback mascot (silent).');
-            }
-            this.addFallbackBee();
-            return;
-        }
-        
-        const mtlLoader = new THREE.MTLLoader();
-        const objLoader = new THREE.OBJLoader();
-        
-        // Load OBJ/MTL model (legacy path)
-        this.loadOBJ(mtlLoader, objLoader);
+        // No GLB path found - use fallback
+        console.warn('⚠️ No GLB path provided - using fallback mascot');
+        this.addFallbackBee();
     }
     
     loadGLB(glbPath) {
@@ -358,6 +345,10 @@ class SmartyBee3D {
                     );
     }
     
+    // REMOVED: loadOBJ method - now using GLB-only format
+    // Legacy OBJ/MTL loading is no longer needed
+    
+    /*
     loadOBJ(mtlLoader, objLoader) {
         // Resolve base and filenames (OBJ/MTL path)
         let base, mtlPath, objPath, texPath, mtlFilename, objFilename;
@@ -650,6 +641,8 @@ class SmartyBee3D {
             }
         );
     }
+    */
+    // END OF REMOVED LEGACY OBJ/MTL CODE
 
     setupControls() {
         if (!this.options.enableInteraction) return;
