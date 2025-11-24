@@ -813,25 +813,33 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(90deg, #66BB6A 0%, #A5D6A7 100%);
     }
 
-    /* Voice Visualizer with Bee Theme */
+    /* Voice Visualizer - transparent particle stage */
 .voice-visualizer {
-  position: relative;
-  width: 100%;
-  min-height: 140px;
-  margin-bottom: 0.5rem;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  overflow: visible;
-  pointer-events: none;
+    position: relative;
+    width: 100%;
+    min-height: 140px;
+    margin-bottom: 0.5rem;
+
+    /* remove the panel/box */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+
+    overflow: visible;
+    pointer-events: none;
+
+    /* hide until JS activates */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 450ms ease;
 }
 
 /* JS adds this when ready */
 .voice-visualizer.active {
     opacity: 1;
     visibility: visible;
-    }
+}
 
     .voice-visualizer::before { display: none; }
     
@@ -2871,6 +2879,15 @@ if ('speechSynthesis' in window) {
         .badge-modal h3 {
             font-size: 1.5rem;
         }
+    }
+
+    /* 🔥 Add this at the VERY BOTTOM */
+    .voice-card,
+    .speaking-mode,
+    .dotwave-wrapper {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 </style>
 {% endblock %}

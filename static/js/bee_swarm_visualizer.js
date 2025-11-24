@@ -31,7 +31,23 @@ const BeeSwarmVisualizer = {
       opts.sampleStep = Math.max(opts.sampleStep, 3);
     }
 
-    const viz = {
+    
+    // ✅ If the Three.js container lives inside a .voice-visualizer panel,
+    // start that panel hidden to avoid any blank/white box before particles build.
+    try {
+      const wrap = container.closest?.('.voice-visualizer');
+      if (wrap) {
+        wrap.style.background = 'transparent';
+        wrap.style.border = 'none';
+        wrap.style.boxShadow = 'none';
+        wrap.style.padding = '0';
+        wrap.style.opacity = '0';
+        wrap.style.visibility = 'hidden';
+        wrap.style.transition = 'opacity 450ms ease';
+      }
+    } catch(e){}
+
+const viz = {
       // config/state
       container,
       COUNT: opts.particleCount,
@@ -362,11 +378,11 @@ const BeeSwarmVisualizer = {
           // Also make sure the container is visible (some pages hide the container until visualizer ready)
           try {
             if (this.container) {
-               this.container.style.visibility = 'visible';
-               this.container.style.opacity = '1';
-
-             // 🔥 REQUIRED FOR YOUR CSS TO WORK
-             this.container.classList.add("active");
+              this.container.style.visibility = 'visible';
+              this.container.style.opacity = '1';
+              // Also activate any outer .voice-visualizer wrapper
+              const wrapper = this.container.closest?.('.voice-visualizer');
+              if (wrapper) wrapper.classList.add('active');
             }
           } catch (e) {
             // ignore
