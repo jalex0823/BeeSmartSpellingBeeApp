@@ -8,17 +8,17 @@ const BeeSwarmVisualizer = {
   init(container, options = {}) {
     const opts = {
       autoStart: true,
-      particleCount: 12000,
+      particleCount: 7000, // lighter default to reduce GPU/CPU load
       overallScale: 2.6,
       cameraZ: 7.2,
       zIndex: 2,
       background: 'transparent',
       // Use the in-repo visualizer mask (clean lip mask) for sampling
       maskUrl: '/static/assets/masks/lips_mask_double.png',
-      sampleStep: 2,
+      sampleStep: 3,
       maskBrightnessThreshold: 60,
       maskInvert: false,
-      lazyInit: false, // if true, defer mask + particle build until first speech start
+      lazyInit: true, // defer mask + particle build until first speech start
       ...options
     };
 
@@ -27,8 +27,8 @@ const BeeSwarmVisualizer = {
                     (window.devicePixelRatio && window.devicePixelRatio < 1.25) ||
                     (window.innerWidth < 640);
     if (lowPerf) {
-      opts.particleCount = Math.min(opts.particleCount, 8000);
-      opts.sampleStep = Math.max(opts.sampleStep, 2);
+      opts.particleCount = Math.min(opts.particleCount, 6000);
+      opts.sampleStep = Math.max(opts.sampleStep, 3);
     }
 
     const viz = {
@@ -67,6 +67,39 @@ const BeeSwarmVisualizer = {
       camera: null,
       renderer: null,
       ready: false,
+      _glyphTex: null,
+      _glyphGrid: null,
+
+      createGlyphAtlas(){
+        if(this._glyphTex) return this._glyphTex;
+        const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const cols=6;
+        const size=64;
+        const rows=Math.ceil(letters.length/cols);
+        const canvas=document.createElement('canvas');
+        canvas.width=cols*size;
+        canvas.height=rows*size;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='rgba(0,0,0,0)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='#fff';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.font='bold 48px Arial';
+        for(let i=0;i<letters.length;i++){
+          const c=letters[i];
+          const col=i%cols;
+          const row=Math.floor(i/cols);
+          ctx.fillText(c,col*size+size/2,row*size+size/2+4);
+        }
+        const tex=new THREE.CanvasTexture(canvas);
+        tex.needsUpdate=true;
+        tex.minFilter=THREE.LinearFilter;
+        tex.magFilter=THREE.LinearFilter;
+        this._glyphTex=tex;
+        this._glyphGrid={x:cols,y:rows,count:letters.length};
+        return tex;
+      },
 
       initThree() {
         this.scene = new THREE.Scene();
@@ -220,24 +253,28 @@ const BeeSwarmVisualizer = {
         this.colors=new Float32Array(this.COUNT*3);
         this.sizes=new Float32Array(this.COUNT);
         this.phases=new Float32Array(this.COUNT);
+        this.glyphs=new Float32Array(this.COUNT);
         const palette=['#FDB813','#FFCC33','#FFB84D','#FFF6CC','#E08A00'].map(c=>new THREE.Color(c));
         const pick=()=>palette[Math.floor(Math.random()*palette.length)].clone();
+        this.createGlyphAtlas();
         for(let i=0;i<this.COUNT;i++){
           const ix=i*3; this.positions[ix]=(Math.random()-0.5)*4.5; this.positions[ix+1]=(Math.random()-0.5)*2.0; this.positions[ix+2]=(Math.random()-0.5)*1.2;
           this.velocities[ix]=(Math.random()-0.5)*0.01; this.velocities[ix+1]=(Math.random()-0.5)*0.01; this.velocities[ix+2]=(Math.random()-0.5)*0.01;
           const c=pick(); this.colors[ix]=c.r; this.colors[ix+1]=c.g; this.colors[ix+2]=c.b;
           const r=Math.random(); let size; if(r<0.80) size=6+Math.random()*6; else if(r<0.97) size=12+Math.random()*10; else size=24+Math.random()*18;
           this.sizes[i]=size; this.phases[i]=Math.random()*Math.PI*2;
+          this.glyphs[i]=Math.floor(Math.random()*this._glyphGrid.count);
         }
         this.geo=new THREE.BufferGeometry();
         this.geo.setAttribute('position',new THREE.BufferAttribute(this.positions,3));
         this.geo.setAttribute('color',new THREE.BufferAttribute(this.colors,3));
         this.geo.setAttribute('aSize',new THREE.BufferAttribute(this.sizes,1));
         this.geo.setAttribute('aPhase',new THREE.BufferAttribute(this.phases,1));
+        this.geo.setAttribute('aGlyph',new THREE.BufferAttribute(this.glyphs,1));
         this.mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true,
-          uniforms:{ uTime:{value:0}, uPulse:{value:0}, uOpacity:{value:0.9} },
-          vertexShader:`attribute float aSize; attribute float aPhase; varying vec3 vColor; varying float vPhase; uniform float uTime; uniform float uPulse; void main(){ vColor=color; vPhase=aPhase; vec4 mvPosition=modelViewMatrix*vec4(position,1.0); float beat=1.0+uPulse*0.12; gl_PointSize=aSize*beat*(300.0/-mvPosition.z); gl_Position=projectionMatrix*mvPosition; }`,
-          fragmentShader:`varying vec3 vColor; varying float vPhase; uniform float uTime; uniform float uPulse; uniform float uOpacity; void main(){ vec2 uv=gl_PointCoord.xy-0.5; float d=length(uv); float glow=smoothstep(0.5,0.0,d); float twinkle=0.65+0.35*sin(uTime*2.0+vPhase); float audioBoost=1.0+uPulse*0.35; vec3 col=vColor*glow*twinkle*audioBoost; float alpha=glow*uOpacity; gl_FragColor=vec4(col,alpha); if(alpha<0.03) discard; }` });
+          uniforms:{ uTime:{value:0}, uPulse:{value:0}, uOpacity:{value:0.9}, uGlyphTex:{value:this._glyphTex}, uGlyphGrid:{value:new THREE.Vector2(this._glyphGrid.x,this._glyphGrid.y)} },
+          vertexShader:`attribute float aSize; attribute float aPhase; attribute float aGlyph; varying vec3 vColor; varying float vPhase; varying float vGlyph; uniform float uTime; uniform float uPulse; void main(){ vColor=color; vPhase=aPhase; vGlyph=aGlyph; vec4 mvPosition=modelViewMatrix*vec4(position,1.0); float beat=1.0+uPulse*0.12; gl_PointSize=aSize*beat*(300.0/-mvPosition.z); gl_Position=projectionMatrix*mvPosition; }`,
+          fragmentShader:`varying vec3 vColor; varying float vPhase; varying float vGlyph; uniform float uTime; uniform float uPulse; uniform float uOpacity; uniform sampler2D uGlyphTex; uniform vec2 uGlyphGrid; void main(){ vec2 uv=gl_PointCoord.xy; float d=length(uv-0.5); float glow=smoothstep(0.5,0.0,d); float twinkle=0.65+0.35*sin(uTime*2.0+vPhase); float audioBoost=1.0+uPulse*0.35; float cols=uGlyphGrid.x; float rows=uGlyphGrid.y; float ci=mod(vGlyph, cols); float ri=floor(vGlyph/cols); vec2 glyphUV=(vec2(ci,ri)+uv)/vec2(cols,rows); vec4 glyph=texture2D(uGlyphTex,glyphUV); float alpha=glyph.a*glow*uOpacity; vec3 col=vColor*glyph.r*glow*twinkle*audioBoost; gl_FragColor=vec4(col,alpha); if(alpha<0.03) discard; }` });
         this.bees=new THREE.Points(this.geo,this.mat); this.scene.add(this.bees);
       },
 
