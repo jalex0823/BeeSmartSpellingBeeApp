@@ -101,7 +101,7 @@ const BeeSwarmVisualizer = {
 
       async buildTargetsFromMask(maskUrl, sampleStep){
         const img = new Image(); img.crossOrigin='anonymous'; img.src = maskUrl;
-        try { await img.decode(); } catch(e){ console.warn('Mask decode failed', e); }
+        try { await img.decode(); } catch(e){ console.warn('Mask decode failed', e, maskUrl); return; }
         const canvas = document.createElement('canvas');
         const w = canvas.width = img.width || 512;
         const h = canvas.height = img.height || 256;
@@ -114,7 +114,9 @@ const BeeSwarmVisualizer = {
         for (let y=0;y<h;y+=sampleStep){
           for (let x=0;x<w;x+=sampleStep){
             const i=(y*w+x)*4; const r=data[i], g=data[i+1], b=data[i+2], a=data[i+3];
-            const bright = (r+g+b)/3; const lit = bright>=threshold && a>20; const include = this.maskInvert ? !lit : lit;
+            const bright = (r+g+b)/3;
+            const alphaOK = a > 40;
+            const lit = alphaOK && bright>=threshold; const include = this.maskInvert ? !lit : lit;
             if(include) pts.push({x,y});
           }
         }
@@ -156,7 +158,7 @@ const BeeSwarmVisualizer = {
         for (let y=0; y<h; y+=sampleStep) {
           for (let x=0; x<w; x+=sampleStep) {
             const i=(y*w+x)*4; const r=data[i], g=data[i+1], b=data[i+2], a=data[i+3];
-            const bright=(r+g+b)/3; const lit=bright>=threshold && a>20; const include=invert? !lit : lit;
+            const bright=(r+g+b)/3; const alphaOK = a>40; const lit=alphaOK && bright>=threshold; const include=invert? !lit : lit;
             if(include) pts.push({x,y});
           }
         }
@@ -184,8 +186,27 @@ const BeeSwarmVisualizer = {
         if(this.geo){ this.geo.dispose(); }
         if(this.mat){ this.mat.dispose(); }
         this.COUNT = desired;
-        // Rebuild targets with current mask settings
-        this.rebuildFromStoredMask({ threshold: this.maskThreshold, sampleStep: this._lastSampleStep || 2, invert: this.maskInvert });
+        // Rebuild targets with current mask settings, or fallback procedural if mask isn't ready
+        if (this._maskPixels) {
+          this.rebuildFromStoredMask({ threshold: this.maskThreshold, sampleStep: this._lastSampleStep || 2, invert: this.maskInvert });
+        } else {
+          // Procedural fallback sized to COUNT (matches fallback in buildTargetsFromMask)
+          this.targetsClosed = new Float32Array(this.COUNT*3);
+          this.targetsOpen   = new Float32Array(this.COUNT*3);
+          this.targets       = new Float32Array(this.COUNT*3);
+          const mouthWidth=5.8, lipCurve=0.9;
+          const build=(openFactor,out)=>{
+            const maxOpen=2.4*openFactor;
+            for(let i=0;i<this.COUNT;i++){
+              const u=i/this.COUNT; const x=(u-0.5)*mouthWidth+(Math.random()-0.5)*0.35; const smileCurve=-Math.cos(u*Math.PI*2)*lipCurve*0.45;
+              const band=Math.random(); let y; if(band<0.35) y=smileCurve+(maxOpen*0.55)+(Math.random()-0.5)*0.85; else if(band<0.70) y=smileCurve-(maxOpen*0.55)+(Math.random()-0.5)*0.85; else y=smileCurve+(Math.random()-0.5)*maxOpen*0.9;
+              const centerBias=1-Math.abs(u-0.5)*2; const z=(Math.random()-0.5)*1.2*(0.35+centerBias*0.65); const s=this.overallScale;
+              out[i*3]=x*s; out[i*3+1]=y*s; out[i*3+2]=z*s;
+            }
+          };
+          build(0.35,this.targetsClosed); build(1.0,this.targetsOpen);
+          this.targets.set(this.targetsClosed);
+        }
         // Re-init particle buffers & points
         this.initParticles();
         console.log(`Performance mode switched to ${mode} (COUNT=${this.COUNT})`);
@@ -226,7 +247,9 @@ const BeeSwarmVisualizer = {
         window.addEventListener('quiz-speech-start',()=>{ this.isActive=true; this.amplitude=0.7; this.mouthPulse=1.2; });
         window.addEventListener('quiz-speech-end',()=>{ this.isActive=false; this.amplitude=0; });
         window.addEventListener('quiz-speech-boundary',()=>{ this.mouthPulse=0.9; });
-        if(typeof speechSynthesis!=='undefined') setInterval(()=>this.updateSpeechAmplitude(),50);
+        if(typeof speechSynthesis!=='undefined' && !this._speechTimer){
+          this._speechTimer = setInterval(()=>this.updateSpeechAmplitude(),50);
+        }
       },
 
       updateSpeechAmplitude(){
@@ -289,7 +312,7 @@ const BeeSwarmVisualizer = {
       },
       start(){ this._performHeavyInit(); },
 
-      destroy(){ if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
+      destroy(){ if(this._speechTimer) { clearInterval(this._speechTimer); this._speechTimer=null; } if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
     };
 
     if(!opts.lazyInit){
