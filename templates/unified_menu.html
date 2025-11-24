@@ -2855,23 +2855,27 @@
                 
                 {% if current_user.is_authenticated %}
                 <!-- 3D Avatar Display (registered users only): Uses morph-container like quiz -->
+                {# Do not render the mascot/morph container on the admin dashboard page (#/admin/dashboard) - admin handles its own avatar markup #}
+                {% if request.path != '/admin/dashboard' %}
                 <div class="morph-container mode-voice" style="
                     width: 100%;
                     max-width: 800px;
-                    height: 240px;
-                    margin: 0 auto -8px auto;
+                    height: auto;
+                    margin: 0.5rem auto 0;
+                    padding: 0.5rem 0;
                     position: relative;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     overflow: visible;
                 ">
-                    <div class="morph-content" style="width: 100%; height: 100%; position: relative;">
+                    <div class="morph-content" style="width: 100%; height: auto; position: relative;">
                         <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
                             width: 240px; height: 180px; margin: 0 auto; position: relative; cursor: pointer;
                         "></div>
                     </div>
                 </div>
+                {% endif %}
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
@@ -2939,6 +2943,39 @@
                     ✨ Click on me to see what I do! ✨
                 </div>
                 {% endif %}
+
+                <!-- Scoped script to center the mascot only within its morph container -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function(){
+                        try {
+                            var mascot = document.getElementById('mascotBee3D');
+                            if (!mascot) return; // nothing to do
+
+                            // Prefer scoping to the immediate morph container (the area you highlighted)
+                            var morph = mascot.closest('.morph-content') || document.querySelector('.morph-content');
+
+                            if (!morph) {
+                                // Fallback: only center the mascot element itself
+                                mascot.style.margin = '0.5rem auto 0';
+                                mascot.style.display = 'block';
+                                return;
+                            }
+
+                            // Make the morph container center its children vertically
+                            morph.style.display = 'flex';
+                            morph.style.flexDirection = 'column';
+                            morph.style.alignItems = 'center';
+                            morph.style.justifyContent = 'center';
+                            morph.style.gap = '0.25rem';
+
+                            // Ensure the mascot itself is centered inside the morph container
+                            mascot.style.margin = '0';
+                            mascot.style.display = 'block';
+                        } catch (e) {
+                            console.warn('Could not auto-center mascot (scoped):', e);
+                        }
+                    });
+                </script>
 
                 {% if not current_user.is_authenticated %}
                 <!-- Guest-only Avatar Carousel (calm, accessible) -->
