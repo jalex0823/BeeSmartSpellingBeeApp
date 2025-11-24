@@ -222,11 +222,11 @@ class SmartyBee3D {
         const gltfLoader = new THREE.GLTFLoader();
         console.log('🐝 Loading GLB model:', glbUrl);
         
-        // Add timeout protection for GLB loading
+        // Add timeout protection for GLB loading (30s allows for large files or slow connections)
         const loadTimeout = setTimeout(() => {
-            console.error('❌ GLB loading timeout (10s) - file may be corrupted or too large');
+            console.error('❌ GLB loading timeout (30s) - file may be corrupted, too large, or network is slow');
             this.addFallbackBee();
-        }, 10000);
+        }, 30000);
         
         gltfLoader.load(
             glbUrl,
@@ -325,7 +325,7 @@ class SmartyBee3D {
                                 window.mascotBeeLoaded = true;
                             } catch (e) {
                                 console.error('❌ Error processing GLB scene:', e);
-                                console.log('🔄 Attempting OBJ fallback...');
+                                console.log('🔄 Falling back to placeholder (GLB-only mode)...');
                                 this.addFallbackBee();
                             }
                         },
