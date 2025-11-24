@@ -287,7 +287,19 @@ const BeeSwarmVisualizer = {
         posAttr.needsUpdate=true;
       },
 
-      animate(time){ if(!this.scene || !this.ready) return; requestAnimationFrame(t=>this.animate(t)); this.updateSpeechAmplitude(); this.ampSmooth=this.ampSmooth*0.9+this.amplitude*0.1; this.swarmStep(time); if(this.mat){ this.mat.uniforms.uTime.value=time*0.001; this.mat.uniforms.uPulse.value=this.ampSmooth; this.mat.uniforms.uOpacity.value=0.9; } this.renderer.render(this.scene,this.camera); },
+      animate(time){
+        if(!this.scene || !this.ready) return;
+        requestAnimationFrame(t=>this.animate(t));
+        // Speech amplitude is polled on an interval (setupSpeechIntegration) to avoid double-polling
+        this.ampSmooth = this.ampSmooth*0.9 + this.amplitude*0.1;
+        this.swarmStep(time);
+        if(this.mat){
+          this.mat.uniforms.uTime.value = time*0.001;
+          this.mat.uniforms.uPulse.value = this.ampSmooth;
+          this.mat.uniforms.uOpacity.value = 0.9;
+        }
+        this.renderer.render(this.scene, this.camera);
+      },
 
       _performHeavyInit(){ 
         if(this._heavyDone) return; 
