@@ -8383,6 +8383,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', initError.stack);
         // Continue with quiz even if initialization fails
     }
+    } // Ensure outer try/catch is closed before continuing
+ 
     // Delay to ensure browser session cookie is fully established before fetching wordbank
     // This prevents race conditions where cookie isn't sent on first request
     // 300ms gives enough time for session to persist after page navigation
