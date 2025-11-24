@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+<!-- QUIZ VERSION: 2025-11-21-syntax-fix -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -79,7 +79,8 @@ if ('speechSynthesis' in window) {
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        padding: 0.75rem 1rem 4rem;
+        /* Reduced top/bottom padding to tighten vertical spacing */
+        padding: 0.35rem 1rem 3rem;
         position: relative;
     }
     
@@ -1519,7 +1520,7 @@ if ('speechSynthesis' in window) {
         .quiz-logo .mascot-3d-container,
         #mascotBee3D {
             width: 130px !important;
-            height: 130px !important;
+            height: 150px !important;  /* Increased to prevent feet clipping */
             margin: 0 auto 0.4rem auto !important;
         }
         
@@ -1730,11 +1731,11 @@ if ('speechSynthesis' in window) {
     #mascotBee3D {
         position: relative;
         width: 200px;
-        height: 200px;
+        height: 210px;  /* Slightly reduced height (still prevents feet clipping) */
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 0.5rem auto;
+        margin: 0.15rem auto 0.35rem auto; /* tighter spacing above/below avatar */
         
         /* ✨ Transparent background with golden glow (Avatar Picker Style) */
         background: transparent;
@@ -1743,12 +1744,12 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 
                     0 0 60px rgba(255, 215, 0, 0.3),
                     inset 0 0 30px rgba(255, 215, 0, 0.1);
-        overflow: visible;
+        overflow: visible;  /* Allow feet to show */
         z-index: 100;
         
         /* Smooth transitions */
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        transform: translateY(-8px);
+        transform: translateY(-14px); /* lift avatar higher toward logo */
         
         /* Interaction */
         pointer-events: auto;
@@ -1773,7 +1774,7 @@ if ('speechSynthesis' in window) {
         position: absolute !important;
         top: 50% !important;
         left: 50% !important;
-        transform: translate(-50%, -50%) !important;
+        transform: translate(-50%, -54%) scale(1.1) !important;  /* shift canvas up a bit to avoid foot clipping after container shrink */
         pointer-events: none;
         z-index: 101 !important;
         background: transparent !important;
@@ -2988,6 +2989,9 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
+                <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
+                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none;"></div>
+                
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
@@ -3066,7 +3070,8 @@ if ('speechSynthesis' in window) {
                             </div>
                             
                             <div class="dotwave-wrapper">
-                                <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
+                                <div id="beeSwarmContainer" style="width: 860px; height: 260px; position: relative; background: transparent;"></div>
+                                <canvas id="dotWaveCanvas" width="860" height="260" style="display: none;"></canvas>
                             </div>
                             
                             <!-- Definition display inside visualizer -->
@@ -3467,8 +3472,7 @@ if ('speechSynthesis' in window) {
     </div>
 </div>
 
-<!-- 3D Bee Swarm Canvas -->
-<canvas id="beeSwarmCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></canvas>
+<!-- Old 2D bee swarm canvas removed - now using 3D visualizer -->
 
 {% endblock %}
 
@@ -3722,17 +3726,23 @@ class BeeSoundboard {
         
         if (this.cachedVoice) {
             utterance.voice = this.cachedVoice;
-        }            // Sync visual display with announcer + morph to voice visualizer
+        }            // Sync visual display with announcer + morph to voice visualizer + bee swarm integration
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
                 if (statusEl) statusEl.textContent = this.cachedVoice
                     ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
                     : '🎙️ Speaking';
                 
+                // Trigger bee swarm activation
+                window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onboundary = (event) => {
+                // Trigger bee swarm mouth pulse on word boundaries
+                window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+                
                 // Word-level micro pauses for natural cadence
                 if (event.name === 'word' || event.charLength > 0) {
                     if (visualizer) {
@@ -3762,12 +3772,18 @@ class BeeSoundboard {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '🐝 Ready';
                 
+                // Trigger bee swarm deactivation
+                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+                
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
+                
+                // Trigger bee swarm deactivation on error
+                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
@@ -3877,6 +3893,18 @@ class MorphController {
         console.log('🎭 Morphing to VOICE visualizer...');
         this.morphing = true;
         
+        // 🐝 Fade in bee swarm visualizer when returning to voice mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            console.log('✨ Fading in bee swarm for voice mode...');
+            beeSwarmContainer.style.transition = 'opacity 0.8s ease-in';
+            beeSwarmContainer.style.opacity = '1';
+            // Resume swarm animation
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = true;
+            }
+        }
+        
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
             window.soundboard.play('morph-to-visualization');
@@ -3905,6 +3933,19 @@ class MorphController {
         
         console.log('🎭 Morphing to HONEY JAR timer...');
         this.morphing = true;
+        
+        // 🐝 Fade out bee swarm visualizer when timer appears
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            console.log('🌫️ Fading out bee swarm as timer appears...');
+            beeSwarmContainer.style.transition = 'opacity 0.8s ease-out';
+            beeSwarmContainer.style.opacity = '0';
+            // Stop swarm animation
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = false;
+                window.beeSwarmViz.amplitude = 0;
+            }
+        }
         
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
@@ -3946,6 +3987,16 @@ class MorphController {
         this.container.classList.add('mode-voice');
         this.currentMode = 'voice';
         this.morphing = false;
+        
+        // 🐝 Ensure bee swarm is visible in voice mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            beeSwarmContainer.style.opacity = '1';
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = true;
+            }
+        }
+        
         console.log('🔄 Reset to VOICE mode');
     }
     
@@ -3957,6 +4008,17 @@ class MorphController {
         this.container.classList.add('mode-timer');
         this.currentMode = 'timer';
         this.morphing = false;
+        
+        // 🐝 Hide bee swarm in timer mode
+        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
+        if (beeSwarmContainer) {
+            beeSwarmContainer.style.opacity = '0';
+            if (window.beeSwarmViz) {
+                window.beeSwarmViz.isActive = false;
+                window.beeSwarmViz.amplitude = 0;
+            }
+        }
+        
         console.log('🔄 Reset to TIMER mode');
     }
     
@@ -4918,7 +4980,15 @@ class QuizManager {
                         status.textContent = '🗣️ Speaking...';
                     }
                     
+                    // Trigger bee swarm activation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                    
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                };
+                
+                // Add boundary event for mouth pulses
+                utterance.onboundary = (event) => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
                 };
                 
                 // Add event listeners to resolve promise when speech ends
@@ -4930,6 +5000,9 @@ class QuizManager {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
+                    
+                    // Trigger bee swarm deactivation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                     
@@ -4943,6 +5016,9 @@ class QuizManager {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
+                    
+                    // Trigger bee swarm deactivation on error
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     
                     // 🎭 Morph back to timer on error
                     if (window.morphController) {
@@ -6612,13 +6688,27 @@ class QuizManager {
                     }
                 }
                 
+                utterance.onstart = () => {
+                    console.log('Direct speech synthesis started');
+                    // Trigger bee swarm activation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                };
+                
+                utterance.onboundary = (event) => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+                };
+                
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
+                    // Trigger bee swarm deactivation
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
                 utterance.onerror = (event) => {
                     console.error('Speech synthesis error:', event);
+                    // Trigger bee swarm deactivation on error
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
@@ -7862,6 +7952,25 @@ function pronounceWordFromReport(word) {
         utterance.pitch = 1.0; // Natural neutral female voice
         utterance.volume = 1.0;
         
+        utterance.onstart = () => {
+            // Trigger bee swarm activation
+            window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+        };
+        
+        utterance.onboundary = (event) => {
+            window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+        };
+        
+        utterance.onend = () => {
+            // Trigger bee swarm deactivation
+            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+        };
+        
+        utterance.onerror = () => {
+            // Trigger bee swarm deactivation on error
+            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+        };
+        
         speechSynthesis.speak(utterance);
     }
 }
@@ -8106,18 +8215,32 @@ window.addEventListener('error', (event) => {
 unlockiOSAudio();
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // CRITICAL: Declare these at function scope so they're accessible in setTimeout callback
+    let delight = null;
+    let smartyBee = null;
+    
     try {
-    // 🎭 Initialize morphing controller
-    window.morphController = new MorphController('morphContainer');
+        // 🐝 Initialize Bee Swarm Voice Visualizer Background
+        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+        console.log('🔍 Visualizer container check:', visualizerContainer ? 'FOUND' : 'NOT FOUND');
+        
+        if (visualizerContainer) {
+            console.log('🐝 Bee swarm visualizer container found but initialization deferred to module script');
+        } else {
+            console.error('❌ beeSwarmVisualizerContainer not found in DOM!');
+        }
+        
+        // 🎭 Initialize morphing controller
+        window.morphController = new MorphController('morphContainer');
     console.log('🎭 Morph controller initialized');
     
-    const delight = new BeeDelightManager();
+    delight = new BeeDelightManager();
     
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
     
     // Initialize 3D Mascot with user's selected avatar
-    let smartyBee = null;
+    // (smartyBee is already declared at function scope above)
     try {
         console.log('🎯 Quiz page: Starting avatar initialization...');
         
@@ -8172,13 +8295,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         
     // Render into mascot container (replaces old smartyBee3D)
     console.log('🎨 Creating SmartyBee3D instance...');
-    smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
+    
+    // Create instance and wait for load (handle async GLB loading)
+    try {
+        smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
         
         if (!smartyBee) {
             throw new Error('❌ SmartyBee3D instance creation failed');
         }
         
-        console.log(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
+        // Give GLB loading a chance to start (it's async in loadModel)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log(`✨ 3D mascot initialization started with avatar: ${avatarId}`);
         
         // 🎯 Also load avatar in quiz header
         try {
@@ -8248,93 +8377,144 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('❌ Could not hide avatar container:', fallbackError);
         }
     }
-
-    fetch('/api/wordbank', {
-        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-        cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.words || data.words.length === 0) {
-                BeeSmart.showError('No words loaded for the quiz!');
-                setTimeout(() => window.location.href = '/', 2800);
-                return;
-            }
-
-            // ✅ Update progress text and percentage with actual word count on page load
-            const totalWords = data.words.length;
-            const progressText = document.getElementById('progressText');
-            const progressPercentage = document.getElementById('progressPercentage');
-            if (progressText) {
-                progressText.textContent = `Question 1 of ${totalWords}`;
-                console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
-            }
-            if (progressPercentage) {
-                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
-            }
-
-            window.quizManager = new QuizManager({ delight, smartyBee });
-        })
-        .catch(error => {
-            console.error('Failed to check word bank:', error);
-            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
-            setTimeout(() => window.location.href = '/', 2800);
-        });
-    } catch (error) {
-        console.error('🚨 Critical initialization error:', error);
-        if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
-            BeeSmart.showError('Quiz initialization failed. Redirecting to main menu...');
-        } else {
-            alert('Quiz initialization failed. Redirecting to main menu...');
-        }
-        setTimeout(() => window.location.href = '/', 2000);
+    } catch (initError) {
+        // Catch errors from the outer try block (morph controller, delight manager, avatar init)
+        console.error('❌ Quiz initialization error:', initError);
+        console.error('Error details:', initError.stack);
+        // Continue with quiz even if initialization fails
     }
-});
+    } catch (outerError) {
+        // Catch errors from the DOMContentLoaded try block
+        console.error('❌ DOMContentLoaded initialization error:', outerError);
+        console.error('Error details:', outerError.stack);
+    }
+
+    // Delay to ensure browser session cookie is fully established before fetching wordbank
+    // This prevents race conditions where cookie isn't sent on first request
+    // 300ms gives enough time for session to persist after page navigation
+    setTimeout(() => {
+        console.log('🔄 Starting wordbank fetch (with session cookie)...');
+        console.log('🍪 Current cookies:', document.cookie);
+        console.log('🔗 Current URL:', window.location.href);
+        
+        fetch('/api/wordbank', {
+            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        })
+    .then(response => {
+        console.log(`📡 Wordbank API response: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+            console.error(`❌ Wordbank fetch failed with status ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📦 Wordbank data received:', data);
+        console.log(`📊 Word count: ${data.words ? data.words.length : 0}`);
+        console.log(`✅ Success flag: ${data.success}`);
+        
+        // ISSUE #4 FIX: Defensive validation of word data
+        if (!data || typeof data !== 'object') {
+            console.error('❌ Invalid response format:', data);
+            throw new Error('Invalid response format from API');
+        }
+        
+        if (!Array.isArray(data.words)) {
+            console.error('❌ Words is not an array:', data.words);
+            throw new Error('Invalid word data returned from API - expected array');
+        }
+        
+        if (data.words.length === 0) {
+            console.error('❌ Wordbank is empty! Showing error and redirecting...');
+            BeeSmart.showError('No words loaded for the quiz!');
+            setTimeout(() => window.location.href = '/', 2800);
+            return;
+        }
+
+        // ✅ Update progress text and percentage with actual word count on page load
+        const totalWords = data.words.length;
+        const progressText = document.getElementById('progressText');
+        const progressPercentage = document.getElementById('progressPercentage');
+        
+        // ISSUE #4 FIX: Validate DOM elements exist before accessing
+        if (progressText) {
+            progressText.textContent = `Question 1 of ${totalWords}`;
+            console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
+        } else {
+            console.warn('⚠️ progressText element not found in DOM');
+        }
+        
+        if (progressPercentage) {
+            progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+        } else {
+            console.warn('⚠️ progressPercentage element not found in DOM');
+        }
+
+        window.quizManager = new QuizManager({ delight, smartyBee });
+    })
+    .catch(error => {
+        console.error('Failed to check word bank:', error);
+        BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+        setTimeout(() => window.location.href = '/', 2800);
+    });
+    }, 300);  // 300ms delay to ensure session cookie is sent with request
+});  // End DOMContentLoaded
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
-window.addEventListener('beforeunload', async (event) => {
+window.addEventListener('beforeunload', (event) => {
     // 🛑 CRITICAL: Stop all quiz activities before leaving
     console.log('🛑 Page unloading - stopping all quiz activities...');
     
-    // Stop speech synthesis immediately (most important)
-    if ('speechSynthesis' in window) {
-        speechSynthesis.cancel();
-        console.log('🔇 Speech synthesis stopped on unload');
-    }
-    
-    // Clear all timers
-    if (window.spellingQuiz) {
-        if (window.spellingQuiz.countdownTimer) {
-            clearInterval(window.spellingQuiz.countdownTimer);
-        }
-        if (window.spellingQuiz.currentWordTimeout) {
-            clearTimeout(window.spellingQuiz.currentWordTimeout);
-        }
-    }
-    
-    // Save progress
+    // ISSUE #5 FIX: Add capability check before using speechSynthesis
     try {
-        // Use sendBeacon for reliable delivery even during page unload
-        const response = await fetch('/api/save-partial-progress', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            keepalive: true  // Ensures request completes even if page is closing
-        });
-        
-        if (response.ok) {
-            console.log('✅ Partial quiz progress saved');
+        if ('speechSynthesis' in window && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            console.log('🔇 Speech synthesis stopped on unload');
         }
+    } catch (speechError) {
+        console.warn('⚠️ Speech synthesis cleanup failed:', speechError);
+    }
+    
+    // ISSUE #5 FIX: Clear all timers with proper null checks
+    try {
+        if (window.spellingQuiz) {
+            if (window.spellingQuiz.countdownTimer) {
+                clearInterval(window.spellingQuiz.countdownTimer);
+            }
+            if (window.spellingQuiz.currentWordTimeout) {
+                clearTimeout(window.spellingQuiz.currentWordTimeout);
+            }
+        }
+    } catch (timerError) {
+        console.warn('⚠️ Timer cleanup failed:', timerError);
+    }
+    
+    // ISSUE #5 FIX: Save progress with quizManager check and no async/await in beforeunload
+    try {
+        // Use sendBeacon for reliable synchronous delivery during unload (no async needed)
+        const progressData = {};
+        
+        // Safely try to get saveProgress data if quizManager exists
+        if (window.quizManager && typeof window.quizManager.saveProgress === 'function') {
+            try {
+                // Call saveProgress synchronously if possible (don't await)
+                window.quizManager.saveProgress();
+            } catch (saveError) {
+                console.warn('⚠️ QuizManager saveProgress failed:', saveError);
+            }
+        }
+        
+        // Use sendBeacon for guaranteed delivery (synchronous, no await needed)
+        const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+        const beaconSent = navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log(beaconSent ? '✅ Progress beacon sent' : '⚠️ Beacon send failed');
     } catch (error) {
-        // Use sendBeacon as fallback (more reliable during unload)
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('💾 Progress save sent via beacon');
+        console.warn('⚠️ Progress save failed:', error);
     }
 });
 
@@ -8359,9 +8539,13 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    navigator.sendBeacon('/api/save-partial-progress', blob);
-    console.log('✅ Final cleanup complete');
+    try {
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('✅ Final cleanup complete');
+    } catch (error) {
+        console.warn('⚠️ Final cleanup failed:', error);
+    }
 });
 
 // Themed avatar effects system for quiz
@@ -8797,4 +8981,122 @@ function playThemedSound(soundType) {
     }
 }
 </script>
+
+<!-- 🐝 Bee Swarm Visualizer Module Script -->
+<script>window.SHOW_VIZ_TUNING_PANEL = {{ 'true' if (show_viz_tuning|default(False)) else 'false' }};</script>
+<script type="module">
+    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251123-3';
+    
+    // Store reference globally for debugging and event integration
+    window.beeSwarmViz = null;
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBeeSwarm);
+    } else {
+        // Delay slightly to ensure all elements are rendered
+        setTimeout(initBeeSwarm, 100);
+    }
+    
+    function initBeeSwarm() {
+        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
+        
+        if (!visualizerContainer) {
+            console.error('❌ beeSwarmVisualizerContainer not found!');
+            return;
+        }
+        
+        console.log('🚀 Initializing bee swarm visualizer...');
+        console.log('📦 Container dimensions:', {
+            width: visualizerContainer.clientWidth,
+            height: visualizerContainer.clientHeight,
+            offsetWidth: visualizerContainer.offsetWidth,
+            offsetHeight: visualizerContainer.offsetHeight,
+            computed: window.getComputedStyle(visualizerContainer).width
+        });
+        
+        try {
+            window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
+                autoStart: true,
+                showControls: false,
+                particleCount: 18000,    // High-detail primary setting (will auto-fallback if low perf)
+                sampleStep: 1,            // Finer sampling of mask for dense silhouette
+                background: 'transparent',
+                zIndex: 5,               // Match container z-index
+                overallScale: 2.2,       // Scale up mouth for visibility
+                cameraZ: 8.5,            // Bring camera closer for better framing
+                // Use mask from /static/assets/masks (ensures server can serve it and avoids CORS/404)
+                maskUrl: '/static/assets/masks/lips_mask_double.png',
+                lazyInit: true            // Defer heavy init until first speech event
+            });
+            console.log('✅ Bee swarm visualizer initialized successfully');
+            console.log('🎤 Canvas will be created on first speech event...');
+            
+            // Test animation immediately
+            setTimeout(() => {
+                console.log('🧪 Testing visualizer with mock amplitude...');
+                if (window.beeSwarmViz) {
+                    window.beeSwarmViz.amplitude = 0.8;
+
+                        // Developer tuning panel gated by flag
+                        if (window.SHOW_VIZ_TUNING_PANEL === true || window.SHOW_VIZ_TUNING_PANEL === 'true') {
+                        const panel = document.createElement('div');
+                        panel.id = 'vizTuningPanel';
+                        panel.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:2000;background:rgba(30,30,35,0.85);color:#ffd566;font:12px/1.4 "Inter",sans-serif;padding:10px 12px;border:1px solid #444;border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,0.4);width:220px;';
+                        panel.innerHTML = `
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <strong style="font-size:12px">Visualizer Tuning</strong>
+                                <button id="vizCloseBtn" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;">✕</button>
+                            </div>
+                            <label style="display:block;margin:6px 0 4px;">Brightness Threshold <span id="thVal">60</span></label>
+                            <input id="thSlider" type="range" min="0" max="255" value="60" style="width:100%;">
+                            <label style="display:block;margin:10px 0 4px;">Performance Mode</label>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <button class="perfBtn" data-mode="high" style="flex:1 1 60px;">High</button>
+                                <button class="perfBtn" data-mode="auto" style="flex:1 1 60px;">Auto</button>
+                                <button class="perfBtn" data-mode="low" style="flex:1 1 60px;">Low</button>
+                            </div>
+                            <label style="display:block;margin:10px 0 4px;">Invert Mask</label>
+                            <button id="invertBtn" style="width:100%;">Invert Off</button>
+                            <div style="margin-top:8px;opacity:0.7;font-size:11px;">Panel is dev-only. Remove for production.</div>
+                        `;
+                        document.body.appendChild(panel);
+                        const thSlider = panel.querySelector('#thSlider');
+                        const thVal = panel.querySelector('#thVal');
+                        const invertBtn = panel.querySelector('#invertBtn');
+                        thSlider.addEventListener('input', () => {
+                            thVal.textContent = thSlider.value;
+                            if(window.beeSwarmViz) {
+                                window.beeSwarmViz.rebuildFromStoredMask({ threshold: parseInt(thSlider.value,10) });
+                            }
+                        });
+                        invertBtn.addEventListener('click', () => {
+                            invertBtn.textContent = invertBtn.textContent.includes('Off') ? 'Invert On' : 'Invert Off';
+                            const invert = invertBtn.textContent.includes('On');
+                            if(window.beeSwarmViz) {
+                                window.beeSwarmViz.rebuildFromStoredMask({ invert });
+                            }
+                        });
+                        panel.querySelectorAll('.perfBtn').forEach(btn => {
+                            btn.style.cssText += 'background:#222;border:1px solid #555;color:#ffd566;padding:4px 6px;border-radius:5px;cursor:pointer;font-size:11px;';
+                            btn.addEventListener('click', () => {
+                                const mode = btn.getAttribute('data-mode');
+                                if(window.beeSwarmViz) window.beeSwarmViz.setPerformanceMode(mode);
+                            });
+                        });
+                        panel.querySelector('#vizCloseBtn').addEventListener('click', () => panel.remove());
+                        }
+                    window.beeSwarmViz.isActive = true;
+                    setTimeout(() => {
+                        window.beeSwarmViz.isActive = false;
+                    }, 2000);
+                }
+            }, 1000);
+        } catch (error) {
+            console.error('❌ Failed to initialize bee swarm:', error);
+            console.error('Error stack:', error.stack);
+        }
+    }
+</script>
+
 {% endblock %}
