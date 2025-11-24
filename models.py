@@ -174,7 +174,6 @@ class User(UserMixin, db.Model):
             'thumbnail': info.get('thumbnail_url'),
             'preview': info.get('preview_url'),
             'glb': info.get('model_file_url'),  # PRIMARY: GLB file path
-            'model_obj': info.get('model_file_url'),  # DEPRECATED: Backward compatibility alias
             'fallback': info.get('fallback_url'),
         }
         

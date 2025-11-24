@@ -11396,7 +11396,6 @@ def api_get_avatars():
                     glb_url = f"{base_path}/{raw_name}"  # Always a .glb after override above
                     urls_obj = {
                         'glb': glb_url,  # Primary GLB file path (GLTFLoader uses this)
-                        'model_obj': glb_url,  # DEPRECATED: Backward compatibility alias
                         'thumbnail': thumb_cb,
                         'preview': thumb_cb,
                     }
@@ -11586,9 +11585,6 @@ def api_get_avatars():
                 'preview': thumb_cb,
                 'urls': {
                     'glb': model_url,  # PRIMARY: GLB file path for GLTFLoader
-                    'model_obj': model_url,  # BACKUP: For compatibility with code checking model_obj
-                    'model_mtl': None,
-                    'texture': None,
                     'thumbnail': thumb_cb,
                     'preview': thumb_cb,
                 },
@@ -11614,7 +11610,7 @@ def api_get_avatars():
                 if exists and not is_generic:
                     return
                 # Derive a base name from the GLB filename if available, else from slug
-                model_url = (av.get('urls') or {}).get('model_obj') or ''
+                model_url = (av.get('urls') or {}).get('glb') or ''
                 base_guess = ''
                 if model_url.lower().endswith('.glb'):
                     base_guess = os.path.splitext(os.path.basename(model_url))[0]
@@ -11635,10 +11631,10 @@ def api_get_avatars():
         for _av in enriched_avatars:
             _maybe_fix_thumbnail(_av)
 
-        # Post-clean: ensure no .obj URLs survived (safety net)
+        # Post-clean: ensure all URLs are GLB (safety net)
         for av in enriched_avatars:
             urls = av.get('urls') or {}
-            for k in ('glb','model_obj','preview','thumbnail'):
+            for k in ('glb','preview','thumbnail'):
                 v = urls.get(k)
                 if isinstance(v, str) and v.lower().endswith('.obj'):
                     urls[k] = v[:-4] + '.glb'

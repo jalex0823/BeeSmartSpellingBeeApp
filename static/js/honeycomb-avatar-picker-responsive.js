@@ -253,9 +253,9 @@ async function loadAvatars() {
         }
         
         const rawAvatars = apiAvatars.map(avatar => {
-            // 🔧 FIX: Prioritize GLB URL from urls.glb field (primary), fallback to model_obj (legacy alias)
-            const glbUrl = avatar.urls ? (avatar.urls.glb || avatar.urls.model_obj) : (avatar.model_obj_url || avatar.obj_file_url);
-            const isGlbFormat = avatar.is_glb || (glbUrl && glbUrl.toLowerCase().endsWith('.glb'));
+            // Extract GLB URL from standard urls.glb field (all avatars are now GLB-only)
+            const glbUrl = avatar.urls?.glb;
+            const isGlbFormat = true; // All avatars are GLB format
             
             return {
                 slug: avatar.id,
@@ -264,9 +264,8 @@ async function loadAvatars() {
                 category: avatar.category,
                 folder_path: avatar.folder,
                 is_glb: isGlbFormat,
-                // Store full URLs from API - GLB-only (all avatars are GLB now)
-                obj_file_url: glbUrl,
-                mtl_file_url: null, // No MTL files for GLB avatars
+                // Store full URL from API - GLB-only (all avatars are GLB now)
+                glb_url: glbUrl,
                 // Also store filenames for detection
                 obj_file: (glbUrl || '').split('/').pop() || null,
                 mtl_file: null,
@@ -305,12 +304,8 @@ async function loadAvatars() {
             return (file || '').toLowerCase().replace(/!+/g,'');
         };
 
-        // Dedupe; prefer GLB entries over OBJ when duplicates exist
+        // Dedupe; all avatars are GLB format now (no OBJ fallback needed)
         const pickPreferGLB = (a, b) => {
-            const aIsGlb = (a.folder_path || '').toLowerCase() === 'glb_files' || (a.obj_file_url || '').toLowerCase().endsWith('.glb') || !!a.is_glb;
-            const bIsGlb = (b.folder_path || '').toLowerCase() === 'glb_files' || (b.obj_file_url || '').toLowerCase().endsWith('.glb') || !!b.is_glb;
-            if (aIsGlb && !bIsGlb) return a;
-            if (!aIsGlb && bIsGlb) return b;
             // If both same type, keep the one with a thumbnail
             if (a.thumbnail && !b.thumbnail) return a;
             if (!a.thumbnail && b.thumbnail) return b;
@@ -604,7 +599,7 @@ function load3DAvatarGLB(avatar, containerId) {
             console.warn('⚠️ Failed to configure DRACOLoader:', e);
         }
     }
-    const modelPath = avatar.obj_file_url; // Use full URL from API
+    const modelPath = avatar.glb_url; // Use full GLB URL from API
     
     loader.load(
         modelPath,
@@ -682,15 +677,9 @@ function load3DAvatarGLB(avatar, containerId) {
             console.error('❌ Error loading GLB:', error);
             container.classList.remove('loading');
             // If GLB fails and OBJ+MTL exist, try OBJ as fallback
-            const url = (avatar.obj_file_url || '').toLowerCase();
-            const hasObjFallback = url.endsWith('.obj') || (avatar.mtl_file_url && typeof THREE.OBJLoader !== 'undefined');
-            if (hasObjFallback) {
-                console.warn('⚠️ Falling back to OBJ loader for', avatar.name);
-                updatePreviewProgress(0, 'Retrying with OBJ format...');
-                setTimeout(() => load3DAvatarOBJ(avatar, containerId), 500);
-                return;
-            }
-            // As last resort, thumbnail fallback
+            const url = (avatar.glb_url || '').toLowerCase();
+            // All avatars are now GLB-only, no OBJ fallback needed
+            // Show thumbnail as fallback
             if (avatar.thumbnail) {
                 container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
             } else {
@@ -746,12 +735,9 @@ function load3DAvatarOBJ(avatar, containerId) {
             objLoader.setMaterials(materials);
         }
         
-        const objPath = avatar.obj_file_url; // Use full URL from API
-        
-        objLoader.load(
-            objPath,
-            function(object) {
-                console.log('✅ OBJ loaded successfully:', avatar.name);
+        // OBJ loading removed - use GLB format exclusively
+        // This code path should never be reached now
+        console.warn('⚠️ Attempting OBJ load in deprecated function');
                 updatePreviewProgress(70, 'Processing geometry...');
                 
                 // If no materials provided, apply a default golden material
@@ -885,6 +871,17 @@ function load3DAvatarOBJ(avatar, containerId) {
     }
 }
 
+// ❌ DEPRECATED: load3DAvatarOBJ function has been removed
+// All avatars are now GLB-only. This function is kept as a stub for backward compatibility.
+// If this is called, it will show the thumbnail fallback instead.
+function load3DAvatarOBJ(avatar, containerId) {
+    console.warn('⚠️ OBJ loading deprecated. All avatars are now GLB-only. Using thumbnail fallback.');
+    const container = document.getElementById(containerId);
+    if (container && avatar.thumbnail) {
+        container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
+    }
+}
+
 // Remove any loading UI from the preview container, keeping the WebGL canvas intact
 function clearPreviewLoading(container, canvasEl) {
     if (!container) return;
@@ -990,13 +987,12 @@ function updatePreview(avatar) {
         // Show loading indicator first
         showPreviewLoading(avatar.name);
 
-        // Detect file type based on folder_path and URL
-        // GLB avatars are in 'glb_files' folder, OBJ avatars have individual folders
-        const modelUrl = (avatar.obj_file_url || '').toLowerCase();
+        // All avatars are now GLB-only format - no detection needed
+        const modelUrl = (avatar.glb_url || '').toLowerCase();
         const folderPath = (avatar.folder_path || '').toLowerCase();
-        const isGLB = folderPath === 'glb_files' || modelUrl.endsWith('.glb') || !!avatar.is_glb;
+        const isGLB = true; // All avatars are GLB
 
-        console.log(`🔍 Avatar format detection for ${avatar.name}: folder=${folderPath}, url=${modelUrl}, isGLB=${isGLB}`);
+        console.log(`🔍 Loading GLB model for ${avatar.name}: url=${modelUrl}`);
 
         // Create container that fills the preview area
         const previewId = 'avatar-preview-3d';
@@ -1035,13 +1031,10 @@ function updatePreview(avatar) {
                 return;
             }
 
-            // Load 3D model (prefer GLB)
-            if (isGLB && avatar.obj_file_url && typeof THREE.GLTFLoader !== 'undefined') {
+            // Load 3D model (GLB-only, all avatars are GLB format)
+            if (avatar.glb_url && typeof THREE.GLTFLoader !== 'undefined') {
                 console.log('📦 Loading GLB model:', avatar.name);
                 load3DAvatarGLB(avatar, previewId);
-            } else if (avatar.obj_file_url && typeof THREE.OBJLoader !== 'undefined') {
-                console.log('📦 Loading OBJ model:', avatar.name);
-                load3DAvatarOBJ(avatar, previewId);
             } else if (avatar.thumbnail) {
                 // Fallback to large thumbnail
                 console.log('🖼️ Using thumbnail fallback for:', avatar.name);

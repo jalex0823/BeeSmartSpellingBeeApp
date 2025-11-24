@@ -173,8 +173,8 @@ class UserAvatarLoader {
                 const id = avatar.id;
                 const urls = avatar.urls || avatar;
                 
-                // Extract GLB path (prefer new 'glb' key, fallback to legacy 'model_obj')
-                const glbPath = urls?.glb || urls?.model_obj || avatar.glb_url || avatar.model_obj_url || avatar.obj_file_url;
+                // Extract GLB path (standard field from modern API)
+                const glbPath = urls?.glb;
                 
                 // Validate it's actually a GLB file
                 const isGlb = typeof glbPath === 'string' && /(\.glb|\.gltf)(\?.*)?$/i.test(glbPath);
@@ -392,8 +392,8 @@ class UserAvatarLoader {
     getAvatarPaths() {
         // Check user avatar URLs
         const urls = this.userAvatar?.urls;
-        if (urls && urls.model_obj) {
-            const modelUrl = urls.model_obj;
+        if (urls && urls.glb) {
+            const modelUrl = urls.glb;
             const isGlb = /\.(glb|gltf)(\?.*)?$/i.test(modelUrl);
             
             if (isGlb) {
