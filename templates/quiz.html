@@ -815,24 +815,16 @@ if ('speechSynthesis' in window) {
 
     /* Voice Visualizer with Bee Theme */
 .voice-visualizer {
-    position: relative;
-    width: 100%;
-    min-height: 140px;
-    margin-bottom: 0.5rem;
-
-    /* remove the panel/box */
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-
-    overflow: visible;
-    pointer-events: none;
-
-    /* hide until JS activates */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 450ms ease;
+  position: relative;
+  width: 100%;
+  min-height: 140px;
+  margin-bottom: 0.5rem;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  overflow: visible;
+  pointer-events: none;
 }
 
 /* JS adds this when ready */

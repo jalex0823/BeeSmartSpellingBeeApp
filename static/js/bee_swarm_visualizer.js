@@ -362,8 +362,11 @@ const BeeSwarmVisualizer = {
           // Also make sure the container is visible (some pages hide the container until visualizer ready)
           try {
             if (this.container) {
-              this.container.style.visibility = 'visible';
-              this.container.style.opacity = '1';
+               this.container.style.visibility = 'visible';
+               this.container.style.opacity = '1';
+
+             // 🔥 REQUIRED FOR YOUR CSS TO WORK
+             this.container.classList.add("active");
             }
           } catch (e) {
             // ignore
