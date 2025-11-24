@@ -9025,7 +9025,8 @@ function playThemedSound(soundType) {
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
-                maskUrl: '/static/assets/visualizer/lips_mask.png',
+                // Use mask from /static/assets/masks (ensures server can serve it and avoids CORS/404)
+                maskUrl: '/static/assets/masks/lips_mask_double.png',
                 lazyInit: true            // Defer heavy init until first speech event
             });
             console.log('✅ Bee swarm visualizer initialized successfully');

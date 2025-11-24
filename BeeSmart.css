@@ -243,6 +243,13 @@ button.speak {
   opacity: 1 !important;
 }
 
+/* Start hidden to avoid showing a white/rounded backdrop when canvas hasn't initialized */
+#beeSwarmVisualizerContainer {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 0.8s ease !important;
+}
+
 /* Specific override for quiz FX layer per bug report */
 #quizFxLayer {
   position: relative;

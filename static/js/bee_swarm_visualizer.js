@@ -306,6 +306,15 @@ const BeeSwarmVisualizer = {
             // Next tick so CSS transition applies
             requestAnimationFrame(() => { el.style.opacity = '1'; });
           }
+          // Also make sure the container is visible (some pages hide the container until visualizer ready)
+          try {
+            if (this.container) {
+              this.container.style.visibility = 'visible';
+              this.container.style.opacity = '1';
+            }
+          } catch (e) {
+            // ignore
+          }
           
           if(opts.autoStart) this.animate(performance.now()); 
         }); 
