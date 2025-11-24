@@ -831,29 +831,32 @@ function selectBestFemaleVoice() {
                 if (name.includes('female') || name.includes('voice 2') || name.includes('voice 4')) score += 40;
             }
 
-            // Known high-quality natural-sounding female voices (prioritized for kids in speed round)
-            const premiumVoices = {
-                'samantha': 95,     // macOS - very natural, excellent for kids
-                'ava': 92,          // macOS - warm and clear
-                'emma': 90,         // Modern neural - friendly tone
-                'joanna': 88,       // Amazon Polly - professional but warm
-                'karen': 88,        // Clear enunciation for spelling
-                'moira': 87,        // Irish accent - pleasant and clear
-                'aria': 85,         // Modern Windows neural - natural
-                'jenny': 85,        // Modern neural voice - friendly
-                'salli': 85,        // Amazon Polly - clear pronunciation
-                'kendra': 85,       // Amazon Polly - warm tone
-                'victoria': 82,     // Windows - natural sounding
-                'nova': 80,         // Modern neural voice
-                'allison': 78,      // Traditional but good clarity
-                'zira': 75,         // Windows - clear and natural
-                'susan': 75         // Traditional - good for spelling
-            };
-                'joanna': 65,       // Amazon Polly style
-                'susan': 60,        // Traditional
-                'karen': 55,        // Traditional
-                'moira': 50         // Traditional Irish
-            };
+// High quality premium voices
+const premiumVoices = {
+    'samantha': 95,
+    'ava': 92,
+    'emma': 90,
+    'joanna': 88,
+    'karen': 88,
+    'moira': 87,
+    'aria': 85,
+    'jenny': 85,
+    'salli': 85,
+    'kendra': 85,
+    'victoria': 82,
+    'nova': 80,
+    'allison': 78,
+    'zira': 75,
+    'susan': 75
+};
+
+// Secondary fallback voices
+const fallbackVoices = {
+    'joanna': 65,
+    'susan': 60,
+    'karen': 55,
+    'moira': 50
+};
             
             // Check for premium voice names
             for (const [voiceName, points] of Object.entries(premiumVoices)) {
