@@ -849,11 +849,6 @@ function selectBestFemaleVoice() {
                 'zira': 75,         // Windows - clear and natural
                 'susan': 75         // Traditional - good for spelling
             };
-                'joanna': 65,       // Amazon Polly style
-                'susan': 60,        // Traditional
-                'karen': 55,        // Traditional
-                'moira': 50         // Traditional Irish
-            };
             
             // Check for premium voice names
             for (const [voiceName, points] of Object.entries(premiumVoices)) {
@@ -916,21 +911,20 @@ function maskTargetWord(text, targetWord) {
 document.addEventListener('DOMContentLoaded', () => {
     // 🐝 Initialize Bee Swarm Voice Visualizer Background
     const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
-    if (visualizerContainer) {
-        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}')
-            .then(module => {
-                const BeeSwarm = module.default;
-                BeeSwarm.init(visualizerContainer, {
-                    autoStart: true,
-                    showControls: false,
-                    particleCount: 18000,   // High-detail; library will auto-fallback if low performance
-                    sampleStep: 1,
-                    maskUrl: '/static/assets/visualizer/lips_mask.png',
-                    zIndex: 0
-                });
-                console.log('🐝 Speed Round: Bee swarm visualizer active');
-            })
-            .catch(err => console.log('Visualizer not loaded:', err));
+    if (visualizerContainer && typeof BeeSwarmVisualizer !== 'undefined') {
+        try {
+            BeeSwarmVisualizer.init(visualizerContainer, {
+                autoStart: true,
+                showControls: false,
+                particleCount: 18000,   // High-detail; library will auto-fallback if low performance
+                sampleStep: 1,
+                maskUrl: '/static/assets/visualizer/lips_mask.png',
+                zIndex: 0
+            });
+            console.log('🐝 Speed Round: Bee swarm visualizer active');
+        } catch (err) {
+            console.log('Visualizer not initialized:', err);
+        }
     }
     
     // iOS Critical Fix: Set up event listeners IMMEDIATELY on page load
@@ -2124,4 +2118,15 @@ window.addEventListener('error', (event) => {
     });
 })();
 </script>
+
+<!-- 🐝 Bee Swarm Visualizer Module Script -->
+<script type="module">
+    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251124';
+    
+    // Store reference globally so DOMContentLoaded handler can access it
+    window.BeeSwarmVisualizer = BeeSwarmVisualizer;
+    
+    console.log('✅ Bee Swarm Visualizer module loaded for Speed Round');
+</script>
+
 {% endblock %}

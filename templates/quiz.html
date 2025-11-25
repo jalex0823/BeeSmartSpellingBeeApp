@@ -2990,8 +2990,12 @@ if ('speechSynthesis' in window) {
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
                 <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
-                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:860px; height:260px; z-index:5; pointer-events:none; background:transparent;"></div>
-                
+                <div id="beeSwarmVisualizerContainer"
+                     style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                            width:860px; height:260px; z-index:5; pointer-events:none;
+                            visibility:visible; opacity:1; background:none; box-shadow:none;">
+                </div>
+
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
@@ -8410,6 +8414,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error(`❌ Wordbank fetch failed with status ${response.status}`);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        // Check content-type before parsing JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error(`❌ Invalid content-type: ${contentType}, expected application/json`);
+            return response.text().then(text => {
+                console.error('Response body:', text.slice(0, 500));
+                throw new Error(`Invalid content-type from API: ${contentType}`);
+            });
+        }
         return response.json();
     })
     .then(data => {
@@ -8455,10 +8468,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         window.quizManager = new QuizManager({ delight, smartyBee });
+        window.soundboard = window.quizManager.soundboard;  // Expose soundboard globally for morph controller
     })
     .catch(error => {
         console.error('Failed to check word bank:', error);
-        BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        BeeSmart.showError('Failed to load word bank. Redirecting to main menu...');
         setTimeout(() => window.location.href = '/', 2800);
     });
     }, 300);  // 300ms delay to ensure session cookie is sent with request
@@ -9026,7 +9045,7 @@ function playThemedSound(soundType) {
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
                 maskUrl: '/static/assets/visualizer/lips_mask.png',
-                lazyInit: true            // Defer heavy init until first speech event
+                lazyInit: false           // Initialize immediately on page load
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('🎤 Canvas will be created on first speech event...');
