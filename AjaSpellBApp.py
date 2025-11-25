@@ -11621,8 +11621,20 @@ def api_get_avatars():
         existing_slugs = { item['id'] for item in enriched_avatars }
 
         def _slug_from_base(base: str) -> str:
+            # Check if there's a known mapping for this base name (e.g., BrotherBee -> brother-bee)
+            try:
+                from avatar_catalog import NAME_MAP_CAMELCASE
+                if base in NAME_MAP_CAMELCASE:
+                    canonical_slug = NAME_MAP_CAMELCASE[base]
+                    print(f"✅ Found canonical slug via NAME_MAP_CAMELCASE: {base} -> {canonical_slug}")
+                    return canonical_slug, base
+            except ImportError:
+                pass
+            
+            # Fallback: generate slug from CamelCase by inserting spaces then converting to hyphens
             name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
-            return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
+            slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
+            return slug, name_with_spaces
 
         def _thumbnail_for_base(base: str):
             """Prefer exact {base}!.png; for known legacy names, try an alias before giving up."""
@@ -12444,8 +12456,20 @@ def api_select_avatar():
             thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
 
             def _slug_from_base(base: str) -> str:
+                # Check if there's a known mapping for this base name
+                try:
+                    from avatar_catalog import NAME_MAP_CAMELCASE
+                    if base in NAME_MAP_CAMELCASE:
+                        canonical_slug = NAME_MAP_CAMELCASE[base]
+                        print(f"✅ Found canonical slug via NAME_MAP_CAMELCASE: {base} -> {canonical_slug}")
+                        return canonical_slug, base
+                except ImportError:
+                    pass
+                
+                # Fallback: generate slug from CamelCase
                 name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
-                return _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-'), name_with_spaces
+                slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
+                return slug, name_with_spaces
 
             def _thumbnail_for_base(base: str):
                 base_path = "/static/assets/avatars/glb_files"
