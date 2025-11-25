@@ -13268,12 +13268,18 @@ def _pick_port(default_port: int) -> int:
         return s.getsockname()[1]
 
 if __name__ == "__main__":
-    # PRE-LOAD dictionary at startup to avoid first-request timeouts
-    print("📚 Pre-loading Simple Wiktionary dictionary...")
-    ensure_simple_wiktionary_loaded()
-    if not DICTIONARY_CACHE:
-        DICTIONARY_CACHE = load_dictionary_cache()
-    print(f"✅ Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
+    # PRE-LOAD dictionary in background to avoid blocking Railway health check
+    import threading
+    def preload_dictionary():
+        print("📚 Pre-loading Simple Wiktionary dictionary (background)...")
+        ensure_simple_wiktionary_loaded()
+        global DICTIONARY_CACHE
+        if not DICTIONARY_CACHE:
+            DICTIONARY_CACHE = load_dictionary_cache()
+        print(f"✅ Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
+    
+    dict_thread = threading.Thread(target=preload_dictionary, daemon=True)
+    dict_thread.start()
     
     env_port = int(os.environ.get("PORT", 5000))
     port = _pick_port(env_port)
