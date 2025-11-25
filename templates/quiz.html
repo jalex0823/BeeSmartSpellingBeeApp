@@ -1022,6 +1022,31 @@ if ('speechSynthesis' in window) {
         animation: pauseAnimation 0.4s ease-in-out;
         opacity: 0.4;
     }
+    
+    /* CSS Fallback Voice Wave Animations */
+    .voice-wave-fallback {
+        display: flex !important;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .voice-wave-fallback.speaking {
+        opacity: 1;
+    }
+    .voice-wave-fallback.speaking .voice-wave-bar {
+        animation: voiceWavePulse 0.6s ease-in-out infinite;
+    }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(1) { animation-delay: 0s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(5) { animation-delay: 0.2s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(6) { animation-delay: 0.1s; }
+    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(7) { animation-delay: 0s; }
+    
+    @keyframes voiceWavePulse {
+        0%, 100% { transform: scaleY(0.5); opacity: 0.6; }
+        50% { transform: scaleY(1.3); opacity: 1; }
+    }
 
     /* Staggered delays for wave effect */
     .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
@@ -2996,6 +3021,17 @@ if ('speechSynthesis' in window) {
                             visibility:hidden; opacity:0; background:transparent; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
                             transition: opacity 0.4s ease-in, visibility 0.4s ease-in;">
+                    <!-- CSS Fallback Voice Waves (shown if THREE.js fails) -->
+                    <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
+                                                            width:200px; height:80px; align-items:center; justify-content:center; gap:6px;">
+                        <div class="voice-wave-bar" style="width:8px; height:15px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:25px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:40px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:55px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:40px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:25px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                        <div class="voice-wave-bar" style="width:8px; height:15px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
+                    </div>
                 </div>
 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
@@ -9090,7 +9126,7 @@ function playThemedSound(soundType) {
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
-                maskUrl: '/static/assets/visualizer/lips_mask.png',
+                maskUrl: '/static/assets/visualizer/lips_mask_clean.png',  // ✅ Fixed: correct filename
                 lazyInit: false           // Initialize immediately to show lips
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
@@ -9099,7 +9135,7 @@ function playThemedSound(soundType) {
             visualizerContainer.style.visibility = 'visible';
             visualizerContainer.style.opacity = '1';
             
-            console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
+            console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask_clean.png');
             console.log('🎨 Canvas count in container:', visualizerContainer.querySelectorAll('canvas').length);
             
             // Test animation immediately
@@ -9165,8 +9201,42 @@ function playThemedSound(soundType) {
         } catch (error) {
             console.error('❌ Failed to initialize bee swarm:', error);
             console.error('Error stack:', error.stack);
+            
+            // ✅ Activate CSS fallback voice waves
+            console.warn('⚡ Activating CSS fallback voice visualization...');
+            const fallbackWaves = visualizerContainer.querySelector('.voice-wave-fallback');
+            if (fallbackWaves) {
+                fallbackWaves.style.display = 'flex';
+                visualizerContainer.style.visibility = 'visible';
+                visualizerContainer.style.opacity = '1';
+                
+                // Store fallback flag globally
+                window.usingFallbackViz = true;
+                
+                // Add speech event listeners for CSS fallback
+                window.addEventListener('quiz-speech-start', () => {
+                    console.log('🎤 Speech started - activating CSS waves');
+                    fallbackWaves.classList.add('speaking');
+                });
+                
+                window.addEventListener('quiz-speech-end', () => {
+                    console.log('🎤 Speech ended - deactivating CSS waves');
+                    fallbackWaves.classList.remove('speaking');
+                });
+                
+                console.log('✅ CSS fallback voice waves ready');
+            }
         }
     }
+    
+    // 🎤 Global speech event integration (works for both THREE.js and CSS fallback)
+    window.addEventListener('quiz-speech-start', () => {
+        const container = document.getElementById('beeSwarmVisualizerContainer');
+        if (container) {
+            container.style.visibility = 'visible';
+            container.style.opacity = '1';
+        }
+    });
 </script>
 
 {% endblock %}

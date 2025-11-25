@@ -1,4 +1,5 @@
-Place the mask image file here named `lips_mask.png`.
+Place the mask image file here named `lips_mask_clean.png`.
+This file is used by the bee swarm voice visualizer to create particle animations.
 Recommended specs:
 - Dimensions: 800x600 (transparent background)
 - Solid opaque lips silhouette in white or #ffe08a (will be thresholded)
