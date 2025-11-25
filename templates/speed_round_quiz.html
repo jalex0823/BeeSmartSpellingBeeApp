@@ -66,6 +66,122 @@ if ('speechSynthesis' in window) {
     speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);
     setTimeout(window.initializeGlobalVoice, 100);
 }
+
+// --- Diagnostic: Track in-flight fetches to help debug emergency timeouts ---
+(function(){
+    if (window.__fetchMonitorInstalled) return;
+    window.__fetchMonitorInstalled = true;
+    window.__activeFetches = new Map();
+    const origFetch = window.fetch.bind(window);
+    let fetchId = 0;
+
+    window.fetch = async function(input, init){
+        const id = ++fetchId;
+        const url = (typeof input === 'string') ? input : (input && input.url) || '[Request]';
+        const createdAt = Date.now();
+        const stack = (new Error()).stack;
+        window.__activeFetches.set(id, { id, url, createdAt, stack });
+
+        try {
+            const resp = await origFetch(input, init);
+            return resp;
+        } catch (err) {
+            throw err;
+        } finally {
+            window.__activeFetches.delete(id);
+        }
+    };
+
+    window.dumpActiveFetches = function(){
+        const arr = Array.from(window.__activeFetches.values()).map(a => {
+            return {
+                id: a.id,
+                url: a.url,
+                age_ms: Date.now() - a.createdAt,
+                stack: a.stack
+            };
+        });
+        console.group('Active fetches ('+arr.length+')');
+        arr.forEach(a => {
+            console.log(`#${a.id} ${a.url} — ${a.age_ms}ms`);
+            console.log(a.stack);
+        });
+        console.groupEnd();
+        return arr;
+    };
+})();
+
+// Auto-dump active fetches when an emergency timeout/error is logged to console
+(function(){
+    if (window.__consoleWrapped) return;
+    window.__consoleWrapped = true;
+    const origErr = console.error.bind(console);
+    console.error = function(...args){
+        try {
+            const msg = args[0] && typeof args[0] === 'string' ? args[0] : '';
+            if (msg && (msg.includes('EMERGENCY TIMEOUT') || msg.includes('Loading took too long') || msg.includes('Emergency timeout'))) {
+                try {
+                    // Provide immediate diagnostic dump
+                    if (typeof window.dumpActiveFetches === 'function') {
+                        const arr = window.dumpActiveFetches();
+                        // also show overlay with the info if available
+                        try { if (typeof window.showDiagnosticOverlay === 'function') window.showDiagnosticOverlay(arr); } catch(e){}
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+        } catch(e) {}
+        origErr(...args);
+    };
+})();
+
+// Diagnostic overlay helpers
+window.showDiagnosticOverlay = function(activeList) {
+    try {
+        const overlay = document.getElementById('diagnosticOverlay');
+        const diagList = document.getElementById('diagList');
+        const diagSummary = document.getElementById('diagSummary');
+        if (!overlay || !diagList) return;
+
+        // Build list from activeList or from dumpActiveFetches()
+        const arr = Array.isArray(activeList) ? activeList : (window.dumpActiveFetches ? window.dumpActiveFetches() : []);
+        if (!arr || arr.length === 0) {
+            diagList.textContent = 'No active fetches found.';
+            diagSummary.textContent = 'No active network requests are currently outstanding.';
+        } else {
+            diagSummary.textContent = `${arr.length} active request(s). Longest first.`;
+            // sort by age descending
+            arr.sort((a,b)=> (b.age_ms||0)-(a.age_ms||0));
+            const lines = arr.map(a => `#${a.id} ${a.url} — ${a.age_ms}ms\n${a.stack || ''}`);
+            diagList.textContent = lines.join('\n\n');
+        }
+
+        overlay.style.display = 'block';
+    } catch(e) { console.warn('showDiagnosticOverlay failed', e); }
+};
+
+window.hideDiagnosticOverlay = function(){
+    try { const o=document.getElementById('diagnosticOverlay'); if(o) o.style.display='none'; } catch(e){}
+};
+
+// Hook up buttons
+document.addEventListener('DOMContentLoaded', ()=>{
+    try {
+        const r = document.getElementById('diagRefreshBtn');
+        const retry = document.getElementById('diagRetryBtn');
+        const close = document.getElementById('diagCloseBtn');
+        if (r) r.addEventListener('click', ()=>{ window.showDiagnosticOverlay(); });
+        if (close) close.addEventListener('click', ()=>{ window.hideDiagnosticOverlay(); });
+        if (retry) retry.addEventListener('click', ()=>{
+            // attempt a safe retry: call retrySpeedRound if defined, else reload
+            try { if (typeof retrySpeedRound === 'function') retrySpeedRound(); else window.location.reload(); } catch(e){ window.location.reload(); }
+        });
+
+        // Keyboard shortcut: Ctrl+Shift+D to open diagnostics
+        window.addEventListener('keydown', (ev)=>{ if (ev.ctrlKey && ev.shiftKey && ev.key.toLowerCase()==='d') { ev.preventDefault(); window.showDiagnosticOverlay(); } });
+    } catch(e){}
+});
 </script>
 
 <style>
@@ -1922,6 +2038,20 @@ window.addEventListener('error', (event) => {
 // ------- end of main Speed Round logic -------
 </script>
 <!-- celebrations loaded globally via base.html -->
+
+<!-- Diagnostic overlay for emergency timeouts -->
+<div id="diagnosticOverlay" style="display:none; position:fixed; inset:12px; z-index:20000; background: rgba(10,10,20,0.85); color:#fff; padding:18px; border-radius:12px; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,0.6); font-family:system-ui,Segoe UI,Arial;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="font-size:1.1rem; font-weight:800;">Diagnostics — Active requests & state</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button id="diagRefreshBtn" style="background:#1f8ceb;color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700;">Refresh</button>
+            <button id="diagRetryBtn" style="background:#59b259;color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700;">Retry</button>
+            <button id="diagCloseBtn" style="background:transparent;color:#fff;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);cursor:pointer;font-weight:700;">Close</button>
+        </div>
+    </div>
+    <div id="diagSummary" style="font-size:0.95rem;margin-bottom:8px;opacity:0.95;">Press <strong>Retry</strong> to attempt recovery, or close to continue.</div>
+    <div id="diagList" style="font-family:monospace; font-size:0.9rem; white-space:pre-wrap;">No active requests.</div>
+</div>
 
 <!-- Optimized Wavy Blue Voice Visualizer (matching Quiz style) -->
 <script>
