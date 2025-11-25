@@ -2853,15 +2853,14 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- 3D Avatar Display (registered users only) -->
-                <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
-                    width: 160px;
-                    height: 120px;
-                    margin: 75px auto 75px auto;
-                    position: relative;
-                    cursor: pointer;
-                    display: block;
-                "></div>
+                <!-- Registered User Avatar Display (same container as guest carousel) -->
+                <div class="guest-avatar-carousel">
+                    <div class="avatar-slide">
+                        <!-- 3D Avatar Display -->
+                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 240px; height: 180px; margin: 0 auto; cursor: pointer;"></div>
+                        <div class="avatar-name" id="registeredAvatarName"></div>
+                    </div>
+                </div>
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
