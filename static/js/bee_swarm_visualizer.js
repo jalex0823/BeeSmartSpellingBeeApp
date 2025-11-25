@@ -99,12 +99,27 @@ const BeeSwarmVisualizer = {
       },
 
       async buildTargetsFromMask(maskUrl, sampleStep){
-        const img = new Image(); img.crossOrigin='anonymous'; img.src = maskUrl;
-        try { await img.decode(); } catch(e){ console.warn('Mask decode failed', e); }
+        console.log('🎭 Loading mask from:', maskUrl);
+        const img = new Image(); 
+        img.crossOrigin='anonymous'; 
+        img.src = maskUrl;
+        
+        img.onerror = (e) => {
+          console.error('❌ Failed to load mask image:', maskUrl, e);
+        };
+        
+        try { 
+          await img.decode(); 
+          console.log('✅ Mask loaded successfully:', img.width + 'x' + img.height);
+        } catch(e){ 
+          console.warn('⚠️ Mask decode failed', e); 
+        }
+        
         const canvas = document.createElement('canvas');
         const w = canvas.width = img.width || 512;
         const h = canvas.height = img.height || 256;
-        const ctx = canvas.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+        const ctx = canvas.getContext('2d'); 
+        ctx.drawImage(img,0,0,w,h);
         const data = ctx.getImageData(0,0,w,h).data;
         // Persist pixel data for dynamic rebuilds (threshold tuning)
         this._maskPixels = { data, w, h };
@@ -222,9 +237,21 @@ const BeeSwarmVisualizer = {
       },
 
       setupSpeechIntegration(){
-        window.addEventListener('quiz-speech-start',()=>{ this.isActive=true; this.amplitude=0.7; this.mouthPulse=1.2; });
-        window.addEventListener('quiz-speech-end',()=>{ this.isActive=false; this.amplitude=0; });
-        window.addEventListener('quiz-speech-boundary',()=>{ this.mouthPulse=0.9; });
+        window.addEventListener('quiz-speech-start',()=>{ 
+          console.log('🐝 Bee swarm: quiz-speech-start received');
+          this.isActive=true; 
+          this.amplitude=0.7; 
+          this.mouthPulse=1.2; 
+        });
+        window.addEventListener('quiz-speech-end',()=>{ 
+          console.log('🐝 Bee swarm: quiz-speech-end received');
+          this.isActive=false; 
+          this.amplitude=0; 
+        });
+        window.addEventListener('quiz-speech-boundary',()=>{ 
+          console.log('🐝 Bee swarm: quiz-speech-boundary received');
+          this.mouthPulse=0.9; 
+        });
         if(typeof speechSynthesis!=='undefined') setInterval(()=>this.updateSpeechAmplitude(),50);
       },
 

@@ -3074,7 +3074,7 @@ if ('speechSynthesis' in window) {
                             </div>
                             
                             <div class="dotwave-wrapper">
-                                <div id="beeSwarmContainer" style="width: 860px; height: 260px; position: relative; background: transparent;"></div>
+                                <!-- Bee swarm visualizer canvas will be injected here by bee_swarm_visualizer.js -->
                                 <canvas id="dotWaveCanvas" width="860" height="260" style="display: none;"></canvas>
                             </div>
                             
@@ -3089,8 +3089,8 @@ if ('speechSynthesis' in window) {
                 <style>
                     .voice-card.speaking-mode {
                         background: transparent;
-                        border-radius: 28px;
-                        padding: 20px 16px 20px;
+                        border-radius: 0;
+                        padding: 0;
                         border: none;
                         box-shadow: none;
                         max-width: 920px;
@@ -3138,8 +3138,11 @@ if ('speechSynthesis' in window) {
                                     display: flex;
                                     justify-content: center;
                                     align-items: center;
-                                    padding: 28px 24px; /* Maximum padding for wave clearance */
-                                    overflow: visible; /* Ensure waves aren't clipped */
+                                    padding: 0; /* Remove padding to eliminate white box */
+                                    overflow: visible;
+                                    background: transparent;
+                                    border: none;
+                                    box-shadow: none;
                                 }
 
                                 .dotwave-wrapper canvas {
@@ -3738,6 +3741,7 @@ class BeeSoundboard {
                     : '🎙️ Speaking';
                 
                 // Trigger bee swarm activation
+                console.log('🎙️ Dispatching quiz-speech-start event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-start'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -3745,6 +3749,7 @@ class BeeSoundboard {
             
             utterance.onboundary = (event) => {
                 // Trigger bee swarm mouth pulse on word boundaries
+                console.log('🎙️ Dispatching quiz-speech-boundary event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
                 
                 // Word-level micro pauses for natural cadence
@@ -3777,6 +3782,7 @@ class BeeSoundboard {
                 if (statusEl) statusEl.textContent = '🐝 Ready';
                 
                 // Trigger bee swarm deactivation
+                console.log('🎙️ Dispatching quiz-speech-end event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -3787,6 +3793,7 @@ class BeeSoundboard {
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
                 
                 // Trigger bee swarm deactivation on error
+                console.log('🎙️ Dispatching quiz-speech-end event (error)');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -9025,6 +9032,13 @@ function playThemedSound(soundType) {
             return;
         }
         
+        // ✅ Ensure container is visible and properly styled
+        visualizerContainer.style.visibility = 'visible';
+        visualizerContainer.style.opacity = '1';
+        visualizerContainer.style.background = 'transparent';
+        visualizerContainer.style.border = 'none';
+        visualizerContainer.style.boxShadow = 'none';
+        
         // 🛡️ Prevent double initialization
         if (window.beeSwarmViz) {
             console.warn('⚠️ Bee swarm already initialized, destroying old instance...');
@@ -9047,6 +9061,13 @@ function playThemedSound(soundType) {
         });
         
         try {
+            // ✅ Verify THREE.js is available
+            if (typeof THREE === 'undefined' || !window.THREE) {
+                console.error('❌ THREE.js not loaded! Bee swarm visualizer requires THREE.js');
+                return;
+            }
+            console.log('✅ THREE.js version:', THREE.REVISION);
+            
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
@@ -9060,7 +9081,8 @@ function playThemedSound(soundType) {
                 lazyInit: false           // Initialize immediately on page load
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
-            console.log('🎤 Canvas will be created on first speech event...');
+            console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
+            console.log('🎨 Canvas count in container:', visualizerContainer.querySelectorAll('canvas').length);
             
             // Test animation immediately
             setTimeout(() => {
