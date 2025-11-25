@@ -93,11 +93,12 @@
   }
 
   .hive-title-row{
-    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
     gap:12px; margin-bottom:14px; position:relative; z-index:1;
     max-width:920px;
     margin-left:auto;
     margin-right:auto;
+    flex-direction:column;
   }
   .hive-title-row h1{
     margin:0; font-size:30px; letter-spacing:.02em;
@@ -106,7 +107,7 @@
   }
 
   /* buttons */
-  .hive-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .hive-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
   .hive-btn{
     border:none; outline:none; cursor:pointer;
     border-radius:var(--radius-pill);
