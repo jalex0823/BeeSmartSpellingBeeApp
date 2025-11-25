@@ -2854,25 +2854,15 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- 3D Avatar Display (registered users only): Uses morph-container like quiz -->
-                <div class="morph-container mode-voice" style="
-                    width: 100%;
-                    max-width: 800px;
-                    height: 400px;
+                <!-- 3D Avatar Display (registered users only) -->
+                <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
+                    width: 160px;
+                    height: 120px;
                     margin: 20px auto;
                     position: relative;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    overflow: visible;
-                ">
-                    <div class="morph-content" style="width: 100%; height: 100%; position: relative;">
-                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
-                            width: 100%; height: 100%; position: relative;
-                            cursor: pointer;
-                        "></div>
-                    </div>
-                </div>
+                    cursor: pointer;
+                    display: block;
+                "></div>
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
