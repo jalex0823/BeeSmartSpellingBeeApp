@@ -773,7 +773,14 @@
 
     statTotalHives.textContent = totalLists;
     statTotalWords.textContent = totalWords;
+    console.log(`📊 Stats updated: ${totalLists} hives, ${totalWords} total words`);
   }
+
+  // Refresh stats when page gains focus (after upload redirect)
+  window.addEventListener('focus', async () => {
+    console.log('👀 Page gained focus - checking for new uploads...');
+    await loadWordLists();
+  });
 
   function renderHoneycombs(){
     const grid = document.getElementById("grid");
