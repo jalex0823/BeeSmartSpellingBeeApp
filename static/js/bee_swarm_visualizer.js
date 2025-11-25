@@ -69,6 +69,7 @@ const viz = {
       mouthOpen: 0,
       mouthOpenVel: 0,
       mouthPulse: 0,
+      swarmEnergy: 0.5, // Dynamic swarm movement intensity (0.5-1.5)
       // motion params
       tSpeedBase: 0.08,
       noiseBase: 0.025,
@@ -158,7 +159,7 @@ const viz = {
 
       async buildTargetsFromMask(maskUrl, sampleStep){
         const img = new Image(); img.crossOrigin='anonymous'; img.src = maskUrl;
-        try { await img.decode(); } catch(e){ console.warn('Mask decode failed', e, maskUrl); return; }
+        try { await img.decode(); } catch(e){ console.warn('Mask decode failed', e, maskUrl); this._initFallbackTargets(); return; }
         const canvas = document.createElement('canvas');
         const w = canvas.width = img.width || 512;
         const h = canvas.height = img.height || 256;
@@ -234,6 +235,25 @@ const viz = {
         this.targets.set(this.targetsClosed);
       },
 
+      _initFallbackTargets(){
+        if(this.targetsClosed && this.targetsOpen && this.targets) return; // Already initialized
+        this.targetsClosed = new Float32Array(this.COUNT*3);
+        this.targetsOpen   = new Float32Array(this.COUNT*3);
+        this.targets       = new Float32Array(this.COUNT*3);
+        const mouthWidth=5.8, lipCurve=0.9;
+        const build=(openFactor,out)=>{
+          const maxOpen=2.4*openFactor;
+          for(let i=0;i<this.COUNT;i++){
+            const u=i/this.COUNT; const x=(u-0.5)*mouthWidth+(Math.random()-0.5)*0.35; const smileCurve=-Math.cos(u*Math.PI*2)*lipCurve*0.45;
+            const band=Math.random(); let y; if(band<0.35) y=smileCurve+(maxOpen*0.55)+(Math.random()-0.5)*0.85; else if(band<0.70) y=smileCurve-(maxOpen*0.55)+(Math.random()-0.5)*0.85; else y=smileCurve+(Math.random()-0.5)*maxOpen*0.9;
+            const centerBias=1-Math.abs(u-0.5)*2; const z=(Math.random()-0.5)*1.2*(0.35+centerBias*0.65); const s=this.overallScale;
+            out[i*3]=x*s; out[i*3+1]=y*s; out[i*3+2]=z*s;
+          }
+        };
+        build(0.35,this.targetsClosed); build(1.0,this.targetsOpen);
+        this.targets.set(this.targetsClosed);
+      },
+
       // Switch performance mode (reinitializes particles with new count)
       setPerformanceMode(mode){
         const desired = mode==='low' ? 8000 : (mode==='high' ? 18000 : this.COUNT); // 'auto' leaves as-is
@@ -301,13 +321,41 @@ const viz = {
       },
 
       updateMouthTargets(openAmount){
+        if(!this.targetsClosed || !this.targetsOpen || !this.targets) return;
         const o=THREE.MathUtils.clamp(openAmount,0,1); for(let i=0;i<this.COUNT*3;i++){ const a=this.targetsClosed[i]; const b=this.targetsOpen[i]; this.targets[i]=a+(b-a)*o; }
       },
 
       setupSpeechIntegration(){
-        window.addEventListener('quiz-speech-start',()=>{ this.isActive=true; this.amplitude=0.7; this.mouthPulse=1.2; });
-        window.addEventListener('quiz-speech-end',()=>{ this.isActive=false; this.amplitude=0; });
-        window.addEventListener('quiz-speech-boundary',()=>{ this.mouthPulse=0.9; });
+        // Speech start: activate swarm animation with energetic pulse
+        window.addEventListener('quiz-speech-start',()=>{ 
+          this.isActive=true; 
+          this.amplitude=0.7; 
+          this.mouthPulse=1.2; 
+          this.swarmEnergy=1.0; // Boost swarm movement energy
+          this.buzzStrength=this.buzzBase*2; // Increase buzz frequency
+        });
+        
+        // Speech end: smooth fade out of animation
+        window.addEventListener('quiz-speech-end',()=>{ 
+          this.isActive=false; 
+          this.amplitude=0; 
+          this.swarmEnergy*=0.8; // Gradually wind down
+        });
+        
+        // Word boundary: pulse for punctuation/pacing
+        window.addEventListener('quiz-speech-boundary',()=>{ 
+          this.mouthPulse=0.9;
+          this.swarmEnergy=Math.min(1.2, this.swarmEnergy+0.3); // Spike energy on word boundary
+        });
+        
+        // Announce event: for system announcements (instructions, feedback, etc)
+        window.addEventListener('announce',()=>{ 
+          this.isActive=true; 
+          this.amplitude=0.5; 
+          this.mouthPulse=1.0; 
+          this.swarmEnergy=0.8;
+        });
+        
         // If device is low-perf, use interval polling to avoid per-frame work; otherwise update per-frame
         if(typeof speechSynthesis!=='undefined' && !this._speechTimer && !this._useFrameAmplitude){
           this._speechTimer = setInterval(()=>this.updateSpeechAmplitude(),50);
@@ -321,13 +369,17 @@ const viz = {
 
       swarmStep(time){
         const posAttr=this.geo.getAttribute('position');
-        this.ampSmooth=this.ampSmooth*0.6+this.amplitude*0.4; this.mouthPulse*=0.8;
+        this.ampSmooth=this.ampSmooth*0.6+this.amplitude*0.4; 
+        this.mouthPulse*=0.8;
+        // Smoothly decay swarmEnergy toward 0.5 when not active
+        this.swarmEnergy = this.swarmEnergy*0.88 + 0.5*0.12;
         const targetOpen=THREE.MathUtils.clamp(this.ampSmooth*1.4+this.mouthPulse*0.6,0,1);
         const stiffness=0.35, damping=0.7; this.mouthOpenVel=this.mouthOpenVel*damping+(targetOpen-this.mouthOpen)*stiffness; this.mouthOpen+=this.mouthOpenVel;
         this.updateMouthTargets(this.mouthOpen);
-        const attractStrength=this.tSpeedBase+this.ampSmooth*0.25;
-        const noiseStrength=this.noiseBase+this.ampSmooth*0.08;
-        const buzzStrength=this.buzzBase+this.ampSmooth*0.01;
+        // Scale motion parameters with swarmEnergy for dynamic response to voice
+        const attractStrength=(this.tSpeedBase+this.ampSmooth*0.25)*this.swarmEnergy;
+        const noiseStrength=(this.noiseBase+this.ampSmooth*0.08)*this.swarmEnergy;
+        const buzzStrength=(this.buzzBase+this.ampSmooth*0.01)*this.swarmEnergy;
         const tBase=time*0.001;
         for(let i=0;i<this.COUNT;i++){
           const ix=i*3;
