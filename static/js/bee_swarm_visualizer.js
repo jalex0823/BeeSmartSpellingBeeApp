@@ -20,7 +20,7 @@ const BeeSwarmVisualizer = {
       zIndex: 2,
       background: 'transparent',
       // Use the in-repo visualizer mask (clean lip mask) for sampling
-      maskUrl: '/static/assets/visualizer/lips_mask.png',
+      maskUrl: '/static/assets/visualizer/lips_mask_clean.png',
       sampleStep: 3,
       maskBrightnessThreshold: 60,
       maskInvert: false,
