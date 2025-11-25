@@ -13268,6 +13268,13 @@ def _pick_port(default_port: int) -> int:
         return s.getsockname()[1]
 
 if __name__ == "__main__":
+    # PRE-LOAD dictionary at startup to avoid first-request timeouts
+    print("📚 Pre-loading Simple Wiktionary dictionary...")
+    ensure_simple_wiktionary_loaded()
+    if not DICTIONARY_CACHE:
+        DICTIONARY_CACHE = load_dictionary_cache()
+    print(f"✅ Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
+    
     env_port = int(os.environ.get("PORT", 5000))
     port = _pick_port(env_port)
     # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI

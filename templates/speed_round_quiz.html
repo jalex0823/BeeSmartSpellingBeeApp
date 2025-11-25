@@ -1264,7 +1264,7 @@ async function loadNextWord() {
 
         // iOS Fix: Add timeout to prevent hanging fetch requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout (allows dictionary pre-load)
         
         const response = await fetch('/api/speed-round/next', {
             signal: controller.signal
@@ -1742,7 +1742,7 @@ async function submitAnswer(isSkip = false) {
     try {
         // iOS Fix: Add timeout to prevent hanging POST requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
         const response = await fetch('/api/speed-round/answer', {
             method: 'POST',
