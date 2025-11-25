@@ -26,12 +26,12 @@
             </div>
 
             <!-- Buzz Dust Rank Badge -->
-            <div id="admin-buzz-dust-rank" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
+            <div id="admin-buzz-dust-rank" style="margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.2); padding: 0.35rem 0.75rem; border-radius: 12px; backdrop-filter: blur(10px);">
                     <img id="admin-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
                     <div style="text-align: left;">
-                        <div id="admin-rank-name" style="font-size: 0.875rem; font-weight: 700; opacity: 0.9;">Loading...</div>
-                        <div id="admin-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900;">0 ✨</div>
+                        <div id="admin-rank-name" style="font-size: 0.875rem; font-weight: 700; opacity: 0.9; margin-bottom: 0.1rem;">Loading...</div>
+                        <div id="admin-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900; line-height: 1.2;">0 ✨</div>
                     </div>
                 </div>
             </div>
@@ -151,8 +151,9 @@
                     const amountEl = document.getElementById('admin-buzz-dust-amount');
                     
                     if (rankEl) {
-                        rankEl.textContent = data.current_class.label || 'Novice Bee';
-                        console.log('✅ Rank name updated:', data.current_class.label);
+                        const label = (data.current_class.label || 'Novice Bee').replace(/ Bee$/, '');
+                        rankEl.textContent = label;
+                        console.log('✅ Rank name updated:', label);
                     }
                     if (amountEl) {
                         amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
@@ -171,14 +172,14 @@
                     console.error('❌ API returned success=false:', data);
                     // Fallback display
                     const rankEl = document.getElementById('admin-rank-name');
-                    if (rankEl) rankEl.textContent = 'Novice Bee';
+                    if (rankEl) rankEl.textContent = 'Novice';
                 }
             } catch (error) {
                 console.error('❌ Error loading Buzz Dust:', error);
                 // Fallback display
                 const rankEl = document.getElementById('admin-rank-name');
                 const amountEl = document.getElementById('admin-buzz-dust-amount');
-                if (rankEl) rankEl.textContent = 'Novice Bee';
+                if (rankEl) rankEl.textContent = 'Novice';
                 if (amountEl) amountEl.textContent = '0 ✨';
             }
         }

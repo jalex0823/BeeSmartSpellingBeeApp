@@ -880,6 +880,21 @@ try:
 except Exception as _e:  # non-fatal
     pass
 
+# --- CamelCase to Avatar ID Mapping -----------------------------------------------
+# Maps GLB filename (CamelCase) to avatar ID (hyphenated)
+# Used by API fallback when generating proper slug IDs for filesystem-based avatars
+NAME_MAP_CAMELCASE: Dict[str, str] = {}
+
+# Build the mapping from AVATAR_CATALOG entries
+for _avatar_entry in AVATAR_CATALOG:
+    _obj_file = _avatar_entry.get('obj_file', '')
+    if _obj_file:
+        # Extract base name without extension (e.g., "AlBee" from "AlBee.glb")
+        _base = _obj_file.rsplit('.', 1)[0] if '.' in _obj_file else _obj_file
+        _avatar_id = _avatar_entry.get('id')
+        if _base and _avatar_id:
+            NAME_MAP_CAMELCASE[_base] = _avatar_id
+
 # --- Pricing and Points Overrides -------------------------------------------
 # Business rule (2025-11-13):
 # - All locked avatars default to $0.99 unless explicitly listed otherwise
@@ -978,36 +993,78 @@ def get_avatar_info(avatar_id, variant='default'):
     if folder == 'glb_files':
         if avatar_id == 'astro-bee':
             thumbnail_file = 'AvatarThumbnails/AstroBee!.png'
+        elif avatar_id == 'buda-bee':
+            thumbnail_file = 'AvatarThumbnails/BudaBee!.png'
         elif avatar_id == 'buzz-bee':
             thumbnail_file = 'AvatarThumbnails/BuzzBee!.png'
         elif avatar_id == 'cool-bee':
             thumbnail_file = 'AvatarThumbnails/CoolBee!.png'
-        elif avatar_id == 'knight-bee':
-            thumbnail_file = 'AvatarThumbnails/BeeKnight!.png'
-        elif avatar_id == 'queen-bee':
-            thumbnail_file = 'AvatarThumbnails/QueenBee!.png'
-        elif avatar_id == 'selfie-bee':
-            thumbnail_file = 'AvatarThumbnails/SelfieBee!.png'
+        elif avatar_id == 'cutie-bee':
+            thumbnail_file = 'AvatarThumbnails/CutieBee!.png'
+        elif avatar_id == 'detective-bee':
+            thumbnail_file = 'AvatarThumbnails/DetectiveBee!.png'
+        elif avatar_id == 'diva-bee':
+            thumbnail_file = 'AvatarThumbnails/DivaBee!.png'
+        elif avatar_id == 'doc-bee':
+            thumbnail_file = 'AvatarThumbnails/DoctorBee!.png'
+        elif avatar_id == 'explorer-bee':
+            thumbnail_file = 'AvatarThumbnails/ExplorerBee!.png'
+        elif avatar_id == 'franken-bee':
+            thumbnail_file = 'AvatarThumbnails/FrankenBee!.png'
         elif avatar_id == 'gamer-bee':
             thumbnail_file = 'AvatarThumbnails/GamerBee!.png'
+        elif avatar_id == 'honeycomb':
+            thumbnail_file = 'AvatarThumbnails/HoneyComb!.png'
         elif avatar_id == 'inventor-bee':
             thumbnail_file = 'AvatarThumbnails/InventorBee!.png'
+        elif avatar_id == 'jrock-bee':
+            thumbnail_file = 'AvatarThumbnails/JRockBee!.png'
+        elif avatar_id == 'knight-bee':
+            thumbnail_file = 'AvatarThumbnails/KnightBee!.png'
         elif avatar_id == 'lumberjack-bee':
             thumbnail_file = 'AvatarThumbnails/LumberjackBee!.png'
+        elif avatar_id == 'motor-bee':
+            thumbnail_file = 'AvatarThumbnails/MotorBee!.png'
         elif avatar_id == 'nurse-bee':
             thumbnail_file = 'AvatarThumbnails/NurseBee!.png'
+        elif avatar_id == 'obee':
+            thumbnail_file = 'AvatarThumbnails/OBee!.png'
         elif avatar_id == 'plumber-bee':
             thumbnail_file = 'AvatarThumbnails/PlumberBee!.png'
+        elif avatar_id == 'professor-bee':
+            thumbnail_file = 'AvatarThumbnails/ProfessorBee!.png'
+        elif avatar_id == 'queen-bee':
+            thumbnail_file = 'AvatarThumbnails/QueenBee!.png'
+        elif avatar_id == 'robo-bee':
+            thumbnail_file = 'AvatarThumbnails/RoboBee!.png'
+        elif avatar_id == 'rocker-bee':
+            thumbnail_file = 'AvatarThumbnails/RockerBee!.png'
+        elif avatar_id == 'sea-bee':
+            thumbnail_file = 'AvatarThumbnails/SeaBee!.png'
+        elif avatar_id == 'selfie-bee':
+            thumbnail_file = 'AvatarThumbnails/SelfieBee!.png'
+        elif avatar_id == 'singer-bee':
+            thumbnail_file = 'AvatarThumbnails/SingerBee!.png'
+        elif avatar_id == 'space-bee':
+            thumbnail_file = 'AvatarThumbnails/SpaceBee!.png'
+        elif avatar_id == 'super-bee':
+            thumbnail_file = 'AvatarThumbnails/SuperBee!.png'
         elif avatar_id == 'techno-bee':
             thumbnail_file = 'AvatarThumbnails/TechnoBee!.png'
         elif avatar_id == 'umpire-bee':
             thumbnail_file = 'AvatarThumbnails/UmpireBee!.png'
+        elif avatar_id == 'vamp-bee':
+            thumbnail_file = 'AvatarThumbnails/VampBee!.png'
+        elif avatar_id == 'ware-bee':
+            thumbnail_file = 'AvatarThumbnails/WareBee!.png'
         elif avatar_id == 'xray-bee':
             thumbnail_file = 'AvatarThumbnails/XrayBee!.png'
         elif avatar_id == 'yeti-bee':
             thumbnail_file = 'AvatarThumbnails/YetiBee!.png'
+        elif avatar_id == 'zom-bee':
+            thumbnail_file = 'AvatarThumbnails/ZomBee!.png'
         else:
-            thumbnail_file = 'AvatarThumbnails/thumbnail.png'  # fallback
+            thumbnail_file = 'AvatarThumbnails/MascotBee!.png'  # fallback to mascot
     elif folder == 'al-bee':
         thumbnail_file = 'AlBee!.png'
     elif folder == 'anxious-bee':

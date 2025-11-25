@@ -11392,11 +11392,27 @@ def api_get_avatars():
             glb_dir = os.path.join(static_root, 'glb_files')
             thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
             fallback_avatars = []
+            
+            # Helper function to generate proper slug from CamelCase
+            def _generate_slug(base: str) -> str:
+                # Try to get canonical slug from catalog if available
+                try:
+                    from avatar_catalog import NAME_MAP_CAMELCASE
+                    if base in NAME_MAP_CAMELCASE:
+                        return NAME_MAP_CAMELCASE[base]
+                except ImportError:
+                    pass
+                # Fallback: convert CamelCase to hyphenated slug
+                name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
+                slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
+                return slug
+            
             if os.path.isdir(glb_dir):
                 for fname in sorted(os.listdir(glb_dir)):
                     if not fname.lower().endswith('.glb'):
                         continue
                     base = fname[:-4]
+                    slug = _generate_slug(base)
                     glb_path = f"/static/assets/avatars/glb_files/{fname}"
                     thumb_path = f"/static/assets/avatars/glb_files/AvatarThumbnails/{base}!.png"
                     # Verify thumbnail exists, use fallback if not
@@ -11404,7 +11420,7 @@ def api_get_avatars():
                     if not os.path.exists(thumb_fs):
                         thumb_path = "/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png"
                     fallback_avatars.append({
-                        "id": base.lower(),
+                        "id": slug,
                         "name": base,
                         "description": f"{base} is ready to spell! 🐝",
                         "category": "free",
