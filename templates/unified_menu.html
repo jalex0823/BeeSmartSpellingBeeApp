@@ -720,17 +720,17 @@
             display: none !important;
         }
         
-        /* MAIN MENU SPECIFIC: Maximum showcase - fills space between logo and badge */
+        /* MAIN MENU SPECIFIC: Match guest carousel dimensions (240x180) */
         .logo-section #mascotBee3D {
-            width: 600px !important;
-            height: 500px !important;
+            width: 240px !important;
+            height: 180px !important;
         }
         
-        /* FINAL CONTAINER SIZE - Maximized for prominent main page display */
+        /* FINAL CONTAINER SIZE - Match guest carousel dimensions (240x180) */
         div#mascotBee3D {
-            width: 600px !important;
-            height: 500px !important;
-            margin: 0 auto 1.2rem auto !important;
+            width: 240px !important;
+            height: 180px !important;
+            margin: 0 auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
             transition: transform 0.3s ease !important;
@@ -841,7 +841,7 @@
             align-items: center;
             gap: 10px; /* add breathing room to avoid mashed look */
             padding: 8px 0;
-            margin: 8px 0 12px;
+            margin: 16px 0 20px;
             transition: opacity 380ms ease, transform 380ms ease;
         }
         .guest-avatar-carousel .avatar-slide {
@@ -2868,8 +2868,8 @@
                     font-size: 14px;
                     color: #FF6B00;
                     font-weight: 600;
-                    margin-top: 2px;
-                    margin-bottom: 4px;
+                    margin-top: 12px;
+                    margin-bottom: 12px;
                     text-align: center;
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;
@@ -2881,7 +2881,7 @@
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
                     display: none;
-                    margin: 8px auto 10px;
+                    margin: 12px auto 16px;
                     padding: 4px 8px;
                     background: rgba(0, 0, 0, 0.1);
                     border-radius: 12px;
