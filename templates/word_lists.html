@@ -601,7 +601,7 @@
   <div class="hive-board">
     <!-- Badge Banner -->
     <div class="badge-banner">
-      <img class="badge-icon" id="badgeIcon" src="/static/assets/badges/novice_bee.png" alt="Badge" style="display:none;">
+      <img class="badge-icon" id="badgeIcon" src="/static/assets/badges/glb_files/Novice.glb" alt="Badge" style="display:none;">
       <div id="badgeName">Novice Bee</div>
       <div>Buzz Dust: <span id="buzzDustTotal">0</span> ✨</div>
     </div>
@@ -692,7 +692,7 @@
           // Update badge image
           const badgeEl = document.getElementById('badgeIcon');
           if(badgeEl && data.current_class.badge_image){
-            badgeEl.src = `/static/assets/badges/${data.current_class.badge_image}`;
+            badgeEl.src = `/static/assets/badges/glb_files/${data.current_class.badge_image}`;
             badgeEl.alt = data.current_class.label + ' Badge';
             badgeEl.style.display = 'block';
           }
@@ -733,7 +733,7 @@
     // Fallback: use defaults
     const badgeEl = document.getElementById('badgeIcon');
     if(badgeEl){
-      badgeEl.src = '/static/assets/badges/novice_bee.png';
+      badgeEl.src = '/static/assets/badges/glb_files/Novice.glb';
       badgeEl.alt = 'Novice Bee Badge';
       badgeEl.style.display = 'block';
     }

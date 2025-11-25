@@ -756,7 +756,7 @@
             <!-- 🐝 Buzz Dust Gamification Card -->
             <div class="stat-card stat-highlight" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
                 <div id="dash-buzz-dust-badge" style="margin-bottom: 0.5rem;">
-                    <img src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
+                    <img src="{{ url_for('static', filename='assets/badges/glb_files/Novice.glb') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
                 </div>
                 <div class="stat-value" id="dash-buzz-dust-total" style="font-size: 2rem; color: #8B4513;">{{ current_user.total_buzz_dust or 0 }}</div>
                 <div class="stat-label" style="color: #5A2C15; font-weight: 700;">✨ Buzz Dust</div>
@@ -824,7 +824,7 @@
                                         if (beeClass) beeClass.textContent = buzzData.current_class.label || 'Novice Bee';
                         if (badgeImg && buzzData.current_class.badge_image) {
                             // Construct the badge URL from badge_image filename
-                            const badgeUrl = `/static/assets/badges/${buzzData.current_class.badge_image}`;
+                            const badgeUrl = `/static/assets/badges/glb_files/${buzzData.current_class.badge_image}`;
                             badgeImg.src = badgeUrl;
                             badgeImg.alt = buzzData.current_class.label + ' Badge';
                             console.log('✅ Main Buzz Dust badge updated:', badgeUrl);
@@ -861,7 +861,7 @@
                                         if (collectionBuzzTotal) collectionBuzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
                                         if (collectionBadgeImg && buzzData.current_class.badge_image) {
                                             // Construct the badge URL from badge_image filename
-                                            const badgeUrl = `/static/assets/badges/${buzzData.current_class.badge_image}`;
+                                            const badgeUrl = `/static/assets/badges/glb_files/${buzzData.current_class.badge_image}`;
                                             collectionBadgeImg.src = badgeUrl;
                                             collectionBadgeImg.alt = buzzData.current_class.label + ' Rank Badge';
                                             console.log('✅ Collection badge updated:', badgeUrl);
@@ -935,7 +935,7 @@
                     <div class="badge-rarity-label" style="background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%); color: white; font-weight: 700;">RANK</div>
                     <div style="margin: 1rem 0;">
                         <img id="collection-rank-badge-img" 
-                             src="{{ url_for('static', filename='assets/badges/Novice.png') }}" 
+                             src="{{ url_for('static', filename='assets/badges/glb_files/Novice.glb') }}" 
                              alt="Buzz Dust Rank Badge" 
                              style="width: 80px; 
                                     height: 80px; 
