@@ -188,13 +188,11 @@
     position:relative; text-decoration:none; color:inherit; cursor:pointer;
     clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
-    box-shadow:0 10px 26px rgba(0,0,0,.14);
+    box-shadow:var(--shadow-med);
     min-height:210px;
     display:flex; align-items:center; justify-content:center;
     padding:20px 16px 18px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
-    will-change:transform, filter;
-    backface-visibility:hidden;
   }
   .hive-cell:nth-child(odd){transform:translateY(8px)}
   .hive-cell:nth-child(even){transform:translateY(-8px)}
@@ -213,9 +211,9 @@
   .hive-cell.is-favorite{
     box-shadow:
       0 0 0 3px rgba(255,255,255,.9),
-      0 0 0 7px rgba(255,201,74,.85),
-      0 0 18px rgba(255,201,74,.65),
-      0 10px 30px rgba(0,0,0,.22);
+      0 0 0 7px rgba(255,201,74,.95),
+      0 0 30px rgba(255,201,74,.9),
+      var(--shadow-deep);
     animation: favPulse 2.4s ease-in-out infinite;
   }
   @keyframes favPulse{
@@ -347,11 +345,6 @@
     .hive-grid{--cell-w:145px;gap:14px 10px}
     .hive-cell{min-height:175px;padding:18px 12px}
     .hive-cell-name{font-size:16px}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .hive-cell:hover{animation:none}
-    .bee-flyover{transition:none}
-    .hive-cell.is-favorite{animation:none}
   }
 </style>
 {% endblock %}
@@ -883,7 +876,6 @@
     beeSheetTitle.textContent = list.name || "Hive Actions";
     beeSheet.classList.add("active");
 
-    // fixed typo: useListInQuiz
     sheetQuizBtn.onclick = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
     sheetViewBtn.onclick = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name); };
     sheetEditBtn.onclick = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name); };
@@ -994,26 +986,23 @@
     bee.className="bee-flyover";
     bee.textContent="🐝";
     document.body.appendChild(bee);
-    let lastTrail=0; let trails=0;
-    function trailLoop(ts){
-      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ return; }
-      if(trails<14 && ts-lastTrail>170){
-        lastTrail=ts; trails++;
-        const t=document.createElement("div");
-        t.className="bee-trail";
-        t.style.left=(bee.getBoundingClientRect().left+8)+"px";
-        document.body.appendChild(t);
-        setTimeout(()=>t.remove(),1200);
-      }
-      if(trails<14) requestAnimationFrame(trailLoop);
-    }
-    requestAnimationFrame(trailLoop);
+
+    let trailTimer= setInterval(()=>{
+      const t=document.createElement("div");
+      t.className="bee-trail";
+      t.style.left=(bee.getBoundingClientRect().left+8)+"px";
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(),1200);
+    },180);
 
     requestAnimationFrame(()=>{
       bee.style.transform=`translateX(${innerWidth+240}px) translateY(-20px)`;
     });
 
-    setTimeout(()=>{ bee.remove(); },3200);
+    setTimeout(()=>{
+      clearInterval(trailTimer);
+      bee.remove();
+    },3200);
   }
 </script>
 {% endblock %}
