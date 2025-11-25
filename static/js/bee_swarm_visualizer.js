@@ -237,21 +237,41 @@ const BeeSwarmVisualizer = {
       },
 
       setupSpeechIntegration(){
-        window.addEventListener('quiz-speech-start',()=>{ 
+        // Remove old listeners before adding new ones to prevent duplicates
+        if (this._speechStartHandler) {
+          window.removeEventListener('quiz-speech-start', this._speechStartHandler);
+        }
+        if (this._speechEndHandler) {
+          window.removeEventListener('quiz-speech-end', this._speechEndHandler);
+        }
+        if (this._speechBoundaryHandler) {
+          window.removeEventListener('quiz-speech-boundary', this._speechBoundaryHandler);
+        }
+        
+        // Create bound handlers so we can remove them later
+        this._speechStartHandler = () => { 
           console.log('🐝 Bee swarm: quiz-speech-start received');
           this.isActive=true; 
           this.amplitude=0.7; 
           this.mouthPulse=1.2; 
-        });
-        window.addEventListener('quiz-speech-end',()=>{ 
+        };
+        
+        this._speechEndHandler = () => { 
           console.log('🐝 Bee swarm: quiz-speech-end received');
           this.isActive=false; 
           this.amplitude=0; 
-        });
-        window.addEventListener('quiz-speech-boundary',()=>{ 
+        };
+        
+        this._speechBoundaryHandler = () => { 
           console.log('🐝 Bee swarm: quiz-speech-boundary received');
           this.mouthPulse=0.9; 
-        });
+        };
+        
+        // Add the new listeners
+        window.addEventListener('quiz-speech-start', this._speechStartHandler);
+        window.addEventListener('quiz-speech-end', this._speechEndHandler);
+        window.addEventListener('quiz-speech-boundary', this._speechBoundaryHandler);
+        
         if(typeof speechSynthesis!=='undefined') setInterval(()=>this.updateSpeechAmplitude(),50);
       },
 
@@ -315,7 +335,26 @@ const BeeSwarmVisualizer = {
       },
       start(){ this._performHeavyInit(); },
 
-      destroy(){ if(this.renderer){ this.renderer.domElement.remove(); this.renderer.dispose(); } if(this.geo) this.geo.dispose(); if(this.mat) this.mat.dispose(); }
+      destroy(){ 
+        // Remove event listeners to prevent memory leaks
+        if (this._speechStartHandler) {
+          window.removeEventListener('quiz-speech-start', this._speechStartHandler);
+        }
+        if (this._speechEndHandler) {
+          window.removeEventListener('quiz-speech-end', this._speechEndHandler);
+        }
+        if (this._speechBoundaryHandler) {
+          window.removeEventListener('quiz-speech-boundary', this._speechBoundaryHandler);
+        }
+        
+        // Clean up Three.js resources
+        if(this.renderer){ 
+          this.renderer.domElement.remove(); 
+          this.renderer.dispose(); 
+        } 
+        if(this.geo) this.geo.dispose(); 
+        if(this.mat) this.mat.dispose(); 
+      }
     };
 
     if(!opts.lazyInit){

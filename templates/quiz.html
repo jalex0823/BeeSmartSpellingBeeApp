@@ -815,9 +815,9 @@ if ('speechSynthesis' in window) {
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: rgba(255, 179, 0, 0.08);
+        background: transparent;
         border-radius: 0;
-        padding: 1rem 1.5rem;
+        padding: 0;
         margin-bottom: 0.5rem;
         position: relative;
         overflow: visible;
@@ -9081,7 +9081,7 @@ function playThemedSound(soundType) {
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
                 maskUrl: '/static/assets/visualizer/lips_mask.png',
-                lazyInit: true            // Defer init until first speech (improves page load)
+                lazyInit: false           // Initialize immediately to show lips
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
