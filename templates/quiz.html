@@ -2494,6 +2494,54 @@ if ('speechSynthesis' in window) {
         }
     }
     
+    /* ✨ SPARKLE PARTICLES FOR BUZZ DUST */
+    .buzz-dust-sparkle {
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        background: radial-gradient(circle, #FFD700, #FFA500);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        animation: sparkleFloat 1.5s ease-out forwards;
+        box-shadow: 0 0 10px #FFD700, 0 0 20px #FFA500;
+    }
+    
+    @keyframes sparkleFloat {
+        0% {
+            opacity: 1;
+            transform: translateY(0) scale(1) rotate(0deg);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-150px) scale(0.3) rotate(360deg);
+        }
+    }
+    
+    /* ⭐ STAR BURST EFFECT */
+    .star-burst {
+        position: fixed;
+        font-size: 1.5rem;
+        pointer-events: none;
+        z-index: 9997;
+        animation: starBurst 1.2s ease-out forwards;
+    }
+    
+    @keyframes starBurst {
+        0% {
+            opacity: 1;
+            transform: scale(0) rotate(0deg);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.5) rotate(180deg);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0.5) rotate(360deg);
+        }
+    }
+    
     /* Session Points Tracker */
     .session-stats {
         position: fixed;
@@ -2636,6 +2684,26 @@ if ('speechSynthesis' in window) {
             transform: rotate(360deg) scale(1);
             opacity: 1;
         }
+    }
+    
+    /* Badge spin and fade out for celebration */
+    @keyframes badgeSpinFadeOut {
+        0% {
+            transform: rotate(0deg) scale(1);
+            opacity: 1;
+        }
+        70% {
+            transform: rotate(1080deg) scale(1.2);
+            opacity: 1;
+        }
+        100% {
+            transform: rotate(1440deg) scale(0);
+            opacity: 0;
+        }
+    }
+    
+    .badge-icon.spin-fade-out {
+        animation: badgeSpinFadeOut 2s ease-out forwards !important;
     }
     
     /* Confetti particles for badge unlock */
@@ -5773,13 +5841,16 @@ class QuizManager {
         feedbackArea.innerHTML = currentFeedback + pointsHtml;
     }
     
-    // 🍯 Show animated points popup
+    // 🍯 Show animated points popup with sparkles
     showPointsPopup(points, breakdown) {
         // Remove any existing popup
         const existingPopup = document.querySelector('.points-popup');
         if (existingPopup) {
             existingPopup.remove();
         }
+        
+        // Create sparkle particles
+        this.createBuzzDustSparkles(points);
         
         // Create popup element
         const popup = document.createElement('div');
@@ -5826,7 +5897,52 @@ class QuizManager {
             popup.remove();
         }, 2500);
         
-        console.log(`🍯 Displayed points popup: +${points} points${isRetry ? ' (Retry)' : ''}`);
+        console.log(`🍯 Displayed points popup: +${points} points${isRetry ? ' (Retry)' : ''} with sparkles!`);
+    }
+    
+    // ✨ Create sparkle particles for Buzz Dust celebration
+    createBuzzDustSparkles(points) {
+        // More sparkles for higher points
+        const sparkleCount = Math.min(Math.floor(points / 10) + 15, 50);
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        
+        for (let i = 0; i < sparkleCount; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'buzz-dust-sparkle';
+            
+            // Random position around center
+            const angle = (Math.PI * 2 * i) / sparkleCount;
+            const radius = 50 + Math.random() * 100;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            sparkle.style.left = x + 'px';
+            sparkle.style.top = y + 'px';
+            sparkle.style.animationDelay = (Math.random() * 0.3) + 's';
+            
+            document.body.appendChild(sparkle);
+            
+            // Remove after animation
+            setTimeout(() => sparkle.remove(), 1500);
+        }
+        
+        // Add star bursts
+        for (let i = 0; i < 5; i++) {
+            const star = document.createElement('div');
+            star.className = 'star-burst';
+            star.textContent = ['✨', '⭐', '💫', '🌟'][Math.floor(Math.random() * 4)];
+            
+            const angle = (Math.PI * 2 * i) / 5;
+            const radius = 80;
+            star.style.left = (centerX + Math.cos(angle) * radius) + 'px';
+            star.style.top = (centerY + Math.sin(angle) * radius) + 'px';
+            star.style.animationDelay = (i * 0.1) + 's';
+            
+            document.body.appendChild(star);
+            
+            setTimeout(() => star.remove(), 1200);
+        }
     }
     
     // 🏆 Badge Achievement System
@@ -5855,13 +5971,31 @@ class QuizManager {
             // Create confetti effect
             this.createConfetti();
             
+            // Create sparkles
+            this.createBuzzDustSparkles(badge.points || 500);
+            
             // Create modal
             const modal = document.createElement('div');
             modal.className = 'badge-modal';
             
+            // Determine if this is a rank badge with 3D model or achievement badge
+            const isRankBadge = badge.badge_image && badge.badge_image.endsWith('.glb');
+            
+            let badgeDisplay = '';
+            if (isRankBadge && window.Badge3DRenderer) {
+                // Use 3D badge renderer with spinning effect
+                badgeDisplay = `
+                    <div id="badge3DContainer" class="badge-icon" style="width:150px;height:150px;margin:0 auto;">
+                    </div>
+                `;
+            } else {
+                // Fall back to emoji or icon
+                badgeDisplay = `<div class="badge-icon">${badge.icon || '🏆'}</div>`;
+            }
+            
             modal.innerHTML = `
                 <div class="badge-modal-content">
-                    <div class="badge-icon">${badge.icon}</div>
+                    ${badgeDisplay}
                     <h2>Achievement Unlocked!</h2>
                     <h3>${badge.name}</h3>
                     <p>${badge.message}</p>
@@ -5871,6 +6005,26 @@ class QuizManager {
                     </button>
                 </div>
             `;
+            
+            document.body.appendChild(modal);
+            
+            // Initialize 3D badge if available
+            if (isRankBadge && window.Badge3DRenderer) {
+                setTimeout(() => {
+                    const container = document.getElementById('badge3DContainer');
+                    if (container) {
+                        new Badge3DRenderer(container, {
+                            badgeFile: badge.badge_image,
+                            width: 150,
+                            height: 150,
+                            autoRotate: true,
+                            rotationSpeed: 1.0, // Faster spin for celebration!
+                            enableLighting: true,
+                            enableShadow: true
+                        });
+                    }
+                }, 100);
+            }
             
             document.body.appendChild(modal);
             
