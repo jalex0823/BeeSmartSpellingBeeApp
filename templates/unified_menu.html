@@ -8039,36 +8039,6 @@
             }
         }
         
-        function createFallbackHiveAnimation(container) {
-            // Fallback to emoji hive if 3D model fails to load
-            container.innerHTML = '';
-            
-            const honeycomb = document.createElement('div');
-            honeycomb.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 3.5rem;
-                animation: pulse 2s ease-in-out infinite;
-            `;
-            honeycomb.textContent = '🏠';
-            container.appendChild(honeycomb);
-            
-            // Add pulse animation
-            if (!document.getElementById('hivePulseStyle')) {
-                const style = document.createElement('style');
-                style.id = 'hivePulseStyle';
-                style.textContent = `
-                    @keyframes pulse {
-                        0%, 100% { transform: translate(-50%, -50%) scale(1); }
-                        50% { transform: translate(-50%, -50%) scale(1.1); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-        
         function createBeeHiveAnimation() {
             // Legacy function - now redirects to 3D version
             create3DBeeHiveAnimation();
