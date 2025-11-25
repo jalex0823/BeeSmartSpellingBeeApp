@@ -11164,16 +11164,44 @@ def api_speed_round_answer():
         # Calculate points
         points_earned = 0
         speed_bonus = False
+        time_bonus_points = 0
         
         if is_correct:
             base_points = 10
             multiplier = speed_round['config']['multiplier']
             
-            # Speed bonus (answered in < 50% of time limit)
-            if time_taken < (time_limit * 0.5):
-                base_points += 5
-                speed_bonus = True
-                speed_round['speed_bonuses'] += 1
+            # 🚀 PROGRESSIVE TIME BONUS: Faster answers earn MORE points
+            # Calculate percentage of time used (0-100%)
+            time_percentage = (time_taken / time_limit) * 100
+            
+            # Award points based on speed (maximum 20 bonus points for instant answers)
+            # Points decrease linearly as time increases
+            if time_percentage <= 100:  # Valid answer within time limit
+                # 0-20% time used: 20 bonus points (lightning fast!)
+                # 21-40% time used: 15 bonus points (very fast)
+                # 41-60% time used: 10 bonus points (fast)
+                # 61-80% time used: 5 bonus points (moderate)
+                # 81-100% time used: 2 bonus points (slow but valid)
+                
+                if time_percentage <= 20:
+                    time_bonus_points = 20
+                    speed_bonus = True
+                    speed_round['speed_bonuses'] += 1
+                elif time_percentage <= 40:
+                    time_bonus_points = 15
+                    speed_bonus = True
+                    speed_round['speed_bonuses'] += 1
+                elif time_percentage <= 60:
+                    time_bonus_points = 10
+                    speed_bonus = True
+                    speed_round['speed_bonuses'] += 1
+                elif time_percentage <= 80:
+                    time_bonus_points = 5
+                else:
+                    time_bonus_points = 2
+                
+                base_points += time_bonus_points
+                speed_logger.info(f"⚡ Time bonus: {time_bonus_points} pts ({time_percentage:.1f}% time used, {time_taken:.2f}s/{time_limit}s)")
             
             # Streak bonus
             speed_round['current_streak'] += 1
@@ -11228,6 +11256,8 @@ def api_speed_round_answer():
             'time_taken': round(time_taken, 2),
             'points_earned': points_earned,
             'speed_bonus': speed_bonus,
+            'time_bonus_points': time_bonus_points if is_correct else 0,
+            'time_percentage': round((time_taken / time_limit) * 100, 1) if is_correct else 100,
             'streak_at_time': speed_round['current_streak']
         }
         speed_round['word_history'].append(word_record)
@@ -11249,6 +11279,8 @@ def api_speed_round_answer():
             'correct_spelling': correct_spelling,
             'points_earned': points_earned,
             'speed_bonus': speed_bonus,
+            'time_bonus_points': time_bonus_points if is_correct else 0,
+            'time_percentage': round((time_taken / time_limit) * 100, 1),
             'total_points': speed_round['total_points'],
             'current_streak': speed_round['current_streak'],
             'time_taken': round(time_taken, 2),

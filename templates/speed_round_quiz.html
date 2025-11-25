@@ -602,6 +602,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
         75% { transform: translateY(-30px) rotate(10deg); }
     }
 
+    /* Time Bonus Popup Animations */
+    @keyframes timeBonusPop {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.1); }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    @keyframes timeBonusFadeOut {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    }
+
     .loading-text {
         font-size: 1.5rem;
         font-weight: 800;
@@ -1768,8 +1780,8 @@ async function submitAnswer(isSkip = false) {
             return;
         }
 
-        // Show feedback
-        showFeedback(data.is_correct, data.points_earned, data.correct_spelling);
+        // Show feedback with time bonus info
+        showFeedback(data.is_correct, data.points_earned, data.correct_spelling, data.time_bonus_points, data.time_percentage);
 
         // Update stats from response
         currentStreak = data.current_streak;
@@ -1811,7 +1823,7 @@ async function submitAnswer(isSkip = false) {
     }
 }
 
-function showFeedback(isCorrect, points, correctSpelling) {
+function showFeedback(isCorrect, points, correctSpelling, timeBonus, timePercentage) {
     try { window.BeeVoiceViz?.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
 
     // Persona celebration on correct answers (confetti + themed bits + short stinger)
@@ -1819,6 +1831,11 @@ function showFeedback(isCorrect, points, correctSpelling) {
         try {
             const container = document.querySelector('.speed-quiz-container') || document.body;
             window.QuizCelebrations?.celebrateCorrect(container, { sound: true });
+            
+            // 🚀 Show time bonus popup if earned
+            if (timeBonus > 0) {
+                showTimeBonusPopup(timeBonus, timePercentage);
+            }
         } catch (_) { /* no-op */ }
     }
 
@@ -1900,6 +1917,48 @@ function highlightStat(boxId) {
     const box = document.getElementById(boxId);
     box.classList.add('highlight');
     setTimeout(() => box.classList.remove('highlight'), 1000);
+}
+
+// 🚀 Show time bonus popup with speed tier
+function showTimeBonusPopup(bonusPoints, timePercentage) {
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 20px;
+        font-size: 1.5rem;
+        font-weight: 800;
+        text-align: center;
+        z-index: 10000;
+        box-shadow: 0 10px 40px rgba(255, 165, 0, 0.6);
+        animation: timeBonusPop 0.5s ease-out forwards;
+        border: 4px solid white;
+    `;
+    
+    let speedTier = '';
+    if (timePercentage <= 20) speedTier = '⚡⚡⚡ LIGHTNING FAST!';
+    else if (timePercentage <= 40) speedTier = '⚡⚡ VERY FAST!';
+    else if (timePercentage <= 60) speedTier = '⚡ FAST!';
+    else if (timePercentage <= 80) speedTier = '✨ GOOD SPEED!';
+    else speedTier = '👍 NICE!';
+    
+    popup.innerHTML = `
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${speedTier}</div>
+        <div style="font-size: 1.8rem;">+${bonusPoints} TIME BONUS!</div>
+        <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 0.5rem;">${timePercentage.toFixed(1)}% of time used</div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    setTimeout(() => {
+        popup.style.animation = 'timeBonusFadeOut 0.3s ease-out forwards';
+        setTimeout(() => popup.remove(), 300);
+    }, 1500);
 }
 
 async function completeRound() {
