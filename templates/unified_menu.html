@@ -8089,7 +8089,7 @@
             try {
                 container.innerHTML = '';
                 
-                // Create simple Three.js scene without loaders
+                // Create simple Three.js scene for honey particle swarm
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(45, 200 / 200, 0.1, 1000);
                 const renderer = new THREE.WebGLRenderer({ 
@@ -8101,28 +8101,118 @@
                 renderer.setClearColor(0x000000, 0);
                 container.appendChild(renderer.domElement);
                 
-                // Simple golden sphere as beehive
-                const geometry = new THREE.SphereGeometry(1, 8, 6);
-                const material = new THREE.MeshBasicMaterial({ 
-                    color: 0xFFD700,
-                    wireframe: true
+                // Honey-themed particle swarm using light and dark honey colors
+                const particleCount = 150;
+                const particles = [];
+                const honeyColors = [
+                    0xFFD700,  // Light honey (golden yellow)
+                    0xFFA500,  // Dark honey (orange)
+                    0xFF8C00,  // Even darker honey
+                    0xFFC700   // Slightly darker golden
+                ];
+                
+                // Create particles
+                const geometry = new THREE.BufferGeometry();
+                const positions = [];
+                const colors = [];
+                
+                for (let i = 0; i < particleCount; i++) {
+                    // Random position within sphere
+                    const phi = Math.random() * Math.PI * 2;
+                    const theta = Math.random() * Math.PI;
+                    const radius = Math.random() * 1.5 + 0.3;
+                    
+                    positions.push(
+                        Math.sin(theta) * Math.cos(phi) * radius,
+                        Math.sin(theta) * Math.sin(phi) * radius,
+                        Math.cos(theta) * radius
+                    );
+                    
+                    // Random honey color
+                    const color = honeyColors[Math.floor(Math.random() * honeyColors.length)];
+                    const r = (color >> 16) & 255;
+                    const g = (color >> 8) & 255;
+                    const b = color & 255;
+                    colors.push(r / 255, g / 255, b / 255);
+                    
+                    particles.push({
+                        position: new THREE.Vector3(
+                            Math.sin(theta) * Math.cos(phi) * radius,
+                            Math.sin(theta) * Math.sin(phi) * radius,
+                            Math.cos(theta) * radius
+                        ),
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.02,
+                            (Math.random() - 0.5) * 0.02,
+                            (Math.random() - 0.5) * 0.02
+                        ),
+                        angle: Math.random() * Math.PI * 2
+                    });
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.08,
+                    sizeAttenuation: true,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8,
+                    fog: false
                 });
-                const hive = new THREE.Mesh(geometry, material);
-                scene.add(hive);
+                
+                const points = new THREE.Points(geometry, material);
+                scene.add(points);
                 
                 camera.position.z = 3;
                 
-                // Simple rotation animation
+                // Particle swarm animation
+                let time = 0;
                 function animate() {
                     requestAnimationFrame(animate);
-                    hive.rotation.x += 0.01;
-                    hive.rotation.y += 0.01;
+                    time += 0.008;
+                    
+                    // Update particles with swarm behavior
+                    const positionAttribute = geometry.getAttribute('position');
+                    const positions = positionAttribute.array;
+                    
+                    for (let i = 0; i < particles.length; i++) {
+                        const particle = particles[i];
+                        const p = particle.position;
+                        
+                        // Circular orbit motion
+                        particle.angle += 0.01;
+                        const distance = p.length();
+                        const phi = Math.atan2(p.y, p.x) + 0.005;
+                        const theta = Math.acos(p.z / distance) + 0.002;
+                        
+                        p.x = Math.sin(theta) * Math.cos(phi) * distance;
+                        p.y = Math.sin(theta) * Math.sin(phi) * distance;
+                        p.z = Math.cos(theta) * distance;
+                        
+                        // Add slight wave motion
+                        p.y += Math.sin(time + i) * 0.02;
+                        p.x += Math.cos(time + i * 0.5) * 0.01;
+                        
+                        positions[i * 3] = p.x;
+                        positions[i * 3 + 1] = p.y;
+                        positions[i * 3 + 2] = p.z;
+                    }
+                    positionAttribute.needsUpdate = true;
+                    
+                    // Rotate entire swarm
+                    points.rotation.x += 0.001;
+                    points.rotation.y += 0.002;
+                    
                     renderer.render(scene, camera);
                 }
                 animate();
                 
                 // Store cleanup function
                 container.cleanup = function() {
+                    geometry.dispose();
+                    material.dispose();
                     renderer.dispose();
                 };
                 
