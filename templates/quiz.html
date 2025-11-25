@@ -2978,8 +2978,8 @@ if ('speechSynthesis' in window) {
         <div class="definition-display" id="definitionDisplay" style="display: none;">
         </div>
         
-        <!-- Voice Toggle Button - Centered -->
-        <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
+        <!-- Voice Toggle Button - Centered (Hidden during quiz) -->
+        <div class="voice-toggle-container" style="display:none; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
             <button type="button" class="action-btn secondary" id="voiceToggleBtn" title="Toggle announcer voice">
                 <span class="bee-icon" aria-hidden="true" id="voiceToggleIcon">🔊</span>
                 <span id="voiceToggleText">Mute Buzzy</span>
@@ -2989,11 +2989,13 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
-                <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
+                <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position (transparent, honey swarm lips only) -->
                 <div id="beeSwarmVisualizerContainer"
                      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                             width:860px; height:260px; z-index:5; pointer-events:none;
-                            visibility:visible; opacity:1; background:none; box-shadow:none;">
+                            visibility:hidden; opacity:0; background:transparent; box-shadow:none;
+                            border:none; outline:none; padding:0; margin:0;
+                            transition: opacity 0.4s ease-in, visibility 0.4s ease-in;">
                 </div>
 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
@@ -9084,6 +9086,11 @@ function playThemedSound(soundType) {
                 lazyInit: false           // Initialize immediately to show lips
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
+            
+            // Show the visualizer container now that it has content
+            visualizerContainer.style.visibility = 'visible';
+            visualizerContainer.style.opacity = '1';
+            
             console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
             console.log('🎨 Canvas count in container:', visualizerContainer.querySelectorAll('canvas').length);
             
