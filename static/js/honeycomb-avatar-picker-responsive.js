@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('THREE available:', typeof THREE !== 'undefined');
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
-    console.log('OBJLoader available:', typeof THREE !== 'undefined' && typeof THREE.OBJLoader !== 'undefined');
-    console.log('MTLLoader available:', typeof THREE !== 'undefined' && typeof THREE.MTLLoader !== 'undefined');
     
     loadAvatars();
     setupSearchFilter();
@@ -266,9 +264,6 @@ async function loadAvatars() {
                 is_glb: isGlbFormat,
                 // Store full URL from API - GLB-only (all avatars are GLB now)
                 glb_url: glbUrl,
-                // Also store filenames for detection
-                obj_file: (glbUrl || '').split('/').pop() || null,
-                mtl_file: null,
                 thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
                 // NEW: Lock status from monetization system
                 is_locked: avatar.is_locked || false,
@@ -288,10 +283,7 @@ async function loadAvatars() {
             // Prefer explicit slug when present
             const slugKey = norm(av.slug);
             if (slugKey) return slugKey;
-            // Fall back to model filename (without extension) if present
-            const modelName = (av.obj_file || '').replace(/\.[^.]+$/,'');
-            if (modelName) return norm(modelName);
-            // Next use thumbnail base name
+            // Use thumbnail base name for fallback
             const thumbName = (av.thumbnail || '').split('/').pop().replace(/\.[^.]+$/,'').replace(/!+$/,'');
             if (thumbName) return norm(thumbName);
             // Finally, the display name
@@ -689,198 +681,7 @@ function load3DAvatarGLB(avatar, containerId) {
     );
 }
 
-// Load OBJ 3D model with progress tracking
-function load3DAvatarOBJ(avatar, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error('❌ Container not found:', containerId);
-        return;
-    }
-    
-    const width = container.clientWidth || 250;
-    const height = container.clientHeight || 250;
-    
-    console.log(`🔄 Loading OBJ: ${avatar.name}, container: ${width}x${height}`);
-    updatePreviewProgress(10, 'Initializing 3D viewer...');
-    
-    // Three.js setup
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    // Color management for r128
-    if (typeof THREE.sRGBEncoding !== 'undefined') {
-        renderer.outputEncoding = THREE.sRGBEncoding;
-    }
-    
-    renderer.setSize(width, height);
-    renderer.setClearColor(0x000000, 0);
-    container.appendChild(renderer.domElement);
-    
-    updatePreviewProgress(20, 'Setting up lights...');
-    
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-    
-    // Function to load OBJ (with or without materials)
-    function loadOBJFile(materials = null) {
-        updatePreviewProgress(40, materials ? 'Loading model with materials...' : 'Loading model...');
-        
-        const objLoader = new THREE.OBJLoader();
-        if (materials) {
-            objLoader.setMaterials(materials);
-        }
-        
-        // OBJ loading removed - use GLB format exclusively
-        // This code path should never be reached now
-        console.warn('⚠️ Attempting OBJ load in deprecated function');
-                updatePreviewProgress(70, 'Processing geometry...');
-                
-                // If no materials provided, apply a default golden material
-                if (!materials) {
-                    const defaultMaterial = new THREE.MeshPhongMaterial({ 
-                        color: 0xFFD700,  // Golden color
-                        shininess: 30,
-                        flatShading: false
-                    });
-                    object.traverse(function(child) {
-                        if (child instanceof THREE.Mesh) {
-                            child.material = defaultMaterial;
-                        }
-                    });
-                }
-                
-                updatePreviewProgress(80, 'Centering model...');
-                
-                // Center and scale for full-body display
-                const box = new THREE.Box3().setFromObject(object);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = 2.5 / maxDim; // Slightly larger scale to show full body
-                
-                object.position.sub(center);
-                object.scale.set(scale, scale, scale);
-                object.position.y = 0; // Center vertically
-                
-                updatePreviewProgress(90, 'Applying materials...');
-                
-                // Post-load material/texture adjustments
-                object.traverse((node) => {
-                    if (node.isMesh) {
-                        const mats = Array.isArray(node.material) ? node.material : [node.material];
-                        mats.forEach(mat => {
-                            if (mat) {
-                                if (mat.map && typeof THREE.sRGBEncoding !== 'undefined') {
-                                    mat.map.encoding = THREE.sRGBEncoding;
-                                    if (mat.map.image) {
-                                        mat.map.needsUpdate = true;
-                                    }
-                                }
-                                mat.transparent = true;
-                                mat.alphaTest = 0.1;
-                            }
-                        });
-                    }
-                });
-
-                scene.add(object);
-                container.classList.remove('loading');
-                
-                updatePreviewProgress(95, 'Starting animation...');
-                
-                // Camera position for full-body view
-                camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
-                camera.lookAt(0, 0, 0);
-                
-                function animate() {
-                    requestAnimationFrame(animate);
-                    object.rotation.y += 0.003; // Slow rotation to show all angles
-                    renderer.render(scene, camera);
-                }
-                animate();
-                
-                // Final update
-                setTimeout(() => {
-                    updatePreviewProgress(100, 'Complete!');
-                    setTimeout(() => clearPreviewLoading(container, renderer.domElement), 300);
-                }, 300);
-            },
-            function(xhr) {
-                // Progress callback for OBJ file
-                if (xhr.lengthComputable) {
-                    const percentComplete = (xhr.loaded / xhr.total) * 100;
-                    const adjustedPercent = 40 + (percentComplete * 0.3); // Map to 40-70% range
-                    updatePreviewProgress(adjustedPercent, `Downloading: ${Math.round(percentComplete)}%`);
-                    console.log(`📥 OBJ download progress: ${Math.round(percentComplete)}%`);
-                }
-            },
-            function(error) {
-                console.error('❌ Error loading OBJ:', error);
-                container.classList.remove('loading');
-                // Try loading thumbnail as fallback
-                if (avatar.thumbnail) {
-                    container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
-                } else {
-                    container.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
-                }
-            }
-        );
-    }
-    
-    // Try to load MTL if available, otherwise load OBJ directly
-    if (avatar.mtl_file_url) {
-        updatePreviewProgress(30, 'Loading materials...');
-        
-        const basePath = avatar.mtl_file_url.substring(0, avatar.mtl_file_url.lastIndexOf('/') + 1);
-        const mtlFilename = avatar.mtl_file_url.substring(avatar.mtl_file_url.lastIndexOf('/') + 1);
-        
-        const mtlLoader = new THREE.MTLLoader();
-        mtlLoader.setPath(basePath);
-        if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
-        
-        mtlLoader.load(
-            mtlFilename,
-            function(materials) {
-                console.log('✅ MTL materials loaded for', avatar.name);
-                materials.preload();
-                
-                // Ensure all materials use proper color space
-                Object.values(materials.materials).forEach(mat => {
-                    // Defer texture updates to after OBJ load to avoid undefined image warnings
-                    mat.transparent = true;
-                    mat.alphaTest = 0.1;
-                });
-                
-                loadOBJFile(materials);
-            },
-            undefined,
-            function(error) {
-                console.warn('⚠️ MTL file not found, loading OBJ with default material:', error);
-                loadOBJFile(null); // Load without materials
-            }
-        );
-    } else {
-        // No MTL file specified, load OBJ directly with default material
-        console.log(`Loading OBJ without MTL for ${avatar.name}`);
-        loadOBJFile(null);
-    }
-}
-
-// ❌ DEPRECATED: load3DAvatarOBJ function has been removed
-// All avatars are now GLB-only. This function is kept as a stub for backward compatibility.
-// If this is called, it will show the thumbnail fallback instead.
-function load3DAvatarOBJ(avatar, containerId) {
-    console.warn('⚠️ OBJ loading deprecated. All avatars are now GLB-only. Using thumbnail fallback.');
-    const container = document.getElementById(containerId);
-    if (container && avatar.thumbnail) {
-        container.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
-    }
-}
+// All avatars are now GLB-only. OBJ/MTL loading removed.
 
 // Remove any loading UI from the preview container, keeping the WebGL canvas intact
 function clearPreviewLoading(container, canvasEl) {

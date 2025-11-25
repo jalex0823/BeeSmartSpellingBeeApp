@@ -2830,7 +2830,7 @@
                 {% endif %}
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <div class="logo-container" style="position: relative; display: inline-block;">
+                <div class="logo-container" style="position: relative; display: inline-block; margin-top: 2rem;">
                     <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="brand-logo crest-logo" style="
                         width: clamp(180px, 40vw, 320px);
                         height: auto;
@@ -2853,15 +2853,31 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Registered User Avatar Display (same container as guest carousel) -->
+                <!-- Registered User Avatar Display (matches non-registered carousel layout exactly) -->
                 <div class="guest-avatar-carousel">
                     <div class="avatar-slide">
                         <!-- 3D Avatar Display -->
                         <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 240px; height: 180px; margin: 0 auto; cursor: pointer;"></div>
+                        <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
                 </div>
                 
+                <!-- Interactive Caption under mascot (matches guest carousel aesthetic) -->
+                <div id="mascotCaption" style="
+                    font-size: 14px;
+                    color: #FF6B00;
+                    font-weight: 600;
+                    margin-top: 2px;
+                    margin-bottom: 4px;
+                    text-align: center;
+                    animation: gentlePulse 2s ease-in-out infinite;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onclick="handleMascotCaptionClick(event)">
+                    ✨ Click on me to see what I do! ✨
+                </div>
+
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
                     display: none;
@@ -2896,7 +2912,7 @@
                 <!-- Avatar Refresh Button (hidden by default, shows if avatar fails) -->
                 <button id="avatarRefreshBtn" style="
                     display: none;
-                    margin: 10px auto;
+                    margin: 20px auto 2rem;
                     padding: 8px 16px;
                     background: linear-gradient(135deg, #FFD700, #FFA500);
                     border: none;
@@ -2912,21 +2928,6 @@
                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 8px rgba(255, 165, 0, 0.3)'">
                     🔄 Reload Avatar
                 </button>
-                
-                <!-- Interactive Caption under mascot -->
-                <div id="mascotCaption" style="
-                    font-size: 14px;
-                    color: #FF6B00;
-                    font-weight: 600;
-                    margin-top: 2px;
-                    margin-bottom: 4px;
-                    text-align: center;
-                    animation: gentlePulse 2s ease-in-out infinite;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                " onclick="handleMascotCaptionClick(event)">
-                    ✨ Click on me to see what I do! ✨
-                </div>
                 {% endif %}
 
                 {% if not current_user.is_authenticated %}
