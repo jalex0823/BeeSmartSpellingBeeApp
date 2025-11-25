@@ -11188,6 +11188,31 @@ def api_speed_round_answer():
             speed_round['total_points'] += points_earned
             speed_round['correct_count'] += 1
             
+            # 🆕 REAL-TIME BUZZ DUST AWARDING: Award Buzz Dust immediately on each correct answer
+            if current_user.is_authenticated:
+                try:
+                    old_buzz_dust = current_user.total_buzz_dust or 0
+                    current_user.total_buzz_dust = old_buzz_dust + points_earned
+                    
+                    # Check for rank advancement
+                    from buzz_dust_helpers import get_bee_class
+                    old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
+                    new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
+                    
+                    if old_class_id != new_class_id:
+                        # User ranked up mid-speed-round!
+                        session['ranked_up_speed'] = True
+                        session['old_class_id_speed'] = old_class_id
+                        current_user.bee_class = new_class_id
+                        speed_logger.info(f"🎊 MID-SPEED-ROUND RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+                    
+                    # Commit the Buzz Dust update immediately
+                    db.session.commit()
+                    speed_logger.info(f"✨ BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
+                except Exception as e:
+                    speed_logger.error(f"Failed real-time Buzz Dust award: {e}")
+                    db.session.rollback()
+            
             print(f"✅ Correct! '{correct_spelling}' - {points_earned} pts (streak: {speed_round['current_streak']})")
         else:
             # Reset streak on wrong answer
@@ -11287,16 +11312,64 @@ def api_speed_round_complete():
         # Use Railway-safe database operations
         score_id = save_speed_round_score_railway(current_user.id, score_data)
         
+        # 🏆 Check for badge achievements in speed round
+        badges_unlocked = []
+        
+        # Build state object compatible with check_badges function
+        speed_state = {
+            'correct': words_correct,
+            'incorrect': words_attempted - words_correct,
+            'max_streak': speed_round['max_streak'],
+            'hints_used_total': 0,  # Speed round doesn't use hints
+            'session_points': speed_round['total_points'],
+            'history': speed_round['word_history']
+        }
+        
+        # Convert word_history to format expected by check_badges
+        for record in speed_state['history']:
+            if 'elapsed_ms' not in record and 'time_taken' in record:
+                record['elapsed_ms'] = int(record['time_taken'] * 1000)
+        
+        # Check badges using same logic as regular quiz
+        badges_unlocked = check_badges(speed_state, speed_round.get('word_list', []))
+        
+        # Calculate badge bonus points
+        badge_points = sum(b["points"] for b in badges_unlocked)
+        
         if score_id:
-            # Update user's comprehensive stats (quizzes, points, accuracy) using Railway-safe method
+            # 🆕 Points already awarded real-time during the round, so pass 0 here
+            # Only update quiz completion count and accuracy stats
             stats_updated = update_user_stats_railway(
                 current_user.id, 
-                speed_round['total_points'],
+                badge_points,  # Award badge bonus points (word points already saved incrementally)
                 words_correct,
                 words_attempted
             )
             
-            speed_logger.info(f"Speed Round saved: {words_correct}/{words_attempted} correct, {speed_round['total_points']} pts, stats_updated={stats_updated}")
+            # 🏆 Save badges to Achievement table
+            if badges_unlocked and current_user.is_authenticated:
+                try:
+                    for badge in badges_unlocked:
+                        achievement = Achievement(
+                            user_id=current_user.id,
+                            achievement_type=badge["type"],
+                            achievement_name=badge["name"],
+                            achievement_description=badge["message"],
+                            points_bonus=badge["points"],
+                            achievement_metadata={
+                                "icon": badge["icon"],
+                                "earned_in_speed_round": score_id,
+                                "speed_round_accuracy": accuracy
+                            }
+                        )
+                        db.session.add(achievement)
+                    db.session.commit()
+                    speed_logger.info(f"🏆 Saved {len(badges_unlocked)} badge(s) to Achievement table")
+                except Exception as e:
+                    speed_logger.error(f"Failed to save badges: {e}")
+                    db.session.rollback()
+            
+            speed_logger.info(f"Speed Round saved: {words_correct}/{words_attempted} correct, {speed_round['total_points']} pts (awarded real-time) + {badge_points} badge pts, stats_updated={stats_updated}")
         else:
             speed_logger.error("Failed to save Speed Round score")
         
@@ -11314,6 +11387,8 @@ def api_speed_round_complete():
         session['speed_round_results'] = {
             'score_id': score_id,
             'total_points': speed_round['total_points'],
+            'badge_points': badge_points,
+            'total_with_badges': speed_round['total_points'] + badge_points,
             'words_attempted': words_attempted,
             'words_correct': words_correct,
             'accuracy': round(accuracy, 1),
@@ -11323,7 +11398,8 @@ def api_speed_round_complete():
             'speed_bonuses': speed_round['speed_bonuses'],
             'difficulty': speed_round['config']['difficulty'],
             'config': speed_round['config'],
-            'incorrect_words': incorrect_words
+            'incorrect_words': incorrect_words,
+            'badges_earned': badges_unlocked  # 🏆 Include badges for display
         }
         
         # Clear speed round from session

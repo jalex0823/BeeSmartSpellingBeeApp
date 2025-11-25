@@ -182,11 +182,38 @@
         <div class="results-title">🏆 Round Complete! 🏆</div>
         <div class="results-subtitle">Amazing work, word wizard!</div>
 
+        {% if results.badges_earned and results.badges_earned|length > 0 %}
+        <!-- 🎊 BADGE CELEBRATION SECTION -->
+        <div style="margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-radius: 16px; border: 3px solid #FFB74D; box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);">
+            <h3 style="color: #E65100; margin-bottom: 1rem; font-size: 1.5rem; font-weight: 800;">
+                🎊 Badges Unlocked! 🎊
+            </h3>
+            <div style="display: grid; gap: 1rem;">
+                {% for badge in results.badges_earned %}
+                <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #FFB74D; display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);">
+                    <div style="font-size: 2.5rem;">{{ badge.icon }}</div>
+                    <div style="flex: 1; text-align: left;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
+                            {{ badge.name }}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #757575; margin-top: 0.25rem;">
+                            {{ badge.message }}
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #FFD54F 0%, #FFC107 100%); color: #E65100; padding: 0.5rem 1rem; border-radius: 999px; font-weight: 800; font-size: 1rem; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.4);">
+                        +{{ badge.points }} pts
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="stat-grid">
             <div class="stat-item">
                 <div class="stat-icon">💰</div>
-                <div class="stat-value">{{ results.total_points }}</div>
-                <div class="stat-label">Points Earned</div>
+                <div class="stat-value">{{ results.total_with_badges if results.total_with_badges else results.total_points }}</div>
+                <div class="stat-label">Total Points{% if results.badge_points and results.badge_points > 0 %} ({{ results.total_points }} + {{ results.badge_points }} badges){% endif %}</div>
             </div>
 
             <div class="stat-item">
