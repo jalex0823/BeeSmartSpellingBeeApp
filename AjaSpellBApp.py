@@ -9213,26 +9213,119 @@ def student_dashboard():
 @app.route('/api/user/avatar', methods=['POST'], endpoint='api_update_own_avatar')
 @login_required
 def api_update_user_avatar_legacy():
-    """API endpoint for a user to update their own avatar. (Legacy)"""
-    data = request.get_json()
-    if not data or 'avatar_id' not in data:
-        return jsonify({'status': 'error', 'message': 'Missing avatar_id in request.'}), 400
+    """API endpoint for a user to update their own avatar. (Legacy)
+    
+    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+    - Admins bypass all unlock checks
+    - Regular users must have earned/purchased the avatar
+    - Guest users cannot select avatars (fallback to mascot)
+    """
+    try:
+        data = request.get_json()
+        if not data or 'avatar_id' not in data:
+            return jsonify({'status': 'error', 'message': 'Missing avatar_id in request.'}), 400
 
-    avatar_id = data['avatar_id']
-    
-    # The update_avatar method on the User model handles validation and saving.
-    success, message = current_user.update_avatar(avatar_id)
-    
-    if success:
-        try:
-            db.session.commit()
-            return jsonify({'status': 'success', 'message': message})
-        except Exception as e:
-            db.session.rollback()
-            log_error(f"Database error after updating avatar for user {current_user.id}: {e}")
-            return jsonify({'status': 'error', 'message': 'Database error. Could not save avatar.'}), 500
-    else:
-        return jsonify({'status': 'error', 'message': message}), 400
+        avatar_id = data['avatar_id']
+        
+        # ✅ SECURITY CHECK 1: Verify user can select avatars
+        # Guest users (no password) cannot select avatars
+        if not current_user.password_hash:
+            return jsonify({
+                'status': 'error', 
+                'message': 'Guest users cannot select avatars. Please register to customize your bee!'
+            }), 403
+        
+        # ✅ SECURITY CHECK 2: Avatar unlock validation (unless admin)
+        if current_user.role != 'admin':
+            try:
+                from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
+                
+                # Get user's unlock eligibility
+                user_honey_points = getattr(current_user, 'honey_points', 0) or 0
+                purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
+                
+                # Check if avatar is unlocked
+                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                
+                if not unlock_result.get('unlocked', False):
+                    # Forbidden: User has not earned/purchased this avatar
+                    tier = next(
+                        (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_id),
+                        'premium'
+                    )
+                    
+                    if tier == 'premium':
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'This avatar is only available for purchase.',
+                            'reason': 'premium_locked'
+                        }), 403
+                    elif tier == 'earn_or_buy':
+                        points_needed = unlock_result.get('required_points', 0) - user_honey_points
+                        return jsonify({
+                            'status': 'error',
+                            'message': f'Earn {points_needed:,} more Honey Points or purchase to unlock this avatar.',
+                            'reason': 'points_required',
+                            'points_needed': max(0, points_needed)
+                        }), 403
+                    else:
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'This avatar is not yet unlocked. Complete more quizzes to earn it!',
+                            'reason': 'not_earned'
+                        }), 403
+                        
+            except ImportError:
+                # Fallback if avatar_catalog unavailable
+                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
+            except Exception as e:
+                print(f"⚠️ Error checking avatar unlock status: {e}")
+                # Continue with selection on catalog errors (fail-open for existing data)
+        
+        # ✅ SECURITY CHECK 3: Avatar parental lock (if parent locked their child's avatars)
+        if getattr(current_user, 'avatar_locked', False):
+            return jsonify({
+                'status': 'error',
+                'message': 'Your parent has locked avatar selection. Please ask them to unlock it.',
+                'reason': 'parental_lock'
+            }), 403
+        
+        # ✅ UPDATE: The update_avatar method on the User model handles saving.
+        success, message = current_user.update_avatar(avatar_id)
+        
+        if success:
+            try:
+                # Mark avatar as explicitly selected
+                prefs = current_user.preferences or {}
+                prefs['avatar_selected'] = True
+                prefs['avatar_selected_at'] = datetime.now(timezone.utc).isoformat()
+                current_user.preferences = prefs
+                
+                db.session.commit()
+                
+                # 📊 AUDIT: Log avatar selection
+                print(f"✅ User {current_user.id} ({current_user.username}) selected avatar: {avatar_id}")
+                
+                return jsonify({
+                    'status': 'success', 
+                    'message': message,
+                    'avatar_id': avatar_id
+                })
+            except Exception as e:
+                db.session.rollback()
+                log_error(f"Database error after updating avatar for user {current_user.id}: {e}")
+                return jsonify({'status': 'error', 'message': 'Database error. Could not save avatar.'}), 500
+        else:
+            # Avatar not found or update failed
+            return jsonify({'status': 'error', 'message': message}), 400
+            
+    except Exception as e:
+        print(f"❌ Unexpected error in avatar selection: {e}")
+        return jsonify({
+            'status': 'error', 
+            'message': 'An unexpected error occurred. Please try again.',
+            'error': str(e) if app.debug else None
+        }), 500
 
 
 @app.route('/avatar-picker')
@@ -12091,7 +12184,13 @@ def api_get_user_avatar(user_id):
 @app.route("/api/users/<int:user_id>/avatar", methods=["PUT"], endpoint='api_admin_or_user_update_avatar')
 @login_required
 def api_admin_or_user_update_avatar(user_id):
-    """Update a user's avatar"""
+    """Update a user's avatar
+    
+    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+    - Users can only update their own avatar (unless admin updating for others)
+    - Unlock validation applied for non-admins
+    - Respects parental locks
+    """
     try:
         # Check permission - users can only update their own avatar
         if current_user.id != user_id:
@@ -12107,6 +12206,20 @@ def api_admin_or_user_update_avatar(user_id):
                 'message': 'User not found'
             }), 404
         
+        # ✅ SECURITY CHECK 1: Guest users cannot select avatars
+        if not user.password_hash:
+            return jsonify({
+                'status': 'error',
+                'message': 'Guest users cannot select avatars. Please register to customize your bee!'
+            }), 403
+        
+        # ✅ SECURITY CHECK 2: Parental lock
+        if getattr(user, 'avatar_locked', False):
+            return jsonify({
+                'status': 'error',
+                'message': 'Your parent has locked avatar selection. Please ask them to unlock it.'
+            }), 403
+        
         data = request.get_json()
         avatar_id = data.get('avatar_id')
         variant = data.get('variant', 'male')
@@ -12116,6 +12229,51 @@ def api_admin_or_user_update_avatar(user_id):
                 'status': 'error',
                 'message': 'avatar_id is required'
             }), 400
+        
+        # ✅ SECURITY CHECK 3: Unlock validation (unless admin)
+        if user.role != 'admin':
+            try:
+                from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
+                
+                # Get user's unlock eligibility
+                user_honey_points = getattr(user, 'honey_points', 0) or 0
+                purchased_avatars = getattr(user, 'purchased_avatars', []) or []
+                
+                # Check if avatar is unlocked
+                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                
+                if not unlock_result.get('unlocked', False):
+                    # Forbidden: User has not earned/purchased this avatar
+                    tier = next(
+                        (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_id),
+                        'premium'
+                    )
+                    
+                    if tier == 'premium':
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'This avatar is only available for purchase.',
+                            'reason': 'premium_locked'
+                        }), 403
+                    elif tier == 'earn_or_buy':
+                        points_needed = unlock_result.get('required_points', 0) - user_honey_points
+                        return jsonify({
+                            'status': 'error',
+                            'message': f'Earn {points_needed:,} more Honey Points or purchase to unlock this avatar.',
+                            'reason': 'points_required',
+                            'points_needed': max(0, points_needed)
+                        }), 403
+                    else:
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'This avatar is not yet unlocked. Complete more quizzes to earn it!',
+                            'reason': 'not_earned'
+                        }), 403
+                        
+            except ImportError:
+                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
+            except Exception as e:
+                print(f"⚠️ Error checking avatar unlock status: {e}")
         
         # Update avatar
         success, message = user.update_avatar(avatar_id, variant)
@@ -12130,6 +12288,7 @@ def api_admin_or_user_update_avatar(user_id):
         try:
             prefs = user.preferences or {}
             prefs['avatar_selected'] = True
+            prefs['avatar_selected_at'] = datetime.now(timezone.utc).isoformat()
             user.preferences = prefs
         except Exception:
             pass
@@ -12140,7 +12299,8 @@ def api_admin_or_user_update_avatar(user_id):
         avatar_data = user.get_avatar_data()
         use_mascot = not user.has_selected_avatar()
 
-        print(f"🐝 User {user.username} updated avatar to {avatar_id} ({variant})")
+        # 📊 AUDIT: Log avatar selection
+        print(f"✅ User {user.id} ({user.username}) updated avatar to {avatar_id} ({variant})")
 
         return jsonify({
             'status': 'success',
@@ -12163,7 +12323,12 @@ def api_admin_or_user_update_avatar(user_id):
 def api_select_avatar():
     """
     Simple avatar selection endpoint for the avatar picker
-    Accepts avatar_slug and updates current user's avatar
+    
+    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+    - Admins bypass all unlock checks
+    - Regular users must have earned/purchased the avatar
+    - Guest users cannot select avatars
+    - Respects parental locks on account
     """
     try:
         from models import Avatar
@@ -12176,6 +12341,20 @@ def api_select_avatar():
                 'success': False,
                 'error': 'avatar_slug is required'
             }), 400
+        
+        # ✅ SECURITY CHECK 1: Guest users cannot select avatars
+        if not current_user.password_hash:
+            return jsonify({
+                'success': False,
+                'error': 'Guest users cannot select avatars. Please register to customize your bee!'
+            }), 403
+        
+        # ✅ SECURITY CHECK 2: Parental lock
+        if getattr(current_user, 'avatar_locked', False):
+            return jsonify({
+                'success': False,
+                'error': 'Your parent has locked avatar selection. Please ask them to unlock it.'
+            }), 403
         
         # Look up avatar by slug; if missing, attempt auto-install from GLB folder
         avatar = Avatar.query.filter_by(slug=avatar_slug, is_active=True).first()
@@ -12235,6 +12414,51 @@ def api_select_avatar():
                     'error': f'Avatar not found: {avatar_slug}'
                 }), 404
         
+        # ✅ SECURITY CHECK 3: Unlock validation (unless admin)
+        if current_user.role != 'admin':
+            try:
+                from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
+                
+                # Get user's unlock eligibility
+                user_honey_points = getattr(current_user, 'honey_points', 0) or 0
+                purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
+                
+                # Check if avatar is unlocked
+                unlock_result = check_avatar_unlocked(avatar_slug, user_honey_points, purchased_avatars)
+                
+                if not unlock_result.get('unlocked', False):
+                    # Forbidden: User has not earned/purchased this avatar
+                    tier = next(
+                        (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_slug),
+                        'premium'
+                    )
+                    
+                    if tier == 'premium':
+                        return jsonify({
+                            'success': False,
+                            'error': 'This avatar is only available for purchase.',
+                            'reason': 'premium_locked'
+                        }), 403
+                    elif tier == 'earn_or_buy':
+                        points_needed = unlock_result.get('required_points', 0) - user_honey_points
+                        return jsonify({
+                            'success': False,
+                            'error': f'Earn {points_needed:,} more Honey Points or purchase to unlock this avatar.',
+                            'reason': 'points_required',
+                            'points_needed': max(0, points_needed)
+                        }), 403
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'error': 'This avatar is not yet unlocked. Complete more quizzes to earn it!',
+                            'reason': 'not_earned'
+                        }), 403
+                        
+            except ImportError:
+                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_slug}")
+            except Exception as e:
+                print(f"⚠️ Error checking avatar unlock status: {e}")
+        
         # Update current user's avatar
         success, message = current_user.update_avatar(avatar.slug, variant='default')
         
@@ -12248,13 +12472,15 @@ def api_select_avatar():
         try:
             prefs = current_user.preferences or {}
             prefs['avatar_selected'] = True
+            prefs['avatar_selected_at'] = datetime.now(timezone.utc).isoformat()
             current_user.preferences = prefs
         except Exception as e:
             print(f"⚠️ Could not update preferences: {e}")
         
         db.session.commit()
         
-        print(f"✅ User {current_user.username} selected avatar: {avatar_slug}")
+        # 📊 AUDIT: Log avatar selection
+        print(f"✅ User {current_user.id} ({current_user.username}) selected avatar via picker: {avatar_slug}")
         
         return jsonify({
             'success': True,
