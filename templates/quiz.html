@@ -8316,27 +8316,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Give GLB loading a chance to start (it's async in loadModel)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Reduced delay for faster page interaction
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         console.log(`✨ 3D mascot initialization started with avatar: ${avatarId}`);
         
-        // 🎯 Also load avatar in quiz header
-        try {
-            const headerAvatarContainer = document.getElementById('quizHeaderAvatar');
-            if (headerAvatarContainer) {
-                const headerAvatarOptions = {
-                    ...avatarOptions,
-                    width: 50,
-                    height: 50,
-                    autoRotate: false,
-                    enableInteraction: false
-                };
-                new SmartyBee3D('quizHeaderAvatar', headerAvatarOptions);
-                console.log('✅ Quiz header avatar loaded');
+        // 🎯 Defer header avatar loading to not block main mascot
+        setTimeout(() => {
+            try {
+                const headerAvatarContainer = document.getElementById('quizHeaderAvatar');
+                if (headerAvatarContainer) {
+                    const headerAvatarOptions = {
+                        ...avatarOptions,
+                        width: 50,
+                        height: 50,
+                        autoRotate: false,
+                        enableInteraction: false
+                    };
+                    new SmartyBee3D('quizHeaderAvatar', headerAvatarOptions);
+                    console.log('✅ Quiz header avatar loaded');
+                }
+            } catch (headerError) {
+                console.warn('⚠️ Failed to load header avatar:', headerError);
             }
-        } catch (headerError) {
-            console.warn('⚠️ Failed to load header avatar:', headerError);
-        }
+        }, 1000); // Load header avatar 1 second after main mascot
         
         // 🐝 Load and display Buzz Dust rank
         try {
@@ -9071,14 +9074,14 @@ function playThemedSound(soundType) {
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 18000,    // High-detail primary setting (will auto-fallback if low perf)
-                sampleStep: 1,            // Finer sampling of mask for dense silhouette
+                particleCount: 8000,     // Reduced for performance (auto-fallback to 6000 on low perf)
+                sampleStep: 2,            // Balanced sampling (1=detailed, 2=performance)
                 background: 'transparent',
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
                 maskUrl: '/static/assets/visualizer/lips_mask.png',
-                lazyInit: false           // Initialize immediately on page load
+                lazyInit: true            // Defer init until first speech (improves page load)
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
             console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
