@@ -12,11 +12,12 @@
 <div class="rank-progress-container">
     <div class="rank-header">
         <div class="current-rank">
-            <img src="{{ url_for('static', filename='assets/badges/' + rank_progress.current_class.badge_image) }}" 
-                 alt="{{ rank_progress.current_class.label }}" 
-                 class="rank-badge-image"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
-            <span class="rank-emoji" style="display:none;">{{ rank_progress.current_class.emoji }}</span>
+            <!-- 3D GLB Badge Container -->
+            <div class="rank-badge-3d" 
+                 id="rankBadge3D" 
+                 data-badge-file="{{ rank_progress.current_class.badge_image }}"
+                 style="width: 60px; height: 60px; display: inline-block; margin-right: 8px;">
+            </div>
             <span class="rank-title">{{ rank_progress.current_class.label }}</span>
         </div>
         {% if not rank_progress.at_max_rank %}
@@ -238,3 +239,23 @@
     }
 }
 </style>
+
+<script>
+// Initialize 3D badge rendering when component loads
+(function() {
+    const badge3DContainer = document.getElementById('rankBadge3D');
+    if (badge3DContainer && typeof Badge3DRenderer !== 'undefined') {
+        const badgeFile = badge3DContainer.dataset.badgeFile;
+        if (badgeFile) {
+            console.log('🎖️ Rendering 3D rank badge:', badgeFile);
+            new Badge3DRenderer(badge3DContainer, {
+                badgeFile: badgeFile,
+                width: 60,
+                height: 60,
+                autoRotate: true,
+                rotationSpeed: 0.3
+            });
+        }
+    }
+})();
+</script>

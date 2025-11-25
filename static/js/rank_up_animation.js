@@ -48,7 +48,7 @@ class RankUpAnimator {
                 
                 <div class=\"rank-transition\">
                     <div class=\"old-rank slide-out-left\">
-                        <img class=\"rank-badge-img\" src=\"\" alt=\"\" style=\"display:none;\">
+                        <div class=\"rank-badge-3d\" data-badge-container=\"old\" style=\"width:80px;height:80px;display:none;\"></div>
                         <span class=\"rank-emoji\"></span>
                         <span class=\"rank-label\"></span>
                     </div>
@@ -56,7 +56,7 @@ class RankUpAnimator {
                     <div class=\"rank-arrow\">→</div>
                     
                     <div class=\"new-rank slide-in-right\">
-                        <img class=\"rank-badge-img\" src=\"\" alt=\"\" style=\"display:none;\">
+                        <div class=\"rank-badge-3d\" data-badge-container=\"new\" style=\"width:80px;height:80px;display:none;\"></div>
                         <span class=\"rank-emoji\"></span>
                         <span class=\"rank-label\"></span>
                     </div>
@@ -85,34 +85,46 @@ class RankUpAnimator {
     playAnimation(overlay, oldClass, newClass, totalBuzzDust) {
         // Populate old rank
         const oldRankEl = overlay.querySelector('.old-rank');
-        const oldBadgeImg = oldRankEl.querySelector('.rank-badge-img');
+        const oldBadge3D = oldRankEl.querySelector('[data-badge-container="old"]');
         const oldEmoji = oldRankEl.querySelector('.rank-emoji');
         
-        if (oldClass.badge_image) {
-            oldBadgeImg.src = `/static/assets/badges/${oldClass.badge_image}`;
-            oldBadgeImg.alt = oldClass.label;
-            oldBadgeImg.style.display = 'block';
+        if (oldClass.badge_image && window.Badge3DRenderer) {
+            new Badge3DRenderer(oldBadge3D, {
+                badgeFile: oldClass.badge_image,
+                width: 80,
+                height: 80,
+                autoRotate: true,
+                rotationSpeed: 0.5,
+                enableLighting: true
+            });
+            oldBadge3D.style.display = 'block';
             oldEmoji.style.display = 'none';
         } else {
             oldEmoji.textContent = oldClass.emoji;
-            oldBadgeImg.style.display = 'none';
+            oldBadge3D.style.display = 'none';
             oldEmoji.style.display = 'block';
         }
         oldRankEl.querySelector('.rank-label').textContent = oldClass.label;
         
         // Populate new rank
         const newRankEl = overlay.querySelector('.new-rank');
-        const newBadgeImg = newRankEl.querySelector('.rank-badge-img');
+        const newBadge3D = newRankEl.querySelector('[data-badge-container="new"]');
         const newEmoji = newRankEl.querySelector('.rank-emoji');
         
-        if (newClass.badge_image) {
-            newBadgeImg.src = `/static/assets/badges/${newClass.badge_image}`;
-            newBadgeImg.alt = newClass.label;
-            newBadgeImg.style.display = 'block';
+        if (newClass.badge_image && window.Badge3DRenderer) {
+            new Badge3DRenderer(newBadge3D, {
+                badgeFile: newClass.badge_image,
+                width: 80,
+                height: 80,
+                autoRotate: true,
+                rotationSpeed: 0.5,
+                enableLighting: true
+            });
+            newBadge3D.style.display = 'block';
             newEmoji.style.display = 'none';
         } else {
             newEmoji.textContent = newClass.emoji;
-            newBadgeImg.style.display = 'none';
+            newBadge3D.style.display = 'none';
             newEmoji.style.display = 'block';
         }
         newRankEl.querySelector('.rank-label').textContent = newClass.label;

@@ -601,7 +601,7 @@
   <div class="hive-board">
     <!-- Badge Banner -->
     <div class="badge-banner">
-      <img class="badge-icon" id="badgeIcon" src="/static/assets/badges/glb_files/Novice.glb" alt="Badge" style="display:none;">
+      <div class="badge-icon rank-badge-3d" id="badgeIcon" style="width:48px;height:48px;display:none;"></div>
       <div id="badgeName">Novice Bee</div>
       <div>Buzz Dust: <span id="buzzDustTotal">0</span> ✨</div>
     </div>
@@ -689,11 +689,18 @@
         console.log('✅ [WORD HIVES] Buzz Dust API response:', data);
         
         if(data && data.current_class){
-          // Update badge image
+          // Update badge with 3D renderer
           const badgeEl = document.getElementById('badgeIcon');
-          if(badgeEl && data.current_class.badge_image){
-            badgeEl.src = `/static/assets/badges/glb_files/${data.current_class.badge_image}`;
-            badgeEl.alt = data.current_class.label + ' Badge';
+          if(badgeEl && data.current_class.badge_image && window.Badge3DRenderer){
+            badgeEl.innerHTML = '';
+            new Badge3DRenderer(badgeEl, {
+              badgeFile: data.current_class.badge_image,
+              width: 48,
+              height: 48,
+              autoRotate: true,
+              rotationSpeed: 0.3,
+              enableLighting: true
+            });
             badgeEl.style.display = 'block';
           }
           

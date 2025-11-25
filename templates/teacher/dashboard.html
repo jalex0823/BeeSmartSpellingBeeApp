@@ -408,7 +408,7 @@
             <!-- Buzz Dust Rank Badge -->
             <div id="teacher-buzz-dust-rank" style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 0.75rem 1.25rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);">
-                    <img id="teacher-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
+                    <div id="teacher-rank-badge" class="rank-badge-3d" style="width: 48px; height: 48px; display: none;"></div>
                     <div style="text-align: left;">
                         <div id="teacher-rank-name" style="font-size: 0.875rem; font-weight: 700; color: #5A2C15;">Loading...</div>
                         <div id="teacher-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900; color: #8B4513;">0 ✨</div>
@@ -852,13 +852,21 @@
                             console.log('✅ Teacher Buzz Dust amount updated:', data.total_buzz_dust);
                         }
                         
-                        if (badgeEl && data.current_class.badge_image) {
-                            // Construct the badge URL from badge_image filename
-                            const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                            badgeEl.src = badgeUrl;
-                            badgeEl.alt = data.current_class.label + ' Badge';
+                        if (badgeEl && data.current_class.badge_image && window.Badge3DRenderer) {
+                            // Clear existing badge
+                            badgeEl.innerHTML = '';
+                            
+                            // Create 3D badge
+                            new Badge3DRenderer(badgeEl, {
+                                badgeFile: data.current_class.badge_image,
+                                width: 48,
+                                height: 48,
+                                autoRotate: true,
+                                rotationSpeed: 0.3,
+                                enableLighting: true
+                            });
                             badgeEl.style.display = 'block';
-                            console.log('✅ Teacher badge image updated:', badgeUrl);
+                            console.log('✅ Teacher 3D badge rendered:', data.current_class.badge_image);
                         }
                     } else {
                         console.error('❌ API returned success=false:', data);

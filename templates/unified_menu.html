@@ -2669,7 +2669,7 @@
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
                     max-width: 380px;
                 ">
-                    <img id="student-rank-badge" src="" alt="Rank Badge" style="width: 72px; height: 72px; display: none; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));">
+                    <div id="student-rank-badge" class="rank-badge-3d" style="width: 72px; height: 72px; display: none;"></div>
                     <div style="text-align: left; flex: 1;">
                         <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
                             <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
@@ -15174,16 +15174,27 @@
                     console.warn('⚠️ [TICKER] Element #student-buzz-dust-amount not found in DOM');
                 }
                 
-                // Update badge image
+                // Update badge with 3D renderer
                 const badgeEl = document.getElementById('student-rank-badge');
-                if (badgeEl && data.current_class.badge_image) {
-                    const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                    badgeEl.src = badgeUrl;
-                    badgeEl.alt = data.current_class.label + ' Badge';
+                if (badgeEl && data.current_class.badge_image && window.Badge3DRenderer) {
+                    // Clear existing badge
+                    badgeEl.innerHTML = '';
+                    
+                    // Create 3D badge
+                    new Badge3DRenderer(badgeEl, {
+                        badgeFile: data.current_class.badge_image,
+                        width: 72,
+                        height: 72,
+                        autoRotate: true,
+                        rotationSpeed: 0.3,
+                        enableLighting: true
+                    });
                     badgeEl.style.display = 'block';
-                    console.log('✅ [TICKER] Badge image updated:', badgeUrl);
+                    console.log('✅ [TICKER] 3D Badge rendered:', data.current_class.badge_image);
                 } else if (!badgeEl) {
                     console.warn('⚠️ [TICKER] Element #student-rank-badge not found in DOM');
+                } else if (!window.Badge3DRenderer) {
+                    console.warn('⚠️ [TICKER] Badge3DRenderer not available, using fallback');
                 } else {
                     console.warn('⚠️ [TICKER] No badge_image in response:', data.current_class);
                 }
