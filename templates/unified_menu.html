@@ -7720,8 +7720,8 @@
                         data.issues.forEach(issue => console.warn('  -', issue));
                     }
                     
-                    // CRITICAL: Show warning if using default words when user uploaded before
-                    if (data.using_default_words && data.has_uploaded_once) {
+                    // CRITICAL: Show warning if using default words when user uploaded before (but NOT in Random Play mode)
+                    if (data.using_default_words && data.has_uploaded_once && !data.is_random_play) {
                         console.error('🚨 CRITICAL: Using default words but user previously uploaded custom list!');
                         showErrorMessage('⚠️ Your word list was lost! Please re-upload your words before starting the quiz.');
                         return;
