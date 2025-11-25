@@ -880,21 +880,33 @@ function chooseAvatar() {
         body: JSON.stringify({ avatar_slug: selectedAvatar.slug })
     })
     .then(response => {
+        console.log(`📡 Avatar select response status: ${response.status}`);
+        
         if (!response.ok) {
-            // If not authenticated, redirect to login/registration
-            if (response.status === 401 || response.status === 403) {
-                const next = encodeURIComponent(window.location.pathname);
-                window.location.href = `/auth/login?next=${next}`;
-                return Promise.reject(new Error('Authentication required'));
-            }
-            return response.json().then(err => Promise.reject(new Error(err.error || `HTTP ${response.status}`)));
+            // Try to parse error details
+            return response.json().catch(() => ({})).then(data => {
+                const errorMsg = data.error || `HTTP ${response.status}`;
+                console.error(`❌ Avatar select failed (${response.status}): ${errorMsg}`, data);
+                
+                // If 401/403 and not already logged in, redirect to auth
+                if ((response.status === 401 || response.status === 403) && !window.isUserLoggedIn) {
+                    const next = encodeURIComponent(window.location.pathname);
+                    window.location.href = `/auth/login?next=${next}`;
+                    return Promise.reject(new Error('Authentication required'));
+                }
+                
+                // For other errors, show detailed message
+                return Promise.reject(new Error(errorMsg));
+            });
         }
         return response.json();
     })
     .then(data => {
-        console.log('✅ Avatar selection saved:', data);
+        console.log('✅ Avatar selection response:', data);
         
         if (data.success) {
+            console.log(`🎉 Avatar successfully selected: ${data.avatar.name}`);
+            
             // Show success message
             if (btn) {
                 btn.textContent = '✓ Saved!';
@@ -921,8 +933,10 @@ function chooseAvatar() {
     })
     .catch(error => {
         console.error('❌ Error selecting avatar:', error);
-        // If we got here without redirecting, show a friendly message and reset button
-        alert('Please log in or register to change your avatar.');
+        const errorMsg = error.message || 'An unexpected error occurred. Please try again.';
+        
+        // Show detailed error message
+        alert(`Could not change your avatar: ${errorMsg}`);
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Choose This Bee';

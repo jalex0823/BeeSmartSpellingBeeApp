@@ -2518,6 +2518,62 @@ def api_debug_session():
     
     return jsonify(result)
 
+@app.route("/api/debug/avatar-picker", methods=["GET"])
+@login_required
+def api_debug_avatar_picker():
+    """Debug endpoint for avatar picker and selection issues"""
+    try:
+        from models import Avatar
+        
+        result = {
+            "authenticated": current_user.is_authenticated,
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "role": current_user.role,
+            "current_avatar": current_user.avatar_id,
+            "avatar_locked": getattr(current_user, 'avatar_locked', False),
+            "password_hash": bool(current_user.password_hash),
+            "honey_points": getattr(current_user, 'honey_points', 0),
+            "purchased_avatars": getattr(current_user, 'purchased_avatars', []),
+        }
+        
+        # Count avatars in database
+        avatar_count = Avatar.query.filter_by(is_active=True).count()
+        result["avatars_in_database"] = avatar_count
+        
+        # Check specific avatar we're trying to select
+        test_avatar = Avatar.query.filter_by(slug="brother-bee", is_active=True).first()
+        result["brother_bee_exists"] = bool(test_avatar)
+        if test_avatar:
+            result["brother_bee_data"] = {
+                "name": test_avatar.name,
+                "category": test_avatar.category,
+                "is_active": test_avatar.is_active
+            }
+        
+        # Check if GLB files exist
+        import os
+        glb_path = os.path.join(app.root_path, 'static', 'assets', 'avatars', 'glb_files')
+        glb_exists = os.path.isdir(glb_path)
+        result["glb_folder_exists"] = glb_exists
+        if glb_exists:
+            glb_files = [f for f in os.listdir(glb_path) if f.lower().endswith('.glb')]
+            result["glb_files_count"] = len(glb_files)
+            if "BrotherBee.glb" in [f for f in os.listdir(glb_path)]:
+                result["brother_bee_glb_exists"] = True
+        
+        result["status"] = "✅ Ready"
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Avatar picker debug error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "status": "❌ Error",
+            "error": str(e)
+        }), 500
+
 @app.route("/api/debug/systems-diagnostic", methods=["GET"])
 def systems_diagnostic():
     """Comprehensive systems diagnostic - tests all major functions, quizzes, and database connections."""
@@ -11657,7 +11713,9 @@ def api_get_avatars():
 
     # Append latest GLB entries
         base_path = "/static/assets/avatars/glb_files"
+        print(f"📊 Processing {len(glb_latest)} GLB avatars from glb_latest...")
         for slug, info in glb_latest.items():
+            print(f"  ➤ GLB Avatar - slug='{slug}', base='{info['base']}', fname='{info['fname']}'")
             model_url = f"{base_path}/{info['fname']}"
             thumb_url = _thumbnail_for_base(info['base'])
             thumb_cb = _cachebust_url(thumb_url)
@@ -11805,9 +11863,12 @@ def api_get_avatars():
         
         # DEBUG: Log first few avatars
         if enriched_avatars:
-            print(f"🐝 First avatar in response: {enriched_avatars[0].get('name')} - URLs: {enriched_avatars[0].get('urls')}")
+            print(f"🐝 First avatar in response: {enriched_avatars[0].get('name')} - ID: {enriched_avatars[0].get('id')}")
             if len(enriched_avatars) > 1:
-                print(f"🐝 Second avatar in response: {enriched_avatars[1].get('name')} - URLs: {enriched_avatars[1].get('urls')}")
+                print(f"🐝 Second avatar in response: {enriched_avatars[1].get('name')} - ID: {enriched_avatars[1].get('id')}")
+            # Log all avatar IDs for debugging
+            all_ids = [av.get('id') for av in enriched_avatars]
+            print(f"🐝 All avatar IDs in response: {all_ids[:10]}")  # Log first 10
         
         return jsonify(response_data)
 
@@ -12333,7 +12394,24 @@ def api_select_avatar():
     try:
         from models import Avatar
         
+        # Debug: Log current user info
+        print(f"🔍 Avatar select endpoint - User: {current_user.id} ({current_user.username}), Role: {current_user.role}")
+        
+        # SAFETY CHECK: Ensure current_user is valid
+        if not current_user or not current_user.is_authenticated:
+            print(f"❌ Current user is not authenticated")
+            return jsonify({
+                'success': False,
+                'error': 'You must be logged in to change your avatar.'
+            }), 401
+        
         data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request body is empty'
+            }), 400
+            
         avatar_slug = data.get('avatar_slug')
         
         if not avatar_slug:
