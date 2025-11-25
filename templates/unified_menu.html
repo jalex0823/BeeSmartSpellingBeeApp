@@ -13051,10 +13051,6 @@
                 loader.style.opacity = '0';
                 loader.style.visibility = 'hidden';
                 setTimeout(() => { loader.style.display = 'none'; }, 350);
-                
-                // Dispatch event to notify avatar loader
-                console.log('🍯 Dispatching honeyLoaderFinished event');
-                document.dispatchEvent(new Event('honeyLoaderFinished'));
             }
 
             async finishLoading() {
@@ -13088,6 +13084,10 @@
                         console.warn('⚠️ Battle check failed:', err);
                     });
                 }
+                
+                // ✅ Dispatch honeyLoaderFinished event for avatar loader
+                console.log('🍯 Dispatching honeyLoaderFinished event');
+                document.dispatchEvent(new Event('honeyLoaderFinished'));
             }
         }
         
