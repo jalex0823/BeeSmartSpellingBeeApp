@@ -34,8 +34,7 @@
     
     <!-- Three.js Loaders - Must load after Three.js core -->
     <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" onerror="console.warn('OBJLoader CDN failed'); window.OBJ_LOADER_FAILED = true;"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js" onerror="console.warn('MTLLoader CDN failed'); window.MTL_LOADER_FAILED = true;"></script>
+    <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
         window.BEE_MODEL_BASE = "{{ url_for('static', filename='models') }}/";
@@ -75,7 +74,7 @@
         })();
     </script>
     <!-- Mascot Bee 3D Component -->
-    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}?v=20251124-fix"></script>
+    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
     <!-- User Avatar Loader -->
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
@@ -2835,7 +2834,7 @@
                     <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="brand-logo crest-logo" style="
                         width: clamp(180px, 40vw, 320px);
                         height: auto;
-                        margin: 8px auto 10px;
+                        margin: 6px auto 8px;
                         display: block;
                         filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
                         background: transparent !important;
@@ -2854,44 +2853,19 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- 3D Avatar Display (registered users only): Styled to match guest carousel -->
-                {# Do not render the mascot/morph container on the admin dashboard page (#/admin/dashboard) - admin handles its own avatar markup #}
-                {% if request.path != '/admin/dashboard' %}
-                <div class="morph-container mode-voice" style="
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 8px 0;
-                    margin: 10px 0 10px;
-                    transition: opacity 380ms ease, transform 380ms ease;
-                ">
-                    <div class="morph-content" style="
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 8px;
-                        width: auto;
-                        height: auto;
-                        position: relative;
-                    ">
-                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" class="main-page-avatar-entrance" style="
-                            width: 240px;
-                            height: 180px;
-                            margin: 0;
-                            position: relative;
-                            cursor: pointer;
-                            border-radius: 16px;
-                            box-shadow: 0 10px 22px rgba(0,0,0,0.12);
-                        "></div>
+                <!-- Registered User Avatar Display (same container as guest carousel) -->
+                <div class="guest-avatar-carousel">
+                    <div class="avatar-slide">
+                        <!-- 3D Avatar Display -->
+                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 240px; height: 180px; margin: 0 auto; cursor: pointer;"></div>
+                        <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
                 </div>
-                {% endif %}
                 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
                     display: none;
-                    margin: 14px auto 12px;
+                    margin: 8px auto 10px;
                     padding: 4px 8px;
                     background: rgba(0, 0, 0, 0.1);
                     border-radius: 12px;
@@ -2944,8 +2918,8 @@
                     font-size: 14px;
                     color: #FF6B00;
                     font-weight: 600;
-                    margin-top: 0;
-                    margin-bottom: 2px;
+                    margin-top: 2px;
+                    margin-bottom: 4px;
                     text-align: center;
                     animation: gentlePulse 2s ease-in-out infinite;
                     cursor: pointer;
@@ -2954,22 +2928,6 @@
                     ✨ Click on me to see what I do! ✨
                 </div>
                 {% endif %}
-
-                <!-- Scoped script to center the mascot (already centered by container flex layout) -->
-                <script>
-                    document.addEventListener('DOMContentLoaded', function(){
-                        try {
-                            var mascot = document.getElementById('mascotBee3D');
-                            if (!mascot) return; // nothing to do
-
-                            // The morph-container and morph-content use flexbox to center
-                            // No additional centering needed - styles are already applied
-                            console.log('[MascotDisplay] Avatar container ready with guest-carousel styling');
-                        } catch (e) {
-                            console.warn('Could not initialize mascot display:', e);
-                        }
-                    });
-                </script>
 
                 {% if not current_user.is_authenticated %}
                 <!-- Guest-only Avatar Carousel (calm, accessible) -->
@@ -7762,8 +7720,8 @@
                         data.issues.forEach(issue => console.warn('  -', issue));
                     }
                     
-                    // CRITICAL: Show warning if using default words when user uploaded before
-                    if (data.using_default_words && data.has_uploaded_once) {
+                    // CRITICAL: Show warning if using default words when user uploaded before (but NOT in Random Play mode)
+                    if (data.using_default_words && data.has_uploaded_once && !data.is_random_play) {
                         console.error('🚨 CRITICAL: Using default words but user previously uploaded custom list!');
                         showErrorMessage('⚠️ Your word list was lost! Please re-upload your words before starting the quiz.');
                         return;
@@ -8042,166 +8000,13 @@
                 return;
             }
             
-            // Check if loaders are available
-            if (typeof THREE.OBJLoader === 'undefined' || typeof THREE.MTLLoader === 'undefined') {
-                console.warn('⚠️ Three.js loaders not loaded - using simple 3D animation');
-                createSimple3DAnimation(container);
-                return;
-            }
-            
-            // Clear any existing content
-            container.innerHTML = '';
-            
-            // Create Three.js scene for 3D beehive
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(45, 200 / 200, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ 
-                alpha: true, 
-                antialias: true,
-                powerPreference: 'low-power' // iOS battery-friendly
-            });
-            
-            renderer.setSize(200, 200);
-            renderer.setClearColor(0x000000, 0); // Transparent background
-            container.appendChild(renderer.domElement);
-            
-            // Lighting - soft and warm like honey
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffd700, 0.6);
-            directionalLight.position.set(5, 5, 5);
-            scene.add(directionalLight);
-            
-            const fillLight = new THREE.DirectionalLight(0xffaa00, 0.3);
-            fillLight.position.set(-5, 3, -5);
-            scene.add(fillLight);
-            
-            // Load beehive 3D model
-            const loader = new THREE.OBJLoader();
-            const mtlLoader = new THREE.MTLLoader();
-            
-            // Set the base path for textures so MTL can find the PNG file
-            mtlLoader.setPath('/static/3DFiles/HoneyComb/');
-            
-            // Load materials first, then model
-            mtlLoader.load('Bee_Haven_1016134000_texture.mtl', function(materials) {
-                materials.preload();
-                loader.setMaterials(materials);
-                
-                // Set the base path for OBJ loader as well
-                loader.setPath('/static/3DFiles/HoneyComb/');
-                
-                loader.load('Bee_Haven_1016134000_texture.obj', function(hiveModel) {
-                    // Center and scale the hive
-                    const box = new THREE.Box3().setFromObject(hiveModel);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    
-                    const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 3.5 / maxDim;
-                    
-                    hiveModel.position.x = -center.x * scale;
-                    hiveModel.position.y = -center.y * scale;
-                    hiveModel.position.z = -center.z * scale;
-                    hiveModel.scale.setScalar(scale);
-                    
-                    scene.add(hiveModel);
-                    
-                    // Store for animation
-                    container.hiveModel = hiveModel;
-                }, undefined, function(error) {
-                    console.warn('Beehive model loading failed, using fallback:', error);
-                    createFallbackHiveAnimation(container);
-                });
-            }, undefined, function(error) {
-                console.warn('Beehive materials loading failed, using fallback:', error);
-                createFallbackHiveAnimation(container);
-            });
-            
-            // Position camera
-            camera.position.z = 6;
-            
-            // Create buzzing bees (emoji overlays)
-            const beeCount = 6;
-            for (let i = 0; i < beeCount; i++) {
-                const bee = document.createElement('div');
-                const angle = (i / beeCount) * 2 * Math.PI;
-                const delay = i * 0.2;
-                
-                bee.style.cssText = `
-                    position: absolute;
-                    font-size: 1.8rem;
-                    animation: buzzAroundHive 3s ease-in-out ${delay}s infinite;
-                    --angle: ${angle}rad;
-                    pointer-events: none;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-                `;
-                bee.textContent = '🐝';
-                container.appendChild(bee);
-            }
-            
-            // Add CSS animation for bees buzzing around hive
-            if (!document.getElementById('beeHiveAnimationStyle')) {
-                const style = document.createElement('style');
-                style.id = 'beeHiveAnimationStyle';
-                style.textContent = `
-                    @keyframes buzzAroundHive {
-                        0%, 100% {
-                            left: calc(50% + 70px * cos(var(--angle)));
-                            top: calc(50% + 70px * sin(var(--angle)));
-                            transform: translate(-50%, -50%) rotate(0deg) scale(1);
-                        }
-                        25% {
-                            left: calc(50% + 85px * cos(var(--angle) + 0.5));
-                            top: calc(50% + 85px * sin(var(--angle) + 0.5));
-                            transform: translate(-50%, -50%) rotate(15deg) scale(1.1);
-                        }
-                        50% {
-                            left: calc(50% + 75px * cos(var(--angle) + 1));
-                            top: calc(50% + 75px * sin(var(--angle) + 1));
-                            transform: translate(-50%, -50%) rotate(-10deg) scale(0.95);
-                        }
-                        75% {
-                            left: calc(50% + 65px * cos(var(--angle) + 1.5));
-                            top: calc(50% + 65px * sin(var(--angle) + 1.5));
-                            transform: translate(-50%, -50%) rotate(20deg) scale(1.05);
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-            
-            // Animation loop
-            let rotationSpeed = 0;
-            function animate() {
-                if (!container.isConnected) {
-                    // Cleanup when removed from DOM
-                    renderer.dispose();
-                    return;
-                }
-                
-                requestAnimationFrame(animate);
-                
-                // Gentle rotation and bobbing
-                if (container.hiveModel) {
-                    rotationSpeed += 0.003;
-                    container.hiveModel.rotation.y = rotationSpeed;
-                    container.hiveModel.position.y = Math.sin(rotationSpeed * 2) * 0.1;
-                }
-                
-                renderer.render(scene, camera);
-            }
-            animate();
-            
-            // Store cleanup function
-            container.cleanup = () => {
-                renderer.dispose();
-                if (container.hiveModel) {
-                    scene.remove(container.hiveModel);
-                }
-            };
+            // GLB-only system - use simple 3D animation instead of OBJ beehive
+            console.warn('⚠️ OBJ beehive deprecated - using simple 3D animation');
+            createSimple3DAnimation(container);
+            return;
         }
+        
+        // Removed OBJ beehive animation code - using simple 3D fallback instead
         
         function createFallbackHiveAnimation(container) {
             // Fallback to emoji hive if 3D model fails to load
@@ -8932,38 +8737,11 @@
                     return;
                 }
                 
-                if (typeof THREE.OBJLoader === 'undefined' || typeof THREE.MTLLoader === 'undefined') {
-                    console.error('❌ OBJLoader or MTLLoader not available');
-                    this.hideLoader();
-                    this.fallbackToCSSBees();
-                    return;
-                }
-                
-                if (!this.canvas || this.isReducedMotion) {
-                    console.log('3D Bees disabled: reduced motion or no canvas');
-                    this.hideLoader();
-                    this.fallbackToCSSBees();
-                    return;
-                }
-
-                console.log('✨ 3D Scene initialized');
-                this.updateLoader(10, 'Loading mascot resources...');
-                this.setupScene();
-                this.updateLoader(20, 'Preparing mascot bee...');
-                
-                // Call async loadBeeModels properly using IIFE
-                (async () => {
-                    try {
-                        await this.loadBeeModels();
-                        this.animate();
-                    } catch (error) {
-                        console.error('❌ Failed to load bee models:', error);
-                        this.hideLoader();
-                        this.fallbackToCSSBees();
-                    }
-                })();
-                
-                window.addEventListener('resize', () => this.onWindowResize());
+                // GLB-only system - OBJ loaders removed
+                console.warn('⚠️ 3D bee swarm deprecated - using CSS fallback');
+                this.hideLoader();
+                this.fallbackToCSSBees();
+                return;
             }
             
             updateLoader(percentage, message = 'Loading...') {
@@ -9156,99 +8934,11 @@
             }
 
             async loadBeeModels() {
-                if (!THREE.OBJLoader || !THREE.MTLLoader) {
-                    console.error('❌ OBJLoader or MTLLoader not available on THREE object');
-                    this.hideLoader();
-                    this.fallbackToCSSBees();
-                    return;
-                }
-                
-                console.log('🐝 Initializing 3D bee swarm...');
-                this.updateLoader(10, '🐝 Preparing bee models...');
-                const mtlLoader = new THREE.MTLLoader();
-                const objLoader = new THREE.OBJLoader();
-                
-                // Set base path for texture loading
-                mtlLoader.setPath('/static/3DFiles/LittleBees/NewBees/');
-                
-                try {
-                    // Load Bee Blossom MTL
-                    console.log('🐝 Loading Bee Blossom materials...');
-                    this.updateLoader(20, '🌸 Loading Bee Blossom materials...');
-                    const blossomMaterials = await new Promise((resolve, reject) => {
-                        mtlLoader.load(
-                            'Bee_Blossom_1015233630_texture.mtl',
-                            resolve,
-                            undefined,
-                            reject
-                        );
-                    });
-                    this.updateLoader(35, '✨ Processing Blossom textures...');
-                    blossomMaterials.preload();
-                    objLoader.setMaterials(blossomMaterials);
-                    
-                    // Set base path for OBJ loading
-                    objLoader.setPath('/static/3DFiles/LittleBees/NewBees/');
-                    
-                    // Load Bee Blossom OBJ
-                    this.updateLoader(45, '🐝 Loading Bee Blossom model...');
-                    this.loadedModels.blossom = await new Promise((resolve, reject) => {
-                        objLoader.load(
-                            'Bee_Blossom_1015233630_texture.obj',
-                            resolve,
-                            undefined,
-                            reject
-                        );
-                    });
-                    
-                    console.log('✅ Bee Blossom loaded');
-                    this.updateLoader(55, '✅ Bee Blossom ready!');
-                    
-                    // Load Bee Smiley MTL
-                    console.log('🐝 Loading Bee Smiley materials...');
-                    this.updateLoader(60, '😊 Loading Bee Smiley materials...');
-                    const smileyMaterials = await new Promise((resolve, reject) => {
-                        mtlLoader.load(
-                            'Bee_Smiley_1015233733_texture.mtl',
-                            resolve,
-                            undefined,
-                            reject
-                        );
-                    });
-                    this.updateLoader(70, '✨ Processing Smiley textures...');
-                    smileyMaterials.preload();
-                    
-                    const smileyObjLoader = new THREE.OBJLoader();
-                    smileyObjLoader.setMaterials(smileyMaterials);
-                    
-                    // Set base path for Smiley OBJ loading
-                    smileyObjLoader.setPath('/static/3DFiles/LittleBees/NewBees/');
-                    
-                    // Load Bee Smiley OBJ
-                    this.updateLoader(80, '🐝 Loading Bee Smiley model...');
-                    this.loadedModels.smiley = await new Promise((resolve, reject) => {
-                        smileyObjLoader.load(
-                            'Bee_Smiley_1015233733_texture.obj',
-                            resolve,
-                            undefined,
-                            reject
-                        );
-                    });
-                    
-                    console.log('✅ Bee Smiley loaded');
-                    this.updateLoader(90, '✅ Bee Smiley ready!');
-                    
-                    // Spawn bees after models loaded
-                    this.updateLoader(95, '🌟 Creating bee swarm...');
-                    this.spawnBees();
-                    this.updateLoader(100, '🎉 All bees ready to buzz!');
-                    
-                } catch (error) {
-                    console.error('❌ Error loading 3D bee models:', error);
-                    console.log('Falling back to CSS bees...');
-                    this.hideLoader();
-                    this.fallbackToCSSBees();
-                }
+                // GLB-only system - OBJ bee swarm deprecated, use CSS fallback
+                console.warn('⚠️ 3D bee swarm deprecated - using CSS bee animation');
+                this.hideLoader();
+                this.fallbackToCSSBees();
+                return;
             }
 
             spawnBees() {
@@ -13361,10 +13051,6 @@
                 loader.style.opacity = '0';
                 loader.style.visibility = 'hidden';
                 setTimeout(() => { loader.style.display = 'none'; }, 350);
-                
-                // Dispatch event to notify avatar loader
-                console.log('🍯 Dispatching honeyLoaderFinished event');
-                document.dispatchEvent(new Event('honeyLoaderFinished'));
             }
 
             async finishLoading() {
@@ -13398,6 +13084,10 @@
                         console.warn('⚠️ Battle check failed:', err);
                     });
                 }
+                
+                // ✅ Dispatch honeyLoaderFinished event for avatar loader
+                console.log('🍯 Dispatching honeyLoaderFinished event');
+                document.dispatchEvent(new Event('honeyLoaderFinished'));
             }
         }
         

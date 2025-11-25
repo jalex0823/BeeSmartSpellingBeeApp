@@ -3458,6 +3458,9 @@ def load_saved_wordlist():
             session.pop(QUIZ_STATE_KEY, None)
             session.modified = True
 
+        # Clear Random Play flag since user is loading a saved list
+        session.pop("is_random_play", None)
+
         # Load into session
         set_wordbank(rows, is_user_upload=True)
         init_quiz_state()
@@ -5425,6 +5428,9 @@ def process_upload_with_progress(session_id, request_obj):
         
         update_upload_progress(session_id, "finalizing", "Bees are storing words in the hive...", "bees_storing", 95)
         
+        # Clear Random Play flag since user is uploading custom words
+        session.pop("is_random_play", None)
+        
         # Store the wordbank and initialize quiz (USER UPLOAD)
         set_wordbank(filtered_enriched, is_user_upload=True)
         init_quiz_state()
@@ -5688,6 +5694,9 @@ def api_upload():
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
     
+    # Clear Random Play flag since user is now uploading custom words
+    session.pop("is_random_play", None)
+    
     # Set wordbank (USER UPLOAD - marks has_uploaded_once)
     set_wordbank(deduped, is_user_upload=True)
     init_quiz_state()
@@ -5877,6 +5886,9 @@ def api_upload_manual_words():
         
         # CRITICAL: Set flag to prevent default word loading
         session["skip_default_load"] = True
+        
+        # Clear Random Play flag since user is entering manual words
+        session.pop("is_random_play", None)
         
         # Store and initialize quiz (USER UPLOAD - manual words)
         set_wordbank(enriched, is_user_upload=True)
@@ -7558,6 +7570,7 @@ def api_clear():
         # This ensures refresh button truly clears EVERYTHING including default word list
         session.pop("skip_default_load", None)  # Remove flag
         session.pop("has_uploaded_once", None)  # Remove flag
+        session.pop("is_random_play", None)  # Clear Random Play flag
         
         # CRITICAL: Explicitly set empty word list to prevent restoration from fallback
         # This prevents get_wordbank() from finding session fallback data after reload

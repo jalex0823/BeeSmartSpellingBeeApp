@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bee Swarm Visualizer Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #testContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        #controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #startSpeech {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        #stopSpeech {
+            background: #f44336;
+            color: white;
+        }
+        
+        #testAmplitude {
+            background: #2196F3;
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .status-active {
+            background: #c8e6c9 !important;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <!-- Visualizer Container -->
+    <div id="testContainer"></div>
+    
+    <!-- Controls -->
+    <div id="controls">
+        <h3 style="margin: 0 0 15px 0;">🐝 Bee Swarm Test</h3>
+        <button id="startSpeech">Start Speech</button>
+        <button id="stopSpeech">Stop Speech</button>
+        <button id="testAmplitude">Pulse Animation</button>
+        <div id="status">Status: Initializing...</div>
+    </div>
+    
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Bee Swarm Visualizer -->
+    <script type="module">
+        import BeeSwarmVisualizer from './static/js/bee_swarm_visualizer.js';
+        
+        const statusEl = document.getElementById('status');
+        
+        function updateStatus(msg, isActive = false) {
+            statusEl.textContent = msg;
+            if (isActive) {
+                statusEl.classList.add('status-active');
+            } else {
+                statusEl.classList.remove('status-active');
+            }
+        }
+        
+        // Initialize visualizer
+        setTimeout(() => {
+            const container = document.getElementById('testContainer');
+            
+            if (!container) {
+                updateStatus('❌ Container not found!');
+                return;
+            }
+            
+            console.log('📦 Container:', {
+                width: container.clientWidth,
+                height: container.clientHeight,
+                offsetWidth: container.offsetWidth,
+                offsetHeight: container.offsetHeight
+            });
+            
+            try {
+                window.viz = BeeSwarmVisualizer.init(container, {
+                    autoStart: true,
+                    showControls: false,
+                    particleCount: 10000,
+                    background: 'transparent',
+                    zIndex: 1
+                });
+                
+                updateStatus('✅ Visualizer initialized');
+                console.log('✅ Visualizer ready:', window.viz);
+                
+                // Setup controls
+                document.getElementById('startSpeech').addEventListener('click', () => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
+                    window.viz.isActive = true;
+                    updateStatus('🎤 Speech active', true);
+                });
+                
+                document.getElementById('stopSpeech').addEventListener('click', () => {
+                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
+                    window.viz.isActive = false;
+                    updateStatus('🔇 Speech stopped');
+                });
+                
+                document.getElementById('testAmplitude').addEventListener('click', () => {
+                    window.viz.isActive = true;
+                    window.viz.amplitude = 0.9;
+                    updateStatus('💫 Pulse animation', true);
+                    
+                    setTimeout(() => {
+                        window.viz.isActive = false;
+                        window.viz.amplitude = 0;
+                        updateStatus('✅ Visualizer ready');
+                    }, 2000);
+                });
+                
+            } catch (error) {
+                updateStatus('❌ Init failed: ' + error.message);
+                console.error('❌ Error:', error);
+            }
+        }, 200);
+    </script>
+</body>
+</html>

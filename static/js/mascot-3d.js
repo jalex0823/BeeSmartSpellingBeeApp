@@ -190,7 +190,7 @@ class SmartyBee3D {
     }
 
     loadModel() {
-        // New: GLB support using GLTFLoader when a .glb is provided
+        // GLB-only support using GLTFLoader
         // Accept either explicit options.glbPath or a modelPath ending with .glb/.gltf
         // GLB is the PREFERRED format: single file, embedded textures, faster loading
         const explicitGlb = this.options.glbPath;
@@ -198,13 +198,13 @@ class SmartyBee3D {
         const glbPath = explicitGlb || inferredGlb;
         
         if (glbPath) {
-            // GLB path - use GLTF loader only
+            // GLB path - use GLTF loader
             this.loadGLB(glbPath);
             return;
         }
         
-        // No GLB path found - use fallback
-        console.warn('⚠️ No GLB path provided - using fallback mascot');
+        // No valid model path - show fallback
+        console.error('❌ No valid GLB model path provided');
         this.addFallbackBee();
     }
     
@@ -222,11 +222,11 @@ class SmartyBee3D {
         const gltfLoader = new THREE.GLTFLoader();
         console.log('🐝 Loading GLB model:', glbUrl);
         
-        // Add timeout protection for GLB loading (30s allows for large files or slow connections)
+        // Add timeout protection for GLB loading
         const loadTimeout = setTimeout(() => {
-            console.error('❌ GLB loading timeout (30s) - file may be corrupted, too large, or network is slow');
+            console.error('❌ GLB loading timeout (10s) - file may be corrupted or too large');
             this.addFallbackBee();
-        }, 30000);
+        }, 10000);
         
         gltfLoader.load(
             glbUrl,
@@ -325,7 +325,7 @@ class SmartyBee3D {
                                 window.mascotBeeLoaded = true;
                             } catch (e) {
                                 console.error('❌ Error processing GLB scene:', e);
-                                console.log('🔄 Falling back to placeholder (GLB-only mode)...');
+                                console.log('🔄 Attempting OBJ fallback...');
                                 this.addFallbackBee();
                             }
                         },
@@ -344,10 +344,6 @@ class SmartyBee3D {
                         }
                     );
     }
-    
-    // REMOVED: loadOBJ method - now using GLB-only format
-    // Legacy OBJ/MTL loading is no longer needed
-    // END OF REMOVED LEGACY OBJ/MTL CODE
 
     setupControls() {
         if (!this.options.enableInteraction) return;
@@ -369,21 +365,8 @@ class SmartyBee3D {
     }
 
     addFallbackBee() {
-        // Legacy fallback visuals removed: we no longer add a 3D sphere or emoji fallback.
-        // Modern flow expects GLB models; if a GLB is not available we simply leave the
-        // scene empty to avoid duplicate/incorrect visuals (sphere + sprite) on dashboards.
-        try {
-            // Ensure there is no bee model present
-            this.bee = null;
-            // Clear any previously injected fallback markup in the container
-            if (this.container && this.container.innerHTML) {
-                this.container.innerHTML = '';
-            }
-            console.warn('Fallback visuals suppressed (GLB-only mode).');
-        } catch (e) {
-            // Swallow errors - nothing to render as fallback
-            console.warn('Suppressed fallback visuals but encountered an error:', e);
-        }
+        // No fallback - GLB avatars only
+        console.warn('GLB avatar failed to load. No fallback provided.');
     }
 
     animate() {

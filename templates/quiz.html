@@ -815,9 +815,9 @@ if ('speechSynthesis' in window) {
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: rgba(255, 179, 0, 0.08);
+        background: transparent;
         border-radius: 0;
-        padding: 1rem 1.5rem;
+        padding: 0;
         margin-bottom: 0.5rem;
         position: relative;
         overflow: visible;
@@ -2990,8 +2990,12 @@ if ('speechSynthesis' in window) {
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
                 <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position -->
-                <div id="beeSwarmVisualizerContainer" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:860px; height:260px; z-index:5; pointer-events:none; visibility:visible; opacity:1;"></div>
-                
+                <div id="beeSwarmVisualizerContainer"
+                     style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                            width:860px; height:260px; z-index:5; pointer-events:none;
+                            visibility:visible; opacity:1; background:none; box-shadow:none;">
+                </div>
+
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
@@ -3070,7 +3074,7 @@ if ('speechSynthesis' in window) {
                             </div>
                             
                             <div class="dotwave-wrapper">
-                                <div id="beeSwarmContainer" style="width: 860px; height: 260px; position: relative; background: transparent;"></div>
+                                <!-- Bee swarm visualizer canvas will be injected here by bee_swarm_visualizer.js -->
                                 <canvas id="dotWaveCanvas" width="860" height="260" style="display: none;"></canvas>
                             </div>
                             
@@ -3085,8 +3089,8 @@ if ('speechSynthesis' in window) {
                 <style>
                     .voice-card.speaking-mode {
                         background: transparent;
-                        border-radius: 28px;
-                        padding: 20px 16px 20px;
+                        border-radius: 0;
+                        padding: 0;
                         border: none;
                         box-shadow: none;
                         max-width: 920px;
@@ -3134,8 +3138,11 @@ if ('speechSynthesis' in window) {
                                     display: flex;
                                     justify-content: center;
                                     align-items: center;
-                                    padding: 28px 24px; /* Maximum padding for wave clearance */
-                                    overflow: visible; /* Ensure waves aren't clipped */
+                                    padding: 0; /* Remove padding to eliminate white box */
+                                    overflow: visible;
+                                    background: transparent;
+                                    border: none;
+                                    box-shadow: none;
                                 }
 
                                 .dotwave-wrapper canvas {
@@ -3734,6 +3741,7 @@ class BeeSoundboard {
                     : '🎙️ Speaking';
                 
                 // Trigger bee swarm activation
+                console.log('🎙️ Dispatching quiz-speech-start event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-start'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -3741,6 +3749,7 @@ class BeeSoundboard {
             
             utterance.onboundary = (event) => {
                 // Trigger bee swarm mouth pulse on word boundaries
+                console.log('🎙️ Dispatching quiz-speech-boundary event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
                 
                 // Word-level micro pauses for natural cadence
@@ -3773,6 +3782,7 @@ class BeeSoundboard {
                 if (statusEl) statusEl.textContent = '🐝 Ready';
                 
                 // Trigger bee swarm deactivation
+                console.log('🎙️ Dispatching quiz-speech-end event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -3783,6 +3793,7 @@ class BeeSoundboard {
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
                 
                 // Trigger bee swarm deactivation on error
+                console.log('🎙️ Dispatching quiz-speech-end event (error)');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
@@ -8305,27 +8316,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Give GLB loading a chance to start (it's async in loadModel)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Reduced delay for faster page interaction
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         console.log(`✨ 3D mascot initialization started with avatar: ${avatarId}`);
         
-        // 🎯 Also load avatar in quiz header
-        try {
-            const headerAvatarContainer = document.getElementById('quizHeaderAvatar');
-            if (headerAvatarContainer) {
-                const headerAvatarOptions = {
-                    ...avatarOptions,
-                    width: 50,
-                    height: 50,
-                    autoRotate: false,
-                    enableInteraction: false
-                };
-                new SmartyBee3D('quizHeaderAvatar', headerAvatarOptions);
-                console.log('✅ Quiz header avatar loaded');
+        // 🎯 Defer header avatar loading to not block main mascot
+        setTimeout(() => {
+            try {
+                const headerAvatarContainer = document.getElementById('quizHeaderAvatar');
+                if (headerAvatarContainer) {
+                    const headerAvatarOptions = {
+                        ...avatarOptions,
+                        width: 50,
+                        height: 50,
+                        autoRotate: false,
+                        enableInteraction: false
+                    };
+                    new SmartyBee3D('quizHeaderAvatar', headerAvatarOptions);
+                    console.log('✅ Quiz header avatar loaded');
+                }
+            } catch (headerError) {
+                console.warn('⚠️ Failed to load header avatar:', headerError);
             }
-        } catch (headerError) {
-            console.warn('⚠️ Failed to load header avatar:', headerError);
-        }
+        }, 1000); // Load header avatar 1 second after main mascot
         
         // 🐝 Load and display Buzz Dust rank
         try {
@@ -8410,6 +8424,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error(`❌ Wordbank fetch failed with status ${response.status}`);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        // Check content-type before parsing JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error(`❌ Invalid content-type: ${contentType}, expected application/json`);
+            return response.text().then(text => {
+                console.error('Response body:', text.slice(0, 500));
+                throw new Error(`Invalid content-type from API: ${contentType}`);
+            });
+        }
         return response.json();
     })
     .then(data => {
@@ -8455,10 +8478,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         window.quizManager = new QuizManager({ delight, smartyBee });
+        window.soundboard = window.quizManager.soundboard;  // Expose soundboard globally for morph controller
     })
     .catch(error => {
         console.error('Failed to check word bank:', error);
-        BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        BeeSmart.showError('Failed to load word bank. Redirecting to main menu...');
         setTimeout(() => window.location.href = '/', 2800);
     });
     }, 300);  // 300ms delay to ensure session cookie is sent with request
@@ -9006,6 +9035,25 @@ function playThemedSound(soundType) {
             return;
         }
         
+        // ✅ Ensure container is visible and properly styled
+        visualizerContainer.style.visibility = 'visible';
+        visualizerContainer.style.opacity = '1';
+        visualizerContainer.style.background = 'transparent';
+        visualizerContainer.style.border = 'none';
+        visualizerContainer.style.boxShadow = 'none';
+        
+        // 🛡️ Prevent double initialization
+        if (window.beeSwarmViz) {
+            console.warn('⚠️ Bee swarm already initialized, destroying old instance...');
+            if (window.beeSwarmViz.destroy) {
+                window.beeSwarmViz.destroy();
+            }
+            window.beeSwarmViz = null;
+        }
+        
+        // 🧹 Clear container of any stale canvases
+        visualizerContainer.innerHTML = '';
+        
         console.log('🚀 Initializing bee swarm visualizer...');
         console.log('📦 Container dimensions:', {
             width: visualizerContainer.clientWidth,
@@ -9016,21 +9064,28 @@ function playThemedSound(soundType) {
         });
         
         try {
+            // ✅ Verify THREE.js is available
+            if (typeof THREE === 'undefined' || !window.THREE) {
+                console.error('❌ THREE.js not loaded! Bee swarm visualizer requires THREE.js');
+                return;
+            }
+            console.log('✅ THREE.js version:', THREE.REVISION);
+            
             window.beeSwarmViz = BeeSwarmVisualizer.init(visualizerContainer, {
                 autoStart: true,
                 showControls: false,
-                particleCount: 18000,    // High-detail primary setting (will auto-fallback if low perf)
-                sampleStep: 1,            // Finer sampling of mask for dense silhouette
+                particleCount: 8000,     // Reduced for performance (auto-fallback to 6000 on low perf)
+                sampleStep: 2,            // Balanced sampling (1=detailed, 2=performance)
                 background: 'transparent',
                 zIndex: 5,               // Match container z-index
                 overallScale: 2.2,       // Scale up mouth for visibility
                 cameraZ: 8.5,            // Bring camera closer for better framing
-                // Use mask from /static/assets/masks (ensures server can serve it and avoids CORS/404)
-                maskUrl: '/static/assets/masks/lips_mask_double.png',
-                lazyInit: true            // Defer heavy init until first speech event
+                maskUrl: '/static/assets/visualizer/lips_mask.png',
+                lazyInit: false           // Initialize immediately to show lips
             });
             console.log('✅ Bee swarm visualizer initialized successfully');
-            console.log('🎤 Canvas will be created on first speech event...');
+            console.log('📍 Mask URL:', '/static/assets/visualizer/lips_mask.png');
+            console.log('🎨 Canvas count in container:', visualizerContainer.querySelectorAll('canvas').length);
             
             // Test animation immediately
             setTimeout(() => {
@@ -9097,33 +9152,6 @@ function playThemedSound(soundType) {
             console.error('Error stack:', error.stack);
         }
     }
-</script>
-<script type="module">
-  import BeeSwarmVisualizer from "/static/js/bee_swarm_visualizer.js";
-
-  const swarmContainer = document.getElementById("beeSwarmVisualizerContainer");
-
-  // Safety: make sure container is visible
-  swarmContainer.style.visibility = "visible";
-  swarmContainer.style.opacity = "1";
-
-  BeeSwarmVisualizer.init(swarmContainer, {
-    maskUrl: "/static/assets/masks/lips_mask_double.png",
-    sampleStep: 2,
-    particleCount: 12000,
-    zIndex: 5,
-
-    // If you want it to appear immediately without waiting for speech:
-    lazyInit: false,
-    autoStart: true,
-    showControls: false
-  });
-
-  // Optional fade-in (if you kept opacity:0 in HTML)
-  requestAnimationFrame(() => {
-    swarmContainer.style.transition = "opacity 0.8s ease-out";
-    swarmContainer.style.opacity = "1";
-  });
 </script>
 
 {% endblock %}
