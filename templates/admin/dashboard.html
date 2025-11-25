@@ -161,12 +161,23 @@
                     }
                     
                     if (badgeEl && data.current_class.badge_image) {
-                        // Construct the badge URL from badge_image filename
-                        const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                        badgeEl.src = badgeUrl;
-                        badgeEl.alt = data.current_class.label + ' Badge';
-                        badgeEl.style.display = 'block';
-                        console.log('✅ Badge image updated:', badgeUrl);
+                        // Render 3D GLB badge
+                        console.log('🎖️ Rendering 3D admin badge:', data.current_class.badge_image);
+                        if (typeof Badge3DRenderer !== 'undefined') {
+                            badgeEl.innerHTML = ''; // Clear previous badge
+                            new Badge3DRenderer(badgeEl, {
+                                badgeFile: data.current_class.badge_image,
+                                width: 48,
+                                height: 48,
+                                autoRotate: true,
+                                rotationSpeed: 0.3
+                            });
+                            console.log('✅ 3D badge rendered:', data.current_class.badge_image);
+                        } else {
+                            console.warn('⚠️ Badge3DRenderer not available, using fallback');
+                            const badgeUrl = `/static/assets/badges/${data.current_class.badge_image.replace('.glb', '.png')}`;
+                            badgeEl.innerHTML = `<img src="${badgeUrl}" alt="${data.current_class.label} Badge" style="width:48px;height:48px;object-fit:contain;">`;
+                        }
                     }
                 } else {
                     console.error('❌ API returned success=false:', data);
