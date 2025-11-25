@@ -150,14 +150,10 @@
     color:var(--bee-brown);
   }
   .badge-icon{
-    font-size:32px;
-    width:48px;
-    height:48px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(255,255,255,.9);
-    border-radius:50%;
+    width:64px;
+    height:64px;
+    object-fit:contain;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.15));
     box-shadow:0 4px 12px rgba(0,0,0,.15);
   }
   #badgeName{
@@ -605,7 +601,7 @@
   <div class="hive-board">
     <!-- Badge Banner -->
     <div class="badge-banner">
-      <div class="badge-icon" id="badgeIcon">🐝</div>
+      <img class="badge-icon" id="badgeIcon" src="/static/assets/badges/novice_bee.png" alt="Badge" style="display:none;">
       <div id="badgeName">Novice Bee</div>
       <div>Buzz Dust: <span id="buzzDustTotal">0</span> ✨</div>
     </div>
@@ -687,41 +683,63 @@
   // Load Buzz Dust Progress
   async function loadBuzzDustProgress(){
     try{
-      // Option A: Check if window.userProgress is set from backend
-      if(typeof window.userProgress !== 'undefined' && window.userProgress){
-        updateBuzzDustUI(window.userProgress);
-        return;
-      }
-
-      // Option B: Try to fetch from API
-      const res = await fetch("/api/user/progress",{credentials:"same-origin",cache:"no-store"});
+      const res = await fetch("/api/buzz-dust/info",{credentials:"same-origin",cache:"no-store"});
       if(res.ok){
         const data = await res.json();
-        if(data.ok && data.progress){
-          updateBuzzDustUI(data.progress);
+        console.log('✅ [WORD HIVES] Buzz Dust API response:', data);
+        
+        if(data && data.current_class){
+          // Update badge image
+          const badgeEl = document.getElementById('badgeIcon');
+          if(badgeEl && data.current_class.badge_image){
+            badgeEl.src = `/static/assets/badges/${data.current_class.badge_image}`;
+            badgeEl.alt = data.current_class.label + ' Badge';
+            badgeEl.style.display = 'block';
+          }
+          
+          // Update badge name
+          const badgeNameEl = document.getElementById('badgeName');
+          if(badgeNameEl){
+            badgeNameEl.textContent = data.current_class.label || 'Novice Bee';
+          }
+          
+          // Update total buzz dust
+          const buzzDustEl = document.getElementById('buzzDustTotal');
+          if(buzzDustEl){
+            const total = data.total_buzz_dust || 0;
+            buzzDustEl.textContent = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          }
+          
+          // Update dust to next badge (use real calculation from API)
+          const dustToNextEl = document.getElementById('statDustToNext');
+          if(dustToNextEl){
+            if(data.at_max_rank){
+              dustToNextEl.textContent = "MAX RANK!";
+            } else if(data.next_class && data.next_class.min_points){
+              const needed = data.next_class.min_points - (data.total_buzz_dust || 0);
+              dustToNextEl.textContent = Math.max(0, needed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            } else {
+              dustToNextEl.textContent = "0";
+            }
+          }
+          
           return;
         }
       }
     }catch(err){
-      console.log("Buzz Dust API not available, using defaults");
+      console.log("Buzz Dust API not available, using defaults:", err);
     }
 
     // Fallback: use defaults
-    updateBuzzDustUI({
-      badge_name: "Novice Bee",
-      badge_icon: "🐝",
-      buzz_dust_total: 0,
-      next_badge_required: 1000
-    });
-  }
-
-  function updateBuzzDustUI(progress){
-    badgeIcon.textContent = progress.badge_icon || "🐝";
-    badgeName.textContent = progress.badge_name || "Novice Bee";
-    buzzDustTotal.textContent = progress.buzz_dust_total || 0;
-    
-    const dustToNext = (progress.next_badge_required || 1000) - (progress.buzz_dust_total || 0);
-    statDustToNext.textContent = Math.max(0, dustToNext);
+    const badgeEl = document.getElementById('badgeIcon');
+    if(badgeEl){
+      badgeEl.src = '/static/assets/badges/novice_bee.png';
+      badgeEl.alt = 'Novice Bee Badge';
+      badgeEl.style.display = 'block';
+    }
+    document.getElementById('badgeName').textContent = 'Novice Bee';
+    document.getElementById('buzzDustTotal').textContent = '0';
+    document.getElementById('statDustToNext').textContent = '1,000';
   }
 
   async function loadWordLists(){
