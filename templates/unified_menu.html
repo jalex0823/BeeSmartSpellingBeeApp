@@ -8940,19 +8940,6 @@
                 this.hideLoader();
                 this.fallbackToCSSBees();
                 return;
-                // OBJ bee models removed - handled by CSS fallback above
-                    
-                    // Spawn bees after models loaded
-                    this.updateLoader(95, '🌟 Creating bee swarm...');
-                    this.spawnBees();
-                    this.updateLoader(100, '🎉 All bees ready to buzz!');
-                    
-                } catch (error) {
-                    console.error('❌ Error loading 3D bee models:', error);
-                    console.log('Falling back to CSS bees...');
-                    this.hideLoader();
-                    this.fallbackToCSSBees();
-                }
             }
 
             spawnBees() {
