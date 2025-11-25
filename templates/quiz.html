@@ -9025,6 +9025,18 @@ function playThemedSound(soundType) {
             return;
         }
         
+        // 🛡️ Prevent double initialization
+        if (window.beeSwarmViz) {
+            console.warn('⚠️ Bee swarm already initialized, destroying old instance...');
+            if (window.beeSwarmViz.destroy) {
+                window.beeSwarmViz.destroy();
+            }
+            window.beeSwarmViz = null;
+        }
+        
+        // 🧹 Clear container of any stale canvases
+        visualizerContainer.innerHTML = '';
+        
         console.log('🚀 Initializing bee swarm visualizer...');
         console.log('📦 Container dimensions:', {
             width: visualizerContainer.clientWidth,
