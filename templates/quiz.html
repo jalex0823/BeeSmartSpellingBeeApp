@@ -76,7 +76,7 @@ if ('speechSynthesis' in window) {
 
 <style>
     .quiz-container {
-        max-width: 700px;
+        max-width: 800px;
         margin: 0 auto;
         text-align: center;
         /* Reduced top/bottom padding to tighten vertical spacing */
@@ -2045,7 +2045,7 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B4 30%, #FFD98E 70%, #FFC947 100%);
         border-radius: 24px;
         padding: 2rem;
-        max-width: 400px;
+        max-width: 800px;
         max-height: 85vh;
         width: 90%;
         text-align: center;
@@ -2518,7 +2518,7 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
         border-radius: 30px;
         padding: 3rem;
-        max-width: 500px;
+        max-width: 800px;
         text-align: center;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
                     inset 0 2px 20px rgba(255, 255, 255, 0.3);
@@ -4897,6 +4897,9 @@ class QuizManager {
             return Promise.resolve();
         }
         
+        // Trigger announce event for visualizer
+        window.dispatchEvent(new CustomEvent('announce'));
+        
         // Clean text by removing emojis before speaking
         const cleanText = this.cleanTextForSpeech(text);
         
@@ -6643,18 +6646,23 @@ class QuizManager {
                     // Prefer delight handler when available, otherwise speak directly
                     if (this.delight && typeof this.delight.handlePronounce === 'function') {
                         try {
+                            // Trigger announce event for visualizer
+                            window.dispatchEvent(new CustomEvent('announce'));
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
                             const phrase = `Spell the word, ${data.word}.`;
+                            window.dispatchEvent(new CustomEvent('announce'));
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
                         const phrase = `Spell the word, ${data.word}.`;
+                        window.dispatchEvent(new CustomEvent('announce'));
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
                         const phrase = `Spell the word, ${data.word}.`;
+                        window.dispatchEvent(new CustomEvent('announce'));
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
