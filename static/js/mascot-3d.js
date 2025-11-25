@@ -190,7 +190,7 @@ class SmartyBee3D {
     }
 
     loadModel() {
-        // New: GLB support using GLTFLoader when a .glb is provided
+        // GLB-only support using GLTFLoader
         // Accept either explicit options.glbPath or a modelPath ending with .glb/.gltf
         // GLB is the PREFERRED format: single file, embedded textures, faster loading
         const explicitGlb = this.options.glbPath;
@@ -198,23 +198,14 @@ class SmartyBee3D {
         const glbPath = explicitGlb || inferredGlb;
         
         if (glbPath) {
-            // GLB path - use GLTF loader only
+            // GLB path - use GLTF loader
             this.loadGLB(glbPath);
             return;
         }
         
-        // Fallback to OBJ/MTL for legacy models
-        if (typeof THREE.MTLLoader === 'undefined' || typeof THREE.OBJLoader === 'undefined') {
-            console.error('❌ MTLLoader/OBJLoader not available and no GLB provided');
-            this.addFallbackBee();
-            return;
-        }
-        
-        const mtlLoader = new THREE.MTLLoader();
-        const objLoader = new THREE.OBJLoader();
-        
-        // Load OBJ/MTL model (legacy path)
-        this.loadOBJ(mtlLoader, objLoader);
+        // No valid model path - show fallback
+        console.error('❌ No valid GLB model path provided');
+        this.addFallbackBee();
     }
     
     loadGLB(glbPath) {
@@ -353,299 +344,6 @@ class SmartyBee3D {
                         }
                     );
     }
-    
-    loadOBJ(mtlLoader, objLoader) {
-        // Resolve base and filenames (OBJ/MTL path)
-        let base, mtlPath, objPath, texPath, mtlFilename, objFilename;
-        
-        // Check if absolute paths are provided
-        if (this.options.mtlPath && this.options.mtlPath.startsWith('/')) {
-            // Absolute paths provided - extract directory and filename
-            mtlPath = this.options.mtlPath;
-            objPath = this.options.modelPath || mtlPath.replace('.mtl', '.obj');
-            texPath = this.options.texturePath || mtlPath.replace('.mtl', '.png');
-            
-            // Extract base directory from the path
-            base = mtlPath.substring(0, mtlPath.lastIndexOf('/') + 1);
-            mtlFilename = mtlPath.substring(mtlPath.lastIndexOf('/') + 1);
-            objFilename = objPath.substring(objPath.lastIndexOf('/') + 1);
-        } else {
-            // Relative paths - use modelBase
-            base = this.options.modelBase.endsWith('/') ? this.options.modelBase : this.options.modelBase + '/';
-            const modelName = this.options.modelName;
-            mtlPath = this.options.mtlPath || `${base}${modelName}.mtl`;
-            objPath = this.options.modelPath || `${base}${modelName}.obj`;
-            texPath = this.options.texturePath || `${base}${modelName}.png`;
-            mtlFilename = mtlPath.substring(mtlPath.lastIndexOf('/') + 1);
-            objFilename = objPath.substring(objPath.lastIndexOf('/') + 1);
-        }
-
-    console.log('🐝 Loading 3D model from:', base);
-    console.log('   MTL:', mtlFilename);
-    console.log('   OBJ:', objFilename);
-    console.log('   Texture:', texPath);
-        
-        // Cache-busting: add timestamp to force reload of updated files
-        const cacheBuster = Date.now();
-        const mtlFilenameWithCache = `${mtlFilename}?v=${cacheBuster}`;
-        const objFilenameWithCache = `${objFilename}?v=${cacheBuster}`;
-        const texPathWithCache = `${texPath}?v=${cacheBuster}`;
-
-        // Configure loader base and resource paths
-        mtlLoader.setPath(base);
-        mtlLoader.setResourcePath(base);
-
-        // Load MTL first (materials and textures)
-        mtlLoader.load(
-            mtlFilenameWithCache,
-            (materials) => {
-                console.log('✅ MTL materials loaded successfully');
-                
-                // CRITICAL FIX: Manually set the texture map for all materials
-                // because MTL loader might not resolve texture paths correctly
-                const textureLoader = new THREE.TextureLoader();
-                console.log('🔧 Manually loading texture:', texPathWithCache);
-                
-                textureLoader.load(
-                    texPathWithCache,
-                    (texture) => {
-                        console.log('✅ Texture loaded, applying to materials');
-                        // Use sRGB for textures so colors are vivid and not washed out
-                        try {
-                            if (typeof texture.colorSpace !== 'undefined' && THREE.SRGBColorSpace) {
-                                texture.colorSpace = THREE.SRGBColorSpace;
-                            } else if (typeof texture.encoding !== 'undefined' && THREE.sRGBEncoding) {
-                                texture.encoding = THREE.sRGBEncoding;
-                            }
-                            texture.needsUpdate = true;
-                        } catch (e) { /* no-op */ }
-                        // Apply texture to all materials in the MTL
-                        for (const materialName in materials.materials) {
-                            const material = materials.materials[materialName];
-                            if (material) {
-                                material.map = texture;
-                                material.needsUpdate = true;
-                                console.log(`   Applied texture to material: ${materialName}`);
-                            }
-                        }
-                        
-                        materials.preload();
-                        objLoader.setMaterials(materials);
-
-                        // Configure OBJ loader base/resource paths as well
-                        objLoader.setPath(base);
-                        objLoader.setResourcePath(base);
-
-                        // Now load OBJ with materials applied
-                        objLoader.load(
-                            objFilenameWithCache,
-                            (object) => {
-                                // IMPROVED: Better centering and camera positioning to prevent cropping
-                                const box = new THREE.Box3().setFromObject(object);
-                                const center = box.getCenter(new THREE.Vector3());
-                                const size = box.getSize(new THREE.Vector3());
-                                
-                                const maxDim = Math.max(size.x, size.y, size.z);
-                                const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
-                                const scale = (3 * scaleMultiplier) / maxDim;
-                                object.scale.set(scale, scale, scale);
-                                
-                                // Center the model properly at origin
-                                object.position.x = -center.x * scale;
-                                object.position.y = -center.y * scale;
-                                object.position.z = -center.z * scale;
-
-                                this.bee = object;
-                                this.scene.add(object);
-                                
-                                // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
-                                object.position.y += (this.options.verticalOffset || 0.35);
-                                
-                                // Camera distance based on zoom/framing controls
-                                const maxScaledDim = maxDim * scale;
-                                const distance = (maxScaledDim * (this.options.cameraDistanceFactor || 1.8)) / (this.options.zoom || 1.0);
-                                this.camera.position.z = distance;
-                                this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
-                                this.camera.lookAt(0, 0, 0); // Look at center
-                                this.camera.updateProjectionMatrix();
-                                
-                                if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
-                                    this.renderer.setScissorTest(false);
-                                }
-                                
-                                console.log('✅ Mascot Bee 3D model loaded successfully with textures!');
-                                window.mascotBeeLoaded = true;
-                            },
-                            (xhr) => {
-                                const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
-                                console.log(`Loading model: ${percentComplete}%`);
-                            },
-                            (error) => {
-                                console.error('Error loading OBJ model:', error);
-                                // Quick HEAD check for diagnostics
-                                fetch(objPath, { method: 'HEAD' })
-                                    .then(r => console.warn(`OBJ HEAD ${r.status} for ${objPath}`))
-                                    .catch(e => console.warn('OBJ HEAD check failed', e));
-                                this.addFallbackBee();
-                            }
-                        );
-                    },
-                    undefined, // onProgress callback
-                    (error) => {
-                        console.error('❌ Error loading texture for MTL:', error);
-                        // Continue anyway with materials but no texture
-                        materials.preload();
-                        objLoader.setMaterials(materials);
-                        objLoader.setPath(base);
-                        objLoader.setResourcePath(base);
-                        
-                        // Load OBJ without texture
-                        objLoader.load(
-                            objFilename,
-                            (object) => {
-                                // IMPROVED: Better centering and camera positioning to prevent cropping
-                                const box = new THREE.Box3().setFromObject(object);
-                                const center = box.getCenter(new THREE.Vector3());
-                                const size = box.getSize(new THREE.Vector3());
-                                
-                                const maxDim = Math.max(size.x, size.y, size.z);
-                                const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
-                                const scale = (3 * scaleMultiplier) / maxDim;
-                                object.scale.set(scale, scale, scale);
-                                
-                                // Center the model properly at origin
-                                object.position.x = -center.x * scale;
-                                object.position.y = -center.y * scale;
-                                object.position.z = -center.z * scale;
-
-                                this.bee = object;
-                                this.scene.add(object);
-                                
-                                // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
-                                object.position.y += (this.options.verticalOffset || 0.35);
-                                
-                                // Camera distance based on zoom/framing controls
-                                const maxScaledDim = maxDim * scale;
-                                const distance = (maxScaledDim * (this.options.cameraDistanceFactor || 1.8)) / (this.options.zoom || 1.0);
-                                this.camera.position.z = distance; // Pull back/closer based on zoom
-                                this.camera.position.y = maxScaledDim * 0.15; // Raise camera slightly
-                                this.camera.lookAt(0, 0, 0); // Look at center
-                                this.camera.updateProjectionMatrix();
-                                
-                                if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
-                                    this.renderer.setScissorTest(false);
-                                }
-                                
-                                console.log('⚠️ Mascot loaded but texture failed');
-                                window.mascotBeeLoaded = true;
-                            },
-                            undefined,
-                            (error) => {
-                                console.error('Error loading OBJ:', error);
-                                this.addFallbackBee();
-                            }
-                        );
-                    }
-                );
-            },
-            (xhr) => {
-                const percentLoaded = xhr.loaded / xhr.total * 100;
-                console.log(`Loading materials: ${percentLoaded.toFixed(0)}%`);
-            },
-            (error) => {
-                console.error('❌ Error loading MTL materials:', error);
-                console.error('   MTL path attempted:', base + mtlFilename);
-                console.error('   Full MTL path:', mtlPath);
-                console.error('   Error type:', error.type || 'unknown');
-                console.error('   Error message:', error.message || error.toString());
-                // Fallback: try loading without materials
-                this.loadModelWithoutMaterials(base, objPath, texPath);
-            }
-        );
-    }
-
-    loadModelWithoutMaterials(base, objPath, texPath) {
-        // Fallback method if MTL loading fails
-        console.log('⚠️ Attempting fallback load without MTL');
-        const loader = new THREE.OBJLoader();
-        const textureLoader = new THREE.TextureLoader();
-        
-        // Extract filename for OBJ
-        const objFilename = objPath.substring(objPath.lastIndexOf('/') + 1);
-        
-        loader.setPath(base);
-        loader.setResourcePath(base);
-
-        // Load texture with absolute path
-        console.log('📦 Loading texture from:', texPath);
-        textureLoader.load(
-            texPath,
-            (texture) => {
-                console.log('✅ Texture loaded successfully');
-                // Load OBJ model
-                loader.load(
-                    objFilename,
-                    (object) => {
-                        // Apply texture to all meshes
-                        object.traverse((child) => {
-                            if (child instanceof THREE.Mesh) {
-                                child.material = new THREE.MeshPhongMaterial({
-                                    map: texture,
-                                    shininess: 30
-                                });
-                            }
-                        });
-
-                        // Center and scale the model
-                        const box = new THREE.Box3().setFromObject(object);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const scaleMultiplier = (this.options && this.options.scaleMultiplier) ? this.options.scaleMultiplier : 1;
-                        const scale = (3 * scaleMultiplier) / maxDim;
-                        object.scale.set(scale, scale, scale);
-                        
-                        object.position.sub(center.multiplyScalar(scale));
-
-                        this.bee = object;
-                        this.scene.add(object);
-                        
-                        // AVATAR CLIPPING FIX: Move bee model up to show bottom stinger/feet
-                        object.position.y += 0.35;
-                        
-                        // Slight upward camera bias for safety in fallback path
-                        try {
-                            const boxSize = Math.max(size.x, size.y, size.z) * scale;
-                            this.camera.position.y += 0.07 * boxSize;
-                            this.camera.updateProjectionMatrix();
-                            if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
-                                this.renderer.setScissorTest(false);
-                            }
-                        } catch (e) { /* no-op */ }
-                        
-                        console.log('✅ Mascot Bee 3D model loaded (fallback mode without MTL)');
-                        window.mascotBeeLoaded = true;
-                    },
-                    (xhr) => {
-                        const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
-                        console.log(`Loading model: ${percentComplete}%`);
-                    },
-                    (error) => {
-                        console.error('❌ Error loading OBJ model in fallback:', error);
-                        console.error('   OBJ path attempted:', base + objFilename);
-                        this.addFallbackBee();
-                    }
-                );
-            },
-            undefined,
-            (error) => {
-                console.error('❌ Error loading texture in fallback:', error);
-                console.error('   Texture path attempted:', texPath);
-                this.addFallbackBee();
-            }
-        );
-    }
 
     setupControls() {
         if (!this.options.enableInteraction) return;
@@ -667,23 +365,8 @@ class SmartyBee3D {
     }
 
     addFallbackBee() {
-        // Lightweight 3D fallback so UI still looks alive if OBJ/MTL missing
-        try {
-            const geom = new THREE.SphereGeometry(1, 20, 20);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xffdd00, metalness: 0.2, roughness: 0.6 });
-            const bee = new THREE.Mesh(geom, mat);
-            bee.position.set(0, 1, 0);
-            this.scene.add(bee);
-            
-            // AVATAR CLIPPING FIX: Move fallback bee up to show bottom
-            bee.position.y += 0.35;
-            
-            this.bee = bee;
-            console.warn('Fallback 3D bee added (OBJ not available).');
-        } catch (e) {
-            console.error('Failed to add fallback 3D bee, showing image instead.', e);
-            this.showFallbackImage();
-        }
+        // No fallback - GLB avatars only
+        console.warn('GLB avatar failed to load. No fallback provided.');
     }
 
     animate() {
