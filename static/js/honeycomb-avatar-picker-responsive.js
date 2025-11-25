@@ -250,6 +250,11 @@ async function loadAvatars() {
             throw new Error('Invalid API response format');
         }
         
+        console.log('📦 Raw API avatars count:', apiAvatars.length);
+        if (apiAvatars.length > 0) {
+            console.log('📦 Sample avatar structure:', JSON.stringify(apiAvatars[0], null, 2));
+        }
+        
         const rawAvatars = apiAvatars.map(avatar => {
             // Extract GLB URL from standard urls.glb field (all avatars are now GLB-only)
             const glbUrl = avatar.urls?.glb;

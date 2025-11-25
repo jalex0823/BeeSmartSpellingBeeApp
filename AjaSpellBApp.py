@@ -11237,19 +11237,48 @@ def api_get_avatars():
             print(f"✅ DEBUG /api/avatars GET: Database connection successful")
         except Exception as db_test_error:
             print(f"❌ ERROR /api/avatars GET: Database connection failed: {db_test_error}")
-            # Return minimal fallback avatar list
-            return jsonify({
-                "ok": True, 
-                "avatars": [{
-                    "id": "bee",
-                    "name": "Default Bee Avatar",
-                    "description": "The classic bee avatar",
+            # Return filesystem-based fallback with all available GLB avatars
+            print(f"🔍 Scanning filesystem for fallback avatars...")
+            static_root = os.path.join(app.root_path, 'static', 'assets', 'avatars')
+            glb_dir = os.path.join(static_root, 'glb_files')
+            thumb_dir = os.path.join(glb_dir, 'AvatarThumbnails')
+            fallback_avatars = []
+            if os.path.isdir(glb_dir):
+                for fname in sorted(os.listdir(glb_dir)):
+                    if not fname.lower().endswith('.glb'):
+                        continue
+                    base = fname[:-4]
+                    glb_path = f"/static/assets/avatars/glb_files/{fname}"
+                    thumb_path = f"/static/assets/avatars/glb_files/AvatarThumbnails/{base}!.png"
+                    # Verify thumbnail exists, use fallback if not
+                    thumb_fs = os.path.join(thumb_dir, f"{base}!.png")
+                    if not os.path.exists(thumb_fs):
+                        thumb_path = "/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png"
+                    fallback_avatars.append({
+                        "id": base.lower(),
+                        "name": base,
+                        "description": f"{base} is ready to spell! 🐝",
+                        "category": "free",
+                        "is_locked": False,
+                        "urls": {"glb": glb_path, "thumbnail": thumb_path}
+                    })
+            
+            if not fallback_avatars:
+                # Ultimate fallback: just HoneyComb
+                fallback_avatars = [{
+                    "id": "honey-comb",
+                    "name": "HoneyComb Avatar",
+                    "description": "The golden honeycomb avatar",
                     "category": "free",
                     "is_locked": False,
-                    "urls": {"glb": "/static/assets/avatars/glb_files/Bee.glb", "thumbnail": "/static/assets/avatars/glb_files/AvatarThumbnails/Bee!.png"}
-                }],
+                    "urls": {"glb": "/static/assets/avatars/glb_files/HoneyComb.glb", "thumbnail": "/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png"}
+                }]
+            
+            return jsonify({
+                "ok": True, 
+                "avatars": fallback_avatars,
                 "user_info": {"honey_points": 0, "is_premium": False},
-                "debug": "Database unavailable - fallback mode"
+                "debug": "Database unavailable - filesystem fallback mode"
             })
         
         # Check cache first
@@ -11459,6 +11488,7 @@ def api_get_avatars():
             # Python 3.9 compatibility: use typing.Union instead of PEP 604 (|) unions
             aliases: Dict[str, Union[List[str], str]] = {
                 'DoctorBee': ['DocBee'],
+                'KnightBee': ['BeeKnight'],
                 'FrankenBee': ['Franken Bee', 'Franken-Bee'],
             }
             alias_val = aliases.get(base)
@@ -11679,6 +11709,12 @@ def api_get_avatars():
         _AVATAR_CACHE[cache_key] = response_data
         _AVATAR_CACHE[f"{cache_key}_timestamp"] = time.time()
         print(f"💾 Cached {len(enriched_avatars)} avatars for {cache_key}")
+        
+        # DEBUG: Log first few avatars
+        if enriched_avatars:
+            print(f"🐝 First avatar in response: {enriched_avatars[0].get('name')} - URLs: {enriched_avatars[0].get('urls')}")
+            if len(enriched_avatars) > 1:
+                print(f"🐝 Second avatar in response: {enriched_avatars[1].get('name')} - URLs: {enriched_avatars[1].get('urls')}")
         
         return jsonify(response_data)
 
