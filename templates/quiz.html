@@ -3093,7 +3093,7 @@ if ('speechSynthesis' in window) {
                             visibility:hidden; opacity:0; background:transparent !important; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
                             transition: opacity 0.4s ease-in, visibility 0.4s ease-in;
-                            display:none;">
+                            display:none !important;">
                     <!-- CSS Fallback Voice Waves (shown if WebGL not available) -->
                     <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
                                                             width:200px; height:80px; align-items:center; justify-content:center; gap:6px;">
@@ -3198,6 +3198,14 @@ if ('speechSynthesis' in window) {
 
                 <!-- Center-Flowing Amber Wave CSS -->
                 <style>
+                    /* Force bee swarm canvas transparency */
+                    #beeSwarmVisualizerContainer,
+                    #beeSwarmVisualizerContainer canvas,
+                    #beeSwarmVisualizerContainer * {
+                        background: transparent !important;
+                        background-color: transparent !important;
+                    }
+                    
                     .voice-card.speaking-mode {
                         background: transparent;
                         border-radius: 0;
