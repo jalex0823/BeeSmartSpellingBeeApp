@@ -32,7 +32,7 @@
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFCA28 70%, #FFB300 100%);
+  background: linear-gradient(135deg, #FFF4E6 0%, #FFEAC2 50%, #FFE4CC 100%);
   color: #3b2b04;
   /* Universal font stack for consistent mobile rendering - system fonts only */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
