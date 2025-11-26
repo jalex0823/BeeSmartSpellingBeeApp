@@ -1250,6 +1250,27 @@ class Avatar(db.Model):
     def get_by_slug(slug):
         """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""
         from flask import g
+        
+        # Initialize cache if not exists
+        if not hasattr(g, '_avatar_cache'):
+            g._avatar_cache = {}
+        
+        # Return cached result if available
+        if slug in g._avatar_cache:
+            return g._avatar_cache[slug]
+        
+        # Query database and cache result
+        avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
+        g._avatar_cache[slug] = avatar
+        return avatar
+    
+    @staticmethod
+    def get_all_active(category=None):
+        """Get all active avatars, optionally filtered by category"""
+        query = Avatar.query.filter_by(is_active=True)
+        if category:
+            query = query.filter_by(category=category)
+        return query.order_by(Avatar.sort_order, Avatar.name).all()
 
 
 class BadgeAsset(db.Model):
@@ -1277,36 +1298,6 @@ class BadgeAsset(db.Model):
             'mime_type': self.mime_type,
             'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
         }
-
-
-    @staticmethod
-    def get_by_slug(slug):
-        """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""
-        from flask import g
-        
-        # Initialize cache if not exists
-        if not hasattr(g, '_avatar_cache'):
-            g._avatar_cache = {}
-        
-        # Return cached result if available
-        if slug in g._avatar_cache:
-            return g._avatar_cache[slug]
-        
-        # Query database and cache result
-        avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
-        g._avatar_cache[slug] = avatar
-        return avatar
-    
-    @staticmethod
-    def get_all_active(category=None):
-        """Get all active avatars, optionally filtered by category"""
-        query = Avatar.query.filter_by(is_active=True)
-        if category:
-            query = query.filter_by(category=category)
-        return query.order_by(Avatar.sort_order, Avatar.name).all()
-    
-    def __repr__(self):
-        return f'<Avatar {self.slug} - {self.name}>'
 
 
 class PurchaseRecord(db.Model):
