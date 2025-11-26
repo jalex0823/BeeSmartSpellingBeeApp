@@ -3085,10 +3085,11 @@ if ('speechSynthesis' in window) {
                 <!-- Bee Swarm Voice Visualizer - Lips Animation (WebGL with CSS fallback) -->
                 <div id="beeSwarmVisualizerContainer"
                      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-                            width:860px; height:260px; z-index:5; pointer-events:none;
-                            visibility:hidden; opacity:0; background:transparent; box-shadow:none;
+                            width:400px; height:200px; z-index:5; pointer-events:none;
+                            visibility:hidden; opacity:0; background:transparent !important; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
-                            transition: opacity 0.4s ease-in, visibility 0.4s ease-in;">
+                            transition: opacity 0.4s ease-in, visibility 0.4s ease-in;
+                            display:none;">
                     <!-- CSS Fallback Voice Waves (shown if WebGL not available) -->
                     <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
                                                             width:200px; height:80px; align-items:center; justify-content:center; gap:6px;">
@@ -9269,6 +9270,7 @@ function playThemedSound(soundType) {
                 lazyInit: false
             });
             
+            container.style.display = 'block';
             container.style.visibility = 'visible';
             container.style.opacity = '1';
             console.log('✅ Bee swarm lips visualizer initialized');
