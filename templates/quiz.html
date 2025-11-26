@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-11-26-webgl-disabled -->
+<!-- QUIZ VERSION: 2025-11-26-bee-swarm-restored -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -3082,14 +3082,14 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
-                <!-- Bee Swarm Voice Visualizer Background - DISABLED (causes white box issue) -->
+                <!-- Bee Swarm Voice Visualizer - Lips Animation (WebGL with CSS fallback) -->
                 <div id="beeSwarmVisualizerContainer"
                      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                             width:860px; height:260px; z-index:5; pointer-events:none;
-                            visibility:hidden; opacity:0; display:none; background:transparent; box-shadow:none;
+                            visibility:hidden; opacity:0; background:transparent; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
                             transition: opacity 0.4s ease-in, visibility 0.4s ease-in;">
-                    <!-- CSS Fallback Voice Waves (shown if THREE.js fails) -->
+                    <!-- CSS Fallback Voice Waves (shown if WebGL not available) -->
                     <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
                                                             width:200px; height:80px; align-items:center; justify-content:center; gap:6px;">
                         <div class="voice-wave-bar" style="width:8px; height:15px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
@@ -9229,11 +9229,63 @@ function playThemedSound(soundType) {
 }
 </script>
 
-<!-- 🐝 Bee Swarm Visualizer DISABLED - WebGL not universally supported, CSS fallback active -->
-<script>
-console.log('ℹ️ Bee Swarm 3D Visualizer disabled - using CSS voice visualizer fallback for better compatibility');
-window.beeSwarmViz = null;
-window.usingFallbackViz = true;
+<!-- 🐝 Bee Swarm Visualizer - Lips Animation with WebGL Fallback -->
+<script type="module">
+    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251126';
+    
+    window.beeSwarmViz = null;
+    window.usingFallbackViz = false;
+    
+    function initBeeSwarm() {
+        const container = document.getElementById('beeSwarmVisualizerContainer');
+        if (!container) {
+            console.error('❌ Bee swarm container not found');
+            return;
+        }
+        
+        // Check for WebGL support before attempting initialization
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        
+        if (!gl) {
+            console.warn('⚠️ WebGL not supported - using CSS fallback visualizer');
+            window.usingFallbackViz = true;
+            return;
+        }
+        
+        console.log('✅ WebGL supported - initializing bee swarm lips animation');
+        
+        try {
+            window.beeSwarmViz = BeeSwarmVisualizer.init(container, {
+                autoStart: true,
+                showControls: false,
+                particleCount: 6000,
+                sampleStep: 2,
+                background: 'transparent',
+                zIndex: 5,
+                overallScale: 2.2,
+                cameraZ: 8.5,
+                maskUrl: '/static/assets/visualizer/lips_mask_clean.png',
+                lazyInit: false
+            });
+            
+            container.style.visibility = 'visible';
+            container.style.opacity = '1';
+            console.log('✅ Bee swarm lips visualizer initialized');
+            
+        } catch (error) {
+            console.warn('⚠️ Bee swarm init failed, using CSS fallback:', error.message);
+            window.usingFallbackViz = true;
+            window.beeSwarmViz = null;
+        }
+    }
+    
+    // Initialize when DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(initBeeSwarm, 100));
+    } else {
+        setTimeout(initBeeSwarm, 100);
+    }
 </script>
 
 {% endblock %}
