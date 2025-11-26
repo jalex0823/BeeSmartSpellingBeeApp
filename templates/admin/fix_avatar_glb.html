@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Fix Avatar GLB Paths - Admin{% endblock %}
+
+{% block content %}
+<style>
+    .admin-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        color: white;
+    }
+    
+    .fix-button {
+        background: #10B981;
+        color: white;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .fix-button:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+    
+    .fix-button:disabled {
+        background: #9CA3AF;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .result-box {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-top: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .success {
+        background: rgba(16, 185, 129, 0.2);
+        border: 2px solid #10B981;
+    }
+    
+    .error {
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid #EF4444;
+    }
+    
+    .avatar-list {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-top: 1rem;
+    }
+    
+    .avatar-item {
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .old-path {
+        color: #FCA5A5;
+        text-decoration: line-through;
+    }
+    
+    .new-path {
+        color: #86EFAC;
+        font-weight: 600;
+    }
+</style>
+
+<div class="admin-container">
+    <h1 style="margin: 0 0 1rem 0; font-size: 2rem;">🔧 Fix Avatar GLB Paths</h1>
+    <p style="opacity: 0.9; margin-bottom: 1.5rem;">
+        This utility converts all avatar database records from <code>.obj</code> to <code>.glb</code> format.
+        All avatars now use GLB files exclusively.
+    </p>
+    
+    <button id="fixButton" class="fix-button" onclick="fixAvatarPaths()">
+        🚀 Fix All Avatar Paths
+    </button>
+    
+    <div id="result" style="display: none;"></div>
+</div>
+
+<script>
+async function fixAvatarPaths() {
+    const button = document.getElementById('fixButton');
+    const resultDiv = document.getElementById('result');
+    
+    // Disable button and show loading
+    button.disabled = true;
+    button.textContent = '⏳ Fixing avatars...';
+    resultDiv.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/admin/fix-avatar-glb-paths', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Show success message
+            resultDiv.className = 'result-box success';
+            resultDiv.innerHTML = `
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem;">✅ Success!</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 1rem;">${data.message}</p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800;">${data.total_avatars}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Total Avatars</div>
+                    </div>
+                    <div style="background: rgba(16,185,129,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800; color: #10B981;">${data.fixed_count}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Fixed</div>
+                    </div>
+                    <div style="background: rgba(59,130,246,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800; color: #3B82F6;">${data.already_correct}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Already Correct</div>
+                    </div>
+                </div>
+                ${data.fixed_avatars && data.fixed_avatars.length > 0 ? `
+                    <h3 style="margin: 1.5rem 0 0.5rem 0;">Fixed Avatars:</h3>
+                    <div class="avatar-list">
+                        ${data.fixed_avatars.map(avatar => `
+                            <div class="avatar-item">
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">${avatar.name} (${avatar.slug})</div>
+                                <div class="old-path">❌ ${avatar.old}</div>
+                                <div class="new-path">✅ ${avatar.new}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p style="margin-top: 1rem; opacity: 0.8;">All avatars were already using .glb format! 🎉</p>'}
+            `;
+        } else {
+            // Show error message
+            resultDiv.className = 'result-box error';
+            resultDiv.innerHTML = `
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem;">❌ Error</h2>
+                <p style="font-size: 1.1rem;">${data.message}</p>
+            `;
+        }
+        
+        resultDiv.style.display = 'block';
+        
+    } catch (error) {
+        // Show error message
+        resultDiv.className = 'result-box error';
+        resultDiv.innerHTML = `
+            <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem;">❌ Error</h2>
+            <p style="font-size: 1.1rem;">Failed to fix avatar paths: ${error.message}</p>
+        `;
+        resultDiv.style.display = 'block';
+    } finally {
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = '🚀 Fix All Avatar Paths';
+    }
+}
+</script>
+
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="/admin/dashboard" style="color: white; text-decoration: none; opacity: 0.8; hover: opacity: 1;">
+        ← Back to Admin Dashboard
+    </a>
+</div>
+
+{% endblock %}

@@ -10260,6 +10260,17 @@ def admin_dashboard():
                              error_details=error_details if app.debug else None), 500
 
 
+@app.route('/admin/fix-avatar-glb')
+@login_required
+def admin_fix_avatar_glb():
+    """Admin utility page to fix avatar GLB paths in database"""
+    if current_user.role != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+    
+    return render_template('admin/fix_avatar_glb.html', user=current_user)
+
+
 @app.route('/admin/battle-bees')
 @login_required
 def admin_battle_bees():
