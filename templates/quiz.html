@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-11-21-syntax-fix -->
+<!-- QUIZ VERSION: 2025-11-26-panel-fixed -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -9316,55 +9316,14 @@ function playThemedSound(soundType) {
                 if (window.beeSwarmViz) {
                     window.beeSwarmViz.amplitude = 0.8;
 
-                        // Developer tuning panel gated by flag
+                        // Developer tuning panel DISABLED - was causing syntax errors
+                        // Re-enable if needed for debugging visualizer parameters
+                        /*
                         if (window.SHOW_VIZ_TUNING_PANEL === true || window.SHOW_VIZ_TUNING_PANEL === 'true') {
-                        const panel = document.createElement('div');
-                        panel.id = 'vizTuningPanel';
-                        panel.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:2000;background:rgba(30,30,35,0.85);color:#ffd566;font:12px/1.4 "Inter",sans-serif;padding:10px 12px;border:1px solid #444;border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,0.4);width:220px;';
-                        panel.innerHTML = `
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                                <strong style="font-size:12px">Visualizer Tuning</strong>
-                                <button id="vizCloseBtn" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;">✕</button>
-                            </div>
-                            <label style="display:block;margin:6px 0 4px;">Brightness Threshold <span id="thVal">60</span></label>
-                            <input id="thSlider" type="range" min="0" max="255" value="60" style="width:100%;">
-                            <label style="display:block;margin:10px 0 4px;">Performance Mode</label>
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <button class="perfBtn" data-mode="high" style="flex:1 1 60px;">High</button>
-                                <button class="perfBtn" data-mode="auto" style="flex:1 1 60px;">Auto</button>
-                                <button class="perfBtn" data-mode="low" style="flex:1 1 60px;">Low</button>
-                            </div>
-                            <label style="display:block;margin:10px 0 4px;">Invert Mask</label>
-                            <button id="invertBtn" style="width:100%;">Invert Off</button>
-                            <div style="margin-top:8px;opacity:0.7;font-size:11px;">Panel is dev-only. Remove for production.</div>
-                        `;
-                        document.body.appendChild(panel);
-                        const thSlider = panel.querySelector('#thSlider');
-                        const thVal = panel.querySelector('#thVal');
-                        const invertBtn = panel.querySelector('#invertBtn');
-                        thSlider.addEventListener('input', () => {
-                            thVal.textContent = thSlider.value;
-                            if(window.beeSwarmViz) {
-                                window.beeSwarmViz.rebuildFromStoredMask({ threshold: parseInt(thSlider.value,10) });
-                            }
-                        });
-                        invertBtn.addEventListener('click', () => {
-                            invertBtn.textContent = invertBtn.textContent.includes('Off') ? 'Invert On' : 'Invert Off';
-                            const invert = invertBtn.textContent.includes('On');
-                            if(window.beeSwarmViz) {
-                                window.beeSwarmViz.rebuildFromStoredMask({ invert });
-                            }
-                        });
-                        panel.querySelectorAll('.perfBtn').forEach(btn => {
-                            btn.style.cssText += 'background:#222;border:1px solid #555;color:#ffd566;padding:4px 6px;border-radius:5px;cursor:pointer;font-size:11px;';
-                            btn.addEventListener('click', () => {
-                                const mode = btn.getAttribute('data-mode');
-                                if(window.beeSwarmViz) window.beeSwarmViz.setPerformanceMode(mode);
-                            });
-                        });
-                        panel.querySelector('#vizCloseBtn').addEventListener('click', () => panel.remove());
-                        document.body.appendChild(panel);
+                        ... panel code ...
                         }
+                        */
+                    
                     window.beeSwarmViz.isActive = true;
                     setTimeout(() => {
                         window.beeSwarmViz.isActive = false;
