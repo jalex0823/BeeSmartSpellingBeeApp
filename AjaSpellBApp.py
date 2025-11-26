@@ -11511,8 +11511,8 @@ def api_get_avatars():
                 except ImportError:
                     pass
                 # Fallback: convert CamelCase to hyphenated slug
-                name_with_spaces = _re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
-                slug = _re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
+                name_with_spaces = re.sub(r'(?<!^)([A-Z])', r' \1', base).strip()
+                slug = re.sub(r'[^a-z0-9]+', '-', name_with_spaces.lower()).strip('-')
                 return slug
             
             if os.path.isdir(glb_dir):
