@@ -3012,8 +3012,8 @@ if ('speechSynthesis' in window) {
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
             <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo">
             
-            <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
-            <div id="mascotBee3D" class="mascot-3d-container" style="border: none;"></div>
+            <!-- 3D Mascot DISABLED for performance - causes quiz slowdown -->
+            <!-- <div id="mascotBee3D" class="mascot-3d-container" style="border: none;"></div> -->
             
             <!-- Avatar Name Badge (shows user's chosen avatar name) -->
             {% if user_name %}
@@ -3082,11 +3082,11 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
-                <!-- Bee Swarm Voice Visualizer Background - Fixed at timer position (transparent, honey swarm lips only) -->
+                <!-- Bee Swarm Voice Visualizer Background - DISABLED (causes white box issue) -->
                 <div id="beeSwarmVisualizerContainer"
                      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                             width:860px; height:260px; z-index:5; pointer-events:none;
-                            visibility:visible; opacity:1; background:transparent; box-shadow:none;
+                            visibility:hidden; opacity:0; display:none; background:transparent; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
                             transition: opacity 0.4s ease-in, visibility 0.4s ease-in;">
                     <!-- CSS Fallback Voice Waves (shown if THREE.js fails) -->
@@ -8459,9 +8459,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     delight = new BeeDelightManager();
     
-    // Bee swarm and hive removed - too distracting during quiz
-    // Only keep the 3D mascot bee for companionship
+    // 3D Mascot DISABLED for performance - causes significant quiz slowdown
+    // Commenting out entire mascot initialization to improve quiz performance
     
+    /*
     // Initialize 3D Mascot with user's selected avatar
     // (smartyBee is already declared at function scope above)
     try {
@@ -8603,6 +8604,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('❌ Could not hide avatar container:', fallbackError);
         }
     }
+    */
+    console.log('ℹ️ 3D Mascot disabled for performance optimization');
+    
     } catch (initError) {
         // Catch errors from the outer try block (morph controller, delight manager, avatar init)
         console.error('❌ Quiz initialization error:', initError);
