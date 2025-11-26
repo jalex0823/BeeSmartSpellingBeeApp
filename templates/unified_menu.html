@@ -12923,36 +12923,22 @@
                 await this.delay(200);
                 this.updateProgress(60, '🎯 Systems ready');
                 
-                // Check 8: Word List Validation (fetch actual count from library)
+                // Check 8: Word List - USE WORDBANKMANAGER (single source of truth)
                 const check8 = this.addCheck('Word List', 'Validating...', '⏳');
                 await this.delay(200);
                 try {
-                    // Fetch word count from the actual library - this reflects TRUE current state
-                    const wordbankRes = await this.fetchWithTimeout('/api/wordbank', {
-                        cache: 'no-store',
-                        credentials: 'same-origin',
-                        headers: { 'Cache-Control': 'no-cache' }
-                    }, 3000);
+                    // Use WordBankManager as single source of truth for all word counts
+                    const wordCount = await window.WordBankManager.getCount(true);
                     
-                    if (wordbankRes.ok) {
-                        const wordbankData = await wordbankRes.json();
-                        const wordCount = (wordbankData.words && wordbankData.words.length) || 0;
-                        
-                        // 🔍 IMPORTANT: This shows ACTUAL words in your current session
-                        // NOT defaults - this is what's really in your wordbank right now
-                        if (wordCount > 0) {
-                            this.updateCheck(check8, `${wordCount} words in session`, '✅', 60);
-                            this.updateProgress(60, `📚 ${wordCount} words ready`);
-                            console.log(`✅ Word list validated: ${wordCount} words (from your session, not defaults)`);
-                        } else {
-                            this.updateCheck(check8, '0 words - empty wordbank', 'ℹ️', 60);
-                            this.updateProgress(60, '📚 Wordbank empty');
-                            console.log('ℹ️ Wordbank is empty - no defaults loaded (user must upload)');
-                        }
+                    // 🔍 WordBankManager ensures consistency across all displays
+                    if (wordCount > 0) {
+                        this.updateCheck(check8, `${wordCount} words in session`, '✅', 60);
+                        this.updateProgress(60, `📚 ${wordCount} words ready`);
+                        console.log(`✅ Word list validated: ${wordCount} words (from WordBankManager)`);
                     } else {
-                        this.updateCheck(check8, 'Check failed', '⚠️', 60);
-                        this.updateProgress(60, '⚠️ Word check error');
-                        console.warn('⚠️ Wordbank fetch returned non-OK:', wordbankRes.status);
+                        this.updateCheck(check8, '0 words - empty wordbank', 'ℹ️', 60);
+                        this.updateProgress(60, '📚 Wordbank empty');
+                        console.log('ℹ️ Wordbank is empty (user must upload)');
                     }
                 } catch (wordbankError) {
                     console.warn('Wordbank validation failed:', wordbankError);
@@ -12992,37 +12978,29 @@
                 }
                 console.log('✅ Stats check deferred to post-loading');
                 
-                // Check 10: Internal Dictionary System - SKIP PRELOAD, SHOW ACTUAL SESSION STATE
+                // Check 10: Dictionary System - USE WORDBANKMANAGER (single source of truth)
                 const check10 = this.addCheck('Dictionary System', 'Checking...', '⏳');
                 await this.delay(200);
                 try {
-                    // Fetch actual wordbank to show consistent count with Check 8
-                    const wordbankRes = await this.fetchWithTimeout('/api/wordbank', {
-                        cache: 'no-store',
-                        credentials: 'same-origin',
-                        headers: { 'Cache-Control': 'no-cache' }
-                    }, 3000);
+                    // Use WordBankManager to ensure consistent count across all checks
+                    const wordCount = await window.WordBankManager.getCount(false); // Use cache from Check 8
                     
-                    if (wordbankRes.ok) {
-                        const wordbankData = await wordbankRes.json();
-                        const wordCount = (wordbankData.words && wordbankData.words.length) || 0;
-                        
-                        if (wordCount > 0) {
-                            this.updateCheck(check10, `Ready (${wordCount} words to define)`, '✅', 75);
-                            this.updateProgress(75, `📖 Dictionary ready for ${wordCount} words`);
-                            console.log(`✅ Dictionary ready for ${wordCount} words in session`);
-                        } else {
-                            this.updateCheck(check10, 'Ready (0 words)', '✅', 75);
-                            this.updateProgress(75, '📖 Dictionary ready (add words to quiz)');
-                            console.log('✅ Dictionary ready - no words in session yet');
-                        }
-                        window.dictionaryPreloaded = false; // On-demand loading
+                    if (wordCount > 0) {
+                        this.updateCheck(check10, `Ready (${wordCount} words to define)`, '✅', 75);
+                        this.updateProgress(75, `📖 Dictionary ready for ${wordCount} words`);
+                        console.log(`✅ Dictionary ready for ${wordCount} words (from WordBankManager)`);
                     } else {
-                        // Fallback: dictionary will load on-demand
-                        this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
-                        this.updateProgress(75, '📖 Dictionary ready (on-demand)');
-                        console.warn('⚠️ Dictionary check failed, will load on-demand');
-                        window.dictionaryPreloaded = false;
+                        this.updateCheck(check10, 'Ready (0 words)', '✅', 75);
+                        this.updateProgress(75, '📖 Dictionary ready (add words to quiz)');
+                        console.log('✅ Dictionary ready - no words in session yet');
+                    }
+                    window.dictionaryPreloaded = false; // On-demand loading
+                } catch (error) {
+                    // Fallback: dictionary will load on-demand
+                    this.updateCheck(check10, 'On-demand mode', '⚠️', 75);
+                    this.updateProgress(75, '📖 Dictionary ready (on-demand)');
+                    console.warn('⚠️ Dictionary check failed, will load on-demand:', error);
+                    window.dictionaryPreloaded = false;
                     }
                 } catch (dictError) {
                     // Fallback: dictionary will load on-demand
