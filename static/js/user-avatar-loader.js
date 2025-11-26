@@ -709,5 +709,5 @@ document.addEventListener('DOMContentLoaded', () => {
             avatarInitialized = true;
             window.userAvatarLoader.init();
         }
-    }, 2000);
+    }, 5000);
 });

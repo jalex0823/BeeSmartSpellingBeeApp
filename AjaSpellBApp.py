@@ -3511,7 +3511,7 @@ def load_saved_wordlist():
 
         if not rows:
             print(f"❌ /api/saved-lists/load: List has no items. list_id={wl.id}")
-            return jsonify({"ok": False, "error": "This list has no items"}), 400
+            return jsonify({"ok": False, "error": "This list is empty. Please upload words to this list first."}), 400
 
         # Clear previous quiz state
         if session.get(QUIZ_STATE_KEY):

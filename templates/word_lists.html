@@ -346,6 +346,11 @@
     align-items:center;
     gap:6px;
   }
+  .list-cell-badge.empty {
+    background:linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color:#fff;
+    box-shadow:0 3px 10px rgba(243,156,18,0.3);
+  }
 
   /* actions */
   .list-cell-actions{
@@ -833,8 +838,12 @@
     const isFav = localFavs.has(list.id);
     const star = isFav ? "⭐" : "☆";
 
+    const isEmpty = !list.word_count || list.word_count === 0;
+    const tapLabel = isEmpty ? "📤 Upload Words" : "🐝 Tap to Quiz";
+    const badgeClass = isEmpty ? "list-cell-badge empty" : "list-cell-badge";
+
     cell.innerHTML = `
-      <div class="tap-label">🐝 Tap to Quiz</div>
+      <div class="tap-label">${tapLabel}</div>
       
       <div class="list-cell-actions">
         <button class="list-cell-action-btn favorite" title="Pin list"
@@ -847,7 +856,7 @@
           onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
       </div>
 
-      <div class="list-cell-badge">≡ ${list.word_count||0} words</div>
+      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : "≡ "+list.word_count+" words"}</div>
 
       <div class="list-cell-inner">
         <div class="list-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
