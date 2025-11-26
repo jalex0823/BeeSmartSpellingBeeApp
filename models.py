@@ -1206,6 +1206,8 @@ class Avatar(db.Model):
     mtl_data = db.Column(db.LargeBinary)  # Material MTL file content
     texture_data = db.Column(db.LargeBinary)  # Texture PNG file content
     thumbnail_data = db.Column(db.LargeBinary)  # Thumbnail PNG file content
+    glb_data = db.Column(db.LargeBinary)  # GLB file binary data (modern format)
+    glb_file_size = db.Column(db.Integer)  # Size in bytes for monitoring
     
     # Metadata
     unlock_level = db.Column(db.Integer, default=1)  # Minimum level to unlock (1 = always available)
@@ -1244,6 +1246,39 @@ class Avatar(db.Model):
             'is_active': self.is_active
         }
     
+    @staticmethod
+    def get_by_slug(slug):
+        """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""
+        from flask import g
+
+
+class BadgeAsset(db.Model):
+    """Store 3D badge GLB files in database for CDN-free deployment"""
+    __tablename__ = 'badge_assets'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    badge_name = db.Column(db.String(100), unique=True, nullable=False, index=True)  # e.g., 'Novice', 'Scholar'
+    file_name = db.Column(db.String(200), nullable=False)  # Original filename: 'Novice.glb'
+    file_data = db.Column(db.LargeBinary, nullable=False)  # Binary GLB data
+    file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
+    mime_type = db.Column(db.String(100), default='model/gltf-binary')
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    last_accessed = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<BadgeAsset {self.badge_name} - {self.file_size} bytes>'
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses (excluding binary data)"""
+        return {
+            'badge_name': self.badge_name,
+            'file_name': self.file_name,
+            'file_size': self.file_size,
+            'mime_type': self.mime_type,
+            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
+        }
+
+
     @staticmethod
     def get_by_slug(slug):
         """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""

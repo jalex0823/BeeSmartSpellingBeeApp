@@ -12759,6 +12759,18 @@ def serve_avatar_file_from_db(slug, filename):
                 return send_from_directory(f'static/assets/avatars/{slug}', filename)
             return Response(avatar.mtl_data, mimetype='text/plain')
         
+        elif ext == 'glb':
+            if not avatar.glb_data:
+                return send_from_directory(f'static/assets/avatars/{slug}', filename)
+            return Response(
+                avatar.glb_data, 
+                mimetype='model/gltf-binary',
+                headers={
+                    'Content-Disposition': f'inline; filename="{filename}"',
+                    'Cache-Control': 'public, max-age=31536000'  # 1 year cache
+                }
+            )
+        
         elif ext == 'png' and '!' in filename:
             # Thumbnail
             if not avatar.thumbnail_data:
@@ -12784,6 +12796,72 @@ def serve_avatar_file_from_db(slug, filename):
             return "File not found", 404
 
 
+# --- Badge GLB File Serving from Database -------------------------------------------
+@app.route("/static/assets/badges/glb_files/<filename>")
+def serve_badge_file_from_db(filename):
+    """Serve badge GLB files from database binary data"""
+    try:
+        from models import BadgeAsset
+        from datetime import datetime
+        
+        # Extract badge name from filename (e.g., 'Novice.glb' -> 'Novice')
+        badge_name = filename.replace('.glb', '')
+        
+        # Get badge from database
+        badge = BadgeAsset.query.filter_by(badge_name=badge_name).first()
+        
+        if not badge:
+            # Try from filesystem as fallback
+            try:
+                return send_from_directory('static/assets/badges/glb_files', filename)
+            except:
+                return jsonify({'error': 'Badge not found'}), 404
+        
+        # Update last accessed time (async, don't block response)
+        try:
+            badge.last_accessed = datetime.utcnow()
+            db.session.commit()
+        except:
+            db.session.rollback()
+        
+        # Serve GLB file from database
+        return Response(
+            badge.file_data,
+            mimetype='model/gltf-binary',
+            headers={
+                'Content-Disposition': f'inline; filename="{badge.file_name}"',
+                'Cache-Control': 'public, max-age=31536000'  # Cache for 1 year
+            }
+        )
+    
+    except Exception as e:
+        print(f"❌ Error serving badge file {filename}: {e}")
+        # Fallback to filesystem
+        try:
+            return send_from_directory('static/assets/badges/glb_files', filename)
+        except:
+            return jsonify({'error': 'File not found'}), 404
+
+
+@app.route("/api/badges/list", methods=["GET"])
+def api_list_badges():
+    """List all available badge GLB files"""
+    try:
+        from models import BadgeAsset
+        
+        badges = BadgeAsset.query.order_by(BadgeAsset.badge_name).all()
+        
+        return jsonify({
+            'success': True,
+            'badges': [badge.to_dict() for badge in badges],
+            'count': len(badges)
+        })
+    
+    except Exception as e:
+        print(f"❌ Error listing badges: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route("/api/users/me", methods=["GET"])
 def api_get_current_user():
     """Get current user's basic information (name, auth status, etc.)"""
@@ -12797,6 +12875,7 @@ def api_get_current_user():
                     current_user.update_gpa_and_accuracy()
             except Exception as _e:
                 print(f"WARNING /api/users/me: Failed to auto-refresh GPA/accuracy: {_e}")
+
 
             resp = jsonify({
                 'status': 'success',
