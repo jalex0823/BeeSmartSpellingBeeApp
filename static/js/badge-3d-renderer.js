@@ -90,11 +90,11 @@ class Badge3DRenderer {
         // Setup lighting
         if (this.options.enableLighting) {
             // Ambient light for overall illumination
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             this.scene.add(ambientLight);
             
             // Directional light for highlights
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
             dirLight.position.set(2, 3, 2);
             if (this.options.enableShadow) {
                 dirLight.castShadow = true;
@@ -143,6 +143,9 @@ class Badge3DRenderer {
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scale = 1.8 / maxDim;
                 this.model.scale.setScalar(scale);
+                
+                // Rotate badge to face front (Y-axis rotation)
+                this.model.rotation.y = Math.PI / 2; // 90 degrees to face forward
                 
                 // Enable shadows if supported
                 if (this.options.enableShadow) {

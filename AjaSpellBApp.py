@@ -3482,11 +3482,13 @@ def load_saved_wordlist():
     try:
         user = get_or_create_guest_user()
         if not user:
+            print("❌ /api/saved-lists/load: Unable to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
         
         payload = request.get_json(silent=True) or {}
         list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
         if not list_id:
+            print(f"❌ /api/saved-lists/load: Missing list id. Payload: {payload}")
             return jsonify({"ok": False, "error": "Missing list id"}), 400
 
         # Lookup by uuid if non-numeric, else by id
@@ -3498,6 +3500,7 @@ def load_saved_wordlist():
             wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
 
         if not wl:
+            print(f"❌ /api/saved-lists/load: List not found. list_id={list_id}, user_id={user.id}")
             return jsonify({"ok": False, "error": "List not found"}), 404
 
         items = WordListItem.query.filter_by(word_list_id=wl.id).order_by(WordListItem.position.asc()).all()
@@ -3507,6 +3510,7 @@ def load_saved_wordlist():
                 rows.append({"word": it.word, "sentence": it.sentence or "", "hint": it.hint or ""})
 
         if not rows:
+            print(f"❌ /api/saved-lists/load: List has no items. list_id={wl.id}")
             return jsonify({"ok": False, "error": "This list has no items"}), 400
 
         # Clear previous quiz state
