@@ -9363,6 +9363,7 @@ function playThemedSound(soundType) {
                             });
                         });
                         panel.querySelector('#vizCloseBtn').addEventListener('click', () => panel.remove());
+                        document.body.appendChild(panel);
                         }
                     window.beeSwarmViz.isActive = true;
                     setTimeout(() => {
