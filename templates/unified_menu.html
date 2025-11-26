@@ -13001,13 +13001,14 @@
                 }
                 console.log('✅ Dictionary check complete');
                 
-            } catch (systemCheckError) {
+                } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
                     console.error('🚨 CRITICAL: System check crashed:', systemCheckError);
                     this.updateProgress(75, '⚠️ Some checks failed - continuing anyway');
                 }
                 
                 return true;
+            }
             }
             
             async preload3DMascot() {
