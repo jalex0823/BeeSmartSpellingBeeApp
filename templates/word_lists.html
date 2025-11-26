@@ -856,7 +856,7 @@
           onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
       </div>
 
-      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : "≡ "+list.word_count+" words"}</div>
+      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `≡ ${list.word_count} words`}</div>
 
       <div class="list-cell-inner">
         <div class="list-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
