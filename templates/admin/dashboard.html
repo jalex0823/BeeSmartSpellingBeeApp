@@ -16,23 +16,17 @@
     <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
             <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👑 Admin Dashboard</h1>
-            <p style="margin: 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
+            <p style="margin: 0 0 1rem 0; opacity: 0.9;">Welcome back, {{ user.display_name }}!</p>
             
-            <!-- Admin Avatar: centered between crest and rank badge -->
-            <div style="margin-top: 0.5rem; display:flex; justify-content:center; align-items:center;">
-                <div class="unified-avatar-stage medium" aria-label="Admin avatar" role="img" style="width:96px; height:96px;">
-                    <div id="adminAvatar3D" class="avatar-fallback" style="font-size:2rem; line-height:1;">🐝</div>
-                </div>
-            </div>
-
-            <!-- Buzz Dust Rank Badge -->
-            <div id="admin-buzz-dust-rank" style="margin-top: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.2); padding: 0.35rem 0.75rem; border-radius: 12px; backdrop-filter: blur(10px);">
-                    <img id="admin-rank-badge" src="" alt="Rank Badge" style="width: 48px; height: 48px; display: none;">
-                    <div style="text-align: left;">
-                        <div id="admin-rank-name" style="font-size: 0.875rem; font-weight: 700; opacity: 0.9; margin-bottom: 0.1rem;">Loading...</div>
-                        <div id="admin-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900; line-height: 1.2;">0 ✨</div>
-                    </div>
+            <!-- Buzz Dust Rank Badge -->ntered, GLB) -->
+            <div id="admin-buzz-dust-rank" style="margin-top: 0.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                <!-- 3D GLB Badge Container -->
+                <div id="admin-rank-badge" style="width: 96px; height: 96px; display: flex; align-items: center; justify-content: center;"></div>
+                
+                <!-- Rank Info Below Badge -->
+                <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
+                    <div id="admin-rank-name" style="font-size: 1rem; font-weight: 700; opacity: 0.9; margin-bottom: 0.25rem;">Loading...</div>
+                    <div id="admin-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; line-height: 1.2;">0 ✨</div>
                 </div>
             </div>
         </div>
@@ -161,22 +155,24 @@
                     }
                     
                     if (badgeEl && data.current_class.badge_image) {
-                        // Render 3D GLB badge
+                        // Render 3D GLB badge (centered, no rotation)
                         console.log('🎖️ Rendering 3D admin badge:', data.current_class.badge_image);
                         if (typeof Badge3DRenderer !== 'undefined') {
                             badgeEl.innerHTML = ''; // Clear previous badge
+                            badgeEl.style.display = 'flex';
                             new Badge3DRenderer(badgeEl, {
                                 badgeFile: data.current_class.badge_image,
-                                width: 48,
-                                height: 48,
-                                autoRotate: true,
-                                rotationSpeed: 0.3
+                                width: 96,
+                                height: 96,
+                                autoRotate: false,
+                                rotationSpeed: 0
                             });
                             console.log('✅ 3D badge rendered:', data.current_class.badge_image);
                         } else {
                             console.warn('⚠️ Badge3DRenderer not available, using fallback');
                             const badgeUrl = `/static/assets/badges/${data.current_class.badge_image.replace('.glb', '.png')}`;
-                            badgeEl.innerHTML = `<img src="${badgeUrl}" alt="${data.current_class.label} Badge" style="width:48px;height:48px;object-fit:contain;">`;
+                            badgeEl.innerHTML = `<img src="${badgeUrl}" alt="${data.current_class.label} Badge" style="width:96px;height:96px;object-fit:contain;">`;
+                            badgeEl.style.display = 'flex';
                         }
                     }
                 } else {
