@@ -128,7 +128,7 @@ const viz = {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
         this.camera.position.z = this.cameraZ;
-        this.renderer = new THREE.WebGLRenderer({ alpha:true, antialias:true });
+        this.renderer = new THREE.WebGLRenderer({ alpha:true, antialias:true, premultipliedAlpha: false });
         this.renderer.setClearColor(0x000000, 0);
         const r = container.getBoundingClientRect();
         const w = r.width || window.innerWidth || 860;
@@ -141,7 +141,7 @@ const viz = {
         el.style.pointerEvents='none'; 
         el.style.zIndex=opts.zIndex;
         
-        // ✅ Prevent white flash - hide until first render
+        // ✅ Prevent white flash - ensure canvas stays transparent
         el.style.background = 'transparent';
         el.style.opacity = '0';
         el.style.visibility = 'hidden';

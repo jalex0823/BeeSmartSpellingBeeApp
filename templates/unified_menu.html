@@ -2669,8 +2669,17 @@
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
                     max-width: 650px;
                 ">
-                    <!-- 3D GLB Badge (like second image) -->
-                    <div id="student-rank-badge" class="rank-badge-3d" style="width: 200px; height: 200px; flex-shrink: 0;"></div>
+                    <!-- 3D GLB Badge (dynamic, matches Buzz Dust rank) -->
+                    <div id="student-rank-badge" class="rank-badge-3d" style="
+                        width: 200px; 
+                        height: 200px; 
+                        flex-shrink: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 50%;
+                        overflow: visible;
+                    "></div>
                     
                     <div style="text-align: left; flex: 1;">
                         <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
@@ -13009,7 +13018,6 @@
                 
                 return true;
             }
-            }
             
             async preload3DMascot() {
                 // Preload 3D mascot assets early so they're ready when menu appears
@@ -15155,23 +15163,27 @@
                 
                 // Update badge with 3D GLB renderer (200px, matching second screenshot)
                 const badgeEl = document.getElementById('student-rank-badge');
-                if (badgeEl && data.current_class.badge_image && window.Badge3DRenderer) {
+                if (badgeEl && data.current_class && data.current_class.badge_image && window.Badge3DRenderer) {
                     // Clear any existing content
                     badgeEl.innerHTML = '';
                     
-                    // Initialize 3D badge renderer with 200px size
+                    // Initialize 3D badge renderer with 200px size, brighter lighting
                     new Badge3DRenderer(badgeEl, {
                         badgeFile: data.current_class.badge_image,
                         width: 200,
                         height: 200,
                         autoRotate: false,
-                        enableLighting: true
+                        rotationSpeed: 0,
+                        enableLighting: true,
+                        cameraDistance: 2.5
                     });
                     console.log('✅ [TICKER] 3D Badge renderer initialized:', data.current_class.badge_image);
                 } else if (!badgeEl) {
                     console.warn('⚠️ [TICKER] Element #student-rank-badge not found in DOM');
                 } else if (!window.Badge3DRenderer) {
-                    console.warn('⚠️ [TICKER] Badge3DRenderer not available - loading fallback');
+                    console.warn('⚠️ [TICKER] Badge3DRenderer not available - THREE.js may not be loaded');
+                } else if (!data.current_class) {
+                    console.warn('⚠️ [TICKER] No current_class in response');
                 } else {
                     console.warn('⚠️ [TICKER] No badge_image in response:', data.current_class);
                 }
