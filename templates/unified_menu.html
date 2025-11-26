@@ -12685,8 +12685,8 @@
                 
                 console.log(`📊 Loading: ${Math.floor(this.progress)}% - ${status}`);
                 
-                // Show "Tap to Enter" button at 50% progress
-                if (this.progress >= 50 && !this.tapToEnterShown) {
+                // Show "Tap to Enter" button at 100% progress ONLY
+                if (this.progress >= 100 && !this.tapToEnterShown) {
                     this.tapToEnterShown = true;
                     this.showTapToEnter();
                 }
@@ -13098,8 +13098,8 @@
             }
             
             showTapToEnter() {
-                // Enable the "Tap to Start" button at 50% progress
-                console.log('📍 50% reached - enabling Tap to Start button');
+                // Enable the "Tap to Start" button at 100% progress ONLY
+                console.log('📍 100% reached - enabling Tap to Start button');
                 this.presentTapToStart();
             }
             
