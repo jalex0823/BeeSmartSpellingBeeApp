@@ -7017,6 +7017,11 @@ class QuizManager {
 
             const result = await response.json();
             
+            // 🐛 DEBUG: Log the full response to see what we're getting
+            console.log('📊 API Response:', result);
+            console.log('🍯 Points data:', result.points);
+            console.log('💰 Earned points:', result.points?.earned);
+            
             // 🍯 Update points from backend response
             if (result.points) {
                 this.sessionPoints = result.points.session_total || this.sessionPoints;
