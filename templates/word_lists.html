@@ -689,7 +689,7 @@
         console.log('✅ [WORD HIVES] Buzz Dust API response:', data);
         
         if(data && data.current_class){
-          // Update badge with 3D renderer
+          // Update badge with 3D renderer (NO ROTATION)
           const badgeEl = document.getElementById('badgeIcon');
           if(badgeEl && data.current_class.badge_image && window.Badge3DRenderer){
             badgeEl.innerHTML = '';
@@ -697,8 +697,8 @@
               badgeFile: data.current_class.badge_image,
               width: 48,
               height: 48,
-              autoRotate: true,
-              rotationSpeed: 0.3,
+              autoRotate: false,  // Disable rotation
+              rotationSpeed: 0,
               enableLighting: true
             });
             badgeEl.style.display = 'block';
@@ -1283,4 +1283,8 @@
     },3200);
   }
 </script>
+
+<!-- 🏆 Badge 3D Renderer for GLB badges -->
+<script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}"></script>
+
 {% endblock %}
