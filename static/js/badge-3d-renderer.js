@@ -19,7 +19,7 @@ class Badge3DRenderer {
             badgeFile: options.badgeFile || 'Novice.glb',
             width: options.width || 60,
             height: options.height || 60,
-            autoRotate: options.autoRotate !== false,
+            autoRotate: options.autoRotate === true, // Default to false unless explicitly true
             rotationSpeed: options.rotationSpeed || 0.5,
             cameraDistance: options.cameraDistance || 2.5,
             enableLighting: options.enableLighting !== false,
