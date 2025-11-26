@@ -13428,7 +13428,11 @@
             window.loadingSystem.updateProgress(95, '🎯 Final touches...');
             
             // Small delay to ensure everything is rendered
-            await window.loadingSystem.delay(300);
+            await window.loadingSystem.delay(200);
+            
+            // 98% - Almost there
+            window.loadingSystem.updateProgress(98, '✨ Almost ready...');
+            await window.loadingSystem.delay(100);
             
             // 100% - Complete!
             await window.loadingSystem.finishLoading();
