@@ -2664,16 +2664,13 @@
                     margin: 0.5rem auto 0.75rem auto;
                     display: inline-flex;
                     align-items: center;
-                    gap: 1rem;
+                    gap: 1.5rem;
                     backdrop-filter: blur(10px);
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
-                    max-width: 580px;
+                    max-width: 650px;
                 ">
-                    <!-- Oversized Badge Image (PNG) - Brightened and facing front -->
-                    <img id="student-rank-badge" 
-                         src="/static/assets/badges/Novice.png" 
-                         alt="Rank Badge"
-                         style="width: 140px; height: 140px; object-fit: contain; display: block; filter: brightness(1.3) contrast(1.1) drop-shadow(0 4px 12px rgba(0,0,0,0.2));">
+                    <!-- 3D GLB Badge (like second image) -->
+                    <div id="student-rank-badge" class="rank-badge-3d" style="width: 200px; height: 200px; flex-shrink: 0;"></div>
                     
                     <div style="text-align: left; flex: 1;">
                         <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
@@ -15162,16 +15159,25 @@
                     console.warn('⚠️ [TICKER] Element #student-buzz-dust-amount not found in DOM');
                 }
                 
-                // Update badge image with PNG (oversized, dynamic display)
+                // Update badge with 3D GLB renderer (200px, matching second screenshot)
                 const badgeEl = document.getElementById('student-rank-badge');
-                if (badgeEl && data.current_class.badge_image) {
-                    // Set the badge image source to the PNG version
-                    const badgeFileName = data.current_class.badge_image.replace('.glb', '.png');
-                    badgeEl.src = `/static/assets/badges/${badgeFileName}`;
-                    badgeEl.alt = data.current_class.label + ' Badge';
-                    console.log('✅ [TICKER] Badge image updated:', badgeFileName);
+                if (badgeEl && data.current_class.badge_image && window.Badge3DRenderer) {
+                    // Clear any existing content
+                    badgeEl.innerHTML = '';
+                    
+                    // Initialize 3D badge renderer with 200px size
+                    new Badge3DRenderer(badgeEl, {
+                        badgeFile: data.current_class.badge_image,
+                        width: 200,
+                        height: 200,
+                        autoRotate: false,
+                        enableLighting: true
+                    });
+                    console.log('✅ [TICKER] 3D Badge renderer initialized:', data.current_class.badge_image);
                 } else if (!badgeEl) {
                     console.warn('⚠️ [TICKER] Element #student-rank-badge not found in DOM');
+                } else if (!window.Badge3DRenderer) {
+                    console.warn('⚠️ [TICKER] Badge3DRenderer not available - loading fallback');
                 } else {
                     console.warn('⚠️ [TICKER] No badge_image in response:', data.current_class);
                 }
