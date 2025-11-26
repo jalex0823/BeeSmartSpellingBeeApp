@@ -10517,6 +10517,68 @@ def api_admin_fix_avatars():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/admin/fix-avatar-glb-paths', methods=['POST'])
+@login_required
+def api_admin_fix_avatar_glb_paths():
+    """Admin endpoint to convert all .obj file references to .glb in database"""
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+    
+    try:
+        from models import Avatar
+        
+        # Get all avatars
+        all_avatars = Avatar.query.all()
+        
+        fixed_count = 0
+        already_correct = 0
+        fixed_avatars = []
+        
+        for avatar in all_avatars:
+            # Check if obj_file needs fixing
+            if not avatar.obj_file:
+                continue
+            
+            # Check if it's already .glb
+            if avatar.obj_file.lower().endswith('.glb'):
+                already_correct += 1
+                continue
+            
+            # Check if it's .obj that needs fixing
+            if avatar.obj_file.lower().endswith('.obj'):
+                old_value = avatar.obj_file
+                # Replace .obj with .glb
+                avatar.obj_file = avatar.obj_file.replace('.obj', '.glb').replace('.OBJ', '.glb')
+                
+                fixed_avatars.append({
+                    'slug': avatar.slug,
+                    'name': avatar.name,
+                    'old': old_value,
+                    'new': avatar.obj_file
+                })
+                fixed_count += 1
+        
+        # Commit all changes
+        if fixed_count > 0:
+            db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Fixed {fixed_count} avatars, {already_correct} already correct",
+            "total_avatars": len(all_avatars),
+            "fixed_count": fixed_count,
+            "already_correct": already_correct,
+            "fixed_avatars": fixed_avatars
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error fixing avatar GLB paths: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
 @login_required
 def api_admin_update_user(user_id):
