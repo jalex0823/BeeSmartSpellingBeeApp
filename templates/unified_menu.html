@@ -14360,9 +14360,9 @@
                         
                         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
                         
-                        // Camera positioning for full bee visibility - CLOSER for larger appearance
-                        camera.position.set(0, 0.5, 2.2);
-                        camera.lookAt(new THREE.Vector3(0, 0.1, 0));
+                        // Camera positioning for full bee visibility - Adjusted for proper framing
+                        camera.position.set(0, 0.3, 2.8);
+                        camera.lookAt(new THREE.Vector3(0, 0, 0));
                         
                         // 🎨 PREMIUM QUALITY RENDERER - Best possible GLB display
                         const renderer = new THREE.WebGLRenderer({ 
@@ -14498,7 +14498,8 @@
                                 const center = box.getCenter(new THREE.Vector3());
                                 
                                 object.position.sub(center);
-                                const targetSize = 2.5;
+                                // Reduced scale to prevent clipping - ensures full avatar visibility including feet
+                                const targetSize = 2.1;
                                 object.scale.setScalar(targetSize / size);
                                 
                                 scene.add(object);
