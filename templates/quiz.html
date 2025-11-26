@@ -5001,6 +5001,12 @@ class QuizManager {
             return Promise.resolve();
         }
         
+        // Cancel any ongoing speech to prevent interruption errors
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+            console.log('🛑 Cancelling previous speech to prevent interruption');
+            window.speechSynthesis.cancel();
+        }
+        
         // Trigger announce event for visualizer
         window.dispatchEvent(new CustomEvent('announce'));
         
@@ -5130,7 +5136,13 @@ class QuizManager {
                 };
                 
                 utterance.onerror = (event) => {
-                    console.warn('⚠️ Speech error:', event.error);
+                    // Only log non-interrupted errors as warnings
+                    if (event.error !== 'interrupted') {
+                        console.warn('⚠️ Speech error:', event.error);
+                    } else {
+                        console.log('ℹ️ Speech interrupted (expected during rapid transitions)');
+                    }
+                    
                     // Stop visualizer animation on error
                     if (visualizer && status) {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
@@ -5140,8 +5152,8 @@ class QuizManager {
                     // Trigger bee swarm deactivation on error
                     window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     
-                    // 🎭 Morph back to timer on error
-                    if (window.morphController) {
+                    // 🎭 Morph back to timer on error (only if not interrupted)
+                    if (window.morphController && event.error !== 'interrupted') {
                         window.morphController.morphToTimer();
                     }
                     
