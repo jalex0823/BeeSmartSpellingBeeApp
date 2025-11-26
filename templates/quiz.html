@@ -1203,9 +1203,13 @@ if ('speechSynthesis' in window) {
     
     /* Voice visualizer layer */
     .morph-content .voice-visualizer {
-        position: relative;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        max-width: 400px;
         opacity: 1;
-        transform: scale(1);
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: auto;
     }
@@ -8009,7 +8013,7 @@ class QuizManager {
                                                 ${item.user_answer ? `Your answer: <span style="color: #D32F2F; font-weight: 600;">${item.user_answer}</span>` : '(Skipped or no answer)'}
                                             </div>
                                         </div>
-                        <button onclick="pronounceWordFromReport('${item.word}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                        <button onclick="pronounceWordFromReport('" + item.word + "')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
                                             🔊 Hear It
                                         </button>
                                     </div>
