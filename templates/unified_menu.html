@@ -14332,6 +14332,15 @@
                         return;
                     }
                     
+                    // Check WebGL support before attempting 3D rendering
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (!gl) {
+                        console.warn('⚠️ WebGL not supported - skipping 3D avatar');
+                        rejectAvatar(new Error('WebGL not supported'));
+                        return;
+                    }
+                    
                     try {
                         // Create Three.js scene for user avatar
                         const scene = new THREE.Scene();
