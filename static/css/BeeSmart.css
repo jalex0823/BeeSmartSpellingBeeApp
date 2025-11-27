@@ -60,9 +60,10 @@ body::before {
     radial-gradient(circle at 5px 6px, rgba(255, 213, 79, 0.2) 0, rgba(255, 213, 79, 0.2) 6px, transparent 7px),
     radial-gradient(circle at 45px 6px, rgba(255, 213, 79, 0.2) 0, rgba(255, 213, 79, 0.2) 6px, transparent 7px);
   background-size: 70px 60px;
-  opacity: 0.12;
+  opacity: 0.05;
   animation: slowPan 28s linear infinite;
   pointer-events: none;
+  z-index: 0;
 }
 body::after {
   content: '';
@@ -73,6 +74,7 @@ body::after {
   mix-blend-mode: screen;
   pointer-events: none;
   animation: shimmer 12s ease-in-out infinite;
+  z-index: 0;
 }
 @keyframes slowPan {
   from { background-position: 0 0; }
