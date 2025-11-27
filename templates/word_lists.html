@@ -882,10 +882,10 @@
       <div class="list-cell-actions">
         <button class="list-cell-action-btn favorite" title="Pin list"
           onclick="toggleFavorite(event, ${list.id})">${star}</button>
-        <button class="list-cell-action-btn edit" title="Edit list"
-          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
         <button class="list-cell-action-btn view" title="View list"
           onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
+        <button class="list-cell-action-btn edit" title="Edit list"
+          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
         <button class="list-cell-action-btn delete" title="Delete list"
           onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
       </div>
