@@ -2181,12 +2181,24 @@ window.addEventListener('error', (event) => {
     let energyTarget = 0.1;
     let isAnimating = true;
 
+    // 🎆 EXPOSE PARTICLE SYSTEM GLOBALLY for announcer control with direct energy/energyTarget manipulation
+    window.particle_system = {
+        get_energy: () => energy,
+        set_energy: (val) => {
+            // Directly update BOTH energy and energyTarget for immediate + smooth response
+            const clamped = Math.max(0, Math.min(2.0, val));
+            energy = clamped;          // Immediate response for word bursts
+            energyTarget = clamped;    // Smooth follow-up
+            console.log(`🎆 Particle energy updated: ${clamped}`);
+        }
+    };
+
     function setMode(next){
         if (mode !== next) {
             mode = next;
-            // More dramatic energy differences for better sync
-            if (mode === 'speaking') energyTarget = 1.2;
-            else if (mode === 'pausing') energyTarget = 0.15; // More noticeable pause
+            // Increased energy targets for more dramatic particle responses
+            if (mode === 'speaking') energyTarget = 1.6; // stronger peak
+            else if (mode === 'pausing') energyTarget = 0.2; // slightly higher pause
             else energyTarget = 0.05; // Very quiet when idle
         }
     }
@@ -2238,8 +2250,9 @@ window.addEventListener('error', (event) => {
     };
 
     // Particle system - replaces wave visualization
+    // NOTE: increased particle density and responsiveness
     let particles = [];
-    const particlesPerLayer = 25;
+    const particlesPerLayer = 80; // dramatically increased
     const maxParticles = particlesPerLayer * config.layers.length;
     
     // Initialize particles
@@ -2293,7 +2306,7 @@ window.addEventListener('error', (event) => {
         
         const centerX = W / 2;
         const centerY = H / 2;
-        const maxRadius = Math.min(W, H) * 0.35; // Max distance from center
+        const maxRadius = Math.min(W, H) * 0.45; // Max distance from center (larger spread)
         
         // Update and draw particles
         particles = particles.filter(p => p.age < p.maxAge);
@@ -2310,9 +2323,10 @@ window.addEventListener('error', (event) => {
                 p.y = centerY;
             } else {
                 // Life phase - move outward with energy-driven speed
+                // stronger mapping: energy drives speed more aggressively
                 const energyFactor = Math.max(0.05, energy * 0.95);
                 const angle = Math.random() * Math.PI * 2;
-                const speed = p.baseSpeed * energyFactor * 3;
+                const speed = p.baseSpeed * energyFactor * 6; // increased velocity multiplier
                 
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
@@ -2354,7 +2368,9 @@ window.addEventListener('error', (event) => {
         });
         
         // Spawn new particles continuously
-        const spawnRate = Math.max(5, Math.ceil(particlesPerLayer * energy * 2));
+        // Make spawn rate super-responsive to energy. Use a power curve so small increases
+        // in energy produce many more particles at high speech levels.
+        const spawnRate = Math.max(10, Math.ceil(particlesPerLayer * Math.pow(Math.max(0.01, energy), 1.4) * 6));
         for (let i = 0; i < spawnRate; i++) {
             if (particles.length < maxParticles) {
                 const layerIdx = Math.floor(Math.random() * config.layers.length);
@@ -2365,9 +2381,9 @@ window.addEventListener('error', (event) => {
                     vx: 0,
                     vy: 0,
                     age: 0,
-                    maxAge: 120 + Math.random() * 80,
+                    maxAge: 140 + Math.random() * 120, // slightly longer-lived for density
                     layerIdx: layerIdx,
-                    baseSpeed: 1 + layerIdx * 0.3,
+                    baseSpeed: 1 + layerIdx * 0.35,
                     layer: layer
                 });
             }
