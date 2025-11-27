@@ -637,19 +637,15 @@
     <!-- Badge Banner -->
     <div class="badge-banner">
       <div class="badge-icon rank-badge-3d" id="badgeIcon" style="width:48px;height:48px;display:none;"></div>
-      <div id="badgeName">Novice Bee</div>
-      <div>Buzz Dust: <span id="buzzDustTotal">0</span> ✨</div>
+      <div>
+        <div id="badgeName">Novice Bee</div>
+        <div style="font-size:13px; margin-top:4px; opacity:.9;">Buzz Dust: <span id="buzzDustTotal">0</span> ✨</div>
+        <div style="font-size:13px; margin-top:4px; opacity:.85; font-weight:700;">To Next Badge: <span id="statDustToNext">0</span></div>
+      </div>
     </div>
 
     <!-- Buzz Dust Stats -->
     <div class="list-stats-bar">
-      <div class="stat">
-        <div class="stat-icon">✨</div>
-        <div class="stat-text">
-          <span class="stat-label">Buzz Dust To Next Badge</span>
-          <span class="stat-value" id="statDustToNext">0</span>
-        </div>
-      </div>
       <div class="stat">
         <div class="stat-icon">🍯</div>
         <div class="stat-text">
@@ -886,10 +882,10 @@
       <div class="list-cell-actions">
         <button class="list-cell-action-btn favorite" title="Pin list"
           onclick="toggleFavorite(event, ${list.id})">${star}</button>
-        <button class="list-cell-action-btn view" title="View list"
-          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
         <button class="list-cell-action-btn edit" title="Edit list"
           onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
+        <button class="list-cell-action-btn view" title="View list"
+          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
         <button class="list-cell-action-btn delete" title="Delete list"
           onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
       </div>

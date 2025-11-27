@@ -1179,7 +1179,7 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: 100%;
         min-height: 200px;
-        margin: 1.5rem 0;
+        margin: 0.6rem 0 0.8rem 0;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
     }
     
@@ -3076,7 +3076,7 @@ if ('speechSynthesis' in window) {
         </div>
         
         <!-- Voice Toggle Button - Centered (Hidden during quiz) -->
-        <div class="voice-toggle-container" style="display:none; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
+        <div class="voice-toggle-container" style="display:none; justify-content:center; align-items:center; margin: 0.4rem 0; width: 100%;">
             <button type="button" class="action-btn secondary" id="voiceToggleBtn" title="Toggle announcer voice">
                 <span class="bee-icon" aria-hidden="true" id="voiceToggleIcon">🔊</span>
                 <span id="voiceToggleText">Mute Buzzy</span>
@@ -3093,7 +3093,7 @@ if ('speechSynthesis' in window) {
                             visibility:hidden; opacity:0; background:transparent !important; box-shadow:none;
                             border:none; outline:none; padding:0; margin:0;
                             transition: opacity 0.4s ease-in, visibility 0.4s ease-in;
-                            display:none !important;
+                            display:none;
                             overflow:hidden; clip-path:inset(0 0 0 0 round 20px);">
                     <!-- CSS Fallback Voice Waves (shown if WebGL not available) -->
                     <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
@@ -3209,7 +3209,7 @@ if ('speechSynthesis' in window) {
                     
                     .voice-card.speaking-mode {
                         background: transparent;
-                        border-radius: 0;
+                        border-radius: 20px;
                         padding: 0;
                         border: none;
                         box-shadow: none;
@@ -3473,7 +3473,7 @@ if ('speechSynthesis' in window) {
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
-        <div class="bee-input" id="beeInputWrapper">
+        <div class="bee-input" id="beeInputWrapper" style="margin-top: 0.8rem;">
             <input type="text"
                    id="spellingInput"
                    placeholder="Type your spelling here..."
