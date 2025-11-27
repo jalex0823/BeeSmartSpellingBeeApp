@@ -3054,6 +3054,31 @@ def _serialize_word_list(wl):
              .order_by(WordListItem.position.asc(), WordListItem.id.asc())
              .all())
 
+    # Calculate percent_used: how many words from this list have been attempted in quizzes
+    percent_used = None
+    if items:
+        try:
+            from models import QuizResult
+            # Get all unique words from this list
+            list_words = {item.word.lower() for item in items}
+            
+            # Count how many of these words have been attempted by this user
+            attempted_words = set()
+            quiz_results = QuizResult.query.filter(
+                QuizResult.user_id == wl.created_by_user_id,
+                QuizResult.word.in_([w.upper() for w in list_words] + [w.lower() for w in list_words] + [w.capitalize() for w in list_words])
+            ).all()
+            
+            for result in quiz_results:
+                attempted_words.add(result.word.lower())
+            
+            # Calculate percentage (0-100)
+            if len(list_words) > 0:
+                percent_used = (len(attempted_words) / len(list_words)) * 100
+        except Exception as e:
+            print(f"⚠️ Could not calculate percent_used for list {wl.id}: {e}")
+            percent_used = None
+
     return {
         "id": wl.id,
         "uuid": wl.uuid,
@@ -3065,6 +3090,7 @@ def _serialize_word_list(wl):
         "is_favorite": wl.is_favorite,
         "is_public": wl.is_public,
         "times_used": wl.times_used,
+        "percent_used": percent_used,  # NEW: quiz usage tracking
         "created_at": wl.created_at.isoformat() if wl.created_at else None,
         "updated_at": wl.updated_at.isoformat() if wl.updated_at else None,
         "words": [
