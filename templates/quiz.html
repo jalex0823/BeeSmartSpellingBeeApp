@@ -3010,19 +3010,23 @@ if ('speechSynthesis' in window) {
                                     align-items: center;
                                     padding: 28px 24px; /* Maximum padding for wave clearance */
                                     overflow: visible; /* Ensure waves aren't clipped */
+                                    width: 100%;
+                                    margin: 0 auto;
                                 }
 
                                 .dotwave-wrapper canvas {
-                                    width: 100%;
-                                    height: 280px; /* Taller for bigger waves */
+                                    max-width: 100%;
+                                    height: auto;
+                                    aspect-ratio: 860 / 260;
                                     filter:
                                         drop-shadow(0 0 4px rgba(255,255,255,0.4))
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
                                     display: block; /* Remove inline spacing */
+                                    margin: 0 auto;
                                 }
                 </style>
 
-                <!-- Optimized Wavy Amber Voice Visualizer -->
+                <!-- Optimized Wavy Amber Voice Visualizer with Mask -->
                 <script>
                 (function(){
                     const canvas = document.getElementById('dotWaveCanvas');
@@ -3032,6 +3036,10 @@ if ('speechSynthesis' in window) {
                     let W = canvas.width;
                     let H = canvas.height;
                     let DPR = window.devicePixelRatio || 1;
+                    
+                    // Mask image - Russia map (black areas for waves, white for hidden)
+                    let maskImage = null;
+                    let maskLoaded = false;
 
                     // Resize handler
                     function resizeCanvas(){
@@ -3046,6 +3054,22 @@ if ('speechSynthesis' in window) {
                     }
                     resizeCanvas();
                     window.addEventListener('resize', resizeCanvas);
+
+                    // Load mask image
+                    function loadMask() {
+                        maskImage = new Image();
+                        maskImage.onload = function() {
+                            maskLoaded = true;
+                        };
+                        maskImage.onerror = function() {
+                            console.warn('Failed to load mask image');
+                            maskLoaded = false;
+                        };
+                        // SVG mask embedded as data URL - Russia map shape
+                        // Black areas = visible, white areas = hidden
+                        maskImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODYwIiBoZWlnaHQ9IjI2MCIgdmlld0JveD0iMCAwIDg2MCAyNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGZpbHRlciBpZD0iYW50aWFsaWFzIj48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxIiAvPjwvZmlsdGVyPjwvZGVmcz48cmVjdCB3aWR0aD0iODYwIiBoZWlnaHQ9IjI2MCIgZmlsbD0id2hpdGUiIC8+PGcgZmlsdGVyPSJ1cmwoI2FudGlhbGlhcykiPjxwYXRoIGQ9Ik0xMjAgNjAgTDM2MCAxMDAgTDU2MCA3MCBMNzAwIDEyMCBMNzcwIDk1IEw3OTAgMTQwIEw3NjAgMTgwIEw2ODAgMTcwIEw1NjAgMjAwIEw0MjAgMjEwIEwzMjAgMTkwIEwxNjAgMTcwIEwxMjAgMTQwIFoiIGZpbGw9ImJsYWNrIiAvPjwvZz48L3N2Zz4=';
+                    }
+                    loadMask();
 
                     // Simplified state management for better performance
                     let mode = 'idle';
@@ -3110,84 +3134,144 @@ if ('speechSynthesis' in window) {
                         ]
                     };
 
-                    // Store smoothed amplitudes per layer
-                    let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
+                    // Particle system - replaces wave visualization
+                    let particles = [];
+                    const particlesPerLayer = 25;
+                    const maxParticles = particlesPerLayer * config.layers.length;
+                    
+                    // Initialize particles
+                    function initParticles() {
+                        particles = [];
+                        config.layers.forEach((layer, layerIdx) => {
+                            for (let i = 0; i < particlesPerLayer; i++) {
+                                particles.push({
+                                    x: W / 2,
+                                    y: H / 2,
+                                    vx: 0,
+                                    vy: 0,
+                                    age: Math.random() * 100,
+                                    maxAge: 120 + Math.random() * 80,
+                                    layerIdx: layerIdx,
+                                    baseSpeed: 1 + layerIdx * 0.3,
+                                    layer: layer
+                                });
+                            }
+                        });
+                    }
+                    initParticles();
 
-                    // Draw smooth waveform with multiple translucent layers
-                    function drawHorizontalWaveform() {
+                    // Apply mask to canvas - only show particles in black areas
+                    function applyMask() {
+                        if (!maskLoaded || !maskImage) return;
+                        
+                        const imageData = ctx.getImageData(0, 0, W, H);
+                        const data = imageData.data;
+                        const maskCanvas = document.createElement('canvas');
+                        maskCanvas.width = W;
+                        maskCanvas.height = H;
+                        const maskCtx = maskCanvas.getContext('2d');
+                        maskCtx.drawImage(maskImage, 0, 0, W, H);
+                        const maskData = maskCtx.getImageData(0, 0, W, H).data;
+                        
+                        // Where mask is white (255,255,255), make particle transparent
+                        for (let i = 0; i < data.length; i += 4) {
+                            const maskBrightness = (maskData[i] + maskData[i+1] + maskData[i+2]) / 3;
+                            // If mask is bright (white), reduce alpha
+                            if (maskBrightness > 200) {
+                                data[i + 3] = 0; // Make transparent
+                            }
+                        }
+                        ctx.putImageData(imageData, 0, 0);
+                    }
+
+                    // Draw particle system with multiple translucent layers
+                    function drawParticleSystem() {
                         ctx.clearRect(0, 0, W, H);
                         
+                        const centerX = W / 2;
                         const centerY = H / 2;
-                        const buffer = 40; // Increased safety buffer from edges to prevent clipping
-                        const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
-                        const spacing = W / (config.points - 1);
-                        const centerIdx = config.points / 2;
-
-                        // Draw each layer from back to front
-                        config.layers.forEach((layer, layerIdx) => {
-                            // Calculate amplitudes for this layer - waves ORIGINATE from center, expand outward
-                            const amplitudes = [];
-                            for (let i = 0; i < config.points; i++) {
-                                const distFromCenter = Math.abs(i - centerIdx) / centerIdx;
-                                
-                                // Wave propagates FROM center outward (not left-to-right)
-                                // Use distance from center as the primary phase, not position index
-                                const wavePhase = (time * 0.04 * layer.frequency) - (distFromCenter * 4) + layer.phase;
-                                
-                                // Organic sine-based amplitude with CENTER PEAK emphasis
-                                const baseWave = Math.sin(wavePhase) * 0.5 + 0.5;
-                                
-                                // Center is tallest, gradually decreases toward edges
-                                const centerBoost = 1.15 - (distFromCenter * 0.55);
-                                
-                                // Edge tapering - force edges to be very thin (approaching zero)
-                                const edgeTaper = 1 - Math.pow(distFromCenter, 2.5); // Exponential falloff at edges
-                                
-                                // Energy drives amplitude - low energy = almost flat line, high energy = big waves
+                        const maxRadius = Math.min(W, H) * 0.35; // Max distance from center
+                        
+                        // Update and draw particles
+                        particles = particles.filter(p => p.age < p.maxAge);
+                        
+                        particles.forEach(p => {
+                            p.age += 1;
+                            
+                            // Life cycle: 0-30% birth, 30-70% life, 70-100% death
+                            const lifecycle = p.age / p.maxAge;
+                            
+                            // Birth phase - particles emerge from center
+                            if (lifecycle < 0.3) {
+                                p.x = centerX;
+                                p.y = centerY;
+                            } else {
+                                // Life phase - move outward with energy-driven speed
                                 const energyFactor = Math.max(0.05, energy * 0.95);
+                                const angle = Math.random() * Math.PI * 2;
+                                const speed = p.baseSpeed * energyFactor * 3;
                                 
-                                const targetAmp = baseWave * centerBoost * edgeTaper * energyFactor * maxHeight * layer.amplitude;
+                                p.vx = Math.cos(angle) * speed;
+                                p.vy = Math.sin(angle) * speed;
                                 
-                                // Smooth transition
-                                layerAmplitudes[layerIdx][i] += (targetAmp - layerAmplitudes[layerIdx][i]) * config.smoothing;
+                                p.x += p.vx;
+                                p.y += p.vy;
                                 
-                                // Strict clamping with extra safety margin to prevent any clipping
-                                const safeAmp = Math.max(1, Math.min(maxHeight * 0.92, layerAmplitudes[layerIdx][i]));
-                                amplitudes.push(safeAmp);
+                                // Constrain to max radius
+                                const dx = p.x - centerX;
+                                const dy = p.y - centerY;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > maxRadius) {
+                                    const ratio = maxRadius / dist;
+                                    p.x = centerX + dx * ratio;
+                                    p.y = centerY + dy * ratio;
+                                }
                             }
-
-                            // Draw upper half with gradient fade at edges
-                            const gradient = ctx.createLinearGradient(0, centerY, W, centerY);
-                            const edgeFadeStart = 0.15; // Start fading at 15% from edges
-                            const edgeFadeEnd = 0.02;   // Fully transparent at 2% from edges
                             
-                            gradient.addColorStop(0, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
-                            gradient.addColorStop(edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(0.5, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(1 - edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(1, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
+                            // Calculate alpha based on lifecycle
+                            let alpha = 1;
+                            if (lifecycle < 0.2) {
+                                // Fade in
+                                alpha = lifecycle / 0.2;
+                            } else if (lifecycle > 0.8) {
+                                // Fade out
+                                alpha = 1 - (lifecycle - 0.8) / 0.2;
+                            }
                             
+                            // Layer color and size
+                            const layer = p.layer;
+                            const size = 2 + (p.layerIdx * 0.5);
+                            const color = `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha * alpha})`;
+                            
+                            // Draw particle
+                            ctx.fillStyle = color;
                             ctx.beginPath();
-                            ctx.moveTo(0, centerY);
-                            for (let i = 0; i < config.points; i++) {
-                                ctx.lineTo(i * spacing, centerY - amplitudes[i]);
-                            }
-                            ctx.lineTo(W, centerY);
-                            ctx.closePath();
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-
-                            // Draw lower half (mirror) with same gradient
-                            ctx.beginPath();
-                            ctx.moveTo(0, centerY);
-                            for (let i = 0; i < config.points; i++) {
-                                ctx.lineTo(i * spacing, centerY + amplitudes[i]);
-                            }
-                            ctx.lineTo(W, centerY);
-                            ctx.closePath();
-                            ctx.fillStyle = gradient;
+                            ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
                             ctx.fill();
                         });
+                        
+                        // Spawn new particles continuously
+                        const spawnRate = Math.max(5, Math.ceil(particlesPerLayer * energy * 2));
+                        for (let i = 0; i < spawnRate; i++) {
+                            if (particles.length < maxParticles) {
+                                const layerIdx = Math.floor(Math.random() * config.layers.length);
+                                const layer = config.layers[layerIdx];
+                                particles.push({
+                                    x: W / 2,
+                                    y: H / 2,
+                                    vx: 0,
+                                    vy: 0,
+                                    age: 0,
+                                    maxAge: 120 + Math.random() * 80,
+                                    layerIdx: layerIdx,
+                                    baseSpeed: 1 + layerIdx * 0.3,
+                                    layer: layer
+                                });
+                            }
+                        }
+                        
+                        // Apply mask if loaded
+                        applyMask();
                     }
 
                     // Optimized animation loop
@@ -3197,10 +3281,8 @@ if ('speechSynthesis' in window) {
                         // Faster energy transitions for better voice sync
                         energy += (energyTarget - energy) * 0.12;
                         
-                        // Only animate when needed (performance optimization)
-                        if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
-                            drawHorizontalWaveform();  // Horizontal waveform expanding from center
-                        }
+                        // Always animate particles (they self-manage visibility)
+                        drawParticleSystem();  // Particle system emanating from center
                         
                         time += 1;
                         requestAnimationFrame(animate);

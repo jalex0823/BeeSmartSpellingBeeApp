@@ -3279,9 +3279,14 @@ def update_saved_wordlist(list_id):
         if "is_favorite" in data:
             wl.is_favorite = bool(data.get("is_favorite"))
 
-        # replace words (optional)
-        if data.get("replace_words") is True:
-            words = _normalize_words(data.get("words"))
+        # replace words (can be triggered by replace_words=true OR if words array is provided)
+        should_replace_words = data.get("replace_words") is True or ("words" in data and isinstance(data.get("words"), list))
+        
+        if should_replace_words:
+            words = _normalize_words(data.get("words", []))
+
+            if not words:
+                return jsonify({"ok": False, "error": "words_required"}), 400
 
             # delete old items
             WordListItem.query.filter_by(word_list_id=wl.id).delete()
@@ -3298,15 +3303,19 @@ def update_saved_wordlist(list_id):
                 ))
 
             wl.word_count = len(words)
+            print(f"✅ Updated {wl.list_name}: replaced {len(words)} words")
 
         wl.updated_at = datetime.utcnow()
         db.session.commit()
 
+        print(f"✅ Updated word list id={list_id} '{wl.list_name}'")
         return jsonify({"ok": True, "list": _serialize_word_list(wl)}), 200
 
     except Exception as e:
         db.session.rollback()
         print(f"❌ ERROR /api/saved-lists/{list_id} PUT: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -6940,13 +6949,39 @@ def api_answer():
                     new_honey_points = old_honey_points + total_points
                     current_user.honey_points = new_honey_points
                     
-                    # ✨ BUZZ DUST AWARDING - Award Buzz Dust for quiz completion
+                    # ✨ BUZZ DUST AWARDING - Award Buzz Dust for quiz completion with full calculations
+                    from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust
+                    
                     old_buzz_dust = current_user.total_buzz_dust or 0
-                    current_user.total_buzz_dust = old_buzz_dust + total_points
-                    print(f"✨ BUZZ DUST AWARDED: {total_points} Buzz Dust (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    
+                    # Calculate buzz dust with all bonuses: perfect round, no hints, streak, etc.
+                    is_perfect_round = (state.get("incorrect", 0) == 0 and state.get("correct", 0) > 0)
+                    no_hints_used = (state.get("hints_used_total", 0) == 0)
+                    max_streak = state.get("max_streak", 0)
+                    
+                    # Use calculate_quiz_buzz_dust to get proper bonuses
+                    buzz_dust_earned, buzz_dust_breakdown = calculate_quiz_buzz_dust(
+                        points=word_points,  # Base points from words answered
+                        perfect_round=is_perfect_round,
+                        no_hints=no_hints_used,
+                        streak_length=max_streak,
+                        daily_challenge=False  # Set to True if this is a daily challenge quiz
+                    )
+                    
+                    # Add badge bonus separately (badges are not part of calculate_quiz_buzz_dust)
+                    total_buzz_dust_earned = buzz_dust_earned + badge_points
+                    
+                    current_user.total_buzz_dust = old_buzz_dust + total_buzz_dust_earned
+                    
+                    # Store breakdown in state for display on report card
+                    state["buzz_dust_earned"] = total_buzz_dust_earned
+                    state["buzz_dust_breakdown"] = buzz_dust_breakdown
+                    state["buzz_dust_breakdown"]["badges"] = badge_points
+                    
+                    print(f"✨ BUZZ DUST AWARDED: Base={buzz_dust_earned} + Badges={badge_points} = {total_buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    print(f"   Breakdown: {state['buzz_dust_breakdown']}")
                     
                     # Check for rank advancement
-                    from buzz_dust_helpers import get_bee_class
                     old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
                     new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
                     
@@ -7043,6 +7078,10 @@ def api_answer():
             "session_total": state.get("session_points", 0),
             "max_streak": state.get("max_streak", 0)
         },
+        "buzz_dust": {
+            "earned": state.get("buzz_dust_earned", 0) if quiz_complete else 0,
+            "breakdown": state.get("buzz_dust_breakdown", {}) if quiz_complete else {}
+        } if current_user.is_authenticated else None,
         "quiz_complete": quiz_complete,
         "badges": badges_unlocked if quiz_complete else [],
         "level_up": state.get("level_up") if quiz_complete else None,
@@ -11342,14 +11381,21 @@ def api_speed_round_answer():
             speed_round['total_points'] += points_earned
             speed_round['correct_count'] += 1
             
-            # 🆕 REAL-TIME BUZZ DUST AWARDING: Award Buzz Dust immediately on each correct answer
+            # 🆕 REAL-TIME BUZZ DUST AWARDING: Award Buzz Dust immediately on each correct answer with speed bonus
             if current_user.is_authenticated:
                 try:
+                    from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust
+                    
                     old_buzz_dust = current_user.total_buzz_dust or 0
-                    current_user.total_buzz_dust = old_buzz_dust + points_earned
+                    
+                    # For speed round, use base_points (without multiplier) and apply speed bonus multiplier
+                    # Speed round is already fast-paced, so we use the points_earned which includes speed bonuses
+                    # Calculate speed-specific buzz dust: just take earned points as base (they include speed calculations)
+                    buzz_dust_earned = points_earned  # Already includes time bonus and streak calculations
+                    
+                    current_user.total_buzz_dust = old_buzz_dust + buzz_dust_earned
                     
                     # Check for rank advancement
-                    from buzz_dust_helpers import get_bee_class
                     old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
                     new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
                     
@@ -11362,7 +11408,7 @@ def api_speed_round_answer():
                     
                     # Commit the Buzz Dust update immediately
                     db.session.commit()
-                    speed_logger.info(f"✨ BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
+                    speed_logger.info(f"✨ SPEED ROUND BUZZ DUST: +{buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
                 except Exception as e:
                     speed_logger.error(f"Failed real-time Buzz Dust award: {e}")
                     db.session.rollback()
