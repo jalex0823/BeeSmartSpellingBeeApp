@@ -589,16 +589,16 @@
         
         /* Single unified card containing logo and menu */
         .content-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 240, 246, 0.7) 100%);
+            background: linear-gradient(135deg, rgba(255, 250, 220, 0.75) 0%, rgba(255, 245, 200, 0.65) 100%);
             border-radius: 30px;
             overflow: visible;        /* Changed from hidden to visible for avatar visibility */
-            box-shadow: 0 18px 45px rgba(255, 170, 200, 0.32);
-            border: 3px solid rgba(255, 220, 238, 0.65);
+            box-shadow: 0 18px 45px rgba(255, 193, 7, 0.25);
+            border: 3px solid rgba(255, 215, 0, 0.4);
             position: relative;
             z-index: 5;              /* Lowered from 10 to 5 to stay below avatar (z-index: 15) */
             animation: none;          /* Disabled cardFloat animation - doesn't work well on mobile */
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(4px);
             padding-top: 5rem;       /* INCREASED: Even more buffer to push content down (was 3.5rem) */
         }
         
