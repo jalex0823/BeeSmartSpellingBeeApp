@@ -3,12 +3,12 @@
 (function(){
   window.BeeSmartVoiceVizCfg = {
     // Densify to look like a ribbon (more waves, closer spacing, smaller dots)
-  MAX_WAVES: 12,
-  DOTS_PER_WAVE: 96,
-  DOT_RADIUS: 2.8,
-  WAVE_SPACING: 14,
-  // Make lines longer by reducing side padding
-  HORIZONTAL_PAD_CSS: 1, // px inside-card buffer left/right (closer to card edges)
+  MAX_WAVES: 10,
+  DOTS_PER_WAVE: 88,
+  DOT_RADIUS: 2.4,
+  WAVE_SPACING: 12,
+  // Keep FX contained: add more side padding so tips stay within central dark region
+  HORIZONTAL_PAD_CSS: 18, // px inside-card buffer left/right (contain within mask center)
 
     // Amber-first palette (bottom -> top) — minimal green, warm ambers/oranges
     waveColors: [
@@ -35,8 +35,8 @@
     // Fade both ends of the ribbon to transparent
     endFade: {
       enabled: true,
-      // portion of the drawable width at each edge used for fading (0-0.5)
-      fraction: 0.16
+      // stronger edge fade to taper sides more aggressively
+      fraction: 0.28
     },
 
     // Subtle thickness variation across X to mimic a single wavy sheet
@@ -61,7 +61,8 @@
     // amplitude AND vertical wave spacing towards zero at edges.
     tipPinch: {
       enabled: true,
-      power: 1.25 // controls how sharply it pinches to the tips (1-2)
+      // increase pinch to keep ends narrow and centered
+      power: 1.8 // controls how sharply it pinches to the tips (1-2)
     },
 
     // Energy targets by mode

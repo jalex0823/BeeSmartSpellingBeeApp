@@ -186,6 +186,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 <style>
     body {
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
+{% endblock %}
+
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
         overflow-x: hidden;
     }

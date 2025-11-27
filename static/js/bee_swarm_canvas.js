@@ -145,6 +145,55 @@
   let maskReady = false;
   const MASK_THRESHOLD = 110; // 0..255 darkness threshold; <= inside (raised to include near-black edges)
 
+  // Map mask image to container without resizing the container.
+  // canvasXY = maskFit.offsetX + maskPixelXY * maskFit.scale
+  let maskFit = { scale: 1, offsetX: 0, offsetY: 0 };
+  // Dark region (<= threshold) bounds in mask pixel coordinates
+  let darkBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0, cx: 0, cy: 0 };
+  // Dark region mapped into canvas coordinates
+  let darkBoundsCanvas = { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0, cx: 0, cy: 0 };
+  // Scale used to turn normalized shape coords into canvas pixels (derived from dark bounds)
+  let shapeScale = 1;
+
+  function computeMaskFit() {
+    if (!containerEl || !maskReady) return;
+    const rect = containerEl.getBoundingClientRect();
+    const sx = rect.width / maskWidth;
+    const sy = rect.height / maskHeight;
+    const scale = Math.min(sx, sy); // contain
+    const drawnW = maskWidth * scale;
+    const drawnH = maskHeight * scale;
+    const offsetX = (rect.width - drawnW) / 2;
+    const offsetY = (rect.height - drawnH) / 2;
+    maskFit = { scale, offsetX, offsetY };
+
+    // Map dark bounds to canvas
+    if (darkBounds.width > 0 && darkBounds.height > 0) {
+      const minX = offsetX + darkBounds.minX * scale;
+      const maxX = offsetX + darkBounds.maxX * scale;
+      const minY = offsetY + darkBounds.minY * scale;
+      const maxY = offsetY + darkBounds.maxY * scale;
+      const widthC = Math.max(0, maxX - minX);
+      const heightC = Math.max(0, maxY - minY);
+      const cx = offsetX + darkBounds.cx * scale;
+      const cy = offsetY + darkBounds.cy * scale;
+      darkBoundsCanvas = { minX, minY, maxX, maxY, width: widthC, height: heightC, cx, cy };
+    } else {
+      const minX = offsetX;
+      const minY = offsetY;
+      const maxX = offsetX + drawnW;
+      const maxY = offsetY + drawnH;
+      const widthC = drawnW;
+      const heightC = drawnH;
+      const cx = offsetX + drawnW / 2;
+      const cy = offsetY + drawnH / 2;
+      darkBoundsCanvas = { minX, minY, maxX, maxY, width: widthC, height: heightC, cx, cy };
+    }
+
+    // Conservative scaling: keep letters within dark region with some margin
+    shapeScale = Math.max(1, Math.min(darkBoundsCanvas.width, darkBoundsCanvas.height) * 0.45);
+  }
+
   function loadMask(url) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -158,7 +207,37 @@
         maskCtx = maskCanvas.getContext('2d');
         maskCtx.drawImage(img, 0, 0);
         maskImgData = maskCtx.getImageData(0, 0, maskWidth, maskHeight);
+        // Compute dark region bounds within mask pixels
+        let minX = maskWidth, minY = maskHeight, maxX = 0, maxY = 0;
+        let sumX = 0, sumY = 0, count = 0;
+        const data = maskImgData.data;
+        for (let y = 0; y < maskHeight; y++) {
+          const row = y * maskWidth;
+          for (let x = 0; x < maskWidth; x++) {
+            const idx = (row + x) * 4;
+            const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+            const brightness = (r + g + b) / 3;
+            if (brightness <= MASK_THRESHOLD) {
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+              sumX += x; sumY += y; count++;
+            }
+          }
+        }
+        if (count > 0) {
+          const width = Math.max(1, maxX - minX + 1);
+          const height = Math.max(1, maxY - minY + 1);
+          const cx = sumX / count;
+          const cy = sumY / count;
+          darkBounds = { minX, minY, maxX, maxY, width, height, cx, cy };
+        } else {
+          darkBounds = { minX: 0, minY: 0, maxX: maskWidth, maxY: maskHeight, width: maskWidth, height: maskHeight, cx: maskWidth/2, cy: maskHeight/2 };
+        }
         maskReady = true;
+        // Establish how the mask maps into the current container
+        computeMaskFit();
         console.log(`🪄 Mask loaded: ${maskWidth}x${maskHeight}`);
         resolve();
       };
@@ -167,11 +246,13 @@
     });
   }
 
-  function isInsideMaskNorm(nx, ny) {
-    if (!maskReady) return true; // no mask means allow
-    // nx, ny are in -1..1; map to pixel space
-    const px = Math.round((nx * 0.5 + 0.5) * (maskWidth - 1));
-    const py = Math.round((ny * 0.5 + 0.5) * (maskHeight - 1));
+  // Check inclusion against the mask using canvas-space coordinates
+  function isInsideMaskCanvas(x, y) {
+    if (!maskReady) return true;
+    const mx = (x - maskFit.offsetX) / maskFit.scale;
+    const my = (y - maskFit.offsetY) / maskFit.scale;
+    const px = Math.round(mx);
+    const py = Math.round(my);
     if (px < 0 || py < 0 || px >= maskWidth || py >= maskHeight) return false;
     const idx = (py * maskWidth + px) * 4;
     const r = maskImgData.data[idx];
@@ -218,6 +299,9 @@
     ctx.lineJoin = "round";
 
     console.log(`🐝 Canvas resizing to ${width}x${height}px (DPR: ${dpr})`);
+    if (maskReady) {
+      computeMaskFit();
+    }
   }
 
   // ============================
@@ -240,8 +324,10 @@
         const r = Math.pow(Math.random(), outwardBias);
         const tx = Math.cos(angle) * radiusX * r;
         const ty = Math.sin(angle) * radiusY * r;
-        // require mask inclusion if maskReady
-        if (!maskReady || isInsideMaskNorm(tx, ty)) { x = tx; y = ty; break; }
+        // Map sample to canvas and ensure it's within the dark mask area when mask is ready
+        const candX = (darkBoundsCanvas.cx || width * 0.5) + tx * shapeScale;
+        const candY = (darkBoundsCanvas.cy || height * 0.5) + ty * shapeScale;
+        if (!maskReady || isInsideMaskCanvas(candX, candY)) { x = tx; y = ty; break; }
       }
 
       // Mild hex/banded perturbation for organic hive feel
@@ -411,10 +497,11 @@
 
     const tSec = time * 0.001;
     // Apply requested center offsets so swarm aligns with mask center
-    const centerX = width * (0.5 + cfg.centerOffsetX);
-    const centerY = height * (0.5 + cfg.centerOffsetY);
-    // Scale: if a mask is present, fit more conservatively to avoid right/top/bottom clipping
-    const scale = maskReady ? Math.min(width, height) * 0.42 : Math.max(width, height) * 0.33;
+    // Center on dark region of the mask (mapped to canvas); allow user offsets
+    const centerX = (darkBoundsCanvas.cx || width * 0.5) + (cfg.centerOffsetX || 0) * width;
+    const centerY = (darkBoundsCanvas.cy || height * 0.5) + (cfg.centerOffsetY || 0) * height;
+    // Use shapeScale derived from dark bounds so swarm stays confined
+    const scale = maskReady ? shapeScale : Math.max(width, height) * 0.33;
 
     // ===================================
     // Speech rhythm-synced pulse effect
@@ -476,23 +563,18 @@
       let targetX = tx0 * scale + noiseX * cfg.baseNoise * 40;
       let targetY = lipY * scale + noiseY * cfg.baseNoise * 28;
 
-      // If mask is present, clamp target back inside mask edge
-      if (maskReady) {
-        // Convert canvas target to normalized -1..1 space used by mask
-        const nx = (targetX - centerX) / scale;
-        const ny = (targetY - centerY) / scale;
-        if (!isInsideMaskNorm(nx, ny)) {
-          // Step back toward base until inside or limit iterations
-          const bxn = tx0; const byn = lipY;
-          let px = nx, py = ny;
-          for (let k = 0; k < 8; k++) {
-            px = (px + bxn) * 0.5;
-            py = (py + byn) * 0.5;
-            if (isInsideMaskNorm(px, py)) break;
-          }
-          targetX = centerX + px * scale;
-          targetY = centerY + py * scale;
+      // If mask is present, clamp target back inside mask edge using canvas-space checks
+      if (maskReady && !isInsideMaskCanvas(targetX, targetY)) {
+        const bxc = centerX + tx0 * scale;
+        const byc = centerY + lipY * scale;
+        let px = targetX, py = targetY;
+        for (let k = 0; k < 8; k++) {
+          px = (px + bxc) * 0.5;
+          py = (py + byc) * 0.5;
+          if (isInsideMaskCanvas(px, py)) break;
         }
+        targetX = px;
+        targetY = py;
       }
 
       // When speaking: add extra jitter and slight expansion
@@ -537,20 +619,30 @@
       const alpha = opacityPulse;
 
       // Draw tiny alphabet letter
-      // Final mask check: do not render letters outside dark region
+      // Final mask guard: skip drawing if outside the dark region
+      if (maskReady && !isInsideMaskCanvas(letter.x, letter.y)) {
+        continue;
+      }
+
+      // Edge taper: fade and shrink letters near mask border to avoid hard clipping
+      let taperAlpha = 1.0;
+      let taperSizeMul = 1.0;
       if (maskReady) {
-        const nxDraw = (letter.x - centerX) / scale;
-        const nyDraw = (letter.y - centerY) / scale;
-        if (!isInsideMaskNorm(nxDraw, nyDraw)) {
-          continue; // skip drawing outside mask
+        const dist = distanceToMaskBorder(letter.x, letter.y);
+        const band = 14; // pixels inside border to start tapering
+        if (dist < band) {
+          const t = Math.max(0, dist) / band; // 0 at edge, 1 further inside
+          taperAlpha = 0.3 + 0.7 * t;         // fade near edge
+          taperSizeMul = 0.65 + 0.35 * t;     // shrink near edge
         }
       }
 
-      ctx.font = `bold ${fontSize}px 'Arial', monospace`;
+      const taperedFontSize = Math.max(6, fontSize * taperSizeMul);
+      ctx.font = `bold ${taperedFontSize}px 'Arial', monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = letter.color;
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * taperAlpha));
       
       // Add subtle outline for depth when speaking
       if (ampSmooth > 0.1) {
@@ -566,3 +658,28 @@
   }
 
 })(window);
+
+// Helper: approximate distance to nearest mask border in canvas pixels
+function distanceToMaskBorder(x, y) {
+  // Uses the isInsideMaskCanvas function bound in closure via window accessor
+  try {
+    const maxStep = 18;
+    const dirs = [
+      [1,0],[-1,0],[0,1],[0,-1],
+      [0.707,0.707],[-0.707,0.707],[0.707,-0.707],[-0.707,-0.707]
+    ];
+    for (let step=0; step<=maxStep; step++) {
+      for (let i=0;i<dirs.length;i++) {
+        const nx = x + dirs[i][0]*step;
+        const ny = y + dirs[i][1]*step;
+        // Call through to the module-scoped function via window
+        if (window && window.BeeSwarmCanvas && typeof window.isInsideMaskCanvas === 'function') {
+          if (!window.isInsideMaskCanvas(nx, ny)) return step;
+        }
+      }
+    }
+    return maxStep;
+  } catch(e) {
+    return 18;
+  }
+}
