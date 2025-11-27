@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-11-26-FORCE-BUILD -->
+<!-- QUIZ VERSION: 2025-11-27-VOICE-CACHE -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -76,10 +76,9 @@ if ('speechSynthesis' in window) {
 
 <style>
     .quiz-container {
-        max-width: 800px;
+        max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        /* Reduced top/bottom padding to tighten vertical spacing */
         padding: 0.35rem 1rem 3rem;
         position: relative;
     }
@@ -143,17 +142,17 @@ if ('speechSynthesis' in window) {
     .quiz-header {
         display: flex;
         flex-direction: column;
-        gap: 0.6rem;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(8px);
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.88);
         border-radius: 20px;
-        padding: 1rem;
+        padding: 1.5rem;
         box-shadow: 0 12px 25px rgba(255, 193, 7, 0.25);
         border: 2px solid rgba(255, 193, 7, 0.35);
-        margin-bottom: 0.75rem;
+        margin-bottom: 1.5rem;
         position: sticky;
         top: 0;
         z-index: 100;
+        backdrop-filter: blur(8px);
     }
     
     /* New header layout with progress on left, exit on right */
@@ -406,8 +405,8 @@ if ('speechSynthesis' in window) {
 
     .definition-display {
         font-size: 1.15rem;
-        margin-bottom: 0.75rem;
-        padding: 1rem;
+        margin-bottom: 1.8rem;
+        padding: 1.5rem;
         background: rgba(255, 255, 255, 0.9);
         border-radius: 18px;
         border: 2px dashed rgba(255, 193, 7, 0.6);
@@ -753,51 +752,16 @@ if ('speechSynthesis' in window) {
         }
         
         .jar-svg {
-            width: 140px; /* Slightly smaller for space */
-            height: 160px;
+            width: 150px; /* Wider on mobile too */
+            height: 180px;
         }
         
-        /* 📱 MOBILE: Timer number MUCH MORE VISIBLE AND READABLE */
         .timer-number {
-            font-size: 3.5rem !important; /* LARGER */
-            font-weight: 900 !important; /* EXTRA BOLD */
-            color: #FF4500 !important; /* Bright orange-red */
-            text-shadow: 
-                0 0 15px rgba(255, 255, 255, 1),
-                0 0 30px rgba(255, 193, 7, 0.9),
-                0 3px 8px rgba(0, 0, 0, 0.5),
-                0 0 5px #FFD700 !important; /* Strong glow */
-            -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.3); /* Outline for contrast */
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-        }
-        
-        /* Warning state - even MORE visible */
-        .honey-jar-timer.warning .timer-number {
-            font-size: 4rem !important;
-            color: #FF0000 !important; /* Bright red */
-            animation: timerPulseMobile 0.5s ease-in-out infinite;
-        }
-        
-        /* Critical state - MAXIMUM visibility */
-        .honey-jar-timer.critical .timer-number {
-            font-size: 4.5rem !important;
-            color: #FF0000 !important;
-            animation: timerPulseMobile 0.3s ease-in-out infinite;
-        }
-        
-        @keyframes timerPulseMobile {
-            0%, 100% { 
-                transform: translate(-50%, -50%) scale(1); 
-            }
-            50% { 
-                transform: translate(-50%, -50%) scale(1.2); 
-            }
+            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
         }
         
         .timer-label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            font-size: 0.7rem;
         }
     }
 
@@ -815,16 +779,16 @@ if ('speechSynthesis' in window) {
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: transparent;
-        border-radius: 0;
-        padding: 0;
-        margin-bottom: 0.5rem;
+        background: rgba(255, 179, 0, 0.08); /* Amber background - kept during transitions */
+        border-radius: 0; /* no border radius */
+        padding: 1.5rem 2rem; /* wider padding */
+        margin-bottom: 1.5rem;
         position: relative;
-        overflow: visible;
-        box-shadow: none;
-        border: none;
-        min-height: 140px;
-        width: 100%;
+        overflow: visible; /* Allow full wave pattern visibility - no clipping */
+        box-shadow: none; /* no shadow */
+        border: none; /* remove border */
+        min-height: 180px; /* taller for fuller waves */
+        width: 100%; /* full width */
     }
 
     .voice-visualizer::before { display: none; }
@@ -1022,31 +986,6 @@ if ('speechSynthesis' in window) {
         animation: pauseAnimation 0.4s ease-in-out;
         opacity: 0.4;
     }
-    
-    /* CSS Fallback Voice Wave Animations */
-    .voice-wave-fallback {
-        display: flex !important;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .voice-wave-fallback.speaking {
-        opacity: 1;
-    }
-    .voice-wave-fallback.speaking .voice-wave-bar {
-        animation: voiceWavePulse 0.6s ease-in-out infinite;
-    }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(1) { animation-delay: 0s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(2) { animation-delay: 0.1s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(3) { animation-delay: 0.2s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(4) { animation-delay: 0.3s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(5) { animation-delay: 0.2s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(6) { animation-delay: 0.1s; }
-    .voice-wave-fallback.speaking .voice-wave-bar:nth-child(7) { animation-delay: 0s; }
-    
-    @keyframes voiceWavePulse {
-        0%, 100% { transform: scaleY(0.5); opacity: 0.6; }
-        50% { transform: scaleY(1.3); opacity: 1; }
-    }
 
     /* Staggered delays for wave effect */
     .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
@@ -1179,10 +1118,8 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: 100%;
         min-height: 200px;
-        margin: 0.6rem 0 0.8rem 0;
+        margin: 1.5rem 0;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
-        overflow: visible; /* Don't clip bee swarm */
-        z-index: 1;
     }
     
     /* Voice visualizer state (speaking mode) */
@@ -1201,24 +1138,15 @@ if ('speechSynthesis' in window) {
     .morph-content {
         position: relative;
         width: 100%;
-        height: 250px; /* Explicit height for absolute positioning to work properly */
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
     
     /* Voice visualizer layer */
     .morph-content .voice-visualizer {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        max-width: 400px;
+        position: relative;
         opacity: 1;
+        transform: scale(1);
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: auto;
-        z-index: 5; /* Above the timer by default */
     }
     
     /* Timer layer - ABSOLUTE positioned to overlap visualizer */
@@ -1232,11 +1160,6 @@ if ('speechSynthesis' in window) {
         pointer-events: none;
         display: flex !important; /* Override hidden class */
         margin: 0; /* Remove default margin */
-        z-index: 1; /* Below voice visualizer initially */
-        width: 100%;
-        max-width: 300px;
-        justify-content: center;
-        align-items: center;
     }
     
     /* When morphing to timer mode */
@@ -1244,15 +1167,15 @@ if ('speechSynthesis' in window) {
         opacity: 0;
         transform: scale(0.85);
         pointer-events: none;
-        z-index: 1; /* Push behind timer */
     }
-
+    
     .morph-container.mode-timer .countdown-container {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1); /* Center and full scale */
         pointer-events: auto;
-        z-index: 10; /* Bring to front */
-    }    /* Morphing animation - scales and fades simultaneously */
+    }
+    
+    /* Morphing animation - scales and fades simultaneously */
     @keyframes morphToTimer {
         0% {
             opacity: 1;
@@ -1489,153 +1412,84 @@ if ('speechSynthesis' in window) {
     }
     
     @media (max-width: 768px) {
-        /* 📱 MOBILE-FIRST: Compact quiz layout to reduce scrolling */
         .quiz-container {
             max-width: 100%;
-            padding: 0.25rem 0.5rem 3rem;
-        }
-
-        /* 📱 MOBILE: Morph container height adjustment */
-        .morph-container {
-            min-height: 180px;
-        }
-
-        .morph-content {
-            height: 180px;
+            padding: 1rem 0.5rem 3rem;
         }
         
         .quiz-header {
-            padding: 0.5rem;
-            gap: 0.4rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* 📱 MOBILE: Compact voice visualizer */
-        .voice-visualizer {
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.4rem;
-            min-height: 120px;
-        }
-        
-        .voice-card.speaking-mode {
-            padding: 12px 8px 12px;
-            margin: 0 auto 8px auto;
-        }
-        
-        /* 📱 MOBILE: Compact definition */
-        .definition-display {
-            font-size: 0.95rem;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* 📱 MOBILE: Countdown timer */
-        .countdown-container {
-            margin: 0.4rem 0 0.75rem;
-        }
-        
-        .jar-svg {
-            width: 120px;
-            height: 140px;
-        }
-        
-        .timer-display {
-            font-size: 2.2rem !important;
-            font-weight: 900 !important;
-            text-shadow: 
-                0 2px 4px rgba(0, 0, 0, 0.3),
-                0 0 10px rgba(255, 193, 7, 0.8) !important;
-            color: #FF6B35 !important;
-            stroke: #000 !important;
-            stroke-width: 2px !important;
-        }
-        
-        .timer-display.warning {
-            font-size: 2.8rem !important;
-            color: #FF0000 !important;
-            animation: timerPulse 0.5s ease-in-out infinite;
-        }
-        
-        @keyframes timerPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); }
+            padding: 1rem;
         }
         
         .progress-info {
-            font-size: 0.9rem;
-            gap: 0.4rem;
-        }
-        
-        /* 📱 MOBILE: Compact avatar */
-        .quiz-logo .mascot-3d-container,
-        #mascotBee3D {
-            width: 130px !important;
-            height: 150px !important;  /* Increased to prevent feet clipping */
-            margin: 0 auto 0.4rem auto !important;
-        }
-        
-        .quiz-logo {
-            margin-bottom: 0.4rem;
-            gap: 0.15rem;
-        }
-        
-        .quiz-logo img {
-            width: 140px;
+            font-size: 0.95rem;
+            gap: 0.5rem;
+            flex-direction: column;
+            align-items: stretch;
         }
         
         .progress-tracker {
-            bottom: 8px;
+            bottom: 10px;
+            padding: 0;
         }
         
         .progress-tracker .honey-jar {
-            width: 50px;
-            height: 65px;
+            width: 55px;
+            height: 70px;
+            margin: 0 auto 0.6rem auto;
         }
         
         .progress-description {
-            font-size: 0.75rem;
-        }
-        
-        .back-button {
             font-size: 0.8rem;
-            padding: 0.35rem 0.7rem;
         }
         
-        .score-display {
+        .progress-text {
+            flex-direction: column;
             gap: 0.5rem;
         }
         
+        .back-button {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        .honey-jar-inline .honey-jar {
+            width: 40px;
+            height: 55px;
+        }
+        
+        .honey-jar-inline .honey-jar-label {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+        }
+        
+        .score-display {
+            gap: 0.7rem;
+        }
+        
         .score-item {
-            min-width: 65px;
-            max-width: 85px;
-            padding: 0.4rem 0.5rem;
+            min-width: 70px;
+            max-width: 90px;
+            padding: 0.5rem 0.6rem;
         }
         
         .score-number {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
         }
         
         .score-label {
-            font-size: 0.65rem;
+            font-size: 0.7rem;
         }
         
-        /* 📱 MOBILE: Input field */
-        .bee-input input[type="text"] {
-            font-size: 1rem;
-            padding: 0.6rem 0.8rem;
+        .quiz-logo .mascot-3d-container {
+            width: 110px !important;
+            height: 110px !important;
+            margin-bottom: 1rem;
+            transform: translateY(-6px);
         }
         
-        /* 📱 MOBILE: Quiz buttons more compact */
-        .quiz-buttons {
-            gap: 0.75rem;
-            margin-top: 0.75rem;
-        }
-        
-        .quiz-buttons .quiz-button,
-        .action-btn {
-            font-size: 0.85rem;
-            padding: 0.6rem 1rem;
-            min-width: 120px;
+        .quiz-logo img {
+            width: 160px;
         }
     }
 
@@ -1723,23 +1577,90 @@ if ('speechSynthesis' in window) {
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 1.5rem;
         margin: 2rem 0;
-        /* Remove padding-bottom to let honey pot position itself */
+        /* Remove padding-bottom to let buzz dust position itself */
     }
     
-    /* Honey pot container - Fixed positioning with proper spacing */
-    .honey-pot-container {
+    /* Buzz Dust container - Fixed positioning with proper spacing */
+    .buzz-dust-container {
         text-align: center;
-    background: linear-gradient(135deg, rgba(255, 250, 227, 0.95), rgba(255, 228, 150, 0.9));
+        background: linear-gradient(135deg, rgba(138, 43, 226, 0.08), rgba(147, 51, 234, 0.12));
         padding: 1.5rem 2rem 2rem;
         border-radius: 20px;
-        box-shadow: 0 -5px 30px rgba(255, 193, 7, 0.3);
-        border: 2px solid rgba(255, 193, 7, 0.4);
+        box-shadow: 0 -5px 30px rgba(147, 51, 234, 0.25);
+        border: 2px solid rgba(147, 51, 234, 0.3);
         margin: 3rem auto 2rem;
-        max-width: 300px;
+        max-width: 340px;
         position: relative;
         z-index: 1;
         clear: both;
         animation: slideInUp 0.8s ease 0.7s backwards;
+    }
+    
+    .buzz-dust-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #6b21a8;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(107, 33, 168, 0.15);
+    }
+    
+    .buzz-dust-badge-display {
+        margin: 1rem auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .report-badge-image {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 20px rgba(147, 51, 234, 0.35));
+        animation: badgePulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes badgePulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .buzz-dust-points-display {
+        margin: 1.25rem 0 0.75rem;
+    }
+    
+    .buzz-dust-points-label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #7c3aed;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .buzz-dust-points-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    .buzz-dust-rank-label {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #6b21a8;
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .buzz-dust-sub {
+        font-size: 1rem;
+        color: #7c3aed;
+        font-weight: 600;
+        margin-top: 0.75rem;
+        opacity: 0.85;
     }
 
     .stat-card {
@@ -1768,7 +1689,7 @@ if ('speechSynthesis' in window) {
     /* Quiz Logo at top center */
     .quiz-logo {
         text-align: center;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1776,70 +1697,23 @@ if ('speechSynthesis' in window) {
     }
     
     /* 3D Mascot in logo section */
-    /* 🎭 UNIFIED AVATAR CONTAINER - Matches Avatar Picker Style */
-    .quiz-logo .mascot-3d-container,
-    #mascotBee3D {
+    .quiz-logo .mascot-3d-container {
         position: relative;
-        width: 200px;
-        height: 210px;  /* Slightly reduced height (still prevents feet clipping) */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0.15rem auto 0.35rem auto; /* tighter spacing above/below avatar */
-        
-        /* ✨ Transparent background with golden glow (Avatar Picker Style) */
-        background: transparent;
-        border-radius: 30px;
-        border: 4px solid #FFD700;
-        box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 
-                    0 0 60px rgba(255, 215, 0, 0.3),
-                    inset 0 0 30px rgba(255, 215, 0, 0.1);
-        overflow: visible;  /* Allow feet to show */
-        z-index: 100;
-        
-        /* Smooth transitions */
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        transform: translateY(-14px); /* lift avatar higher toward logo */
-        
-        /* Interaction */
-        pointer-events: auto;
-        cursor: pointer;
+        width: 140px;
+        height: 140px;
+        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
+        transition: transform 0.3s ease;
+        z-index: 10;
+        margin-bottom: 0.5rem;
+        transform: translateY(-8px);
     }
     
-    .quiz-logo .mascot-3d-container:hover,
-    #mascotBee3D:hover {
-        transform: translateY(-12px) scale(1.05);
-        box-shadow: 0 0 50px rgba(255, 215, 0, 0.8), 
-                    0 0 70px rgba(255, 215, 0, 0.4),
-                    inset 0 0 40px rgba(255, 215, 0, 0.15);
-    }
-    
-    /* Canvas styling for Three.js avatars */
-    .quiz-logo .mascot-3d-container canvas,
-    #mascotBee3D canvas {
-        width: 100% !important;
-        height: 100% !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
-        position: absolute !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -54%) scale(1.1) !important;  /* shift canvas up a bit to avoid foot clipping after container shrink */
-        pointer-events: none;
-        z-index: 101 !important;
-        background: transparent !important;
-    }
-    
-    /* Remove any pseudo-elements */
-    .quiz-logo .mascot-3d-container::before,
-    .quiz-logo .mascot-3d-container::after,
-    #mascotBee3D::before,
-    #mascotBee3D::after {
-        display: none !important;
+    .quiz-logo .mascot-3d-container:hover {
+        transform: scale(1.05);
     }
 
     .quiz-logo img {
-        width: 120px;
+        width: 200px;
         height: auto;
         opacity: 0.95;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
@@ -2092,66 +1966,39 @@ if ('speechSynthesis' in window) {
     }
 
     .exit-modal-content {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B4 30%, #FFD98E 70%, #FFC947 100%);
-        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
         padding: 2rem;
-        max-width: 800px;
+        max-width: 400px;
         max-height: 85vh;
         width: 90%;
         text-align: center;
-        box-shadow: 0 20px 40px rgba(255, 140, 0, 0.4), 0 0 0 4px rgba(255, 215, 0, 0.2);
-        border: 5px solid #FFB300;
+        box-shadow: 0 20px 40px rgba(255, 193, 7, 0.3);
+        border: 3px solid rgba(255, 193, 7, 0.5);
         animation: modalBounceIn 0.4s ease-out;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        position: relative;
-    }
-    
-    .exit-modal-content::before {
-        content: '';
-        position: absolute;
-        top: -3px;
-        left: -3px;
-        right: -3px;
-        bottom: -3px;
-        background: linear-gradient(45deg, #FFD700, #FFA500, #FF8C00, #FFD700);
-        border-radius: 27px;
-        z-index: -1;
-        animation: borderGlow 3s linear infinite;
-        background-size: 300% 300%;
-    }
-    
-    @keyframes borderGlow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
     }
 
     .exit-modal-header h3 {
-        color: #8B4513;
+        color: #6d4c00;
         margin: 0 0 1rem 0;
-        font-size: 1.6rem;
-        text-shadow: 2px 2px 4px rgba(255, 215, 0, 0.3);
-        font-weight: 800;
+        font-size: 1.5rem;
     }
 
     .exit-modal-body p {
-        color: #5A3A1A;
+        color: #6d4c00;
         margin: 0.5rem 0;
         font-size: 1.1rem;
-        font-weight: 600;
-        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
     }
 
     .exit-stats {
-        background: linear-gradient(135deg, #FFECB3 0%, #FFE082 100%);
-        border-radius: 16px;
-        padding: 1.2rem;
+        background: rgba(255, 215, 0, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
         margin: 1rem 0;
-        color: #6D4C00;
-        font-weight: 700;
-        border: 3px solid #FFD54F;
-        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        color: #B8860B;
+        font-weight: 600;
     }
 
     .exit-modal-buttons {
@@ -2187,36 +2034,18 @@ if ('speechSynthesis' in window) {
     }
 
     .voice-intro-content {
-        background: linear-gradient(135deg, #FFF9E6 0%, #FFE8B4 25%, #FFD98E 50%, #FFC947 75%, #FFB300 100%);
-        border-radius: 28px;
+        background: linear-gradient(135deg, #FFFFFF 0%, #FFF9E6 100%);
+        border-radius: 24px;
         padding: 2.5rem 2rem;
         max-width: 450px;
         max-height: 85vh;
         width: 90%;
         text-align: center;
-        box-shadow: 0 20px 50px rgba(255, 140, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3);
-        border: 5px solid #FF8C00;
+        box-shadow: 0 20px 50px rgba(255, 140, 0, 0.4);
+        border: 4px solid #FFD700;
         animation: modalBounceIn 0.5s ease-out;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        position: relative;
-    }
-    
-    .voice-intro-content::after {
-        content: '🐝';
-        position: absolute;
-        top: -15px;
-        right: 20px;
-        font-size: 3rem;
-        animation: buzz 2s ease-in-out infinite;
-        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-    }
-    
-    @keyframes buzz {
-        0%, 100% { transform: translate(0, 0) rotate(-5deg); }
-        25% { transform: translate(5px, -5px) rotate(5deg); }
-        50% { transform: translate(-5px, 5px) rotate(-10deg); }
-        75% { transform: translate(5px, 0) rotate(5deg); }
     }
 
     .voice-intro-icon {
@@ -2519,6 +2348,36 @@ if ('speechSynthesis' in window) {
         }
     }
     
+    /* Session Points Tracker */
+    .session-stats {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 1.5rem;
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 152, 0, 0.95));
+        padding: 0.8rem 1.5rem;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+        z-index: 100;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .session-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 700;
+        color: #5A2C15;
+        font-size: 1rem;
+    }
+    
+    .session-stat-value {
+        font-size: 1.2rem;
+        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+    }
+    
     /* ✨ SPARKLE PARTICLES FOR BUZZ DUST */
     .buzz-dust-sparkle {
         position: fixed;
@@ -2567,36 +2426,6 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* Session Points Tracker */
-    .session-stats {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 1.5rem;
-        background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 152, 0, 0.95));
-        padding: 0.8rem 1.5rem;
-        border-radius: 50px;
-        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
-        z-index: 100;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .session-stat {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-weight: 700;
-        color: #5A2C15;
-        font-size: 1rem;
-    }
-    
-    .session-stat-value {
-        font-size: 1.2rem;
-        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-    }
-    
     /* 🏆 BADGE UNLOCK MODAL */
     .badge-modal {
         position: fixed;
@@ -2616,7 +2445,7 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
         border-radius: 30px;
         padding: 3rem;
-        max-width: 800px;
+        max-width: 500px;
         text-align: center;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
                     inset 0 2px 20px rgba(255, 255, 255, 0.3);
@@ -2711,26 +2540,6 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* Badge spin and fade out for celebration */
-    @keyframes badgeSpinFadeOut {
-        0% {
-            transform: rotate(0deg) scale(1);
-            opacity: 1;
-        }
-        70% {
-            transform: rotate(1080deg) scale(1.2);
-            opacity: 1;
-        }
-        100% {
-            transform: rotate(1440deg) scale(0);
-            opacity: 0;
-        }
-    }
-    
-    .badge-icon.spin-fade-out {
-        animation: badgeSpinFadeOut 2s ease-out forwards !important;
-    }
-    
     /* Confetti particles for badge unlock */
     .confetti {
         position: fixed;
@@ -2752,77 +2561,7 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* � THEMED BACKGROUNDS - Change with progress */
-    .quiz-container.theme-start {
-        background: linear-gradient(135deg, #FFE5B4 0%, #FFD700 50%, #FFA500 100%);
-        transition: background 1.5s ease;
-    }
-    
-    .quiz-container.theme-25 {
-        background: linear-gradient(135deg, #98FB98 0%, #90EE90 50%, #00FA9A 100%);
-        transition: background 1.5s ease;
-    }
-    
-    .quiz-container.theme-50 {
-        background: linear-gradient(135deg, #87CEEB 0%, #4682B4 50%, #1E90FF 100%);
-        transition: background 1.5s ease;
-    }
-    
-    .quiz-container.theme-75 {
-        background: linear-gradient(135deg, #DDA0DD 0%, #DA70D6 50%, #BA55D3 100%);
-        transition: background 1.5s ease;
-    }
-    
-    .quiz-container.theme-complete {
-        background: linear-gradient(135deg, #FFD700 0%, #FF69B4 25%, #00CED1 50%, #9370DB 75%, #FFD700 100%);
-        background-size: 200% 200%;
-        animation: rainbowShift 8s ease infinite;
-    }
-    
-    @keyframes rainbowShift {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-    
-    /* Theme transition notification */
-    .theme-notification {
-        position: fixed;
-        top: 120px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-20px);
-        background: rgba(255, 255, 255, 0.95);
-        padding: 1rem 2rem;
-        border-radius: 16px;
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #5A2C15;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        z-index: 9000;
-        opacity: 0;
-        animation: themePopIn 2s ease-out forwards;
-        pointer-events: none;
-    }
-    
-    @keyframes themePopIn {
-        0% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-20px) scale(0.8);
-        }
-        20% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0) scale(1.05);
-        }
-        80% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0) scale(1);
-        }
-        100% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-10px) scale(0.95);
-        }
-    }
-    
-    /* �🎯 LEVEL UP MODAL */
+    /* 🎯 LEVEL UP MODAL */
     .level-up-modal {
         position: fixed;
         top: 0;
@@ -2992,17 +2731,32 @@ if ('speechSynthesis' in window) {
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 
+<!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
+<div class="session-stats" id="sessionStatsBar" style="display: none;">
+    <div class="session-stat">
+        <span>📊</span>
+        <span class="session-stat-value" id="floatingWordCount">0/0</span>
+    </div>
+    <div class="session-stat">
+        <span>🍯</span>
+        <span class="session-stat-value" id="floatingPoints">0</span>
+    </div>
+    <div class="session-stat">
+        <span>🔥</span>
+        <span class="session-stat-value" id="floatingStreak">0</span>
+    </div>
+</div>
+
 <div class="quiz-container quiz-shell">
     <!-- Quiz Header -->
     <div class="quiz-header">
-        <!-- Exit button (top-right) and Progress (top-left) -->
+        <!-- Modern header layout: progress left, exit right -->
         <div class="quiz-header-top">
             <div class="progress-section">
-                <div class="progress-percentage" id="progressPercentage">Progress: 0% (0 of 0 words)</div>
                 <span id="progressText">Question 1 of 10</span>
             </div>
             <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
-                <span class="exit-icon">�</span>
+                <span class="exit-icon">×</span>
                 <span>Exit Quiz</span>
             </a>
         </div>
@@ -3027,6 +2781,11 @@ if ('speechSynthesis' in window) {
                 <span class="score-number points" id="sessionPoints" style="color: #FFD700;">0</span>
                 <span class="score-label">Points</span>
             </div>
+            
+            <!-- Buzz Dust Badge Image -->
+            <div class="score-item" style="padding: 0.3rem; background: transparent; border: none; box-shadow: none;">
+                <img id="quizHeaderBadge" src="/static/assets/badges/Novice.png" alt="Rank Badge" style="width: 80px; height: 80px; object-fit: contain;" title="Loading rank...">
+            </div>
         </div>
     </div>
 
@@ -3035,10 +2794,10 @@ if ('speechSynthesis' in window) {
         <!-- Logo at top center -->
         <div class="quiz-logo">
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
-            <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo">
+            <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo">
             
-            <!-- 3D Mascot DISABLED for performance - causes quiz slowdown -->
-            <!-- <div id="mascotBee3D" class="mascot-3d-container" style="border: none;"></div> -->
+            <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
+            <div id="mascotBee3D" class="mascot-3d-container"></div>
             
             <!-- Avatar Name Badge (shows user's chosen avatar name) -->
             {% if user_name %}
@@ -3094,10 +2853,11 @@ if ('speechSynthesis' in window) {
 
         <!-- Hidden definition storage for JavaScript (shown in visualizer instead) -->
         <div class="definition-display" id="definitionDisplay" style="display: none;">
+            Loading your first word...
         </div>
         
-        <!-- Voice Toggle Button - Centered (Hidden during quiz) -->
-        <div class="voice-toggle-container" style="display:none; justify-content:center; align-items:center; margin: 0.4rem 0; width: 100%;">
+        <!-- Voice Toggle Button - Centered -->
+        <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
             <button type="button" class="action-btn secondary" id="voiceToggleBtn" title="Toggle announcer voice">
                 <span class="bee-icon" aria-hidden="true" id="voiceToggleIcon">🔊</span>
                 <span id="voiceToggleText">Mute Buzzy</span>
@@ -3107,13 +2867,6 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
-                <!-- 2D Canvas Bee Swarm Lips Visualizer (No WebGL Required) -->
-                <div id="beeSwarmVisualizerContainer"
-                     style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-                           width:100%; height:180px;
-                            z-index:999; pointer-events:none; background:none; overflow:visible;">
-                </div>
-
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
@@ -3182,24 +2935,292 @@ if ('speechSynthesis' in window) {
                     </div>
                 </div>
 
-                <!-- Voice Visualizer (Simple container, bee swarm canvas handles all visuals) -->
-                <div class="voice-visualizer" id="voiceVisualizer" style="display:none;">
-                    <!-- Bee swarm canvas renders directly in beeSwarmVisualizerContainer above -->
+                <!-- Voice Visualizer (Upgraded center-flowing amber wave) -->
+                <div class="voice-visualizer" id="voiceVisualizer">
+                        <div class="voice-card speaking-mode">
+                            <!-- Hidden status for JavaScript (not displayed visually) -->
+                            <div class="voice-header" style="display: none;">
+                                <span class="voice-bee">🐝</span>
+                                <span class="voice-text" id="voiceStatus">Ready</span>
+                            </div>
+                            
+                            <div class="dotwave-wrapper">
+                                <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
+                            </div>
+                            
+                            <!-- Definition display inside visualizer -->
+                            <div class="voice-definition" id="voiceDefinition">
+                                🐝 Listen carefully and spell the word! 🐝
+                            </div>
+                        </div>
                 </div>
 
+                <!-- Center-Flowing Amber Wave CSS -->
                 <style>
-                    /* Force bee swarm canvas transparency */
-                    #beeSwarmVisualizerContainer,
-                    #beeSwarmVisualizerContainer canvas,
-                    #beeSwarmVisualizerContainer * {
-                        background: transparent !important;
-                        background-color: transparent !important;
+                    .voice-card.speaking-mode {
+                        background: transparent;
+                        border-radius: 28px;
+                        padding: 20px 24px 10px; /* Reduced padding for tighter spacing */
+                        border: none;
+                        box-shadow: none;
+                        max-width: 920px; /* Much wider for more room */
+                        margin: 0 auto 24px auto;
+                        color: #fff;
+                        text-align: center;
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
+                        overflow: visible; /* Allow full wave pattern visibility */
                     }
+
+                    .voice-header {
+                        font-size: 1.25rem;
+                        font-weight: 600;
+                        color: #fff8e1;
+                        text-shadow:
+                            0 0 6px rgba(255,255,255,0.8),
+                            0 0 12px rgba(255,214,64,0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        letter-spacing: 0.02em;
+                        margin-bottom: 20px;
+                    }
+
+                    .voice-bee {
+                        margin-right: 8px;
+                        display: inline-block;
+                        filter:
+                            drop-shadow(0 0 4px #fff)
+                            drop-shadow(0 0 8px #ffd54f);
+                    }
+
+                    .voice-definition {
+                        font-size: 1.1rem;
+                        font-weight: 500;
+                        color: #5A2C15; /* Dark brown for better visibility */
+                        text-shadow: none;
+                        padding: 16px 20px;
+                        margin-top: 12px;
+                        line-height: 1.5;
+                        letter-spacing: 0.01em;
+                    }
+
+                                .dotwave-wrapper {
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    padding: 28px 24px; /* Maximum padding for wave clearance */
+                                    overflow: visible; /* Ensure waves aren't clipped */
+                                }
+
+                                .dotwave-wrapper canvas {
+                                    width: 100%;
+                                    height: 280px; /* Taller for bigger waves */
+                                    filter:
+                                        drop-shadow(0 0 4px rgba(255,255,255,0.4))
+                                        drop-shadow(0 0 12px rgba(255,200,0,0.4));
+                                    display: block; /* Remove inline spacing */
+                                }
                 </style>
+
+                <!-- Optimized Wavy Amber Voice Visualizer -->
+                <script>
+                (function(){
+                    const canvas = document.getElementById('dotWaveCanvas');
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+
+                    let W = canvas.width;
+                    let H = canvas.height;
+                    let DPR = window.devicePixelRatio || 1;
+
+                    // Resize handler
+                    function resizeCanvas(){
+                        DPR = window.devicePixelRatio || 1;
+                        const cssWidth = canvas.clientWidth || 860;
+                        const cssHeight = canvas.clientHeight || 260;
+                        canvas.width = Math.round(cssWidth * DPR);
+                        canvas.height = Math.round(cssHeight * DPR);
+                        canvas.style.width = cssWidth + 'px';
+                        canvas.style.height = cssHeight + 'px';
+                        W = canvas.width; H = canvas.height;
+                    }
+                    resizeCanvas();
+                    window.addEventListener('resize', resizeCanvas);
+
+                    // Simplified state management for better performance
+                    let mode = 'idle';
+                    let time = 0;
+                    let energy = 0.1;
+                    let energyTarget = 0.1;
+                    let isAnimating = true;
+
+                    function setMode(next){
+                        if (mode !== next) {
+                            mode = next;
+                            // More dramatic energy differences for better sync
+                            if (mode === 'speaking') energyTarget = 1.2;
+                            else if (mode === 'pausing') energyTarget = 0.15; // More noticeable pause
+                            else energyTarget = 0.05; // Very quiet when idle
+                        }
+                    }
+                    window.voiceVizSetMode = setMode;
+
+                    // Observe class changes for voice sync
+                    const host = document.getElementById('voiceVisualizer');
+                    if (host && 'MutationObserver' in window){
+                        const mo = new MutationObserver(() => {
+                            const c = host.classList;
+                            if (c.contains('speaking')) setMode('speaking');
+                            else if (c.contains('pausing')) setMode('pausing');
+                            else setMode('idle');
+                        });
+                        mo.observe(host, { attributes: true, attributeFilter: ['class'] });
+                    }
+
+                    // Lightweight UI reaction helper
+                    window.BeeVoiceViz = (function(){
+                        function hostEl(){ return document.getElementById('voiceVisualizer'); }
+                        function speak(ms=600){ const h=hostEl(); if(!h) return; h.classList.add('speaking'); setTimeout(()=>h.classList.remove('speaking'), ms); }
+                        function pulse(ms=220){ const h=hostEl(); if(!h) return; h.classList.add('pausing','word-pulse'); setTimeout(()=>h.classList.remove('pausing','word-pulse'), ms); }
+                        function react(kind){
+                            switch(kind){
+                                case 'button': return pulse(200);
+                                case 'submit': return speak(480);
+                                case 'hint': return pulse(260);
+                                case 'skip': return pulse(300);
+                                case 'feedback-correct': return speak(700);
+                                case 'feedback-incorrect': return pulse(520);
+                                default: return pulse(180);
+                            }
+                        }
+                        return { speak, pulse, react };
+                    })();
+
+                    // Multi-layer waveform with translucent overlapping colors (BeeSmart amber theme)
+                    const config = {
+                        points: 120,
+                        smoothing: 0.7,
+                        layers: [
+                            { amplitude: 0.70, frequency: 1.0, phase: 0, r: 153, g: 63, b: 0, baseAlpha: 0.7 },      // Deep rust (#993F00) - Darkest
+                            { amplitude: 0.62, frequency: 1.15, phase: 0.3, r: 204, g: 92, b: 0, baseAlpha: 0.6 },  // Burnt orange (#CC5C00) - Darker
+                            { amplitude: 0.55, frequency: 1.25, phase: 0.6, r: 230, g: 115, b: 0, baseAlpha: 0.55 },// Rich amber (#E67300) - Slightly Dark
+                            { amplitude: 0.48, frequency: 1.4, phase: 0.9, r: 255, g: 153, b: 51, baseAlpha: 0.5 }, // Classic orange (#FF9933) - Slightly Light
+                            { amplitude: 0.41, frequency: 1.6, phase: 1.2, r: 255, g: 184, b: 112, baseAlpha: 0.45 },// Warm tangerine (#FFB870) - Lighter
+                            { amplitude: 0.34, frequency: 1.8, phase: 1.5, r: 255, g: 216, b: 176, baseAlpha: 0.4 } // Soft peachy orange (#FFD8B0) - Lightest
+                        ]
+                    };
+
+                    // Store smoothed amplitudes per layer
+                    let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
+
+                    // Draw smooth waveform with multiple translucent layers
+                    function drawHorizontalWaveform() {
+                        ctx.clearRect(0, 0, W, H);
+                        
+                        const centerY = H / 2;
+                        const buffer = 40; // Increased safety buffer from edges to prevent clipping
+                        const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
+                        const spacing = W / (config.points - 1);
+                        const centerIdx = config.points / 2;
+
+                        // Draw each layer from back to front
+                        config.layers.forEach((layer, layerIdx) => {
+                            // Calculate amplitudes for this layer - waves ORIGINATE from center, expand outward
+                            const amplitudes = [];
+                            for (let i = 0; i < config.points; i++) {
+                                const distFromCenter = Math.abs(i - centerIdx) / centerIdx;
+                                
+                                // Wave propagates FROM center outward (not left-to-right)
+                                // Use distance from center as the primary phase, not position index
+                                const wavePhase = (time * 0.04 * layer.frequency) - (distFromCenter * 4) + layer.phase;
+                                
+                                // Organic sine-based amplitude with CENTER PEAK emphasis
+                                const baseWave = Math.sin(wavePhase) * 0.5 + 0.5;
+                                
+                                // Center is tallest, gradually decreases toward edges
+                                const centerBoost = 1.15 - (distFromCenter * 0.55);
+                                
+                                // Edge tapering - force edges to be very thin (approaching zero)
+                                const edgeTaper = 1 - Math.pow(distFromCenter, 2.5); // Exponential falloff at edges
+                                
+                                // Energy drives amplitude - low energy = almost flat line, high energy = big waves
+                                const energyFactor = Math.max(0.05, energy * 0.95);
+                                
+                                const targetAmp = baseWave * centerBoost * edgeTaper * energyFactor * maxHeight * layer.amplitude;
+                                
+                                // Smooth transition
+                                layerAmplitudes[layerIdx][i] += (targetAmp - layerAmplitudes[layerIdx][i]) * config.smoothing;
+                                
+                                // Strict clamping with extra safety margin to prevent any clipping
+                                const safeAmp = Math.max(1, Math.min(maxHeight * 0.92, layerAmplitudes[layerIdx][i]));
+                                amplitudes.push(safeAmp);
+                            }
+
+                            // Draw upper half with gradient fade at edges
+                            const gradient = ctx.createLinearGradient(0, centerY, W, centerY);
+                            const edgeFadeStart = 0.15; // Start fading at 15% from edges
+                            const edgeFadeEnd = 0.02;   // Fully transparent at 2% from edges
+                            
+                            gradient.addColorStop(0, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
+                            gradient.addColorStop(edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(0.5, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(1 - edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
+                            gradient.addColorStop(1, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(0, centerY);
+                            for (let i = 0; i < config.points; i++) {
+                                ctx.lineTo(i * spacing, centerY - amplitudes[i]);
+                            }
+                            ctx.lineTo(W, centerY);
+                            ctx.closePath();
+                            ctx.fillStyle = gradient;
+                            ctx.fill();
+
+                            // Draw lower half (mirror) with same gradient
+                            ctx.beginPath();
+                            ctx.moveTo(0, centerY);
+                            for (let i = 0; i < config.points; i++) {
+                                ctx.lineTo(i * spacing, centerY + amplitudes[i]);
+                            }
+                            ctx.lineTo(W, centerY);
+                            ctx.closePath();
+                            ctx.fillStyle = gradient;
+                            ctx.fill();
+                        });
+                    }
+
+                    // Optimized animation loop
+                    function animate() {
+                        if (!isAnimating) return;
+                        
+                        // Faster energy transitions for better voice sync
+                        energy += (energyTarget - energy) * 0.12;
+                        
+                        // Only animate when needed (performance optimization)
+                        if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
+                            drawHorizontalWaveform();  // Horizontal waveform expanding from center
+                        }
+                        
+                        time += 1;
+                        requestAnimationFrame(animate);
+                    }
+
+                    // Initialize
+                    setMode('idle');
+                    requestAnimationFrame(animate);
+                    
+                    // Pause animation when page is hidden (performance)
+                    document.addEventListener('visibilitychange', () => {
+                        isAnimating = !document.hidden;
+                        if (isAnimating) requestAnimationFrame(animate);
+                    });
+                })();
+                </script>
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
-        <div class="bee-input" id="beeInputWrapper" style="margin-top: 0.8rem;">
+        <div class="bee-input" id="beeInputWrapper">
             <input type="text"
                    id="spellingInput"
                    placeholder="Type your spelling here..."
@@ -3325,7 +3346,8 @@ if ('speechSynthesis' in window) {
     </div>
 </div>
 
-<!-- Old 2D bee swarm canvas removed - now using 3D visualizer -->
+<!-- 3D Bee Swarm Canvas -->
+<canvas id="beeSwarmCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></canvas>
 
 {% endblock %}
 
@@ -3340,16 +3362,6 @@ if ('speechSynthesis' in window) {
 </div>
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
-<script src="{{ url_for('static', filename='js/voice_dotwave_renderer.js') }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    const cont = document.getElementById('beeSwarmVisualizerContainer');
-    if(cont && window.DotWaveVisualizer){
-        try { window.dotWaveViz = window.DotWaveVisualizer.init(cont, { height: 180 }); } catch(e){ console.warn('DotWave init failed', e); }
-    }
-});
-</script>
 <script>
 // Frontend safety blanker - hide target word if it appears in definitions/sentences
 function hideTargetWord(text, word) {
@@ -3543,7 +3555,7 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.85) {
+    speakWord(word, onEndCallback = null, rate = 0.92) {
         if (!word || !('speechSynthesis' in window)) {
             if (onEndCallback) onEndCallback();
             return;
@@ -3553,8 +3565,8 @@ class BeeSoundboard {
         
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.0; // Natural neutral female voice
-            utterance.rate = rate; // Use provided rate (default 0.85 - natural conversational pace)
+            utterance.pitch = 1.35;
+            utterance.rate = rate; // Use provided rate instead of fixed 0.92
             utterance.volume = 0.9;
             utterance.text = word;
             
@@ -3568,13 +3580,8 @@ class BeeSoundboard {
                 utterance.addEventListener('error', onEndCallback);
             }
             
-        // Use enhanced voice selection for natural-sounding female voices
-        if (!this.cachedVoice) {
-            // Try global cached voice first for consistency
-            if (window.QUIZ_CACHED_VOICE) {
-                this.cachedVoice = window.QUIZ_CACHED_VOICE;
-                console.log('🎤 speakWord using global cached voice:', this.cachedVoice.name);
-            } else {
+            // Use enhanced voice selection for natural-sounding female voices
+            if (!this.cachedVoice) {
                 this.cachedVoice = this.selectBestFemaleVoice();
                 
                 if (this.cachedVoice) {
@@ -3585,29 +3592,22 @@ class BeeSoundboard {
                     console.warn('⚠️ speakWord: No suitable voice found, using browser default');
                 }
             }
-        }
-        
-        if (this.cachedVoice) {
-            utterance.voice = this.cachedVoice;
-        }            // Sync visual display with announcer + morph to voice visualizer + bee swarm integration
+            
+            if (this.cachedVoice) {
+                utterance.voice = this.cachedVoice;
+            }
+            
+            // Sync visual display with announcer + morph to voice visualizer
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
                 if (statusEl) statusEl.textContent = this.cachedVoice
                     ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
                     : '🎙️ Speaking';
                 
-                // Trigger bee swarm activation
-                console.log('🎙️ Dispatching quiz-speech-start event');
-                window.dispatchEvent(new CustomEvent('quiz-speech-start'));
-                
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onboundary = (event) => {
-                // Trigger bee swarm mouth pulse on word boundaries
-                console.log('🎙️ Dispatching quiz-speech-boundary event');
-                window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
-                
                 // Word-level micro pauses for natural cadence
                 if (event.name === 'word' || event.charLength > 0) {
                     if (visualizer) {
@@ -3637,20 +3637,12 @@ class BeeSoundboard {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '🐝 Ready';
                 
-                // Trigger bee swarm deactivation
-                console.log('🎙️ Dispatching quiz-speech-end event');
-                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-                
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
             
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
-                
-                // Trigger bee swarm deactivation on error
-                console.log('🎙️ Dispatching quiz-speech-end event (error)');
-                window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
@@ -3712,11 +3704,10 @@ class BeeSoundboard {
                 if (name.includes('premium')) score += 60;
                 if (name.includes('neural')) score += 60;
                 
-                // Known high-quality natural-sounding female voices (prioritized for kids)
+                // Known high-quality female voices
                 const premiumVoices = {
-                    'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
-                    'moira': 87, 'aria': 85, 'jenny': 85, 'salli': 85, 'kendra': 85,
-                    'victoria': 82, 'nova': 80, 'allison': 78, 'zira': 75, 'susan': 75
+                    'samantha': 90, 'aria': 85, 'jenny': 85, 'alex': 85,
+                    'victoria': 80, 'nova': 80, 'zira': 75, 'allison': 70
                 };
                 
                 for (const [voiceName, points] of Object.entries(premiumVoices)) {
@@ -3760,18 +3751,6 @@ class MorphController {
         console.log('🎭 Morphing to VOICE visualizer...');
         this.morphing = true;
         
-        // 🐝 Fade in bee swarm visualizer when returning to voice mode
-        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
-        if (beeSwarmContainer) {
-            console.log('✨ Fading in bee swarm for voice mode...');
-            beeSwarmContainer.style.transition = 'opacity 0.8s ease-in';
-            beeSwarmContainer.style.opacity = '1';
-            // Resume swarm animation
-            if (window.beeSwarmViz) {
-                window.beeSwarmViz.isActive = true;
-            }
-        }
-        
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
             window.soundboard.play('morph-to-visualization');
@@ -3800,19 +3779,6 @@ class MorphController {
         
         console.log('🎭 Morphing to HONEY JAR timer...');
         this.morphing = true;
-        
-        // 🐝 Fade out bee swarm visualizer when timer appears
-        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
-        if (beeSwarmContainer) {
-            console.log('🌫️ Fading out bee swarm as timer appears...');
-            beeSwarmContainer.style.transition = 'opacity 0.8s ease-out';
-            beeSwarmContainer.style.opacity = '0';
-            // Stop swarm animation
-            if (window.beeSwarmViz) {
-                window.beeSwarmViz.isActive = false;
-                window.beeSwarmViz.amplitude = 0;
-            }
-        }
         
         // 🔊 Play morphing sound effect
         if (window.soundboard) {
@@ -3854,16 +3820,6 @@ class MorphController {
         this.container.classList.add('mode-voice');
         this.currentMode = 'voice';
         this.morphing = false;
-        
-        // 🐝 Ensure bee swarm is visible in voice mode
-        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
-        if (beeSwarmContainer) {
-            beeSwarmContainer.style.opacity = '1';
-            if (window.beeSwarmViz) {
-                window.beeSwarmViz.isActive = true;
-            }
-        }
-        
         console.log('🔄 Reset to VOICE mode');
     }
     
@@ -3875,17 +3831,6 @@ class MorphController {
         this.container.classList.add('mode-timer');
         this.currentMode = 'timer';
         this.morphing = false;
-        
-        // 🐝 Hide bee swarm in timer mode
-        const beeSwarmContainer = document.getElementById('beeSwarmVisualizerContainer');
-        if (beeSwarmContainer) {
-            beeSwarmContainer.style.opacity = '0';
-            if (window.beeSwarmViz) {
-                window.beeSwarmViz.isActive = false;
-                window.beeSwarmViz.amplitude = 0;
-            }
-        }
-        
         console.log('🔄 Reset to TIMER mode');
     }
     
@@ -4346,9 +4291,9 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            // Speak a friendly prompt and the word once (removed echo)
-            const phrase = `Spell the word, ${data.word}.`;
-            const rate = data.rate || 0.85; // Use provided rate or default natural pace
+            // Speak a friendly prompt and the word twice
+            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+            const rate = data.rate || 0.92; // Use provided rate or default
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -4517,14 +4462,6 @@ class QuizManager {
         // Reset honey jar to 0% at start
         this.resetHoneyJar();
         
-        // 🌈 Initialize themed background
-        this.currentTheme = 'theme-start';
-        const quizContainer = document.querySelector('.quiz-container');
-        if (quizContainer) {
-            quizContainer.classList.add('theme-start');
-            console.log('🌈 Initial theme set to: theme-start');
-        }
-        
         // Randomized positive feedback messages (without names - we'll add dynamically)
         this.positiveFeedback = [
             "🐝 BEE-utiful! That's absolutely correct!",
@@ -4684,23 +4621,21 @@ class QuizManager {
                 if (name.includes('premium')) score += 60;
                 if (name.includes('neural')) score += 60;
                 
-                // Known high-quality natural-sounding female voices (prioritized for kids)
+                // Known high-quality female voices (ordered by naturalness)
                 const premiumVoices = {
-                    'samantha': 95,     // macOS - very natural, excellent for kids
-                    'ava': 92,          // macOS - warm and clear
-                    'emma': 90,         // Modern neural - friendly tone
-                    'joanna': 88,       // Amazon Polly - professional but warm
-                    'karen': 88,        // Clear enunciation for spelling
-                    'moira': 87,        // Irish accent - pleasant and clear
-                    'aria': 85,         // Modern Windows neural - natural
-                    'jenny': 85,        // Modern neural voice - friendly
-                    'salli': 85,        // Amazon Polly - clear pronunciation
-                    'kendra': 85,       // Amazon Polly - warm tone
-                    'victoria': 82,     // Windows - natural sounding
-                    'nova': 80,         // Modern neural voice
-                    'allison': 78,      // Traditional but good clarity
+                    'samantha': 90,     // macOS - very natural
+                    'alex': 85,         // macOS - excellent quality
+                    'victoria': 80,     // Windows - natural sounding
                     'zira': 75,         // Windows - clear and natural
-                    'susan': 75         // Traditional - good for spelling
+                    'aria': 85,         // Modern Windows neural
+                    'jenny': 85,        // Modern neural voice
+                    'nova': 80,         // Modern neural voice
+                    'allison': 70,      // Traditional but good
+                    'ava': 70,          // Traditional but good
+                    'joanna': 65,       // Amazon Polly style
+                    'susan': 60,        // Traditional
+                    'karen': 55,        // Traditional
+                    'moira': 50         // Traditional Irish
                 };
                 
                 // Check for premium voice names
@@ -4751,15 +4686,6 @@ class QuizManager {
             return Promise.resolve();
         }
         
-        // Cancel any ongoing speech to prevent interruption errors
-        if (window.speechSynthesis && window.speechSynthesis.speaking) {
-            console.log('🛑 Cancelling previous speech to prevent interruption');
-            window.speechSynthesis.cancel();
-        }
-        
-        // Trigger announce event for visualizer
-        window.dispatchEvent(new CustomEvent('announce'));
-        
         // Clean text by removing emojis before speaking
         const cleanText = this.cleanTextForSpeech(text);
         
@@ -4790,26 +4716,20 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 0.85;  // Natural conversational pace (consistent with speakWord)
-                utterance.pitch = 1.0; // Natural neutral female voice
+                utterance.rate = 1.0;  // Normal speed for US English
+                utterance.pitch = 1.1;
                 utterance.volume = 0.85;
                 
                 // Cache the selected voice to ensure consistency using enhanced selection
                 if (!this.cachedVoice) {
-                    // Try global cached voice first for consistency
-                    if (window.QUIZ_CACHED_VOICE) {
-                        this.cachedVoice = window.QUIZ_CACHED_VOICE;
-                        console.log('🎤 speakDefinition using global cached voice:', this.cachedVoice.name);
+                    this.cachedVoice = this.selectBestFemaleVoice();
+                    
+                    if (this.cachedVoice) {
+                        const voiceType = this.cachedVoice.lang === 'en-US' 
+                            ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
+                        console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
                     } else {
-                        this.cachedVoice = this.selectBestFemaleVoice();
-                        
-                        if (this.cachedVoice) {
-                            const voiceType = this.cachedVoice.lang === 'en-US' 
-                                ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
-                            console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
-                        } else {
-                            console.warn('⚠️ No suitable enhanced female voice found, using browser default');
-                        }
+                        console.warn('⚠️ No suitable enhanced female voice found, using browser default');
                     }
                 }
                 
@@ -4856,15 +4776,7 @@ class QuizManager {
                         status.textContent = '🗣️ Speaking...';
                     }
                     
-                    // Trigger bee swarm activation
-                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
-                    
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
-                };
-                
-                // Add boundary event for mouth pulses
-                utterance.onboundary = (event) => {
-                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
                 };
                 
                 // Add event listeners to resolve promise when speech ends
@@ -4877,33 +4789,21 @@ class QuizManager {
                         status.textContent = '🐝 Ready';
                     }
                     
-                    // Trigger bee swarm deactivation
-                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-                    
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                     
                     resolve();
                 };
                 
                 utterance.onerror = (event) => {
-                    // Only log non-interrupted errors as warnings
-                    if (event.error !== 'interrupted') {
-                        console.warn('⚠️ Speech error:', event.error);
-                    } else {
-                        console.log('ℹ️ Speech interrupted (expected during rapid transitions)');
-                    }
-                    
+                    console.warn('⚠️ Speech error:', event.error);
                     // Stop visualizer animation on error
                     if (visualizer && status) {
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
                     
-                    // Trigger bee swarm deactivation on error
-                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-                    
-                    // 🎭 Morph back to timer on error (only if not interrupted)
-                    if (window.morphController && event.error !== 'interrupted') {
+                    // 🎭 Morph back to timer on error
+                    if (window.morphController) {
                         window.morphController.morphToTimer();
                     }
                     
@@ -5081,23 +4981,19 @@ class QuizManager {
                     iosVoiceStatus.style.color = '#4CAF50';
                     iosVoiceStatus.style.fontWeight = '600';
                     
-                const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
-                const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
-                                   "Listen carefully to each word, then spell what you hear. " +
-                                   "Let's start spelling and fill that honey jar!";
-                
-                // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
-                speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(introMessage);
-                
-                // Use global cached voice for consistency
-                if (window.QUIZ_CACHED_VOICE) {
-                    utterance.voice = window.QUIZ_CACHED_VOICE;
-                }
-                
-                utterance.rate = 0.85; // Natural conversational pace (consistent)
-                utterance.pitch = 1.0; // Natural neutral female voice
-                utterance.volume = 0.9;                    utterance.onend = () => {
+                    const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
+                    const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
+                                       "Listen carefully to each word, then spell what you hear. " +
+                                       "Let's start spelling and fill that honey jar!";
+                    
+                    // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
+                    speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(introMessage);
+                    utterance.rate = 0.95;
+                    utterance.pitch = 1.1;
+                    utterance.volume = 0.9;
+                    
+                    utterance.onend = () => {
                         console.log('✅ iOS intro voice completed successfully');
                         iosVoiceStatus.textContent = '✅ Great! Starting quiz...';
                         iosVoiceStatus.style.color = '#4CAF50';
@@ -5283,7 +5179,7 @@ class QuizManager {
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
-            this.updateProgressDisplays(questionNumber, this.totalWords);
+            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -5603,16 +5499,13 @@ class QuizManager {
         feedbackArea.innerHTML = currentFeedback + pointsHtml;
     }
     
-    // 🍯 Show animated points popup with sparkles
+    // 🍯 Show animated points popup
     showPointsPopup(points, breakdown) {
         // Remove any existing popup
         const existingPopup = document.querySelector('.points-popup');
         if (existingPopup) {
             existingPopup.remove();
         }
-        
-        // Create sparkle particles
-        this.createBuzzDustSparkles(points);
         
         // Create popup element
         const popup = document.createElement('div');
@@ -5653,6 +5546,9 @@ class QuizManager {
         `;
         
         document.body.appendChild(popup);
+        
+        // Create sparkle particles
+        this.createBuzzDustSparkles(points);
         
         // Auto-remove after animation completes (2.5s)
         setTimeout(() => {
@@ -5740,24 +5636,9 @@ class QuizManager {
             const modal = document.createElement('div');
             modal.className = 'badge-modal';
             
-            // Determine if this is a rank badge with 3D model or achievement badge
-            const isRankBadge = badge.badge_image && badge.badge_image.endsWith('.glb');
-            
-            let badgeDisplay = '';
-            if (isRankBadge && window.Badge3DRenderer) {
-                // Use 3D badge renderer with spinning effect
-                badgeDisplay = `
-                    <div id="badge3DContainer" class="badge-icon" style="width:150px;height:150px;margin:0 auto;">
-                    </div>
-                `;
-            } else {
-                // Fall back to emoji or icon
-                badgeDisplay = `<div class="badge-icon">${badge.icon || '🏆'}</div>`;
-            }
-            
             modal.innerHTML = `
                 <div class="badge-modal-content">
-                    ${badgeDisplay}
+                    <div class="badge-icon">${badge.icon}</div>
                     <h2>Achievement Unlocked!</h2>
                     <h3>${badge.name}</h3>
                     <p>${badge.message}</p>
@@ -5767,26 +5648,6 @@ class QuizManager {
                     </button>
                 </div>
             `;
-            
-            document.body.appendChild(modal);
-            
-            // Initialize 3D badge if available
-            if (isRankBadge && window.Badge3DRenderer) {
-                setTimeout(() => {
-                    const container = document.getElementById('badge3DContainer');
-                    if (container) {
-                        new Badge3DRenderer(container, {
-                            badgeFile: badge.badge_image,
-                            width: 150,
-                            height: 150,
-                            autoRotate: true,
-                            rotationSpeed: 1.0, // Faster spin for celebration!
-                            enableLighting: true,
-                            enableShadow: true
-                        });
-                    }
-                }, 100);
-            }
             
             document.body.appendChild(modal);
             
@@ -6245,7 +6106,9 @@ class QuizManager {
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
-            this.updateProgressDisplays(questionNumber, this.totalWords);
+            
+            // Update progress displays (both text and percentage)
+            this.updateProgressDisplays(questionNumber, data.total ?? this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -6335,14 +6198,11 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // ✅ ENABLE input immediately - no waiting for timer
+            // DISABLE input until timer starts
             const spellingInput = document.getElementById('spellingInput');
-            const submitButton = document.getElementById('submitButton');
-            spellingInput.disabled = false;
-            submitButton.disabled = false;  // 🔧 FIX: Re-enable submit button for each new word
+            spellingInput.disabled = true;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Type your answer...';
-            spellingInput.focus();
+            spellingInput.placeholder = 'Wait for timer...';
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
@@ -6351,9 +6211,14 @@ class QuizManager {
             this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
-            // Input is already enabled - users can start typing immediately
+            // Input will be enabled when timer starts
             if (this.timerEnabled && this.quizStarted) {
                 await this.announceAndStartTimer();
+            } else {
+                // If timer is disabled, enable input immediately
+                spellingInput.disabled = false;
+                spellingInput.placeholder = 'Type your answer...';
+                spellingInput.focus();
             }
         } catch (error) {
             console.error('Error loading next word:', error);
@@ -6564,7 +6429,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false, rate = 0.85 } = {}) {
+    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
@@ -6575,7 +6440,7 @@ class QuizManager {
                 const data = {
                     word: this.currentWordData.word,
                     definition: this.currentWordData.definition,
-                    rate: rate // Pass speech rate to handlers (default 0.85 - natural pace)
+                    rate: rate // Pass speech rate to handlers
                 };
                 
                 // Start visualizer animation BEFORE speaking
@@ -6598,23 +6463,18 @@ class QuizManager {
                     // Prefer delight handler when available, otherwise speak directly
                     if (this.delight && typeof this.delight.handlePronounce === 'function') {
                         try {
-                            // Trigger announce event for visualizer
-                            window.dispatchEvent(new CustomEvent('announce'));
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = `Spell the word, ${data.word}.`;
-                            window.dispatchEvent(new CustomEvent('announce'));
+                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = `Spell the word, ${data.word}.`;
-                        window.dispatchEvent(new CustomEvent('announce'));
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = `Spell the word, ${data.word}.`;
-                        window.dispatchEvent(new CustomEvent('announce'));
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
@@ -6635,20 +6495,17 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 0.85) {
+    speakDirectly(text, onDone, rate = 1.0) {
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = rate; // Default 0.85 - natural conversational pace
+                utterance.rate = rate;
                 utterance.pitch = 1.0;
                 utterance.volume = 0.9;
                 
-                // Use global cached voice for consistency first
-                if (window.QUIZ_CACHED_VOICE) {
-                    utterance.voice = window.QUIZ_CACHED_VOICE;
-                    console.log(`Using global cached voice: ${window.QUIZ_CACHED_VOICE.name}`);
-                } else if (this.cachedVoice) {
+                // Use the same female voice selection as other speech methods
+                if (this.cachedVoice) {
                     utterance.voice = this.cachedVoice;
                     console.log(`Using cached female voice: ${this.cachedVoice.name}`);
                 } else {
@@ -6661,27 +6518,13 @@ class QuizManager {
                     }
                 }
                 
-                utterance.onstart = () => {
-                    console.log('Direct speech synthesis started');
-                    // Trigger bee swarm activation
-                    window.dispatchEvent(new CustomEvent('quiz-speech-start'));
-                };
-                
-                utterance.onboundary = (event) => {
-                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
-                };
-                
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
-                    // Trigger bee swarm deactivation
-                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
                 utterance.onerror = (event) => {
                     console.error('Speech synthesis error:', event);
-                    // Trigger bee swarm deactivation on error
-                    window.dispatchEvent(new CustomEvent('quiz-speech-end'));
                     if (onDone) onDone();
                 };
                 
@@ -6697,14 +6540,14 @@ class QuizManager {
         }
     }
 
-    // Pronounce word at natural pace (same as default)
+    // Pronounce word at slower speed for learning
     async pronounceWordSlow() {
-        return await this.pronounceWord({ rate: 0.85 });
+        return await this.pronounceWord({ rate: 0.7 });
     }
 
-    // Repeat word at natural pace
+    // Repeat word at normal speed
     async repeatWord() {
-        return await this.pronounceWord({ rate: 0.85 });
+        return await this.pronounceWord({ rate: 1.0 });
     }
 
     async submitAnswer() {
@@ -6722,7 +6565,8 @@ class QuizManager {
         }
 
         this.isAnswering = true;
-        this.disableInput();
+        // Keep submit button enabled - only disable input field
+        document.getElementById('spellingInput').disabled = true;
         
         // ⏱️ Stop countdown timer when answer submitted
         this.stopCountdownTimer();
@@ -6753,11 +6597,6 @@ class QuizManager {
             }
 
             const result = await response.json();
-            
-            // 🐛 DEBUG: Log the full response to see what we're getting
-            console.log('📊 API Response:', result);
-            console.log('🍯 Points data:', result.points);
-            console.log('💰 Earned points:', result.points?.earned);
             
             // 🍯 Update points from backend response
             if (result.points) {
@@ -6982,6 +6821,28 @@ class QuizManager {
             const points = Number(this.sessionPoints) || 0;
             sessionPointsElement.textContent = points.toLocaleString();
         }
+        
+        // 🎯 Update floating session stats bar
+        const floatingWordCount = document.getElementById('floatingWordCount');
+        const floatingPoints = document.getElementById('floatingPoints');
+        const floatingStreak = document.getElementById('floatingStreak');
+        const sessionStatsBar = document.getElementById('sessionStatsBar');
+        
+        if (floatingWordCount) {
+            floatingWordCount.textContent = `${correct}/${total}`;
+        }
+        if (floatingPoints) {
+            const points = Number(this.sessionPoints) || 0;
+            floatingPoints.textContent = points.toLocaleString();
+        }
+        if (floatingStreak) {
+            floatingStreak.textContent = streak;
+        }
+        
+        // Show the floating stats bar once quiz starts
+        if (sessionStatsBar && total > 0) {
+            sessionStatsBar.style.display = 'flex';
+        }
 
         // Update honey jar fill level based on progress
         const honeyLevel = document.getElementById('honeyLevel');
@@ -6994,11 +6855,8 @@ class QuizManager {
         }
 
         this.delight?.updateProgress({ ...progress, total: this.totalWords });
-        
-        // 🌈 Update themed background based on progress
-        this.updateThemedBackground(correct, this.totalWords);
     }
-    
+
     /**
      * Update both progress text and percentage displays
      * @param {number} current - Current word index (1-based)
@@ -7020,62 +6878,6 @@ class QuizManager {
         }
     }
     
-    updateThemedBackground(correct, total) {
-        if (!total || total === 0) return;
-        
-        const percentage = (correct / total) * 100;
-        const quizContainer = document.querySelector('.quiz-container');
-        if (!quizContainer) return;
-        
-        // Define theme thresholds and names
-        const themes = [
-            { threshold: 0, name: 'theme-start', label: '🌅 Sunny Start!' },
-            { threshold: 25, name: 'theme-25', label: '🌱 Growing Garden!' },
-            { threshold: 50, name: 'theme-50', label: '🌊 Halfway Ocean!' },
-            { threshold: 75, name: 'theme-75', label: '🌸 Blossom Peak!' },
-            { threshold: 100, name: 'theme-complete', label: '🌈 Rainbow Victory!' }
-        ];
-        
-        // Find the current theme based on percentage
-        let newTheme = themes[0];
-        for (const theme of themes) {
-            if (percentage >= theme.threshold) {
-                newTheme = theme;
-            }
-        }
-        
-        // Check if theme has changed
-        const currentTheme = this.currentTheme || 'theme-start';
-        if (newTheme.name !== currentTheme) {
-            // Remove all theme classes
-            themes.forEach(t => quizContainer.classList.remove(t.name));
-            
-            // Add new theme class
-            quizContainer.classList.add(newTheme.name);
-            this.currentTheme = newTheme.name;
-            
-            // Show celebration notification (except for first theme)
-            if (newTheme.threshold > 0) {
-                this.showThemeNotification(newTheme.label);
-            }
-            
-            console.log(`🌈 Theme changed to: ${newTheme.name} (${percentage.toFixed(1)}% progress)`);
-        }
-    }
-    
-    showThemeNotification(message) {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'theme-notification';
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        // Remove after animation completes
-        setTimeout(() => {
-            notification.remove();
-        }, 2000);
-    }
-
     resetHoneyJar() {
         // Reset honey jar to 0% (empty) at start of quiz
         const honeyLevel = document.getElementById('honeyLevel');
@@ -7087,12 +6889,14 @@ class QuizManager {
 
     disableInput() {
         document.getElementById('spellingInput').disabled = true;
-        document.getElementById('submitButton').disabled = true;
+        // Submit button remains enabled for user to submit anytime
+        // document.getElementById('submitButton').disabled = true;
     }
 
     enableInput() {
         document.getElementById('spellingInput').disabled = false;
-        document.getElementById('submitButton').disabled = false;
+        // Submit button remains enabled for user to submit anytime
+        // document.getElementById('submitButton').disabled = false;
     }
 
     // 🔄 RETRY SYSTEM METHODS
@@ -7504,12 +7308,6 @@ class QuizManager {
     }
 
     async showQuizComplete(summary) {
-        // ⏹️ Stop timer when quiz completes
-        if (this.countdownTimer) {
-            this.countdownTimer.stop();
-            console.log('⏹️ Timer stopped - quiz complete');
-        }
-        
         document.getElementById('quizCard').style.display = 'none';
         const completeDiv = document.getElementById('quizComplete');
         completeDiv.style.display = 'block';
@@ -7613,7 +7411,7 @@ class QuizManager {
                                 </div>
                             ` : `
                                 <div style="font-size: 1rem; color: rgba(255,255,255,0.95); margin-top: 0.5rem;">
-                                    ✨ Buzz Dust Master! ✨
+                                    👑 Maximum Level Achieved! 👑
                                 </div>
                             `}
                         </div>
@@ -7722,20 +7520,18 @@ class QuizManager {
                     </div>
                 </div>
 
-                <!-- Honey Pot Progress -->
-                <div class="honey-pot-container">
-                    <div class="honey-title">🍯 Honey Collected This Session</div>
-                    <div class="honey-pot">
-                        <!-- Honey level fill -->
-                        <div class="honey-fill" style="height: ${safePercentage}%;"></div>
-                        
-                        <!-- Honey pot label -->
-                        <div class="honey-label">${safePercentage}%</div>
-                        
-                        <!-- Pot rim -->
-                        <div class="pot-rim"></div>
+                <!-- Buzz Dust Badge Progress -->
+                <div class="buzz-dust-container" id="reportBuzzDustContainer">
+                    <div class="buzz-dust-title">✨ Buzz Dust Earned This Session</div>
+                    <div class="buzz-dust-badge-display">
+                        <img id="reportBadgeImage" src="/static/assets/badges/Novice.png" alt="Current Rank" class="report-badge-image">
                     </div>
-                    <div class="honey-sub">Keep spelling to fill your pot! 🐝</div>
+                    <div class="buzz-dust-points-display">
+                        <div class="buzz-dust-points-label">Total Buzz Dust</div>
+                        <div class="buzz-dust-points-value" id="reportBuzzDustPoints">0</div>
+                    </div>
+                    <div class="buzz-dust-rank-label" id="reportBuzzDustRank">Novice Bee</div>
+                    <div class="buzz-dust-sub">Keep spelling to level up! ✨</div>
                 </div>
 
                 <!-- Achievements moved below for breathing room -->
@@ -7827,24 +7623,9 @@ class QuizManager {
                 .fancy-stat-card.gold { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #fff; border-color: rgba(255,255,255,0.35); }
                 .fancy-stat-card.purple { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: #fff; border-color: rgba(255,255,255,0.35); }
 
-                .honey-pot-container { text-align: center; margin-top: 1.1rem; }
-                .honey-title { font-size: 1.05rem; font-weight: 800; color: #5A2C15; margin-bottom: 0.6rem; }
-                .honey-pot { position: relative; width: 200px; height: 180px; margin: 0.25rem auto 0; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); border-radius: 20px 20px 40px 40px; border: 4px solid #8B4513; box-shadow: 0 10px 30px rgba(255,165,0,0.35), inset 0 -20px 40px rgba(139,69,19,0.18); overflow: hidden; }
-                .honey-fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(180deg, rgba(255, 223, 0, 0.9) 0%, rgba(255, 193, 7, 1) 100%); border-radius: 0 0 36px 36px; animation: honeyFill 1.5s ease-out 0.6s backwards; box-shadow: inset 0 10px 20px rgba(255,255,255,0.3); }
-                .honey-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.3rem; font-weight: 900; color: #8B4513; text-shadow: 2px 2px 4px rgba(255,255,255,0.5); z-index: 10; }
-                .pot-rim { position: absolute; top: -8px; left: -4px; right: -4px; height: 20px; background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%); border-radius: 20px 20px 0 0; border: 2px solid #654321; }
-                .honey-sub { margin-top: 0.75rem; font-size: 0.95rem; color: #5A2C15; font-weight: 600; }
-
                 @media (max-width: 460px) {
                     .tall-stats, .grid-stats { grid-template-columns: 1fr; }
                     .report-card { padding: 1rem 0.75rem 1.5rem; }
-                }
-            </style>
-            
-            <style>
-                @keyframes honeyFill {
-                    from { height: 0%; }
-                    to { height: ${safePercentage}%; }
                 }
             </style>
             
@@ -7894,6 +7675,9 @@ class QuizManager {
         if (this.smartyBee) {
             this.smartyBee.onQuizComplete();
         }
+        
+        // Fetch and populate buzz dust badge info
+        this.loadBuzzDustReportCard();
 
         BeeSmart.showSuccess(`Quiz complete! You got ${summary.correct} out of ${summary.total} words correct (${percentage}%). Grade: ${letterGrade}`);
     }
@@ -7909,6 +7693,45 @@ class QuizManager {
             BeeSmart.showError('Failed to restart quiz. Please refresh the page.');
         }
     }
+    
+    async loadBuzzDustReportCard() {
+        try {
+            const response = await fetch('/api/buzz-dust/info', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                console.warn('Failed to load buzz dust info for report card');
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.current_class) {
+                const badgeImage = document.getElementById('reportBadgeImage');
+                const buzzDustPoints = document.getElementById('reportBuzzDustPoints');
+                const buzzDustRank = document.getElementById('reportBuzzDustRank');
+                
+                // Update badge image - handle filename mapping (Elite -> Elete typo)
+                const badgeFilename = data.current_class.badge_image
+                    .replace('.glb', '.png')
+                    .replace('Elite.png', 'Elete.png');
+                badgeImage.src = `/static/assets/badges/${badgeFilename}`;
+                badgeImage.alt = `${data.current_class.label} Badge`;
+                
+                // Update points display
+                buzzDustPoints.textContent = (data.total_buzz_dust || 0).toLocaleString();
+                
+                // Update rank label with emoji
+                buzzDustRank.textContent = `${data.current_class.emoji} ${data.current_class.label}`;
+                
+                console.log('✨ Buzz Dust report card loaded:', data);
+            }
+        } catch (error) {
+            console.error('Error loading buzz dust report card:', error);
+        }
+    }
 }
 
 // 🔊 Pronounce word from report card (missed words review)
@@ -7920,34 +7743,17 @@ function pronounceWordFromReport(word) {
         speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(word);
+        const voices = speechSynthesis.getVoices();
         
-        // Use global cached voice for consistency
-        if (window.QUIZ_CACHED_VOICE) {
-            utterance.voice = window.QUIZ_CACHED_VOICE;
-        }
+        // Prefer US English voice
+        const enUSVoice = voices.find(v => v.lang === 'en-US') || 
+                         voices.find(v => v.lang?.startsWith('en')) || 
+                         null;
+        if (enUSVoice) utterance.voice = enUSVoice;
         
-        utterance.rate = 0.85;  // Natural conversational pace (consistent)
-        utterance.pitch = 1.0; // Natural neutral female voice
+        utterance.rate = 0.85;  // Slow for clarity
+        utterance.pitch = 1.0;
         utterance.volume = 1.0;
-        
-        utterance.onstart = () => {
-            // Trigger bee swarm activation
-            window.dispatchEvent(new CustomEvent('quiz-speech-start'));
-        };
-        
-        utterance.onboundary = (event) => {
-            window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
-        };
-        
-        utterance.onend = () => {
-            // Trigger bee swarm deactivation
-            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-        };
-        
-        utterance.onerror = () => {
-            // Trigger bee swarm deactivation on error
-            window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-        };
         
         speechSynthesis.speak(utterance);
     }
@@ -8193,61 +7999,24 @@ window.addEventListener('error', (event) => {
 unlockiOSAudio();
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // CRITICAL: Declare these at function scope so they're accessible in setTimeout callback
-    let delight = null;
-    let smartyBee = null;
-    
     try {
-        // 🐝 Initialize Bee Swarm Voice Visualizer Background
-        const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
-        console.log('🔍 Visualizer container check:', visualizerContainer ? 'FOUND' : 'NOT FOUND');
-        
-        if (visualizerContainer) {
-            console.log('🐝 Bee swarm visualizer container found but initialization deferred to module script');
-        } else {
-            console.error('❌ beeSwarmVisualizerContainer not found in DOM!');
-        }
-        
-        // 🎭 Initialize morphing controller
-        window.morphController = new MorphController('morphContainer');
+    // 🎭 Initialize morphing controller
+    window.morphController = new MorphController('morphContainer');
     console.log('🎭 Morph controller initialized');
     
-    delight = new BeeDelightManager();
+    const delight = new BeeDelightManager();
     
-    // 3D Mascot DISABLED for performance - causes significant quiz slowdown
-    // Commenting out entire mascot initialization to improve quiz performance
+    // Bee swarm and hive removed - too distracting during quiz
+    // Only keep the 3D mascot bee for companionship
     
-    /*
     // Initialize 3D Mascot with user's selected avatar
-    // (smartyBee is already declared at function scope above)
+    let smartyBee = null;
     try {
         console.log('🎯 Quiz page: Starting avatar initialization...');
-        
-        // CRITICAL: Ensure container exists before attempting to load avatar
-        const mascotContainer = document.getElementById('mascotBee3D');
-        if (!mascotContainer) {
-            throw new Error('❌ Avatar container #mascotBee3D not found in DOM');
-        }
-        console.log('✅ Avatar container found:', mascotContainer);
-        
-        // CRITICAL: Ensure Three.js is loaded
-        if (typeof THREE === 'undefined') {
-            throw new Error('❌ Three.js library not loaded');
-        }
-        console.log('✅ Three.js library loaded');
-        
-        // CRITICAL: Ensure SmartyBee3D class is loaded
-        if (typeof SmartyBee3D === 'undefined') {
-            throw new Error('❌ SmartyBee3D class not loaded - check mascot-3d.js');
-        }
-        console.log('✅ SmartyBee3D class loaded');
         
         // Ensure avatar loader exists (should be loaded from base.html)
         if (!window.userAvatarLoader) {
             console.warn('⚠️ UserAvatarLoader not found - creating new instance');
-            if (typeof UserAvatarLoader === 'undefined') {
-                throw new Error('❌ UserAvatarLoader class not loaded - check user-avatar-loader.js');
-            }
             window.userAvatarLoader = new UserAvatarLoader();
         }
         
@@ -8255,263 +8024,177 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🔄 Fetching user avatar from API...');
         await window.userAvatarLoader.init();
         
-        // Use GLB-only avatar options for both guests and registered users
-        let avatarId;
+        // Get avatar options from loader
         const avatarOptions = window.userAvatarLoader.getAvatarOptions({
             width: 180,
             height: 180,
             autoRotate: true,
             enableInteraction: true
         });
-        avatarId = window.userAvatarLoader.getAvatarId();
         
+        const avatarId = window.userAvatarLoader.getAvatarId();
         console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
-        // CRITICAL: Verify avatar options before rendering
-        if (!avatarOptions || !avatarOptions.modelPath) {
-            throw new Error(`❌ Invalid avatar options - missing modelPath for ${avatarId}`);
-        }
-        
     // Render into mascot container (replaces old smartyBee3D)
-    console.log('🎨 Creating SmartyBee3D instance...');
-    
-    // Create instance and wait for load (handle async GLB loading)
-    try {
-        smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
+    smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
         
-        if (!smartyBee) {
-            throw new Error('❌ SmartyBee3D instance creation failed');
-        }
-        
-        // Give GLB loading a chance to start (it's async in loadModel)
-        // Reduced delay for faster page interaction
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log(`✨ 3D mascot initialization started with avatar: ${avatarId}`);
-        
-        // 🎯 Defer header avatar loading to not block main mascot
-        setTimeout(() => {
-            try {
-                const headerAvatarContainer = document.getElementById('quizHeaderAvatar');
-                if (headerAvatarContainer) {
-                    const headerAvatarOptions = {
-                        ...avatarOptions,
-                        width: 50,
-                        height: 50,
-                        autoRotate: false,
-                        enableInteraction: false
-                    };
-                    new SmartyBee3D('quizHeaderAvatar', headerAvatarOptions);
-                    console.log('✅ Quiz header avatar loaded');
-                }
-            } catch (headerError) {
-                console.warn('⚠️ Failed to load header avatar:', headerError);
-            }
-        }, 1000); // Load header avatar 1 second after main mascot
-        
-        // 🐝 Load and display Buzz Dust rank
-        try {
-            const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-            if (rankResponse.ok) {
-                const rankData = await rankResponse.json();
-                const rankBadge = document.getElementById('quizHeaderRank');
-                if (rankBadge && rankData.current_class) {
-                    const beeClass = rankData.current_class;
-                    rankBadge.innerHTML = `${beeClass.emoji || '🐝'} ${beeClass.label.replace(' Bee', '')}`;
-                    rankBadge.title = `${rankData.total_buzz_dust || 0} Buzz Dust`;
-                    console.log('✅ Buzz Dust rank displayed:', beeClass.label);
-                }
-            }
-        } catch (rankError) {
-            console.warn('⚠️ Failed to load Buzz Dust rank:', rankError);
-        }
+        console.log(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
         // Add click handler for themed animation
-        mascotContainer.style.cursor = 'pointer';
-        mascotContainer.addEventListener('click', () => {
-            console.log('🐝 Quiz mascot clicked - playing themed animation');
-            try {
+        const mascotContainer = document.getElementById('mascotBee3D');
+        if (mascotContainer) {
+            mascotContainer.style.cursor = 'pointer';
+            mascotContainer.addEventListener('click', () => {
+                console.log('🐝 Quiz mascot clicked - playing themed animation');
                 playThemedAvatarEffect(avatarId, mascotContainer);
-            } catch (clickError) {
-                console.error('❌ Avatar click animation failed:', clickError);
-            }
-        });
-        
-        console.log('✅ Avatar initialization complete!');
-        
-    } catch (error) {
-        console.error('❌ 3D mascot failed to load:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        });
-        
-        // Hide avatar container instead of showing 2D fallback
-        try {
-            console.log('🔄 Hiding avatar container (3D load failed)...');
-            const mascotContainer = document.getElementById('mascotBee3D');
-            if (mascotContainer) {
-                mascotContainer.style.display = 'none';
-                console.log('✅ Avatar container hidden');
-            }
-        } catch (fallbackError) {
-            console.error('❌ Could not hide avatar container:', fallbackError);
-        }
-    }
-    */
-    console.log('ℹ️ 3D Mascot disabled for performance optimization');
-    
-    // Continue with quiz initialization after mascot
-    
-    } catch (initError) {
-        // Catch errors from the DOMContentLoaded try block (morph controller, delight manager, avatar init)
-        console.error('❌ Quiz initialization error:', initError);
-        console.error('Error details:', initError.stack);
-        // Continue with quiz even if initialization fails
-    }
-
-    // Delay to ensure browser session cookie is fully established before fetching wordbank
-    // This prevents race conditions where cookie isn't sent on first request
-    // 300ms gives enough time for session to persist after page navigation
-    setTimeout(() => {
-        console.log('🔄 Starting wordbank fetch (with session cookie)...');
-        console.log('🍪 Current cookies:', document.cookie);
-        console.log('🔗 Current URL:', window.location.href);
-        
-        fetch('/api/wordbank', {
-            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-            cache: 'no-store',
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        })
-    .then(response => {
-        console.log(`📡 Wordbank API response: ${response.status} ${response.statusText}`);
-        if (!response.ok) {
-            console.error(`❌ Wordbank fetch failed with status ${response.status}`);
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        // Check content-type before parsing JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            console.error(`❌ Invalid content-type: ${contentType}, expected application/json`);
-            return response.text().then(text => {
-                console.error('Response body:', text.slice(0, 500));
-                throw new Error(`Invalid content-type from API: ${contentType}`);
             });
         }
-        return response.json();
+    } catch (error) {
+        console.error('❌ 3D mascot failed to load:', error);
+        console.error('Error details:', error.message, error.stack);
+        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+        try {
+            console.log('🔄 Attempting 2D fallback...');
+            if (window.userAvatarLoader) {
+                await window.userAvatarLoader.load2DFallback('mascotBee3D');
+                console.log('✅ 2D fallback loaded successfully');
+            }
+        } catch (fallbackError) {
+            console.error('❌ Fallback avatar also failed:', fallbackError);
+        }
+    }
+    
+    // 🐝 Load and display Buzz Dust badge
+    try {
+        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+        if (rankResponse.ok) {
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
+            }
+        }
+    } catch (rankError) {
+        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+    }
+
+    // 🐝 Load and display Buzz Dust badge image
+    try {
+        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+        if (rankResponse.ok) {
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
+            }
+        }
+    } catch (rankError) {
+        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+    }
+
+    fetch('/api/wordbank', {
+        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
     })
-    .then(data => {
-        console.log('📦 Wordbank data received:', data);
-        console.log(`📊 Word count: ${data.words ? data.words.length : 0}`);
-        console.log(`✅ Success flag: ${data.success}`);
-        
-        // ISSUE #4 FIX: Defensive validation of word data
-        if (!data || typeof data !== 'object') {
-            console.error('❌ Invalid response format:', data);
-            throw new Error('Invalid response format from API');
-        }
-        
-        if (!Array.isArray(data.words)) {
-            console.error('❌ Words is not an array:', data.words);
-            throw new Error('Invalid word data returned from API - expected array');
-        }
-        
-        if (data.words.length === 0) {
-            console.error('❌ Wordbank is empty! Showing error and redirecting...');
-            BeeSmart.showError('No words loaded for the quiz!');
+        .then(response => response.json())
+        .then(data => {
+            if (!data.words || data.words.length === 0) {
+                BeeSmart.showError('No words loaded for the quiz!');
+                setTimeout(() => window.location.href = '/', 2800);
+                return;
+            }
+            
+            // Initialize progress displays with actual word count
+            const totalWords = data.words.length;
+            const progressText = document.getElementById('progressText');
+            const progressPercentage = document.getElementById('progressPercentage');
+            
+            if (progressText) {
+                progressText.textContent = `Question 1 of ${totalWords}`;
+            }
+            
+            if (progressPercentage) {
+                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+            }
+
+            window.quizManager = new QuizManager({ delight, smartyBee });
+        })
+        .catch(error => {
+            console.error('Failed to check word bank:', error);
+            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
             setTimeout(() => window.location.href = '/', 2800);
-            return;
-        }
-
-        // ✅ Update progress text and percentage with actual word count on page load
-        const totalWords = data.words.length;
-        const progressText = document.getElementById('progressText');
-        const progressPercentage = document.getElementById('progressPercentage');
-        
-        // ISSUE #4 FIX: Validate DOM elements exist before accessing
-        if (progressText) {
-            progressText.textContent = `Question 1 of ${totalWords}`;
-            console.log(`✅ Progress text initialized: 1 of ${totalWords}`);
-        } else {
-            console.warn('⚠️ progressText element not found in DOM');
-        }
-        
-        if (progressPercentage) {
-            progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
-        } else {
-            console.warn('⚠️ progressPercentage element not found in DOM');
-        }
-
-        window.quizManager = new QuizManager({ delight, smartyBee });
-        window.soundboard = window.quizManager.soundboard;  // Expose soundboard globally for morph controller
-    })
-    .catch(error => {
-        console.error('Failed to check word bank:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
         });
-        BeeSmart.showError('Failed to load word bank. Redirecting to main menu...');
-        setTimeout(() => window.location.href = '/', 2800);
-    });
-    }, 300);  // 300ms delay to ensure session cookie is sent with request
-});  // End DOMContentLoaded
+    } catch (error) {
+        console.error('🚨 Critical initialization error:', error);
+        if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
+            BeeSmart.showError('Quiz initialization failed. Redirecting to main menu...');
+        } else {
+            alert('Quiz initialization failed. Redirecting to main menu...');
+        }
+        setTimeout(() => window.location.href = '/', 2000);
+    }
+});
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
-window.addEventListener('beforeunload', (event) => {
+window.addEventListener('beforeunload', async (event) => {
     // 🛑 CRITICAL: Stop all quiz activities before leaving
     console.log('🛑 Page unloading - stopping all quiz activities...');
     
-    // ISSUE #5 FIX: Add capability check before using speechSynthesis
-    try {
-        if ('speechSynthesis' in window && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            console.log('🔇 Speech synthesis stopped on unload');
-        }
-    } catch (speechError) {
-        console.warn('⚠️ Speech synthesis cleanup failed:', speechError);
+    // Stop speech synthesis immediately (most important)
+    if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        console.log('🔇 Speech synthesis stopped on unload');
     }
     
-    // ISSUE #5 FIX: Clear all timers with proper null checks
-    try {
-        if (window.spellingQuiz) {
-            if (window.spellingQuiz.countdownTimer) {
-                clearInterval(window.spellingQuiz.countdownTimer);
-            }
-            if (window.spellingQuiz.currentWordTimeout) {
-                clearTimeout(window.spellingQuiz.currentWordTimeout);
-            }
+    // Clear all timers
+    if (window.spellingQuiz) {
+        if (window.spellingQuiz.countdownTimer) {
+            clearInterval(window.spellingQuiz.countdownTimer);
         }
-    } catch (timerError) {
-        console.warn('⚠️ Timer cleanup failed:', timerError);
+        if (window.spellingQuiz.currentWordTimeout) {
+            clearTimeout(window.spellingQuiz.currentWordTimeout);
+        }
     }
     
-    // ISSUE #5 FIX: Save progress with quizManager check and no async/await in beforeunload
+    // Save progress
     try {
-        // Use sendBeacon for reliable synchronous delivery during unload (no async needed)
-        const progressData = {};
+        // Use sendBeacon for reliable delivery even during page unload
+        const response = await fetch('/api/save-partial-progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            keepalive: true  // Ensures request completes even if page is closing
+        });
         
-        // Safely try to get saveProgress data if quizManager exists
-        if (window.quizManager && typeof window.quizManager.saveProgress === 'function') {
-            try {
-                // Call saveProgress synchronously if possible (don't await)
-                window.quizManager.saveProgress();
-            } catch (saveError) {
-                console.warn('⚠️ QuizManager saveProgress failed:', saveError);
-            }
+        if (response.ok) {
+            console.log('✅ Partial quiz progress saved');
         }
-        
-        // Use sendBeacon for guaranteed delivery (synchronous, no await needed)
-        const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
-        const beaconSent = navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log(beaconSent ? '✅ Progress beacon sent' : '⚠️ Beacon send failed');
     } catch (error) {
-        console.warn('⚠️ Progress save failed:', error);
+        // Use sendBeacon as fallback (more reliable during unload)
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('💾 Progress save sent via beacon');
     }
 });
 
@@ -8536,13 +8219,9 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    try {
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('✅ Final cleanup complete');
-    } catch (error) {
-        console.warn('⚠️ Final cleanup failed:', error);
-    }
+    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+    navigator.sendBeacon('/api/save-partial-progress', blob);
+    console.log('✅ Final cleanup complete');
 });
 
 // Themed avatar effects system for quiz
@@ -8978,32 +8657,4 @@ function playThemedSound(soundType) {
     }
 }
 </script>
-
-<!-- 🐝 2D Canvas Bee Swarm Lips Visualizer (No WebGL Required) -->
-<script src="{{ url_for('static', filename='js/bee_swarm_canvas.js') }}?v=20251126"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById("beeSwarmVisualizerContainer");
-    if (!container) {
-      console.error('❌ Bee swarm container not found');
-      return;
-    }
-
-        // Provide mask URL globally so the visualizer uses it automatically (Option B)
-        window.__BeeSwarmMaskUrl = "/static/assets/masks/mouth_mask.png";
-
-    // Create the 2D canvas swarm instance - dancing letters animation
-    window.beeSwarmInstance = BeeSwarmCanvas.init(container, {
-      letterCount: 800,
-            baseSize: 8,
-            centerOffsetX: -0.18, // nudge left to align with mask center
-            centerOffsetY: 0.00
-    }).then(() => {
-      console.log('✅ 2D dancing letter swarm initialized');
-    }).catch(err => {
-      console.warn('⚠️ Could not init bee swarm:', err);
-    });
-  });
-</script>
-
 {% endblock %}

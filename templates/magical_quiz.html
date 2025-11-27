@@ -971,7 +971,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🐝 Initialize Bee Swarm Voice Visualizer Background
     const visualizerContainer = document.getElementById('beeSwarmVisualizerContainer');
     if (visualizerContainer) {
-        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}')
+        import('{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251127particles')
             .then(module => {
                 const BeeSwarm = module.default;
                 BeeSwarm.init(visualizerContainer, {

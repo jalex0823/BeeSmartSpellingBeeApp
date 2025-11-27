@@ -303,7 +303,12 @@ const viz = {
           const ix=i*3; this.positions[ix]=(Math.random()-0.5)*4.5; this.positions[ix+1]=(Math.random()-0.5)*2.0; this.positions[ix+2]=(Math.random()-0.5)*1.2;
           this.velocities[ix]=(Math.random()-0.5)*0.01; this.velocities[ix+1]=(Math.random()-0.5)*0.01; this.velocities[ix+2]=(Math.random()-0.5)*0.01;
           const c=pick(); this.colors[ix]=c.r; this.colors[ix+1]=c.g; this.colors[ix+2]=c.b;
-          const r=Math.random(); let size; if(r<0.80) size=6+Math.random()*6; else if(r<0.97) size=12+Math.random()*10; else size=24+Math.random()*18;
+          // Varied particle sizes - more visible individual particles
+          const r=Math.random(); 
+          let size; 
+          if(r<0.60) size=4+Math.random()*6;        // Small particles (60%)
+          else if(r<0.90) size=8+Math.random()*10;  // Medium particles (30%)
+          else size=16+Math.random()*12;             // Large particles (10%)
           this.sizes[i]=size; this.phases[i]=Math.random()*Math.PI*2;
           this.glyphs[i]=Math.floor(Math.random()*this._glyphGrid.count);
         }
@@ -313,10 +318,56 @@ const viz = {
         this.geo.setAttribute('aSize',new THREE.BufferAttribute(this.sizes,1));
         this.geo.setAttribute('aPhase',new THREE.BufferAttribute(this.phases,1));
         this.geo.setAttribute('aGlyph',new THREE.BufferAttribute(this.glyphs,1));
-        this.mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true,
-          uniforms:{ uTime:{value:0}, uPulse:{value:0}, uOpacity:{value:0.9}, uGlyphTex:{value:this._glyphTex}, uGlyphGrid:{value:new THREE.Vector2(this._glyphGrid.x,this._glyphGrid.y)} },
-          vertexShader:`attribute float aSize; attribute float aPhase; attribute float aGlyph; varying vec3 vColor; varying float vPhase; varying float vGlyph; uniform float uTime; uniform float uPulse; void main(){ vColor=color; vPhase=aPhase; vGlyph=aGlyph; vec4 mvPosition=modelViewMatrix*vec4(position,1.0); float beat=1.0+uPulse*0.12; gl_PointSize=aSize*beat*(300.0/-mvPosition.z); gl_Position=projectionMatrix*mvPosition; }`,
-          fragmentShader:`varying vec3 vColor; varying float vPhase; varying float vGlyph; uniform float uTime; uniform float uPulse; uniform float uOpacity; uniform sampler2D uGlyphTex; uniform vec2 uGlyphGrid; void main(){ vec2 uv=gl_PointCoord.xy; float d=length(uv-0.5); float glow=smoothstep(0.5,0.0,d); float twinkle=0.65+0.35*sin(uTime*2.0+vPhase); float audioBoost=1.0+uPulse*0.35; float cols=uGlyphGrid.x; float rows=uGlyphGrid.y; float ci=mod(vGlyph, cols); float ri=floor(vGlyph/cols); vec2 glyphUV=(vec2(ci,ri)+uv)/vec2(cols,rows); vec4 glyph=texture2D(uGlyphTex,glyphUV); float alpha=glyph.a*glow*uOpacity; vec3 col=vColor*glyph.r*glow*twinkle*audioBoost; gl_FragColor=vec4(col,alpha); if(alpha<0.03) discard; }` });
+        this.mat=new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.NormalBlending, vertexColors:true,
+          uniforms:{ uTime:{value:0}, uPulse:{value:0}, uOpacity:{value:0.85} },
+          vertexShader:`
+            attribute float aSize; 
+            attribute float aPhase; 
+            varying vec3 vColor; 
+            varying float vPhase; 
+            uniform float uTime; 
+            uniform float uPulse; 
+            
+            void main(){ 
+              vColor = color; 
+              vPhase = aPhase; 
+              vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); 
+              float beat = 1.0 + uPulse * 0.15; 
+              gl_PointSize = aSize * beat * (300.0 / -mvPosition.z); 
+              gl_Position = projectionMatrix * mvPosition; 
+            }`,
+          fragmentShader:`
+            varying vec3 vColor; 
+            varying float vPhase; 
+            uniform float uTime; 
+            uniform float uPulse; 
+            uniform float uOpacity; 
+            
+            void main(){ 
+              vec2 uv = gl_PointCoord.xy; 
+              vec2 center = uv - 0.5;
+              float dist = length(center);
+              
+              // Create circular particle with soft edges
+              float circle = 1.0 - smoothstep(0.35, 0.5, dist);
+              
+              // Add subtle glow ring
+              float glow = smoothstep(0.5, 0.2, dist) * 0.4;
+              
+              // Twinkle effect for sparkle
+              float twinkle = 0.7 + 0.3 * sin(uTime * 3.0 + vPhase);
+              
+              // Audio reactivity
+              float audioBoost = 1.0 + uPulse * 0.4;
+              
+              // Combine effects
+              float intensity = (circle + glow) * twinkle * audioBoost;
+              vec3 col = vColor * intensity;
+              float alpha = intensity * uOpacity;
+              
+              gl_FragColor = vec4(col, alpha); 
+              if(alpha < 0.05) discard; 
+            }` });
         this.bees=new THREE.Points(this.geo,this.mat); this.scene.add(this.bees);
       },
 
@@ -411,7 +462,7 @@ const viz = {
         if(this.mat){
           this.mat.uniforms.uTime.value = time*0.001;
           this.mat.uniforms.uPulse.value = this.ampSmooth;
-          this.mat.uniforms.uOpacity.value = 0.9;
+          this.mat.uniforms.uOpacity.value = 0.85;
         }
         this.renderer.render(this.scene, this.camera);
       },
