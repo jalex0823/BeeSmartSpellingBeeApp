@@ -335,9 +335,10 @@ class UserAvatarLoader {
         }
         
         try {
+            // Increased timeout to 3000ms to prevent premature aborts on slow connections
             const response = await this._safeFetch('/api/users/me/avatar', {
                 credentials: 'same-origin'
-            }, 1500, 1);
+            }, 3000, 2);  // 3 second timeout, 2 retries
             
             if (response.ok) {
                 const data = await response.json();

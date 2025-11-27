@@ -14581,9 +14581,9 @@
                     const avatarId = window.userAvatarLoader.getAvatarId();
                     console.log(`✨ Menu avatar initialized with GLB support for: ${avatarId}`);
                 } catch (error) {
-                    console.warn('Could not initialize user avatar, falling back to default mascot:', error);
-                    try { await initDefaultMascot(); }
-                    catch(e){ container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>'; }
+                    console.warn('Could not initialize user avatar, using fallback emoji:', error);
+                    // Show simple emoji fallback instead of recursive init
+                    container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>';
                 }
             }
             
