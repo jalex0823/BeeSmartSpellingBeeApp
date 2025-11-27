@@ -1162,7 +1162,8 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=True,  # Keep session alive on activity
     SESSION_COOKIE_PATH='/',  # Ensure cookie works across all paths
     SESSION_COOKIE_DOMAIN=None,  # Let Flask auto-detect domain
-    MAX_CONTENT_LENGTH=16 * 1024 * 1024  # 16MB max upload
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
+    SEND_FILE_MAX_AGE_DEFAULT=3600  # 1 hour default cache for static files
 )
 
 # Initialize database
@@ -3808,12 +3809,34 @@ def _debug_root_status(resp):
     try:
         if request.path == '/':
             print(f"DEBUG AFTER_REQUEST / status={resp.status_code}")
+        
         # Apply aggressive no-cache headers for all API endpoints to prevent stale wordbank / quiz state.
         # This consolidates front-end cache busting with server guarantees (see manual upload race condition notes).
         if request.path.startswith('/api/'):
             resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
             resp.headers['Pragma'] = 'no-cache'
             resp.headers['Expires'] = '0'
+        
+        # Set proper Content-Type with UTF-8 charset for HTML responses
+        # Fixes accessibility/compatibility validator warnings
+        if resp.content_type and 'text/html' in resp.content_type:
+            if 'charset' not in resp.content_type:
+                resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+            
+            # Apply cache-control headers for HTML pages (not as aggressive as API)
+            # Allow browser caching but require revalidation for freshness
+            if 'Cache-Control' not in resp.headers:
+                resp.headers['Cache-Control'] = 'private, max-age=0, must-revalidate'
+        
+        # Cache busting for static assets with versioning
+        # Allow long-term caching for fingerprinted assets
+        if request.path.startswith('/static/'):
+            if any(ext in request.path for ext in ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2']):
+                # Check if URL has cache-busting parameter (timestamp or version)
+                if '?' in request.path or 'timestamp=' in request.query_string.decode() or 'v=' in request.query_string.decode():
+                    resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable'  # 1 year for versioned assets
+                else:
+                    resp.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'  # 1 hour for unversioned
     except Exception:
         pass
     return resp
