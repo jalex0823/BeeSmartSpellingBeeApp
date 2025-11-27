@@ -1181,6 +1181,8 @@ if ('speechSynthesis' in window) {
         min-height: 200px;
         margin: 0.6rem 0 0.8rem 0;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        overflow: visible; /* Don't clip bee swarm */
+        z-index: 1;
     }
     
     /* Voice visualizer state (speaking mode) */
@@ -1199,6 +1201,10 @@ if ('speechSynthesis' in window) {
     .morph-content {
         position: relative;
         width: 100%;
+        height: 250px; /* Explicit height for absolute positioning to work properly */
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     /* Voice visualizer layer */
@@ -1212,6 +1218,7 @@ if ('speechSynthesis' in window) {
         opacity: 1;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: auto;
+        z-index: 5; /* Above the timer by default */
     }
     
     /* Timer layer - ABSOLUTE positioned to overlap visualizer */
@@ -1225,6 +1232,11 @@ if ('speechSynthesis' in window) {
         pointer-events: none;
         display: flex !important; /* Override hidden class */
         margin: 0; /* Remove default margin */
+        z-index: 1; /* Below voice visualizer initially */
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+        align-items: center;
     }
     
     /* When morphing to timer mode */
@@ -1232,15 +1244,15 @@ if ('speechSynthesis' in window) {
         opacity: 0;
         transform: scale(0.85);
         pointer-events: none;
+        z-index: 1; /* Push behind timer */
     }
-    
+
     .morph-container.mode-timer .countdown-container {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1); /* Center and full scale */
         pointer-events: auto;
-    }
-    
-    /* Morphing animation - scales and fades simultaneously */
+        z-index: 10; /* Bring to front */
+    }    /* Morphing animation - scales and fades simultaneously */
     @keyframes morphToTimer {
         0% {
             opacity: 1;
@@ -1481,6 +1493,15 @@ if ('speechSynthesis' in window) {
         .quiz-container {
             max-width: 100%;
             padding: 0.25rem 0.5rem 3rem;
+        }
+
+        /* 📱 MOBILE: Morph container height adjustment */
+        .morph-container {
+            min-height: 180px;
+        }
+
+        .morph-content {
+            height: 180px;
         }
         
         .quiz-header {
@@ -3086,26 +3107,11 @@ if ('speechSynthesis' in window) {
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
-                <!-- Bee Swarm Voice Visualizer - Lips Animation (WebGL with CSS fallback) -->
+                <!-- 2D Canvas Bee Swarm Lips Visualizer (No WebGL Required) -->
                 <div id="beeSwarmVisualizerContainer"
                      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-                            width:700px; height:180px; z-index:5; pointer-events:none;
-                            visibility:hidden; opacity:0; background:transparent !important; box-shadow:none;
-                            border:none; outline:none; padding:0; margin:0;
-                            transition: opacity 0.4s ease-in, visibility 0.4s ease-in;
-                            display:none;
-                            overflow:hidden; clip-path:inset(0 0 0 0 round 20px);">
-                    <!-- CSS Fallback Voice Waves (shown if WebGL not available) -->
-                    <div class="voice-wave-fallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
-                                                            width:200px; height:80px; align-items:center; justify-content:center; gap:6px;">
-                        <div class="voice-wave-bar" style="width:8px; height:15px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:25px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:40px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:55px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:40px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:25px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                        <div class="voice-wave-bar" style="width:8px; height:15px; background:linear-gradient(180deg,#FFD700,#FFA500); border-radius:4px;"></div>
-                    </div>
+                            width:100%; max-width:400px; height:180px;
+                            z-index:999; pointer-events:none; background:none; overflow:visible;">
                 </div>
 
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
@@ -3176,28 +3182,11 @@ if ('speechSynthesis' in window) {
                     </div>
                 </div>
 
-                <!-- Voice Visualizer (Upgraded center-flowing amber wave) -->
-                <div class="voice-visualizer" id="voiceVisualizer">
-                        <div class="voice-card speaking-mode">
-                            <!-- Hidden status for JavaScript (not displayed visually) -->
-                            <div class="voice-header" style="display: none;">
-                                <span class="voice-bee">🐝</span>
-                                <span class="voice-text" id="voiceStatus">Ready</span>
-                            </div>
-                            
-                            <div class="dotwave-wrapper">
-                                <!-- Bee swarm visualizer canvas will be injected here by bee_swarm_visualizer.js -->
-                                <canvas id="dotWaveCanvas" width="860" height="260" style="display: none;"></canvas>
-                            </div>
-                            
-                            <!-- Definition display inside visualizer -->
-                            <div class="voice-definition" id="voiceDefinition">
-                                🐝 Listen carefully and spell the word! 🐝
-                            </div>
-                        </div>
+                <!-- Voice Visualizer (Simple container, bee swarm canvas handles all visuals) -->
+                <div class="voice-visualizer" id="voiceVisualizer" style="display:none;">
+                    <!-- Bee swarm canvas renders directly in beeSwarmVisualizerContainer above -->
                 </div>
 
-                <!-- Center-Flowing Amber Wave CSS -->
                 <style>
                     /* Force bee swarm canvas transparency */
                     #beeSwarmVisualizerContainer,
@@ -3206,270 +3195,7 @@ if ('speechSynthesis' in window) {
                         background: transparent !important;
                         background-color: transparent !important;
                     }
-                    
-                    .voice-card.speaking-mode {
-                        background: transparent;
-                        border-radius: 20px;
-                        padding: 0;
-                        border: none;
-                        box-shadow: none;
-                        max-width: 920px;
-                        margin: 0 auto 12px auto;
-                        color: #fff;
-                        text-align: center;
-                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
-                        overflow: visible;
-                    }
-
-                    .voice-header {
-                        font-size: 1.25rem;
-                        font-weight: 600;
-                        color: #fff8e1;
-                        text-shadow:
-                            0 0 6px rgba(255,255,255,0.8),
-                            0 0 12px rgba(255,214,64,0.8);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        letter-spacing: 0.02em;
-                        margin-bottom: 20px;
-                    }
-
-                    .voice-bee {
-                        margin-right: 8px;
-                        display: inline-block;
-                        filter:
-                            drop-shadow(0 0 4px #fff)
-                            drop-shadow(0 0 8px #ffd54f);
-                    }
-
-                    .voice-definition {
-                        font-size: 1.1rem;
-                        font-weight: 500;
-                        color: #5A2C15; /* Dark brown for better visibility */
-                        text-shadow: none;
-                        padding: 16px 20px;
-                        margin-top: 12px;
-                        line-height: 1.5;
-                        letter-spacing: 0.01em;
-                    }
-
-                                .dotwave-wrapper {
-                                    display: flex;
-                                    justify-content: center;
-                                    align-items: center;
-                                    padding: 0; /* Remove padding to eliminate white box */
-                                    overflow: visible;
-                                    background: transparent;
-                                    border: none;
-                                    box-shadow: none;
-                                }
-
-                                .dotwave-wrapper canvas {
-                                    width: 100%;
-                                    height: 280px; /* Taller for bigger waves */
-                                    filter:
-                                        drop-shadow(0 0 4px rgba(255,255,255,0.4))
-                                        drop-shadow(0 0 12px rgba(255,200,0,0.4));
-                                    display: block; /* Remove inline spacing */
-                                }
                 </style>
-
-                <!-- Optimized Wavy Amber Voice Visualizer -->
-                <script>
-                (function(){
-                    const canvas = document.getElementById('dotWaveCanvas');
-                    if (!canvas) return;
-                    const ctx = canvas.getContext('2d');
-
-                    let W = canvas.width;
-                    let H = canvas.height;
-                    let DPR = window.devicePixelRatio || 1;
-
-                    // Resize handler
-                    function resizeCanvas(){
-                        DPR = window.devicePixelRatio || 1;
-                        const cssWidth = canvas.clientWidth || 860;
-                        const cssHeight = canvas.clientHeight || 260;
-                        canvas.width = Math.round(cssWidth * DPR);
-                        canvas.height = Math.round(cssHeight * DPR);
-                        canvas.style.width = cssWidth + 'px';
-                        canvas.style.height = cssHeight + 'px';
-                        W = canvas.width; H = canvas.height;
-                    }
-                    resizeCanvas();
-                    window.addEventListener('resize', resizeCanvas);
-
-                    // Simplified state management for better performance
-                    let mode = 'idle';
-                    let time = 0;
-                    let energy = 0.1;
-                    let energyTarget = 0.1;
-                    let isAnimating = true;
-
-                    function setMode(next){
-                        if (mode !== next) {
-                            mode = next;
-                            // More dramatic energy differences for better sync
-                            if (mode === 'speaking') energyTarget = 1.2;
-                            else if (mode === 'pausing') energyTarget = 0.15; // More noticeable pause
-                            else energyTarget = 0.05; // Very quiet when idle
-                        }
-                    }
-                    window.voiceVizSetMode = setMode;
-
-                    // Observe class changes for voice sync
-                    const host = document.getElementById('voiceVisualizer');
-                    if (host && 'MutationObserver' in window){
-                        const mo = new MutationObserver(() => {
-                            const c = host.classList;
-                            if (c.contains('speaking')) setMode('speaking');
-                            else if (c.contains('pausing')) setMode('pausing');
-                            else setMode('idle');
-                        });
-                        mo.observe(host, { attributes: true, attributeFilter: ['class'] });
-                    }
-
-                    // Lightweight UI reaction helper
-                    window.BeeVoiceViz = (function(){
-                        function hostEl(){ return document.getElementById('voiceVisualizer'); }
-                        function speak(ms=600){ const h=hostEl(); if(!h) return; h.classList.add('speaking'); setTimeout(()=>h.classList.remove('speaking'), ms); }
-                        function pulse(ms=220){ const h=hostEl(); if(!h) return; h.classList.add('pausing','word-pulse'); setTimeout(()=>h.classList.remove('pausing','word-pulse'), ms); }
-                        function react(kind){
-                            switch(kind){
-                                case 'button': return pulse(200);
-                                case 'submit': return speak(480);
-                                case 'hint': return pulse(260);
-                                case 'skip': return pulse(300);
-                                case 'feedback-correct': return speak(700);
-                                case 'feedback-incorrect': return pulse(520);
-                                default: return pulse(180);
-                            }
-                        }
-                        return { speak, pulse, react };
-                    })();
-
-                    // Multi-layer waveform with translucent overlapping colors (BeeSmart amber theme)
-                    const config = {
-                        points: 120,
-                        smoothing: 0.7,
-                        layers: [
-                            { amplitude: 0.70, frequency: 1.0, phase: 0, r: 153, g: 63, b: 0, baseAlpha: 0.7 },      // Deep rust (#993F00) - Darkest
-                            { amplitude: 0.62, frequency: 1.15, phase: 0.3, r: 204, g: 92, b: 0, baseAlpha: 0.6 },  // Burnt orange (#CC5C00) - Darker
-                            { amplitude: 0.55, frequency: 1.25, phase: 0.6, r: 230, g: 115, b: 0, baseAlpha: 0.55 },// Rich amber (#E67300) - Slightly Dark
-                            { amplitude: 0.48, frequency: 1.4, phase: 0.9, r: 255, g: 153, b: 51, baseAlpha: 0.5 }, // Classic orange (#FF9933) - Slightly Light
-                            { amplitude: 0.41, frequency: 1.6, phase: 1.2, r: 255, g: 184, b: 112, baseAlpha: 0.45 },// Warm tangerine (#FFB870) - Lighter
-                            { amplitude: 0.34, frequency: 1.8, phase: 1.5, r: 255, g: 216, b: 176, baseAlpha: 0.4 } // Soft peachy orange (#FFD8B0) - Lightest
-                        ]
-                    };
-
-                    // Store smoothed amplitudes per layer
-                    let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
-
-                    // Draw smooth waveform with multiple translucent layers
-                    function drawHorizontalWaveform() {
-                        ctx.clearRect(0, 0, W, H);
-                        
-                        const centerY = H / 2;
-                        const buffer = 40; // Increased safety buffer from edges to prevent clipping
-                        const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
-                        const spacing = W / (config.points - 1);
-                        const centerIdx = config.points / 2;
-
-                        // Draw each layer from back to front
-                        config.layers.forEach((layer, layerIdx) => {
-                            // Calculate amplitudes for this layer - waves ORIGINATE from center, expand outward
-                            const amplitudes = [];
-                            for (let i = 0; i < config.points; i++) {
-                                const distFromCenter = Math.abs(i - centerIdx) / centerIdx;
-                                
-                                // Wave propagates FROM center outward (not left-to-right)
-                                // Use distance from center as the primary phase, not position index
-                                const wavePhase = (time * 0.04 * layer.frequency) - (distFromCenter * 4) + layer.phase;
-                                
-                                // Organic sine-based amplitude with CENTER PEAK emphasis
-                                const baseWave = Math.sin(wavePhase) * 0.5 + 0.5;
-                                
-                                // Center is tallest, gradually decreases toward edges
-                                const centerBoost = 1.15 - (distFromCenter * 0.55);
-                                
-                                // Edge tapering - force edges to be very thin (approaching zero)
-                                const edgeTaper = 1 - Math.pow(distFromCenter, 2.5); // Exponential falloff at edges
-                                
-                                // Energy drives amplitude - low energy = almost flat line, high energy = big waves
-                                const energyFactor = Math.max(0.05, energy * 0.95);
-                                
-                                const targetAmp = baseWave * centerBoost * edgeTaper * energyFactor * maxHeight * layer.amplitude;
-                                
-                                // Smooth transition
-                                layerAmplitudes[layerIdx][i] += (targetAmp - layerAmplitudes[layerIdx][i]) * config.smoothing;
-                                
-                                // Strict clamping with extra safety margin to prevent any clipping
-                                const safeAmp = Math.max(1, Math.min(maxHeight * 0.92, layerAmplitudes[layerIdx][i]));
-                                amplitudes.push(safeAmp);
-                            }
-
-                            // Draw upper half with gradient fade at edges
-                            const gradient = ctx.createLinearGradient(0, centerY, W, centerY);
-                            const edgeFadeStart = 0.15; // Start fading at 15% from edges
-                            const edgeFadeEnd = 0.02;   // Fully transparent at 2% from edges
-                            
-                            gradient.addColorStop(0, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
-                            gradient.addColorStop(edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(0.5, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(1 - edgeFadeStart, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${layer.baseAlpha})`);
-                            gradient.addColorStop(1, `rgba(${layer.r}, ${layer.g}, ${layer.b}, ${edgeFadeEnd})`);
-                            
-                            ctx.beginPath();
-                            ctx.moveTo(0, centerY);
-                            for (let i = 0; i < config.points; i++) {
-                                ctx.lineTo(i * spacing, centerY - amplitudes[i]);
-                            }
-                            ctx.lineTo(W, centerY);
-                            ctx.closePath();
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-
-                            // Draw lower half (mirror) with same gradient
-                            ctx.beginPath();
-                            ctx.moveTo(0, centerY);
-                            for (let i = 0; i < config.points; i++) {
-                                ctx.lineTo(i * spacing, centerY + amplitudes[i]);
-                            }
-                            ctx.lineTo(W, centerY);
-                            ctx.closePath();
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-                        });
-                    }
-
-                    // Optimized animation loop
-                    function animate() {
-                        if (!isAnimating) return;
-                        
-                        // Faster energy transitions for better voice sync
-                        energy += (energyTarget - energy) * 0.12;
-                        
-                        // Only animate when needed (performance optimization)
-                        if (energy > 0.02 || Math.abs(energy - energyTarget) > 0.01) {
-                            drawHorizontalWaveform();  // Horizontal waveform expanding from center
-                        }
-                        
-                        time += 1;
-                        requestAnimationFrame(animate);
-                    }
-
-                    // Initialize
-                    setMode('idle');
-                    requestAnimationFrame(animate);
-                    
-                    // Pause animation when page is hidden (performance)
-                    document.addEventListener('visibilitychange', () => {
-                        isAnimating = !document.hidden;
-                        if (isAnimating) requestAnimationFrame(animate);
-                    });
-                })();
-                </script>
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
@@ -9243,64 +8969,31 @@ function playThemedSound(soundType) {
 }
 </script>
 
-<!-- 🐝 Bee Swarm Visualizer - Lips Animation with WebGL Fallback -->
-<script type="module">
-    import BeeSwarmVisualizer from '{{ url_for("static", filename="js/bee_swarm_visualizer.js") }}?v=20251126';
-    
-    window.beeSwarmViz = null;
-    window.usingFallbackViz = false;
-    
-    function initBeeSwarm() {
-        const container = document.getElementById('beeSwarmVisualizerContainer');
-        if (!container) {
-            console.error('❌ Bee swarm container not found');
-            return;
-        }
-        
-        // Check for WebGL support before attempting initialization
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        
-        if (!gl) {
-            console.warn('⚠️ WebGL not supported - using CSS fallback visualizer');
-            window.usingFallbackViz = true;
-            return;
-        }
-        
-        console.log('✅ WebGL supported - initializing bee swarm lips animation');
-        
-        try {
-            window.beeSwarmViz = BeeSwarmVisualizer.init(container, {
-                autoStart: true,
-                showControls: false,
-                particleCount: 6000,
-                sampleStep: 2,
-                background: 'transparent',
-                zIndex: 5,
-                overallScale: 2.2,
-                cameraZ: 8.5,
-                maskUrl: '/static/assets/visualizer/lips_mask_clean2.png',
-                lazyInit: false
-            });
-            
-            container.style.display = 'block';
-            container.style.visibility = 'visible';
-            container.style.opacity = '1';
-            console.log('✅ Bee swarm lips visualizer initialized');
-            
-        } catch (error) {
-            console.warn('⚠️ Bee swarm init failed, using CSS fallback:', error.message);
-            window.usingFallbackViz = true;
-            window.beeSwarmViz = null;
-        }
+<!-- 🐝 2D Canvas Bee Swarm Lips Visualizer (No WebGL Required) -->
+<script src="{{ url_for('static', filename='js/bee_swarm_canvas.js') }}?v=20251126"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("beeSwarmVisualizerContainer");
+    if (!container) {
+      console.error('❌ Bee swarm container not found');
+      return;
     }
-    
-    // Initialize when DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(initBeeSwarm, 100));
-    } else {
-        setTimeout(initBeeSwarm, 100);
-    }
+
+        // Provide mask URL globally so the visualizer uses it automatically (Option B)
+        window.__BeeSwarmMaskUrl = "/static/assets/masks/mouth_mask.png";
+
+    // Create the 2D canvas swarm instance - dancing letters animation
+    window.beeSwarmInstance = BeeSwarmCanvas.init(container, {
+      letterCount: 800,
+            baseSize: 8,
+            centerOffsetX: -0.18, // nudge left to align with mask center
+            centerOffsetY: 0.00
+    }).then(() => {
+      console.log('✅ 2D dancing letter swarm initialized');
+    }).catch(err => {
+      console.warn('⚠️ Could not init bee swarm:', err);
+    });
+  });
 </script>
 
 {% endblock %}
