@@ -508,7 +508,7 @@ if ('speechSynthesis' in window) {
     .countdown-container {
         display: flex;
         justify-content: center;
-        margin: 1rem 0 1.5rem;
+        margin: 0; /* remove extra margin around timer */
         opacity: 0;
         transform: translateY(-10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
@@ -781,8 +781,8 @@ if ('speechSynthesis' in window) {
     .voice-visualizer {
         background: rgba(255, 179, 0, 0.08); /* Amber background - kept during transitions */
         border-radius: 0; /* no border radius */
-        padding: 1.5rem 2rem; /* wider padding */
-        margin-bottom: 1.5rem;
+        padding: 1rem 1.5rem; /* tighter padding to reduce vertical space */
+        margin-bottom: 0; /* remove extra gap below visualizer */
         position: relative;
         overflow: visible; /* Allow full wave pattern visibility - no clipping */
         box-shadow: none; /* no shadow */
@@ -1118,8 +1118,39 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: 100%;
         min-height: 200px;
-        margin: 1.5rem 0;
+        margin: 0; /* remove vertical spacing between morph sections */
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+    }
+    
+    /* 🧩 Avatar container for quiz body (placed in the red square area) */
+    .quiz-avatar-container {
+        position: relative;
+        width: 100%;
+        max-width: 700px; /* match quiz container width */
+        margin: 0 auto; /* remove extra top/bottom margins */
+        min-height: 220px; /* visible area for avatar */
+        background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
+        overflow: hidden; /* allow internal effects without page overflow */
+        /* no border or shadow to integrate naturally */
+    }
+    
+    /* Optional: subtle placeholder while avatar loads */
+    .quiz-avatar-container.loading::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 193, 7, 0.20) 0%, rgba(255, 193, 7, 0.08) 60%, transparent 70%);
+        animation: avatarPlaceholderPulse 1.4s ease-in-out infinite;
+    }
+    
+    @keyframes avatarPlaceholderPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+        50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
     }
     
     /* Voice visualizer state (speaking mode) */
@@ -8656,5 +8687,45 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
+</script>
+<div id="quizAvatarContainer" class="quiz-avatar-container loading" aria-label="Avatar display area"></div>
+<!-- Ensure avatar loader is available on quiz page -->
+<script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+<script>
+// Render the same avatar used on the main menu into the quiz container
+(function(){
+    function renderQuizAvatar(){
+        try {
+            var containerId = 'quizAvatarContainer';
+            var el = document.getElementById(containerId);
+            if (!el) return;
+
+            // If global loader exists, ensure it’s initialized and then render
+            if (window.userAvatarLoader && typeof window.userAvatarLoader.init === 'function') {
+                // Initialize quietly (no blocking validation)
+                window.userAvatarLoader.init().finally(function(){
+                    try {
+                        var avatarId = window.userAvatarLoader.getAvatarId();
+                        // Use same GLB and options, but enable gentle auto-rotate in quiz
+                        window.userAvatarLoader.loadUserAvatar(avatarId, containerId).then(function(){
+                            el.classList.remove('loading');
+                        }).catch(function(){
+                            el.classList.remove('loading');
+                        });
+                    } catch(e){
+                        el.classList.remove('loading');
+                    }
+                });
+            }
+        } catch(_){ /* no-op */ }
+    }
+
+    // Wait for DOM, then small delay so layout settles
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function(){ setTimeout(renderQuizAvatar, 120); });
+    } else {
+        setTimeout(renderQuizAvatar, 120);
+    }
+})();
 </script>
 {% endblock %}
