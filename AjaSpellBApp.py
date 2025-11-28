@@ -72,6 +72,9 @@ print(f"📍 Platform: {sys.platform}")
 print(f"📍 Working directory: {os.getcwd()}")
 print("="*70)
 
+# Base directory for resolving relative data paths (added to silence linter undefined warning)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Fast-boot mode: skip heavy startup checks/initializers that can delay first load
 # Default is OFF to run full system checks prior to entering the home page.
 FAST_BOOT = os.getenv('FAST_BOOT', '0').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -209,7 +212,8 @@ def load_simple_wiktionary():
 # 🏆 Badge metadata for display
 BADGE_METADATA = {
     'perfect_game': {
-        'icon': '🌟',
+        'icon': '🌟',  # emoji fallback
+        'image': 'badges/perfect_game.png',
         'name': 'Perfect Game',
         'description': '100% accuracy, no hints, no mistakes',
         'rarity': 'epic',
@@ -217,6 +221,7 @@ BADGE_METADATA = {
     },
     'speed_demon': {
         'icon': '⚡',
+        'image': 'badges/speed_demon.png',
         'name': 'Speed Demon',
         'description': 'Average answer time < 10 seconds',
         'rarity': 'rare',
@@ -224,6 +229,7 @@ BADGE_METADATA = {
     },
     'persistent_learner': {
         'icon': '📚',
+        'image': 'badges/persistent_learner.png',
         'name': 'Persistent Learner',
         'description': 'Complete 50+ words in one session',
         'rarity': 'rare',
@@ -231,6 +237,7 @@ BADGE_METADATA = {
     },
     'hot_streak': {
         'icon': '🔥',
+        'image': 'badges/hot_streak.png',
         'name': 'Hot Streak',
         'description': '10+ correct answers in a row',
         'rarity': 'common',
@@ -238,6 +245,7 @@ BADGE_METADATA = {
     },
     'comeback_kid': {
         'icon': '🎯',
+        'image': 'badges/comeback_kid.png',
         'name': 'Comeback Kid',
         'description': 'Succeed after multiple wrong attempts',
         'rarity': 'rare',
@@ -245,6 +253,7 @@ BADGE_METADATA = {
     },
     'honey_hunter': {
         'icon': '🍯',
+        'image': 'badges/honey_hunter.png',
         'name': 'Honey Hunter',
         'description': 'Use hints wisely (< 20% of words)',
         'rarity': 'common',
@@ -252,10 +261,19 @@ BADGE_METADATA = {
     },
     'early_bird': {
         'icon': '🐝',
+        'image': 'badges/early_bird.png',
         'name': 'Early Bird',
         'description': 'Complete quiz in under 5 minutes',
         'rarity': 'common',
         'points': 50
+    },
+    'elite_buzz_dust': {
+        'icon': '🏆',  # fallback emoji
+        'image': 'badges/elite_buzz_dust.png',  # PNG expected in static/images/badges/
+        'name': 'Elite Buzz Dust',
+        'description': 'Reach elite Buzz Dust threshold',
+        'rarity': 'epic',
+        'points': 0
     }
 }
 
@@ -1911,9 +1929,20 @@ def get_leaderboard_no_guests(limit=10):
 NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]", re.IGNORECASE)
 
 def normalize(s: str) -> str:
-    """Normalize a spelling for comparison: strip non-alnum, lowercase."""
+    """Normalize a spelling for comparison: remove diacritics, strip non-alnum, lowercase.
+    This fixes cases where voice input or pasted text includes accents/Unicode variants.
+    """
     if s is None:
         return ""
+    # Strip leading/trailing whitespace first
+    s = str(s).strip()
+    try:
+        import unicodedata
+        # Decompose characters and drop combining marks (accents/diacritics)
+        s = ''.join(ch for ch in unicodedata.normalize('NFKD', s) if not unicodedata.combining(ch))
+    except Exception:
+        # If unicodedata fails for some reason, continue with original string
+        pass
     return re.sub(NORMALIZE_PATTERN, "", s).lower()
 
 # Kid-Friendly Word Filter - Blocks inappropriate content for children
@@ -6387,14 +6416,28 @@ def api_next():
 
         # Word for TTS/pronunciation
         "word": word,
+        # Announcer control to prevent double playback on repeated /api/next calls
+        # Client should only auto-pronounce when shouldAnnounce=true and may pass announceToken to /api/pronounce.
+        "shouldAnnounce": (lambda _now: (
+            # Compute whether we should announce: if new idx or last announce older than 1.5s
+            True if (state.get("last_announced_idx") != idx or (_now - float(state.get("last_announce_ts", 0))) > 1.5) else False
+        ))(time.time()),
+        "announceToken": (lambda: (
+            # Generate a short token for idempotency; store in state when shouldAnnounce is true
+            __import__("uuid").uuid4().hex[:12]
+        ))(),
         "wordMeta": {
             "hasSentence": bool(sentence),
             "hasHint": bool(hint),
         },
         "progress": {
+            # Unified progress structure (matches /api/answer & /api/live-status)
+            "index": idx + 1,
+            "total": len(order),
             "correct": state.get("correct", 0),
             "incorrect": state.get("incorrect", 0),
-            "streak": state.get("streak", 0)
+            "streak": state.get("streak", 0),
+            "session_points": state.get("session_points", 0)
         }
     })
 
@@ -6406,14 +6449,30 @@ def api_pronounce():
     if not wb or state is None:
         return jsonify({"error": "No active session"}), 400
 
+    # Optional auto flag: when the client auto-announces on new word, don't count as a hint
+    payload = {}
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        payload = {}
+    is_auto = bool(payload.get("auto"))
+    announce_token = payload.get("token")
+
     idx = state["idx"]
     order = state["order"]
     if idx >= len(order):
         return jsonify({"error": "Quiz finished"}), 400
 
-    # Track hint usage for points calculation
-    state["hints_used_current_word"] = state.get("hints_used_current_word", 0) + 1
-    state["hints_used_total"] = state.get("hints_used_total", 0) + 1
+    # Track hint usage for points calculation only if user explicitly requested pronunciation
+    if not is_auto:
+        state["hints_used_current_word"] = state.get("hints_used_current_word", 0) + 1
+        state["hints_used_total"] = state.get("hints_used_total", 0) + 1
+    else:
+        # Record last announce timing/idempotency to avoid echo
+        state["last_announced_idx"] = idx
+        state["last_announce_ts"] = time.time()
+        if announce_token:
+            state["last_announce_token"] = announce_token
     session[QUIZ_STATE_KEY] = state
 
     word_rec = wb[order[idx]]
@@ -6457,6 +6516,38 @@ def api_pronounce():
         "hint": safe_hint,
         "phonetic": phonetic_lookup,
         "phonetic_spelling": spelled_out
+    })
+
+@app.route("/api/live-status", methods=["GET"])
+def api_live_status():
+    """Real-time session stats without penalizing incomplete quizzes.
+    Provides: current index, total, streak, points earned so far, correct/incorrect counts.
+    GPA / lifetime accuracy intentionally excluded (only completed sessions adjust those).
+    """
+    state = get_quiz_state()
+    wb = get_wordbank()
+    if not state or not wb:
+        return jsonify({
+            "active": False,
+            "message": "No active quiz",
+            "session_points": 0,
+            "streak": 0,
+            "correct": 0,
+            "incorrect": 0
+        })
+    order = state.get("order", [])
+    idx = state.get("idx", 0)
+    total = len(order)
+    return jsonify({
+        "active": idx < total,
+        "index": idx + 1 if idx < total else total,
+        "total": total,
+        "streak": state.get("streak", 0),
+        "max_streak": state.get("max_streak", 0),
+        "session_points": state.get("session_points", 0),
+        "correct": state.get("correct", 0),
+        "incorrect": state.get("incorrect", 0),
+        "hints_used_current_word": state.get("hints_used_current_word", 0)
     })
 
 @app.route("/api/hint", methods=["POST"])
@@ -7017,9 +7108,10 @@ def api_answer():
             state["session_points"] = state.get("session_points", 0) + badge_points
             print(f"🏆 Badges earned: {len(badges_unlocked)}, bonus points: {badge_points}")
         
-        # Save badges to state for report card display
-        state["badges_earned"] = badges_unlocked
-        session[QUIZ_STATE_KEY] = state
+    # Save ONLY buzz dust related badge(s) for report card display; filter others out.
+    filtered_for_report = [b for b in badges_unlocked if b.get("type") in {"elite_buzz_dust", "buzz_dust", "buzz_dust_elite"}]
+    state["badges_earned"] = filtered_for_report
+    session[QUIZ_STATE_KEY] = state
     
     # Finalize database session for logged-in users OR guest accounts
     if quiz_complete and state.get("db_session_id"):
@@ -7053,6 +7145,7 @@ def api_answer():
                 quiz_session.complete_session()
                 
                 # 🏆 Save badges to Achievement table
+                # Persist all badges to Achievement table (full history), but report card later filters display.
                 if badges_unlocked and current_user.is_authenticated:
                     for badge in badges_unlocked:
                         achievement = Achievement(
@@ -7112,7 +7205,9 @@ def api_answer():
                     # Store breakdown in state for display on report card
                     state["buzz_dust_earned"] = total_buzz_dust_earned
                     state["buzz_dust_breakdown"] = buzz_dust_breakdown
-                    state["buzz_dust_breakdown"]["badges"] = badge_points
+                    # Only include badge-derived dust if those badges are buzz-dust related
+                    if badge_points:
+                        state["buzz_dust_breakdown"]["badges"] = badge_points
                     
                     print(f"✨ BUZZ DUST AWARDED: Base={buzz_dust_earned} + Badges={badge_points} = {total_buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
                     print(f"   Breakdown: {state['buzz_dust_breakdown']}")
@@ -9418,6 +9513,7 @@ def student_dashboard():
                 'latest_earned': achievement.earned_date,
                 'rarity': BADGE_METADATA.get(badge_type, {}).get('rarity', 'common'),
                 'icon': BADGE_METADATA.get(badge_type, {}).get('icon', '🏆'),
+                'image': BADGE_METADATA.get(badge_type, {}).get('image'),
                 'name': BADGE_METADATA.get(badge_type, {}).get('name', badge_type.replace('_', ' ').title()),
                 'description': BADGE_METADATA.get(badge_type, {}).get('description', '')
             }
@@ -9433,10 +9529,12 @@ def student_dashboard():
     recent_badges = []
     for achievement in achievements[:5]:
         badge_type = achievement.achievement_type
+        meta = BADGE_METADATA.get(badge_type, {})
         recent_badges.append({
             'type': badge_type,
-            'icon': BADGE_METADATA.get(badge_type, {}).get('icon', '🏆'),
-            'name': BADGE_METADATA.get(badge_type, {}).get('name', badge_type.replace('_', ' ').title()),
+            'icon': meta.get('icon', '🏆'),
+            'image': meta.get('image'),
+            'name': meta.get('name', badge_type.replace('_', ' ').title()),
             'points': achievement.points_bonus or 0,
             'earned_date': achievement.earned_date
         })

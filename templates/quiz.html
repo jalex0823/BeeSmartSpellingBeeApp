@@ -8070,6 +8070,64 @@ window.addEventListener('error', (event) => {
 // Call immediately on page load
 unlockiOSAudio();
 
+<!-- Real-time live status polling (ensures header stays in sync even on tab focus changes) -->
+<script>
+let __liveStatusInterval = null;
+function startLiveStatusPolling(intervalMs = 5000) {
+    if (__liveStatusInterval) return;
+    const jitter = Math.floor(Math.random() * 750); // reduce thundering herd
+    __liveStatusInterval = setInterval(async () => {
+        try {
+            const resp = await fetch('/api/live-status');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.active) {
+                clearInterval(__liveStatusInterval);
+                __liveStatusInterval = null;
+                return;
+            }
+            const progress = {
+                index: data.index,
+                total: data.total,
+                correct: data.correct,
+                incorrect: data.incorrect,
+                streak: data.streak,
+                session_points: data.session_points
+            };
+            if (typeof BeeSmart !== 'undefined') {
+                BeeSmart.sessionPoints = data.session_points ?? BeeSmart.sessionPoints;
+                if (typeof BeeSmart.updateScoreDisplay === 'function') {
+                    BeeSmart.updateScoreDisplay(progress);
+                }
+                if (typeof BeeSmart.updateProgressDisplays === 'function') {
+                    BeeSmart.updateProgressDisplays(data.index, data.total);
+                }
+            } else {
+                // Fallback DOM direct updates
+                const pt = document.getElementById('progressText');
+                if (pt) pt.textContent = `Question ${data.index} of ${data.total}`;
+                const cEl = document.getElementById('correctCount');
+                const iEl = document.getElementById('incorrectCount');
+                const sEl = document.getElementById('streakCount');
+                const pEl = document.getElementById('sessionPoints');
+                if (cEl) cEl.textContent = data.correct;
+                if (iEl) iEl.textContent = data.incorrect;
+                if (sEl) sEl.textContent = data.streak;
+                if (pEl) pEl.textContent = (data.session_points || 0).toLocaleString();
+            }
+        } catch (e) {
+            console.warn('live-status poll failed', e);
+        }
+    }, intervalMs + jitter);
+}
+document.addEventListener('visibilitychange', () => {
+    // If tab becomes visible again and polling stopped, restart it
+    if (!document.hidden && !__liveStatusInterval) {
+        startLiveStatusPolling();
+    }
+});
+</script>
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
     // 🎭 Initialize morphing controller

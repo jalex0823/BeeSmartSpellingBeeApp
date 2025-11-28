@@ -20,3 +20,4 @@ pyjwt==2.8.0
 cryptography==43.0.1
 google-auth==2.35.0
 google-api-python-client==2.154.0
+pytest==8.2.0

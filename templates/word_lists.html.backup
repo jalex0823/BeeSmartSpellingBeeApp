@@ -501,6 +501,30 @@
     padding: 4px 9px;
   }
 
+  /* Bottom-centered icon stack for actions inside hex cell */
+  .hive-cell-actions.icon-stack-bottom {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    background: rgba(255,255,255,0.65);
+    padding: 4px 6px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
+    top: auto; /* override original top positioning */
+    z-index: 5;
+  }
+  .hive-cell-action-btn.delete { order: 99; }
+  @media (max-width: 540px){
+    .hive-cell-actions.icon-stack-bottom { flex-direction: column; gap: 2px; padding: 6px 4px; }
+    .hive-cell-badge { margin-bottom: 44px; }
+    .hive-cell-action-btn { font-size: 18px; line-height: 1; }
+  }
+
   @media (max-width:640px){
     .hive-controls{
       flex-direction: column;
@@ -810,7 +834,7 @@
 
   function createHoneycombCell(list,hiveIndex){
     const cell = document.createElement("a");
-    cell.className = "hive-cell";
+  cell.className = "hive-cell hive-cell-has-stack";
     cell.href="#";
     cell.dataset.name=(list.name||"").toLowerCase();
     cell.dataset.words=list.word_count||0;
@@ -842,26 +866,24 @@
     const earned = Number(list.total_buzz_earned||0);
 
     cell.innerHTML = `
-      <div class="hive-cell-actions">
-        <button class="hive-cell-action-btn favorite" title="Pin hive"
-          onclick="toggleFavorite(event, ${list.id})">${star}</button>
-        <button class="hive-cell-action-btn view" title="View list"
-          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
-        <button class="hive-cell-action-btn rename" title="Rename list"
-          onclick="renameList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🏷️</button>
-        <button class="hive-cell-action-btn edit" title="Edit list"
-          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
-        <button class="hive-cell-action-btn delete" title="Delete list"
-          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
-      </div>
-
-      <div class="hive-cell-badge">≡ ${list.word_count||0} words</div>
-
       <div class="hive-cell-inner">
         <div class="hive-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
         <div class="hive-cell-meta">
           <div class="row">🐝 Tap to quiz</div>
           <div class="hive-earned-tag">Earned: ${earned.toLocaleString()} ✨</div>
+          <div class="hive-cell-badge">≡ ${list.word_count||0} words</div>
+        </div>
+        <div class="hive-cell-actions icon-stack-bottom" aria-label="Word list actions">
+          <button class="hive-cell-action-btn favorite" title="Pin hive"
+            onclick="toggleFavorite(event, ${list.id})">${star}</button>
+          <button class="hive-cell-action-btn view" title="View list"
+            onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
+          <button class="hive-cell-action-btn rename" title="Rename list"
+            onclick="renameList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🏷️</button>
+          <button class="hive-cell-action-btn edit" title="Edit list"
+            onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
+          <button class="hive-cell-action-btn delete" title="Delete list"
+            onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
         </div>
       </div>
     `;
