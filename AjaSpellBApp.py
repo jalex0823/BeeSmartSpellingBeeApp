@@ -2299,6 +2299,43 @@ def load_default_wordbank() -> List[Dict[str, str]]:
         traceback.print_exc()
         return []
 
+# Disk-backed persistence for WORD_STORAGE entries so user lists survive app restarts
+WORD_STORAGE_DIR = os.path.join(BASE_DIR if 'BASE_DIR' in globals() else os.getcwd(), 'data', 'wordbanks')
+try:
+    os.makedirs(WORD_STORAGE_DIR, exist_ok=True)
+except Exception:
+    pass
+
+def _load_wordbank_from_disk(storage_id: str) -> List[Dict[str, str]]:
+    try:
+        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+    except Exception as e:
+        print(f"⚠️ Failed to load wordbank from disk for {storage_id}: {e}")
+    return []
+
+def _save_wordbank_to_disk(storage_id: str, rows: List[Dict[str, str]]):
+    try:
+        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(rows, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"⚠️ Failed to save wordbank to disk for {storage_id}: {e}")
+
+def _delete_wordbank_from_disk(storage_id: Optional[str]):
+    try:
+        if not storage_id:
+            return
+        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception as e:
+        print(f"⚠️ Failed to delete wordbank file for {storage_id}: {e}")
+
 def get_wordbank() -> List[Dict[str, str]]:
     """Read wordbank from WORD_STORAGE using session's storage_id pointer.
     
@@ -2316,6 +2353,13 @@ def get_wordbank() -> List[Dict[str, str]]:
             print(f"DEBUG get_wordbank: Loaded {len(wb)} words from WORD_STORAGE[{storage_id}]")
         else:
             print(f"⚠️ WARNING get_wordbank: storage_id={storage_id} exists but WORD_STORAGE is empty (server restart?)")
+            # Try disk restore
+            disk_rows = _load_wordbank_from_disk(storage_id)
+            if disk_rows:
+                with WORD_STORAGE_LOCK:
+                    WORD_STORAGE[storage_id] = disk_rows
+                wb = disk_rows
+                print(f"✅ Restored {len(wb)} words from disk cache for storage_id={storage_id}")
     
     # Fallback: try legacy direct session storage (migrate to WORD_STORAGE)
     # BUT respect explicit clear operation - don't restore if user cleared intentionally
@@ -2356,6 +2400,8 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     # Store full word list in server-side WORD_STORAGE (not in cookies!)
     with WORD_STORAGE_LOCK:
         WORD_STORAGE[storage_id] = rows
+    # Persist to disk for durability across restarts
+    _save_wordbank_to_disk(storage_id, rows)
     
     # Only store lightweight metadata in session
     session["wordbank_count"] = len(rows)
@@ -5260,13 +5306,48 @@ def api_get_wordbank():
     response = jsonify({
         "words": words,
         "success": len(words) > 0,
-        "count": len(words)
+        "count": len(words),
+        "using_default": session.get("using_default_words", False)
     })
     # Add cache-control headers to prevent Safari caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+@app.route("/api/wordbank/delete", methods=["POST"])
+def api_wordbank_delete():
+    """Delete a single word from the current wordbank by word text or index.
+    Body: { "word": "..." } OR { "index": 3 }
+    Normalization removes non-alphanum and lowercases for comparison.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        wb = get_wordbank()
+        if not wb:
+            return jsonify({"ok": False, "error": "No wordbank loaded"}), 400
+
+        removed = None
+        if "index" in data and isinstance(data["index"], int):
+            idx = data["index"]
+            if 0 <= idx < len(wb):
+                removed = wb.pop(idx)
+        elif "word" in data:
+            target = normalize(str(data["word"]))
+            for i, rec in enumerate(list(wb)):
+                if normalize(rec.get("word", "")) == target:
+                    removed = wb.pop(i)
+                    break
+
+        if removed is None:
+            return jsonify({"ok": False, "error": "Word not found"}), 404
+
+        # Persist updated list and refresh quiz order
+        set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
+        init_quiz_state()
+        return jsonify({"ok": True, "count": len(wb), "removed": removed.get("word")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/api/content-filter-status", methods=["GET"])
 def api_content_filter_status():
@@ -7706,6 +7787,7 @@ def api_clear():
             with WORD_STORAGE_LOCK:
                 removed = WORD_STORAGE.pop(storage_id, None)
                 print(f"DEBUG /api/clear: Removed {len(removed) if removed else 0} words from WORD_STORAGE")
+            _delete_wordbank_from_disk(storage_id)
         
         # Clear all session data thoroughly
         session.pop("wordbank_storage_id", None)
@@ -7731,6 +7813,7 @@ def api_clear():
             with WORD_STORAGE_LOCK:
                 WORD_STORAGE[storage_id] = []  # Ensure it's empty, not deleted
                 print(f"DEBUG /api/clear: Set WORD_STORAGE[{storage_id}] to empty list []")
+            _delete_wordbank_from_disk(storage_id)
         
         # Set flag to explicitly prevent auto-loading defaults after clear
         # User must manually upload or select "Random Words" to get any words
