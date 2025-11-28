@@ -47,13 +47,17 @@
     // Canvas
     const canvas = document.createElement('canvas');
     canvas.style.width='100%';
-    canvas.style.height=(options.height||180)+'px';
+    // If inside egg-visualizer, use its aspect ratio driven height (slightly taller)
+    const isEgg = container.classList.contains('egg-visualizer');
+    const baseH = (options.height||180);
+    canvas.style.height=(isEgg ? Math.round(baseH*1.15) : baseH)+'px';
     canvas.style.display='block';
     canvas.style.filter='drop-shadow(0 0 4px rgba(0,0,0,0.08))';
     container.innerHTML='';
     container.appendChild(canvas);
     const ctx = canvas.getContext('2d');
-    let dpr = Math.max(1, global.devicePixelRatio||1);
+    // Cap DPR to reduce render load on low-end devices
+    let dpr = Math.max(1, Math.min(1.5, global.devicePixelRatio||1));
 
     const cfg = Cfg();
     let width=0, height=0, innerLeft=0, innerRight=0, innerWidth=0, centerY=0, vBuffer=0, innerTop=0, innerBottom=0, innerHeight=0;
@@ -61,11 +65,13 @@
     let wavePack = 0; // packs waves together slightly when speaking
     let dip = 0, surge = 0; // transient boosts
     let t0 = performance.now();
+    let idleSince = performance.now();
+    let dotsScale = 1.0; // adaptive density scale
 
     function resize(){
       const rect = container.getBoundingClientRect();
       width = Math.max(10, rect.width);
-      height = Math.max(10, options.height||180);
+      height = Math.max(10, isEgg ? Math.round((options.height||180)*1.15) : (options.height||180));
       canvas.width = Math.floor(width*dpr);
       canvas.height = Math.floor(height*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -77,16 +83,23 @@
       innerBottom = height - vBuffer;
       innerHeight = Math.max(10, innerBottom - innerTop);
       centerY = Math.floor(innerTop + innerHeight*0.5);
+      // Slight upward bias for egg top taper so waves sit a bit higher visually
+      if(isEgg){
+        centerY = Math.floor(innerTop + innerHeight*0.46);
+      }
     }
     resize();
     global.addEventListener('resize', resize);
 
     function setMode(mode){
       targetEnergy = cfg.energyTargets[mode] ?? cfg.energyTargets.idle;
+      if(mode === 'speaking'){
+        dotsScale = 1.0; // restore full density on speech
+      }
     }
 
     function onStart(){ setMode('speaking'); surge = Math.max(surge, cfg.boostScales.surge); }
-    function onEnd(){ setMode('pausing'); dip = Math.max(dip, cfg.boostScales.dip); }
+    function onEnd(){ setMode('pausing'); dip = Math.max(dip, cfg.boostScales.dip); idleSince = performance.now(); }
     function onBoundary(){ surge = Math.max(surge, cfg.boostScales.surge*1.1); }
 
     global.addEventListener('quiz-speech-start', onStart);
@@ -104,7 +117,10 @@
       ctx.clearRect(0,0,width,height);
 
       const waves = Math.max(1, cfg.MAX_WAVES|0);
-      const dots = Math.max(8, cfg.DOTS_PER_WAVE|0);
+      // Adaptive density: reduce when idle for > 2s
+      const idleMs = now - idleSince;
+      if(targetEnergy === cfg.energyTargets.pausing && idleMs > 2000){ dotsScale = 0.75; } else if(targetEnergy === cfg.energyTargets.idle && idleMs > 2000){ dotsScale = 0.7; }
+      const dots = Math.max(8, Math.floor((cfg.DOTS_PER_WAVE|0) * dotsScale));
       const spacing = cfg.WAVE_SPACING;
       const ampBase = cfg.waveShape.ampBase;
       const ampStep = cfg.waveShape.ampStep;
@@ -127,7 +143,11 @@
         const color = cfg.waveColors[wi % cfg.waveColors.length] || 'rgba(255, 180, 55, 0.9)';
         ctx.fillStyle = color;
         const yBase = centerY + (wi - (waves-1)/2) * (spacing - wavePack*2);
-        const amp = (ampBase + wi*ampStep) * (0.4 + 0.6*energyNow);
+        let amp = (ampBase + wi*ampStep) * (0.4 + 0.6*energyNow);
+        if(isEgg){
+          // Constrain amplitude a bit more near top to respect egg curvature illusion
+          amp *= 0.88;
+        }
         const freq = baseFreq + wi*freqStep;
 
         for(let di=0; di<dots; di++){
@@ -142,7 +162,11 @@
           const bulge = bulgeMag ? (1 + bulgeMag*Math.sin((u*bulgeCycles + bulgePhase)*Math.PI*2)) : 1;
           let A = amp * edgeFactor * bulge;
           // Strict vertical confinement: never exceed innerTop/innerBottom with a small safety margin
-          const maxA = (innerHeight*0.5) - 2; // 2px safety
+          let maxA = (innerHeight*0.5) - 2; // 2px safety
+          if(isEgg){
+            // Egg curvature: reduce vertical extremes slightly
+            maxA *= 0.9;
+          }
           A = Math.min(A, maxA);
           const ripple = Math.sin((u * rippleFreq + now*0.0015)*Math.PI*2)*rippleBase*energyNow;
           let y = yBase + Math.sin((u*freq + now*0.0018)*Math.PI*2) * A + ripple;

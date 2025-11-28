@@ -1,0 +1,84 @@
+/* Speed Round specific styles: egg-shaped voice visualizer and responsive tweaks */
+
+/* Egg-shaped voice visualizer (speed round only) */
+.voice-visualizer.egg-visualizer {
+  width: 340px;
+  max-width: 90%;
+  margin: 0.5rem auto 1rem auto;
+  padding: 1.25rem 1rem 1.75rem;
+  position: relative;
+  border-radius: 48% 48% 52% 52% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 50% 30%, #FFF4C9 0%, #FFE289 45%, #FFC94D 75%, #FFB300 100%);
+  box-shadow: 0 10px 30px rgba(255, 179, 0, 0.35), inset 0 6px 14px rgba(255,255,255,0.6), inset 0 -6px 18px rgba(204,120,0,0.25);
+  overflow: hidden;
+  border: 4px solid rgba(255, 193, 7, 0.55);
+  isolation: isolate;
+}
+
+.voice-visualizer.egg-visualizer::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  width: 65%;
+  height: 38%;
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 80%);
+  filter: blur(4px) brightness(1.08);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.65;
+  animation: eggShimmer 5s linear infinite;
+}
+
+@keyframes eggShimmer {
+  0% { transform: translateX(-50%) rotate(-8deg) scale(1); opacity:0.55; }
+  50% { transform: translateX(-50%) rotate(-8deg) scale(1.03); opacity:0.75; }
+  100% { transform: translateX(-50%) rotate(-8deg) scale(1); opacity:0.55; }
+}
+
+.voice-visualizer.egg-visualizer .voice-card.speaking-mode {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.voice-visualizer.egg-visualizer .dotwave-wrapper {
+  padding: 0;
+  width: 100%;
+  aspect-ratio: 10 / 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-visualizer.egg-visualizer .dotwave-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 10 / 11;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.45)) drop-shadow(0 0 14px rgba(255,193,7,0.35));
+}
+
+.voice-visualizer.egg-visualizer .voice-definition {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 82%;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  background: rgba(255,255,255,0.15);
+  padding: 0.35rem 0.65rem 0.45rem;
+  border-radius: 12px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 4px 12px rgba(255,179,0,0.25);
+  color: #5A3A1A;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.55);
+}
+
+@media (max-width: 420px){
+  .voice-visualizer.egg-visualizer{ width: clamp(240px, 80vw, 320px); }
+  .voice-visualizer.egg-visualizer .voice-definition{ font-size: 0.85rem; padding: 0.3rem 0.55rem; width: 84%; }
+}

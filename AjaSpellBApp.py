@@ -18,6 +18,7 @@ import random
 import threading
 import uuid
 import logging
+from tempfile import NamedTemporaryFile
 from datetime import datetime, timedelta, timezone
 import socket
 import secrets
@@ -110,6 +111,60 @@ except Exception as e:
 # Dictionary Cache Functions
 DICTIONARY_CACHE_FILE = "data/dictionary.json"
 SIMPLE_WIKTIONARY_FILE = "data/simple-wiktionary.jsonl"
+WORDBANK_DIR = "data/wordbanks"
+
+def _ensure_dir(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
+
+def _wordbank_path(storage_id: str) -> str:
+    _ensure_dir(WORDBANK_DIR)
+    safe = re.sub(r"[^a-zA-Z0-9_-]", "_", storage_id or "default")
+    return os.path.join(WORDBANK_DIR, f"{safe}.json")
+
+def save_wordbank_atomic(storage_id: str, rows: list) -> bool:
+    """Atomically persist wordbank rows to disk (temp file + rename)."""
+    try:
+        _ensure_dir(WORDBANK_DIR)
+        target = _wordbank_path(storage_id)
+        schema = {"version":"1.0","rows": rows}
+        with NamedTemporaryFile('w', delete=False, dir=WORDBANK_DIR, suffix='.tmp', encoding='utf-8') as tf:
+            json.dump(schema, tf, ensure_ascii=False)
+            tf.flush()
+            os.fsync(tf.fileno())
+            temp_name = tf.name
+        shutil.move(temp_name, target)
+        return True
+    except Exception as e:
+        print(f"❌ Failed to save wordbank atomically: {e}")
+        return False
+
+def load_wordbank_safe(storage_id: str) -> list:
+    """Load wordbank rows from disk with schema validation; return [] on failure."""
+    try:
+        path = _wordbank_path(storage_id)
+        if not os.path.exists(path):
+            return []
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or 'rows' not in data or not isinstance(data['rows'], list):
+            print("⚠️ Wordbank schema invalid; ignoring file")
+            return []
+        # Normalize rows shape
+        normalized = []
+        for r in data['rows']:
+            if isinstance(r, dict) and 'word' in r:
+                normalized.append({
+                    'word': str(r.get('word','')).strip(),
+                    'sentence': str(r.get('sentence','')).strip(),
+                    'hint': str(r.get('hint','')).strip()
+                })
+        return normalized
+    except Exception as e:
+        print(f"❌ Failed to load wordbank: {e}")
+        return []
 
 def load_simple_wiktionary():
     """Load Simple English Wiktionary from JSONL file - 50K+ words!"""

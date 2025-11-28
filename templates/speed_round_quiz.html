@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/speed-round.css') }}">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout speed round
@@ -198,6 +199,86 @@ document.addEventListener('DOMContentLoaded', ()=>{
     .voice-visualizer { 
         margin-bottom: 0.75rem;
         padding-top: 0.25rem;
+    }
+
+    /* Egg-shaped voice visualizer (speed round only) */
+    .voice-visualizer.egg-visualizer {
+        width: 340px; /* fixed width for consistent egg silhouette */
+        max-width: 90%;
+        margin: 0.5rem auto 1rem auto;
+        padding: 1.25rem 1rem 1.75rem; /* extra bottom padding for wave tail */
+        position: relative;
+        border-radius: 48% 48% 52% 52% / 60% 60% 40% 40%; /* approximate egg curve */
+        background: radial-gradient(circle at 50% 30%, #FFF4C9 0%, #FFE289 45%, #FFC94D 75%, #FFB300 100%);
+        box-shadow: 0 10px 30px rgba(255, 179, 0, 0.35), inset 0 6px 14px rgba(255,255,255,0.6), inset 0 -6px 18px rgba(204,120,0,0.25);
+        overflow: hidden; /* clip waves inside egg */
+        border: 4px solid rgba(255, 193, 7, 0.55);
+        isolation: isolate;
+    }
+
+    /* Decorative honey shimmer inside egg */
+    .voice-visualizer.egg-visualizer::after {
+        content: '';
+        position: absolute;
+        top: 8%;
+        left: 50%;
+        transform: translateX(-50%) rotate(-8deg);
+        width: 65%;
+        height: 38%;
+        background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 80%);
+        filter: blur(4px) brightness(1.08);
+        pointer-events: none;
+        mix-blend-mode: screen;
+        opacity: 0.65;
+        animation: eggShimmer 5s linear infinite;
+    }
+
+    @keyframes eggShimmer {
+        0% { transform: translateX(-50%) rotate(-8deg) scale(1); opacity:0.55; }
+        50% { transform: translateX(-50%) rotate(-8deg) scale(1.03); opacity:0.75; }
+        100% { transform: translateX(-50%) rotate(-8deg) scale(1); opacity:0.55; }
+    }
+
+    /* Adapt inner card for egg shape */
+    .voice-visualizer.egg-visualizer .voice-card.speaking-mode {
+        background: transparent;
+        padding: 0; /* outer container handles padding */
+        margin: 0;
+        box-shadow: none;
+    }
+
+    .voice-visualizer.egg-visualizer .dotwave-wrapper {
+        padding: 0;
+        width: 100%;
+        aspect-ratio: 10 / 11; /* approximate egg interior aspect */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .voice-visualizer.egg-visualizer .dotwave-wrapper canvas {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: 10 / 11;
+        filter: drop-shadow(0 0 4px rgba(255,255,255,0.45)) drop-shadow(0 0 14px rgba(255,193,7,0.35));
+    }
+
+    .voice-visualizer.egg-visualizer .voice-definition {
+        position: absolute;
+        bottom: 6%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 82%;
+        font-size: 0.9rem;
+        line-height: 1.35;
+        background: rgba(255,255,255,0.15);
+        padding: 0.35rem 0.65rem 0.45rem;
+        border-radius: 12px;
+        backdrop-filter: blur(3px);
+        box-shadow: 0 4px 12px rgba(255,179,0,0.25);
+        color: #5A3A1A;
+        font-weight: 600;
+        text-shadow: 0 1px 2px rgba(255,255,255,0.55);
     }
 
     .voice-visualizer::before { display: none; }
@@ -816,7 +897,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     <!-- Quiz Card -->
     <div class="quiz-card">
                 <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
-                <div class="voice-visualizer" id="voiceVisualizer">
+                <div class="voice-visualizer egg-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
                             <!-- Hidden status for JavaScript (not displayed visually) -->
                             <div class="voice-header" style="display: none;">

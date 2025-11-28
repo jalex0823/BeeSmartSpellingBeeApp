@@ -248,13 +248,14 @@
     font-weight:800;
   }
 
-  /* NEW: Responsive Grid (2-3 columns) */
+  /* UPDATED: Fixed 3-per-row hex grid for consistent layout */
   .grid{
-    --cell-w:220px;
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(var(--cell-w),1fr));
+    grid-template-columns:repeat(3, 1fr);
     gap:18px 14px;
     padding-top:6px;
+    align-items:start;
+    justify-items:center;
   }
 
   /* wobble */
@@ -273,7 +274,8 @@
     clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
     box-shadow:var(--shadow-med);
-    min-height:210px;
+    width: 300px;          /* fixed width to fit 3 per row in ~920px board */
+    height: 260px;         /* fixed height to maintain hex look */
     display:flex;
     align-items:center;
     justify-content:center;
@@ -541,15 +543,17 @@
   }
   .bee-sheet-btn.danger{background:#fff0f0}
 
-  @media (max-width:720px){
-    .list-title-row h1{font-size:26px}
-    .grid{--cell-w:180px}
-    .list-cell{min-height:190px}
+  /* Responsive fallbacks: keep 3 per row down to ~900px, then drop to 2, then 1 */
+  @media (max-width: 1024px){
+    .grid{grid-template-columns:repeat(3,1fr)}
+    .list-cell{width:280px;height:242px}
   }
-  @media (max-width:480px){
-    .grid{--cell-w:160px;gap:14px 10px}
-    .list-cell{min-height:175px;padding:18px 12px}
-    .list-cell-name{font-size:16px}
+  @media (max-width: 900px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width: 600px){
+    .grid{grid-template-columns:1fr}
+    .list-cell{width: 92%; height: 230px}
   }
 </style>
 {% endblock %}
@@ -1047,7 +1051,17 @@
       const data = await res.json();
       if(data.ok && data.list){
         const words = data.list.words||[];
-        const preview = words.slice(0,12).join(", ");
+        // Normalize for display: accept array of strings or array of {word, sentence, hint}
+        const norm = words.map(w => {
+          if (typeof w === 'string') return w;
+          if (w && typeof w === 'object') {
+            if (typeof w.word === 'string' && w.word.trim().length > 0) return w.word.trim();
+            // Fallback: attempt to stringify minimal representation
+            try { return JSON.stringify(w); } catch { return String(w); }
+          }
+          return String(w);
+        });
+        const preview = norm.slice(0,12).join(", ");
         const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
         await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
       }else{
