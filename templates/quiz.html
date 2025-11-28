@@ -770,7 +770,7 @@ if ('speechSynthesis' in window) {
         display: flex;
         justify-content: center;
         gap: 1rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem; /* tighter spacing between controls and next section */
     }
 
     .btn-repeat {
@@ -789,6 +789,30 @@ if ('speechSynthesis' in window) {
         border: none; /* remove border */
         min-height: 180px; /* taller for fuller waves */
         width: 100%; /* full width */
+    }
+
+    /* Generic quiz form spacing normalization */
+    .quiz-container h1,
+    .quiz-container h2,
+    .quiz-container h3,
+    .quiz-container p {
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem; /* reduce vertical rhythm for texts */
+    }
+
+    .quiz-container .button-group,
+    .quiz-container .action-row,
+    .quiz-container .controls-row {
+        margin-top: 0.4rem;
+        margin-bottom: 0.6rem; /* consistent compact spacing for rows of controls/buttons */
+    }
+
+    .quiz-container input[type="text"],
+    .quiz-container input[type="search"],
+    .quiz-container input[type="email"],
+    .quiz-container input[type="number"],
+    .quiz-container textarea {
+        margin-bottom: 0.5rem; /* compact spacing beneath inputs */
     }
 
     .voice-visualizer::before { display: none; }
@@ -1194,12 +1218,29 @@ if ('speechSynthesis' in window) {
     }
     
     /* When morphing to timer mode */
+    /* Keep the sentence visible during countdown by only fading the wave canvas, not the whole visualizer */
     .morph-container.mode-timer .voice-visualizer {
-        opacity: 0;
-        transform: scale(0.85);
-        pointer-events: none;
+        opacity: 1; /* keep container visible */
+        transform: scale(1);
+        pointer-events: none; /* prevent interaction while timer runs */
     }
-    
+
+    /* Fade out animated wave bars/canvas only */
+    .morph-container.mode-timer .voice-visualizer .dotwave-wrapper,
+    .morph-container.mode-timer .voice-visualizer .voice-header,
+    .morph-container.mode-timer .voice-visualizer #voiceWaveContainer,
+    .morph-container.mode-timer .voice-visualizer .wave-bar {
+        opacity: 0;
+        transition: opacity 0.6s ease;
+    }
+
+    /* Keep definition text fully visible above/below the timer */
+    .morph-container.mode-timer .voice-visualizer .voice-definition {
+        opacity: 1 !important;
+        position: relative;
+        z-index: 2; /* sit above faded viz, below the timer */
+    }
+
     .morph-container.mode-timer .countdown-container {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1); /* Center and full scale */
