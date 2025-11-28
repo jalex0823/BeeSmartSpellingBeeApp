@@ -15271,14 +15271,44 @@
                     badgeEl.innerHTML = '';
                     
                     // Use PNG badge image instead of 3D GLB
-                    const pngFile = data.current_class.badge_image.replace('.glb', '.png');
+                    let pngFile = data.current_class.badge_image.replace('.glb', '.png');
+                    // Normalize basename to handle case differences
+                    const base = pngFile.split('/').pop();
+                    const pngOverrides = new Map([
+                        // GLB → PNG explicit mappings (present in static/assets/badges)
+                        ['Novice.png', 'Novice.png'],
+                        ['Apprentice.png', 'Apprentice.png'],
+                        ['Scholar.png', 'Scholar.png'],
+                        ['Magistrate.png', 'Magistrate.png'],
+                        ['BuzzDustMaster.png', 'BuzzDustMaster.png'],
+                        // Known typo: Elite.glb → Elete.png
+                        ['Elite.png', 'Elete.png']
+                    ]);
+                    if (pngOverrides.has(base)) {
+                        pngFile = pngOverrides.get(base);
+                    }
                     const img = document.createElement('img');
+                    // Primary path
                     img.src = `/static/assets/badges/${pngFile}`;
                     img.alt = data.current_class.label || 'Badge';
                     img.style.width = '200px';
                     img.style.height = '200px';
                     img.style.objectFit = 'contain';
                     img.style.filter = 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))';
+                    // Fallbacks for known filename mismatches
+                    const fallbacks = new Map([
+                        ['Elite.png', '/static/assets/badges/Elete.png']
+                    ]);
+                    img.onerror = function(){
+                        const alt = fallbacks.get(pngFile);
+                        if (alt) {
+                            console.warn('⚠️ [TICKER] PNG not found, trying fallback:', alt);
+                            img.onerror = null; // prevent loops
+                            img.src = alt;
+                        } else {
+                            console.error('❌ [TICKER] PNG Badge failed to load:', pngFile);
+                        }
+                    };
                     badgeEl.appendChild(img);
                     
                     console.log('✅ [TICKER] PNG Badge loaded:', pngFile);
