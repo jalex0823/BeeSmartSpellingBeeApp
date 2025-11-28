@@ -2,46 +2,37 @@
 // Renders multi-wave dotted ribbon synced to announcer speech.
 // Reads settings from window.BeeSmartVoiceVizCfg if present.
 (function (global) {
-  // Configuration factory merges user overrides
   const Cfg = () => Object.assign({
-    // Higher density & more waves for richer lip surface
-    MAX_WAVES: 13,
-    DOTS_PER_WAVE: 160,
-    DOT_RADIUS: 2.4,
-    WAVE_SPACING: 13,
-    HORIZONTAL_PAD_CSS: 22, // a touch more padding left/right
-    VERTICAL_BUFFER: 14,    // top/bottom buffer to avoid clipping
-    VERTICAL_SOFT_CLAMP: 6, // extra soft clamp inside buffer
-    // Taper & mapping
-    TIP_PINCH_POWER: 2.6,   // stronger taper at ends
-    NON_LINEAR_X_MAP: true, // cluster points toward tips (mouth shape)
-    // Dynamically generated honey/brown palette (light → dark)
-    waveColors: (function(){
-      const stops = [
-        [255, 235, 185], // very light honey
-        [255, 222, 150], // honey
-        [255, 208, 110], // golden
-        [255, 194, 78],  // deep golden
-        [255, 178, 52],  // rich amber
-        [247, 160, 32],  // amber mid
-        [235, 140, 24],  // darker amber
-        [220, 125, 20],  // burnt honey
-        [202, 110, 18],  // soft brown
-        [182, 96, 16],   // cocoa honey
-        [160, 82, 14],   // brown
-        [138, 70, 12],   // deeper brown
-        [118, 58, 10]    // near molasses
-      ];
-      return stops.map(([r,g,b]) => `rgba(${r},${g},${b},0.95)`);
-    })(),
-    gradientLR: { enabled: true, alpha: 0.30, stops: [ {offset:0,color:'rgba(255,235,185,1)'}, {offset:1,color:'rgba(118,58,10,1)'} ] },
-    endFade: { enabled: true, fraction: 0.34 },
-    thicknessBulge: { enabled: true, magnitude: 0.22, speed: 0.0018, cycles: 1.0 },
-    centerGlow: { enabled: true, alpha: 0.6, verticalSpan: 0.55, energyScale: 1.0, horizontalFraction: 0.1 },
-    energyTargets: { speaking: 1.0, pausing: 0.07, idle: 0.045 },
-    easing: { energy: 0.22, wavePack: 0.26, dipDecay: 0.17, surgeDecay: 0.13 },
-    boostScales: { dip: 0.62, surge: 0.22 },
-    waveShape: { baseFreq: 2.3, freqStep: 0.26, ampBase: 28, ampStep: 7.0, rippleFreq: 12, rippleBase: 5 }
+    // Denser, smoother default look
+    MAX_WAVES: 11,
+    DOTS_PER_WAVE: 128,
+    DOT_RADIUS: 2.6,
+    WAVE_SPACING: 14,
+    HORIZONTAL_PAD_CSS: 18,
+    VERTICAL_BUFFER: 18, // px top & bottom to prevent clipping
+    // Honey & brown palette from light honey to deep amber/brown
+    waveColors: [
+      'rgba(255, 230, 170, 0.95)', // light honey
+      'rgba(255, 216, 140, 0.95)',
+      'rgba(255, 204, 102, 0.95)',
+      'rgba(255, 190, 76, 0.95)',
+      'rgba(255, 171, 52, 0.95)',
+      'rgba(255, 153, 26, 0.95)',
+      'rgba(240, 132, 20, 0.95)',
+      'rgba(220, 118, 18, 0.95)',
+      'rgba(199, 103, 16, 0.95)',
+      'rgba(168, 85, 12, 0.95)',  // amber-brown
+      'rgba(140, 70, 10, 0.95)'   // deeper brown
+    ],
+    gradientLR: { enabled: true, alpha: 0.28, stops: [ {offset:0,color:'rgba(255,216,140,1)'}, {offset:1,color:'rgba(168,85,12,1)'} ] },
+    endFade: { enabled: true, fraction: 0.32 },
+    thicknessBulge: { enabled: true, magnitude: 0.18, speed: 0.002, cycles: 1.0 },
+    centerGlow: { enabled: true, alpha: 0.55, verticalSpan: 0.58, energyScale: 1.0, horizontalFraction: 0.12 },
+    tipPinch: { enabled: true, power: 2.1 },
+    energyTargets: { speaking: 1.0, pausing: 0.06, idle: 0.04 },
+    easing: { energy: 0.2, wavePack: 0.24, dipDecay: 0.16, surgeDecay: 0.12 },
+    boostScales: { dip: 0.6, surge: 0.2 },
+    waveShape: { baseFreq: 2.2, freqStep: 0.28, ampBase: 26, ampStep: 6.5, rippleFreq: 11, rippleBase: 4.5 }
   }, (global.BeeSmartVoiceVizCfg||{}));
 
   function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
@@ -132,73 +123,50 @@
       let gradLR = null;
       if(cfg.gradientLR?.enabled){ gradLR = makeGradient(ctx, innerLeft,0, innerRight,0, cfg.gradientLR.stops); }
 
-      // Precompute lip shaping function for horizontal domain (smooth ellipse narrowing at tips)
-      function mapU(u){
-        if(!cfg.NON_LINEAR_X_MAP) return innerLeft + u*innerWidth;
-        // Cosine ease: clusters more points near ends (mouth tips)
-        const eased = 0.5 - 0.5*Math.cos(Math.PI*u); // 0..1 with more density near 0/1
-        return innerLeft + eased*innerWidth;
-      }
-      function edgeTaper(u){
-        const edge = Math.min(u, 1-u); // 0 at tips
-        // Power curve accentuates taper; TIP_PINCH_POWER controls steepness
-        return Math.pow(edge*2, cfg.TIP_PINCH_POWER || 2.4); // 0..1
-      }
-      function lipProfile(u){
-        // Elliptical profile emphasizing center fullness
-        // sin(pi*u) gives 0 at ends, 1 at center
-        return Math.pow(Math.sin(Math.PI*u), 1.15); // mild sharpening
-      }
-
       for(let wi=0; wi<waves; wi++){
-        const color = cfg.waveColors[wi % cfg.waveColors.length] || 'rgba(255,180,55,0.9)';
+        const color = cfg.waveColors[wi % cfg.waveColors.length] || 'rgba(255, 180, 55, 0.9)';
         ctx.fillStyle = color;
-        // Slight vertical staggering with wavePack and a soft center compression while idle
-        const idleCompress = 1 - 0.25*energyNow; // narrower stack when quiet
-        const yBase = centerY + (wi - (waves-1)/2) * (spacing*idleCompress - wavePack*2);
-        const amp = (ampBase + wi*ampStep) * (0.42 + 0.58*energyNow);
+        const yBase = centerY + (wi - (waves-1)/2) * (spacing - wavePack*2);
+        const amp = (ampBase + wi*ampStep) * (0.4 + 0.6*energyNow);
         const freq = baseFreq + wi*freqStep;
 
         for(let di=0; di<dots; di++){
-          const u = di/(dots-1); // normalized domain
-          const x = mapU(u);
-          const taper = edgeTaper(u);         // 0 at ends → reduces amplitude & radius
-          const profile = lipProfile(u);      // center fullness
+          const u = di/(dots-1); // 0..1
+          const x = innerLeft + u*innerWidth;
+          // Tip pinch: attenuate amplitude near edges
+          let edgeFactor = 1.0;
+          if(cfg.tipPinch?.enabled){
+            const dEdge = Math.min(u, 1-u); // 0 at edges
+            edgeFactor = Math.pow(dEdge*2, cfg.tipPinch.power||1.2); // 0..1
+          }
           const bulge = bulgeMag ? (1 + bulgeMag*Math.sin((u*bulgeCycles + bulgePhase)*Math.PI*2)) : 1;
-          // Combined amplitude shaping
-          let A = amp * taper * profile * bulge;
-          const maxA = (innerHeight*0.5) - (cfg.VERTICAL_SOFT_CLAMP || 4);
-          if (A > maxA) A = maxA;
-          const ripple = Math.sin((u * rippleFreq + now*0.0014)*Math.PI*2)*rippleBase*energyNow;
-          let waveY = Math.sin((u*freq + now*0.0017)*Math.PI*2) * A + ripple;
-          let y = yBase + waveY;
-          // Hard vertical confinement (respect top/bottom buffers)
-          const topLimit = innerTop + (cfg.VERTICAL_SOFT_CLAMP||4);
-          const bottomLimit = innerBottom - (cfg.VERTICAL_SOFT_CLAMP||4);
-          if (y < topLimit) y = topLimit;
-          if (y > bottomLimit) y = bottomLimit;
+          let A = amp * edgeFactor * bulge;
+          // Strict vertical confinement: never exceed innerTop/innerBottom with a small safety margin
+          const maxA = (innerHeight*0.5) - 2; // 2px safety
+          A = Math.min(A, maxA);
+          const ripple = Math.sin((u * rippleFreq + now*0.0015)*Math.PI*2)*rippleBase*energyNow;
+          let y = yBase + Math.sin((u*freq + now*0.0018)*Math.PI*2) * A + ripple;
+          if (y < innerTop+1) y = innerTop+1;
+          if (y > innerBottom-1) y = innerBottom-1;
 
-          // Alpha fade at ends
+          // End fade alpha
           let alphaMul = 1.0;
           if(cfg.endFade?.enabled){
-            const f = clamp(cfg.endFade.fraction ?? 0.2, 0, 0.55);
+            const f = clamp(cfg.endFade.fraction ?? 0.18, 0, 0.5);
             const left = clamp(u/f, 0, 1);
             const right = clamp((1-u)/f, 0, 1);
             alphaMul = Math.min(left, right);
           }
-          // Dynamic radius scaling: smaller near tips + subtle breathing
-          const baseR = Math.max(0.75, cfg.DOT_RADIUS);
-          const breathing = 0.85 + 0.3*energyNow;
-          const r = baseR * breathing * (0.55 + 0.45*taper) * (0.7 + 0.3*profile);
-
-            ctx.globalAlpha = alphaMul;
+          // Smaller near tips to help "points together" mouth tips
+          const r = Math.max(0.8, cfg.DOT_RADIUS) * (0.85 + 0.35*energyNow) * (0.62 + 0.38*edgeFactor);
+          ctx.globalAlpha = alphaMul;
           ctx.beginPath();
           ctx.arc(x, y, r, 0, Math.PI*2);
           ctx.fill();
 
-          // Gradient overlay adds depth & honey sheen
+          // Optional gradient overlay pass
           if(gradLR){
-            ctx.globalAlpha = (cfg.gradientLR.alpha ?? 0.32) * alphaMul;
+            ctx.globalAlpha = (cfg.gradientLR.alpha ?? 0.35) * alphaMul;
             ctx.fillStyle = gradLR;
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = color;
