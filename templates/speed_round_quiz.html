@@ -187,10 +187,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 <style>
     body {
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
-{% endblock %}
-
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
         overflow-x: hidden;
     }
@@ -971,7 +967,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 <!-- Removed duplicate loading overlay: rely on unified global honey pot loading screen -->
 
-<script src="/static/js/voice-visualizer-config.js"></script>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}?v=20251129"></script>
+{% endblock %}
+
 <script>
 // Speed Round Quiz State
 let currentWord = null;
