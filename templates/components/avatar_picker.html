@@ -607,6 +607,98 @@
 }
 }
 
+/* Locked Avatar Styling */
+.avatar-option.locked {
+    opacity: 0.5;
+    filter: grayscale(80%);
+    position: relative;
+    cursor: not-allowed;
+}
+
+.avatar-option.locked::before {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    z-index: 10;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+.avatar-option.locked .avatar-3d-thumbnail,
+.avatar-option.locked img {
+    filter: grayscale(100%) brightness(0.7);
+}
+
+.avatar-option.locked:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-option.locked .avatar-name {
+    color: #999;
+    opacity: 0.7;
+}
+
+/* Lock Badge for Locked Avatars */
+.avatar-lock-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #FFD700;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 15;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.avatar-lock-badge .lock-icon {
+    font-size: 0.85rem;
+}
+
+/* Unlock Info Tooltip */
+.avatar-unlock-info {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #FFD700;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 20;
+    border: 1px solid #FFD700;
+}
+
+.avatar-option.locked:hover .avatar-unlock-info {
+    opacity: 1;
+}
+
+.avatar-unlock-info::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+}
+
 /* Action Buttons - Honeycomb Theme */
 .avatar-actions {
     margin-top: 1.5rem;
@@ -666,6 +758,23 @@
     opacity: 0.4;
     cursor: not-allowed;
     filter: grayscale(0.5);
+}
+
+/* Keyframe Animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Responsive - Enhanced for Better Mobile Display */

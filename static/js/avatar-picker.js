@@ -122,6 +122,12 @@ function renderAvatarGrid(avatarsToRender) {
         const card = document.createElement('div');
         card.className = 'avatar-option';
         card.dataset.avatarId = avatar.id;
+        
+        // Add locked class if avatar is locked
+        if (avatar.is_locked) {
+            card.classList.add('locked');
+            card.title = 'Locked - Earn or purchase to unlock';
+        }
 
         // Create 3D thumbnail container (render OBJ as thumbnail)
         const thumbContainer = document.createElement('div');
@@ -132,6 +138,32 @@ function renderAvatarGrid(avatarsToRender) {
         thumbContainer.style.overflow = 'hidden';
         thumbContainer.style.borderRadius = '8px';
         thumbContainer.style.background = 'linear-gradient(135deg, #FFE8CC 0%, #FFD700 100%)';
+        
+        // Add lock badge for locked avatars
+        if (avatar.is_locked) {
+            const lockBadge = document.createElement('div');
+            lockBadge.className = 'avatar-lock-badge';
+            lockBadge.innerHTML = `<span class="lock-icon">🔒</span><span>Locked</span>`;
+            thumbContainer.appendChild(lockBadge);
+            
+            // Add unlock requirement tooltip
+            if (avatar.unlock_requirement || avatar.price_usd) {
+                const unlockInfo = document.createElement('div');
+                unlockInfo.className = 'avatar-unlock-info';
+                
+                let unlockText = '';
+                if (avatar.tier === 'premium') {
+                    unlockText = avatar.price_usd ? `Purchase: $${avatar.price_usd}` : 'Premium - Purchase to unlock';
+                } else if (avatar.unlock_requirement) {
+                    unlockText = `Earn ${avatar.unlock_requirement} 🍯 points`;
+                } else {
+                    unlockText = 'Complete quizzes to unlock';
+                }
+                
+                unlockInfo.textContent = unlockText;
+                card.appendChild(unlockInfo);
+            }
+        }
 
         // Use standardized name from catalog (includes "Avatar" suffix for Apple compliance)
         const displayName = avatar.name;
@@ -140,14 +172,21 @@ function renderAvatarGrid(avatarsToRender) {
         const nameDiv = document.createElement('div');
         nameDiv.className = 'avatar-name';
         nameDiv.dataset.avatarId = avatar.id;
-        nameDiv.title = 'Click for details';
+        nameDiv.title = avatar.is_locked ? 'Locked' : 'Click for details';
         nameDiv.textContent = displayName;
 
         card.appendChild(thumbContainer);
         card.appendChild(nameDiv);
 
-        // Card click selects avatar (unless clicking the name)
+        // Card click selects avatar (unless clicking the name or avatar is locked)
         card.addEventListener('click', (e) => {
+            // Prevent selection of locked avatars
+            if (avatar.is_locked) {
+                console.log(`🔒 Avatar "${avatar.name}" is locked`);
+                // Show a friendly message
+                showLockedAvatarMessage(avatar);
+                return;
+            }
             if (!e.target.classList.contains('avatar-name')) {
                 selectAvatar(avatar);
             }
@@ -753,6 +792,69 @@ function closeAvatarPopup() {
             popup.remove();
         }, 300);
     }
+}
+
+/**
+ * Show a friendly message when a locked avatar is clicked
+ * @param {Object} avatar - The locked avatar that was clicked
+ */
+function showLockedAvatarMessage(avatar) {
+    // Create a temporary notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #000;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        text-align: center;
+        max-width: 90%;
+        width: 400px;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    let unlockText = '';
+    if (avatar.tier === 'premium') {
+        unlockText = avatar.price_usd 
+            ? `<strong>Purchase for $${avatar.price_usd}</strong>` 
+            : '<strong>Premium Avatar - Purchase to unlock</strong>';
+    } else if (avatar.unlock_requirement) {
+        unlockText = `<strong>Earn ${avatar.unlock_requirement} 🍯 Honey Points</strong>`;
+    } else {
+        unlockText = '<strong>Complete quizzes to unlock</strong>';
+    }
+    
+    notification.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+        <h3 style="margin: 0 0 1rem 0; color: #000;">${avatar.name}</h3>
+        <p style="margin: 0 0 1.5rem 0; color: #333;">This avatar is locked!</p>
+        <p style="margin: 0 0 1.5rem 0; font-size: 1.1rem;">${unlockText}</p>
+        <button onclick="this.parentElement.remove()" style="
+            padding: 0.75rem 2rem;
+            background: #fff;
+            border: 2px solid #FF8C00;
+            border-radius: 8px;
+            color: #FF8C00;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        ">Got it!</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
 /**
