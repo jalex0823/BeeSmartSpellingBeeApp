@@ -395,18 +395,25 @@
     position:relative;
     width:220px;
     height:380px;
-    background:url('/static/assets/ui/jars/wordlist_jar_base.png') no-repeat center bottom / contain;
+    /* Use provided base jar artwork */
+    background:url('/static/assets/WordListImages/jar_base.png') no-repeat center bottom / contain;
   }
   /* Fallback if the new folder isn't present yet: attempt existing asset */
   .list-cell-inner-jar.fallback{
-    background:url('/static/assets/WordListImages/Jar.png') no-repeat center bottom / contain;
+    background:url('/static/assets/WordListImages/jar_center.png') no-repeat center bottom / contain;
   }
   .jar-title{
     position:absolute;
     top:84px;
     left:50%;
     transform:translateX(-50%);
-    max-width:170px;
+    width:180px;
+    height:90px;
+    background:url('/static/assets/WordListImages/jar_center.png') no-repeat center / contain;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 10px;
     font-size:18px;
     font-weight:900;
     text-align:center;
@@ -436,7 +443,7 @@
     position:absolute;
     inset:10px;
     border-radius:999px;
-    background:#ffb94a;
+    background:url('/static/assets/WordListImages/badge_word_count.png') no-repeat center / contain;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -453,7 +460,7 @@
     width:82px;
     height:110px;
     border:none;
-    background:url('/static/assets/WordListImages/UseInQuiz.png') no-repeat center / contain;
+    background:url('/static/assets/WordListImages/btn_use_in_quiz.png') no-repeat center / contain;
     padding:0;
     cursor:pointer;
   }
@@ -465,7 +472,7 @@
     width:80px;
     height:80px;
     border:none;
-    background:url('/static/assets/WordListImages/View.png') no-repeat center / contain;
+    background:url('/static/assets/WordListImages/btn_view.png') no-repeat center / contain;
     cursor:pointer;
     padding:0;
   }
@@ -474,6 +481,14 @@
     left:50%;
     bottom:88px;
     transform:translateX(-50%);
+    width:180px;
+    height:50px;
+    background:url('/static/assets/WordListImages/sticker_info.png.png') no-repeat center / contain;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
     font-size:11px;
     font-weight:800;
     color:#5a4a2e;
@@ -489,7 +504,7 @@
     cursor:pointer;
     width:130px;
     height:44px;
-    background:url('/static/assets/WordListImages/delete.png') no-repeat center / contain;
+    background:url('/static/assets/WordListImages/btn_delete_puddle.png') no-repeat center / contain;
     padding:0;
   }
   .list-cell.is-favorite{filter:drop-shadow(0 0 12px rgba(255,201,74,0.85)) drop-shadow(0 8px 24px rgba(0,0,0,0.2));}
