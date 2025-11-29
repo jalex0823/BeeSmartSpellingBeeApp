@@ -2,10 +2,11 @@ import os
 import sys
 import subprocess
 
-def run(cmd: list[str]) -> int:
+def run(cmd: list) -> int:
     try:
         print(f"$ {' '.join(cmd)}")
-        return subprocess.call(cmd)
+        result = subprocess.run(cmd, capture_output=False, text=True)
+        return result.returncode
     except Exception as e:
         print(f"❌ Failed running command {' '.join(cmd)}: {e}")
         return 1
@@ -18,19 +19,24 @@ def main() -> int:
 
     # Show installed packages (top few) to confirm build layer
     try:
-        import pkg_resources  # type: ignore
+        import pkg_resources
         dists = sorted([(d.project_name, d.version) for d in pkg_resources.working_set])
         print("📦 Installed packages (sample):", ", ".join([f"{n}=={v}" for n, v in dists[:15]]), "...")
     except Exception as e:
         print(f"⚠️ Could not enumerate installed packages: {e}")
 
     # Try schema ensure (non-fatal)
-    try:
-        rc = run([sys.executable, "scripts/ensure_db_schema.py"]) 
-        if rc != 0:
-            print(f"⚠️ ensure_db_schema exited with code {rc} (continuing)")
-    except Exception as e:
-        print(f"⚠️ ensure_db_schema failed: {e}")
+    schema_script = os.path.join("scripts", "ensure_db_schema.py")
+    if os.path.exists(schema_script):
+        try:
+            print(f"🔧 Running schema migration: {schema_script}")
+            rc = run([sys.executable, schema_script]) 
+            if rc != 0:
+                print(f"⚠️ ensure_db_schema exited with code {rc} (continuing anyway)")
+        except Exception as e:
+            print(f"⚠️ ensure_db_schema failed: {e} (continuing anyway)")
+    else:
+        print(f"⚠️ Schema script not found at {schema_script} (skipping)")
 
     print("✅ Pre-deploy diagnostics complete. Proceeding to deploy.")
     return 0
