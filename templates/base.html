@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
-    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -554,15 +554,15 @@
     <!-- Mascot-3d.js disabled - not used (3D mascot disabled for performance) -->
     
     <!-- 3D Badge Renderer for GLB rank badges -->
-    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v=20251125"></script>
+    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v=20251129"></script>
     
     <!-- User Avatar System -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     
     <!-- Bee Swarm Animation for Quiz Page -->
-    <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}?v=20251129"></script>
     <!-- Global celebrations (persona confetti + stinger) -->
-    <script src="{{ url_for('static', filename='js/quiz-celebrations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quiz-celebrations.js') }}?v=20251129"></script>
     
     <!-- Mobile Viewport Handler for iOS/Android -->
     <script>
@@ -806,7 +806,7 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v=20251129"></script>
 
     <!-- PWA Service Worker Registration -->
     <script>
