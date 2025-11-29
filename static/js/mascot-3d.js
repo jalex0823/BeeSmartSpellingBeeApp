@@ -209,19 +209,32 @@ class SmartyBee3D {
     }
     
     loadGLB(glbPath) {
-        // Wait for GLTFLoader to be available (iOS Safari fix)
+        // Wait for GLTFLoader to be available (iOS Safari and Windows desktop fix)
         const waitForGLTFLoader = async () => {
             let attempts = 0;
             const maxAttempts = 50; // 5 seconds max wait
             
-            while (typeof THREE.GLTFLoader === 'undefined' && attempts < maxAttempts) {
+            // Check both THREE.GLTFLoader and window.THREE.GLTFLoader for cross-browser compatibility
+            while ((!window.THREE || !window.THREE.GLTFLoader) && attempts < maxAttempts) {
+                console.log(`⏳ Waiting for GLTFLoader... (${attempts + 1}/${maxAttempts})`);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
+                
+                // Early exit if found
+                if (window.THREE && window.THREE.GLTFLoader) {
+                    console.log('✅ GLTFLoader detected!');
+                    break;
+                }
             }
             
-            if (typeof THREE.GLTFLoader === 'undefined') {
+            if (!window.THREE || !window.THREE.GLTFLoader) {
+                console.error('❌ GLTFLoader not available after ' + attempts + ' attempts');
+                console.error('   window.THREE:', !!window.THREE);
+                console.error('   GLTFLoader:', window.THREE ? !!window.THREE.GLTFLoader : 'N/A');
                 throw new Error('GLTFLoader not available after 5 seconds');
             }
+            
+            console.log('✅ GLTFLoader ready for use');
         };
         
         // Start loading process

@@ -14669,20 +14669,34 @@
                 container.style.opacity = '1';
                 
                 // Wait for THREE.js and GLTFLoader to be available (critical for 3D rendering)
+                // GLTFLoader loads as a global constructor, not as THREE.GLTFLoader
                 let attempts = 0;
-                while ((typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') && attempts < 50) {
-                    console.log(`⏳ Waiting for THREE.js libraries... (attempt ${attempts + 1}/50)`);
+                const maxAttempts = 50; // 5 seconds max
+                while ((typeof THREE === 'undefined' || typeof window.THREE === 'undefined' || !window.THREE.GLTFLoader) && attempts < maxAttempts) {
+                    console.log(`⏳ Waiting for THREE.js libraries... (attempt ${attempts + 1}/${maxAttempts})`);
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
+                    
+                    // Double-check after each wait
+                    if (typeof THREE !== 'undefined' && window.THREE && window.THREE.GLTFLoader) {
+                        console.log('✅ THREE.js and GLTFLoader detected!');
+                        break;
+                    }
                 }
                 
-                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') {
-                    console.error('❌ THREE.js or GLTFLoader failed to load - showing fallback');
+                // Final validation
+                if (typeof THREE === 'undefined' || !window.THREE || !window.THREE.GLTFLoader) {
+                    console.error('❌ THREE.js or GLTFLoader failed to load after ' + attempts + ' attempts');
+                    console.error('   THREE available:', typeof THREE !== 'undefined');
+                    console.error('   window.THREE available:', !!window.THREE);
+                    console.error('   GLTFLoader available:', window.THREE ? !!window.THREE.GLTFLoader : false);
                     container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>';
                     return;
                 }
                 
                 console.log('✅ THREE.js and GLTFLoader loaded successfully');
+                console.log('   THREE version:', THREE.REVISION);
+                console.log('   GLTFLoader:', typeof THREE.GLTFLoader);
                 
                 try {
                     // Always fetch the current user's avatar first
