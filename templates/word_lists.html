@@ -1502,24 +1502,24 @@
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     /* --- Word List Jar layout overrides --- */
-    .list-cell-inner-jar{position:relative}
-    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; margin-top:8px;}
+    .list-cell-inner-jar{position:relative; min-height:380px; padding-bottom:60px;}
+    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; margin-top:8px; z-index:3;}
     .jar-title-img{width:160px; height:auto; filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));}
     .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; letter-spacing:.03em; text-align:center; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px;}
-    .jar-words{position:relative; display:flex; align-items:center; justify-content:center}
-    .jar-words-center{margin-top:20px}
-    .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center}
+    .jar-words{position:relative; display:flex; align-items:center; justify-content:center; z-index:2;}
+    .jar-words-center{margin-top:25px; margin-bottom:20px;}
+    .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:15px 0;}
     .jar-word-count{font-size:28px; font-weight:900; color:white;}
     .jar-word-label{font-size:13px; letter-spacing:0.06em; font-weight:900; color:white;}
-    .jar-date-center{display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:16px;}
-    .jar-date-label{width:120px; height:auto; display:block; margin:0 auto 2px}
-    .jar-date-text{font-size:14px; text-align:center; font-weight:700; color:#5b3b0a; position:absolute; margin-top:8px;}
-    .jar-delete-btn{background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:999px; font-weight:900; cursor:pointer; font-size:15px; box-shadow:0 4px 8px rgba(0,0,0,.2);}
-    .jar-delete-bottom-center{position:absolute; bottom:12px; left:50%; transform:translateX(-50%);}
-    .jar-use-leaf{position:absolute; top:45%; left:-8px; transform:translateY(-50%);}
-    .jar-use-left-side{left:-8px}
-    .jar-view-btn{position:absolute; top:45%; right:-8px; transform:translateY(-50%);}
-    .jar-view-right-side{right:-8px}
+    .jar-date-center{display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:20px; margin-bottom:25px; position:relative; z-index:2;}
+    .jar-date-label{width:120px; height:auto; display:block; margin:0 auto 6px;}
+    .jar-date-text{font-size:14px; text-align:center; font-weight:700; color:#5b3b0a; position:relative; margin-top:2px;}
+    .jar-delete-btn{background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:999px; font-weight:900; cursor:pointer; font-size:15px; box-shadow:0 4px 8px rgba(0,0,0,.2); z-index:3;}
+    .jar-delete-bottom-center{position:absolute; bottom:10px; left:50%; transform:translateX(-50%);}
+    .jar-use-leaf{position:absolute; top:50%; left:-8px; transform:translateY(-50%); z-index:4;}
+    .jar-use-left-side{left:-8px;}
+    .jar-view-btn{position:absolute; top:50%; right:-8px; transform:translateY(-50%); z-index:4;}
+    .jar-view-right-side{right:-8px;}
   `;
   document.head.appendChild(style);
 
