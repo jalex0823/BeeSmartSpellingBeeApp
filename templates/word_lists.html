@@ -983,7 +983,11 @@
 
     cell.innerHTML = `
       <div class="list-cell-inner-jar">
-        <!-- Title removed per new design -->
+        <!-- Title plate using dedicated image -->
+        <div class="jar-title-plate">
+          <img class="jar-title-img" src="/static/assets/WordListImages/title.png" alt="Title" />
+          <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+        </div>
 
         <!-- WORDS badge moved lower on the jar -->
         <div class="jar-words jar-words-lower">
@@ -1498,6 +1502,9 @@
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     /* --- Word List Jar layout overrides --- */
     .list-cell-inner-jar{position:relative}
+    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; margin-top:4px;}
+    .jar-title-img{width:160px; height:auto; filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));}
+    .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; letter-spacing:.03em; text-align:center; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .jar-words{position:relative; display:flex; align-items:center; justify-content:center}
     .jar-words-lower{margin-top:48px}
     .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center}
