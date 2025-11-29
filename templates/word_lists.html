@@ -983,10 +983,16 @@
 
     cell.innerHTML = `
       <div class="list-cell-inner-jar">
-        <!-- Title plate using dedicated image -->
-        <div class="jar-title-plate">
-          <img class="jar-title-img" src="/static/assets/WordListImages/title.png" alt="Title" />
-          <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+        <!-- Top row: leaf (left), title centered, magnifier (right) -->
+        <div class="jar-top-row">
+          <button class="jar-use-leaf jar-use-leaf-left" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
+          
+          <div class="jar-title-plate">
+            <img class="jar-title-img" src="/static/assets/WordListImages/title.png" alt="Title" />
+            <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+          </div>
+          
+          <button class="jar-view-btn jar-view-btn-right" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
         </div>
 
         <!-- WORDS badge moved lower on the jar -->
@@ -998,14 +1004,10 @@
           </div>
         </div>
 
-        <!-- Controls: leaf (left) and magnifier (right) -->
-        <button class="jar-use-leaf jar-use-leaf-left" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
-
-        <button class="jar-view-btn jar-view-btn-right" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
-
         <!-- Bottom area: dedicated date label centered, delete to the right -->
         <div class="jar-bottom">
           <div class="jar-date">
+            <img class="jar-date-label" src="/static/assets/ui/date.png" alt="" />
             <div class="jar-date-text">${formattedDate}</div>
           </div>
           <button class="jar-delete-btn jar-delete-bottom-right" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
@@ -1501,18 +1503,19 @@
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     /* --- Word List Jar layout overrides --- */
     .list-cell-inner-jar{position:relative}
-    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; margin-top:4px;}
+    .jar-top-row{position:relative; display:flex; align-items:center; justify-content:space-between; margin-top:4px; padding:0 10px;}
+    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; flex:1;}
     .jar-title-img{width:160px; height:auto; filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));}
-    .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; letter-spacing:.03em; text-align:center; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; letter-spacing:.03em; text-align:center; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px;}
     .jar-words{position:relative; display:flex; align-items:center; justify-content:center}
     .jar-words-lower{margin-top:48px}
     .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center}
     .jar-word-count{font-size:22px}
     .jar-word-label{font-size:11px; letter-spacing:0.06em}
-    .jar-use-leaf{position:absolute}
-    .jar-use-leaf-left{left:-6px}
-    .jar-view-btn{position:absolute}
-    .jar-view-btn-right{right:-6px}
+    .jar-use-leaf{position:relative; flex-shrink:0;}
+    .jar-use-leaf-left{left:0}
+    .jar-view-btn{position:relative; flex-shrink:0;}
+    .jar-view-btn-right{right:0}
     .jar-bottom{position:absolute; left:0; right:0; bottom:8px; display:flex; align-items:center; justify-content:center}
     .jar-date{display:flex; flex-direction:column; align-items:center; justify-content:center}
     .jar-date-label{width:72px; height:auto; display:block; margin:0 auto 4px}
