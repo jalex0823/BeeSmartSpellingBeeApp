@@ -248,14 +248,16 @@
     font-weight:800;
   }
 
-  /* HONEY JAR GRID */
+  /* HONEY JAR GRID - 2 per row */
   .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns:repeat(2, 1fr);
     gap:32px 24px;
     padding-top:12px;
     align-items:start;
     justify-items:center;
+    max-width:640px;
+    margin:0 auto;
   }
 
   /* wobble */
@@ -643,19 +645,18 @@
   .bee-sheet-btn.danger{background:#fff0f0}
 
   /* Responsive */
-  @media (max-width: 900px){
-    .grid{grid-template-columns:repeat(auto-fill, minmax(260px, 1fr))}
-    .list-cell{width:260px; height:360px}
-    .list-cell::before{width:220px; height:320px}
-    .list-cell::after{width:220px}
-    .jar-content{width:208px; height:228px; top:86px}
-  }
-  @media (max-width: 600px){
-    .grid{grid-template-columns:1fr; gap:28px}
+  @media (max-width: 768px){
+    .grid{
+      grid-template-columns:1fr;
+      max-width:320px;
+    }
     .list-cell{width:280px; height:380px}
     .list-cell::before{width:240px; height:340px}
     .list-cell::after{width:240px}
     .jar-content{width:228px; height:248px}
+  }
+  @media (max-width: 600px){
+    .list-board{padding:12px}
   }
 </style>
 {% endblock %}
