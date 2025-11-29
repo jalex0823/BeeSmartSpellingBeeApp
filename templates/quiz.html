@@ -8788,8 +8788,7 @@ function playThemedSound(soundType) {
 }
 </script>
 <div id="quizAvatarContainer" class="quiz-avatar-container loading" aria-label="Avatar display area"></div>
-<!-- Ensure avatar loader is available on quiz page -->
-<script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+<!-- Avatar loader is already included in base.html, no need to load twice -->
 <script>
 // Render the same avatar used on the main menu into the quiz container
 (function(){

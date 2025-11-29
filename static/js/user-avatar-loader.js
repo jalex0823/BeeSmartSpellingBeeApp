@@ -12,6 +12,9 @@
  * @date 2025-11-17
  */
 
+// Defensive guard: prevent redeclaration if script loads multiple times
+if (!window.UserAvatarLoader) {
+
 class UserAvatarLoader {
     constructor() {
         // User avatar state
@@ -685,8 +688,13 @@ class UserAvatarLoader {
     }
 }
 
-// Create global instance
-window.userAvatarLoader = new UserAvatarLoader();
+// Close defensive guard
+} // end if (!window.UserAvatarLoader)
+
+// Create global instance if not already created
+if (!window.userAvatarLoader) {
+    window.userAvatarLoader = new UserAvatarLoader();
+}
 
 // Deferred initialization
 let avatarInitialized = false;
