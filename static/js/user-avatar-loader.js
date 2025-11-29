@@ -12,8 +12,11 @@
  * @date 2025-11-17
  */
 
-// Defensive guard: prevent redeclaration if script loads multiple times
-if (!window.UserAvatarLoader) {
+// Robust definition wrapper (fixed block scope): ensure constructor always becomes globally accessible.
+// Previous version defined the class inside an if-block, making the identifier block-scoped and
+// causing a ReferenceError when accessed outside that block. This version defines & assigns atomically.
+(function(){
+    if (typeof window.UserAvatarLoader !== 'function') {
 
 class UserAvatarLoader {
     constructor() {
@@ -686,14 +689,24 @@ class UserAvatarLoader {
             };
         }
     }
-}
-
-// Close defensive guard
-} // end if (!window.UserAvatarLoader)
+        // Bind constructor to window (atomic definition)
+        window.UserAvatarLoader = UserAvatarLoader;
+    }
+})();
 
 // Create global instance if not already created
 if (!window.userAvatarLoader) {
-    window.userAvatarLoader = new UserAvatarLoader();
+    try {
+        const LoaderCtor = window.UserAvatarLoader; // guaranteed defined by wrapper
+        window.userAvatarLoader = new LoaderCtor();
+    } catch (e) {
+        console.error('❌ Avatar loader bootstrap failed:', e);
+    }
+}
+
+// Runtime verification (defensive): ensure constructor present after wrapper
+if (typeof window.UserAvatarLoader !== 'function') {
+    console.error('❌ UserAvatarLoader missing after initialization wrapper');
 }
 
 // Deferred initialization

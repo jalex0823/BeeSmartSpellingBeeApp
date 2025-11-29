@@ -28,12 +28,12 @@
             }
         </script>
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v={{ timestamp }}">
 
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
-    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}?v={{ timestamp }}"></script>
     
     <!-- Modern CSS Framework -->
     <style>
@@ -554,15 +554,15 @@
     <!-- Mascot-3d.js disabled - not used (3D mascot disabled for performance) -->
     
     <!-- 3D Badge Renderer for GLB rank badges -->
-    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v=20251125"></script>
-    
-    <!-- User Avatar System -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
-    
+    <!-- Static JS with cache-busting timestamp -->
+    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
+    {% block pre_avatar_loader %}{% endblock %}
+    <!-- User Avatar System (single global include) -->
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
     <!-- Bee Swarm Animation for Quiz Page -->
-    <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}?v={{ timestamp }}"></script>
     <!-- Global celebrations (persona confetti + stinger) -->
-    <script src="{{ url_for('static', filename='js/quiz-celebrations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quiz-celebrations.js') }}?v={{ timestamp }}"></script>
     
     <!-- Mobile Viewport Handler for iOS/Android -->
     <script>
@@ -806,7 +806,7 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v={{ timestamp }}"></script>
 
     <!-- PWA Service Worker Registration -->
     <script>
@@ -852,6 +852,43 @@
                 }
             } catch(_) {}
         })();
+    </script>
+    <!-- SVG viewBox sanitizer: converts percentage viewBox values to numeric units to silence console errors -->
+    <script>
+    (function(){
+        function sanitizeViewBoxes(){
+            try {
+                var svgs = document.querySelectorAll('svg[viewBox*="%"]');
+                svgs.forEach(function(svg){
+                    var raw = svg.getAttribute('viewBox');
+                    if(!raw) return;
+                    var parts = raw.trim().split(/\s+/);
+                    if(parts.length !== 4) return;
+                    var changed = false;
+                    var cleaned = parts.map(function(p){
+                        if(p.indexOf('%') !== -1){
+                            var num = parseFloat(p.replace('%',''));
+                            if(!isNaN(num)){
+                                changed = true;
+                                // Interpret percentage relative to 100 units (e.g., 90% -> 90)
+                                return (num).toString();
+                            }
+                            return '0';
+                        }
+                        return p;
+                    });
+                    if(changed && cleaned.every(function(x){return /^-?\d+(\.\d+)?$/.test(x);})){
+                        svg.setAttribute('viewBox', cleaned.join(' '));
+                    }
+                });
+            } catch(e){ /* silent */ }
+        }
+        if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', sanitizeViewBoxes);
+        } else {
+            sanitizeViewBoxes();
+        }
+    })();
     </script>
 </body>
 </html>

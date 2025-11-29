@@ -369,8 +369,8 @@ if ('speechSynthesis' in window) {
 </script>
 
 <!-- Three.js for 3D Avatar -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+<!-- Three.js already included via base.html; duplicate include removed -->
+<!-- User avatar loader already included via base.html; duplicate include removed -->
 
 <script>
 // Load user avatar on results page
