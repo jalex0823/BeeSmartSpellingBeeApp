@@ -20,15 +20,15 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
-    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
+    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v=20251129"></script>
     <!-- Matrix Rain Effect -->
-    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     
@@ -74,11 +74,11 @@
         })();
     </script>
     <!-- Mascot Bee 3D Component -->
-    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}?v=20251129"></script>
     <!-- User Avatar Loader -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
-    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
     {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
@@ -2578,7 +2578,7 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -50%) scale(1.5) !important; /* ENHANCED: Larger scale for maximum avatar presence */
+            transform: translate(-50%, -50%) !important; /* Centered without scaling to prevent stretching */
             pointer-events: none;
             z-index: 100 !important;
         }
@@ -14667,6 +14667,22 @@
                 container.style.display = 'block';
                 container.style.visibility = 'visible';
                 container.style.opacity = '1';
+                
+                // Wait for THREE.js and GLTFLoader to be available (critical for 3D rendering)
+                let attempts = 0;
+                while ((typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') && attempts < 50) {
+                    console.log(`⏳ Waiting for THREE.js libraries... (attempt ${attempts + 1}/50)`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') {
+                    console.error('❌ THREE.js or GLTFLoader failed to load - showing fallback');
+                    container.innerHTML = '<div style="font-size: 120px; text-align: center; padding: 50px 0;">🐝</div>';
+                    return;
+                }
+                
+                console.log('✅ THREE.js and GLTFLoader loaded successfully');
                 
                 try {
                     // Always fetch the current user's avatar first
