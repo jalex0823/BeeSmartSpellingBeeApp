@@ -31,12 +31,12 @@ def load_buzz_dust_config() -> dict:
                 }
             },
             "bee_classes": [
-                {"id": "novice", "label": "Novice Bee", "min_buzz_dust": 0},
-                {"id": "apprentice", "label": "Apprentice Bee", "min_buzz_dust": 500},
-                {"id": "scholar", "label": "Scholar Bee", "min_buzz_dust": 2500},
-                {"id": "elite", "label": "Elite Bee", "min_buzz_dust": 10000},
-                {"id": "magistrate", "label": "Magistrate Bee", "min_buzz_dust": 50000},
-                {"id": "master", "label": "Buzz Dust Master", "min_buzz_dust": 100000}
+                {"id": "novice", "label": "Novice Bee", "min_buzz_dust": 0, "badge_image": "Novice.png"},
+                {"id": "apprentice", "label": "Apprentice Bee", "min_buzz_dust": 500, "badge_image": "Apprentice.png"},
+                {"id": "scholar", "label": "Scholar Bee", "min_buzz_dust": 2500, "badge_image": "Scholar.png"},
+                {"id": "elite", "label": "Elite Bee", "min_buzz_dust": 10000, "badge_image": "Elete.png"},
+                {"id": "magistrate", "label": "Magistrate Bee", "min_buzz_dust": 50000, "badge_image": "Magistrate.png"},
+                {"id": "master", "label": "Buzz Dust Master", "min_buzz_dust": 100000, "badge_image": "BuzzDustMaster.png"}
             ]
         }
 

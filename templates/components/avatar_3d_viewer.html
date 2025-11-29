@@ -100,7 +100,8 @@
 
 <!-- Three.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- Note: We only use GLB avatars now, OBJ/MTL loaders removed -->
+<!-- GLTFLoader for GLB avatars -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
@@ -188,7 +189,7 @@ class Avatar3DViewer {
         });
     }
     
-    loadAvatar(objUrl, mtlUrl, textureUrl, avatarName = null) {
+    loadAvatar(glbUrl, avatarName = null) {
         this.showLoading(true);
         this.avatarName = avatarName;
         
@@ -198,52 +199,35 @@ class Avatar3DViewer {
             this.currentModel = null;
         }
         
-        const mtlLoader = new THREE.MTLLoader();
+        const loader = new THREE.GLTFLoader();
         
-        // Set the path for textures
-        const basePath = objUrl.substring(0, objUrl.lastIndexOf('/') + 1);
-        mtlLoader.setPath(basePath);
-        
-        mtlLoader.load(
-            mtlUrl,
-            (materials) => {
-                materials.preload();
+        loader.load(
+            glbUrl,
+            (gltf) => {
+                this.currentModel = gltf.scene;
                 
-                const objLoader = new THREE.OBJLoader();
-                objLoader.setMaterials(materials);
+                // Center and scale the model
+                const box = new THREE.Box3().setFromObject(this.currentModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
                 
-                objLoader.load(
-                    objUrl,
-                    (object) => {
-                        this.currentModel = object;
-                        
-                        // Center and scale the model
-                        const box = new THREE.Box3().setFromObject(object);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const scale = 5 / maxDim;
-                        
-                        object.scale.multiplyScalar(scale);
-                        object.position.sub(center.multiplyScalar(scale));
-                        
-                        this.scene.add(object);
-                        this.showLoading(false);
-                    },
-                    (progress) => {
-                        const percent = (progress.loaded / progress.total) * 100;
-                        console.log(`Loading: ${percent.toFixed(0)}%`);
-                    },
-                    (error) => {
-                        console.error('Error loading OBJ:', error);
-                        this.showError(this.avatarName);
-                    }
-                );
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 5 / maxDim;
+                
+                this.currentModel.scale.multiplyScalar(scale);
+                this.currentModel.position.sub(center.multiplyScalar(scale));
+                
+                this.scene.add(this.currentModel);
+                this.showLoading(false);
             },
-            undefined,
+            (progress) => {
+                if (progress.total > 0) {
+                    const percent = (progress.loaded / progress.total) * 100;
+                    console.log(`Loading: ${percent.toFixed(0)}%`);
+                }
+            },
             (error) => {
-                console.error('Error loading MTL:', error);
+                console.error('Error loading GLB:', error);
                 this.showError(this.avatarName);
             }
         );
@@ -293,11 +277,9 @@ function init3DViewer() {
 function load3DAvatar(avatarId, avatarName = null) {
     const viewer = init3DViewer();
     
-    const basePath = `/static/assets/avatars/${avatarId}`;
-    const objUrl = `${basePath}/model.obj`;
-    const mtlUrl = `${basePath}/model.mtl`;
-    const textureUrl = `${basePath}/texture.png`;
+    // Use GLB file from the glb_files directory
+    const glbUrl = `/static/assets/avatars/glb_files/${avatarId}.glb`;
     
-    viewer.loadAvatar(objUrl, mtlUrl, textureUrl, avatarName);
+    viewer.loadAvatar(glbUrl, avatarName);
 }
 </script>

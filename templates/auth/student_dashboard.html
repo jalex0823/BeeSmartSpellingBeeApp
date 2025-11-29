@@ -857,17 +857,15 @@
                                         const collectionBadgeImg = $('#collection-rank-badge-img');
                                         const collectionProgressText = $('#collection-rank-progress-text');
                                         
-                                        if (collectionRankName) collectionRankName.textContent = buzzData.current_class.label || 'Novice Bee';
-                                        if (collectionBuzzTotal) collectionBuzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
-                                        if (collectionBadgeImg && buzzData.current_class.badge_image) {
-                                            // Construct the badge URL from badge_image filename
-                                            const badgeUrl = `/static/assets/badges/glb_files/${buzzData.current_class.badge_image}`;
-                                            collectionBadgeImg.src = badgeUrl;
-                                            collectionBadgeImg.alt = buzzData.current_class.label + ' Rank Badge';
-                                            console.log('✅ Collection badge updated:', badgeUrl);
-                                        }
-                                        
-                                        // Update collection progress text
+                        if (collectionRankName) collectionRankName.textContent = buzzData.current_class.label || 'Novice Bee';
+                        if (collectionBuzzTotal) collectionBuzzTotal.textContent = (buzzData.total_buzz_dust || 0).toLocaleString();
+                        if (collectionBadgeImg && buzzData.current_class.badge_image) {
+                            // Construct the badge URL from badge_image filename (PNG badges in main badges folder)
+                            const badgeUrl = `/static/assets/badges/${buzzData.current_class.badge_image}`;
+                            collectionBadgeImg.src = badgeUrl;
+                            collectionBadgeImg.alt = buzzData.current_class.label + ' Rank Badge';
+                            console.log('✅ Collection badge updated:', badgeUrl);
+                        }                                        // Update collection progress text
                                         if (collectionProgressText) {
                                             if (buzzData.next_class && buzzData.next_class.threshold) {
                                                 const current = buzzData.total_buzz_dust || 0;
@@ -998,7 +996,7 @@
                     <div class="badge-rarity-label" style="background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%); color: white; font-weight: 700;">RANK</div>
                     <div style="margin: 1rem 0;">
                         <img id="collection-rank-badge-img" 
-                             src="{{ url_for('static', filename='assets/badges/glb_files/Novice.glb') }}" 
+                             src="{{ url_for('static', filename='assets/badges/Novice.png') }}" 
                              alt="Buzz Dust Rank Badge" 
                              style="width: 80px; 
                                     height: 80px; 
