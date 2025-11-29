@@ -365,8 +365,35 @@ class SmartyBee3D {
     }
 
     addFallbackBee() {
-        // No fallback - GLB avatars only
-        console.warn('GLB avatar failed to load. No fallback provided.');
+        // iOS fallback: Show high-quality 2D thumbnail instead of emoji
+        console.warn('⚠️ GLB avatar failed to load - showing 2D thumbnail fallback');
+        
+        // Use MascotBee thumbnail as fallback
+        const thumbnailUrl = '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png';
+        
+        this.container.innerHTML = `
+            <div style="
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+            ">
+                <img src="${thumbnailUrl}" 
+                     alt="Mascot Bee" 
+                     style="
+                         max-width: 90%;
+                         max-height: 90%;
+                         object-fit: contain;
+                         filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+                     "
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'font-size: 4rem; animation: bounce 1s infinite;\\'>🐝</div>';"
+                />
+            </div>
+        `;
+        
+        console.log('✅ 2D fallback loaded:', thumbnailUrl);
     }
 
     animate() {
