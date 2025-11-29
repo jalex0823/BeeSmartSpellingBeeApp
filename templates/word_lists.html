@@ -248,185 +248,261 @@
     font-weight:800;
   }
 
-  /* UPDATED: 2-per-row hex grid for better organization and title visibility */
+  /* HONEY JAR GRID */
   .grid{
     display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:24px 20px;
-    padding-top:6px;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:32px 24px;
+    padding-top:12px;
     align-items:start;
     justify-items:center;
   }
 
   /* wobble */
   @keyframes buzzWobble{
-    0%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
-    30%{transform:translateY(-10px) scale(1.04) rotate(-1.2deg)}
-    60%{transform:translateY(-10px) scale(1.04) rotate(1deg)}
-    100%{transform:translateY(-10px) scale(1.04) rotate(0deg)}
+    0%{transform:translateY(0) scale(1)}
+    25%{transform:translateY(-3px) scale(1.02)}
+    50%{transform:translateY(0) scale(1)}
+    75%{transform:translateY(-2px) scale(1.01)}
+    100%{transform:translateY(0) scale(1)}
   }
 
+  /* HONEY JAR SHAPE */
   .list-cell{
     position:relative;
     text-decoration:none;
     color:inherit;
     cursor:pointer;
-    clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
-    background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
-    box-shadow:var(--shadow-med);
-    width: 420px;          /* larger width for 2 per row */
-    height: 340px;         /* increased height for title + content */
+    width: 280px;
+    height: 380px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
-    padding:24px 20px 20px;
+    padding:0;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));
   }
-  .list-cell:nth-child(odd){transform:translateY(8px)}
-  .list-cell:nth-child(even){transform:translateY(-8px)}
+  
+  /* Honey jar container with transparent background */
   .list-cell::before{
     content:"";
     position:absolute;
-    inset:2px;
-    clip-path:inherit;
-    background:radial-gradient(circle at 20% 0, rgba(255,255,255,.7), transparent 60%);
-    opacity:.9;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:240px;
+    height:340px;
+    background:transparent;
+    border:6px solid #3e3e3e;
+    border-radius:0 0 80px 80px / 0 0 30px 30px;
+    z-index:1;
     pointer-events:none;
   }
+  
+  /* Jar lid/cap - brown wavy */
+  .list-cell::after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:240px;
+    height:80px;
+    background:linear-gradient(180deg, #c9a36a 0%, #a5825a 50%, #c9a36a 100%);
+    border:6px solid #3e3e3e;
+    border-bottom:none;
+    border-radius:14px 14px 0 0;
+    clip-path: polygon(
+      10% 0%, 90% 0%,
+      100% 40%, 100% 60%,
+      95% 68%, 90% 75%, 85% 82%, 80% 88%, 75% 92%, 70% 95%, 65% 97%, 60% 99%, 55% 100%, 45% 100%, 40% 99%, 35% 97%, 30% 95%, 25% 92%, 20% 88%, 15% 82%, 10% 75%, 5% 68%, 0% 60%,
+      0% 40%
+    );
+    z-index:4;
+    pointer-events:none;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.15);
+  }
+  
   .list-cell:hover{
-    animation:buzzWobble .35s ease-out 1;
-    box-shadow:var(--shadow-deep);
-    filter:brightness(1.06);
+    animation:buzzWobble .4s ease-out 1;
+    filter: drop-shadow(0 12px 28px rgba(0,0,0,0.22)) brightness(1.03);
   }
 
-  /* List title at top of hexagon */
+  /* List title at top of jar (on lid) */
   .list-cell-title{
-    font-size:21px;
-    font-weight:900;
-    color:var(--bee-brown);
-    text-align:center;
-    margin-top:42px;
-    margin-bottom:8px;
-    padding:0 12px;
-    max-width:100%;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-    position:relative;
-    z-index:2;
-    text-shadow:0 1px 3px rgba(255,255,255,.6);
-    line-height:1.3;
-  }
-
-  /* FAVORITE glow ring */
-  .list-cell.is-favorite{
-    box-shadow:
-      0 0 0 3px rgba(255,255,255,.9),
-      0 0 0 7px rgba(255,201,74,.95),
-      0 0 30px rgba(255,201,74,.9),
-      var(--shadow-deep);
-    animation: favPulse 2.4s ease-in-out infinite;
-  }
-  @keyframes favPulse{
-    0%,100%{filter:brightness(1.05)}
-    50%{filter:brightness(1.12)}
-  }
-
-  /* NEW: Tap Label at top */
-  .tap-label{
     position:absolute;
     top:12px;
     left:50%;
     transform:translateX(-50%);
-    background:rgba(255,255,255,.96);
-    border-radius:var(--radius-pill);
-    padding:4px 10px;
-    font-size:11px;
+    font-size:17px;
     font-weight:900;
-    color:var(--bee-brown);
-    box-shadow:0 3px 10px rgba(0,0,0,.15);
-    z-index:2;
+    color:#1f1f1f;
+    text-align:center;
+    padding:0 16px;
+    max-width:200px;
+    overflow:hidden;
+    text-overflow:ellipsis;
     white-space:nowrap;
+    z-index:5;
+    text-shadow:0 1px 2px rgba(255,255,255,.4);
+    line-height:1.2;
   }
 
-  /* badge */
-  .list-cell-badge{
+  /* FAVORITE glow ring */
+  .list-cell.is-favorite{
+    filter: drop-shadow(0 0 12px rgba(255,201,74,0.8)) drop-shadow(0 8px 24px rgba(0,0,0,0.2));
+    animation: favPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes favPulse{
+    0%,100%{filter: drop-shadow(0 0 12px rgba(255,201,74,0.8)) drop-shadow(0 8px 24px rgba(0,0,0,0.2))}
+    50%{filter: drop-shadow(0 0 20px rgba(255,201,74,0.95)) drop-shadow(0 8px 28px rgba(0,0,0,0.25)) brightness(1.05)}
+  }
+
+  /* Jar content area - cream/beige background */
+  .jar-content{
     position:absolute;
-    top:42px;
+    top:86px;
     left:50%;
     transform:translateX(-50%);
-    background:rgba(255,255,255,.96);
+    width:228px;
+    height:248px;
+    background:linear-gradient(180deg, #fffbf0 0%, #fff4d9 100%);
+    border-radius:0 0 74px 74px / 0 0 28px 28px;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:16px 12px 12px;
+  }
+
+  /* Word count badge on jar */
+  .list-cell-badge{
+    position:absolute;
+    top:52px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(255,255,255,.98);
     border-radius:var(--radius-pill);
-    padding:5px 10px;
-    font-size:12px;
+    padding:6px 14px;
+    font-size:15px;
     font-weight:900;
     color:var(--bee-brown);
-    box-shadow:0 3px 10px rgba(0,0,0,.15);
-    z-index:2;
+    box-shadow:0 3px 12px rgba(0,0,0,.2);
+    z-index:5;
     display:flex;
     align-items:center;
     gap:6px;
+    border:3px solid #3e3e3e;
   }
   .list-cell-badge.empty {
     background:linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
     color:#fff;
-    box-shadow:0 3px 10px rgba(243,156,18,0.3);
+    box-shadow:0 3px 12px rgba(243,156,18,0.35);
   }
 
-  /* actions - evenly spaced 3-column grid in center of hexagon */
+  /* actions - centered icon buttons in jar */
   .list-cell-actions{
     position:relative;
     z-index:3;
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:8px 14px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    gap:16px;
     width:100%;
-    max-width:220px;
-    margin:12px auto 16px;
+    margin:16px 0 12px;
+  }
+  .action-btn-wrapper{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .action-label{
+    font-size:12px;
+    font-weight:900;
+    color:#1f1f1f;
+    text-align:center;
+    line-height:1.2;
+    max-width:60px;
   }
   .list-cell-action-btn{
-    width:100%;
-    height:42px;
+    width:52px;
+    height:52px;
     border:none;
     cursor:pointer;
-    border-radius:12px;
-    font-size:15px;
+    border-radius:50%;
+    font-size:20px;
     font-weight:900;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:rgba(255,255,255,.95);
-    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    background:rgba(255,255,255,.96);
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
     transition:transform var(--transition-fast), filter var(--transition-fast);
-    padding:6px;
+    padding:0;
   }
-  .list-cell-action-btn:hover{transform:translateY(-2px) scale(1.06)}
-  .list-cell-action-btn.favorite{font-size:18px}
+  .list-cell-action-btn:hover{transform:translateY(-3px) scale(1.08)}
+  .list-cell-action-btn.quiz{font-size:24px; background:#4caf50; color:#fff}
+  .list-cell-action-btn.view{background:#90caf9; font-size:22px}
+  .list-cell-action-btn.edit{background:#ffb74d; font-size:22px}
   
-  /* Delete button at bottom - full width */
+  /* Date and meta info */
+  .list-cell-meta{
+    font-size:12px;
+    font-weight:800;
+    color:#5a4a2e;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    opacity:.92;
+    text-align:center;
+    margin-top:8px;
+  }
+  .list-cell-meta .row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  
+  /* Separator line */
+  .jar-separator{
+    width:100%;
+    height:2px;
+    background:linear-gradient(90deg, transparent 0%, #d4c5a8 50%, transparent 100%);
+    margin:12px 0;
+  }
+  
+  /* Delete button at bottom of jar */
   .list-cell-delete-wrapper{
     position:absolute;
-    bottom:14px;
+    bottom:20px;
     left:50%;
     transform:translateX(-50%);
     z-index:3;
-    width:calc(100% - 70px);
-    max-width:220px;
+    width:calc(100% - 40px);
+    max-width:190px;
   }
   .list-cell-action-btn.delete{
     width:100%;
-    height:36px;
-    background:linear-gradient(135deg, #ffb3b3 0%, #ff6b6b 100%);
+    height:40px;
+    background:linear-gradient(135deg, #ef5350 0%, #c62828 100%);
     color:#fff;
     border-radius:var(--radius-pill);
-    font-size:14px;
+    font-size:15px;
     font-weight:900;
-    box-shadow:0 4px 12px rgba(255,107,107,0.4);
+    box-shadow:0 4px 12px rgba(239,83,80,0.4);
+    border:3px solid rgba(62,62,62,0.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
   }
   .list-cell-action-btn.delete:hover{
-    background:linear-gradient(135deg, #ff9999 0%, #ff5252 100%);
-    box-shadow:0 6px 16px rgba(255,107,107,0.5);
+    background:linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+    box-shadow:0 6px 16px rgba(239,83,80,0.5);
   }
 
   .list-cell-inner{
@@ -434,34 +510,7 @@
     z-index:2;
     text-align:center;
     width:100%;
-    max-width:85%;
-    margin:2px auto 0;
-  }
-  .list-cell-name{
-    font-weight:900;
-    font-size:18px;
-    margin-top:6px;
-    margin-bottom:6px;
-    text-shadow:0 1px 2px rgba(0,0,0,.2);
-    line-height:1.2;
-    max-height:2.4em;
-    overflow:hidden;
-  }
-
-  .list-cell-meta{
-    font-size:11px;
-    font-weight:800;
-    color:#3a250f;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    opacity:.96;
-  }
-  .list-cell-meta .row{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:6px;
+    margin:4px auto 0;
   }
 
   /* empty state */
@@ -530,25 +579,26 @@
 
   /* progress bar for quiz usage */
   .progress-wrap{
-    margin-top:8px;
+    margin-top:12px;
     width:100%;
-    padding:0 10px;
+    padding:0 8px;
   }
   .progress-label{
     font-size:11px;
     font-weight:800;
-    color:#4a2b0e;
-    margin-bottom:3px;
+    color:#6b5a3e;
+    margin-bottom:4px;
     text-align:center;
   }
   .progress-bar{
     position:relative;
     width:100%;
-    height:7px;
+    height:8px;
     border-radius:999px;
-    background:rgba(255,255,255,.7);
+    background:rgba(255,255,255,.8);
     overflow:hidden;
-    box-shadow:inset 0 1px 2px rgba(0,0,0,.15);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.15);
+    border:2px solid rgba(62,62,62,0.3);
   }
   .progress-fill{
     height:100%;
@@ -592,17 +642,20 @@
   }
   .bee-sheet-btn.danger{background:#fff0f0}
 
-  /* Responsive: 2 columns desktop, 1 column mobile */
-  @media (max-width: 1024px){
-    .list-cell{width:380px;height:320px}
-  }
+  /* Responsive */
   @media (max-width: 900px){
-    .grid{grid-template-columns:1fr}
-    .list-cell{width:420px;height:340px}
+    .grid{grid-template-columns:repeat(auto-fill, minmax(260px, 1fr))}
+    .list-cell{width:260px; height:360px}
+    .list-cell::before{width:220px; height:320px}
+    .list-cell::after{width:220px}
+    .jar-content{width:208px; height:228px; top:86px}
   }
   @media (max-width: 600px){
-    .list-cell{width:95%;height:320px}
-    .list-cell-title{font-size:18px}
+    .grid{grid-template-columns:1fr; gap:28px}
+    .list-cell{width:280px; height:380px}
+    .list-cell::before{width:240px; height:340px}
+    .list-cell::after{width:240px}
+    .jar-content{width:228px; height:248px}
   }
 </style>
 {% endblock %}
@@ -932,39 +985,40 @@
     cell.innerHTML = `
       <div class="list-cell-title" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
       
-      <div class="tap-label">${tapLabel}</div>
+      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `${list.word_count} Words`}</div>
       
-      <div class="list-cell-actions">
-        <button class="list-cell-action-btn favorite" title="Pin list"
-          onclick="toggleFavorite(event, ${list.id})">${star}</button>
-        <button class="list-cell-action-btn view" title="View list"
-          onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
-        <button class="list-cell-action-btn edit" title="Edit list"
-          onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
-      </div>
-      
-      <div class="list-cell-delete-wrapper">
-        <button class="list-cell-action-btn delete" title="Delete list"
-          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
-      </div>
-
-      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `≡ ${list.word_count} words`}</div>
-
-      <div class="list-cell-inner">
-
-        <div class="list-cell-meta">
-          <div class="row">📅 ${formattedDate}</div>
-          ${isFav ? `<div class="row">⭐ Pinned List</div>` : ``}
+      <div class="jar-content">
+        <div class="list-cell-actions">
+          <div class="action-btn-wrapper">
+            <button class="list-cell-action-btn quiz" title="Use in quiz"
+              onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id})">?</button>
+            <div class="action-label">Use in<br>quiz</div>
+          </div>
+          <div class="action-btn-wrapper">
+            <button class="list-cell-action-btn edit" title="Edit list"
+              onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
+            <div class="action-label">Edit</div>
+          </div>
+          <div class="action-btn-wrapper">
+            <button class="list-cell-action-btn view" title="View list"
+              onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
+            <div class="action-label">View</div>
+          </div>
         </div>
 
-        ${pct !== null ? `
-          <div class="progress-wrap">
-            <div class="progress-label">Used ${pct}% in quizzes</div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width:${pct}%;"></div>
-            </div>
+        <div class="list-cell-inner">
+          <div class="list-cell-meta">
+            <div class="row">📅 ${formattedDate}</div>
+            ${pct !== null ? `<div class="row">Used ${pct}% in quizzes</div>` : `<div class="row">Used 0% in quizzes</div>`}
           </div>
-        ` : ``}
+        </div>
+        
+        <div class="jar-separator"></div>
+
+        <div class="list-cell-delete-wrapper">
+          <button class="list-cell-action-btn delete" title="Delete list"
+            onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+        </div>
       </div>
     `;
     return cell;
