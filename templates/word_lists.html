@@ -269,69 +269,36 @@
     100%{transform:translateY(0) scale(1)}
   }
 
-  /* HONEY JAR SHAPE */
+  /* =============================================
+     ORIGINAL JAR CARD (CSS drawn) -- neutralized
+     We keep the selector for backward compatibility
+     but override with the new Pixar jar artwork card.
+     ============================================= */
   .list-cell{
     position:relative;
     text-decoration:none;
     color:inherit;
     cursor:pointer;
-    width: 280px;
-    height: 420px;
+    width:260px; /* slightly narrower for art proportions */
+    height:420px;
     display:flex;
-    flex-direction:column;
     align-items:center;
-    justify-content:flex-start;
+    justify-content:center;
     padding:0;
     margin-bottom:30px;
-    transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
-    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));
+    filter:drop-shadow(0 8px 20px rgba(0,0,0,0.15));
+    transition:transform var(--transition-med), filter var(--transition-med);
   }
   
   /* Honey jar glass body */
-  .list-cell::before{
-    content:"";
-    position:absolute;
-    top:60px;
-    left:50%;
-    transform:translateX(-50%);
-    width:240px;
-    height:350px;
-    background:rgba(255, 250, 240, 0.3);
-    border:6px solid #3e3e3e;
-    border-top:none;
-    border-radius:0 0 100px 100px / 0 0 40px 40px;
-    z-index:1;
-    pointer-events:none;
-    box-shadow:inset 0 4px 12px rgba(0,0,0,0.08);
-  }
+  /* Neutralize old pseudo elements */
+  .list-cell::before, .list-cell::after{content:none !important; display:none !important;}
   
   /* Jar lid/cap - brown wavy top */
-  .list-cell::after{
-    content:"";
-    position:absolute;
-    top:40px;
-    left:50%;
-    transform:translateX(-50%);
-    width:200px;
-    height:60px;
-    background:linear-gradient(180deg, #daa520 0%, #b8860b 50%, #daa520 100%);
-    border:5px solid #3e3e3e;
-    border-bottom:none;
-    border-radius:12px 12px 0 0;
-    clip-path: polygon(
-      0% 35%, 5% 25%, 10% 18%, 15% 13%, 20% 10%, 25% 8%, 30% 7%, 35% 8%, 40% 10%,
-      45% 13%, 50% 18%, 55% 13%, 60% 10%, 65% 8%, 70% 7%, 75% 8%, 80% 10%, 85% 13%,
-      90% 18%, 95% 25%, 100% 35%, 100% 100%, 0% 100%
-    );
-    z-index:4;
-    pointer-events:none;
-    box-shadow:0 2px 8px rgba(0,0,0,0.2), inset 0 1px 3px rgba(255,255,255,0.3);
-  }
+  /* New hover treatment */
+  .list-cell:hover{transform:translateY(-4px) scale(1.02); filter:drop-shadow(0 12px 28px rgba(0,0,0,0.22));}
   
-  .list-cell:hover{
-    animation:buzzWobble .4s ease-out 1;
-    filter: drop-shadow(0 12px 28px rgba(0,0,0,0.22)) brightness(1.03);
-  }
+  /* Remove old animation reference (optional keep) */
 
   /* List title at top of jar (on lid) */
   .list-cell-title{
@@ -365,61 +332,13 @@
   }
 
   /* Jar content area - cream/beige background */
-  .jar-content{
-    position:absolute;
-    top:105px;
-    left:50%;
-    transform:translateX(-50%);
-    width:220px;
-    height:295px;
-    background:linear-gradient(180deg, #fffbf0 0%, #fff4d9 100%);
-    border-radius:0 0 90px 90px / 0 0 36px 36px;
-    z-index:2;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-    padding:16px 12px 12px;
-    overflow:hidden;
-  }
+  .jar-content{display:none !important;}
 
   /* Word count badge on jar */
-  .list-cell-badge{
-    position:absolute;
-    top:78px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(255,255,255,.98);
-    border-radius:var(--radius-pill);
-    padding:6px 14px;
-    font-size:15px;
-    font-weight:900;
-    color:var(--bee-brown);
-    box-shadow:0 3px 12px rgba(0,0,0,.2);
-    z-index:5;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    border:3px solid #3e3e3e;
-    pointer-events:none;
-  }
-  .list-cell-badge.empty {
-    background:linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-    color:#fff;
-    box-shadow:0 3px 12px rgba(243,156,18,0.35);
-  }
+  .list-cell-badge{display:none !important;}
 
   /* actions - centered icon buttons in jar */
-  .list-cell-actions{
-    position:relative;
-    z-index:3;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    gap:12px;
-    width:100%;
-    margin:12px 0 8px;
-  }
+  .list-cell-actions{display:none !important;}
   .action-btn-wrapper{
     display:flex;
     flex-direction:column;
@@ -457,17 +376,7 @@
   .list-cell-action-btn.edit{background:#ffb74d; font-size:20px}
   
   /* Date and meta info */
-  .list-cell-meta{
-    font-size:11px;
-    font-weight:800;
-    color:#5a4a2e;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    opacity:.92;
-    text-align:center;
-    margin-top:4px;
-  }
+  .list-cell-meta{display:none !important;}
   .list-cell-meta .row{
     display:flex;
     align-items:center;
@@ -476,42 +385,116 @@
   }
   
   /* Separator line */
-  .jar-separator{
-    width:90%;
-    height:1px;
-    background:linear-gradient(90deg, transparent 0%, #d4c5a8 50%, transparent 100%);
-    margin:8px auto;
-  }
+  .jar-separator{display:none !important;}
   
   /* Delete button at bottom of jar */
-  .list-cell-delete-wrapper{
+  .list-cell-delete-wrapper{display:none !important;}
+
+  /* ================= NEW PIXAR-STYLE JAR UI ================= */
+  .list-cell-inner-jar{
+    position:relative;
+    width:220px;
+    height:380px;
+    background:url('/static/assets/ui/jars/wordlist_jar_base.png') no-repeat center bottom / contain;
+  }
+  /* Fallback if the new folder isn't present yet: attempt existing asset */
+  .list-cell-inner-jar.fallback{
+    background:url('/static/assets/WordListImages/Jar.png') no-repeat center bottom / contain;
+  }
+  .jar-title{
     position:absolute;
-    bottom:24px;
+    top:84px;
     left:50%;
     transform:translateX(-50%);
-    z-index:3;
-    width:calc(100% - 48px);
-    max-width:180px;
-  }
-  .list-cell-action-btn.delete{
-    width:100%;
-    height:38px;
-    background:linear-gradient(135deg, #ef5350 0%, #c62828 100%);
-    color:#fff;
-    border-radius:var(--radius-pill);
-    font-size:14px;
+    max-width:170px;
+    font-size:18px;
     font-weight:900;
-    box-shadow:0 4px 12px rgba(239,83,80,0.4);
-    border:3px solid #3e3e3e;
+    text-align:center;
+    color:#7a4b2b;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-shadow:0 1px 2px rgba(255,255,255,0.6);
+    pointer-events:none;
+  }
+  .jar-words{
+    position:absolute;
+    top:155px;
+    left:50%;
+    transform:translateX(-50%);
+    width:120px;
+    height:120px;
+  }
+  .jar-word-ring{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    padding:6px;
+    background:conic-gradient(#ffc94a 0deg,#ffc94a calc(var(--pct,0)*3.6deg),transparent calc(var(--pct,0)*3.6deg));
+  }
+  .jar-word-badge{
+    position:absolute;
+    inset:10px;
+    border-radius:999px;
+    background:#ffb94a;
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:6px;
+    font-weight:900;
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.25);
+    box-shadow:0 3px 8px rgba(0,0,0,.25);
   }
-  .list-cell-action-btn.delete:hover{
-    background:linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
-    box-shadow:0 6px 16px rgba(239,83,80,0.5);
+  .jar-use-leaf{
+    position:absolute;
+    left:-12px;
+    top:185px;
+    width:82px;
+    height:110px;
+    border:none;
+    background:url('/static/assets/WordListImages/UseInQuiz.png') no-repeat center / contain;
+    padding:0;
+    cursor:pointer;
   }
+  .jar-use-leaf-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:#ffffff; text-align:center;}
+  .jar-view-btn{
+    position:absolute;
+    right:-8px;
+    top:185px;
+    width:80px;
+    height:80px;
+    border:none;
+    background:url('/static/assets/WordListImages/View.png') no-repeat center / contain;
+    cursor:pointer;
+    padding:0;
+  }
+  .jar-meta{
+    position:absolute;
+    left:50%;
+    bottom:88px;
+    transform:translateX(-50%);
+    font-size:11px;
+    font-weight:800;
+    color:#5a4a2e;
+    text-align:center;
+    text-shadow:0 1px 2px rgba(255,255,255,0.5);
+  }
+  .jar-delete-btn{
+    position:absolute;
+    left:50%;
+    bottom:36px;
+    transform:translateX(-50%);
+    border:none;
+    cursor:pointer;
+    width:130px;
+    height:44px;
+    background:url('/static/assets/WordListImages/delete.png') no-repeat center / contain;
+    padding:0;
+  }
+  .list-cell.is-favorite{filter:drop-shadow(0 0 12px rgba(255,201,74,0.85)) drop-shadow(0 8px 24px rgba(0,0,0,0.2));}
+  @media (hover:hover){.jar-use-leaf:hover,.jar-view-btn:hover,.jar-delete-btn:hover{filter:brightness(1.1) drop-shadow(0 2px 6px rgba(0,0,0,0.25));}}
+  /* =========================================================== */
 
   .list-cell-inner{
     position:relative;
@@ -957,10 +940,10 @@
     cell.dataset.updated=list.updated_at||list.created_at||"";
     if(localFavs.has(list.id)) cell.classList.add("is-favorite");
 
-    // tap to quiz unless on buttons
+    // Click jar = use in quiz (unless a positioned button was clicked)
     cell.onclick=(e)=>{
       e.preventDefault();
-      if(!e.target.closest(".list-cell-action-btn")){
+      if(!e.target.closest("button")){
         useListInQuiz(list.id);
       }
     };
@@ -976,56 +959,34 @@
       ? new Date(list.updated_at||list.created_at).toLocaleDateString()
       : "No date yet";
 
-    const isFav = localFavs.has(list.id);
-    const star = isFav ? "⭐" : "☆";
-
     const isEmpty = !list.word_count || list.word_count === 0;
-    const tapLabel = isEmpty ? "📤 Upload Words" : "🐝 Tap to Quiz";
-    const badgeClass = isEmpty ? "list-cell-badge empty" : "list-cell-badge";
-
-    // Progress percent (0–100) if provided
-    let pct = null;
+    let pct = 0;
     if(typeof list.percent_used === "number"){
       pct = Math.max(0, Math.min(100, Math.round(list.percent_used)));
     }
 
     cell.innerHTML = `
-      <div class="list-cell-title" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
-      
-      <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `${list.word_count} Words`}</div>
-      
-      <div class="jar-content">
-        <div class="list-cell-actions">
-          <div class="action-btn-wrapper">
-            <button class="list-cell-action-btn quiz" title="Use in quiz"
-              onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id})">?</button>
-            <div class="action-label">Use in<br>quiz</div>
-          </div>
-          <div class="action-btn-wrapper">
-            <button class="list-cell-action-btn edit" title="Edit list"
-              onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
-            <div class="action-label">Edit</div>
-          </div>
-          <div class="action-btn-wrapper">
-            <button class="list-cell-action-btn view" title="View list"
-              onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
-            <div class="action-label">View</div>
+      <div class="list-cell-inner-jar">
+        <div class="jar-title" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+
+        <div class="jar-words">
+          <div class="jar-word-ring" style="--pct:${pct};"></div>
+          <div class="jar-word-badge">
+            <div style="font-size:22px;">${isEmpty ? "0" : list.word_count}</div>
+            <div style="font-size:11px;letter-spacing:0.06em;">WORDS</div>
           </div>
         </div>
 
-        <div class="list-cell-inner">
-          <div class="list-cell-meta">
-            <div class="row">📅 ${formattedDate}</div>
-            ${pct !== null ? `<div class="row">Used ${pct}% in quizzes</div>` : `<div class="row">Used 0% in quizzes</div>`}
-          </div>
-        </div>
-        
-        <div class="jar-separator"></div>
+        <button class="jar-use-leaf" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
 
-        <div class="list-cell-delete-wrapper">
-          <button class="list-cell-action-btn delete" title="Delete list"
-            onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+        <button class="jar-view-btn" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
+
+        <div class="jar-meta">
+          <div>📅 ${formattedDate}</div>
+          <div>Used ${pct}% in quizzes</div>
         </div>
+
+        <button class="jar-delete-btn" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
       </div>
     `;
     return cell;
