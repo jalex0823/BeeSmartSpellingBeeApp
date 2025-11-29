@@ -274,6 +274,55 @@ BADGE_METADATA = {
         'description': 'Reach elite Buzz Dust threshold',
         'rarity': 'epic',
         'points': 0
+    },
+    # Rank advancement badges
+    'novice_rank': {
+        'icon': '🐝',
+        'image': 'badges/Novice.png',
+        'name': 'Novice Bee',
+        'description': 'Welcome to BeeSmart!',
+        'rarity': 'common',
+        'points': 0
+    },
+    'apprentice_rank': {
+        'icon': '📚',
+        'image': 'badges/Apprentice.png',
+        'name': 'Apprentice Bee',
+        'description': 'Reached Apprentice Bee rank',
+        'rarity': 'common',
+        'points': 0
+    },
+    'scholar_rank': {
+        'icon': '🎓',
+        'image': 'badges/Scholar.png',
+        'name': 'Scholar Bee',
+        'description': 'Reached Scholar Bee rank',
+        'rarity': 'rare',
+        'points': 0
+    },
+    'elite_rank': {
+        'icon': '👑',
+        'image': 'badges/Elete.png',  # Note: typo in file system 'Elete' instead of 'Elite'
+        'name': 'Elite Bee',
+        'description': 'Reached Elite Bee rank',
+        'rarity': 'epic',
+        'points': 0
+    },
+    'magistrate_rank': {
+        'icon': '⚖️',
+        'image': 'badges/Magistrate.png',
+        'name': 'Magistrate Bee',
+        'description': 'Reached Magistrate Bee rank',
+        'rarity': 'legendary',
+        'points': 0
+    },
+    'master_rank': {
+        'icon': '✨',
+        'image': 'badges/BuzzDustMaster.png',
+        'name': 'Buzz Dust Master',
+        'description': 'Reached the highest rank!',
+        'rarity': 'legendary',
+        'points': 0
     }
 }
 
@@ -6984,8 +7033,31 @@ def api_answer():
                 # User ranked up mid-quiz!
                 session['ranked_up'] = True
                 session['old_class_id'] = old_class_id
+                session['new_class_id'] = new_class_id
                 current_user.bee_class = new_class_id
+                current_user.last_rank_up_at = datetime.now(timezone.utc)
                 print(f"🎊 MID-QUIZ RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+                
+                # Award rank-up badge immediately
+                badge_type = f"{new_class_id}_rank"
+                try:
+                    # Check if user already has this rank badge
+                    existing_badge = Achievement.query.filter_by(
+                        user_id=current_user.id,
+                        achievement_type=badge_type
+                    ).first()
+                    
+                    if not existing_badge:
+                        rank_badge = Achievement(
+                            user_id=current_user.id,
+                            achievement_type=badge_type,
+                            points_bonus=0,  # Rank badges don't give extra points
+                            earned_date=datetime.now(timezone.utc)
+                        )
+                        db.session.add(rank_badge)
+                        print(f"🏆 RANK BADGE AWARDED: {badge_type}")
+                except Exception as badge_error:
+                    print(f"⚠️ Failed to award rank badge: {badge_error}")
             
             # Commit the Buzz Dust update immediately
             try:
@@ -7220,8 +7292,31 @@ def api_answer():
                         # User ranked up!
                         session['ranked_up'] = True
                         session['old_class_id'] = old_class_id
+                        session['new_class_id'] = new_class_id
                         current_user.bee_class = new_class_id
+                        current_user.last_rank_up_at = datetime.now(timezone.utc)
                         print(f"🎊 RANK UP! {old_class_id} → {new_class_id}")
+                        
+                        # Award rank-up badge
+                        badge_type = f"{new_class_id}_rank"
+                        try:
+                            # Check if user already has this rank badge
+                            existing_badge = Achievement.query.filter_by(
+                                user_id=current_user.id,
+                                achievement_type=badge_type
+                            ).first()
+                            
+                            if not existing_badge:
+                                rank_badge = Achievement(
+                                    user_id=current_user.id,
+                                    achievement_type=badge_type,
+                                    points_bonus=0,  # Rank badges don't give extra points
+                                    earned_date=datetime.now(timezone.utc)
+                                )
+                                db.session.add(rank_badge)
+                                print(f"🏆 RANK BADGE AWARDED: {badge_type}")
+                        except Exception as badge_error:
+                            print(f"⚠️ Failed to award rank badge: {badge_error}")
                     
                     purchased_avatars = current_user.purchased_avatars or []
                     

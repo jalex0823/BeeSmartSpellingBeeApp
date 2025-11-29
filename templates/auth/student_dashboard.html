@@ -717,7 +717,7 @@
             <!-- Row 1: Points, Quizzes, and Cumulative Grade (prominent) -->
             <div class="stat-card">
                 <div class="stat-icon">🏆</div>
-                <div class="stat-value" id="dash-points">{{ current_user.total_lifetime_points or 0 }}</div>
+                <div class="stat-value" id="dash-points">{{ "{:,}".format(current_user.total_lifetime_points or 0) }}</div>
                 <div class="stat-label">Total Points</div>
             </div>
 
@@ -758,7 +758,7 @@
                 <div id="dash-buzz-dust-badge" style="margin-bottom: 0.5rem;">
                     <img src="{{ url_for('static', filename='assets/badges/glb_files/Novice.glb') }}" alt="Bee Class Badge" style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" id="dash-buzz-dust-badge-img">
                 </div>
-                <div class="stat-value" id="dash-buzz-dust-total" style="font-size: 2rem; color: #8B4513;">{{ current_user.total_buzz_dust or 0 }}</div>
+                <div class="stat-value" id="dash-buzz-dust-total" style="font-size: 2rem; color: #8B4513;">{{ "{:,}".format(current_user.total_buzz_dust or 0) }}</div>
                 <div class="stat-label" style="color: #5A2C15; font-weight: 700;">✨ Buzz Dust</div>
                 <div class="stat-sublabel" style="color: #8B4513; font-size: 0.9rem; margin-top: 0.3rem;">
                     🐝 <span id="dash-bee-class">{{ current_user.bee_class or 'Novice Bee' }}</span>
@@ -950,7 +950,7 @@
                     <div class="badge-name" style="color: #5A2C15; font-size: 1.1rem; font-weight: 700;" id="collection-rank-name">Novice Bee</div>
                     <div class="badge-stats" style="flex-direction: column; gap: 0.5rem;">
                         <span class="points-total" style="font-size: 1.3rem; color: #8B4513; font-weight: 900;">
-                            <span id="collection-buzz-dust-total">0</span> ✨
+                            <span id="collection-buzz-dust-total">{{ "{:,}".format(current_user.total_buzz_dust or 0) }}</span> ✨
                         </span>
                         <span class="earn-count" style="font-size: 0.85rem; color: #8B4513;" id="collection-rank-progress-text">
                             Loading...
