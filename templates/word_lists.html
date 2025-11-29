@@ -248,11 +248,11 @@
     font-weight:800;
   }
 
-  /* UPDATED: Fixed 3-per-row hex grid for consistent layout */
+  /* UPDATED: 2-per-row hex grid for better organization and title visibility */
   .grid{
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:18px 14px;
+    grid-template-columns:repeat(2, 1fr);
+    gap:24px 20px;
     padding-top:6px;
     align-items:start;
     justify-items:center;
@@ -274,12 +274,13 @@
     clip-path:polygon(25% 3%,75% 3%,98% 50%,75% 97%,25% 97%,2% 50%);
     background:radial-gradient(circle at 30% 20%,#fff9e7 0,var(--honey) 45%,var(--honey-deep) 100%);
     box-shadow:var(--shadow-med);
-    width: 300px;          /* fixed width to fit 3 per row in ~920px board */
-    height: 260px;         /* fixed height to maintain hex look */
+    width: 420px;          /* larger width for 2 per row */
+    height: 340px;         /* increased height for title + content */
     display:flex;
+    flex-direction:column;
     align-items:center;
-    justify-content:center;
-    padding:20px 16px 18px;
+    justify-content:flex-start;
+    padding:24px 20px 20px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
   }
   .list-cell:nth-child(odd){transform:translateY(8px)}
@@ -297,6 +298,23 @@
     animation:buzzWobble .35s ease-out 1;
     box-shadow:var(--shadow-deep);
     filter:brightness(1.06);
+  }
+
+  /* List title at top of hexagon */
+  .list-cell-title{
+    font-size:20px;
+    font-weight:900;
+    color:var(--bee-brown);
+    text-align:center;
+    margin-bottom:12px;
+    padding:0 10px;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    position:relative;
+    z-index:2;
+    text-shadow:0 1px 3px rgba(255,255,255,.6);
   }
 
   /* FAVORITE glow ring */
@@ -572,17 +590,17 @@
   }
   .bee-sheet-btn.danger{background:#fff0f0}
 
-  /* Responsive fallbacks: keep 3 per row down to ~900px, then drop to 2, then 1 */
+  /* Responsive: 2 columns desktop, 1 column mobile */
   @media (max-width: 1024px){
-    .grid{grid-template-columns:repeat(3,1fr)}
-    .list-cell{width:280px;height:242px}
+    .list-cell{width:380px;height:320px}
   }
   @media (max-width: 900px){
-    .grid{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:1fr}
+    .list-cell{width:420px;height:340px}
   }
   @media (max-width: 600px){
-    .grid{grid-template-columns:1fr}
-    .list-cell{width: 92%; height: 230px}
+    .list-cell{width:95%;height:320px}
+    .list-cell-title{font-size:18px}
   }
 </style>
 {% endblock %}
@@ -618,7 +636,7 @@
         border:3px solid var(--honey); border-radius:12px; outline:none; margin:6px 0 14px;
       " />
 
-      <label style="font-weight:900;">Words (one per line)</label>
+      <label style="font-weight:900;">Words (one per line) <span id="editWordCount" style="color: #42A5F5; font-weight: 800; margin-left: 8px;"></span></label>
       <textarea id="editWords" rows="10" style="
         width:100%; padding:.8rem; font-size:1rem; font-weight:700;
         border:3px solid var(--honey); border-radius:12px; outline:none; margin-top:6px;
@@ -910,6 +928,8 @@
     }
 
     cell.innerHTML = `
+      <div class="list-cell-title" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+      
       <div class="tap-label">${tapLabel}</div>
       
       <div class="list-cell-actions">
@@ -929,7 +949,6 @@
       <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `≡ ${list.word_count} words`}</div>
 
       <div class="list-cell-inner">
-        <div class="list-cell-name" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
 
         <div class="list-cell-meta">
           <div class="row">📅 ${formattedDate}</div>
@@ -1083,19 +1102,16 @@
       const data = await res.json();
       if(data.ok && data.list){
         const words = data.list.words||[];
-        // Normalize for display: accept array of strings or array of {word, sentence, hint}
-        const norm = words.map(w => {
+        // Extract word strings from word objects {id, word, sentence, hint, ...}
+        const wordStrings = words.map(w => {
           if (typeof w === 'string') return w;
-          if (w && typeof w === 'object') {
-            if (typeof w.word === 'string' && w.word.trim().length > 0) return w.word.trim();
-            // Fallback: attempt to stringify minimal representation
-            try { return JSON.stringify(w); } catch { return String(w); }
-          }
+          if (w && typeof w === 'object' && w.word) return w.word;
           return String(w);
-        });
-        const preview = norm.slice(0,12).join(", ");
-        const more = words.length>12 ? `<br>…and ${words.length-12} more.` : "";
-        await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${words.length}<br><br>${preview}${more}`,"Close","primary");
+        }).filter(Boolean);
+        
+        const preview = wordStrings.slice(0,12).join(", ");
+        const more = wordStrings.length>12 ? `<br>…and ${wordStrings.length-12} more.` : "";
+        await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${wordStrings.length}<br><br>${preview}${more}`,"Close","primary");
       }else{
         showToast("❌ Could not load hive details","error");
       }
@@ -1212,14 +1228,47 @@
       editTarget = { id:listId };
       const list = data.list;
       const wordsArray = list.words || [];
+      
+      // Extract word strings from word objects {id, word, sentence, hint, ...}
+      const wordStrings = wordsArray.map(w => {
+        if (typeof w === 'string') return w;
+        if (w && typeof w === 'object' && w.word) return w.word;
+        return String(w);
+      }).filter(Boolean);
 
       editName.value = list.name || "";
-      editWords.value = wordsArray.join("\n");
+      editWords.value = wordStrings.join("\n");
+      
+      // Update initial word count display
+      updateEditWordCount();
+      
+      // Add real-time word count listener
+      editWords.addEventListener('input', updateEditWordCount);
+      
       editModal.classList.add("active");
     }catch(err){
       console.error(err);
       showToast("❌ Error loading list for editing","error");
     }
+  }
+  
+  function updateEditWordCount(){
+    const wordsInput = document.getElementById("editWords");
+    const countDisplay = document.getElementById("editWordCount");
+    if(!wordsInput || !countDisplay) return;
+    
+    const rawLines = (wordsInput.value||"").split(/\r?\n/);
+    const words = rawLines.map(w => w.trim()).filter(Boolean);
+    const count = words.length;
+    
+    // Color code based on count
+    let color = "#42A5F5"; // blue
+    if(count > 500) color = "#FF4444"; // red
+    else if(count === 0) color = "#9E9E9E"; // gray
+    else if(count > 400) color = "#FF9800"; // orange
+    
+    countDisplay.textContent = `(${count} word${count !== 1 ? 's' : ''})`;
+    countDisplay.style.color = color;
   }
 
   function closeEditModal(){

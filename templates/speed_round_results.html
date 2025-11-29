@@ -296,8 +296,8 @@ function selectBestFemaleVoice() {
     if (!voices || voices.length === 0) return null;
     
     // iOS-specific: prefer Apple voices
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOSDevice) {
         const samantha = voices.find(v => v.name === 'Samantha');
         if (samantha) return samantha;
     }
