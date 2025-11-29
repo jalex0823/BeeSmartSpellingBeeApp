@@ -690,8 +690,9 @@ class UserAvatarLoader {
         }
     }
 }
-    // Bind constructor to window (atomic definition)
-    window.UserAvatarLoader = UserAvatarLoader;
+
+// Bind constructor to window (atomic definition)
+window.UserAvatarLoader = UserAvatarLoader;
     }
 })();
 
