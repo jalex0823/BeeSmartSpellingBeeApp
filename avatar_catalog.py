@@ -1,14 +1,14 @@
 """
 3D Bee Avatar Catalog
-Manages the catalog of 39 bee avatars with monetization tiers
+Manages the catalog of 40 bee avatars with monetization tiers
 
 Monetization Tiers:
 - DEFAULT_FREE: Available during registration (5 avatars)
 - EARN_OR_BUY: Unlock with Honey Points or purchase (7 avatars)
-- PREMIUM: Top-tier avatars with higher unlock requirements (26 avatars)
+- PREMIUM: Top-tier avatars with higher unlock requirements (27 avatars)
 - MASCOT: Default for guests/unregistered users (1 avatar)
 
-Total: 39 avatars (verified via count_avatars.py)
+Total: 40 avatars (includes new Fairy Bee Avatar)
 
 Dynamic naming: If available, avatar display names are sourced from the
 original render PNG filenames that end with '!' under
@@ -204,6 +204,23 @@ AVATAR_CATALOG: List[Dict] = [
         "is_purchasable": False,
         "unlock_points": 0,
         "price": 0.00
+    },
+    {
+        "id": "fairy-bee",
+        "product_id": "beesmart.avatar.fairy_bee",
+        "name": "Fairy Bee Avatar",
+        "folder": "glb_files",
+        "obj_file": "FairyBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Magical and enchanting, Fairy Bee brings sparkle and wonder to every spelling quest with her wand and wings!",
+        "variants": ["default"],
+        "category": "fantasy",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 25000,
+        "price": 1.99
     },
     {
         "id": "franken-bee",
@@ -928,6 +945,7 @@ PREMIUM_199_IDS = {
     "astro-bee",
     "biker-bee",
     "diva-bee",
+    "fairy-bee",
     "superbee",
     "queen-bee",
     "robo-bee",
@@ -1023,6 +1041,8 @@ def get_avatar_info(avatar_id, variant='default'):
             thumbnail_file = 'AvatarThumbnails/DoctorBee!.png'
         elif avatar_id == 'explorer-bee':
             thumbnail_file = 'AvatarThumbnails/ExplorerBee!.png'
+        elif avatar_id == 'fairy-bee':
+            thumbnail_file = 'AvatarThumbnails/FairyBee!.png'
         elif avatar_id == 'franken-bee':
             thumbnail_file = 'AvatarThumbnails/FrankenBee!.png'
         elif avatar_id == 'gamer-bee':
