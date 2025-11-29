@@ -860,6 +860,12 @@ function chooseAvatar() {
         return;
     }
     
+    // Check if avatar is locked before attempting selection
+    if (selectedAvatar.is_locked) {
+        showLockedMessage(selectedAvatar);
+        return;
+    }
+    
     console.log(`🎯 User chose avatar: ${selectedAvatar.name} (${selectedAvatar.slug})`);
     
     // Disable button during save
@@ -886,10 +892,25 @@ function chooseAvatar() {
             // Try to parse error details
             return response.json().catch(() => ({})).then(data => {
                 const errorMsg = data.error || `HTTP ${response.status}`;
+                const errorReason = data.reason || 'unknown';
                 console.error(`❌ Avatar select failed (${response.status}): ${errorMsg}`, data);
                 
-                // If 401/403 and not already logged in, redirect to auth
-                if ((response.status === 401 || response.status === 403) && !window.isUserLoggedIn) {
+                // Handle specific error reasons
+                if (errorReason === 'guest_restricted') {
+                    // Guest user trying to select non-mascot avatar
+                    alert('🔐 Guest users can only use the Honey Comb mascot avatar.\\n\\nPlease register for a free account to unlock more bee avatars!');
+                    return Promise.reject(new Error('Guest user restriction'));
+                } else if (errorReason === 'premium_locked') {
+                    // Premium avatar that must be purchased
+                    alert(`🔒 ${selectedAvatar.name} is a premium avatar.\\n\\nThis avatar is only available for purchase.`);
+                    return Promise.reject(new Error('Premium avatar locked'));
+                } else if (errorReason === 'points_required') {
+                    // Need more honey points
+                    const pointsNeeded = data.points_needed || 0;
+                    alert(`🍯 ${selectedAvatar.name} requires more Honey Points!\\n\\nEarn ${pointsNeeded.toLocaleString()} more Honey Points or purchase to unlock this avatar.`);
+                    return Promise.reject(new Error('Insufficient honey points'));
+                } else if ((response.status === 401 || response.status === 403) && !window.isUserLoggedIn) {
+                    // Authentication required
                     const next = encodeURIComponent(window.location.pathname);
                     window.location.href = `/auth/login?next=${next}`;
                     return Promise.reject(new Error('Authentication required'));
@@ -975,6 +996,35 @@ function filterAvatars(query) {
 function showLockedMessage(avatar) {
     // Use the unified computation for consistency across UI
     const message = computeLockedMessage(avatar);
+    
+    // Determine if this is a guest restriction
+    const isGuestRestriction = message.includes('Guest users must register');
+    const tier = avatar.tier || 'premium';
+    
+    // Create appropriate messaging
+    let actionHtml = '';
+    if (isGuestRestriction) {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300; font-weight: 600;">
+                🎓 Register for free to unlock amazing bee avatars!
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                <button class="locked-modal-btn" onclick="window.location.href='/auth/register'">Register Now</button>
+                <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
+            </div>
+        `;
+    } else if (tier === 'premium') {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300;">💎 This is a premium avatar available for purchase.</p>
+            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+        `;
+    } else {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to unlock more awesome bees!</p>
+            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+        `;
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'locked-avatar-modal';
     modal.innerHTML = `
@@ -983,8 +1033,7 @@ function showLockedMessage(avatar) {
             <div class="locked-modal-icon">🔒</div>
             <h2>${avatar.name} is Locked</h2>
             <p>${message}</p>
-            <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to unlock more awesome bees!</p>
-            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            ${actionHtml}
         </div>
     `;
     document.body.appendChild(modal);

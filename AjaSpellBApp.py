@@ -12101,11 +12101,15 @@ def api_get_avatars():
         user_honey_points = 0
         purchased_avatars = []
         is_admin_or_premium = False
+        is_guest = False
         
         if current_user.is_authenticated:
             # Safe access with fallbacks for newly migrated fields
             user_honey_points = getattr(current_user, 'honey_points', 0) or 0
             purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
+            
+            # Check if user is a guest (temporary account)
+            is_guest = session.get('is_guest', False) or is_guest_user(current_user)
             
             # Check if user has admin_all_access method
             if hasattr(current_user, 'is_admin_or_premium'):
@@ -12116,6 +12120,9 @@ def api_get_avatars():
                     is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
             else:
                 is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
+        else:
+            # Not authenticated = guest by default
+            is_guest = True
 
         # Request filters
         category = request.args.get('category')
@@ -12175,15 +12182,24 @@ def api_get_avatars():
                     tier_val = None
                     price_val = None
 
-                    if is_admin_or_premium:
+                    # MONETIZATION: Enforce tier-based access control
+                    if is_guest:
+                        # Guest users: only show mascot avatar (honey-comb)
+                        if catalog_avatar and catalog_avatar.get('tier') != 'mascot_free':
+                            # Skip non-mascot avatars for guests entirely
+                            continue
+                        # Mascot avatar is always unlocked for guests
+                        is_locked = False
+                    elif is_admin_or_premium:
                         # Admins and premium members have access to all avatars
                         is_locked = False
                     elif catalog_avatar:
-                        # Check unlock status using avatar_catalog helper (returns dict)
+                        # Registered users: check unlock status using avatar_catalog helper (returns dict)
                         unlock_result = check_avatar_unlocked(
                             avatar_slug,
                             user_honey_points,
-                            purchased_avatars
+                            purchased_avatars,
+                            is_guest=is_guest
                         )
                         is_locked = not unlock_result.get('unlocked', False)
 
@@ -13059,12 +13075,21 @@ def api_select_avatar():
                 'error': 'avatar_slug is required'
             }), 400
         
-        # ✅ SECURITY CHECK 1: Guest users cannot select avatars
-        if not current_user.password_hash:
-            return jsonify({
-                'success': False,
-                'error': 'Guest users cannot select avatars. Please register to customize your bee!'
-            }), 403
+        # ✅ SECURITY CHECK 1: Guest users cannot select avatars (beyond mascot)
+        is_user_guest = session.get('is_guest', False) or is_guest_user(current_user)
+        if is_user_guest or not current_user.password_hash:
+            # Guest users can only use the mascot avatar (honey-comb)
+            from avatar_catalog import AVATAR_CATALOG
+            avatar_tier = next(
+                (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_slug),
+                'premium'
+            )
+            if avatar_tier != 'mascot_free':
+                return jsonify({
+                    'success': False,
+                    'error': 'Guest users can only use the Honey Comb mascot avatar. Please register to customize your bee!',
+                    'reason': 'guest_restricted'
+                }), 403
         
         # ✅ SECURITY CHECK 2: Parental lock
         if getattr(current_user, 'avatar_locked', False):
@@ -13153,7 +13178,12 @@ def api_select_avatar():
                 purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
                 
                 # Check if avatar is unlocked
-                unlock_result = check_avatar_unlocked(avatar_slug, user_honey_points, purchased_avatars)
+                unlock_result = check_avatar_unlocked(
+                    avatar_slug, 
+                    user_honey_points, 
+                    purchased_avatars,
+                    is_guest=is_user_guest
+                )
                 
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar

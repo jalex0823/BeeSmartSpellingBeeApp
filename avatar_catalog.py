@@ -760,7 +760,7 @@ def get_avatars_by_tier(tier):
     """Returns avatars filtered by tier (default_free, earn_or_buy, premium, mascot, special)"""
     return [a for a in get_avatar_catalog() if a.get("tier") == tier]
 
-def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None):
+def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None, is_guest=False):
     """
     Check if user has unlocked an avatar via points or purchase.
     Admin users bypass all checks via their user profile.
@@ -769,6 +769,7 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
         avatar_id: The avatar ID to check
         user_honey_points: User's current Honey Points balance
         purchased_avatars: List of avatar IDs user has purchased
+        is_guest: Whether the user is a guest (restricts to mascot only)
         
     Returns:
         dict with keys: unlocked (bool), reason (str), required_points (int), price (float)
@@ -780,7 +781,20 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
     if not avatar:
         return {"unlocked": False, "reason": "Avatar not found", "required_points": 0, "price": 0}
     
-    # Default free avatars are always unlocked
+    # MONETIZATION: Guest users can only access mascot avatar
+    if is_guest:
+        tier = avatar.get("tier", "premium")
+        if tier == "mascot_free":
+            return {"unlocked": True, "reason": "Mascot avatar (guest access)", "required_points": 0, "price": 0}
+        else:
+            return {
+                "unlocked": False, 
+                "reason": "Guest users must register to unlock avatars",
+                "required_points": 0,
+                "price": 0
+            }
+    
+    # Default free avatars are always unlocked for registered users
     if avatar.get("is_default_free", False):
         return {"unlocked": True, "reason": "Free avatar", "required_points": 0, "price": 0}
     
