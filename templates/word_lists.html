@@ -983,20 +983,14 @@
 
     cell.innerHTML = `
       <div class="list-cell-inner-jar">
-        <!-- Top row: leaf (left), title centered, magnifier (right) -->
-        <div class="jar-top-row">
-          <button class="jar-use-leaf jar-use-leaf-left" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
-          
-          <div class="jar-title-plate">
-            <img class="jar-title-img" src="/static/assets/WordListImages/title.png" alt="Title" />
-            <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
-          </div>
-          
-          <button class="jar-view-btn jar-view-btn-right" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
+        <!-- Title at top with word list name -->
+        <div class="jar-title-plate">
+          <img class="jar-title-img" src="/static/assets/WordListImages/title.png" alt="Title" />
+          <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
         </div>
 
-        <!-- WORDS badge moved lower on the jar -->
-        <div class="jar-words jar-words-lower">
+        <!-- WORDS badge in center -->
+        <div class="jar-words jar-words-center">
           <div class="jar-word-ring" style="--pct:${pct};"></div>
           <div class="jar-word-badge">
             <div class="jar-word-count">${isEmpty ? "0" : list.word_count}</div>
@@ -1004,14 +998,20 @@
           </div>
         </div>
 
-        <!-- Bottom area: dedicated date label centered, delete to the right -->
-        <div class="jar-bottom">
-          <div class="jar-date">
-            <img class="jar-date-label" src="/static/assets/ui/date.png" alt="" />
-            <div class="jar-date-text">${formattedDate}</div>
-          </div>
-          <button class="jar-delete-btn jar-delete-bottom-right" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
+        <!-- Date centered below words badge -->
+        <div class="jar-date-center">
+          <img class="jar-date-label" src="/static/assets/ui/date.png" alt="" />
+          <div class="jar-date-text">${formattedDate}</div>
         </div>
+
+        <!-- Delete button at bottom center -->
+        <button class="jar-delete-btn jar-delete-bottom-center" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">Delete</button>
+
+        <!-- Leaf (Use in quiz) - positioned on left side -->
+        <button class="jar-use-leaf jar-use-left-side" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
+
+        <!-- Magnifier (View) - positioned on right side -->
+        <button class="jar-view-btn jar-view-right-side" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
       </div>
     `;
     return cell;
@@ -1503,25 +1503,23 @@
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     /* --- Word List Jar layout overrides --- */
     .list-cell-inner-jar{position:relative}
-    .jar-top-row{position:relative; display:flex; align-items:center; justify-content:space-between; margin-top:4px; padding:0 10px;}
-    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; flex:1;}
+    .jar-title-plate{position:relative; display:flex; align-items:center; justify-content:center; margin-top:8px;}
     .jar-title-img{width:160px; height:auto; filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));}
     .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; letter-spacing:.03em; text-align:center; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px;}
     .jar-words{position:relative; display:flex; align-items:center; justify-content:center}
-    .jar-words-lower{margin-top:48px}
+    .jar-words-center{margin-top:20px}
     .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center}
-    .jar-word-count{font-size:22px}
-    .jar-word-label{font-size:11px; letter-spacing:0.06em}
-    .jar-use-leaf{position:relative; flex-shrink:0;}
-    .jar-use-leaf-left{left:0}
-    .jar-view-btn{position:relative; flex-shrink:0;}
-    .jar-view-btn-right{right:0}
-    .jar-bottom{position:absolute; left:0; right:0; bottom:8px; display:flex; align-items:center; justify-content:center}
-    .jar-date{display:flex; flex-direction:column; align-items:center; justify-content:center}
-    .jar-date-label{width:72px; height:auto; display:block; margin:0 auto 4px}
-    .jar-date-text{font-size:12px; text-align:center}
-    .jar-delete-btn{position:absolute}
-    .jar-delete-bottom-right{right:10px; bottom:-2px}
+    .jar-word-count{font-size:28px; font-weight:900; color:white;}
+    .jar-word-label{font-size:13px; letter-spacing:0.06em; font-weight:900; color:white;}
+    .jar-date-center{display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:16px;}
+    .jar-date-label{width:120px; height:auto; display:block; margin:0 auto 2px}
+    .jar-date-text{font-size:14px; text-align:center; font-weight:700; color:#5b3b0a; position:absolute; margin-top:8px;}
+    .jar-delete-btn{background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:999px; font-weight:900; cursor:pointer; font-size:15px; box-shadow:0 4px 8px rgba(0,0,0,.2);}
+    .jar-delete-bottom-center{position:absolute; bottom:12px; left:50%; transform:translateX(-50%);}
+    .jar-use-leaf{position:absolute; top:45%; left:-8px; transform:translateY(-50%);}
+    .jar-use-left-side{left:-8px}
+    .jar-view-btn{position:absolute; top:45%; right:-8px; transform:translateY(-50%);}
+    .jar-view-right-side{right:-8px}
   `;
   document.head.appendChild(style);
 
