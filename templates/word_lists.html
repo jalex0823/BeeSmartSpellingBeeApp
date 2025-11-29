@@ -333,7 +333,7 @@
   /* badge */
   .list-cell-badge{
     position:absolute;
-    top:38px;
+    top:42px;
     left:50%;
     transform:translateX(-50%);
     background:rgba(255,255,255,.96);
@@ -354,21 +354,23 @@
     box-shadow:0 3px 10px rgba(243,156,18,0.3);
   }
 
-  /* actions */
+  /* actions - 2-column grid in center of hexagon */
   .list-cell-actions{
-    position:absolute;
-    top:10px;
-    right:12px;
+    position:relative;
     z-index:3;
-    display:flex;
-    gap:6px;
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:10px 12px;
+    width:100%;
+    max-width:180px;
+    margin:8px auto 12px;
   }
   .list-cell-action-btn{
-    width:34px;
-    height:34px;
+    width:100%;
+    height:40px;
     border:none;
     cursor:pointer;
-    border-radius:50%;
+    border-radius:12px;
     font-size:16px;
     font-weight:900;
     display:flex;
@@ -377,16 +379,43 @@
     background:rgba(255,255,255,.95);
     box-shadow:0 4px 12px rgba(0,0,0,.2);
     transition:transform var(--transition-fast), filter var(--transition-fast);
+    padding:4px 8px;
   }
   .list-cell-action-btn:hover{transform:translateY(-2px) scale(1.06)}
   .list-cell-action-btn.favorite{font-size:17px}
+  
+  /* Delete button at bottom - full width */
+  .list-cell-delete-wrapper{
+    position:absolute;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:3;
+    width:calc(100% - 70px);
+    max-width:220px;
+  }
+  .list-cell-action-btn.delete{
+    width:100%;
+    height:36px;
+    background:linear-gradient(135deg, #ffb3b3 0%, #ff6b6b 100%);
+    color:#fff;
+    border-radius:var(--radius-pill);
+    font-size:14px;
+    font-weight:900;
+    box-shadow:0 4px 12px rgba(255,107,107,0.4);
+  }
+  .list-cell-action-btn.delete:hover{
+    background:linear-gradient(135deg, #ff9999 0%, #ff5252 100%);
+    box-shadow:0 6px 16px rgba(255,107,107,0.5);
+  }
 
   .list-cell-inner{
     position:relative;
     z-index:2;
     text-align:center;
     width:100%;
-    margin-top:20px;
+    max-width:85%;
+    margin:6px auto 0;
   }
   .list-cell-name{
     font-weight:900;
@@ -890,8 +919,11 @@
           onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">👁️</button>
         <button class="list-cell-action-btn edit" title="Edit list"
           onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">✏️</button>
+      </div>
+      
+      <div class="list-cell-delete-wrapper">
         <button class="list-cell-action-btn delete" title="Delete list"
-          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️</button>
+          onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
       </div>
 
       <div class="${badgeClass}">${isEmpty ? "⚠️ Empty" : `≡ ${list.word_count} words`}</div>
