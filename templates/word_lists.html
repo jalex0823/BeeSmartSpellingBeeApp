@@ -983,26 +983,30 @@
 
     cell.innerHTML = `
       <div class="list-cell-inner-jar">
-        <div class="jar-title" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+        <!-- Title removed per new design -->
 
-        <div class="jar-words">
+        <!-- WORDS badge moved lower on the jar -->
+        <div class="jar-words jar-words-lower">
           <div class="jar-word-ring" style="--pct:${pct};"></div>
           <div class="jar-word-badge">
-            <div style="font-size:22px;">${isEmpty ? "0" : list.word_count}</div>
-            <div style="font-size:11px;letter-spacing:0.06em;">WORDS</div>
+            <div class="jar-word-count">${isEmpty ? "0" : list.word_count}</div>
+            <div class="jar-word-label">WORDS</div>
           </div>
         </div>
 
-        <button class="jar-use-leaf" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
+        <!-- Controls: leaf (left) and magnifier (right) -->
+        <button class="jar-use-leaf jar-use-leaf-left" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});"></button>
 
-        <button class="jar-view-btn" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
+        <button class="jar-view-btn jar-view-btn-right" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
 
-        <div class="jar-meta">
-          <div>📅 ${formattedDate}</div>
-          <div>Used ${pct}% in quizzes</div>
+        <!-- Bottom area: dedicated date label centered, delete to the right -->
+        <div class="jar-bottom">
+          <div class="jar-date">
+            <img class="jar-date-label" src="/static/assets/ui/date.png" alt="Date" />
+            <div class="jar-date-text">${formattedDate}</div>
+          </div>
+          <button class="jar-delete-btn jar-delete-bottom-right" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
         </div>
-
-        <button class="jar-delete-btn" title="Delete list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')"></button>
       </div>
     `;
     return cell;
@@ -1492,6 +1496,23 @@
   style.textContent=`
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
+    /* --- Word List Jar layout overrides --- */
+    .list-cell-inner-jar{position:relative}
+    .jar-words{position:relative; display:flex; align-items:center; justify-content:center}
+    .jar-words-lower{margin-top:48px}
+    .jar-word-badge{display:flex; flex-direction:column; align-items:center; justify-content:center}
+    .jar-word-count{font-size:22px}
+    .jar-word-label{font-size:11px; letter-spacing:0.06em}
+    .jar-use-leaf{position:absolute}
+    .jar-use-leaf-left{left:-6px}
+    .jar-view-btn{position:absolute}
+    .jar-view-btn-right{right:-6px}
+    .jar-bottom{position:absolute; left:0; right:0; bottom:8px; display:flex; align-items:center; justify-content:center}
+    .jar-date{display:flex; flex-direction:column; align-items:center; justify-content:center}
+    .jar-date-label{width:72px; height:auto; display:block; margin:0 auto 4px}
+    .jar-date-text{font-size:12px; text-align:center}
+    .jar-delete-btn{position:absolute}
+    .jar-delete-bottom-right{right:10px; bottom:-2px}
   `;
   document.head.appendChild(style);
 
