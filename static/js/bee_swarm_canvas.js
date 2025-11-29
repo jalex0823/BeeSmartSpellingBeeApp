@@ -1,17 +1,17 @@
 // static/js/bee_swarm_canvas.js
-// 2D Canvas Alphabet Visualizer - tiny letters forming lips shape from mask
+// 2D Canvas Particle Wave Visualizer - glowing dots forming wave shape with center-out animation and edge tapering
 
 (function(global){
 
   const cfgDefault = {
-    letterCount: 800,      // number of dancing letters
-    baseSize: 8,           // base font size
+    letterCount: 1200,     // number of particle dots (increased for better wave density)
+    baseSize: 8,           // base particle size
     attractStrength: 0.08, // weaker attraction (more loose swarm feel)
     damp: 0.82,            // less damping (more bouncy)
     baseNoise: 0.15,       // procedural noise for wandering
     centerOffsetX: -0.26,  // shift swarm center horizontally (-1..1 of width) - favor left alignment
     centerOffsetY: -0.02,  // shift swarm center vertically (-1..1 of height) - slight upward centering
-    // brown palette for layered lip effect
+    // brown/gold palette for glowing particle effect
     palette: [
       "#8B6914", // dark brown
       "#A0826D", // warm brown
@@ -130,7 +130,7 @@
     running = true;
     rafId = requestAnimationFrame((t) => step(t, cfg));
 
-    console.log(`🐝 Dancing letter swarm initialized with ${letters.length} letters`);
+    console.log(`🐝 Particle wave swarm initialized with ${letters.length} dots (center-out animation, tapered edges)`);
     console.log(`🐝 Listening to announcer speech events`);
     return BeeSwarmCanvas;
   }
@@ -309,12 +309,11 @@
   // ============================
   function buildLetterSwarm(letterCount, cfg) {
     letters = [];
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    // Parameters for hive shape
+    // Parameters for wave shape
     const radiusX = 1.25;      // widen horizontally
-    const radiusY = 0.75;      // taller for hive feel
-    const outwardBias = 0.55;  // <1 moves more letters outward (0.5 uniform, <0.5 stronger ring)
+    const radiusY = 0.75;      // taller for wave feel
+    const outwardBias = 0.55;  // <1 moves more particles outward (0.5 uniform, <0.5 stronger ring)
 
     for (let i = 0; i < letterCount; i++) {
       // Sample until inside mask (if available)
@@ -339,20 +338,21 @@
         y += wobB * (1 - Math.min(1, Math.sqrt(x*x + y*y)));
       }
 
-      // Scatter noise (small so letters remain legible)
+      // Scatter noise
       x += (Math.random() - 0.5) * 0.12;
       y += (Math.random() - 0.5) * 0.10;
 
-      const char = alphabet[Math.floor(Math.random() * alphabet.length)];
-
-      // Size variation but smaller overall for airy distribution
-      const size = cfg.baseSize - 1 + Math.random() * 2.2; // shrink a touch
+      // Size variation for particles
+      const size = cfg.baseSize - 1 + Math.random() * 2.2;
+      
+      // Calculate distance from center for tapering effect (0 at center, 1 at edge)
+      const distFromCenter = Math.sqrt(x*x + y*y) / Math.max(radiusX, radiusY);
+      const taperFactor = 1 - Math.pow(distFromCenter, 1.8); // Taper more aggressively at edges
 
       const color = cfg.palette[Math.floor(Math.random() * cfg.palette.length)];
 
       const letter = {
-        char,
-        // Base position: mouth shape
+        // Base position: wave shape
         baseX: x,
         baseY: y,
         // Current position with slight random offset
@@ -364,7 +364,11 @@
         color,
         // Procedural noise for wandering
         noisePhase: Math.random() * Math.PI * 2,
-        noiseSpeed: 0.5 + Math.random() * 1.5
+        noiseSpeed: 0.5 + Math.random() * 1.5,
+        // Taper and animation delay from center
+        taperFactor: taperFactor,
+        distFromCenter: distFromCenter,
+        animDelay: distFromCenter * 0.15 // Delay animation based on distance from center
       };
 
       letters.push(letter);
@@ -394,7 +398,7 @@
         }
       }
 
-    console.log(`🐝 Built ${letters.length} dancing letters forming mouth/lips shape`);
+    console.log(`🐝 Built ${letters.length} particle dots forming wave shape with center-out animation and edge tapering`);
   }
 
   // ============================
@@ -637,21 +641,44 @@
         }
       }
 
-      const taperedFontSize = Math.max(6, fontSize * taperSizeMul);
-      ctx.font = `bold ${taperedFontSize}px 'Arial', monospace`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = letter.color;
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * taperAlpha));
+      // Apply taper factor to size and opacity based on distance from center
+      const taperedSize = fontSize * taperSizeMul * letter.taperFactor;
+      const taperedAlpha = alpha * taperAlpha * letter.taperFactor;
       
-      // Add subtle outline for depth when speaking
-      if (ampSmooth > 0.1) {
-        ctx.strokeStyle = "rgba(0,0,0,0.2)";
-        ctx.lineWidth = 0.3;
-        ctx.strokeText(letter.char, letter.x, letter.y);
+      // Center-out animation: particles near center animate first
+      const animPhase = Math.max(0, Math.min(1, (tSec * 2 - letter.animDelay)));
+      const centerOutAlpha = taperedAlpha * animPhase;
+      
+      // Draw as glowing dot/particle instead of letter
+      const dotRadius = Math.max(1.5, taperedSize * 0.4);
+      
+      ctx.globalAlpha = Math.max(0, Math.min(1, centerOutAlpha));
+      
+      // Outer glow for particles when speaking
+      if (ampSmooth > 0.15) {
+        // Convert hex color to rgba for gradient
+        const hexToRgba = (hex, alpha) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+        
+        const gradient = ctx.createRadialGradient(letter.x, letter.y, 0, letter.x, letter.y, dotRadius * 2.5);
+        gradient.addColorStop(0, letter.color);
+        gradient.addColorStop(0.4, hexToRgba(letter.color, 0.4));
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(letter.x, letter.y, dotRadius * 2.5, 0, Math.PI * 2);
+        ctx.fill();
       }
       
-      ctx.fillText(letter.char, letter.x, letter.y);
+      // Main dot particle
+      ctx.fillStyle = letter.color;
+      ctx.beginPath();
+      ctx.arc(letter.x, letter.y, dotRadius, 0, Math.PI * 2);
+      ctx.fill()
     }
 
     ctx.globalAlpha = 1.0; // reset
