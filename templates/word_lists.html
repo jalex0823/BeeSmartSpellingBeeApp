@@ -276,54 +276,56 @@
     color:inherit;
     cursor:pointer;
     width: 280px;
-    height: 380px;
+    height: 420px;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
     padding:0;
+    margin-bottom:30px;
     transition:transform var(--transition-med), box-shadow var(--transition-med), filter var(--transition-med);
     filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));
   }
   
-  /* Honey jar container with transparent background */
+  /* Honey jar glass body */
   .list-cell::before{
     content:"";
     position:absolute;
-    top:0;
+    top:60px;
     left:50%;
     transform:translateX(-50%);
     width:240px;
-    height:340px;
-    background:transparent;
+    height:350px;
+    background:rgba(255, 250, 240, 0.3);
     border:6px solid #3e3e3e;
-    border-radius:0 0 80px 80px / 0 0 30px 30px;
+    border-top:none;
+    border-radius:0 0 100px 100px / 0 0 40px 40px;
     z-index:1;
     pointer-events:none;
+    box-shadow:inset 0 4px 12px rgba(0,0,0,0.08);
   }
   
-  /* Jar lid/cap - brown wavy */
+  /* Jar lid/cap - brown wavy top */
   .list-cell::after{
     content:"";
     position:absolute;
-    top:0;
+    top:40px;
     left:50%;
     transform:translateX(-50%);
-    width:240px;
-    height:80px;
-    background:linear-gradient(180deg, #c9a36a 0%, #a5825a 50%, #c9a36a 100%);
-    border:6px solid #3e3e3e;
+    width:200px;
+    height:60px;
+    background:linear-gradient(180deg, #daa520 0%, #b8860b 50%, #daa520 100%);
+    border:5px solid #3e3e3e;
     border-bottom:none;
-    border-radius:14px 14px 0 0;
+    border-radius:12px 12px 0 0;
     clip-path: polygon(
-      10% 0%, 90% 0%,
-      100% 40%, 100% 60%,
-      95% 68%, 90% 75%, 85% 82%, 80% 88%, 75% 92%, 70% 95%, 65% 97%, 60% 99%, 55% 100%, 45% 100%, 40% 99%, 35% 97%, 30% 95%, 25% 92%, 20% 88%, 15% 82%, 10% 75%, 5% 68%, 0% 60%,
-      0% 40%
+      0% 35%, 5% 25%, 10% 18%, 15% 13%, 20% 10%, 25% 8%, 30% 7%, 35% 8%, 40% 10%,
+      45% 13%, 50% 18%, 55% 13%, 60% 10%, 65% 8%, 70% 7%, 75% 8%, 80% 10%, 85% 13%,
+      90% 18%, 95% 25%, 100% 35%, 100% 100%, 0% 100%
     );
     z-index:4;
     pointer-events:none;
-    box-shadow:inset 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow:0 2px 8px rgba(0,0,0,0.2), inset 0 1px 3px rgba(255,255,255,0.3);
   }
   
   .list-cell:hover{
@@ -334,7 +336,7 @@
   /* List title at top of jar (on lid) */
   .list-cell-title{
     position:absolute;
-    top:12px;
+    top:48px;
     left:50%;
     transform:translateX(-50%);
     font-size:17px;
@@ -347,8 +349,9 @@
     text-overflow:ellipsis;
     white-space:nowrap;
     z-index:5;
-    text-shadow:0 1px 2px rgba(255,255,255,.4);
+    text-shadow:0 1px 2px rgba(255,255,255,.5);
     line-height:1.2;
+    pointer-events:none;
   }
 
   /* FAVORITE glow ring */
@@ -364,25 +367,26 @@
   /* Jar content area - cream/beige background */
   .jar-content{
     position:absolute;
-    top:86px;
+    top:105px;
     left:50%;
     transform:translateX(-50%);
-    width:228px;
-    height:248px;
+    width:220px;
+    height:295px;
     background:linear-gradient(180deg, #fffbf0 0%, #fff4d9 100%);
-    border-radius:0 0 74px 74px / 0 0 28px 28px;
+    border-radius:0 0 90px 90px / 0 0 36px 36px;
     z-index:2;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
     padding:16px 12px 12px;
+    overflow:hidden;
   }
 
   /* Word count badge on jar */
   .list-cell-badge{
     position:absolute;
-    top:52px;
+    top:78px;
     left:50%;
     transform:translateX(-50%);
     background:rgba(255,255,255,.98);
@@ -397,6 +401,7 @@
     align-items:center;
     gap:6px;
     border:3px solid #3e3e3e;
+    pointer-events:none;
   }
   .list-cell-badge.empty {
     background:linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
@@ -411,31 +416,31 @@
     display:flex;
     align-items:flex-start;
     justify-content:center;
-    gap:16px;
+    gap:12px;
     width:100%;
-    margin:16px 0 12px;
+    margin:12px 0 8px;
   }
   .action-btn-wrapper{
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:6px;
+    gap:4px;
   }
   .action-label{
-    font-size:12px;
+    font-size:11px;
     font-weight:900;
     color:#1f1f1f;
     text-align:center;
-    line-height:1.2;
-    max-width:60px;
+    line-height:1.1;
+    max-width:56px;
   }
   .list-cell-action-btn{
-    width:52px;
-    height:52px;
+    width:48px;
+    height:48px;
     border:none;
     cursor:pointer;
     border-radius:50%;
-    font-size:20px;
+    font-size:19px;
     font-weight:900;
     display:flex;
     align-items:center;
@@ -444,59 +449,60 @@
     box-shadow:0 4px 12px rgba(0,0,0,.18);
     transition:transform var(--transition-fast), filter var(--transition-fast);
     padding:0;
+    border:2px solid #3e3e3e;
   }
   .list-cell-action-btn:hover{transform:translateY(-3px) scale(1.08)}
-  .list-cell-action-btn.quiz{font-size:24px; background:#4caf50; color:#fff}
-  .list-cell-action-btn.view{background:#90caf9; font-size:22px}
-  .list-cell-action-btn.edit{background:#ffb74d; font-size:22px}
+  .list-cell-action-btn.quiz{font-size:22px; background:#4caf50; color:#fff}
+  .list-cell-action-btn.view{background:#90caf9; font-size:20px}
+  .list-cell-action-btn.edit{background:#ffb74d; font-size:20px}
   
   /* Date and meta info */
   .list-cell-meta{
-    font-size:12px;
+    font-size:11px;
     font-weight:800;
     color:#5a4a2e;
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:4px;
     opacity:.92;
     text-align:center;
-    margin-top:8px;
+    margin-top:4px;
   }
   .list-cell-meta .row{
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:6px;
+    gap:4px;
   }
   
   /* Separator line */
   .jar-separator{
-    width:100%;
-    height:2px;
+    width:90%;
+    height:1px;
     background:linear-gradient(90deg, transparent 0%, #d4c5a8 50%, transparent 100%);
-    margin:12px 0;
+    margin:8px auto;
   }
   
   /* Delete button at bottom of jar */
   .list-cell-delete-wrapper{
     position:absolute;
-    bottom:20px;
+    bottom:24px;
     left:50%;
     transform:translateX(-50%);
     z-index:3;
-    width:calc(100% - 40px);
-    max-width:190px;
+    width:calc(100% - 48px);
+    max-width:180px;
   }
   .list-cell-action-btn.delete{
     width:100%;
-    height:40px;
+    height:38px;
     background:linear-gradient(135deg, #ef5350 0%, #c62828 100%);
     color:#fff;
     border-radius:var(--radius-pill);
-    font-size:15px;
+    font-size:14px;
     font-weight:900;
     box-shadow:0 4px 12px rgba(239,83,80,0.4);
-    border:3px solid rgba(62,62,62,0.7);
+    border:3px solid #3e3e3e;
     display:flex;
     align-items:center;
     justify-content:center;
