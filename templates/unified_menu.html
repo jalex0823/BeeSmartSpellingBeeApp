@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251130">
     
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
@@ -79,6 +80,8 @@
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
+    <!-- Avatar Intro FX System -->
+    <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251130"></script>
     
     <!-- Homepage Avatar Sync: Load user's selected avatar on main page -->
     <script>
@@ -2998,7 +3001,7 @@
                 <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
                     <div class="avatar-slide">
                         <!-- Progressive 3D canvas (shown when available) -->
-                        <div id="guestAvatar3D" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
+                        <div id="guestAvatar3D" class="avatar-fx-container" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
                         <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
@@ -10686,6 +10689,13 @@
                             animateCrossfade(outgoingGroup, currentGroup, 700);
                             // Restore wrap transform after a tick
                             setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
+                            
+                            // Apply random intro FX after GLB loads
+                            setTimeout(() => {
+                                if (window.AvatarFX && canvasWrap) {
+                                    window.AvatarFX.init(canvasWrap);
+                                }
+                            }, 100);
                         },
                         undefined,
                         (err) => {

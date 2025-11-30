@@ -1,0 +1,518 @@
+/**
+ * BeeSmart Avatar & Badge Intro FX System
+ * Optimized for GLB 3D avatars and badge reveals
+ * November 30, 2025
+ */
+
+/* ===== BASE AVATAR CONTAINER ===== */
+.avatar-fx-container {
+    position: relative;
+    display: inline-block;
+    overflow: visible;
+}
+
+/* ===== 1. HONEY-GLOW FADE (Default/Universal) ===== */
+.avatar-honey-glow {
+    opacity: 0;
+    transform: scale(0.95);
+    animation: honeyGlowFade 0.6s ease-out forwards;
+}
+
+@keyframes honeyGlowFade {
+    0% {
+        opacity: 0;
+        box-shadow: 0 0 0px rgba(252, 211, 77, 0.8);
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 40px rgba(250, 204, 21, 0.6);
+        transform: scale(1);
+    }
+}
+
+/* ===== 2. HEX-PIXEL REVEAL (Premium) ===== */
+.avatar-hex-reveal {
+    opacity: 0;
+    animation: hexRevealFade 0.8s ease-out forwards;
+}
+
+.avatar-hex-tile {
+    opacity: 0;
+    transform: scale(0.8);
+    animation: hexTileFade 0.35s ease-out forwards;
+}
+
+@keyframes hexRevealFade {
+    0% { opacity: 0; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@keyframes hexTileFade {
+    from {
+        opacity: 0;
+        transform: scale(0.7) rotate(-5deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* ===== 3. BUZZ-DUST PARTICLE FADE ===== */
+.avatar-buzz-dust {
+    position: relative;
+    opacity: 0;
+    animation: buzzDustFadeIn 0.6s ease-out forwards;
+}
+
+.avatar-buzz-dust::before {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    background: radial-gradient(circle, rgba(250, 204, 21, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    animation: buzzDustFloat 0.8s ease-out forwards;
+    pointer-events: none;
+}
+
+/* Individual dust particles */
+.buzz-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #fbbf24, #f59e0b);
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleRise 1.2s ease-out forwards;
+}
+
+@keyframes buzzDustFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes buzzDustFloat {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.5);
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(1.2);
+    }
+}
+
+@keyframes particleRise {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0);
+    }
+    30% {
+        opacity: 1;
+        transform: translateY(-10px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.5);
+    }
+}
+
+/* ===== 4. BEE-WING SWEEP (Unique) ===== */
+.avatar-wing-sweep {
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: wingSweepFade 0.7s ease-out forwards;
+}
+
+.avatar-wing-sweep::before,
+.avatar-wing-sweep::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(120deg, 
+        transparent 0%, 
+        rgba(251, 191, 36, 0.4) 30%,
+        rgba(245, 158, 11, 0.6) 50%,
+        rgba(251, 191, 36, 0.4) 70%,
+        transparent 100%
+    );
+    pointer-events: none;
+    z-index: 10;
+}
+
+.avatar-wing-sweep::before {
+    left: -50%;
+    animation: wingLeftSweep 0.7s ease-out forwards;
+}
+
+.avatar-wing-sweep::after {
+    right: -50%;
+    animation: wingRightSweep 0.7s ease-out forwards;
+}
+
+@keyframes wingSweepFade {
+    0% { opacity: 0; }
+    40% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes wingLeftSweep {
+    0% { left: -50%; }
+    100% { left: 100%; }
+}
+
+@keyframes wingRightSweep {
+    0% { right: -50%; }
+    100% { right: 100%; }
+}
+
+/* ===== 5. HONEY-DRIP WIPE ===== */
+.avatar-honey-drip {
+    position: relative;
+    overflow: hidden;
+}
+
+.honey-wipe-overlay {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(180deg, 
+        rgba(251, 191, 36, 0.7) 0%,
+        rgba(245, 158, 11, 0.5) 50%,
+        rgba(251, 191, 36, 0.3) 100%
+    );
+    animation: honeyWipeDrip 0.8s ease-out forwards;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.avatar-honey-drip .avatar-img {
+    opacity: 0;
+    animation: honeyDripReveal 0.8s ease-out forwards;
+}
+
+@keyframes honeyWipeDrip {
+    0% { top: -100%; }
+    100% { top: 100%; }
+}
+
+@keyframes honeyDripReveal {
+    0% { opacity: 0; }
+    40% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* ===== 6. GOLDEN FLASH + FADE (Premium Avatars) ===== */
+.avatar-golden-flash {
+    opacity: 0;
+    animation: goldenFlashFade 0.8s ease-out forwards;
+}
+
+@keyframes goldenFlashFade {
+    0% {
+        opacity: 0;
+        filter: brightness(5) saturate(2);
+        transform: scale(0.9);
+    }
+    30% {
+        opacity: 1;
+        filter: brightness(2.5) saturate(1.5);
+    }
+    60% {
+        filter: brightness(1.2) saturate(1.2);
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        filter: brightness(1) saturate(1);
+        transform: scale(1);
+    }
+}
+
+/* ===== 7. HONEYCOMB PORTAL IN ===== */
+.avatar-portal {
+    position: relative;
+    opacity: 0;
+    transform: scale(0.7);
+    animation: portalFadeIn 0.7s ease-out forwards;
+}
+
+.honeycomb-halo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    animation: honeycombHaloExpand 1s ease-out forwards;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes portalFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.7) rotate(-10deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes honeycombHaloExpand {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1.2) rotate(180deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5) rotate(360deg);
+    }
+}
+
+/* ===== 8. SIDE-SWIPE GLOW ===== */
+.avatar-swipe-glow {
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: swipeGlowFade 0.6s ease-out forwards;
+}
+
+.avatar-swipe-glow::after {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: -100%;
+    width: 40%;
+    height: 120%;
+    background: linear-gradient(110deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 20%,
+        rgba(251, 191, 36, 0.6) 50%,
+        rgba(255, 255, 255, 0.1) 80%,
+        transparent 100%
+    );
+    animation: glowSweep 0.8s ease-out 0.1s forwards;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes swipeGlowFade {
+    to { opacity: 1; }
+}
+
+@keyframes glowSweep {
+    0% { left: -100%; }
+    100% { left: 120%; }
+}
+
+/* ===== 9. SOFT DROP-IN + BOUNCE ===== */
+.avatar-drop-bounce {
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: dropBounceFade 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes dropBounceFade {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== 10. SHAPE-MORPH FADE ===== */
+.avatar-shape-morph {
+    opacity: 0;
+    animation:
+        shapeMorphTransform 0.7s ease-out forwards,
+        shapeMorphFade 0.5s ease-out forwards;
+}
+
+@keyframes shapeMorphTransform {
+    0% {
+        clip-path: circle(0% at 50% 50%);
+        transform: rotate(-15deg);
+    }
+    50% {
+        clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+        transform: rotate(5deg);
+    }
+    100% {
+        clip-path: inset(0%);
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes shapeMorphFade {
+    0% { opacity: 0; }
+    30% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* ===== BADGE-SPECIFIC FX ===== */
+.badge-intro {
+    position: relative;
+    display: inline-block;
+}
+
+/* Badge Glow Pulse */
+.badge-glow-pulse {
+    opacity: 0;
+    animation: badgeGlowPulse 1s ease-out forwards;
+}
+
+@keyframes badgeGlowPulse {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+        filter: drop-shadow(0 0 0px #fbbf24);
+    }
+    50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 20px #fbbf24);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px #f59e0b);
+    }
+}
+
+/* Badge Spin-In */
+.badge-spin-in {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+    animation: badgeSpinIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes badgeSpinIn {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-180deg);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.1) rotate(10deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* Badge Collect (Flies in from top) */
+.badge-collect {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.3);
+    animation: badgeCollect 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes badgeCollect {
+    0% {
+        opacity: 0;
+        transform: translateY(-100px) scale(0.3) rotate(0deg);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(5px) scale(1.05) rotate(360deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(360deg);
+    }
+}
+
+/* ===== COMBINED AVATAR + BADGE FX ===== */
+.avatar-badge-combo {
+    position: relative;
+}
+
+.avatar-badge-combo .badge-overlay {
+    position: absolute;
+    bottom: -10%;
+    right: -10%;
+    animation: badgeDelayedEntry 1s ease-out 0.5s forwards;
+    opacity: 0;
+}
+
+@keyframes badgeDelayedEntry {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-90deg);
+    }
+    70% {
+        transform: scale(1.15) rotate(5deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* ===== STAGGER UTILITY CLASSES ===== */
+.fx-delay-100 { animation-delay: 0.1s !important; }
+.fx-delay-200 { animation-delay: 0.2s !important; }
+.fx-delay-300 { animation-delay: 0.3s !important; }
+.fx-delay-400 { animation-delay: 0.4s !important; }
+.fx-delay-500 { animation-delay: 0.5s !important; }
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+.avatar-fx-container,
+.avatar-fx-container * {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
+
+/* Disable animations for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .avatar-honey-glow,
+    .avatar-hex-reveal,
+    .avatar-buzz-dust,
+    .avatar-wing-sweep,
+    .avatar-golden-flash,
+    .avatar-portal,
+    .avatar-swipe-glow,
+    .avatar-drop-bounce,
+    .avatar-shape-morph,
+    .badge-glow-pulse,
+    .badge-spin-in,
+    .badge-collect {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
