@@ -3694,7 +3694,7 @@ class BeeSoundboard {
 
         let start = this.ctx.currentTime;
         steps.forEach((step) => {
-            const duration = step.duration ?? 0.2;
+            const duration = (step.duration !== undefined && step.duration !== null) ? step.duration : 0.2;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
@@ -3704,7 +3704,7 @@ class BeeSoundboard {
                 osc.frequency.linearRampToValueAtTime(step.slide, start + duration);
             }
 
-            const gainValue = Math.max(step.gain ?? 0.14, 0.0001);
+            const gainValue = Math.max((step.gain !== undefined && step.gain !== null) ? step.gain : 0.14, 0.0001);
             gain.gain.setValueAtTime(gainValue, start);
             if (step.fade) {
                 gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -3716,7 +3716,7 @@ class BeeSoundboard {
             osc.start(start);
             osc.stop(start + duration + 0.01);
 
-            start += step.delay ?? duration;
+            start += (step.delay !== undefined && step.delay !== null) ? step.delay : duration;
         });
     }
 
@@ -4442,7 +4442,7 @@ class BeeDelightManager {
             return;
         }
 
-        const total = progress.total ?? this.totalQuestions;
+        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : this.totalQuestions;
         if (Number.isFinite(total) && total > 0) {
             this.totalQuestions = total;
         }
@@ -4452,7 +4452,7 @@ class BeeDelightManager {
             return;
         }
 
-        const correct = Math.max(progress.correct ?? 0, 0);
+        const correct = Math.max((progress.correct !== undefined && progress.correct !== null) ? progress.correct : 0, 0);
         const ratio = Math.min(correct / workingTotal, 1);
         
         // Update SVG honey fill
@@ -5444,9 +5444,9 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
-            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
+            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
+            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
+            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${(data.total !== undefined && data.total !== null) ? data.total : '?'}`;
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -6409,11 +6409,11 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
+            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
+            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
             
             // Update progress displays (both text and percentage)
-            this.updateProgressDisplays(questionNumber, data.total ?? this.totalWords);
+            this.updateProgressDisplays(questionNumber, (data.total !== undefined && data.total !== null) ? data.total : this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
@@ -7155,14 +7155,14 @@ class QuizManager {
     }
 
     updateScoreDisplay(progress = {}) {
-        const total = progress.total ?? this.totalWords ?? 0;
+        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : ((this.totalWords !== undefined && this.totalWords !== null) ? this.totalWords : 0);
         if (Number.isFinite(total) && total > 0) {
             this.totalWords = total;
         }
 
         const correct = Number(progress.correct) || 0;
         const incorrect = Number(progress.incorrect) || 0;
-        const streak = Number(progress.streak ?? this.currentStreak) || 0;
+        const streak = Number((progress.streak !== undefined && progress.streak !== null) ? progress.streak : this.currentStreak) || 0;
         
         // Ensure we never display NaN
         document.getElementById('correctCount').textContent = correct;
@@ -8408,7 +8408,7 @@ function startLiveStatusPolling(intervalMs = 5000) {
                 session_points: data.session_points
             };
             if (typeof BeeSmart !== 'undefined') {
-                BeeSmart.sessionPoints = data.session_points ?? BeeSmart.sessionPoints;
+                BeeSmart.sessionPoints = (data.session_points !== undefined && data.session_points !== null) ? data.session_points : BeeSmart.sessionPoints;
                 if (typeof BeeSmart.updateScoreDisplay === 'function') {
                     BeeSmart.updateScoreDisplay(progress);
                 }
@@ -8449,7 +8449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🎭 Initialize morphing controller
     window.morphController = new MorphController('morphContainer');
     // DEBUG gated logging helper
-    window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
+    window.DEBUG_MODE = (window.DEBUG_MODE !== undefined && window.DEBUG_MODE !== null) ? window.DEBUG_MODE : false; // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
     debugLog('🎭 Morph controller initialized');
 
