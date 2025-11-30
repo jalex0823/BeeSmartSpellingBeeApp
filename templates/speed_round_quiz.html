@@ -1361,6 +1361,22 @@ function setupEventListeners() {
                 submitAnswer();
             }
         });
+        
+        // 🍎 iOS FIX: Scroll input into view when keyboard appears
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            spellInput.addEventListener('focus', () => {
+                setTimeout(() => {
+                    spellInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+            
+            spellInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 100);
+            });
+        }
     }
 }
 

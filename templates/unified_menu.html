@@ -168,6 +168,9 @@
             padding: 2rem 0;
             overflow-x: hidden;
             position: relative;
+            /* 🍎 iOS optimization: Prevent tap highlight and improve touch responsiveness */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         
         /* Bee Swarm Visual Effects */
@@ -913,6 +916,11 @@
             box-shadow: 0 10px 22px var(--tile-shadow);
             z-index: 200 !important;  /* Ensure tiles are above decorative elements */
             pointer-events: auto !important;
+            /* 🍎 iOS optimization: Fast tap response and prevent tap highlight */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* Locked (guest) state for tiles */
@@ -1021,6 +1029,13 @@
         .menu-option.active {
             border-color: rgba(255, 255, 255, 0.95);
             box-shadow: 0 14px 30px var(--tile-hover-shadow);
+        }
+        
+        /* 🍎 iOS touch feedback - active state when tapping */
+        .menu-option:active {
+            transform: translateY(-8px) scale(1.04);
+            box-shadow: 0 20px 40px var(--tile-hover-shadow);
+            transition: all 0.1s ease;
         }
 
         /* Kid-friendly color themes */
@@ -5838,12 +5853,24 @@
             });
 
             // Submit button
-            document.getElementById('randomPlaySubmit').addEventListener('click', () => {
+            const randomPlaySubmitBtn = document.getElementById('randomPlaySubmit');
+            
+            // Click handler for desktop
+            randomPlaySubmitBtn.addEventListener('click', () => {
                 const level = parseInt(slider.value);
                 console.log('🎲 Submit button clicked! Level:', level);
                 modal.remove();
                 generateRandomWords(level);
             });
+            
+            // 🍎 iOS FIX: Touch handler for instant response on iPhone/iPad
+            randomPlaySubmitBtn.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Prevent 300ms click delay on iOS
+                const level = parseInt(slider.value);
+                console.log('🎲 Submit button touched (iOS)! Level:', level);
+                modal.remove();
+                generateRandomWords(level);
+            }, { passive: false });
 
             // Hover effect for submit button
             const submitBtn = document.getElementById('randomPlaySubmit');
@@ -5855,11 +5882,29 @@
                 submitBtn.style.transform = '';
                 submitBtn.style.boxShadow = '0 6px 20px rgba(255, 107, 157, 0.4)';
             });
+            
+            // 🍎 iOS FIX: Touch feedback for button press on iPhone/iPad
+            submitBtn.addEventListener('touchstart', () => {
+                submitBtn.style.transform = 'translateY(-3px) scale(1.05)';
+                submitBtn.style.boxShadow = '0 10px 30px rgba(255, 107, 157, 0.6)';
+            }, { passive: true });
+            submitBtn.addEventListener('touchcancel', () => {
+                submitBtn.style.transform = '';
+                submitBtn.style.boxShadow = '0 6px 20px rgba(255, 107, 157, 0.4)';
+            }, { passive: true });
 
             // Close button
-            document.getElementById('randomPlayClose').addEventListener('click', () => {
+            const randomPlayCloseBtn = document.getElementById('randomPlayClose');
+            
+            randomPlayCloseBtn.addEventListener('click', () => {
                 modal.remove();
             });
+            
+            // 🍎 iOS FIX: Touch handler for instant close on iPhone/iPad
+            randomPlayCloseBtn.addEventListener('touchend', (e) => {
+                e.preventDefault(); // Prevent 300ms click delay on iOS
+                modal.remove();
+            }, { passive: false });
 
             // Close on outside click
             modal.addEventListener('click', (e) => {
@@ -5867,6 +5912,9 @@
                     modal.remove();
                 }
             });
+            
+            // 📱 Auto-scroll to submit button on mobile for better visibility
+            autoCenterModal(modal);
         }
 
         function generateRandomWords(difficulty) {
@@ -6909,7 +6957,7 @@
                                     </p>
                                 </div>
                                 
-                                <button onclick="startSpeedRound()" style="
+                                <button id="speedRoundStartBtn" style="
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                                     color: #333;
                                     border: none;
@@ -6930,6 +6978,16 @@
 
                     document.body.appendChild(modal);
                     autoCenterModal(modal); // 📱 Auto-center for mobile
+                    
+                    // 🍎 iOS FIX: Add touch event listeners to start button
+                    const speedStartBtn = document.getElementById('speedRoundStartBtn');
+                    if (speedStartBtn) {
+                        speedStartBtn.addEventListener('click', startSpeedRound);
+                        speedStartBtn.addEventListener('touchend', (e) => {
+                            e.preventDefault(); // Prevent 300ms delay on iOS
+                            startSpeedRound();
+                        }, { passive: false });
+                    }
                 })
                 .catch(error => {
                     console.error('Error checking wordbank:', error);
