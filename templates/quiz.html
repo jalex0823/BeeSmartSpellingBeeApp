@@ -8190,8 +8190,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const avatarId = window.userAvatarLoader.getAvatarId();
         debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
-    // Render into mascot container (replaces old smartyBee3D)
-    smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
+        // Render into mascot container using userAvatarLoader
+        await window.userAvatarLoader.loadUserAvatar('mascotBee3D');
         
         debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
