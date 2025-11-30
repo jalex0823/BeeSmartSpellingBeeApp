@@ -1429,8 +1429,8 @@
       beeModal.classList.add("active");
     });
   }
-  function confirmBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(true); modalResolve=null; }
-  function closeBeeModal(){ beeModal.classList.remove("active"); modalResolve?.(false); modalResolve=null; }
+  function confirmBeeModal(){ beeModal.classList.remove("active"); if(modalResolve) modalResolve(true); modalResolve=null; }
+  function closeBeeModal(){ beeModal.classList.remove("active"); if(modalResolve) modalResolve(false); modalResolve=null; }
 
   // PROMPT (create)
   function showBeePrompt(icon,title,message){
@@ -1458,7 +1458,7 @@
   }
   function closeBeePrompt(value){
     beeModal.classList.remove("active");
-    modalResolve?.(value);
+    if(modalResolve) modalResolve(value);
     modalResolve=null;
     // restore modal HTML
     const modal = beeModal.querySelector(".bee-modal");
