@@ -8133,7 +8133,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
     // 🎭 Initialize morphing controller
     window.morphController = new MorphController('morphContainer');
-    console.log('🎭 Morph controller initialized');
+    // DEBUG gated logging helper
+    window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
+    const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
+    debugLog('🎭 Morph controller initialized');
+
+    // Helper: Load and display Buzz Dust badge once
+    const loadBuzzDustBadge = async () => {
+        try {
+            const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+            if (!rankResponse.ok) return;
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
+            }
+        } catch (rankError) {
+            console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+        }
+    };
     
     const delight = new BeeDelightManager();
     
@@ -8143,7 +8167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize 3D Mascot with user's selected avatar
     let smartyBee = null;
     try {
-        console.log('🎯 Quiz page: Starting avatar initialization...');
+        debugLog('🎯 Quiz page: Starting avatar initialization...');
         
         // Ensure avatar loader exists (should be loaded from base.html)
         if (!window.userAvatarLoader) {
@@ -8152,7 +8176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Wait for avatar loader to fetch user's avatar
-        console.log('🔄 Fetching user avatar from API...');
+        debugLog('🔄 Fetching user avatar from API...');
         await window.userAvatarLoader.init();
         
         // Get avatar options from loader
@@ -8164,19 +8188,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         const avatarId = window.userAvatarLoader.getAvatarId();
-        console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
+        debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
     // Render into mascot container (replaces old smartyBee3D)
     smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
         
-        console.log(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
+        debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
         // Add click handler for themed animation
         const mascotContainer = document.getElementById('mascotBee3D');
         if (mascotContainer) {
             mascotContainer.style.cursor = 'pointer';
             mascotContainer.addEventListener('click', () => {
-                console.log('🐝 Quiz mascot clicked - playing themed animation');
+                debugLog('🐝 Quiz mascot clicked - playing themed animation');
                 playThemedAvatarEffect(avatarId, mascotContainer);
             });
         }
@@ -8185,59 +8209,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error details:', error.message, error.stack);
         // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
         try {
-            console.log('🔄 Attempting 2D fallback...');
+            debugLog('🔄 Attempting 2D fallback...');
             if (window.userAvatarLoader) {
                 await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                console.log('✅ 2D fallback loaded successfully');
+                debugLog('✅ 2D fallback loaded successfully');
             }
         } catch (fallbackError) {
             console.error('❌ Fallback avatar also failed:', fallbackError);
         }
     }
     
-    // 🐝 Load and display Buzz Dust badge
-    try {
-        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-        if (rankResponse.ok) {
-            const rankData = await rankResponse.json();
-            const badgeImg = document.getElementById('quizHeaderBadge');
-            if (badgeImg && rankData.current_class) {
-                const beeClass = rankData.current_class;
-                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
-                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
-                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
-                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
-                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
-                badgeImg.alt = beeClass.label;
-                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
-                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
-            }
-        }
-    } catch (rankError) {
-        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
-    }
-
-    // 🐝 Load and display Buzz Dust badge image
-    try {
-        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-        if (rankResponse.ok) {
-            const rankData = await rankResponse.json();
-            const badgeImg = document.getElementById('quizHeaderBadge');
-            if (badgeImg && rankData.current_class) {
-                const beeClass = rankData.current_class;
-                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
-                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
-                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
-                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
-                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
-                badgeImg.alt = beeClass.label;
-                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
-                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
-            }
-        }
-    } catch (rankError) {
-        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
-    }
+    // 🐝 Load and display Buzz Dust badge (deduplicated)
+    await loadBuzzDustBadge();
 
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
