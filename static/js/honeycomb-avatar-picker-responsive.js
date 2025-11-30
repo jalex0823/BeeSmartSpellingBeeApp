@@ -98,10 +98,10 @@ function showPreviewLoading(avatarName) {
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #FFD700;">
             <div style="font-size: 3rem; animation: bounce 1s infinite;">🐝</div>
             <div style="margin-top: 1rem; font-size: 1.2rem;">Loading ${avatarName}...</div>
-                <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Avatar preview loading progress" style="width: min(90%, 320px); height: 0.5rem; background: rgba(255,215,0,0.2); border-radius: 9999px; margin-top: 1rem; overflow: hidden;">
+            <div style="width: 80%; height: 8px; background: rgba(255,215,0,0.2); border-radius: 4px; margin-top: 1rem; overflow: hidden;">
                 <div id="preview-load-progress" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s;"></div>
             </div>
-                <div id="preview-load-text" style="margin-top: 0.5rem; font-size: clamp(0.9rem, 2vw, 1rem);" aria-live="polite">0%</div>
+            <div id="preview-load-text" style="margin-top: 0.5rem; font-size: 0.9rem;">0%</div>
         </div>
     `;
     
@@ -123,14 +123,10 @@ function showPreviewLoading(avatarName) {
 function updatePreviewProgress(percentage, message = null) {
     const progressBar = document.getElementById('preview-load-progress');
     const progressText = document.getElementById('preview-load-text');
-        const progressOuter = progressBar ? progressBar.parentElement : null;
     
     if (progressBar) {
         progressBar.style.width = percentage + '%';
     }
-        if (progressOuter && progressOuter.getAttribute('role') === 'progressbar') {
-            progressOuter.setAttribute('aria-valuenow', String(Math.round(percentage)));
-        }
     
     if (progressText) {
         progressText.textContent = message || `${Math.round(percentage)}%`;
@@ -205,19 +201,19 @@ function computeLockedMessage(avatar) {
             let msg = `You need ${remaining.toLocaleString()} more Honey Points to unlock this bee.`;
             if (price && tier === 'earn_or_buy') {
                 msg += ` Or purchase for $${Number(price).toFixed(2)}.`;
-                <button type="button" class="locked-modal-btn" aria-label="Register now to unlock more avatars" onclick="window.location.href='/auth/register'">Register Now</button>
-                <button type="button" class="locked-modal-btn-secondary" aria-label="Close unlock information" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
+            }
+            return msg;
         }
         return 'You have enough Honey Points to unlock this bee! Try selecting again.';
     } else if (isPremiumOnly && price) {
         return `Purchase for $${Number(price).toFixed(2)}.`;
     }
-            <button type="button" class="locked-modal-btn" aria-label="Dismiss premium avatar notice" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+    return avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
 }
 
 // Load avatars from API
 async function loadAvatars() {
-            <button type="button" class="locked-modal-btn" aria-label="Dismiss locked avatar notice" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+    try {
         const response = await fetch('/api/avatars', { credentials: 'same-origin' });
         if (!response.ok) {
             let bodySnippet = '';
@@ -225,7 +221,7 @@ async function loadAvatars() {
                 bodySnippet = (await response.text()).slice(0, 500);
             } catch (_) { /* ignore */ }
             console.error('🐞 Avatar API non-OK response', {
-            <button type="button" class="locked-modal-close" aria-label="Close" onclick="this.parentElement.parentElement.remove()">×</button>
+                status: response.status,
                 contentType: response.headers.get('content-type') || '',
                 preview: bodySnippet
             });
