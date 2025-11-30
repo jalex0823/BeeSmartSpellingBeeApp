@@ -378,32 +378,7 @@ if ('speechSynthesis' in window) {
         pointer-events: none;
     }
     
-    /* Toggle button to show/hide stats */
-    .show-stats-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.4rem;
-        margin: 0.5rem auto;
-        padding: 0.4rem 1rem;
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 193, 7, 0.85));
-        border: 2px solid rgba(255, 193, 7, 0.6);
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #5c4600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
-        -webkit-tap-highlight-color: transparent;
-    }
-    
-    .show-stats-toggle:hover,
-    .show-stats-toggle:active {
-        background: linear-gradient(135deg, rgba(255, 220, 50, 1), rgba(255, 200, 20, 0.95));
-        transform: scale(1.02);
-        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-    }
+    /* Toggle button styling handled inline - removed standalone styles */
 
     .score-item {
         flex: 0 1 auto;
@@ -2943,8 +2918,6 @@ if ('speechSynthesis' in window) {
             </a>
         </div>
 
-        <button class="show-stats-toggle" id="showStatsToggle" type="button"> Show Stats</button>
-
         <div class="score-display stats-hidden" id="scoreDisplay">
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
@@ -3427,6 +3400,12 @@ if ('speechSynthesis' in window) {
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
 
         <div class="quiz-buttons">
+            <!-- Show Stats Toggle -->
+            <button type="button" class="action-btn secondary" id="showStatsToggle" style="background: linear-gradient(135deg, #FFD700, #FFC107); color: #5c4600;">
+                <span class="bee-icon" aria-hidden="true">📊</span>
+                Show Stats
+            </button>
+            
             <!-- Voice Control Buttons -->
             <button type="button" class="action-btn secondary" id="speakButton">
                 <span class="bee-icon" aria-hidden="true">🔊</span>
@@ -8527,7 +8506,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
         // Render into mascot container using userAvatarLoader
-        await window.userAvatarLoader.loadUserAvatar('mascotBee3D');
+        // Use the user's actual avatar ID, not the container ID
+        const userAvatarId = window.userAvatarLoader.getAvatarId();
+        debugLog('Loading user avatar:', userAvatarId);
+        await window.userAvatarLoader.loadUserAvatar(userAvatarId, 'mascotBee3D');
         
         debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
