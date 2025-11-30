@@ -3781,8 +3781,12 @@ class BeeSoundboard {
             };
             
             utterance.onend = () => {
-                if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                if (statusEl) statusEl.textContent = '🐝 Ready';
+                // iOS/iPhone Fix: Keep visualization active longer to bridge gap before timer fade-in
+                // Delay removing 'speaking' class by 500ms to cover the pause before timer starts
+                setTimeout(() => {
+                    if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                    if (statusEl) statusEl.textContent = '🐝 Ready';
+                }, 500);
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
