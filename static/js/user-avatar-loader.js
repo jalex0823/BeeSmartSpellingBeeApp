@@ -625,13 +625,13 @@ class UserAvatarLoader {
             
             toast.style.cssText = `
                 position: fixed;
-                bottom: 20px;
-                right: 20px;
+                bottom: clamp(12px, 2vh, 24px);
+                right: clamp(12px, 2vw, 24px);
                 background: ${bgColor};
                 color: #fff;
-                padding: 10px 14px;
-                border-radius: 8px;
-                font-size: 14px;
+                padding: clamp(8px, 1.5vh, 12px) clamp(12px, 2vw, 16px);
+                border-radius: 0.5rem;
+                font-size: clamp(0.875rem, 1.8vw, 1rem);
                 z-index: 9999;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.25);
                 opacity: 0;

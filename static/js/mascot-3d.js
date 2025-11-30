@@ -411,7 +411,7 @@ class SmartyBee3D {
                 align-items: center;
                 justify-content: center;
                 background: linear-gradient(135deg, #FFE082 0%, #FFD54F 100%);
-                border-radius: 20px;
+                border-radius: 1rem;
                 border: 3px solid #FFB300;
                 padding: 1rem;
                 text-align: center;
@@ -542,13 +542,13 @@ class SmartyBee3D {
         // Show 2D bee image if 3D fails to load
         this.container.innerHTML = `
             <div style="
-                width: ${this.options.width}px;
-                height: ${this.options.height}px;
+                width: 100%;
+                height: 100%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background: linear-gradient(135deg, #FFE082 0%, #FFD54F 100%);
-                border-radius: 20px;
+                border-radius: 1rem;
                 border: 3px solid #FFB300;
             ">
                 <div style="font-size: 4rem; animation: bounce 1s infinite;">🐝</div>

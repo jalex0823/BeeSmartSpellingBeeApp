@@ -27,7 +27,7 @@ async function loadAvatars() {
                     font-size: 1.1rem;
                     font-weight: 600;
                     background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
-                    border-radius: 12px;
+                    border-radius: 0.75rem;
                     margin-bottom: 1rem;
                 ">
                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">🐝</div>
@@ -39,14 +39,7 @@ async function loadAvatars() {
                     ">
                         <span id="avatarLoadCount">0</span> avatars ready
                     </div>
-                    <div style="
-                        width: 200px;
-                        height: 4px;
-                        background: rgba(255, 152, 0, 0.2);
-                        border-radius: 2px;
-                        margin: 1rem auto;
-                        overflow: hidden;
-                    ">
+                    <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Avatar list loading progress" style="width: min(60vw, 240px); height: 0.5rem; background: rgba(255, 152, 0, 0.2); border-radius: 9999px; margin: 1rem auto; overflow: hidden;">
                         <div id="avatarLoadBar" style="
                             width: 0%;
                             height: 100%;
@@ -76,6 +69,10 @@ async function loadAvatars() {
             if (loadBar && loadCount) {
                 loadCount.textContent = avatars.length;
                 loadBar.style.width = '100%';
+                const outer = loadBar.parentElement;
+                if (outer && outer.getAttribute('role') === 'progressbar') {
+                    outer.setAttribute('aria-valuenow', '100');
+                }
             }
             
             // Update test page avatar count if present
@@ -203,8 +200,8 @@ function renderAvatarGrid(avatarsToRender) {
         // Use 2D PNG thumbnail (simple and fast)
         const thumbnailUrl = avatar.urls?.thumbnail || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
         thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
-                                        alt="${displayName}" 
-                                        style="width:100%;height:100%;object-fit:contain;border-radius:8px;">`;
+                        alt="${displayName}" 
+                        style="width:100%;height:100%;object-fit:contain;border-radius:0.5rem;">`;
     });
     
     console.log(`✅ Rendered ${avatarsToRender.length} avatar cards with 2D thumbnails`);
@@ -369,7 +366,7 @@ function updatePreview() {
             preview.innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">🐝</div>
-                    <div style="width: 80%; max-width: 200px; height: 8px; background: #FFE8CC; border-radius: 10px; margin: 1rem auto; overflow: hidden;">
+                    <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Avatar preview loading progress" style="width: min(80%, 320px); height: 0.5rem; background: #FFE8CC; border-radius: 9999px; margin: 1rem auto; overflow: hidden;">
                         <div id="preview3DProgress" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%); transition: width 0.3s ease;"></div>
                     </div>
                     <p id="preview3DText" style="color: #8B6914; font-weight: 600; margin-top: 0.5rem;">Loading 3D model... 0%</p>
@@ -498,6 +495,10 @@ function updatePreview() {
             const updateProgress = () => {
                 if (progressBar) progressBar.style.width = loadProgress.file + '%';
                 if (progressText) progressText.textContent = `Loading 3D model... ${loadProgress.file}%`;
+                const outer = progressBar ? progressBar.parentElement : null;
+                if (outer && outer.getAttribute('role') === 'progressbar') {
+                    outer.setAttribute('aria-valuenow', String(loadProgress.file));
+                }
             };
             
             // ========== GLB LOADING ==========
@@ -742,7 +743,7 @@ function showAvatarDescriptionPopup(avatar) {
                 <div class="avatar-popup-body">
                     <p class="avatar-popup-description">${avatar.description || 'A wonderful bee companion for your spelling journey!'}</p>
                     <div class="avatar-popup-actions">
-                        <button class="btn-select-this-avatar" data-avatar-id="${avatar.id}">
+                        <button type="button" class="btn-select-this-avatar" data-avatar-id="${avatar.id}" aria-label="Select ${avatar.name} as your avatar">
                             Select This Avatar
                         </button>
                     </div>
@@ -809,12 +810,11 @@ function showLockedAvatarMessage(avatar) {
         background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
         color: #000;
         padding: 2rem;
-        border-radius: 16px;
+        border-radius: 1rem;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         z-index: 10000;
         text-align: center;
-        max-width: 90%;
-        width: 400px;
+        width: min(90%, 400px);
         animation: slideIn 0.3s ease;
     `;
     
@@ -834,14 +834,14 @@ function showLockedAvatarMessage(avatar) {
         <h3 style="margin: 0 0 1rem 0; color: #000;">${avatar.name}</h3>
         <p style="margin: 0 0 1.5rem 0; color: #333;">This avatar is locked!</p>
         <p style="margin: 0 0 1.5rem 0; font-size: 1.1rem;">${unlockText}</p>
-        <button onclick="this.parentElement.remove()" style="
+        <button type="button" aria-label="Dismiss locked avatar notice" onclick="this.parentElement.remove()" style="
             padding: 0.75rem 2rem;
             background: #fff;
             border: 2px solid #FF8C00;
-            border-radius: 8px;
+            border-radius: 0.5rem;
             color: #FF8C00;
             font-weight: 700;
-            font-size: 1rem;
+            font-size: clamp(0.95rem, 2vw, 1rem);
             cursor: pointer;
             transition: all 0.3s ease;
         ">Got it!</button>
