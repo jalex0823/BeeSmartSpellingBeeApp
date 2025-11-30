@@ -7082,6 +7082,10 @@
                                 box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
                                 transition: all 0.2s;
                                 border: 3px solid #FF4757;
+                                -webkit-tap-highlight-color: transparent;
+                                touch-action: manipulation;
+                                user-select: none;
+                                -webkit-user-select: none;
                             ">${confirmText}</button>
                             <button id="beeConfirmCancel" style="
                                 background: linear-gradient(135deg, #A8E6CF 0%, #88D8B0 100%);
@@ -7095,6 +7099,10 @@
                                 box-shadow: 0 8px 20px rgba(168, 230, 207, 0.4);
                                 transition: all 0.2s;
                                 border: 3px solid #77DD77;
+                                -webkit-tap-highlight-color: transparent;
+                                touch-action: manipulation;
+                                user-select: none;
+                                -webkit-user-select: none;
                             ">${cancelText}</button>
                         </div>
                     </div>
@@ -7114,10 +7122,29 @@
                     okBtn.style.transform = 'scale(1)';
                     okBtn.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.4)';
                 });
+                
+                // Desktop click handler
                 okBtn.addEventListener('click', () => {
                     modal.remove();
                     resolve(true);
                 });
+                
+                // 🍎 iOS touch handler for instant response
+                okBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    modal.remove();
+                    resolve(true);
+                }, { passive: false });
+                
+                // 🍎 iOS touch feedback
+                okBtn.addEventListener('touchstart', () => {
+                    okBtn.style.transform = 'scale(1.08) translateY(-2px)';
+                    okBtn.style.boxShadow = '0 12px 28px rgba(255, 107, 107, 0.6)';
+                }, { passive: true });
+                okBtn.addEventListener('touchcancel', () => {
+                    okBtn.style.transform = 'scale(1)';
+                    okBtn.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.4)';
+                }, { passive: true });
 
                 cancelBtn.addEventListener('mouseenter', () => {
                     cancelBtn.style.transform = 'scale(1.08) translateY(-2px)';
@@ -7127,10 +7154,29 @@
                     cancelBtn.style.transform = 'scale(1)';
                     cancelBtn.style.boxShadow = '0 8px 20px rgba(168, 230, 207, 0.4)';
                 });
+                
+                // Desktop click handler
                 cancelBtn.addEventListener('click', () => {
                     modal.remove();
                     resolve(false);
                 });
+                
+                // 🍎 iOS touch handler for instant response
+                cancelBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    modal.remove();
+                    resolve(false);
+                }, { passive: false });
+                
+                // 🍎 iOS touch feedback
+                cancelBtn.addEventListener('touchstart', () => {
+                    cancelBtn.style.transform = 'scale(1.08) translateY(-2px)';
+                    cancelBtn.style.boxShadow = '0 12px 28px rgba(168, 230, 207, 0.6)';
+                }, { passive: true });
+                cancelBtn.addEventListener('touchcancel', () => {
+                    cancelBtn.style.transform = 'scale(1)';
+                    cancelBtn.style.boxShadow = '0 8px 20px rgba(168, 230, 207, 0.4)';
+                }, { passive: true });
             });
         }
         
@@ -7248,6 +7294,10 @@
                                 box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
                                 transition: all 0.2s;
                                 border: 3px solid #FF4757;
+                                -webkit-tap-highlight-color: transparent;
+                                touch-action: manipulation;
+                                user-select: none;
+                                -webkit-user-select: none;
                             ">OK</button>
                             <button id="beePromptCancel" style="
                                 background: linear-gradient(135deg, #A8E6CF 0%, #88D8B0 100%);
@@ -7261,6 +7311,10 @@
                                 box-shadow: 0 8px 20px rgba(168, 230, 207, 0.4);
                                 transition: all 0.2s;
                                 border: 3px solid #77DD77;
+                                -webkit-tap-highlight-color: transparent;
+                                touch-action: manipulation;
+                                user-select: none;
+                                -webkit-user-select: none;
                             ">Cancel</button>
                         </div>
                     </div>
@@ -7302,11 +7356,31 @@
                     okBtn.style.transform = 'scale(1)';
                     okBtn.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.4)';
                 });
+                
+                // Desktop click handler
                 okBtn.addEventListener('click', () => {
                     const value = inputField.value;
                     modal.remove();
                     resolve(value);
                 });
+                
+                // 🍎 iOS touch handler for instant response
+                okBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const value = inputField.value;
+                    modal.remove();
+                    resolve(value);
+                }, { passive: false });
+                
+                // 🍎 iOS touch feedback
+                okBtn.addEventListener('touchstart', () => {
+                    okBtn.style.transform = 'scale(1.08) translateY(-2px)';
+                    okBtn.style.boxShadow = '0 12px 28px rgba(255, 107, 107, 0.6)';
+                }, { passive: true });
+                okBtn.addEventListener('touchcancel', () => {
+                    okBtn.style.transform = 'scale(1)';
+                    okBtn.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.4)';
+                }, { passive: true });
 
                 cancelBtn.addEventListener('mouseenter', () => {
                     cancelBtn.style.transform = 'scale(1.08) translateY(-2px)';
@@ -7316,10 +7390,29 @@
                     cancelBtn.style.transform = 'scale(1)';
                     cancelBtn.style.boxShadow = '0 8px 20px rgba(168, 230, 207, 0.4)';
                 });
+                
+                // Desktop click handler
                 cancelBtn.addEventListener('click', () => {
                     modal.remove();
                     resolve(null);
                 });
+                
+                // 🍎 iOS touch handler for instant response
+                cancelBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    modal.remove();
+                    resolve(null);
+                }, { passive: false });
+                
+                // 🍎 iOS touch feedback
+                cancelBtn.addEventListener('touchstart', () => {
+                    cancelBtn.style.transform = 'scale(1.08) translateY(-2px)';
+                    cancelBtn.style.boxShadow = '0 12px 28px rgba(168, 230, 207, 0.6)';
+                }, { passive: true });
+                cancelBtn.addEventListener('touchcancel', () => {
+                    cancelBtn.style.transform = 'scale(1)';
+                    cancelBtn.style.boxShadow = '0 8px 20px rgba(168, 230, 207, 0.4)';
+                }, { passive: true });
             });
         }
         
