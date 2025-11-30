@@ -354,6 +354,7 @@ if ('speechSynthesis' in window) {
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
+        margin-bottom: 1rem;
     }
 
     .score-item {
@@ -1536,21 +1537,72 @@ if ('speechSynthesis' in window) {
         }
         
         .score-display {
-            gap: 0.7rem;
+            position: fixed;
+            top: 120px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 0.5rem;
+            gap: 0;
+            z-index: 100;
+            pointer-events: none;
         }
         
         .score-item {
-            min-width: 70px;
-            max-width: 90px;
-            padding: 0.5rem 0.6rem;
+            min-width: 65px;
+            max-width: 80px;
+            padding: 0.4rem 0.5rem;
+            pointer-events: auto;
+        }
+        
+        /* Left column - CORRECT and INCORRECT stacked */
+        .score-item:nth-child(1),
+        .score-item:nth-child(2) {
+            position: fixed;
+            left: 0.5rem;
+        }
+        
+        .score-item:nth-child(1) {
+            top: 120px;
+        }
+        
+        .score-item:nth-child(2) {
+            top: 200px;
+        }
+        
+        /* Right column - STREAK, POINTS, and BADGE stacked */
+        .score-item:nth-child(3),
+        .score-item:nth-child(4),
+        .score-item:nth-child(5) {
+            position: fixed;
+            right: 0.5rem;
+        }
+        
+        .score-item:nth-child(3) {
+            top: 120px;
+        }
+        
+        .score-item:nth-child(4) {
+            top: 200px;
+        }
+        
+        .score-item:nth-child(5) {
+            top: 280px;
         }
         
         .score-number {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
         }
         
         .score-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
+        }
+        
+        /* Make badge smaller on mobile */
+        .score-item:nth-child(5) img {
+            width: 60px !important;
+            height: 60px !important;
         }
         
         .quiz-logo .mascot-3d-container {
