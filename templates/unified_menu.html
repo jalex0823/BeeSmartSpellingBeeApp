@@ -30,10 +30,10 @@
     <!-- Matrix Rain Effect -->
     <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
+    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}" onerror="console.warn('Three.js failed to load')"></script>
     
     <!-- Three.js Loaders - Must load after Three.js core -->
-    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
+    <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}" onerror="console.warn('GLTFLoader failed to load'); window.GLTF_LOADER_FAILED = true;"></script>
     <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
@@ -3003,7 +3003,7 @@
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
                     <div class="carousel-cta">
-                        <span class="cta-text">Join the hive — pick your Bee style!</span>
+                        <span class="cta-text">Join the hive - pick your Bee style!</span>
                         <a class="register-button" href="/auth/register" aria-label="Start your free trial and create your Bee Avatar" data-subscribe="1">
                             {% if (subscription_trial_days or 0) | int > 0 %}
                                 Start {{ subscription_trial_days | int }}‑day Free Trial
@@ -3763,7 +3763,9 @@
         // 🗑️ Lightweight delete helper (frontend convenience)
         window.deleteWordFromCurrentList = async function(wordOrIndex){
             try{
-                const body = (typeof wordOrIndex === 'number') ? { index: wordOrIndex } : { word: String(wordOrIndex||'') };
+                const body = (typeof wordOrIndex === 'number')
+                    ? { index: wordOrIndex }
+                    : { word: String(wordOrIndex ?? '') };
                 const res = await fetch('/api/wordbank/delete',{
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
@@ -4318,8 +4320,8 @@
             // Refresh status and show modal
             checkContentFilterStatus().then(() => {
                 showContentFilterModal(title, content, true, 
-                    (currentFilterStatus && currentFilterStatus.violation_count_24h !== undefined) ? currentFilterStatus.violation_count_24h || 1, 
-                    (currentFilterStatus && currentFilterStatus.guardian_notification_triggered !== undefined) ? currentFilterStatus.guardian_notification_triggered || false
+                    (currentFilterStatus && currentFilterStatus.violation_count_24h !== undefined) ? currentFilterStatus.violation_count_24h : 1, 
+                    (currentFilterStatus && currentFilterStatus.guardian_notification_triggered !== undefined) ? currentFilterStatus.guardian_notification_triggered : false
                 );
             });
         }
@@ -4592,7 +4594,9 @@
                 const ofetch=window.fetch.bind(window);
                 window.fetch=function(resource, init){
                     try {
-                        let url=typeof resource==='string'?resource:(resource && resource.url)||'';
+                        let url = typeof resource==='string'
+                            ? resource
+                            : ((resource && resource.url) ?? '');
                         // Only rewrite EXACT legacy '/upload' (optionally with query), not '/api/upload-*' or other paths
                         const origin = (typeof location!=='undefined' ? location.origin : '');
                         const u = new URL(url, origin);
@@ -4688,7 +4692,7 @@
 
             // 🔐 Guests don't have saved lists; skip the fetch entirely
             if (window.IS_AUTH !== true) {
-                console.log('🔐 Guest mode — skipping /api/saved-lists badge fetch');
+                console.log('🔐 Guest mode - skipping /api/saved-lists badge fetch');
                 badge.style.display = 'none';
                 return;
             }
@@ -4763,7 +4767,7 @@
             const { bar, msg, fill, pct } = ensureTopBar();
             if (!bar) return;
             bar.classList.add('visible');
-            if (msg) msg.textContent = message || 'Loading…';
+            if (msg) msg.textContent = message || 'Loading...';
             if (typeof percent === 'number' && fill && pct){
                 const p = Math.max(0, Math.min(100, Math.round(percent)));
                 fill.style.width = p + '%';
@@ -5361,7 +5365,7 @@
                                 // ✅ Update word count badge AND start quiz button using centralized manager
                                 await WordBankManager.updateAllDisplays(true);
                                 
-                                showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz…`);
+                                showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz...`);
                                 
                                 // Short delay to show success message
                                 setTimeout(() => {
@@ -5473,7 +5477,7 @@
                 
                 // iOS Fix: Perform actual save function without await to maintain user gesture context
                 function doActualSave() {
-                    statusEl.textContent = 'Saving…';
+                    statusEl.textContent = 'Saving...';
                     fetch('/api/saved-lists/save', {
                         method: 'POST',
                         headers: {'Content-Type':'application/json'},
@@ -6495,7 +6499,9 @@
                 if (data && (data.ok === true || data.status === 'success')) {
                     closeBattleModal();
                     // Read battle code from response
-                    const battleCode = (data.battle && data.battle.code) ? data.battle.code : (data.battle_code || '');
+                    const battleCode = (data.battle && data.battle.code)
+                        ? data.battle.code
+                        : (data.battle_code ?? '');
                     
                     // Show success with battle code and redirect option
                     openFriendlyInfoModal({
@@ -10131,7 +10137,9 @@
             // Get current avatar info for theme-based effects
             getCurrentAvatarInfo()
                 .then(avatarInfo => {
-                    const avatarName = (avatarInfo && avatarInfo.name !== undefined) ? avatarInfo.name || 'mascot-bee';
+                    const avatarName = (avatarInfo && avatarInfo.name !== undefined)
+                        ? (avatarInfo.name || 'mascot-bee')
+                        : 'mascot-bee';
                     const theme = getAvatarTheme(avatarName);
                     
                     console.log(`🎭 Playing rotation show with ${theme} theme for ${avatarName}`);
@@ -12086,7 +12094,9 @@
             };
             
             // Map avatar ID to persona, fallback to theme parameter or mascot
-            const avatarId = (mascot.options && mascot.options.avatarId !== undefined) ? mascot.options.avatarId || theme;
+            const avatarId = (mascot.options && mascot.options.avatarId !== undefined)
+                ? (mascot.options.avatarId || theme)
+                : (theme || 'mascot');
             const persona = avatarPersonaMap[avatarId] || theme || 'mascot';
             const config = rotationConfigs[persona] || rotationConfigs.mascot;
             
@@ -13390,7 +13400,7 @@
                 try { btn.classList.add('ready-flash'); } catch (e) { /* no-op */ }
                 // Fallback override in case inline animation persists
                 btn.style.animation = 'readyFlash 1s ease-in-out infinite';
-                btn.setAttribute('title', 'All systems ready — tap to start!');
+                btn.setAttribute('title', 'All systems ready - tap to start!');
                 btn.addEventListener('click', () => this.dismissLoader());
             }
 
@@ -13500,7 +13510,9 @@
             const LOADING_EMERGENCY_TIMEOUT = 5000;
             const emergencyTimeout = setTimeout(() => {
                 console.error('🚨 EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
-                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined) ? window.loadingSystem.progress || 'unknown');
+                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined)
+                    ? (window.loadingSystem.progress ?? 'unknown')
+                    : 'unknown');
                 console.error('Loader element:', document.getElementById('honeyLoader') ? 'found' : 'missing');
                 console.error('Stack trace of where we are stuck:');
                 console.trace();
@@ -13591,9 +13603,9 @@
                 try {
                     const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
                     if (mode === 'guest') {
-                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Guest — Carousel preview enabled; tap to register.');
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Guest - Carousel preview enabled; tap to register.');
                     } else {
-                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Registered — Rendering your selected avatar.');
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Registered - Rendering your selected avatar.');
                     }
                 } catch(_) {}
                 
@@ -13715,7 +13727,9 @@
                 console.error('🚨 CRITICAL LOADING ERROR:', loadingError);
                 console.error('Error stack:', loadingError.stack);
                 console.error('LoadingSystem exists:', !!window.loadingSystem);
-                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined) ? window.loadingSystem.progress || 'unknown');
+                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined)
+                    ? (window.loadingSystem.progress ?? 'unknown')
+                    : 'unknown');
                 
                 // Force completion even on error
                 try {
@@ -13748,7 +13762,7 @@
                 console.log('[AvatarDisplay] mode=%s visible: carousel=%s mascot=%s', mode, visible(guestWrap), visible(mascot));
             } catch(_) {}
 
-            // Initialize guest avatar carousel (guests only) — prefer 3D when available
+            // Initialize guest avatar carousel (guests only) - prefer 3D when available
             try {
                 // Reset on fresh page load (not navigation) to allow re-initialization
                 if (performance && performance.navigation && performance.navigation.type === 1) {
@@ -15080,23 +15094,23 @@
                     },
                     'anxious-bee': {
                         title: 'Anxious Bee',
-                        tagline: 'Takes a deep breath—and spells anyway.',
-                        story: 'Anxious Bee gets a little wiggly before big words, but bravery is buzzing inside. One letter at a time and—ta-da!—victory.'
+                        tagline: 'Takes a deep breath-and spells anyway.',
+                        story: 'Anxious Bee gets a little wiggly before big words, but bravery is buzzing inside. One letter at a time and-ta-da!-victory.'
                     },
                     'astro-bee': {
                         title: 'Astro Bee',
                         tagline: 'Spelling among the stars.',
-                        story: 'Astro Bee rockets through space dictionaries, mapping constellations like “C-A-T” to “C-O-N-S-T-E-L-L-A-T-I-O-N.”'
+                        story: 'Astro Bee rockets through space dictionaries, mapping constellations like "C-A-T" to "C-O-N-S-T-E-L-L-A-T-I-O-N."'
                     },
                     'biker-bee': {
                         title: 'Biker Bee',
                         tagline: 'Rolls over rough words like a champ.',
-                        story: 'With a tiny helmet and roaring “vroom-buzz,” Biker Bee speeds past typos and sticks the landing on tricky endings.'
+                        story: 'With a tiny helmet and roaring "vroom-buzz," Biker Bee speeds past typos and sticks the landing on tricky endings.'
                     },
                     'brother-bee': {
                         title: 'Brother Bee',
                         tagline: 'Team player of the hive.',
-                        story: 'Brother Bee always shares tips and high-fives. When a friend forgets a letter, he’s there with a cheerful nudge.'
+                        story: 'Brother Bee always shares tips and high-fives. When a friend forgets a letter, he\'s there with a cheerful nudge.'
                     },
                     'builder-bee': {
                         title: 'Builder Bee',
@@ -15106,7 +15120,7 @@
                     'cool-bee': {
                         title: 'Cool Bee',
                         tagline: 'Too chill to miss a silent letter.',
-                        story: 'Cool Bee wears shades and keeps it smooth. Whether it’s “knight” or “knowledge,” this bee never breaks a sweat.'
+                        story: 'Cool Bee wears shades and keeps it smooth. Whether it\'s "knight" or "knowledge," this bee never breaks a sweat.'
                     },
                     'detective-bee': {
                         title: 'Detective Bee',
@@ -15116,7 +15130,7 @@
                     'diva-bee': {
                         title: 'Diva Bee',
                         tagline: 'Big voice, bigger vocabulary.',
-                        story: 'Diva Bee loves center stage and dazzling definitions. Every correct word gets a fabulous “Bravo!”'
+                        story: 'Diva Bee loves center stage and dazzling definitions. Every correct word gets a fabulous "Bravo!"'
                     },
                     'doctor-bee': {
                         title: 'Doctor Bee',
@@ -15131,7 +15145,7 @@
                     'explorer-bee': {
                         title: 'Explorer Bee',
                         tagline: 'Adventures through jungle words and desert dictionaries!',
-                        story: 'Explorer Bee finds new words in wild places. From “cactus” to “canoe,” this bee loves discovering how words traveled to our hive.'
+                        story: 'Explorer Bee finds new words in wild places. From "cactus" to "canoe," this bee loves discovering how words traveled to our hive.'
                     },
                     'frankenbee': {
                         title: 'FrankenBee',
@@ -15141,7 +15155,7 @@
                     'knight-bee': {
                         title: 'Knight Bee',
                         tagline: 'Defender of vowels and vanquisher of typos!',
-                        story: 'Clad in shiny armor, Knight Bee protects every vowel order with bravery. Hyphens beware—order in the kingdom of words will be kept!'
+                        story: 'Clad in shiny armor, Knight Bee protects every vowel order with bravery. Hyphens beware-order in the kingdom of words will be kept!'
                     },
                     'mascot-bee': {
                         title: 'Mascot Bee',
@@ -15156,7 +15170,7 @@
                     'professor-bee': {
                         title: 'Professor Bee',
                         tagline: 'Knows the history of every word.',
-                        story: 'Professor Bee tells tales of roots and origins—Latin, Greek, and beyond—making every word feel like a mini adventure.'
+                        story: 'Professor Bee tells tales of roots and origins-Latin, Greek, and beyond-making every word feel like a mini adventure.'
                     },
                     'queen-bee': {
                         title: 'Queen Bee',
@@ -15175,8 +15189,8 @@
                     },
                     'seabea': {
                         title: 'SeaBea',
-                        tagline: 'Sails the seven C’s (and all the other letters).',
-                        story: 'SeaBea charts courses through tricky homophones—there, their, and they’re—like a true captain of words.'
+                        tagline: 'Sails the seven C\'s (and all the other letters).',
+                        story: 'SeaBea charts courses through tricky homophones-there, their, and they\'re-like a true captain of words.'
                     },
                     'superbee': {
                         title: 'SuperBee',
@@ -15186,7 +15200,7 @@
                     'vamp-bee': {
                         title: 'Vamp Bee',
                         tagline: 'A night owl who loves bright ideas.',
-                        story: 'Vamp Bee practices in the moonlight and never misses a vowel—especially a, e, i, ooo, and u.'
+                        story: 'Vamp Bee practices in the moonlight and never misses a vowel-especially a, e, i, ooo, and u.'
                     },
                     'ware-bee': {
                         title: 'Ware Bee',
@@ -15195,7 +15209,7 @@
                     },
                     'zom-bee': {
                         title: 'Zom Bee',
-                        tagline: 'Slow and steady… but unstoppable.',
+                        tagline: 'Slow and steady... but unstoppable.',
                         story: 'Zom Bee takes it letter by letter. Even the longest words give up and become friends.'
                     }
                 };
