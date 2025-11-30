@@ -356,16 +356,53 @@ if ('speechSynthesis' in window) {
         flex-wrap: wrap;
         margin-bottom: 1rem;
         /* 🍎 iOS optimization: Hardware acceleration for smooth fade animations */
-        transition: opacity 0.4s ease-in-out;
-        will-change: opacity;
+        transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.4s ease-in-out;
+        will-change: max-height, opacity;
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
+        overflow: hidden;
+        max-height: 200px;
+    }
+    
+    /* Hide stats by default - show only when toggle clicked */
+    .score-display.stats-hidden {
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0;
+        pointer-events: none;
     }
     
     /* Fade out stats during countdown timer */
     .score-display.fade-out {
         opacity: 0.15;
         pointer-events: none;
+    }
+    
+    /* Toggle button to show/hide stats */
+    .show-stats-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        margin: 0.5rem auto;
+        padding: 0.4rem 1rem;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 193, 7, 0.85));
+        border: 2px solid rgba(255, 193, 7, 0.6);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #5c4600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .show-stats-toggle:hover,
+    .show-stats-toggle:active {
+        background: linear-gradient(135deg, rgba(255, 220, 50, 1), rgba(255, 200, 20, 0.95));
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
     }
 
     .score-item {
@@ -2906,7 +2943,9 @@ if ('speechSynthesis' in window) {
             </a>
         </div>
 
-        <div class="score-display">
+        <button class="show-stats-toggle" id="showStatsToggle" type="button"> Show Stats</button>
+
+        <div class="score-display stats-hidden" id="scoreDisplay">
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
@@ -6119,48 +6158,36 @@ class QuizManager {
 
         if (speakButton) {
             let pronounceTimeout = null;
-            speakButton.addEventListener('click', () => {
-                // 🍎 iOS FIX: Debounce to prevent double-clicks causing repeat speech
-                if (pronounceTimeout) {
-                    console.log('🍎 Ignoring rapid pronounce click (debounce)');
-                    return;
-                }
-                
+            const handlePronounce = () => {
+                if (pronounceTimeout) { console.log('🍎 Ignoring rapid pronounce (debounce)'); return; }
                 console.log('🔊 Pronounce button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.pronounceWordSlow(); // Pronounce at slower speed for learning
-                
-                // Prevent rapid clicks for 1 second
-                pronounceTimeout = setTimeout(() => {
-                    pronounceTimeout = null;
-                }, 1000);
-            });
+                this.pronounceWordSlow();
+                pronounceTimeout = setTimeout(() => { pronounceTimeout = null; }, 1000);
+            };
+            speakButton.addEventListener('click', handlePronounce);
+            speakButton.addEventListener('touchend', (e) => { e.preventDefault(); handlePronounce(); }, { passive: false });
         }
 
         if (repeatButton) {
             let repeatTimeout = null;
-            repeatButton.addEventListener('click', () => {
-                // 🍎 iOS FIX: Debounce to prevent double-clicks causing repeat speech
-                if (repeatTimeout) {
-                    console.log('🍎 Ignoring rapid repeat click (debounce)');
-                    return;
-                }
-                
+            const handleRepeat = () => {
+                if (repeatTimeout) { console.log('🍎 Ignoring rapid repeat (debounce)'); return; }
                 console.log('🔁 Repeat button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.repeatWord(); // Repeat at normal speed
-                
-                // Prevent rapid clicks for 1 second
-                repeatTimeout = setTimeout(() => {
-                    repeatTimeout = null;
-                }, 1000);
-            });
+                this.repeatWord();
+                repeatTimeout = setTimeout(() => { repeatTimeout = null; }, 1000);
+            };
+            repeatButton.addEventListener('click', handleRepeat);
+            repeatButton.addEventListener('touchend', (e) => { e.preventDefault(); handleRepeat(); }, { passive: false });
         }
 
-        getHintButton.addEventListener('click', () => {
+        const handleGetHint = () => {
             try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
             this.getDefinition({ refresh: true });
-        });
+        };
+        getHintButton.addEventListener('click', handleGetHint);
+        getHintButton.addEventListener('touchend', (e) => { e.preventDefault(); handleGetHint(); }, { passive: false });
         skipButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
             this.skipWord();
@@ -6802,34 +6829,57 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
+    // Direct speech synthesis fallback - iOS enhanced
     async speakDirectly(text, onDone, rate = 1.0) {
         if ('speechSynthesis' in window) {
             try {
-                // 🍎 iOS FIX: Cancel any ongoing speech
-                if (speechSynthesis.speaking) {
+                // iOS FIX: Cancel any ongoing speech
+                if (speechSynthesis.speaking || speechSynthesis.pending) {
                     speechSynthesis.cancel();
-                    // Wait for iOS to process cancellation
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 150));
                 }
+                if (speechSynthesis.paused) speechSynthesis.resume();
                 
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
                 utterance.pitch = 1.0;
-                utterance.volume = 0.9;
+                utterance.volume = 1.0;
+                utterance.lang = 'en-US';
                 
-                // Use the same female voice selection as other speech methods
                 if (this.cachedVoice) {
                     utterance.voice = this.cachedVoice;
-                    console.log(`Using cached female voice: ${this.cachedVoice.name}`);
                 } else {
-                    // Try to select best female voice if not cached yet
                     const femaleVoice = this.selectBestFemaleVoice();
-                    if (femaleVoice) {
-                        utterance.voice = femaleVoice;
-                        this.cachedVoice = femaleVoice;
-                        console.log(`Selected female voice: ${femaleVoice.name}`);
-                    }
+                    if (femaleVoice) { utterance.voice = femaleVoice; this.cachedVoice = femaleVoice; }
                 }
+                
+                let ended = false;
+                const timeoutMs = Math.max(3000, text.length * 150);
+                const timeout = setTimeout(() => {
+                    if (!ended) { ended = true; console.warn('Speech timeout - forcing completion'); if (onDone) onDone(); }
+                }, timeoutMs);
+                
+                utterance.onend = () => {
+                    if (!ended) { ended = true; clearTimeout(timeout); console.log('Speech completed'); if (onDone) onDone(); }
+                };
+                utterance.onerror = (event) => {
+                    if (!ended) { ended = true; clearTimeout(timeout); console.error('Speech error:', event); if (onDone) onDone(); }
+                };
+                
+                speechSynthesis.speak(utterance);
+                console.log('Speech started: ' + text + ' at rate ' + rate);
+                
+                // iOS sometimes pauses speech unexpectedly
+                setTimeout(() => { if (!ended && speechSynthesis.paused) { console.log('iOS: Resuming paused speech'); speechSynthesis.resume(); } }, 250);
+            } catch (error) {
+                console.error('Speech failed:', error);
+                if (onDone) onDone();
+            }
+        } else {
+            console.warn('Speech synthesis not supported');
+            if (onDone) onDone();
+        }
+    }
                 
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
@@ -8257,40 +8307,66 @@ function confirmBackToMenu(event) {
 // 🍎 iOS Audio Unlock - MUST run before any speech synthesis
 function unlockiOSAudio() {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isIOS) return;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     
-    console.log('🍎 iOS detected - setting up audio unlock');
+    if (!isIOS && !isSafari) return;
     
-    // Silent utterance to wake up speech synthesis on first user interaction
-    const unlock = () => {
-        console.log('🔓 Unlocking iOS audio...');
+    console.log('🍎 iOS/Safari detected - setting up audio unlock');
+    window.__iosAudioUnlocked = false;
+    
+    const unlock = (e) => {
+        if (window.__iosAudioUnlocked) return;
+        console.log('🔓 Unlocking iOS audio via:', e.type);
         
-        // Method 1: Silent speech utterance
-        const utterance = new SpeechSynthesisUtterance(' ');
-        utterance.volume = 0.01; // Almost silent
-        speechSynthesis.speak(utterance);
-        setTimeout(() => speechSynthesis.cancel(), 100);
-        
-        // Method 2: Resume AudioContext if exists
-        if (window.AudioContext || window.webkitAudioContext) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log('✅ AudioContext resumed');
-                });
+        try {
+            speechSynthesis.cancel();
+            const warmup = new SpeechSynthesisUtterance('');
+            warmup.volume = 0;
+            speechSynthesis.speak(warmup);
+            
+            setTimeout(() => {
+                speechSynthesis.cancel();
+                const warmup2 = new SpeechSynthesisUtterance('bee');
+                warmup2.volume = 0.01;
+                warmup2.rate = 2;
+                warmup2.lang = 'en-US';
+                speechSynthesis.speak(warmup2);
+                setTimeout(() => speechSynthesis.cancel(), 200);
+            }, 50);
+            
+            if (window.AudioContext || window.webkitAudioContext) {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') ctx.resume();
             }
-        }
-        
-        console.log('✅ iOS audio unlocked');
-        
-        // Remove listeners after first unlock
-        document.removeEventListener('touchstart', unlock);
-        document.removeEventListener('click', unlock);
+            
+            window.__iosAudioUnlocked = true;
+            console.log('✅ iOS audio unlocked');
+            ['touchstart', 'touchend', 'click', 'keydown'].forEach(evt => document.removeEventListener(evt, unlock));
+        } catch (err) { console.warn('iOS unlock error:', err); }
     };
     
-    // Listen for first user interaction
-    document.addEventListener('touchstart', unlock, { once: true });
-    document.addEventListener('click', unlock, { once: true });
+    ['touchstart', 'touchend', 'click', 'keydown'].forEach(evt => document.addEventListener(evt, unlock, { passive: true }));
+}
+
+function initStatsToggle() {
+    const toggleBtn = document.getElementById('showStatsToggle');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    let hideTimer = null;
+    
+    if (!toggleBtn || !scoreDisplay) return;
+    
+    const showStats = () => {
+        if (hideTimer) clearTimeout(hideTimer);
+        scoreDisplay.classList.remove('stats-hidden');
+        toggleBtn.textContent = '📊 Stats';
+        hideTimer = setTimeout(() => {
+            scoreDisplay.classList.add('stats-hidden');
+            toggleBtn.textContent = '📊 Show Stats';
+        }, 5000);
+    };
+    
+    toggleBtn.addEventListener('click', (e) => { e.preventDefault(); showStats(); });
+    toggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); showStats(); });
 }
 
 // 🛡️ Safe JSON parsing helper
@@ -8388,6 +8464,9 @@ document.addEventListener('visibilitychange', () => {
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+    // 📊 Initialize stats toggle (hide by default, show on click)
+    initStatsToggle();
+    
     // 🎭 Initialize morphing controller
     window.morphController = new MorphController('morphContainer');
     // DEBUG gated logging helper
