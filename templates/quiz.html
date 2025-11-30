@@ -3351,7 +3351,9 @@ if ('speechSynthesis' in window) {
                    autocomplete="off"
                    autocorrect="off"
                    autocapitalize="off"
-                   spellcheck="false">
+                   spellcheck="false"
+                   inputmode="text"
+                   style="font-size: 16px;">
         </div>
 
         <!-- Letter Hint Display -->
@@ -4693,6 +4695,11 @@ class QuizManager {
         
         this.initializeEventListeners();
         
+        // 🍎 iOS-specific optimizations
+        if (this.isIOS || this.isSafari) {
+            this.setupiOSKeyboardHandling();
+        }
+        
         // Show iOS voice intro modal if needed, otherwise show regular intro
         if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
             console.log('📱 Showing iOS/Safari voice intro modal');
@@ -4704,6 +4711,70 @@ class QuizManager {
             this.updateVoiceToggleUI(); // Initialize UI to match state
             this.showIntroAnnouncer();
         }
+    }
+    
+    // 🍎 iOS-specific keyboard and viewport handling
+    setupiOSKeyboardHandling() {
+        const spellingInput = document.getElementById('spellingInput');
+        if (!spellingInput) return;
+        
+        console.log('🍎 Setting up iOS keyboard handling');
+        
+        // Prevent page zoom when focusing input (already handled by 16px font size)
+        // Scroll input into view when keyboard appears
+        spellingInput.addEventListener('focus', () => {
+            console.log('🍎 iOS input focused - ensuring visibility');
+            
+            // Small delay to let keyboard animate in
+            setTimeout(() => {
+                // Scroll the input into view smoothly
+                spellingInput.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }, 300);
+        });
+        
+        // Handle blur (keyboard dismissal)
+        spellingInput.addEventListener('blur', () => {
+            console.log('🍎 iOS input blurred - keyboard likely dismissed');
+            
+            // Scroll back to top of quiz area if needed
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
+        });
+        
+        // Prevent unwanted scrolling during keyboard appearance
+        document.body.addEventListener('touchmove', (e) => {
+            // Only prevent if input is focused and at the edges of scroll
+            if (document.activeElement === spellingInput) {
+                const target = e.target;
+                const scrollable = this.findScrollableParent(target);
+                
+                if (!scrollable || scrollable === document.body) {
+                    // No scrollable parent, prevent default
+                    // e.preventDefault(); // Commented out to allow normal scrolling
+                }
+            }
+        }, { passive: true });
+        
+        console.log('✅ iOS keyboard handling configured');
+    }
+    
+    // Helper to find scrollable parent element
+    findScrollableParent(element) {
+        if (!element || element === document.body) return null;
+        
+        const overflowY = window.getComputedStyle(element).overflowY;
+        const isScrollable = overflowY === 'scroll' || overflowY === 'auto';
+        
+        if (isScrollable && element.scrollHeight > element.clientHeight) {
+            return element;
+        }
+        
+        return this.findScrollableParent(element.parentElement);
     }
     
     // Helper function to remove emojis and special characters for speech
@@ -4810,6 +4881,22 @@ class QuizManager {
             return Promise.resolve();
         }
         
+        // 🍎 iOS FIX: Cancel any ongoing speech to prevent echo
+        if ('speechSynthesis' in window && speechSynthesis.speaking) {
+            console.log('🔊 Cancelling ongoing speech to prevent iOS echo');
+            speechSynthesis.cancel();
+            // Small delay for iOS to process cancellation
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    this.speakAnnouncementInternal(text).then(resolve);
+                }, 100);
+            });
+        }
+        
+        return this.speakAnnouncementInternal(text);
+    }
+    
+    speakAnnouncementInternal(text) {
         // Clean text by removing emojis before speaking
         const cleanText = this.cleanTextForSpeech(text);
         
@@ -5474,7 +5561,15 @@ class QuizManager {
         if (spellingInput) {
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Type your answer...';
-            spellingInput.focus();
+            
+            // 🍎 iOS FIX: Delay focus slightly to ensure keyboard shows properly
+            if (this.isIOS || this.isSafari) {
+                setTimeout(() => {
+                    spellingInput.focus();
+                }, 150);
+            } else {
+                spellingInput.focus();
+            }
         }
     }
     
@@ -5948,10 +6043,19 @@ class QuizManager {
                     this.soundboard?.play('buzz-hover');
                 });
                 
-                // Click sound
+                // Click sound (support both mouse and touch)
                 button.addEventListener('mousedown', () => {
                     this.soundboard?.play('buzz-click');
                 });
+                
+                // 🍎 iOS FIX: Add touch event for better iOS button responsiveness
+                button.addEventListener('touchstart', (e) => {
+                    this.soundboard?.play('buzz-click');
+                    // Prevent duplicate mouse event on iOS
+                    if (this.isIOS || this.isSafari) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
             }
         });
 
@@ -5959,6 +6063,15 @@ class QuizManager {
             try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
             this.submitAnswer();
         });
+        
+        // 🍎 iOS FIX: Add touch event for submit button to prevent iOS double-tap delay
+        submitButton.addEventListener('touchend', (e) => {
+            if (this.isIOS || this.isSafari) {
+                e.preventDefault();
+                try { window.BeeVoiceViz?.react('submit'); } catch (err) {}
+                this.submitAnswer();
+            }
+        }, { passive: false });
         spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
                 try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
@@ -6680,7 +6793,16 @@ class QuizManager {
         }
 
         const spellingInput = document.getElementById('spellingInput');
-        const userInput = spellingInput.value.trim();
+        // 🍎 iOS FIX: Normalize text for iOS compatibility (remove zero-width chars, normalize unicode)
+        let userInput = spellingInput.value.trim();
+        
+        // Remove zero-width characters that iOS keyboard might insert
+        userInput = userInput.replace(/[\u200B-\u200D\uFEFF]/g, '');
+        
+        // Normalize unicode (iOS may use different unicode representations)
+        if (userInput.normalize) {
+            userInput = userInput.normalize('NFC');
+        }
 
         if (!userInput) {
             BeeSmart.showError('Please enter your spelling first!');
@@ -6859,6 +6981,9 @@ class QuizManager {
                 this.retryAvailable = true;
                 this.showRetryButton();
                 
+                // 🍎 iOS FIX: Re-enable input immediately so user can interact
+                this.enableInput();
+                
                 console.log('🔄 PURE RETRY CHOICE MODE: Showing ONLY buttons (no message, no phonetic, nothing else)');
                 
                 feedbackArea.className = 'feedback-area feedback-error';
@@ -7018,7 +7143,17 @@ class QuizManager {
     }
 
     enableInput() {
-        document.getElementById('spellingInput').disabled = false;
+        const spellingInput = document.getElementById('spellingInput');
+        spellingInput.disabled = false;
+        
+        // 🍎 iOS FIX: Delay focus to allow keyboard to properly show after interaction
+        if (this.isIOS || this.isSafari) {
+            setTimeout(() => {
+                spellingInput.focus();
+            }, 100);
+        } else {
+            spellingInput.focus();
+        }
         // Submit button remains enabled for user to submit anytime
         // document.getElementById('submitButton').disabled = false;
     }
@@ -7060,7 +7195,15 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
-            spellingInput.focus();
+            
+            // 🍎 iOS FIX: Delay focus to ensure keyboard shows properly after retry
+            if (this.isIOS || this.isSafari) {
+                setTimeout(() => {
+                    spellingInput.focus();
+                }, 150);
+            } else {
+                spellingInput.focus();
+            }
         }
         
         // Update countdown display with animated styling
