@@ -79,6 +79,42 @@
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
+    
+    <!-- Homepage Avatar Sync: Load user's selected avatar on main page -->
+    <script>
+    (function() {
+        function renderHomepageAvatar() {
+            if (!window.userAvatarLoader) {
+                console.warn('UserAvatarLoader not ready, retrying in 100ms...');
+                setTimeout(renderHomepageAvatar, 100);
+                return;
+            }
+            
+            const id = window.userAvatarLoader.getAvatarId();
+            if (id) {
+                console.log('Loading user avatar on homepage:', id);
+                window.userAvatarLoader.loadUserAvatar(id, 'mascotBee3D');
+                
+                // Update avatar name display
+                const registeredAvatarName = document.getElementById('registeredAvatarName');
+                if (registeredAvatarName) {
+                    const displayName = window.userAvatarLoader.getAvatarDisplayName(id);
+                    registeredAvatarName.textContent = displayName;
+                }
+            } else {
+                console.log('No registered user avatar, using default SmartyBee');
+            }
+        }
+        
+        // Try when loader signals ready, or fallback to DOMContentLoaded
+        document.addEventListener('BeeSmart:loaderComplete', renderHomepageAvatar);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderHomepageAvatar);
+        } else {
+            renderHomepageAvatar();
+        }
+    })();
+    </script>
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
     {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
@@ -662,8 +698,8 @@
         #mascotBee3D,
         .mascot-3d-container {
             /* Container sizing */
-            width: 280px;
-            height: 280px;
+            width: 460px;
+            height: 360px;
             
             /* Layout */
             position: relative;
@@ -725,14 +761,14 @@
         
         /* MAIN MENU SPECIFIC: Larger avatar (280x280) */
         .logo-section #mascotBee3D {
-            width: 280px !important;
-            height: 280px !important;
+            width: 460px !important;
+            height: 360px !important;
         }
         
         /* FINAL CONTAINER SIZE - Larger avatar (280x280) */
         div#mascotBee3D {
-            width: 280px !important;
-            height: 280px !important;
+            width: 460px !important;
+            height: 360px !important;
             margin: 0 auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
@@ -1928,8 +1964,8 @@
             
             /* Main menu specific - slightly larger */
             .logo-section #mascotBee3D {
-                width: 280px !important;
-                height: 280px !important;
+                width: 460px !important;
+                height: 360px !important;
             }
             
             .logo-section img {

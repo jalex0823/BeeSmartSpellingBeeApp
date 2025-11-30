@@ -158,8 +158,10 @@ function updateDynamicMarquee(avatars) {
         const nextUnlocks = locked
             .filter(a => a.unlock_message && a.unlock_message.includes('Honey Points'))
             .sort((a, b) => {
-                const aPoints = parseInt(a.unlock_message.match(/\d+/)?.[0] || '999999');
-                const bPoints = parseInt(b.unlock_message.match(/\d+/)?.[0] || '999999');
+                var aMatch = a.unlock_message ? a.unlock_message.match(/\d+/) : null;
+                var aPoints = parseInt((aMatch && aMatch[0]) ? aMatch[0] : '999999');
+                var bMatch = b.unlock_message ? b.unlock_message.match(/\d+/) : null;
+                var bPoints = parseInt((bMatch && bMatch[0]) ? bMatch[0] : '999999');
                 return aPoints - bPoints;
             });
         
@@ -257,7 +259,8 @@ async function loadAvatars() {
         
         const rawAvatars = apiAvatars.map(avatar => {
             // Extract GLB URL from standard urls.glb field (all avatars are now GLB-only)
-            const glbUrl = avatar.urls?.glb;
+            var urlsObj = (avatar && typeof avatar.urls === 'object') ? avatar.urls : {};
+            var glbUrl = urlsObj.glb;
             const isGlbFormat = true; // All avatars are GLB format
             
             return {
@@ -394,10 +397,10 @@ function maybeShowNewlyUnlockedModal(avatars) {
         const unlockedObjs = newly.slice(0, 3).map(slug => {
             const a = bySlug.get(slug);
             return {
-                name: a?.name || slug,
-                slug: a?.slug || slug,
-                description: a?.description || '',
-                thumbnail: a?.thumbnail || ''
+                name: (a && a.name) ? a.name : slug,
+                slug: (a && a.slug) ? a.slug : slug,
+                description: (a && a.description) ? a.description : '',
+                thumbnail: (a && a.thumbnail) ? a.thumbnail : ''
             };
         });
         if (window.showAvatarUnlockNotification) {
