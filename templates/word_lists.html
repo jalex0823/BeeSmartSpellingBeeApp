@@ -395,12 +395,12 @@
     position:relative;
     width:220px;
     height:380px;
-    /* Use provided base jar artwork */
-    background:url('/static/assets/WordListImages/jar_base.png') no-repeat center bottom / contain;
+    /* Background removed - using explicit img tag to avoid double jar */
+    background:transparent;
   }
-  /* Remove legacy center asset dependency; keep same look using base */
+  /* Remove legacy center asset dependency */
   .list-cell-inner-jar.fallback{
-    background:url('/static/assets/WordListImages/jar_base.png') no-repeat center bottom / contain;
+    background:transparent;
   }
   /* Legacy .jar-title not used; keep selector minimal without external asset */
   .jar-title{position:absolute; top:84px; left:50%; transform:translateX(-50%); width:180px; height:90px; pointer-events:none;}
