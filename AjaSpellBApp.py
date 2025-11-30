@@ -7518,6 +7518,71 @@ def api_save_partial_progress():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/quiz/status", methods=["GET"])
+def api_quiz_status():
+    """
+    Get current quiz status - checks if there's resumable progress
+    Returns can_resume flag and current stats if available
+    """
+    try:
+        state = session.get(QUIZ_STATE_KEY)
+        if not state:
+            return jsonify({"can_resume": False, "message": "No quiz session found"})
+        
+        # Check if there's meaningful progress to resume
+        index = state.get("index", 0)
+        correct = state.get("correct", 0)
+        incorrect = state.get("incorrect", 0)
+        total = state.get("total", 0)
+        
+        # Can resume if: has answered at least one question and hasn't finished all words
+        can_resume = (correct > 0 or incorrect > 0) and index < total
+        
+        if can_resume:
+            return jsonify({
+                "can_resume": True,
+                "index": index,
+                "total": total,
+                "correct": correct,
+                "incorrect": incorrect,
+                "streak": state.get("streak", 0),
+                "session_points": state.get("session_points", 0)
+            })
+        else:
+            return jsonify({"can_resume": False, "message": "No progress to resume"})
+            
+    except Exception as e:
+        print(f" Error checking quiz status: {e}")
+        return jsonify({"can_resume": False, "error": str(e)}), 500
+
+@app.route("/api/clear-partial-progress", methods=["POST"])
+def api_clear_partial_progress():
+    """
+    Clear saved quiz progress to start fresh
+    Does NOT delete database records, just resets session state
+    """
+    try:
+        state = session.get(QUIZ_STATE_KEY)
+        if state:
+            # Reset to initial state but keep wordbank
+            state["index"] = 0
+            state["correct"] = 0
+            state["incorrect"] = 0
+            state["streak"] = 0
+            state["max_streak"] = 0
+            state["session_points"] = 0
+            state["badges_earned"] = []
+            session[QUIZ_STATE_KEY] = state
+        
+        return jsonify({
+            "status": "success",
+            "message": "Quiz progress cleared - ready for fresh start"
+        })
+        
+    except Exception as e:
+        print(f" Error clearing quiz progress: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/add-bonus-points", methods=["POST"])
 def api_add_bonus_points():
     """
