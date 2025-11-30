@@ -8771,43 +8771,7 @@ function playThemedSound(soundType) {
     }
 }
 </script>
-<div id="quizAvatarContainer" class="quiz-avatar-container loading" aria-label="Avatar display area"></div>
-<!-- Avatar loader is already included in base.html, no need to load twice -->
-<script>
-// Render the same avatar used on the main menu into the quiz container
-(function(){
-    function renderQuizAvatar(){
-        try {
-            var containerId = 'quizAvatarContainer';
-            var el = document.getElementById(containerId);
-            if (!el) return;
-
-            // If global loader exists, ensure it’s initialized and then render
-            if (window.userAvatarLoader && typeof window.userAvatarLoader.init === 'function') {
-                // Initialize quietly (no blocking validation)
-                window.userAvatarLoader.init().finally(function(){
-                    try {
-                        var avatarId = window.userAvatarLoader.getAvatarId();
-                        // Use same GLB and options, but enable gentle auto-rotate in quiz
-                        window.userAvatarLoader.loadUserAvatar(avatarId, containerId).then(function(){
-                            el.classList.remove('loading');
-                        }).catch(function(){
-                            el.classList.remove('loading');
-                        });
-                    } catch(e){
-                        el.classList.remove('loading');
-                    }
-                });
-            }
-        } catch(_){ /* no-op */ }
-    }
-
-    // Wait for DOM, then small delay so layout settles
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function(){ setTimeout(renderQuizAvatar, 120); });
-    } else {
-        setTimeout(renderQuizAvatar, 120);
-    }
-})();
-</script>
+<!-- Removed duplicate quizAvatarContainer and legacy render script.
+     The quiz now relies solely on the primary mascot container #mascotBee3D
+     initialized earlier with SmartyBee3D and userAvatarLoader. -->
 {% endblock %}
