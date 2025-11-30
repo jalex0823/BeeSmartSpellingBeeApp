@@ -1500,39 +1500,26 @@
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     /* --- Word List Jar layout overrides --- */
-    .list-cell-inner-jar{position:relative; min-height:400px; padding-bottom:20px; width:270px;} /* widened from 220px to reduce overlap */
-    .jar-base-img{width:100%; height:auto; display:block; position:relative; z-index:1; filter:saturate(1.15) hue-rotate(-8deg) brightness(1.08);} /* warmer honey tone */
-    /* Pseudo-element overlay for honey gloss (better performance than extra DOM) */
-    .list-cell-inner-jar::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:overlay; background:
-      linear-gradient(180deg, rgba(255,247,205,0.55) 0%, rgba(255,218,95,0.38) 45%, rgba(255,190,60,0.34) 70%, rgba(140,74,0,0.22) 100%),
-      radial-gradient(circle at 50% 22%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 58%);
-      opacity:0.88;
-    }
-    .jar-title-plate{position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center;}
-    .jar-title-img{width:180px; height:auto;}
-    .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; font-size:15px; text-align:center; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .jar-words-badge-container{position:absolute; top:110px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
-    .jar-badge-img{width:110px; height:auto;} /* slightly smaller to fit title */
-    .jar-word-count{position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); font-size:26px; font-weight:900; color:white;} /* reduced font size */
-    .jar-word-label{position:absolute; top:60%; left:50%; transform:translate(-50%,-50%); font-size:12px; letter-spacing:0.08em; font-weight:900; color:white;} /* reduced label size */
-    .jar-date-container{position:absolute; top:220px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+    .list-cell-inner-jar{position:relative; min-height:420px; padding-bottom:20px; width:300px;} /* widened to 300px */
+    .jar-base-img{width:100%; height:auto; display:block; position:relative; z-index:1;}
+    .jar-title-plate{position:absolute; top:120px; left:50%; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center;} /* moved down where word count was */
+    .jar-title-img{width:200px; height:auto;}
+    .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; font-size:15px; text-align:center; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .jar-words-badge-container{position:absolute; top:210px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* moved further down */
+    .jar-badge-img{width:120px; height:auto;}
+    .jar-word-count{position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:900; color:white;}
+    .jar-word-label{position:absolute; top:60%; left:50%; transform:translate(-50%,-50%); font-size:13px; letter-spacing:0.08em; font-weight:900; color:white;}
+    .jar-date-container{position:absolute; bottom:15px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* moved to bottom where delete was */
     .jar-date-img{width:140px; height:auto;}
     .jar-date-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:14px; font-weight:700; color:#5b3b0a;}
-    .jar-delete-container{position:absolute; bottom:15px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
-    .jar-delete-img{width:120px; height:auto;}
+    .jar-delete-container{position:absolute; bottom:30px; right:-15px; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* moved to right side */
+    .jar-delete-img{width:100px; height:auto;}
     /* .jar-delete-text removed: text label no longer needed (image has the word) */
-    .jar-use-leaf{position:absolute; top:45%; left:-10px; width:80px; height:auto; z-index:4;}
-    .jar-view-btn{position:absolute; top:45%; right:-10px; width:80px; height:auto; z-index:4;}
+    .jar-use-leaf{position:absolute; top:48%; left:-15px; width:90px; height:auto; z-index:4;}
+    .jar-view-btn{position:absolute; top:48%; right:-15px; width:90px; height:auto; z-index:4;}
     .jar-edit-btn{position:absolute; top:50%; right:-15px; width:70px; height:auto; z-index:4; display:none;}
     
-    /* Adaptive tone for dark mode */
-    @media (prefers-color-scheme: dark){
-      .jar-base-img{filter:saturate(1.05) hue-rotate(-6deg) brightness(0.95);} /* slightly reduce brightness */
-      .list-cell-inner-jar::after{opacity:0.78; background:
-        linear-gradient(180deg, rgba(255,240,180,0.42) 0%, rgba(255,205,80,0.30) 45%, rgba(220,150,40,0.28) 70%, rgba(90,45,0,0.20) 100%),
-        radial-gradient(circle at 50% 22%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 56%);
-      }
-    }
+    /* Adaptive tone for dark mode - removed since using jar_base.png image */
   `;
   document.head.appendChild(style);
 
