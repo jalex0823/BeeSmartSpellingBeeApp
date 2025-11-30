@@ -260,7 +260,7 @@ class SmartyBee3D {
                     (gltf) => {
                         clearTimeout(loadTimeout);
                             try {
-                                const object = gltf.scene || gltf.scenes?.[0];
+                                const object = gltf.scene || (gltf.scenes && gltf.scenes[0] !== undefined) ? gltf.scenes[0] : null;
                                 if (!object) {
                                     throw new Error('GLB contained no scene - file may be corrupted');
                                 }

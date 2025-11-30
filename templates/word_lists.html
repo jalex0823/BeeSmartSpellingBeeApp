@@ -1414,7 +1414,7 @@
   }
 
   function fakeEvent(e){
-    return { preventDefault(){}, stopPropagation(){}, clientX:e?.clientX||innerWidth/2, clientY:e?.clientY||innerHeight/2 };
+    return { preventDefault(){}, stopPropagation(){}, clientX:(e && e.clientX !== undefined) ? e.clientX||innerWidth/2, clientY:(e && e.clientY !== undefined) ? e.clientY||innerHeight/2 };
   }
 
   // MODAL (confirm/info)
@@ -1453,7 +1453,7 @@
         </div>
       `;
       beeModal.classList.add("active");
-      setTimeout(()=>document.getElementById("beePromptInput")?.focus(),80);
+      setTimeout(()=>(function(){ const el = document.getElementById(\"beePromptInput\"); if(el) el.focus(); })(),80);
     });
   }
   function closeBeePrompt(value){
@@ -1477,7 +1477,7 @@
 
   // TOAST
   function showToast(message,type="success"){
-    document.querySelector(".toast")?.remove();
+    (function(){ const el = document.querySelector(\".toast\"); if(el) el.remove(); })();
     const toast=document.createElement("div");
     toast.className="toast "+type;
     toast.style.cssText=`

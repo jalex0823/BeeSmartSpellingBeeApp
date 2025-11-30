@@ -92,7 +92,7 @@
     global.addEventListener('resize', resize);
 
     function setMode(mode){
-      targetEnergy = cfg.energyTargets[mode] ?? cfg.energyTargets.idle;
+      targetEnergy = (cfg.energyTargets[mode] !== undefined && cfg.energyTargets[mode] !== null) ? cfg.energyTargets[mode] : cfg.energyTargets.idle;
       if(mode === 'speaking'){
         dotsScale = 1.0; // restore full density on speech
       }
@@ -137,7 +137,7 @@
 
       // Gradient LR overlay
       let gradLR = null;
-      if(cfg.gradientLR?.enabled){ gradLR = makeGradient(ctx, innerLeft,0, innerRight,0, cfg.gradientLR.stops); }
+      if((cfg.gradientLR && cfg.gradientLR.enabled)){ gradLR = makeGradient(ctx, innerLeft,0, innerRight,0, cfg.gradientLR.stops); }
 
       for(let wi=0; wi<waves; wi++){
         const color = cfg.waveColors[wi % cfg.waveColors.length] || 'rgba(255, 180, 55, 0.9)';
@@ -155,7 +155,7 @@
           const x = innerLeft + u*innerWidth;
           // Tip pinch: attenuate amplitude near edges
           let edgeFactor = 1.0;
-          if(cfg.tipPinch?.enabled){
+          if((cfg.tipPinch && cfg.tipPinch.enabled)){
             const dEdge = Math.min(u, 1-u); // 0 at edges
             edgeFactor = Math.pow(dEdge*2, cfg.tipPinch.power||1.2); // 0..1
           }
@@ -175,8 +175,8 @@
 
           // End fade alpha
           let alphaMul = 1.0;
-          if(cfg.endFade?.enabled){
-            const f = clamp(cfg.endFade.fraction ?? 0.18, 0, 0.5);
+          if((cfg.endFade && cfg.endFade.enabled)){
+            const f = clamp((cfg.endFade.fraction !== undefined && cfg.endFade.fraction !== null) ? cfg.endFade.fraction : 0.18, 0, 0.5);
             const left = clamp(u/f, 0, 1);
             const right = clamp((1-u)/f, 0, 1);
             alphaMul = Math.min(left, right);
@@ -190,7 +190,7 @@
 
           // Optional gradient overlay pass
           if(gradLR){
-            ctx.globalAlpha = (cfg.gradientLR.alpha ?? 0.35) * alphaMul;
+            ctx.globalAlpha = ((cfg.gradientLR.alpha !== undefined && cfg.gradientLR.alpha !== null) ? cfg.gradientLR.alpha : 0.35) * alphaMul;
             ctx.fillStyle = gradLR;
             ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = color;
@@ -199,9 +199,9 @@
       }
 
       // Center glow overlay
-      if(cfg.centerGlow?.enabled){
-        const gA = (cfg.centerGlow.alpha??0.5) * (1 + (cfg.centerGlow.energyScale??1)*energyNow*0.5);
-        const span = clamp(cfg.centerGlow.verticalSpan??0.6, 0.1, 1);
+      if((cfg.centerGlow && cfg.centerGlow.enabled)){
+        const gA = ((cfg.centerGlow.alpha !== undefined && cfg.centerGlow.alpha !== null) ? cfg.centerGlow.alpha : 0.5) * (1 + ((cfg.centerGlow.energyScale !== undefined && cfg.centerGlow.energyScale !== null) ? cfg.centerGlow.energyScale : 1)*energyNow*0.5);
+        const span = clamp((cfg.centerGlow.verticalSpan !== undefined && cfg.centerGlow.verticalSpan !== null) ? cfg.centerGlow.verticalSpan : 0.6, 0.1, 1);
         const h2 = height*span;
         const gy0 = centerY - h2/2, gy1 = centerY + h2/2;
         const g = ctx.createLinearGradient(0, gy0, 0, gy1);

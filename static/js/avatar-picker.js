@@ -198,7 +198,7 @@ function renderAvatarGrid(avatarsToRender) {
         grid.appendChild(card);
 
         // Use 2D PNG thumbnail (simple and fast)
-        const thumbnailUrl = avatar.urls?.thumbnail || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
+        const thumbnailUrl = avatar.(urls && urls.thumbnail !== undefined) ? urls.thumbnail : null || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
         thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
                         alt="${displayName}" 
                         style="width:100%;height:100%;object-fit:contain;border-radius:0.5rem;">`;
@@ -320,7 +320,7 @@ function selectAvatar(avatar) {
     document.querySelectorAll('.avatar-option').forEach(card => {
         card.classList.remove('selected');
     });
-    document.querySelector(`.avatar-option[data-avatar-id="${avatar.id}"]`)?.classList.add('selected');
+    (function(){ const el = document.querySelector(`.avatar-option[data-avatar-id="${avatar.id}"]`); if(el && el.classList) el.classList.add('selected'); })();
     
     // Defer 3D preview loading to not block UI
     requestIdleCallback(() => {
@@ -352,7 +352,7 @@ function updatePreview() {
     if (descEl) descEl.textContent = selectedAvatar.description;
     
     // Detect if GLB or OBJ format
-    const isGLB = selectedAvatar.urls?.model_obj && selectedAvatar.urls.model_obj.toLowerCase().endsWith('.glb');
+    const isGLB = selectedAvatar.(urls && urls.model_obj !== undefined) ? urls.model_obj : null && selectedAvatar.urls.model_obj.toLowerCase().endsWith('.glb');
     
     // Try to render a lightweight 3D preview if THREE loaders are available
     // Fallback to placeholder if not
@@ -701,8 +701,8 @@ function updatePreview() {
 function showPreviewPlaceholder(preview) {
     preview.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">${selectedAvatar?.emoji || '🐝'}</div>
-            <p style="color: #8B6914; font-size: 1.2rem; font-weight: bold;">${selectedAvatar?.name || 'Bee Avatar'}</p>
+            <div style="font-size: 4rem; margin-bottom: 1rem;">${(selectedAvatar && selectedAvatar.emoji !== undefined) ? selectedAvatar.emoji || '🐝'}</div>
+            <p style="color: #8B6914; font-size: 1.2rem; font-weight: bold;">${(selectedAvatar && selectedAvatar.name !== undefined) ? selectedAvatar.name || 'Bee Avatar'}</p>
             <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">3D Preview</p>
         </div>
     `;

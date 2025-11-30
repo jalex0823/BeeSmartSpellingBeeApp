@@ -4318,8 +4318,8 @@
             // Refresh status and show modal
             checkContentFilterStatus().then(() => {
                 showContentFilterModal(title, content, true, 
-                    currentFilterStatus?.violation_count_24h || 1, 
-                    currentFilterStatus?.guardian_notification_triggered || false
+                    (currentFilterStatus && currentFilterStatus.violation_count_24h !== undefined) ? currentFilterStatus.violation_count_24h || 1, 
+                    (currentFilterStatus && currentFilterStatus.guardian_notification_triggered !== undefined) ? currentFilterStatus.guardian_notification_triggered || false
                 );
             });
         }
@@ -6431,8 +6431,8 @@
 
     function createBattle() {
             console.log('🎯 createBattle() called');
-            const battleName = document.getElementById('battleName')?.value?.trim();
-            const creatorName = document.getElementById('creatorName')?.value?.trim();
+            const battleName = (function(){ const el = document.getElementById('battleName'); return (el && el.value) ? el.value.trim() : ''; })();
+            const creatorName = (function(){ const el = document.getElementById('creatorName'); return (el && el.value) ? el.value.trim() : ''; })();
             
             console.log('Battle Name:', battleName);
             console.log('Creator Name:', creatorName);
@@ -9925,7 +9925,7 @@
         // DON'T call initializeWordCount() here - let the loading system call it after completion
         
         // ✅ Attach Start Quiz button click handler
-        document.getElementById('startQuizBtn')?.addEventListener('click', function(e) {
+        (function(){ const el = document.getElementById('startQuizBtn'); if(el) el.addEventListener('click', function(e) {
             if (this.disabled) {
                 console.log('❌ Start Quiz button is disabled');
                 return;
@@ -10094,7 +10094,7 @@
 
             // Quick tap ripple feedback at click location (or center)
             try {
-                const rect = mascotContainer?.getBoundingClientRect();
+                const rect = (mascotContainer ? mascotContainer.getBoundingClientRect() : null);
                 const x = (evt && rect) ? (evt.clientX - rect.left) : (rect ? rect.width / 2 : 80);
                 const y = (evt && rect) ? (evt.clientY - rect.top) : (rect ? rect.height / 2 : 60);
                 if (mascotContainer) createTapRipple(mascotContainer, x, y);
@@ -10131,7 +10131,7 @@
             // Get current avatar info for theme-based effects
             getCurrentAvatarInfo()
                 .then(avatarInfo => {
-                    const avatarName = avatarInfo?.name || 'mascot-bee';
+                    const avatarName = (avatarInfo && avatarInfo.name !== undefined) ? avatarInfo.name || 'mascot-bee';
                     const theme = getAvatarTheme(avatarName);
                     
                     console.log(`🎭 Playing rotation show with ${theme} theme for ${avatarName}`);
@@ -12086,7 +12086,7 @@
             };
             
             // Map avatar ID to persona, fallback to theme parameter or mascot
-            const avatarId = mascot.options?.avatarId || theme;
+            const avatarId = (mascot.options && mascot.options.avatarId !== undefined) ? mascot.options.avatarId || theme;
             const persona = avatarPersonaMap[avatarId] || theme || 'mascot';
             const config = rotationConfigs[persona] || rotationConfigs.mascot;
             
@@ -13500,7 +13500,7 @@
             const LOADING_EMERGENCY_TIMEOUT = 5000;
             const emergencyTimeout = setTimeout(() => {
                 console.error('🚨 EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
-                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
+                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined) ? window.loadingSystem.progress || 'unknown');
                 console.error('Loader element:', document.getElementById('honeyLoader') ? 'found' : 'missing');
                 console.error('Stack trace of where we are stuck:');
                 console.trace();
@@ -13715,7 +13715,7 @@
                 console.error('🚨 CRITICAL LOADING ERROR:', loadingError);
                 console.error('Error stack:', loadingError.stack);
                 console.error('LoadingSystem exists:', !!window.loadingSystem);
-                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
+                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined) ? window.loadingSystem.progress || 'unknown');
                 
                 // Force completion even on error
                 try {
@@ -14728,7 +14728,7 @@
                         await waitForGLTFLoader();
                         
                         const gltfLoader = new THREE.GLTFLoader();
-                        window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
+                        if(window.loadingSystem) window.loadingSystem.updateProgress(85, '📦 Loading GLB model...');
                         
                         gltfLoader.load(
                             modelUrl,
@@ -14791,7 +14791,7 @@
                             (xhr) => {
                                 if (xhr.lengthComputable) {
                                     const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                    window.loadingSystem?.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
+                                    if(window.loadingSystem) window.loadingSystem.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
                                 }
                             },
                             (error) => {

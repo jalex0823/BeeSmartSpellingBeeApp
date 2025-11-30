@@ -3517,7 +3517,7 @@ class BeeSoundboard {
 
         let start = this.ctx.currentTime;
         steps.forEach((step) => {
-            const duration = step.duration ?? 0.2;
+            const duration = (step.duration !== undefined && step.duration !== null) ? step.duration : 0.2;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
@@ -3527,7 +3527,7 @@ class BeeSoundboard {
                 osc.frequency.linearRampToValueAtTime(step.slide, start + duration);
             }
 
-            const gainValue = Math.max(step.gain ?? 0.14, 0.0001);
+            const gainValue = Math.max((step.gain !== undefined && step.gain !== null) ? step.gain : 0.14, 0.0001);
             gain.gain.setValueAtTime(gainValue, start);
             if (step.fade) {
                 gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -3539,7 +3539,7 @@ class BeeSoundboard {
             osc.start(start);
             osc.stop(start + duration + 0.01);
 
-            start += step.delay ?? duration;
+            start += (step.delay !== undefined && step.delay !== null) ? step.delay : duration;
         });
     }
 
@@ -4315,7 +4315,7 @@ class BeeDelightManager {
             return;
         }
 
-        const total = progress.total ?? this.totalQuestions;
+        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : this.totalQuestions;
         if (Number.isFinite(total) && total > 0) {
             this.totalQuestions = total;
         }
@@ -4325,7 +4325,7 @@ class BeeDelightManager {
             return;
         }
 
-        const correct = Math.max(progress.correct ?? 0, 0);
+        const correct = Math.max((progress.correct !== undefined && progress.correct !== null) ? progress.correct : 0, 0);
         const ratio = Math.min(correct / workingTotal, 1);
         
         // Update SVG honey fill
@@ -5281,15 +5281,15 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
+            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
+            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
             this.updateProgressDisplays(questionNumber, this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
 
-            this.delight?.setTotalQuestions(data.total);
+            if(this.delight) this.delight.setTotalQuestions(data.total);
 
             // Set the definition with fallback - prefer explicit sentence/hint fields
             const defBox = document.getElementById('definitionDisplay');
@@ -6243,15 +6243,15 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
+            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
+            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
             this.updateProgressDisplays(questionNumber, this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
 
-            this.delight?.setTotalQuestions(data.total);
+            if(this.delight) this.delight.setTotalQuestions(data.total);
 
             // Set the definition directly from the /api/next response - prefer explicit fields
             const defBox = document.getElementById('definitionDisplay');
@@ -6348,7 +6348,7 @@ class QuizManager {
             const feedbackArea2 = document.getElementById('feedbackArea');
             if (feedbackArea2) feedbackArea2.style.display = 'none';
             this.hideLetterHint();  // Hide letter hint for new word
-            this.delight?.clearFeedbackState();
+            if(this.delight) this.delight.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
             // Input is already enabled - users can start typing immediately
@@ -6496,9 +6496,9 @@ class QuizManager {
             }
             
             if (!options.silent) {
-                this.delight?.handleDefinition(data);
+                if(this.delight) this.delight.handleDefinition(data);
             } else {
-                this.delight?.handleDefinition();
+                if(this.delight) this.delight.handleDefinition();
             }
         } catch (error) {
             console.error('Error getting definition:', error);
@@ -6953,7 +6953,7 @@ class QuizManager {
             }
         }
 
-        this.delight?.handleFeedback(result);
+        if(this.delight) this.delight.handleFeedback(result);
     }
 
     hideFeedback() {
@@ -6962,14 +6962,14 @@ class QuizManager {
     }
 
     updateScoreDisplay(progress = {}) {
-        const total = progress.total ?? this.totalWords ?? 0;
+        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : ((this.totalWords !== undefined && this.totalWords !== null) ? this.totalWords : 0);
         if (Number.isFinite(total) && total > 0) {
             this.totalWords = total;
         }
 
         const correct = Number(progress.correct) || 0;
         const incorrect = Number(progress.incorrect) || 0;
-        const streak = Number(progress.streak ?? this.currentStreak) || 0;
+        const streak = Number((progress.streak !== undefined && progress.streak !== null) ? progress.streak : this.currentStreak) || 0;
         
         // Ensure we never display NaN
         document.getElementById('correctCount').textContent = correct;
@@ -6993,7 +6993,7 @@ class QuizManager {
             }
         }
 
-        this.delight?.updateProgress({ ...progress, total: this.totalWords });
+        if(this.delight) this.delight.updateProgress({ ...progress, total: this.totalWords });
         
         // 🌈 Update themed background based on progress
         this.updateThemedBackground(correct, this.totalWords);
@@ -7483,7 +7483,7 @@ class QuizManager {
                     elapsed_ms: 0
                 })
             });
-            this.delight?.handleSkip();
+            if(this.delight) this.delight.handleSkip();
             this.loadNextWord();
         } catch (error) {
             console.error('Error skipping word:', error);
@@ -7886,9 +7886,9 @@ class QuizManager {
             </style>
         `;
 
-        this.delight?.setTotalQuestions(summary.total);
-        this.delight?.updateProgress({ correct: summary.correct, total: summary.total });
-        this.delight?.setMascotState('happy', 2200);
+        if(this.delight) this.delight.setTotalQuestions(summary.total);
+        if(this.delight) this.delight.updateProgress({ correct: summary.correct, total: summary.total });
+        if(this.delight) this.delight.setMascotState('happy', 2200);
         
         // Mascot celebrates quiz completion!
         if (this.smartyBee) {

@@ -180,7 +180,7 @@ class UserAvatarLoader {
                 const urls = avatar.urls || avatar;
                 
                 // Extract GLB path (standard field from modern API)
-                const glbPath = urls?.glb;
+                const glbPath = (urls && urls.glb !== undefined) ? urls.glb : null;
                 
                 // Validate it's actually a GLB file
                 const isGlb = typeof glbPath === 'string' && /(\.glb|\.gltf)(\?.*)?$/i.test(glbPath);
@@ -198,7 +198,7 @@ class UserAvatarLoader {
                 // Build GLB-only avatar entry
                 this.avatarMap[id] = {
                     glb: glbPath,
-                    thumbnail: urls?.thumbnail || avatar.thumbnail_url || avatar.thumbnail,
+                    thumbnail: (urls && urls.thumbnail !== undefined) ? urls.thumbnail : null || avatar.thumbnail_url || avatar.thumbnail,
                     name: avatar.name || id,
                     format: 'glb',
                     folder_path: avatar.folder_path
@@ -401,7 +401,7 @@ class UserAvatarLoader {
      */
     getAvatarPaths() {
         // Check user avatar URLs
-        const urls = this.userAvatar?.urls;
+        const urls = (this.userAvatar && this.userAvatar.urls !== undefined) ? this.userAvatar.urls : null;
         if (urls && urls.glb) {
             const modelUrl = urls.glb;
             const isGlb = /\.(glb|gltf)(\?.*)?$/i.test(modelUrl);
@@ -557,7 +557,7 @@ class UserAvatarLoader {
      * Get avatar ID
      */
     getAvatarId() {
-        return this._normalizeId(this.userAvatar?.avatar_id || this.userAvatar?.id || 'mascot-bee');
+        return this._normalizeId((this.userAvatar && this.userAvatar.avatar_id !== undefined) ? this.userAvatar.avatar_id : null || (this.userAvatar && this.userAvatar.id !== undefined) ? this.userAvatar.id : null || 'mascot-bee');
     }
 
     /**
@@ -571,7 +571,7 @@ class UserAvatarLoader {
      * Get avatar display name
      */
     getAvatarDisplayName() {
-        return this.userAvatar?.name || 'Mascot Bee Avatar';
+        return (this.userAvatar && this.userAvatar.name !== undefined) ? this.userAvatar.name : null || 'Mascot Bee Avatar';
     }
 
     /**

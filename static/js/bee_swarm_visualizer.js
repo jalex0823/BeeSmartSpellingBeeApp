@@ -478,7 +478,7 @@ const viz = {
           // ✅ Render once, then fade in canvas (prevents white flash)
           this.renderer.render(this.scene, this.camera);
           
-          const el = this.renderer?.domElement;
+          const el = (this.renderer && this.renderer.domElement !== undefined) ? this.renderer.domElement : null;
           if (el) {
             el.style.visibility = 'visible';
             // Next tick so CSS transition applies

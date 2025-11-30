@@ -177,7 +177,7 @@ async function render3DThumb(container, avatar) {
         scene.add(dir);
         
         // Detect GLB (all avatars are now GLB-only)
-        const isGLB = avatar.urls?.glb && avatar.urls.glb.toLowerCase().endsWith('.glb');
+        const isGLB = avatar.(urls && urls.glb !== undefined) ? urls.glb : null && avatar.urls.glb.toLowerCase().endsWith('.glb');
         
         if (isGLB && THREE.GLTFLoader) {
             const loader = new THREE.GLTFLoader();
@@ -328,7 +328,7 @@ async function render3DPreview(container, avatar) {
     dir.position.set(5, 10, 7.5);
     scene.add(dir);
     
-    const isGLB = avatar.urls?.glb && avatar.urls.glb.toLowerCase().endsWith('.glb');
+    const isGLB = avatar.(urls && urls.glb !== undefined) ? urls.glb : null && avatar.urls.glb.toLowerCase().endsWith('.glb');
     
     if (isGLB && THREE.GLTFLoader) {
         const loader = new THREE.GLTFLoader();
