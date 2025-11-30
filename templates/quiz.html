@@ -355,6 +355,17 @@ if ('speechSynthesis' in window) {
         gap: 1rem;
         flex-wrap: wrap;
         margin-bottom: 1rem;
+        /* 🍎 iOS optimization: Hardware acceleration for smooth fade animations */
+        transition: opacity 0.4s ease-in-out;
+        will-change: opacity;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+    
+    /* Fade out stats during countdown timer */
+    .score-display.fade-out {
+        opacity: 0.15;
+        pointer-events: none;
     }
 
     .score-item {
@@ -368,6 +379,9 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 6px 12px rgba(255, 193, 7, 0.15);
         text-align: center;
         position: relative;
+        /* 🍎 iOS optimization: Hardware acceleration for individual items */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
 
     /* Remove old honey jar overlay styles */
@@ -1556,6 +1570,18 @@ if ('speechSynthesis' in window) {
             pointer-events: auto;
         }
         
+        /* BADGE centered at top */
+        .score-item:nth-child(5) {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        
         /* Left column - CORRECT and INCORRECT stacked */
         .score-item:nth-child(1),
         .score-item:nth-child(2) {
@@ -1571,10 +1597,9 @@ if ('speechSynthesis' in window) {
             top: 200px;
         }
         
-        /* Right column - STREAK, POINTS, and BADGE stacked */
+        /* Right column - STREAK and POINTS stacked */
         .score-item:nth-child(3),
-        .score-item:nth-child(4),
-        .score-item:nth-child(5) {
+        .score-item:nth-child(4) {
             position: fixed;
             right: 0.5rem;
         }
@@ -1587,10 +1612,6 @@ if ('speechSynthesis' in window) {
             top: 200px;
         }
         
-        .score-item:nth-child(5) {
-            top: 280px;
-        }
-        
         .score-number {
             font-size: 1.2rem;
         }
@@ -1599,10 +1620,10 @@ if ('speechSynthesis' in window) {
             font-size: 0.65rem;
         }
         
-        /* Make badge smaller on mobile */
+        /* Badge size on mobile - slightly larger since it's centered at top */
         .score-item:nth-child(5) img {
-            width: 60px !important;
-            height: 60px !important;
+            width: 70px !important;
+            height: 70px !important;
         }
         
         .quiz-logo .mascot-3d-container {
@@ -4012,6 +4033,12 @@ class CountdownTimer {
         this.hasCritical = false;
         this.tickSoundStarted = false;  // Reset tick sound state
         
+        // Fade out score display during countdown
+        const scoreDisplay = document.querySelector('.score-display');
+        if (scoreDisplay) {
+            scoreDisplay.classList.add('faded');
+        }
+        
         // Show timer with animation
         this.container.classList.remove('hidden');
         setTimeout(() => {
@@ -4166,6 +4193,13 @@ class CountdownTimer {
             clearInterval(this.interval);
             this.interval = null;
         }
+        
+        // 🍎 Fade score display back in after countdown
+        const scoreDisplay = document.querySelector('.score-display');
+        if (scoreDisplay) {
+            scoreDisplay.classList.remove('faded');
+        }
+        
         console.log('⏹️ Timer stopped');
     }
     
@@ -6080,18 +6114,42 @@ class QuizManager {
         });
 
         if (speakButton) {
+            let pronounceTimeout = null;
             speakButton.addEventListener('click', () => {
+                // 🍎 iOS FIX: Debounce to prevent double-clicks causing repeat speech
+                if (pronounceTimeout) {
+                    console.log('🍎 Ignoring rapid pronounce click (debounce)');
+                    return;
+                }
+                
                 console.log('🔊 Pronounce button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
                 this.pronounceWordSlow(); // Pronounce at slower speed for learning
+                
+                // Prevent rapid clicks for 1 second
+                pronounceTimeout = setTimeout(() => {
+                    pronounceTimeout = null;
+                }, 1000);
             });
         }
 
         if (repeatButton) {
+            let repeatTimeout = null;
             repeatButton.addEventListener('click', () => {
+                // 🍎 iOS FIX: Debounce to prevent double-clicks causing repeat speech
+                if (repeatTimeout) {
+                    console.log('🍎 Ignoring rapid repeat click (debounce)');
+                    return;
+                }
+                
                 console.log('🔁 Repeat button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
                 this.repeatWord(); // Repeat at normal speed
+                
+                // Prevent rapid clicks for 1 second
+                repeatTimeout = setTimeout(() => {
+                    repeatTimeout = null;
+                }, 1000);
             });
         }
 
@@ -6668,6 +6726,14 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
+            // 🍎 iOS FIX: Cancel any ongoing speech and wait for iOS to process
+            if ('speechSynthesis' in window && speechSynthesis.speaking) {
+                console.log('🍎 iOS: Cancelling ongoing speech before pronouncing');
+                speechSynthesis.cancel();
+                // Wait for iOS to process cancellation
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
@@ -6732,10 +6798,16 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    async speakDirectly(text, onDone, rate = 1.0) {
         if ('speechSynthesis' in window) {
             try {
-                speechSynthesis.cancel(); // Cancel any ongoing speech
+                // 🍎 iOS FIX: Cancel any ongoing speech
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                    // Wait for iOS to process cancellation
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
                 utterance.pitch = 1.0;
@@ -7787,21 +7859,7 @@ class QuizManager {
                     </div>
                 </div>
 
-                <!-- Buzz Dust Badge Progress -->
-                <div class="buzz-dust-container" id="reportBuzzDustContainer">
-                    <div class="buzz-dust-title">✨ Buzz Dust Earned This Session</div>
-                    <div class="buzz-dust-badge-display">
-                        <img id="reportBadgeImage" src="/static/assets/badges/Novice.png" alt="Current Rank" class="report-badge-image">
-                    </div>
-                    <div class="buzz-dust-points-display">
-                        <div class="buzz-dust-points-label">Total Buzz Dust</div>
-                        <div class="buzz-dust-points-value" id="reportBuzzDustPoints">0</div>
-                    </div>
-                    <div class="buzz-dust-rank-label" id="reportBuzzDustRank">Novice Bee</div>
-                    <div class="buzz-dust-sub">Keep spelling to level up! ✨</div>
-                </div>
-
-                <!-- Achievements moved below for breathing room -->
+                <!-- Achievements section -->
                 ${badgesHTML}
                 ${levelHTML}
                 
