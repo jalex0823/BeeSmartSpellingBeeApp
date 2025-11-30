@@ -136,142 +136,49 @@ class SmartyBee3D {
     }
 
     loadModel() {
-        const mtlLoader = new THREE.MTLLoader();
-        const objLoader = new THREE.OBJLoader();
-
-        // Resolve base and filenames
+        // GLB-only loader - all avatars are GLB format
+        const loader = new THREE.GLTFLoader();
+        
+        // Resolve GLB path
         const base = this.options.modelBase.endsWith('/') ? this.options.modelBase : this.options.modelBase + '/';
         const modelName = this.options.modelName;
-        const mtlPath = this.options.mtlPath || `${base}${modelName}.mtl`;
-        const objPath = this.options.modelPath || `${base}${modelName}.obj`;
-        const texPath = this.options.texturePath || `${base}${modelName}.png`;
+        const glbPath = this.options.modelPath || `${base}${modelName}.glb`;
         
         // Cache-busting: add timestamp to force reload of updated files
         const cacheBuster = Date.now();
+        const glbPathWithCache = `${glbPath}?v=${cacheBuster}`;
 
-        // Configure loader base and resource paths
-        mtlLoader.setPath(base);
-        mtlLoader.setResourcePath(base);
+        console.log('🐝 Loading GLB model:', glbPathWithCache);
 
-        // Use filename-only for loader after setPath
-        const mtlFilename = mtlPath.substring(mtlPath.lastIndexOf('/') + 1);
-        const mtlFilenameWithCache = `${mtlFilename}?v=${cacheBuster}`;
+        // Load GLB model with materials and textures embedded
+        loader.load(
+            glbPathWithCache,
+            (gltf) => {
+                const object = gltf.scene;
+                
+                // Center and scale the model
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 3 / maxDim;
+                object.scale.set(scale, scale, scale);
+                
+                object.position.sub(center.multiplyScalar(scale));
 
-        // Load MTL first (materials and textures)
-        mtlLoader.load(
-            mtlFilenameWithCache,
-            (materials) => {
-                materials.preload();
-                objLoader.setMaterials(materials);
-
-                // Configure OBJ loader base/resource paths as well
-                objLoader.setPath(base);
-                objLoader.setResourcePath(base);
-
-                const objFilename = objPath.substring(objPath.lastIndexOf('/') + 1);
-                const objFilenameWithCache = `${objFilename}?v=${cacheBuster}`;
-
-                // Now load OBJ with materials applied
-                objLoader.load(
-                    objFilenameWithCache,
-                    (object) => {
-                        // Center and scale the model
-                        const box = new THREE.Box3().setFromObject(object);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const scale = 3 / maxDim;
-                        object.scale.set(scale, scale, scale);
-                        
-                        object.position.sub(center.multiplyScalar(scale));
-
-                        this.bee = object;
-                        this.scene.add(object);
-                        
-                        console.log('✅ Mascot Bee 3D model loaded successfully with textures!');
-                    },
-                    (xhr) => {
-                        const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
-                        console.log(`Loading model: ${percentComplete}%`);
-                    },
-                    (error) => {
-                        console.error('Error loading OBJ model:', error);
-                        // Quick HEAD check for diagnostics
-                        fetch(objPath, { method: 'HEAD' })
-                            .then(r => console.warn(`OBJ HEAD ${r.status} for ${objPath}`))
-                            .catch(e => console.warn('OBJ HEAD check failed', e));
-                        this.addFallbackBee();
-                    }
-                );
+                this.bee = object;
+                this.scene.add(object);
+                
+                console.log('✅ Mascot Bee GLB model loaded successfully!');
             },
             (xhr) => {
-                const percentLoaded = xhr.loaded / xhr.total * 100;
-                console.log(`Loading materials: ${percentLoaded.toFixed(0)}%`);
+                const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
+                console.log(`Loading GLB model: ${percentComplete}%`);
             },
             (error) => {
-                console.error('Error loading MTL materials:', error);
-                // Fallback: try loading without materials
-                this.loadModelWithoutMaterials(base, objPath, texPath);
-            }
-        );
-    }
-
-    loadModelWithoutMaterials(base, objPath, texPath) {
-        // Fallback method if MTL loading fails
-        const loader = new THREE.OBJLoader();
-        const textureLoader = new THREE.TextureLoader();
-        loader.setPath(base);
-        loader.setResourcePath(base);
-        textureLoader.setPath && textureLoader.setPath(base);
-
-        // Load texture
-        textureLoader.load(
-            texPath,
-            (texture) => {
-                // Load OBJ model
-                loader.load(
-                    objPath.substring(objPath.lastIndexOf('/') + 1),
-                    (object) => {
-                        // Apply texture to all meshes
-                        object.traverse((child) => {
-                            if (child instanceof THREE.Mesh) {
-                                child.material = new THREE.MeshPhongMaterial({
-                                    map: texture,
-                                    shininess: 30
-                                });
-                            }
-                        });
-
-                        // Center and scale the model
-                        const box = new THREE.Box3().setFromObject(object);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const scale = 3 / maxDim;
-                        object.scale.set(scale, scale, scale);
-                        
-                        object.position.sub(center.multiplyScalar(scale));
-
-                        this.bee = object;
-                        this.scene.add(object);
-                        
-                        console.log('✅ Mascot Bee 3D model loaded (fallback mode)');
-                    },
-                    (xhr) => {
-                        const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
-                        console.log(`Loading model: ${percentComplete}%`);
-                    },
-                    (error) => {
-                        console.error('Error loading OBJ model:', error);
-                        this.addFallbackBee();
-                    }
-                );
-            },
-            undefined,
-            (error) => {
-                console.error('Error loading texture:', error);
+                console.error('❌ Error loading GLB model:', error);
+                console.error('GLB path attempted:', glbPath);
                 this.addFallbackBee();
             }
         );
@@ -297,7 +204,7 @@ class SmartyBee3D {
     }
 
     addFallbackBee() {
-        // Lightweight 3D fallback so UI still looks alive if OBJ/MTL missing
+        // Lightweight 3D fallback so UI still looks alive if GLB loading fails
         try {
             const geom = new THREE.SphereGeometry(1, 20, 20);
             const mat = new THREE.MeshStandardMaterial({ color: 0xffdd00, metalness: 0.2, roughness: 0.6 });
@@ -305,7 +212,7 @@ class SmartyBee3D {
             bee.position.set(0, 1, 0);
             this.scene.add(bee);
             this.bee = bee;
-            console.warn('Fallback 3D bee added (OBJ not available).');
+            console.warn('Fallback 3D bee added (GLB not available).');
         } catch (e) {
             console.error('Failed to add fallback 3D bee, showing image instead.', e);
             this.showFallbackImage();
