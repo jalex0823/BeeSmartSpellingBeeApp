@@ -13650,7 +13650,12 @@ def api_get_my_avatar():
     try:
         # Try to get authenticated user first
         if current_user.is_authenticated:
-            user = current_user
+            # CRITICAL FIX: Force fresh query from database to avoid stale session data
+            # This ensures quiz page shows the same avatar as home page
+            from models import User
+            user = User.query.get(current_user.id)
+            if not user:
+                user = current_user
         else:
             # Fall back to guest user
             user = get_or_create_guest_user()
