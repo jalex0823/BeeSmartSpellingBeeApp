@@ -12215,14 +12215,22 @@ def api_get_avatars():
             if hasattr(current_user, 'is_admin_or_premium'):
                 try:
                     is_admin_or_premium = current_user.is_admin_or_premium()
-                except Exception:
+                    print(f"🔍 is_admin_or_premium() returned: {is_admin_or_premium}")
+                except Exception as e:
                     # Fallback to role check
+                    print(f"⚠️ Error calling is_admin_or_premium(): {e}")
                     is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
             else:
+                print(f"⚠️ User doesn't have is_admin_or_premium method")
                 is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
             
-            # CRITICAL DEBUG: Log admin status
-            print(f"🔍 Avatar API - User: {current_user.username}, Role: {getattr(current_user, 'role', 'none')}, is_admin_or_premium: {is_admin_or_premium}, is_guest: {is_guest}")
+            # CRITICAL DEBUG: Log admin status with ALL relevant fields
+            print(f"🔍 Avatar API - User: {current_user.username}")
+            print(f"   Role: {getattr(current_user, 'role', 'none')}")
+            print(f"   admin_all_access: {getattr(current_user, 'admin_all_access', False)}")
+            print(f"   premium_member: {getattr(current_user, 'premium_member', False)}")
+            print(f"   is_admin_or_premium: {is_admin_or_premium}")
+            print(f"   is_guest: {is_guest}")
         else:
             # Not authenticated = guest by default
             is_guest = True
