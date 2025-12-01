@@ -3477,6 +3477,17 @@ if ('speechSynthesis' in window) {
                 Repeat
             </button>
             
+            <!-- Context Buttons (Show sentence and definition without spelling) -->
+            <button type="button" class="action-btn secondary" id="showSentenceButton">
+                <span class="bee-icon" aria-hidden="true">📝</span>
+                Show Sentence
+            </button>
+            
+            <button type="button" class="action-btn secondary" id="showDefinitionButton">
+                <span class="bee-icon" aria-hidden="true">📖</span>
+                Show Definition
+            </button>
+            
             <!-- Quiz Action Buttons -->
             <button type="button" class="action-btn primary" id="submitButton">
                 Submit Answer
@@ -6038,9 +6049,11 @@ class QuizManager {
         const getHintButton = document.getElementById('getHintButton');
         const skipButton = document.getElementById('skipButton');
         const restartButton = document.getElementById('restartButton');
+        const showSentenceButton = document.getElementById('showSentenceButton');
+        const showDefinitionButton = document.getElementById('showDefinitionButton');
 
         // Add buzz sounds to all buttons
-        const allButtons = [submitButton, speakButton, repeatButton, getHintButton, skipButton, restartButton];
+        const allButtons = [submitButton, speakButton, repeatButton, getHintButton, skipButton, restartButton, showSentenceButton, showDefinitionButton];
         allButtons.forEach(button => {
             if (button) {
                 // Hover sound
@@ -6079,6 +6092,22 @@ class QuizManager {
                 console.log('🔁 Repeat button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
                 this.repeatWord(); // Repeat at normal speed
+            });
+        }
+
+        if (showSentenceButton) {
+            showSentenceButton.addEventListener('click', () => {
+                console.log('📝 Show Sentence button clicked');
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.showSentence();
+            });
+        }
+
+        if (showDefinitionButton) {
+            showDefinitionButton.addEventListener('click', () => {
+                console.log('📖 Show Definition button clicked');
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.showDefinition();
             });
         }
 
@@ -6770,6 +6799,76 @@ class QuizManager {
     // Repeat word at normal speed
     async repeatWord() {
         return await this.pronounceWord({ rate: 1.0 });
+    }
+
+    // Show sentence with the target word masked
+    showSentence() {
+        if (!this.currentWordData || !this.currentWordData.sentence) {
+            BeeSmart.showError('No sentence available for this word.');
+            return;
+        }
+
+        const sentence = this.currentWordData.sentence;
+        const word = this.currentWordData.word;
+        
+        // Mask the word with underscores (case-insensitive replacement)
+        const maskedSentence = this.maskWordInText(sentence, word);
+        
+        // Display in feedback area
+        const feedbackElement = document.getElementById('feedback');
+        if (feedbackElement) {
+            feedbackElement.innerHTML = `
+                <div class="sentence-display" style="padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; margin: 10px 0; border-radius: 4px;">
+                    <strong>📝 Sentence:</strong><br>
+                    <span style="font-size: 1.1em; color: #333;">${maskedSentence}</span>
+                </div>
+            `;
+            feedbackElement.style.display = 'block';
+        }
+
+        console.log('📝 Sentence displayed (word masked)');
+    }
+
+    // Show definition with the target word masked
+    showDefinition() {
+        if (!this.currentWordData || !this.currentWordData.definition) {
+            BeeSmart.showError('No definition available for this word.');
+            return;
+        }
+
+        const definition = this.currentWordData.definition;
+        const word = this.currentWordData.word;
+        
+        // Mask the word with underscores (case-insensitive replacement)
+        const maskedDefinition = this.maskWordInText(definition, word);
+        
+        // Display in feedback area
+        const feedbackElement = document.getElementById('feedback');
+        if (feedbackElement) {
+            feedbackElement.innerHTML = `
+                <div class="definition-display" style="padding: 15px; background: #d1ecf1; border-left: 4px solid #17a2b8; margin: 10px 0; border-radius: 4px;">
+                    <strong>📖 Definition:</strong><br>
+                    <span style="font-size: 1.1em; color: #333;">${maskedDefinition}</span>
+                </div>
+            `;
+            feedbackElement.style.display = 'block';
+        }
+
+        console.log('📖 Definition displayed (word masked)');
+    }
+
+    // Helper method to mask the target word in text with underscores
+    maskWordInText(text, word) {
+        if (!text || !word) return text;
+        
+        // Create a regex that matches the word (case-insensitive, whole word)
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        
+        // Replace with underscores matching the length
+        const replacement = '_'.repeat(word.length);
+        
+        return text.replace(regex, replacement);
     }
 
     async submitAnswer() {
