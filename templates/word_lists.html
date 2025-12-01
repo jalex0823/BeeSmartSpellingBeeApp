@@ -895,9 +895,12 @@
 
     // Fallback: use defaults
     const badgeEl = document.getElementById('badgeIcon');
-    if(badgeEl){
-      badgeEl.src = '/static/assets/badges/glb_files/Novice.glb';
-      badgeEl.alt = 'Novice Bee Badge';
+    if (badgeEl) {
+      // Set fallback badge as background image (badgeEl is a div, not img)
+      badgeEl.style.backgroundImage = "url('/static/assets/badges/png/Novice.png')";
+      badgeEl.style.backgroundSize = "contain";
+      badgeEl.style.backgroundRepeat = "no-repeat";
+      badgeEl.style.backgroundPosition = "center";
       badgeEl.style.display = 'block';
     }
     document.getElementById('badgeName').textContent = 'Novice Bee';
@@ -1576,24 +1579,29 @@
   }
 
   // TOAST
-  function showToast(message,type="success"){
-    (function(){ const el = document.querySelector(\".toast\"); if(el) el.remove(); })();
-    const toast=document.createElement("div");
-    toast.className="toast "+type;
-    toast.style.cssText=`
+  // TOAST
+  function showToast(message, type = "success") {
+    (function() {
+      const el = document.querySelector(".toast");
+      if (el) el.remove();
+    })();
+
+    const toast = document.createElement("div");
+    toast.className = "toast " + type;
+    toast.style.cssText = `
       position:fixed;bottom:1.5rem;right:1.5rem;
       background:white;padding:.9rem 1.2rem;border-radius:12px;
       box-shadow:0 10px 30px rgba(0,0,0,0.2);
-      border-left:5px solid ${type==="success"?"#4CAF50":"#f44336"};
+      border-left:5px solid ${type === "success" ? "#4CAF50" : "#f44336"};
       z-index:10000;font-weight:900;max-width:420px;
       animation:slideIn .25s ease;
     `;
-    toast.innerHTML=message;
+    toast.innerHTML = message;
     document.body.appendChild(toast);
-    setTimeout(()=>{
-      toast.style.animation="slideOut .25s ease";
-      setTimeout(()=>toast.remove(),250);
-    },2600);
+    setTimeout(() => {
+      toast.style.animation = "slideOut .25s ease";
+      setTimeout(() => toast.remove(), 250);
+    }, 2600);
   }
   const style=document.createElement("style");
   style.textContent=`
