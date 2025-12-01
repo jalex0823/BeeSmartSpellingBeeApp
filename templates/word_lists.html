@@ -1468,7 +1468,7 @@
         </div>
       `;
       beeModal.classList.add("active");
-      setTimeout(()=>(function(){ const el = document.getElementById(\"beePromptInput\"); if(el) el.focus(); })(),80);
+      setTimeout(()=>{ const el = document.getElementById(\"beePromptInput\"); if(el) el.focus(); },80);
     });
   }
   function closeBeePrompt(value){
