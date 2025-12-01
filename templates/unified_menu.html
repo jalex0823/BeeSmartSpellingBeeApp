@@ -12997,24 +12997,25 @@
                 const percentElement = document.getElementById('loadingPercentage');
                 const statusElement = document.getElementById('loadingStatus');
                 
-                // Check if we've reached 90% - show "Ready for Lift Off"
+                // Check if we've reached 90% - show "Let's Get Buzzing!"
                 if (this.progress >= 90 && this.progress < 100 && percentElement && !this.liftOffShown) {
                     this.liftOffShown = true;
-                    // Flash "Ready for Lift Off!" message
-                    percentElement.style.transition = 'all 0.3s ease-in-out';
-                    percentElement.style.transform = 'scale(1.2)';
-                    percentElement.style.color = '#FFD700';
-                    percentElement.textContent = '🚀 Ready for Lift Off! 🚀';
                     
-                    // Show sparkle FX
-                    this.showBuzzOnFX(percentElement.parentElement);
+                    // Fade out the 90%
+                    percentElement.style.transition = 'opacity 0.5s ease-out';
+                    percentElement.style.opacity = '0';
                     
-                    // Return to percentage after 2 seconds
+                    // After fade out completes, show "Let's Get Buzzing!"
                     setTimeout(() => {
-                        percentElement.style.transform = 'scale(1)';
-                        percentElement.style.color = '';
-                        percentElement.textContent = `${Math.floor(this.progress)}%`;
-                    }, 2000);
+                        percentElement.style.transition = 'all 0.5s ease-in-out';
+                        percentElement.style.transform = 'scale(1.2)';
+                        percentElement.style.color = '#FFD700';
+                        percentElement.textContent = "🐝 Let's Get Buzzing! 🐝";
+                        percentElement.style.opacity = '1';
+                        
+                        // Show sparkle FX
+                        this.showBuzzOnFX(percentElement.parentElement);
+                    }, 500);
                 } else {
                     // Normal percentage update
                     if (percentElement) {

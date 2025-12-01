@@ -231,6 +231,16 @@ async function loadAvatars() {
         }
         
         const data = await response.json();
+        
+        // Store user info globally for chooseAvatar to check admin/guest status
+        window.avatarUserInfo = {
+            is_guest: data.is_guest || false,
+            is_admin: data.is_admin || false,
+            user_role: data.user_role || null,
+            user_authenticated: data.user_authenticated || false
+        };
+        console.log('👤 User Info:', window.avatarUserInfo);
+        
         // Capture current user's honey points if provided
         if (data && typeof data.user_honey_points === 'number') {
             currentUserHoneyPoints = data.user_honey_points;
@@ -863,8 +873,34 @@ function chooseAvatar() {
         return;
     }
     
-    // Check if avatar is locked before attempting selection
-    if (selectedAvatar.is_locked) {
+    // Extra safety: Check if user is guest (NOT admin) and trying to select non-HoneyComb avatar
+    // Use API-provided user status from window.avatarUserInfo (set during loadAvatars)
+    const userInfo = window.avatarUserInfo || {};
+    const isGuest = userInfo.is_guest === true;
+    const isAdmin = userInfo.is_admin === true || userInfo.user_role === 'admin';
+    const isHoneyComb = selectedAvatar.slug === 'honey-comb' || selectedAvatar.slug === 'honeycomb';
+    
+    console.log(`🔍 chooseAvatar - User: guest=${isGuest}, admin=${isAdmin}, avatar=${selectedAvatar.slug}`);
+    
+    // Only restrict guests - admins have unrestricted access
+    if (isGuest && !isAdmin && !isHoneyComb) {
+        console.warn('🚫 Guest user attempted to select locked avatar:', selectedAvatar.slug);
+        alert('🔐 Guest users can only use the Honey Comb mascot avatar.\n\nPlease register for a free account to unlock more bee avatars!');
+        
+        // Reset to Honey Comb avatar
+        const honeycombAvatar = allAvatars.find(a => a.slug === 'honey-comb' || a.slug === 'honeycomb');
+        if (honeycombAvatar) {
+            const honeycombElement = document.querySelector(`.avatar-hex-position[data-slug="${honeycombAvatar.slug}"]`);
+            if (honeycombElement) {
+                selectAvatar(honeycombAvatar, honeycombElement);
+            }
+        }
+        return;
+    }
+    
+    // Check if avatar is locked before attempting selection (skip for admins)
+    if (!isAdmin && selectedAvatar.is_locked) {
+        console.log('🔒 Avatar is locked for non-admin user');
         showLockedMessage(selectedAvatar);
         return;
     }

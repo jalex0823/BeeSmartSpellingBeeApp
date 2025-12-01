@@ -12152,8 +12152,12 @@ def api_get_avatars():
         current_time = time.time()
         
         # Use cache for both authenticated and unauthenticated users
-        # Cache key includes user ID to separate per-user unlock status
-        cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+        # Cache key includes user ID AND role to separate guest/registered/admin unlock status
+        if current_user.is_authenticated:
+            user_role = getattr(current_user, 'role', 'registered')
+            cache_key = f"user_{current_user.id}_role_{user_role}"
+        else:
+            cache_key = "user_guest"
         
         # Allow cache bypass for immediate troubleshooting (e.g., force=1)
         if request.args.get('force') != '1':
@@ -12281,6 +12285,7 @@ def api_get_avatars():
                     if is_admin_or_premium:
                         # Admins and premium members have FULL unrestricted access to ALL avatars
                         is_locked = False
+                        print(f"  ✅ ADMIN UNLOCK: {avatar_slug} unlocked for admin/premium user")
                     elif is_guest:
                         # Guest users: only show mascot avatar (honey-comb)
                         if catalog_avatar and catalog_avatar.get('tier') != 'mascot_free':
@@ -12489,6 +12494,7 @@ def api_get_avatars():
             
             if is_admin_or_premium:
                 is_locked = False
+                print(f"  ✅ ADMIN UNLOCK: {slug} (GLB) unlocked for admin/premium user")
             elif catalog_avatar:
                 # Check unlock status using avatar_catalog helper (returns dict)
                 unlock_result = check_avatar_unlocked(
@@ -12602,14 +12608,32 @@ def api_get_avatars():
             'avatars': enriched_avatars,
             'total': len(enriched_avatars),
             # include current user honey points for client-side computations
-            'user_honey_points': user_honey_points
+            'user_honey_points': user_honey_points,
+            # include user authentication and role info for client-side logic
+            'user_authenticated': current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False,
+            'user_role': getattr(current_user, 'role', None) if current_user.is_authenticated else None,
+            'is_guest': is_guest,
+            'is_admin': is_admin_or_premium if 'is_admin_or_premium' in locals() else False
         }
         
         # Cache for all users (with per-user cache key)
-        cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+        if current_user.is_authenticated:
+            user_role = getattr(current_user, 'role', 'registered')
+            cache_key = f"user_{current_user.id}_role_{user_role}"
+        else:
+            cache_key = "user_guest"
         _AVATAR_CACHE[cache_key] = response_data
         _AVATAR_CACHE[f"{cache_key}_timestamp"] = time.time()
+        
+        # DEBUG: Count locked vs unlocked avatars
+        locked_count = sum(1 for av in enriched_avatars if av.get('is_locked', False))
+        unlocked_count = len(enriched_avatars) - locked_count
         print(f"💾 Cached {len(enriched_avatars)} avatars for {cache_key}")
+        print(f"🔓 Unlocked: {unlocked_count}, 🔒 Locked: {locked_count}")
+        if is_admin_or_premium:
+            print(f"✨ ADMIN USER: All {len(enriched_avatars)} avatars should be unlocked!")
+            if locked_count > 0:
+                print(f"⚠️ WARNING: Admin user has {locked_count} locked avatars - this is a bug!")
         
         # DEBUG: Log first few avatars
         if enriched_avatars:
