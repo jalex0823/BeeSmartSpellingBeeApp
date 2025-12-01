@@ -4509,8 +4509,8 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            // Speak a friendly prompt and the word twice
-            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+            // Speak a friendly prompt with the word
+            const phrase = `Spell the word ${data.word}.`;
             const rate = data.rate || 0.92; // Use provided rate or default
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
@@ -6684,15 +6684,15 @@ class QuizManager {
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                            const phrase = `Spell the word ${data.word}.`;
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word ${data.word}.`;
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word ${data.word}.`;
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
