@@ -786,6 +786,10 @@
   let filteredLists = [];
   let modalResolve = null;
 
+  // NEW: backup the original button handlers so we can restore them
+  let _originalCancelOnclick = null;
+  let _originalConfirmOnclick = null;
+
   // favorites stored locally unless API exists
   const favKey = "beesmart_favorites";
   const localFavs = new Set(JSON.parse(localStorage.getItem(favKey) || "[]"));
@@ -1433,61 +1437,112 @@
   }
 
   // MODAL (confirm/info)
-  function showBeeModal(icon,title,message,confirmText="OK",confirmType="primary"){
-    return new Promise(resolve=>{
-      modalResolve=resolve;
-      modalIcon.textContent=icon;
-      modalTitle.textContent=title;
-      modalBody.innerHTML=message;
-      modalConfirmBtn.textContent=confirmText;
-      modalConfirmBtn.className="bee-modal-btn "+confirmType;
-      beeModal.classList.add("active");
-    });
-  }
-  function confirmBeeModal(){ beeModal.classList.remove("active"); if(modalResolve) modalResolve(true); modalResolve=null; }
-  function closeBeeModal(){ beeModal.classList.remove("active"); if(modalResolve) modalResolve(false); modalResolve=null; }
+  function showBeeModal(icon, title, message, confirmText = "OK", confirmType = "primary") {
+    return new Promise(resolve => {
+      modalResolve = resolve;
 
-  // PROMPT (create)
-  function showBeePrompt(icon,title,message){
-    return new Promise(resolve=>{
-      modalResolve=resolve;
-      const modal = beeModal.querySelector(".bee-modal");
-      modal.innerHTML=`
-        <div class="bee-modal-header">
-          <div class="bee-modal-icon">${icon}</div>
-          <h2 class="bee-modal-title">${title}</h2>
-        </div>
-        <div class="bee-modal-body">${message}</div>
-        <input id="beePromptInput" type="text" style="
-          width:100%; padding:.9rem; font-size:1.05rem; font-weight:700;
-          border:3px solid var(--honey); border-radius:12px; outline:none; margin: 6px 0 12px;
-        "/>
-        <div class="bee-modal-actions">
-          <button class="bee-modal-btn secondary" onclick="closeBeePrompt('')">Cancel</button>
-          <button class="bee-modal-btn primary" onclick="closeBeePrompt(document.getElementById(\\'beePromptInput\\').value)">Create</button>
-        </div>
-      `;
+      // These are the existing elements in your HTML
+      modalIcon.textContent = icon;
+      modalTitle.textContent = title;
+      modalBody.innerHTML = message;
+
+      modalConfirmBtn.textContent = confirmText;
+      modalConfirmBtn.className = "bee-modal-btn " + confirmType;
+
+      // Make sure confirm button runs the normal confirm handler
+      // (it will call modalResolve(true))
+      // Inline onclick from HTML still points to confirmBeeModal()
       beeModal.classList.add("active");
-      setTimeout(()=>{ const el = document.getElementById(\"beePromptInput\"); if(el) el.focus(); },80);
     });
   }
-  function closeBeePrompt(value){
+
+  function confirmBeeModal() {
     beeModal.classList.remove("active");
-    if(modalResolve) modalResolve(value);
-    modalResolve=null;
-    // restore modal HTML
+    if (modalResolve) modalResolve(true);
+    modalResolve = null;
+  }
+
+  function closeBeeModal() {
+    beeModal.classList.remove("active");
+    if (modalResolve) modalResolve(false);
+    modalResolve = null;
+  }
+
+  // PROMPT (create) – DOM-based, no template HTML
+  function showBeePrompt(icon, title, message) {
+    return new Promise(resolve => {
+      modalResolve = resolve;
+
+      const modal = beeModal.querySelector(".bee-modal");
+      const cancelBtn = modal.querySelector(".bee-modal-btn.secondary");
+      const confirmBtn = modal.querySelector("#modalConfirmBtn");
+
+      // Backup original handlers (from inline onclick attributes)
+      if (_originalCancelOnclick === null) _originalCancelOnclick = cancelBtn.onclick;
+      if (_originalConfirmOnclick === null) _originalConfirmOnclick = confirmBtn.onclick;
+
+      // Set icon/title
+      modalIcon.textContent = icon;
+      modalTitle.textContent = title;
+
+      // Clear body and insert message + input
+      modalBody.innerHTML = "";
+      const msgDiv = document.createElement("div");
+      msgDiv.innerHTML = message;
+      modalBody.appendChild(msgDiv);
+
+      const input = document.createElement("input");
+      input.id = "beePromptInput";
+      input.type = "text";
+      input.style.cssText = `
+        width:100%;
+        padding:.9rem;
+        font-size:1.05rem;
+        font-weight:700;
+        border:3px solid var(--honey);
+        border-radius:12px;
+        outline:none;
+        margin:6px 0 12px;
+      `;
+      modalBody.appendChild(input);
+
+      // Rewire buttons for prompt behavior
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.onclick = () => closeBeePrompt("");
+
+      confirmBtn.textContent = "Create";
+      confirmBtn.className = "bee-modal-btn primary";
+      confirmBtn.onclick = () => closeBeePrompt(input.value);
+
+      beeModal.classList.add("active");
+
+      // Auto-focus input
+      setTimeout(() => {
+        if (input) input.focus();
+      }, 80);
+    });
+  }
+
+  function closeBeePrompt(value) {
     const modal = beeModal.querySelector(".bee-modal");
-    modal.innerHTML=`
-      <div class="bee-modal-header">
-        <div class="bee-modal-icon" id="modalIcon">🐝</div>
-        <h2 class="bee-modal-title" id="modalTitle">Bzzzz!</h2>
-      </div>
-      <div class="bee-modal-body" id="modalBody">Are you sure about this?</div>
-      <div class="bee-modal-actions">
-        <button class="bee-modal-btn secondary" onclick="closeBeeModal()">Cancel</button>
-        <button class="bee-modal-btn primary" id="modalConfirmBtn" onclick="confirmBeeModal()">OK</button>
-      </div>
-    `;
+    const cancelBtn = modal.querySelector(".bee-modal-btn.secondary");
+    const confirmBtn = modal.querySelector("#modalConfirmBtn");
+
+    // Close + resolve promise
+    beeModal.classList.remove("active");
+    if (modalResolve) modalResolve(value);
+    modalResolve = null;
+
+    // Restore original handlers
+    if (_originalCancelOnclick) cancelBtn.onclick = _originalCancelOnclick;
+    if (_originalConfirmOnclick) confirmBtn.onclick = _originalConfirmOnclick;
+
+    // Restore default confirm modal content
+    modalIcon.textContent = "🐝";
+    modalTitle.textContent = "Bzzzz!";
+    modalBody.innerHTML = "Are you sure about this?";
+    confirmBtn.textContent = "OK";
+    confirmBtn.className = "bee-modal-btn primary";
   }
 
   // TOAST
