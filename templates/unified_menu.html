@@ -12997,31 +12997,23 @@
                 const percentElement = document.getElementById('loadingPercentage');
                 const statusElement = document.getElementById('loadingStatus');
                 
-                // Check if we've reached 90% - show "Let's Get Buzzing!"
-                if (this.progress >= 90 && this.progress < 100 && percentElement && !this.liftOffShown) {
+                // Show percentage until 90%, then switch to "Let's Get Buzzing!"
+                if (this.progress >= 90 && percentElement && !this.liftOffShown) {
                     this.liftOffShown = true;
                     
-                    // Fade out the 90%
-                    percentElement.style.transition = 'opacity 0.5s ease-out';
-                    percentElement.style.opacity = '0';
+                    // Transition to "Let's Get Buzzing!" message
+                    percentElement.style.transition = 'all 0.5s ease-in-out';
+                    percentElement.style.transform = 'scale(1.2)';
+                    percentElement.style.color = '#FFD700';
+                    percentElement.textContent = "🐝 Let's Get Buzzing! 🐝";
+                    percentElement.style.opacity = '1';
                     
-                    // After fade out completes, show "Let's Get Buzzing!"
-                    setTimeout(() => {
-                        percentElement.style.transition = 'all 0.5s ease-in-out';
-                        percentElement.style.transform = 'scale(1.2)';
-                        percentElement.style.color = '#FFD700';
-                        percentElement.textContent = "🐝 Let's Get Buzzing! 🐝";
-                        percentElement.style.opacity = '1';
-                        
-                        // Show sparkle FX
-                        this.showBuzzOnFX(percentElement.parentElement);
-                    }, 500);
-                } else {
-                    // Normal percentage update
-                    if (percentElement) {
-                        percentElement.textContent = `${Math.floor(this.progress)}%`;
-                        percentElement.style.opacity = '1';
-                    }
+                    // Show sparkle FX
+                    this.showBuzzOnFX(percentElement.parentElement);
+                } else if (!this.liftOffShown && percentElement) {
+                    // Show normal percentage (0% to 89%)
+                    percentElement.textContent = `${Math.floor(this.progress)}%`;
+                    percentElement.style.opacity = '1';
                 }
                 
                 if (statusElement) statusElement.textContent = status;

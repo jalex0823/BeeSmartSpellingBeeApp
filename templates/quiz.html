@@ -5463,11 +5463,34 @@ class QuizManager {
                 voiceDefBox.textContent = finalDefinition;
             }
 
-            // Store the word data
+            // Store the word data with the actual sentence/definition being displayed
+            // Fetch complete word info from /api/pronounce to get both sentence AND definition
+            let actualSentence = data.sentence || '';
+            let actualDefinition = data.definition || '';
+            
+            // If we don't have both sentence and definition, fetch from /api/pronounce
+            if (!actualSentence || !actualDefinition) {
+                try {
+                    const pronounceData = await this.fetchPronounce(true);
+                    if (pronounceData) {
+                        if (!actualSentence && pronounceData.sentence) {
+                            actualSentence = pronounceData.sentence;
+                            console.log('✓ Fetched sentence from /api/pronounce:', actualSentence);
+                        }
+                        if (!actualDefinition && pronounceData.definition) {
+                            actualDefinition = pronounceData.definition;
+                            console.log('✓ Fetched definition from /api/pronounce:', actualDefinition);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Could not fetch word info:', err);
+                }
+            }
+            
             this.currentWordData = {
                 word: data.word || '',
-                sentence: data.sentence || '',
-                definition: data.definition || ''
+                sentence: actualSentence || chosen || 'No sentence available for this word.',
+                definition: actualDefinition || chosen || 'No definition available for this word.'
             };
 
             // Enable input immediately - users can type right away
