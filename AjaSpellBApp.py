@@ -9927,10 +9927,20 @@ def honeycomb_avatar_picker():
             # Normalize to a static-relative path
             picker_bg_url = url_for('static', filename=bg.lstrip('/'))
 
+    # Pass user context to template/JavaScript
+    user_data = {
+        'is_authenticated': current_user.is_authenticated,
+        'is_guest': session.get('is_guest', False) or is_guest_user(current_user) if current_user.is_authenticated else True,
+        'is_admin': current_user.role == 'admin' if current_user.is_authenticated else False,
+        'user_role': current_user.role if current_user.is_authenticated else None,
+        'username': current_user.username if current_user.is_authenticated else None,
+    }
+
     return render_template(
         'honeycomb_avatar_picker_responsive.html',
         timestamp=timestamp,
-        picker_bg_url=picker_bg_url
+        picker_bg_url=picker_bg_url,
+        user_data=user_data
     )
 
 @app.route('/honeycomb-picker-old')
@@ -9948,6 +9958,85 @@ def test_api():
 def test_avatar_loading():
     """Test page for avatar 3D loading diagnostics"""
     return render_template('test_avatar_loading.html')
+
+@app.route('/debug/my-permissions')
+@login_required
+def debug_my_permissions():
+    """Debug endpoint to show current user's permissions"""
+    import json
+    
+    user_info = {
+        'username': current_user.username,
+        'display_name': current_user.display_name,
+        'id': current_user.id,
+        'role': current_user.role,
+        'admin_all_access': current_user.admin_all_access,
+        'premium_member': current_user.premium_member,
+        'honey_points': current_user.honey_points,
+        'purchased_avatars': current_user.purchased_avatars,
+        'is_admin_or_premium()': current_user.is_admin_or_premium(),
+        'is_guest': session.get('is_guest', False) or is_guest_user(current_user),
+    }
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Permission Debug - {current_user.username}</title>
+        <style>
+            body {{ font-family: monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }}
+            .section {{ margin: 20px 0; padding: 15px; background: #2a2a2a; border: 2px solid #00ff00; }}
+            .label {{ color: #ffff00; font-weight: bold; }}
+            .value {{ color: #00ff00; }}
+            .error {{ color: #ff0000; }}
+            .success {{ color: #00ff00; }}
+            pre {{ background: #0a0a0a; padding: 10px; border: 1px solid #333; }}
+        </style>
+    </head>
+    <body>
+        <h1>🔍 Permission Debug for: {current_user.username}</h1>
+        
+        <div class="section">
+            <h2>User Information</h2>
+            <pre>{json.dumps(user_info, indent=2)}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>Avatar Access Analysis</h2>
+            <p class="label">Expected Behavior:</p>
+            <ul>
+                <li class="{'success' if user_info['role'] == 'admin' else 'value'}">
+                    Role 'admin' = All avatars unlocked
+                    <strong>{'✅ YES' if user_info['role'] == 'admin' else '❌ NO'}</strong>
+                </li>
+                <li class="{'success' if user_info['admin_all_access'] else 'value'}">
+                    admin_all_access = All avatars unlocked
+                    <strong>{'✅ YES' if user_info['admin_all_access'] else '❌ NO'}</strong>
+                </li>
+                <li class="{'success' if user_info['premium_member'] else 'value'}">
+                    premium_member = All avatars unlocked
+                    <strong>{'✅ YES' if user_info['premium_member'] else '❌ NO'}</strong>
+                </li>
+            </ul>
+            
+            <p class="label">Final Result:</p>
+            <p class="{'error' if user_info['is_admin_or_premium()'] else 'success'}" style="font-size: 1.5em;">
+                is_admin_or_premium() = <strong>{user_info['is_admin_or_premium()']}</strong>
+            </p>
+            
+            {'<p class="error">⚠️ BUG DETECTED: Regular user has admin/premium access!</p>' if user_info['is_admin_or_premium()'] and user_info['role'] != 'admin' and not user_info['admin_all_access'] and not user_info['premium_member'] else ''}
+            {'<p class="success">✅ Permissions look correct - avatars should be locked based on honey points/purchases</p>' if not user_info['is_admin_or_premium()'] else ''}
+        </div>
+        
+        <div class="section">
+            <p><a href="/honeycomb-picker" style="color: #00ff00;">Go to Avatar Picker</a></p>
+            <p><a href="/" style="color: #00ff00;">Go to Home</a></p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
 
 
 @app.route('/test/single-avatar')
