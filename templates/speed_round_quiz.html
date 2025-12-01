@@ -2311,150 +2311,159 @@ window.addEventListener('error', (event) => {
         return { speak, pulse, react };
     })();
 
-    // 🐝 HONEYCOMB 3D VISUALIZATION
-    let hexagons = [];
-    const hexSize = 18;
-    const hexSpacing = 1.1;
+    // 🐝 BEE SWARM 3D VISUALIZATION
+    let particles = [];
+    const particleCount = 200;
     
-    // Bee-themed colors (golden honey to amber)
+    // Bee-themed colors (golden honey to amber to black)
     const colors = [
         { r: 255, g: 193, b: 7 },   // Golden
         { r: 255, g: 167, b: 38 },  // Amber
         { r: 251, g: 140, b: 0 },   // Orange
-        { r: 245, g: 124, b: 0 },   // Deep Orange
-        { r: 255, g: 213, b: 79 },  // Light Gold
-        { r: 255, g: 179, b: 0 }    // Pure Gold
+        { r: 50, g: 40, b: 30 },    // Dark brown
+        { r: 30, g: 25, b: 20 },    // Nearly black
+        { r: 255, g: 213, b: 79 }   // Light Gold
     ];
 
-    function initHoneycomb() {
-        hexagons = [];
-        const rows = Math.ceil(H / (hexSize * 1.5 * hexSpacing)) + 2;
-        const cols = Math.ceil(W / (hexSize * Math.sqrt(3) * hexSpacing)) + 2;
+    // Create organic swarm shape mask
+    function generateSwarmShape() {
+        const points = [];
+        const numPoints = 20;
+        const baseRadius = Math.min(W, H) * 0.35;
         
-        for (let row = -1; row < rows; row++) {
-            for (let col = -1; col < cols; col++) {
-                const x = col * hexSize * Math.sqrt(3) * hexSpacing + (row % 2 === 0 ? 0 : hexSize * Math.sqrt(3) / 2 * hexSpacing);
-                const y = row * hexSize * 1.5 * hexSpacing;
-                
-                // Distance from center for wave effect
-                const dx = x - W / 2;
-                const dy = y - H / 2;
-                const distFromCenter = Math.sqrt(dx * dx + dy * dy);
-                const normalizedDist = distFromCenter / (Math.max(W, H) / 2);
-                
-                hexagons.push({
-                    x: x,
-                    y: y,
-                    baseSize: hexSize,
-                    phase: Math.random() * Math.PI * 2,
-                    colorIdx: Math.floor(Math.random() * colors.length),
-                    distFromCenter: normalizedDist,
-                    pulseOffset: Math.random() * Math.PI * 2,
-                    depth: 0,
-                    brightness: 0.5 + Math.random() * 0.5
-                });
-            }
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i / numPoints) * Math.PI * 2;
+            const noise = Math.random() * 0.4 + 0.8; // Random variation
+            const radiusVariation = Math.sin(angle * 3) * 0.2; // Organic bumps
+            const radius = baseRadius * (noise + radiusVariation);
+            
+            points.push({
+                angle: angle,
+                radius: radius
+            });
         }
-    }
-    initHoneycomb();
-
-    // Draw single hexagon with 3D effect
-    function drawHexagon(x, y, size, depth, color, alpha) {
-        const angle = Math.PI / 3;
-        
-        ctx.save();
-        ctx.translate(x, y);
-        
-        // Create 3D effect with shadow layers
-        if (depth > 0) {
-            // Back face (darker)
-            ctx.fillStyle = `rgba(${color.r * 0.4}, ${color.g * 0.4}, ${color.b * 0.4}, ${alpha * 0.6})`;
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const offsetX = Math.cos(angle * i) * size + depth * 2;
-                const offsetY = Math.sin(angle * i) * size + depth * 2;
-                if (i === 0) ctx.moveTo(offsetX, offsetY);
-                else ctx.lineTo(offsetX, offsetY);
-            }
-            ctx.closePath();
-            ctx.fill();
-        }
-        
-        // Main hexagon face
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
-        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`);
-        gradient.addColorStop(0.7, `rgba(${color.r * 0.8}, ${color.g * 0.8}, ${color.b * 0.8}, ${alpha * 0.9})`);
-        gradient.addColorStop(1, `rgba(${color.r * 0.6}, ${color.g * 0.6}, ${color.b * 0.6}, ${alpha * 0.7})`);
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const offsetX = Math.cos(angle * i) * size;
-            const offsetY = Math.sin(angle * i) * size;
-            if (i === 0) ctx.moveTo(offsetX, offsetY);
-            else ctx.lineTo(offsetX, offsetY);
-        }
-        ctx.closePath();
-        ctx.fill();
-        
-        // Highlight edge
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        
-        // Inner glow
-        if (depth > 0) {
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.15 * depth})`;
-            ctx.beginPath();
-            ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        ctx.restore();
+        return points;
     }
 
-    // Draw honeycomb visualization
-    function drawHoneycomb() {
+    let swarmShape = generateSwarmShape();
+
+    function initSwarm() {
+        particles = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            // Random position within swarm bounds
+            const angle = Math.random() * Math.PI * 2;
+            const radiusFactor = Math.pow(Math.random(), 0.7); // Concentrate toward center
+            
+            // Get radius from swarm shape
+            const shapeIndex = Math.floor((angle / (Math.PI * 2)) * swarmShape.length);
+            const maxRadius = swarmShape[shapeIndex].radius;
+            const radius = maxRadius * radiusFactor;
+            
+            const x = W / 2 + Math.cos(angle) * radius;
+            const y = H / 2 + Math.sin(angle) * radius;
+            
+            particles.push({
+                x: x,
+                y: y,
+                baseX: x,
+                baseY: y,
+                vx: 0,
+                vy: 0,
+                size: 3 + Math.random() * 5,
+                colorIdx: Math.floor(Math.random() * colors.length),
+                phase: Math.random() * Math.PI * 2,
+                orbitSpeed: 0.01 + Math.random() * 0.02,
+                orbitRadius: 10 + Math.random() * 30,
+                depth: Math.random(),
+                brightness: 0.4 + Math.random() * 0.6
+            });
+        }
+        
+        // Sort by depth for layering
+        particles.sort((a, b) => a.depth - b.depth);
+    }
+    initSwarm();
+
+    // Draw swarm visualization
+    function drawSwarm() {
         ctx.clearRect(0, 0, W, H);
         
-        // Sort hexagons by depth for proper layering
-        hexagons.sort((a, b) => a.depth - b.depth);
-        
-        hexagons.forEach(hex => {
-            // Calculate wave effect based on energy and distance from center
-            const wave = Math.sin(time * 0.05 + hex.phase + hex.distFromCenter * 2) * 0.5 + 0.5;
-            const energyWave = Math.sin(time * 0.08 + hex.pulseOffset) * 0.5 + 0.5;
-            
-            // Size pulsates with energy
+        particles.forEach(p => {
+            // Orbit around base position with energy
             const energyFactor = energy * 0.8;
-            const sizeMult = 1 + (wave * energyFactor * 0.4) + (energyWave * energyFactor * 0.3);
-            const size = hex.baseSize * sizeMult;
+            const orbitAngle = time * p.orbitSpeed + p.phase;
+            const orbitDist = p.orbitRadius * (1 + energyFactor * 0.5);
             
-            // Depth effect - hexagons "pop out" with energy
-            hex.depth = energyFactor * wave * 3 + energyWave * energyFactor * 2;
+            p.x = p.baseX + Math.cos(orbitAngle) * orbitDist;
+            p.y = p.baseY + Math.sin(orbitAngle) * orbitDist;
             
-            // Alpha varies with energy and distance
-            const baseAlpha = 0.3 + hex.brightness * 0.4;
-            const energyAlpha = energyFactor * 0.5;
-            const alpha = Math.min(0.95, baseAlpha + energyAlpha + wave * 0.2);
+            // Size pulsates with energy and depth
+            const pulse = Math.sin(time * 0.1 + p.phase) * 0.5 + 0.5;
+            const sizeMult = 1 + (energyFactor * 0.6) + (pulse * energyFactor * 0.4);
+            const size = p.size * sizeMult * (0.5 + p.depth * 0.5);
+            
+            // Alpha based on energy and depth
+            const baseAlpha = 0.4 + p.brightness * 0.4;
+            const energyAlpha = energyFactor * 0.4;
+            const depthAlpha = 0.3 + p.depth * 0.7;
+            const alpha = Math.min(0.95, baseAlpha + energyAlpha) * depthAlpha;
             
             // Get color
-            const color = colors[hex.colorIdx];
+            const color = colors[p.colorIdx];
             
-            // Draw hexagon
-            drawHexagon(hex.x, hex.y, size, hex.depth, color, alpha);
+            // Draw particle with 3D effect
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            
+            // Shadow for depth
+            if (p.depth > 0.5) {
+                ctx.shadowBlur = size * 2;
+                ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.5})`;
+            }
+            
+            // Main particle
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+            gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`);
+            gradient.addColorStop(0.6, `rgba(${color.r * 0.7}, ${color.g * 0.7}, ${color.b * 0.7}, ${alpha * 0.8})`);
+            gradient.addColorStop(1, `rgba(${color.r * 0.4}, ${color.g * 0.4}, ${color.b * 0.4}, ${alpha * 0.5})`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Highlight
+            if (p.depth > 0.6) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(-size * 0.2, -size * 0.2, size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
         });
         
-        // Add central glow effect when energy is high
-        if (energy > 0.5) {
-            const glowAlpha = (energy - 0.5) * 0.4;
-            const glowSize = 150 + energy * 100;
-            const glow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, glowSize);
-            glow.addColorStop(0, `rgba(255, 193, 7, ${glowAlpha})`);
-            glow.addColorStop(0.5, `rgba(255, 167, 38, ${glowAlpha * 0.5})`);
-            glow.addColorStop(1, 'rgba(255, 193, 7, 0)');
-            ctx.fillStyle = glow;
-            ctx.fillRect(0, 0, W, H);
+        // Add organic swarm outline glow when energy is high
+        if (energy > 0.4) {
+            ctx.save();
+            ctx.translate(W / 2, H / 2);
+            ctx.strokeStyle = `rgba(255, 193, 7, ${(energy - 0.4) * 0.5})`;
+            ctx.lineWidth = 3 + energy * 5;
+            ctx.shadowBlur = 20 + energy * 30;
+            ctx.shadowColor = 'rgba(255, 193, 7, 0.8)';
+            
+            ctx.beginPath();
+            swarmShape.forEach((point, i) => {
+                const pulse = Math.sin(time * 0.05 + i * 0.3) * 0.1 + 1;
+                const x = Math.cos(point.angle) * point.radius * pulse;
+                const y = Math.sin(point.angle) * point.radius * pulse;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
         }
     }
 
@@ -2465,8 +2474,8 @@ window.addEventListener('error', (event) => {
         // Smooth energy transitions
         energy += (energyTarget - energy) * 0.15;
         
-        // Draw honeycomb
-        drawHoneycomb();
+        // Draw swarm
+        drawSwarm();
         
         time += 1;
         requestAnimationFrame(animate);
