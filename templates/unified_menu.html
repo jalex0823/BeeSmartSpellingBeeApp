@@ -12999,18 +12999,30 @@
                 
                 // Check if this is the "Buzz On!" message (at 90%)
                 if (status.includes('Buzz On!') && percentElement) {
-                    // Fade out percentage
-                    percentElement.style.transition = 'opacity 0.6s ease-out';
-                    percentElement.style.opacity = '0';
+                    // Flash "We Have Lift Off!" message
+                    const originalText = percentElement.textContent;
+                    percentElement.style.transition = 'all 0.3s ease-in-out';
+                    percentElement.style.transform = 'scale(1.2)';
+                    percentElement.style.color = '#FFD700';
+                    percentElement.textContent = '🚀 We Have Lift Off! 🚀';
                     
                     // Show sparkle FX
                     this.showBuzzOnFX(percentElement.parentElement);
+                    
+                    // Return to percentage after 2 seconds
+                    setTimeout(() => {
+                        percentElement.style.transform = 'scale(1)';
+                        percentElement.style.color = '';
+                        percentElement.textContent = `${Math.floor(this.progress)}%`;
+                    }, 2000);
+                } else {
+                    // Normal percentage update
+                    if (percentElement) {
+                        percentElement.textContent = `${Math.floor(this.progress)}%`;
+                        percentElement.style.opacity = '1';
+                    }
                 }
                 
-                // Update percentage display (no honey fill animation)
-                if (percentElement && !status.includes('Buzz On!')) {
-                    percentElement.textContent = `${Math.floor(this.progress)}%`;
-                }
                 if (statusElement) statusElement.textContent = status;
                 
                 console.log(`📊 Loading: ${Math.floor(this.progress)}% - ${status}`);
