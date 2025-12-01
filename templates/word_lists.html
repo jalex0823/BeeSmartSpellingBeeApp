@@ -1102,6 +1102,24 @@
   // QUIZ LOAD
   async function useListInQuiz(id){
     try{
+      // First, get details of the list being loaded
+      const listRes = await fetch(`/api/saved-lists/${id}`);
+      const listData = await listRes.json();
+      
+      if(!listData.ok || !listData.list){
+        showToast("❌ Could not load this word list","error");
+        return;
+      }
+      
+      const newList = listData.list;
+      const newWordCount = newList.words ? newList.words.length : 0;
+      
+      if(newWordCount === 0){
+        showToast("❌ This list is empty. Add words before using in quiz.","error");
+        return;
+      }
+      
+      // Check current wordbank
       const wbRes = await fetch("/api/wordbank");
       const wbData = await wbRes.json();
       const currentCount = wbData.words ? wbData.words.length : 0;
@@ -1110,7 +1128,9 @@
         const confirmed = await showBeeModal(
           "🍯",
           "Replace Current Words?",
-          `You already have ${currentCount} word(s) loaded.<br><br>Loading this hive will replace them.`,
+          `You currently have <strong>${currentCount} word(s)</strong> loaded in your quiz.<br><br>` +
+          `Loading "<strong>${escapeHtml(newList.name)}</strong>" will replace them with <strong>${newWordCount} new word(s)</strong>.<br><br>` +
+          `⚠️ Any quiz progress will be lost.`,
           "Yes, Load It!",
           "primary"
         );
@@ -1127,7 +1147,7 @@
 
       const data = await res.json();
       if(data.ok){
-        showToast("✅ word list loaded! Heading to quiz…","success");
+        showToast(`✅ ${newWordCount} words loaded! Heading to quiz…`,"success");
         setTimeout(()=>window.location.href="/quiz",700);
       }else{
         showToast("❌ "+(data.error||"Failed to load list"),"error");
