@@ -8261,8 +8261,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Check if there's an existing quiz state with progress
             const quizState = data.quiz_state || {};
-            const currentIndex = quizState.current_index || 0;
+            const currentIndex = quizState.idx || 0;  // Use 'idx' not 'current_index'
             const hasProgress = currentIndex > 0 && currentIndex < totalWords;
+            
+            console.log('🔍 Quiz state check:', {
+                totalWords,
+                quizState,
+                currentIndex,
+                hasProgress,
+                fullData: data
+            });
             
             if (hasProgress) {
                 // Show resume/restart modal
@@ -8323,7 +8331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const progressText = document.getElementById('progressText');
         const progressPercentage = document.getElementById('progressPercentage');
         const quizState = data.quiz_state || {};
-        const currentIndex = quizState.current_index || 0;
+        const currentIndex = quizState.idx || 0;  // Use 'idx' not 'current_index'
         
         if (progressText) {
             progressText.textContent = `Question ${currentIndex + 1} of ${totalWords}`;
