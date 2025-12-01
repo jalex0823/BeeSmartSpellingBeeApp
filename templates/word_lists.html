@@ -797,6 +797,21 @@
   let pressTimer = null;
   let sheetTarget = null;
 
+  // Make functions globally accessible for onclick handlers (prevents ReferenceError)
+  // These assignments happen before the functions are defined due to hoisting
+  window.createNewList = null;
+  window.useListInQuiz = null;
+  window.viewWordList = null;
+  window.deleteWordList = null;
+  window.toggleFavorite = null;
+  window.openEditModal = null;
+  window.saveEditModal = null;
+  window.closeEditModal = null;
+  window.closeBeeModal = null;
+  window.confirmBeeModal = null;
+  window.closeBeePrompt = null;
+  window.closeBeeSheet = null;
+
   document.addEventListener("DOMContentLoaded", async () => {
     runBeeFlyover();
     await loadBuzzDustProgress();
@@ -1550,6 +1565,20 @@
       bee.remove();
     },3200);
   }
+
+  // Assign functions to window for onclick handlers (after all functions are defined)
+  window.createNewList = createNewList;
+  window.useListInQuiz = useListInQuiz;
+  window.viewWordList = viewWordList;
+  window.deleteWordList = deleteWordList;
+  window.toggleFavorite = toggleFavorite;
+  window.openEditModal = openEditModal;
+  window.saveEditModal = saveEditModal;
+  window.closeEditModal = closeEditModal;
+  window.closeBeeModal = closeBeeModal;
+  window.confirmBeeModal = confirmBeeModal;
+  window.closeBeePrompt = closeBeePrompt;
+  window.closeBeeSheet = closeBeeSheet;
 </script>
 
 {% endblock %}
