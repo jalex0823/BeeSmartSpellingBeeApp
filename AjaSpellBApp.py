@@ -6969,12 +6969,18 @@ def api_answer():
     # 🐛 DEBUG: Log exact comparison details
     normalized_input = normalize(user_input)
     normalized_correct = normalize(correct_spelling)
+    print(f"")
+    print(f"{'='*70}")
     print(f"🔍 ANSWER COMPARISON DEBUG:")
     print(f"   User input (raw): '{user_input}' (len={len(user_input)})")
     print(f"   User input (normalized): '{normalized_input}' (len={len(normalized_input)})")
     print(f"   Correct word (raw): '{correct_spelling}' (len={len(correct_spelling)})")
     print(f"   Correct word (normalized): '{normalized_correct}' (len={len(normalized_correct)})")
+    print(f"   Comparison: '{normalized_input}' == '{normalized_correct}'")
     print(f"   Match: {normalized_input == normalized_correct}")
+    print(f"   Result: {'✅ CORRECT' if normalized_input == normalized_correct else '❌ INCORRECT'}")
+    print(f"{'='*70}")
+    print(f"")
 
     is_correct = False if skip_requested else normalized_input == normalized_correct
 
