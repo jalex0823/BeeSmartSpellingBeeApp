@@ -4657,10 +4657,8 @@
                         window.__wordbankRestored=true;
                         console.log('✅ Mobile wordbank rehydrate success:', restoreData.count, 'words');
                         
-                        // Fetch current wordbank to get accurate count
-                        const currentWbResp = await fetch('/api/wordbank?_ts='+Date.now(), {cache:'no-store', credentials:'same-origin'});
-                        const currentWbData = await currentWbResp.json();
-                        const actualCount = (currentWbData && (currentWbData.count || (currentWbData.words && currentWbData.words.length) || 0)) || restoreData.count;
+                        // Use WordBankManager for accurate count (same as system checks)
+                        const actualCount = window.WordBankManager ? await window.WordBankManager.getCount(true) : 0;
                         
                         const btn=document.getElementById('startQuizBtn');
                         if(btn){
@@ -4673,7 +4671,8 @@
                             btn.style.cursor='pointer';
                             btn.style.pointerEvents='auto';
                         }
-                        if (typeof showSuccessMessage==='function'){
+                        // Only show popup if there are actually words restored
+                        if (actualCount > 0 && typeof showSuccessMessage==='function'){
                             showSuccessMessage(`Restored ${actualCount} saved word${actualCount !== 1 ? 's' : ''}! 🐝`);
                         }
                     } else {
