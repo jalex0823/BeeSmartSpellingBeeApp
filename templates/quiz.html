@@ -8103,6 +8103,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 badgeImg.alt = beeClass.label;
                 badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
                 console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
+                
+                // 🎬 Add click handler for random intro FX animation
+                badgeImg.style.cursor = 'pointer';
+                badgeImg.addEventListener('click', function() {
+                    console.log('🎨 Badge clicked - triggering random intro FX');
+                    if (window.AvatarFX) {
+                        // Get random effect from available effects
+                        const effects = ['honey-glow', 'hex-reveal', 'buzz-dust', 'wing-sweep', 'honey-drip', 'golden-flash', 'portal', 'swipe-glow', 'drop-bounce', 'shape-morph'];
+                        const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+                        console.log('🎭 Playing effect:', randomEffect);
+                        window.AvatarFX.init(badgeImg.parentElement, randomEffect);
+                    } else {
+                        console.warn('⚠️ AvatarFX not loaded - cannot play animation');
+                    }
+                });
             }
         }
     } catch (rankError) {
