@@ -294,7 +294,7 @@ AVATAR_CATALOG: List[Dict] = [
         "id": "mascot-bee",
         "product_id": "beesmart.avatar.mascot_bee",
         "name": "Mascot Bee Avatar",
-        "folder": "mascot-bee",
+        "folder": "glb_files",
         "obj_file": "MascotBee.glb",  # GLB format (legacy field name)
         "description": "The official BeeSmart cheerleader! Mascot Bee hypes you up every step of the way.",
         "variants": ["default"],

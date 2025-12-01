@@ -1,12 +1,11 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-11-30-v3-MORPHCONTROLLER-FIX -->
+<!-- QUIZ VERSION: 2025-11-27-VOICE-CACHE -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251130">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
@@ -22,7 +21,7 @@ window.initializeGlobalVoice = function() {
         if (voices.length > 0) {
             window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
             window.QUIZ_VOICE_INITIALIZED = true;
-            console.log('🎤 Global voice initialized:', (window.QUIZ_CACHED_VOICE && window.QUIZ_CACHED_VOICE.name) || 'Default');
+            console.log('🎤 Global voice initialized:', window.QUIZ_CACHED_VOICE?.name || 'Default');
         }
     }
 };
@@ -32,7 +31,7 @@ function selectBestFemaleVoiceGlobal(voices) {
     if (!voices || voices.length === 0) return null;
     
     const scoredVoices = voices
-        .filter(v => v.lang && v.lang.startsWith('en'))
+        .filter(v => v.lang?.startsWith('en'))
         .map(voice => {
             let score = 0;
             const name = voice.name.toLowerCase();
@@ -355,31 +354,7 @@ if ('speechSynthesis' in window) {
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
-        margin-bottom: 1rem;
-        /* 🍎 iOS optimization: Hardware acceleration for smooth fade animations */
-        transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.4s ease-in-out;
-        will-change: max-height, opacity;
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        overflow: hidden;
-        max-height: 200px;
     }
-    
-    /* Hide stats by default - show only when toggle clicked */
-    .score-display.stats-hidden {
-        max-height: 0;
-        opacity: 0;
-        margin-bottom: 0;
-        pointer-events: none;
-    }
-    
-    /* Fade out stats during countdown timer */
-    .score-display.fade-out {
-        opacity: 0.15;
-        pointer-events: none;
-    }
-    
-    /* Toggle button styling handled inline - removed standalone styles */
 
     .score-item {
         flex: 0 1 auto;
@@ -392,9 +367,6 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 6px 12px rgba(255, 193, 7, 0.15);
         text-align: center;
         position: relative;
-        /* 🍎 iOS optimization: Hardware acceleration for individual items */
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
     }
 
     /* Remove old honey jar overlay styles */
@@ -536,7 +508,7 @@ if ('speechSynthesis' in window) {
     .countdown-container {
         display: flex;
         justify-content: center;
-        margin: 0; /* remove extra margin around timer */
+        margin: 1rem 0 1.5rem;
         opacity: 0;
         transform: translateY(-10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
@@ -798,7 +770,7 @@ if ('speechSynthesis' in window) {
         display: flex;
         justify-content: center;
         gap: 1rem;
-        margin-bottom: 0.5rem; /* tighter spacing between controls and next section */
+        margin-bottom: 1.5rem;
     }
 
     .btn-repeat {
@@ -809,38 +781,14 @@ if ('speechSynthesis' in window) {
     .voice-visualizer {
         background: rgba(255, 179, 0, 0.08); /* Amber background - kept during transitions */
         border-radius: 0; /* no border radius */
-        padding: 1rem 1.5rem; /* tighter padding to reduce vertical space */
-        margin-bottom: 0; /* remove extra gap below visualizer */
+        padding: 1.5rem 2rem; /* wider padding */
+        margin-bottom: 1.5rem;
         position: relative;
         overflow: visible; /* Allow full wave pattern visibility - no clipping */
         box-shadow: none; /* no shadow */
         border: none; /* remove border */
         min-height: 180px; /* taller for fuller waves */
         width: 100%; /* full width */
-    }
-
-    /* Generic quiz form spacing normalization */
-    .quiz-container h1,
-    .quiz-container h2,
-    .quiz-container h3,
-    .quiz-container p {
-        margin-top: 0.4rem;
-        margin-bottom: 0.4rem; /* reduce vertical rhythm for texts */
-    }
-
-    .quiz-container .button-group,
-    .quiz-container .action-row,
-    .quiz-container .controls-row {
-        margin-top: 0.4rem;
-        margin-bottom: 0.6rem; /* consistent compact spacing for rows of controls/buttons */
-    }
-
-    .quiz-container input[type="text"],
-    .quiz-container input[type="search"],
-    .quiz-container input[type="email"],
-    .quiz-container input[type="number"],
-    .quiz-container textarea {
-        margin-bottom: 0.5rem; /* compact spacing beneath inputs */
     }
 
     .voice-visualizer::before { display: none; }
@@ -1170,39 +1118,8 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: 100%;
         min-height: 200px;
-        margin: 0; /* remove vertical spacing between morph sections */
+        margin: 1.5rem 0;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
-    }
-    
-    /* 🧩 Avatar container for quiz body (placed in the red square area) */
-    .quiz-avatar-container {
-        position: relative;
-        width: 100%;
-        max-width: 700px; /* match quiz container width */
-        margin: 0 auto; /* remove extra top/bottom margins */
-        min-height: 220px; /* visible area for avatar */
-        background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
-        overflow: hidden; /* allow internal effects without page overflow */
-        /* no border or shadow to integrate naturally */
-    }
-    
-    /* Optional: subtle placeholder while avatar loads */
-    .quiz-avatar-container.loading::after {
-        content: '';
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 193, 7, 0.20) 0%, rgba(255, 193, 7, 0.08) 60%, transparent 70%);
-        animation: avatarPlaceholderPulse 1.4s ease-in-out infinite;
-    }
-    
-    @keyframes avatarPlaceholderPulse {
-        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
-        50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
     }
     
     /* Voice visualizer state (speaking mode) */
@@ -1246,29 +1163,12 @@ if ('speechSynthesis' in window) {
     }
     
     /* When morphing to timer mode */
-    /* Keep the sentence visible during countdown by only fading the wave canvas, not the whole visualizer */
     .morph-container.mode-timer .voice-visualizer {
-        opacity: 1; /* keep container visible */
-        transform: scale(1);
-        pointer-events: none; /* prevent interaction while timer runs */
-    }
-
-    /* Fade out animated wave bars/canvas only */
-    .morph-container.mode-timer .voice-visualizer .dotwave-wrapper,
-    .morph-container.mode-timer .voice-visualizer .voice-header,
-    .morph-container.mode-timer .voice-visualizer #voiceWaveContainer,
-    .morph-container.mode-timer .voice-visualizer .wave-bar {
         opacity: 0;
-        transition: opacity 0.6s ease;
+        transform: scale(0.85);
+        pointer-events: none;
     }
-
-    /* Keep definition text fully visible above/below the timer */
-    .morph-container.mode-timer .voice-visualizer .voice-definition {
-        opacity: 1 !important;
-        position: relative;
-        z-index: 2; /* sit above faded viz, below the timer */
-    }
-
+    
     .morph-container.mode-timer .countdown-container {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1); /* Center and full scale */
@@ -1564,79 +1464,21 @@ if ('speechSynthesis' in window) {
         }
         
         .score-display {
-            position: fixed;
-            top: 120px;
-            left: 0;
-            right: 0;
-            width: 100%;
-            justify-content: space-between;
-            padding: 0 0.5rem;
-            gap: 0;
-            z-index: 100;
-            pointer-events: none;
+            gap: 0.7rem;
         }
         
         .score-item {
-            min-width: 65px;
-            max-width: 80px;
-            padding: 0.4rem 0.5rem;
-            pointer-events: auto;
-        }
-        
-        /* BADGE centered at top */
-        .score-item:nth-child(5) {
-            position: fixed;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-        
-        /* Left column - CORRECT and INCORRECT stacked */
-        .score-item:nth-child(1),
-        .score-item:nth-child(2) {
-            position: fixed;
-            left: 0.5rem;
-        }
-        
-        .score-item:nth-child(1) {
-            top: 120px;
-        }
-        
-        .score-item:nth-child(2) {
-            top: 200px;
-        }
-        
-        /* Right column - STREAK and POINTS stacked */
-        .score-item:nth-child(3),
-        .score-item:nth-child(4) {
-            position: fixed;
-            right: 0.5rem;
-        }
-        
-        .score-item:nth-child(3) {
-            top: 120px;
-        }
-        
-        .score-item:nth-child(4) {
-            top: 200px;
+            min-width: 70px;
+            max-width: 90px;
+            padding: 0.5rem 0.6rem;
         }
         
         .score-number {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
         }
         
         .score-label {
-            font-size: 0.65rem;
-        }
-        
-        /* Badge size on mobile - slightly larger since it's centered at top */
-        .score-item:nth-child(5) img {
-            width: 70px !important;
-            height: 70px !important;
+            font-size: 0.7rem;
         }
         
         .quiz-logo .mascot-3d-container {
@@ -2108,7 +1950,7 @@ if ('speechSynthesis' in window) {
         animation: avatarFullRotation 2s ease-in-out;
     }
 
-    /* Exit Modal Styling - iOS Optimized */
+    /* Exit Modal Styling */
     .exit-modal {
         position: fixed;
         top: 0;
@@ -2121,10 +1963,6 @@ if ('speechSynthesis' in window) {
         justify-content: center;
         z-index: 2000;
         backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        /* iOS: Hardware acceleration */
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
     }
 
     .exit-modal-content {
@@ -2138,12 +1976,8 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 20px 40px rgba(255, 193, 7, 0.3);
         border: 3px solid rgba(255, 193, 7, 0.5);
         animation: modalBounceIn 0.4s ease-out;
-        -webkit-animation: modalBounceIn 0.4s ease-out;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        /* iOS: Prevent content shifting */
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
     }
 
     .exit-modal-header h3 {
@@ -2178,16 +2012,10 @@ if ('speechSynthesis' in window) {
         min-height: 50px;
     }
 
-    @-webkit-keyframes modalBounceIn {
-        0% { -webkit-transform: scale(0.3) rotate(-10deg); transform: scale(0.3) rotate(-10deg); opacity: 0; }
-        50% { -webkit-transform: scale(1.05) rotate(2deg); transform: scale(1.05) rotate(2deg); opacity: 1; }
-        100% { -webkit-transform: scale(1) rotate(0deg); transform: scale(1) rotate(0deg); opacity: 1; }
-    }
-
     @keyframes modalBounceIn {
-        0% { -webkit-transform: scale(0.3) rotate(-10deg); transform: scale(0.3) rotate(-10deg); opacity: 0; }
-        50% { -webkit-transform: scale(1.05) rotate(2deg); transform: scale(1.05) rotate(2deg); opacity: 1; }
-        100% { -webkit-transform: scale(1) rotate(0deg); transform: scale(1) rotate(0deg); opacity: 1; }
+        0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+        50% { transform: scale(1.05) rotate(2deg); opacity: 1; }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
     /* Voice Intro Modal - iOS Friendly */
@@ -2933,7 +2761,7 @@ if ('speechSynthesis' in window) {
             </a>
         </div>
 
-        <div class="score-display stats-hidden" id="scoreDisplay">
+        <div class="score-display">
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
@@ -3399,9 +3227,7 @@ if ('speechSynthesis' in window) {
                    autocomplete="off"
                    autocorrect="off"
                    autocapitalize="off"
-                   spellcheck="false"
-                   inputmode="text"
-                   style="font-size: 16px;">
+                   spellcheck="false">
         </div>
 
         <!-- Letter Hint Display -->
@@ -3415,12 +3241,6 @@ if ('speechSynthesis' in window) {
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
 
         <div class="quiz-buttons">
-            <!-- Show Stats Toggle - iOS Optimized -->
-            <button type="button" class="action-btn secondary" id="showStatsToggle" style="background: linear-gradient(135deg, #FFD700, #FFC107); color: #5c4600; -webkit-tap-highlight-color: rgba(255, 215, 0, 0.3); touch-action: manipulation;">
-                <span class="bee-icon" aria-hidden="true">📊</span>
-                Show Stats
-            </button>
-            
             <!-- Voice Control Buttons -->
             <button type="button" class="action-btn secondary" id="speakButton">
                 <span class="bee-icon" aria-hidden="true">🔊</span>
@@ -3709,7 +3529,7 @@ class BeeSoundboard {
 
         let start = this.ctx.currentTime;
         steps.forEach((step) => {
-            const duration = (step.duration !== undefined && step.duration !== null) ? step.duration : 0.2;
+            const duration = step.duration ?? 0.2;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
@@ -3719,7 +3539,7 @@ class BeeSoundboard {
                 osc.frequency.linearRampToValueAtTime(step.slide, start + duration);
             }
 
-            const gainValue = Math.max((step.gain !== undefined && step.gain !== null) ? step.gain : 0.14, 0.0001);
+            const gainValue = Math.max(step.gain ?? 0.14, 0.0001);
             gain.gain.setValueAtTime(gainValue, start);
             if (step.fade) {
                 gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -3731,7 +3551,7 @@ class BeeSoundboard {
             osc.start(start);
             osc.stop(start + duration + 0.01);
 
-            start += (step.delay !== undefined && step.delay !== null) ? step.delay : duration;
+            start += step.delay ?? duration;
         });
     }
 
@@ -3814,12 +3634,8 @@ class BeeSoundboard {
             };
             
             utterance.onend = () => {
-                // iOS/iPhone Fix: Keep visualization active longer to bridge gap before timer fade-in
-                // Delay removing 'speaking' class by 500ms to cover the pause before timer starts
-                setTimeout(() => {
-                    if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                    if (statusEl) statusEl.textContent = '🐝 Ready';
-                }, 500);
+                if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                if (statusEl) statusEl.textContent = '🐝 Ready';
                 
                 // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
@@ -4027,9 +3843,6 @@ class MorphController {
     }
 }
 
-// Make MorphController globally available
-window.MorphController = MorphController;
-
 // ⏱️ Countdown Timer Class - Honey Jar Animation
 class CountdownTimer {
     constructor(duration = 15, options = {}) {
@@ -4072,12 +3885,6 @@ class CountdownTimer {
         this.hasWarned = false;
         this.hasCritical = false;
         this.tickSoundStarted = false;  // Reset tick sound state
-        
-        // Fade out score display during countdown
-        const scoreDisplay = document.querySelector('.score-display');
-        if (scoreDisplay) {
-            scoreDisplay.classList.add('faded');
-        }
         
         // Show timer with animation
         this.container.classList.remove('hidden');
@@ -4233,13 +4040,6 @@ class CountdownTimer {
             clearInterval(this.interval);
             this.interval = null;
         }
-        
-        // 🍎 Fade score display back in after countdown
-        const scoreDisplay = document.querySelector('.score-display');
-        if (scoreDisplay) {
-            scoreDisplay.classList.remove('faded');
-        }
-        
         console.log('⏹️ Timer stopped');
     }
     
@@ -4292,12 +4092,12 @@ class BeeDelightManager {
         const confirmExitButton = document.getElementById('confirmExitButton');
 
         // Show exit confirmation modal
-        if (exitButton) exitButton.addEventListener('click', () => {
+        exitButton?.addEventListener('click', () => {
             this.showExitModal();
         });
 
         // Next Word button - manual advance after retry window closes
-        if (nextWordButton) nextWordButton.addEventListener('click', async () => {
+        nextWordButton?.addEventListener('click', async () => {
             console.log('⏭️ Next Word button clicked');
             // Hide the Next Word button
             if (nextWordButton) {
@@ -4307,7 +4107,7 @@ class BeeDelightManager {
             // Hide feedback area
             const feedbackArea1 = document.getElementById('feedbackArea');
             if (feedbackArea1) feedbackArea1.style.display = 'none';
-            if (this.soundboard) this.soundboard.play('button-primary');
+            this.soundboard?.play('button-primary');
             // Call loadNextWord on the global quizManager instance
             if (window.quizManager && typeof window.quizManager.loadNextWord === 'function') {
                 await window.quizManager.loadNextWord();
@@ -4315,18 +4115,18 @@ class BeeDelightManager {
         });
 
         // Stay and continue practicing
-        if (stayButton) stayButton.addEventListener('click', () => {
+        stayButton?.addEventListener('click', () => {
             this.hideExitModal();
             this.soundboard.play('button-primary');
         });
 
         // Confirm exit and go to menu
-        if (confirmExitButton) confirmExitButton.addEventListener('click', () => {
+        confirmExitButton?.addEventListener('click', () => {
             this.confirmExit();
         });
 
         // Close modal on backdrop click
-        if (exitModal) exitModal.addEventListener('click', (e) => {
+        exitModal?.addEventListener('click', (e) => {
             if (e.target === exitModal) {
                 this.hideExitModal();
             }
@@ -4338,9 +4138,9 @@ class BeeDelightManager {
         const exitStats = document.getElementById('exitStats');
         
         // Update stats in the modal
-        const correctCount = (document.getElementById('correctCount') && document.getElementById('correctCount').textContent) || '0';
-        const incorrectCount = (document.getElementById('incorrectCount') && document.getElementById('incorrectCount').textContent) || '0';
-        const streakCount = (document.getElementById('streakCount') && document.getElementById('streakCount').textContent) || '0';
+        const correctCount = document.getElementById('correctCount')?.textContent || '0';
+        const incorrectCount = document.getElementById('incorrectCount')?.textContent || '0';
+        const streakCount = document.getElementById('streakCount')?.textContent || '0';
         
         exitStats.innerHTML = `
             <div>📝 Words spelled: ${parseInt(correctCount) + parseInt(incorrectCount)}</div>
@@ -4460,7 +4260,7 @@ class BeeDelightManager {
             return;
         }
 
-        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : this.totalQuestions;
+        const total = progress.total ?? this.totalQuestions;
         if (Number.isFinite(total) && total > 0) {
             this.totalQuestions = total;
         }
@@ -4470,7 +4270,7 @@ class BeeDelightManager {
             return;
         }
 
-        const correct = Math.max((progress.correct !== undefined && progress.correct !== null) ? progress.correct : 0, 0);
+        const correct = Math.max(progress.correct ?? 0, 0);
         const ratio = Math.min(correct / workingTotal, 1);
         
         // Update SVG honey fill
@@ -4490,7 +4290,7 @@ class BeeDelightManager {
 
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
-        if (data && data.word) {
+        if (data?.word) {
             // Speak a friendly prompt and the word twice
             const phrase = `Spell the word ${data.word}. ${data.word}.`;
             const rate = data.rate || 0.92; // Use provided rate or default
@@ -4574,7 +4374,7 @@ class BeeDelightManager {
             clearTimeout(this.mascotTimer);
             if (duration > 0) {
                 this.mascotTimer = setTimeout(() => {
-                    if (this.mascot) this.mascot.classList.remove(classes[state]);
+                    this.mascot?.classList.remove(classes[state]);
                 }, duration);
             }
         }
@@ -4769,11 +4569,6 @@ class QuizManager {
         
         this.initializeEventListeners();
         
-        // 🍎 iOS-specific optimizations
-        if (this.isIOS || this.isSafari) {
-            this.setupiOSKeyboardHandling();
-        }
-        
         // Show iOS voice intro modal if needed, otherwise show regular intro
         if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
             console.log('📱 Showing iOS/Safari voice intro modal');
@@ -4785,70 +4580,6 @@ class QuizManager {
             this.updateVoiceToggleUI(); // Initialize UI to match state
             this.showIntroAnnouncer();
         }
-    }
-    
-    // 🍎 iOS-specific keyboard and viewport handling
-    setupiOSKeyboardHandling() {
-        const spellingInput = document.getElementById('spellingInput');
-        if (!spellingInput) return;
-        
-        console.log('🍎 Setting up iOS keyboard handling');
-        
-        // Prevent page zoom when focusing input (already handled by 16px font size)
-        // Scroll input into view when keyboard appears
-        spellingInput.addEventListener('focus', () => {
-            console.log('🍎 iOS input focused - ensuring visibility');
-            
-            // Small delay to let keyboard animate in
-            setTimeout(() => {
-                // Scroll the input into view smoothly
-                spellingInput.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center',
-                    inline: 'nearest'
-                });
-            }, 300);
-        });
-        
-        // Handle blur (keyboard dismissal)
-        spellingInput.addEventListener('blur', () => {
-            console.log('🍎 iOS input blurred - keyboard likely dismissed');
-            
-            // Scroll back to top of quiz area if needed
-            setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 100);
-        });
-        
-        // Prevent unwanted scrolling during keyboard appearance
-        document.body.addEventListener('touchmove', (e) => {
-            // Only prevent if input is focused and at the edges of scroll
-            if (document.activeElement === spellingInput) {
-                const target = e.target;
-                const scrollable = this.findScrollableParent(target);
-                
-                if (!scrollable || scrollable === document.body) {
-                    // No scrollable parent, prevent default
-                    // e.preventDefault(); // Commented out to allow normal scrolling
-                }
-            }
-        }, { passive: true });
-        
-        console.log('✅ iOS keyboard handling configured');
-    }
-    
-    // Helper to find scrollable parent element
-    findScrollableParent(element) {
-        if (!element || element === document.body) return null;
-        
-        const overflowY = window.getComputedStyle(element).overflowY;
-        const isScrollable = overflowY === 'scroll' || overflowY === 'auto';
-        
-        if (isScrollable && element.scrollHeight > element.clientHeight) {
-            return element;
-        }
-        
-        return this.findScrollableParent(element.parentElement);
     }
     
     // Helper function to remove emojis and special characters for speech
@@ -4955,22 +4686,6 @@ class QuizManager {
             return Promise.resolve();
         }
         
-        // 🍎 iOS FIX: Cancel any ongoing speech to prevent echo
-        if ('speechSynthesis' in window && speechSynthesis.speaking) {
-            console.log('🔊 Cancelling ongoing speech to prevent iOS echo');
-            speechSynthesis.cancel();
-            // Small delay for iOS to process cancellation
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    this.speakAnnouncementInternal(text).then(resolve);
-                }, 100);
-            });
-        }
-        
-        return this.speakAnnouncementInternal(text);
-    }
-    
-    speakAnnouncementInternal(text) {
         // Clean text by removing emojis before speaking
         const cleanText = this.cleanTextForSpeech(text);
         
@@ -5462,15 +5177,15 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
-            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
-            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${(data.total !== undefined && data.total !== null) ? data.total : '?'}`;
+            const questionNumber = data.index ?? data.number ?? 1;
+            this.totalWords = data.total ?? this.totalWords;
+            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
 
-            if (this.delight) this.delight.setTotalQuestions(data.total);
+            this.delight?.setTotalQuestions(data.total);
 
             // Set the definition with fallback - prefer explicit sentence/hint fields
             const defBox = document.getElementById('definitionDisplay');
@@ -5635,15 +5350,7 @@ class QuizManager {
         if (spellingInput) {
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Type your answer...';
-            
-            // 🍎 iOS FIX: Delay focus slightly to ensure keyboard shows properly
-            if (this.isIOS || this.isSafari) {
-                setTimeout(() => {
-                    spellingInput.focus();
-                }, 150);
-            } else {
-                spellingInput.focus();
-            }
+            spellingInput.focus();
         }
     }
     
@@ -6114,79 +5821,49 @@ class QuizManager {
             if (button) {
                 // Hover sound
                 button.addEventListener('mouseenter', () => {
-                    if (this.soundboard) this.soundboard.play('buzz-hover');
+                    this.soundboard?.play('buzz-hover');
                 });
                 
-                // Click sound (support both mouse and touch)
+                // Click sound
                 button.addEventListener('mousedown', () => {
-                    if (this.soundboard) this.soundboard.play('buzz-click');
+                    this.soundboard?.play('buzz-click');
                 });
-                
-                // 🍎 iOS FIX: Add touch event for better iOS button responsiveness
-                button.addEventListener('touchstart', (e) => {
-                    if (this.soundboard) this.soundboard.play('buzz-click');
-                    // Prevent duplicate mouse event on iOS
-                    if (this.isIOS || this.isSafari) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
             }
         });
 
         submitButton.addEventListener('click', () => {
-            try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('submit'); } catch (e) {}
+            try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
             this.submitAnswer();
         });
-        
-        // 🍎 iOS FIX: Add touch event for submit button to prevent iOS double-tap delay
-        submitButton.addEventListener('touchend', (e) => {
-            if (this.isIOS || this.isSafari) {
-                e.preventDefault();
-                try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('submit'); } catch (err) {}
-                this.submitAnswer();
-            }
-        }, { passive: false });
         spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
-                try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('submit'); } catch (e) {}
+                try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
                 this.submitAnswer();
             }
         });
 
         if (speakButton) {
-            let pronounceTimeout = null;
-            const handlePronounce = () => {
-                if (pronounceTimeout) { console.log('🍎 Ignoring rapid pronounce (debounce)'); return; }
+            speakButton.addEventListener('click', () => {
                 console.log('🔊 Pronounce button clicked');
-                try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('button'); } catch (e) {}
-                this.pronounceWordSlow();
-                pronounceTimeout = setTimeout(() => { pronounceTimeout = null; }, 1000);
-            };
-            speakButton.addEventListener('click', handlePronounce);
-            speakButton.addEventListener('touchend', (e) => { e.preventDefault(); handlePronounce(); }, { passive: false });
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.pronounceWordSlow(); // Pronounce at slower speed for learning
+            });
         }
 
         if (repeatButton) {
-            let repeatTimeout = null;
-            const handleRepeat = () => {
-                if (repeatTimeout) { console.log('🍎 Ignoring rapid repeat (debounce)'); return; }
+            repeatButton.addEventListener('click', () => {
                 console.log('🔁 Repeat button clicked');
-                try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('button'); } catch (e) {}
-                this.repeatWord();
-                repeatTimeout = setTimeout(() => { repeatTimeout = null; }, 1000);
-            };
-            repeatButton.addEventListener('click', handleRepeat);
-            repeatButton.addEventListener('touchend', (e) => { e.preventDefault(); handleRepeat(); }, { passive: false });
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                this.repeatWord(); // Repeat at normal speed
+            });
         }
 
-        const handleGetHint = () => {
-            try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('hint'); } catch (e) {}
+        getHintButton.addEventListener('click', () => {
+            try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
             this.getDefinition({ refresh: true });
-        };
-        getHintButton.addEventListener('click', handleGetHint);
-        getHintButton.addEventListener('touchend', (e) => { e.preventDefault(); handleGetHint(); }, { passive: false });
+        });
         skipButton.addEventListener('click', () => {
-            try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('skip'); } catch (e) {}
+            try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
             this.skipWord();
         });
         
@@ -6194,7 +5871,7 @@ class QuizManager {
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
             retryButton.addEventListener('click', () => {
-                try { if (window.BeeVoiceViz) window.BeeVoiceViz.react('button'); } catch (e) {}
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
                 this.handleRetry();
             });
         }
@@ -6427,17 +6104,17 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = (data.index !== undefined && data.index !== null) ? data.index : ((data.number !== undefined && data.number !== null) ? data.number : 1);
-            this.totalWords = (data.total !== undefined && data.total !== null) ? data.total : this.totalWords;
+            const questionNumber = data.index ?? data.number ?? 1;
+            this.totalWords = data.total ?? this.totalWords;
             
             // Update progress displays (both text and percentage)
-            this.updateProgressDisplays(questionNumber, (data.total !== undefined && data.total !== null) ? data.total : this.totalWords);
+            this.updateProgressDisplays(questionNumber, data.total ?? this.totalWords);
 
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
 
-            if (this.delight) this.delight.setTotalQuestions(data.total);
+            this.delight?.setTotalQuestions(data.total);
 
             // Set the definition directly from the /api/next response - prefer explicit fields
             const defBox = document.getElementById('definitionDisplay');
@@ -6531,7 +6208,7 @@ class QuizManager {
             const feedbackArea2 = document.getElementById('feedbackArea');
             if (feedbackArea2) feedbackArea2.style.display = 'none';
             this.hideLetterHint();  // Hide letter hint for new word
-            if (this.delight) this.delight.clearFeedbackState();
+            this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
             // Input will be enabled when timer starts
@@ -6684,9 +6361,9 @@ class QuizManager {
             }
             
             if (!options.silent) {
-                if (this.delight) this.delight.handleDefinition(data);
+                this.delight?.handleDefinition(data);
             } else {
-                if (this.delight) this.delight.handleDefinition();
+                this.delight?.handleDefinition();
             }
         } catch (error) {
             console.error('Error getting definition:', error);
@@ -6754,14 +6431,6 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
-            // 🍎 iOS FIX: Cancel any ongoing speech and wait for iOS to process
-            if ('speechSynthesis' in window && speechSynthesis.speaking) {
-                console.log('🍎 iOS: Cancelling ongoing speech before pronouncing');
-                speechSynthesis.cancel();
-                // Wait for iOS to process cancellation
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
@@ -6826,57 +6495,28 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    // Direct speech synthesis fallback - iOS enhanced
-    async speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = 1.0) {
         if ('speechSynthesis' in window) {
             try {
-                // iOS FIX: Cancel any ongoing speech
-                if (speechSynthesis.speaking || speechSynthesis.pending) {
-                    speechSynthesis.cancel();
-                    await new Promise(resolve => setTimeout(resolve, 150));
-                }
-                if (speechSynthesis.paused) speechSynthesis.resume();
-                
+                speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
                 utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-                utterance.lang = 'en-US';
+                utterance.volume = 0.9;
                 
+                // Use the same female voice selection as other speech methods
                 if (this.cachedVoice) {
                     utterance.voice = this.cachedVoice;
+                    console.log(`Using cached female voice: ${this.cachedVoice.name}`);
                 } else {
+                    // Try to select best female voice if not cached yet
                     const femaleVoice = this.selectBestFemaleVoice();
-                    if (femaleVoice) { utterance.voice = femaleVoice; this.cachedVoice = femaleVoice; }
+                    if (femaleVoice) {
+                        utterance.voice = femaleVoice;
+                        this.cachedVoice = femaleVoice;
+                        console.log(`Selected female voice: ${femaleVoice.name}`);
+                    }
                 }
-                
-                let ended = false;
-                const timeoutMs = Math.max(3000, text.length * 150);
-                const timeout = setTimeout(() => {
-                    if (!ended) { ended = true; console.warn('Speech timeout - forcing completion'); if (onDone) onDone(); }
-                }, timeoutMs);
-                
-                utterance.onend = () => {
-                    if (!ended) { ended = true; clearTimeout(timeout); console.log('Speech completed'); if (onDone) onDone(); }
-                };
-                utterance.onerror = (event) => {
-                    if (!ended) { ended = true; clearTimeout(timeout); console.error('Speech error:', event); if (onDone) onDone(); }
-                };
-                
-                speechSynthesis.speak(utterance);
-                console.log('Speech started: ' + text + ' at rate ' + rate);
-                
-                // iOS sometimes pauses speech unexpectedly
-                setTimeout(() => { if (!ended && speechSynthesis.paused) { console.log('iOS: Resuming paused speech'); speechSynthesis.resume(); } }, 250);
-            } catch (error) {
-                console.error('Speech failed:', error);
-                if (onDone) onDone();
-            }
-        } else {
-            console.warn('Speech synthesis not supported');
-            if (onDone) onDone();
-        }
-    }
                 
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
@@ -6916,16 +6556,7 @@ class QuizManager {
         }
 
         const spellingInput = document.getElementById('spellingInput');
-        // 🍎 iOS FIX: Normalize text for iOS compatibility (remove zero-width chars, normalize unicode)
-        let userInput = spellingInput.value.trim();
-        
-        // Remove zero-width characters that iOS keyboard might insert
-        userInput = userInput.replace(/[\u200B-\u200D\uFEFF]/g, '');
-        
-        // Normalize unicode (iOS may use different unicode representations)
-        if (userInput.normalize) {
-            userInput = userInput.normalize('NFC');
-        }
+        const userInput = spellingInput.value.trim();
 
         if (!userInput) {
             BeeSmart.showError('Please enter your spelling first!');
@@ -7029,7 +6660,7 @@ class QuizManager {
             window.morphController.morphToVoice(1000); // 1 second morph
         }
         
-        try { if (window.BeeVoiceViz) window.BeeVoiceViz.react((result && result.correct) ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
+        try { window.BeeVoiceViz?.react(result?.correct ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         
@@ -7053,7 +6684,7 @@ class QuizManager {
             }
             
             // Update streak
-            this.currentStreak = (result.progress && result.progress.streak) || this.currentStreak;
+            this.currentStreak = result.progress?.streak || this.currentStreak;
             if (this.currentStreak > this.maxStreak) {
                 this.maxStreak = this.currentStreak;
             }
@@ -7071,7 +6702,7 @@ class QuizManager {
             }
             
             // Play honey collection sound on correct answer
-            if (this.soundboard) this.soundboard.play('honey-collect');
+            this.soundboard?.play('honey-collect');
             
             // Audio announcement - may include a separate name utterance after a short pause
             if (typeof audioAnnouncement === 'string') {
@@ -7094,7 +6725,7 @@ class QuizManager {
             this.currentStreak = 0;
             
             // Get the correct spelling from the current word data
-            const correctWord = (this.currentWordData && this.currentWordData.word) || result.word || '';
+            const correctWord = this.currentWordData?.word || result.word || '';
             
             // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used
             if (!this.isRetryAttempt && !this.hasRetried) {
@@ -7103,9 +6734,6 @@ class QuizManager {
                 // NO feedback message, NO phonetic, NO hints - JUST the choice buttons
                 this.retryAvailable = true;
                 this.showRetryButton();
-                
-                // 🍎 iOS FIX: Re-enable input immediately so user can interact
-                this.enableInput();
                 
                 console.log('🔄 PURE RETRY CHOICE MODE: Showing ONLY buttons (no message, no phonetic, nothing else)');
                 
@@ -7164,7 +6792,7 @@ class QuizManager {
             }
         }
 
-        if (this.delight) this.delight.handleFeedback(result);
+        this.delight?.handleFeedback(result);
     }
 
     hideFeedback() {
@@ -7173,14 +6801,14 @@ class QuizManager {
     }
 
     updateScoreDisplay(progress = {}) {
-        const total = (progress.total !== undefined && progress.total !== null) ? progress.total : ((this.totalWords !== undefined && this.totalWords !== null) ? this.totalWords : 0);
+        const total = progress.total ?? this.totalWords ?? 0;
         if (Number.isFinite(total) && total > 0) {
             this.totalWords = total;
         }
 
         const correct = Number(progress.correct) || 0;
         const incorrect = Number(progress.incorrect) || 0;
-        const streak = Number((progress.streak !== undefined && progress.streak !== null) ? progress.streak : this.currentStreak) || 0;
+        const streak = Number(progress.streak ?? this.currentStreak) || 0;
         
         // Ensure we never display NaN
         document.getElementById('correctCount').textContent = correct;
@@ -7226,7 +6854,7 @@ class QuizManager {
             }
         }
 
-        if (this.delight) this.delight.updateProgress({ ...progress, total: this.totalWords });
+        this.delight?.updateProgress({ ...progress, total: this.totalWords });
     }
 
     /**
@@ -7266,17 +6894,7 @@ class QuizManager {
     }
 
     enableInput() {
-        const spellingInput = document.getElementById('spellingInput');
-        spellingInput.disabled = false;
-        
-        // 🍎 iOS FIX: Delay focus to allow keyboard to properly show after interaction
-        if (this.isIOS || this.isSafari) {
-            setTimeout(() => {
-                spellingInput.focus();
-            }, 100);
-        } else {
-            spellingInput.focus();
-        }
+        document.getElementById('spellingInput').disabled = false;
         // Submit button remains enabled for user to submit anytime
         // document.getElementById('submitButton').disabled = false;
     }
@@ -7318,15 +6936,7 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
-            
-            // 🍎 iOS FIX: Delay focus to ensure keyboard shows properly after retry
-            if (this.isIOS || this.isSafari) {
-                setTimeout(() => {
-                    spellingInput.focus();
-                }, 150);
-            } else {
-                spellingInput.focus();
-            }
+            spellingInput.focus();
         }
         
         // Update countdown display with animated styling
@@ -7589,7 +7199,7 @@ class QuizManager {
     }
 
     showRetryInputExpired() {
-        const correctWord = (this.currentWordData && this.currentWordData.word) || '';
+        const correctWord = this.currentWordData?.word || '';
         const feedbackArea = document.getElementById('feedbackArea');
         
         feedbackArea.innerHTML = `
@@ -7677,7 +7287,7 @@ class QuizManager {
                     elapsed_ms: 0
                 })
             });
-            if (this.delight) this.delight.handleSkip();
+            this.delight?.handleSkip();
             this.loadNextWord();
         } catch (error) {
             console.error('Error skipping word:', error);
@@ -7745,7 +7355,7 @@ class QuizManager {
         
         // Get badges from session state
         const state = await this.getQuizState();
-        const badgesEarned = (state && state.badges_earned) || [];
+        const badgesEarned = state?.badges_earned || [];
         
         // Get user's current level
         let levelHTML = '';
@@ -7910,7 +7520,21 @@ class QuizManager {
                     </div>
                 </div>
 
-                <!-- Achievements section -->
+                <!-- Buzz Dust Badge Progress -->
+                <div class="buzz-dust-container" id="reportBuzzDustContainer">
+                    <div class="buzz-dust-title">✨ Buzz Dust Earned This Session</div>
+                    <div class="buzz-dust-badge-display">
+                        <img id="reportBadgeImage" src="/static/assets/badges/Novice.png" alt="Current Rank" class="report-badge-image">
+                    </div>
+                    <div class="buzz-dust-points-display">
+                        <div class="buzz-dust-points-label">Total Buzz Dust</div>
+                        <div class="buzz-dust-points-value" id="reportBuzzDustPoints">0</div>
+                    </div>
+                    <div class="buzz-dust-rank-label" id="reportBuzzDustRank">Novice Bee</div>
+                    <div class="buzz-dust-sub">Keep spelling to level up! ✨</div>
+                </div>
+
+                <!-- Achievements moved below for breathing room -->
                 ${badgesHTML}
                 ${levelHTML}
                 
@@ -8043,9 +7667,9 @@ class QuizManager {
             </style>
         `;
 
-        if (this.delight) this.delight.setTotalQuestions(summary.total);
-        if (this.delight) this.delight.updateProgress({ correct: summary.correct, total: summary.total });
-        if (this.delight) this.delight.setMascotState('happy', 2200);
+        this.delight?.setTotalQuestions(summary.total);
+        this.delight?.updateProgress({ correct: summary.correct, total: summary.total });
+        this.delight?.setMascotState('happy', 2200);
         
         // Mascot celebrates quiz completion!
         if (this.smartyBee) {
@@ -8123,7 +7747,7 @@ function pronounceWordFromReport(word) {
         
         // Prefer US English voice
         const enUSVoice = voices.find(v => v.lang === 'en-US') || 
-                         voices.find(v => v.lang && v.lang.startsWith('en')) || 
+                         voices.find(v => v.lang?.startsWith('en')) || 
                          null;
         if (enUSVoice) utterance.voice = enUSVoice;
         
@@ -8304,45 +7928,40 @@ function confirmBackToMenu(event) {
 // 🍎 iOS Audio Unlock - MUST run before any speech synthesis
 function unlockiOSAudio() {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (!isIOS) return;
     
-    if (!isIOS && !isSafari) return;
+    console.log('🍎 iOS detected - setting up audio unlock');
     
-    console.log('🍎 iOS/Safari detected - setting up audio unlock');
-    window.__iosAudioUnlocked = false;
-    
-    const unlock = (e) => {
-        if (window.__iosAudioUnlocked) return;
-        console.log('🔓 Unlocking iOS audio via:', e.type);
+    // Silent utterance to wake up speech synthesis on first user interaction
+    const unlock = () => {
+        console.log('🔓 Unlocking iOS audio...');
         
-        try {
-            speechSynthesis.cancel();
-            const warmup = new SpeechSynthesisUtterance('');
-            warmup.volume = 0;
-            speechSynthesis.speak(warmup);
-            
-            setTimeout(() => {
-                speechSynthesis.cancel();
-                const warmup2 = new SpeechSynthesisUtterance('bee');
-                warmup2.volume = 0.01;
-                warmup2.rate = 2;
-                warmup2.lang = 'en-US';
-                speechSynthesis.speak(warmup2);
-                setTimeout(() => speechSynthesis.cancel(), 200);
-            }, 50);
-            
-            if (window.AudioContext || window.webkitAudioContext) {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (ctx.state === 'suspended') ctx.resume();
+        // Method 1: Silent speech utterance
+        const utterance = new SpeechSynthesisUtterance(' ');
+        utterance.volume = 0.01; // Almost silent
+        speechSynthesis.speak(utterance);
+        setTimeout(() => speechSynthesis.cancel(), 100);
+        
+        // Method 2: Resume AudioContext if exists
+        if (window.AudioContext || window.webkitAudioContext) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('✅ AudioContext resumed');
+                });
             }
-            
-            window.__iosAudioUnlocked = true;
-            console.log('✅ iOS audio unlocked');
-            ['touchstart', 'touchend', 'click', 'keydown'].forEach(evt => document.removeEventListener(evt, unlock));
-        } catch (err) { console.warn('iOS unlock error:', err); }
+        }
+        
+        console.log('✅ iOS audio unlocked');
+        
+        // Remove listeners after first unlock
+        document.removeEventListener('touchstart', unlock);
+        document.removeEventListener('click', unlock);
     };
     
-    ['touchstart', 'touchend', 'click', 'keydown'].forEach(evt => document.addEventListener(evt, unlock, { passive: true }));
+    // Listen for first user interaction
+    document.addEventListener('touchstart', unlock, { once: true });
+    document.addEventListener('click', unlock, { once: true });
 }
 
 // 🛡️ Safe JSON parsing helper
@@ -8379,357 +7998,151 @@ window.addEventListener('error', (event) => {
 // Call immediately on page load
 unlockiOSAudio();
 
-// Real-time live status polling (ensures header stays in sync even on tab focus changes)
-</script>
-<script>
-let __liveStatusInterval = null;
-function startLiveStatusPolling(intervalMs = 5000) {
-    if (__liveStatusInterval) return;
-    const jitter = Math.floor(Math.random() * 750); // reduce thundering herd
-    __liveStatusInterval = setInterval(async () => {
-        try {
-            const resp = await fetch('/api/live-status');
-            if (!resp.ok) return;
-            const data = await resp.json();
-            if (!data.active) {
-                clearInterval(__liveStatusInterval);
-                __liveStatusInterval = null;
-                return;
-            }
-            const progress = {
-                index: data.index,
-                total: data.total,
-                correct: data.correct,
-                incorrect: data.incorrect,
-                streak: data.streak,
-                session_points: data.session_points
-            };
-            if (typeof BeeSmart !== 'undefined') {
-                BeeSmart.sessionPoints = (data.session_points !== undefined && data.session_points !== null) ? data.session_points : BeeSmart.sessionPoints;
-                if (typeof BeeSmart.updateScoreDisplay === 'function') {
-                    BeeSmart.updateScoreDisplay(progress);
-                }
-                if (typeof BeeSmart.updateProgressDisplays === 'function') {
-                    BeeSmart.updateProgressDisplays(data.index, data.total);
-                }
-            } else {
-                // Fallback DOM direct updates
-                const pt = document.getElementById('progressText');
-                if (pt) pt.textContent = `Question ${data.index} of ${data.total}`;
-                const cEl = document.getElementById('correctCount');
-                const iEl = document.getElementById('incorrectCount');
-                const sEl = document.getElementById('streakCount');
-                const pEl = document.getElementById('sessionPoints');
-                if (cEl) cEl.textContent = data.correct;
-                if (iEl) iEl.textContent = data.incorrect;
-                if (sEl) sEl.textContent = data.streak;
-                if (pEl) pEl.textContent = (data.session_points || 0).toLocaleString();
-            }
-        } catch (e) {
-            console.warn('live-status poll failed', e);
-        }
-    }, intervalMs + jitter);
-}
-document.addEventListener('visibilitychange', () => {
-    // If tab becomes visible again and polling stopped, restart it
-    if (!document.hidden && !__liveStatusInterval) {
-        startLiveStatusPolling();
-    }
-});
-</script>
-<script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251130"></script>
-<script>
-// 📊 Stats toggle initialization (moved here to ensure it's available for DOMContentLoaded)
-function initStatsToggle() {
-    const toggleBtn = document.getElementById('showStatsToggle');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    let hideTimer = null;
-    
-    if (!toggleBtn || !scoreDisplay) {
-        console.warn('⚠️ Stats toggle elements not found');
-        return;
-    }
-    
-    const showStats = (e) => {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        if (hideTimer) clearTimeout(hideTimer);
-        scoreDisplay.classList.remove('stats-hidden');
-        toggleBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">📊</span> Stats (auto-hide)';
-        hideTimer = setTimeout(() => {
-            scoreDisplay.classList.add('stats-hidden');
-            toggleBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">📊</span> Show Stats';
-        }, 5000);
-    };
-    
-    // iOS: Support both click and touch events
-    toggleBtn.addEventListener('click', showStats);
-    toggleBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        showStats(e);
-    }, { passive: false });
-    
-    console.log('✅ Stats toggle initialized - iOS compatible, hidden by default, shows for 5s on click');
-}
-
-// 🔄 Check for resumable quiz session on page load
-async function checkResumeQuiz() {
-    try {
-        const response = await fetch('/api/quiz/status', { credentials: 'same-origin' });
-        if (!response.ok) return false;
-        const data = await response.json();
-        
-        if (data.can_resume) {
-            // Show resume/restart modal
-            return await showResumeModal(data);
-        }
-        return false;
-    } catch (error) {
-        console.warn('Could not check quiz resume status:', error);
-        return false;
-    }
-}
-
-function showResumeModal(quizData) {
-    return new Promise((resolve) => {
-        const modal = document.createElement('div');
-        modal.className = 'exit-modal';
-        modal.style.display = 'block';
-        // iOS: Prevent background scrolling
-        modal.style.cssText = `
-            display: block;
-            -webkit-overflow-scrolling: touch;
-            touch-action: none;
-        `;
-        modal.innerHTML = `
-            <div class="exit-modal-content" style="-webkit-overflow-scrolling: touch;">
-                <div class="exit-modal-header">
-                    <h3>🐝 Welcome Back, Busy Bee!</h3>
-                </div>
-                <div class="exit-modal-body">
-                    <p>You have a quiz in progress!</p>
-                    <div class="exit-stats">
-                        <p><strong>Progress:</strong> ${quizData.index} of ${quizData.total} words</p>
-                        <p><strong>Correct:</strong> ${quizData.correct} ✅</p>
-                        <p><strong>Incorrect:</strong> ${quizData.incorrect} ❌</p>
-                        <p><strong>Points:</strong> ${quizData.session_points || 0} 🏆</p>
-                    </div>
-                    <p style="margin-top: 1rem;">Would you like to continue or start fresh?</p>
-                </div>
-                <div class="exit-modal-buttons">
-                    <button type="button" class="action-btn secondary" id="resumeQuizBtn" style="-webkit-tap-highlight-color: rgba(255, 215, 0, 0.3);">
-                        <span class="bee-icon" aria-hidden="true">▶️</span>
-                        Resume Quiz
-                    </button>
-                    <button type="button" class="action-btn exit" id="restartQuizBtn" style="-webkit-tap-highlight-color: rgba(231, 76, 60, 0.3);">
-                        <span class="bee-icon" aria-hidden="true">🔄</span>
-                        Start Fresh
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // iOS: Prevent body scroll when modal is open
-        const originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-        
-        const cleanup = () => {
-            modal.remove();
-            document.body.style.overflow = originalOverflow;
-            document.body.style.position = '';
-            document.body.style.width = '';
-        };
-        
-        const resumeBtn = modal.querySelector('#resumeQuizBtn');
-        const restartBtn = modal.querySelector('#restartQuizBtn');
-        
-        // Support both click and touch events for iOS
-        const handleResume = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            cleanup();
-            resolve(true); // Resume
-        };
-        
-        const handleRestart = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            cleanup();
-            // Clear quiz state and start fresh
-            try {
-                await fetch('/api/clear', { 
-                    method: 'POST',
-                    credentials: 'same-origin'
-                });
-            } catch (err) {
-                console.warn('Could not clear quiz state:', err);
-            }
-            resolve(false); // Start fresh
-        };
-        
-        resumeBtn.addEventListener('click', handleResume);
-        resumeBtn.addEventListener('touchend', handleResume, { passive: false });
-        
-        restartBtn.addEventListener('click', handleRestart);
-        restartBtn.addEventListener('touchend', handleRestart, { passive: false });
-    });
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // 🔄 Check for resume before initializing
-        const shouldResume = await checkResumeQuiz();
-        console.log(shouldResume ? '▶️ Resuming quiz...' : '🆕 Starting new quiz...');
+    // 🎭 Initialize morphing controller
+    window.morphController = new MorphController('morphContainer');
+    console.log('🎭 Morph controller initialized');
+    
+    const delight = new BeeDelightManager();
+    
+    // Bee swarm and hive removed - too distracting during quiz
+    // Only keep the 3D mascot bee for companionship
+    
+    // Initialize 3D Mascot with user's selected avatar
+    let smartyBee = null;
+    try {
+        console.log('🎯 Quiz page: Starting avatar initialization...');
         
-        // 📊 Initialize stats toggle (hide by default, show on click)
-        initStatsToggle();
-        
-        // 🎭 Initialize morphing controller
-        window.morphController = new MorphController('morphContainer');
-        
-        // DEBUG gated logging helper
-        window.DEBUG_MODE = (window.DEBUG_MODE !== undefined && window.DEBUG_MODE !== null) ? window.DEBUG_MODE : false; // Set to true in console to enable verbose logs
-        const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
-        debugLog('🎭 Morph controller initialized');
-
-        // Helper: Load and display Buzz Dust badge once
-        const loadBuzzDustBadge = async () => {
-            try {
-                const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-                if (!rankResponse.ok) return;
-                const rankData = await rankResponse.json();
-                const badgeImg = document.getElementById('quizHeaderBadge');
-                if (badgeImg && rankData.current_class) {
-                    const beeClass = rankData.current_class;
-                    const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
-                    const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
-                    badgeImg.src = `/static/assets/badges/${correctedFileName}`;
-                    badgeImg.alt = beeClass.label;
-                    badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
-                    debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
-                }
-            } catch (rankError) {
-                console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
-            }
-        };
-        
-        const delight = new BeeDelightManager();
-        
-        // Bee swarm and hive removed - too distracting during quiz
-        // Only keep the 3D mascot bee for companionship
-        
-        // Initialize 3D Mascot with user's selected avatar
-        let smartyBee = null;
-        try {
-            debugLog('🎯 Quiz page: Starting avatar initialization...');
-            
-            // Ensure avatar loader exists (should be loaded from base.html)
-            if (!window.userAvatarLoader) {
-                console.warn('⚠️ UserAvatarLoader not found - creating new instance');
-                window.userAvatarLoader = new UserAvatarLoader();
-            }
-            
-            // Wait for avatar loader to fetch user's avatar
-            debugLog('🔄 Fetching user avatar from API...');
-            await window.userAvatarLoader.init();
-            
-            // Get avatar options from loader
-            const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-                width: 180,
-                height: 180,
-                autoRotate: true,
-                enableInteraction: true
-            });
-            
-            const avatarId = window.userAvatarLoader.getAvatarId();
-            debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
-            
-            // Render into mascot container using userAvatarLoader
-            // Use the user's actual avatar ID, not the container ID
-            const userAvatarId = window.userAvatarLoader.getAvatarId();
-            debugLog('Loading user avatar:', userAvatarId);
-            await window.userAvatarLoader.loadUserAvatar(userAvatarId, 'mascotBee3D');
-            
-            debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
-            
-            // 🎨 Play avatar intro FX after loading
-            const mascotContainer = document.getElementById('mascotBee3D');
-            if (mascotContainer && window.AvatarFX) {
-                // Random intro effect for variety
-                const effects = ['honey-glow', 'buzz-dust', 'golden-flash', 'drop-bounce'];
-                const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-                window.AvatarFX.init(mascotContainer, randomEffect);
-                debugLog('🎨 Avatar intro FX played:', randomEffect);
-            }
-            
-            // Add click handler for themed animation
-            if (mascotContainer) {
-                mascotContainer.style.cursor = 'pointer';
-                mascotContainer.addEventListener('click', () => {
-                    debugLog('🐝 Quiz mascot clicked - playing themed animation');
-                    playThemedAvatarEffect(avatarId, mascotContainer);
-                });
-            }
-        } catch (error) {
-            console.error('❌ 3D mascot failed to load:', error);
-            console.error('Error details:', error.message, error.stack);
-            // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
-            try {
-                debugLog('🔄 Attempting 2D fallback...');
-                if (window.userAvatarLoader) {
-                    await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                    debugLog('✅ 2D fallback loaded successfully');
-                }
-            } catch (fallbackError) {
-                console.error('❌ Fallback avatar also failed:', fallbackError);
-            }
+        // Ensure avatar loader exists (should be loaded from base.html)
+        if (!window.userAvatarLoader) {
+            console.warn('⚠️ UserAvatarLoader not found - creating new instance');
+            window.userAvatarLoader = new UserAvatarLoader();
         }
         
-        // 🐝 Load and display Buzz Dust badge (deduplicated)
-        await loadBuzzDustBadge();
-
-        fetch('/api/wordbank', {
-            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-            cache: 'no-store',
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.words || data.words.length === 0) {
-                    BeeSmart.showError('No words loaded for the quiz!');
-                    setTimeout(() => window.location.href = '/', 2800);
-                    return;
-                }
-                
-                // Initialize progress displays with actual word count
-                const totalWords = data.words.length;
-                const progressText = document.getElementById('progressText');
-                const progressPercentage = document.getElementById('progressPercentage');
-                
-                if (progressText) {
-                    progressText.textContent = `Question 1 of ${totalWords}`;
-                }
-                
-                if (progressPercentage) {
-                    progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
-                }
-
-                window.quizManager = new QuizManager({ delight, smartyBee });
-            })
-            .catch(error => {
-                console.error('Failed to check word bank:', error);
-                BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
-                setTimeout(() => window.location.href = '/', 2800);
+        // Wait for avatar loader to fetch user's avatar
+        console.log('🔄 Fetching user avatar from API...');
+        await window.userAvatarLoader.init();
+        
+        // Get avatar options from loader
+        const avatarOptions = window.userAvatarLoader.getAvatarOptions({
+            width: 180,
+            height: 180,
+            autoRotate: true,
+            enableInteraction: true
+        });
+        
+        const avatarId = window.userAvatarLoader.getAvatarId();
+        console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
+        
+    // Render into mascot container (replaces old smartyBee3D)
+    smartyBee = new SmartyBee3D('mascotBee3D', avatarOptions);
+        
+        console.log(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
+        
+        // Add click handler for themed animation
+        const mascotContainer = document.getElementById('mascotBee3D');
+        if (mascotContainer) {
+            mascotContainer.style.cursor = 'pointer';
+            mascotContainer.addEventListener('click', () => {
+                console.log('🐝 Quiz mascot clicked - playing themed animation');
+                playThemedAvatarEffect(avatarId, mascotContainer);
             });
+        }
+    } catch (error) {
+        console.error('❌ 3D mascot failed to load:', error);
+        console.error('Error details:', error.message, error.stack);
+        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+        try {
+            console.log('🔄 Attempting 2D fallback...');
+            if (window.userAvatarLoader) {
+                await window.userAvatarLoader.load2DFallback('mascotBee3D');
+                console.log('✅ 2D fallback loaded successfully');
+            }
+        } catch (fallbackError) {
+            console.error('❌ Fallback avatar also failed:', fallbackError);
+        }
+    }
+    
+    // 🐝 Load and display Buzz Dust badge
+    try {
+        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+        if (rankResponse.ok) {
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
+            }
+        }
+    } catch (rankError) {
+        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+    }
+
+    // 🐝 Load and display Buzz Dust badge image
+    try {
+        const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+        if (rankResponse.ok) {
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                // Map badge_image from config (e.g., "Novice.glb") to PNG filename
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                // Handle typo in Elite badge filename (Elete.png vs Elite.png)
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
+            }
+        }
+    } catch (rankError) {
+        console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+    }
+
+    fetch('/api/wordbank', {
+        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.words || data.words.length === 0) {
+                BeeSmart.showError('No words loaded for the quiz!');
+                setTimeout(() => window.location.href = '/', 2800);
+                return;
+            }
+            
+            // Initialize progress displays with actual word count
+            const totalWords = data.words.length;
+            const progressText = document.getElementById('progressText');
+            const progressPercentage = document.getElementById('progressPercentage');
+            
+            if (progressText) {
+                progressText.textContent = `Question 1 of ${totalWords}`;
+            }
+            
+            if (progressPercentage) {
+                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+            }
+
+            window.quizManager = new QuizManager({ delight, smartyBee });
+        })
+        .catch(error => {
+            console.error('Failed to check word bank:', error);
+            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+            setTimeout(() => window.location.href = '/', 2800);
+        });
     } catch (error) {
         console.error('🚨 Critical initialization error:', error);
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
@@ -8763,26 +8176,26 @@ window.addEventListener('beforeunload', async (event) => {
         }
     }
     
-    // Save progress - DISABLED (feature not yet implemented)
-    // try {
-    //     // Use sendBeacon for reliable delivery even during page unload
-    //     const response = await fetch('/api/save-partial-progress', {
-    //         method: 'POST',
-    //         headers: {
-    //             'Content-Type': 'application/json'
-    //         },
-    //         keepalive: true  // Ensures request completes even if page is closing
-    //     });
-    //     
-    //     if (response.ok) {
-    //         console.log('✅ Partial quiz progress saved');
-    //     }
-    // } catch (error) {
-    //     // Use sendBeacon as fallback (more reliable during unload)
-    //     const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    //     navigator.sendBeacon('/api/save-partial-progress', blob);
-    //     console.log('💾 Progress save sent via beacon');
-    // }
+    // Save progress
+    try {
+        // Use sendBeacon for reliable delivery even during page unload
+        const response = await fetch('/api/save-partial-progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            keepalive: true  // Ensures request completes even if page is closing
+        });
+        
+        if (response.ok) {
+            console.log('✅ Partial quiz progress saved');
+        }
+    } catch (error) {
+        // Use sendBeacon as fallback (more reliable during unload)
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('💾 Progress save sent via beacon');
+    }
 });
 
 // Also save when navigating away programmatically
@@ -8805,9 +8218,9 @@ window.addEventListener('pagehide', () => {
         }
     }
     
-    // Save progress via beacon - DISABLED (feature not yet implemented)
-    // const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    // navigator.sendBeacon('/api/save-partial-progress', blob);
+    // Save progress via beacon
+    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+    navigator.sendBeacon('/api/save-partial-progress', blob);
     console.log('✅ Final cleanup complete');
 });
 
@@ -9244,7 +8657,4 @@ function playThemedSound(soundType) {
     }
 }
 </script>
-<!-- Removed duplicate quizAvatarContainer and legacy render script.
-     The quiz now relies solely on the primary mascot container #mascotBee3D
-     initialized earlier with SmartyBee3D and userAvatarLoader. -->
 {% endblock %}
