@@ -6435,13 +6435,11 @@ class QuizManager {
             this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
-            // Input will be enabled when timer starts
+            // Input is already enabled - just ensure focus
             if (this.timerEnabled && this.quizStarted) {
                 await this.announceAndStartTimer();
             } else {
-                // If timer is disabled, enable input immediately
-                spellingInput.disabled = false;
-                spellingInput.placeholder = 'Type your answer...';
+                // If timer is disabled, just focus the input (already enabled above)
                 spellingInput.focus();
             }
         } catch (error) {
