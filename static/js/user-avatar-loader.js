@@ -571,7 +571,7 @@ class UserAvatarLoader {
      * Get avatar display name
      */
     getAvatarDisplayName() {
-        return (this.userAvatar && this.userAvatar.name !== undefined) ? this.userAvatar.name : null || 'Mascot Bee Avatar';
+        return (this.userAvatar && this.userAvatar.name !== undefined) ? this.userAvatar.name : '';
     }
 
     /**
