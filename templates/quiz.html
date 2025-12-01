@@ -219,7 +219,7 @@ if ('speechSynthesis' in window) {
         transform: scale(1.1);
     }
 
-    /* Status Toggle Button */
+    /* Status Toggle Button - iOS Compatible */
     .status-toggle-button {
         display: inline-flex;
         align-items: center;
@@ -232,33 +232,45 @@ if ('speechSynthesis' in window) {
         font-size: 0.95rem;
         font-weight: 600;
         transition: all 0.3s ease;
+        -webkit-transition: all 0.3s ease;
         box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
         text-transform: uppercase;
         letter-spacing: 0.5px;
         cursor: pointer;
+        -webkit-tap-highlight-color: rgba(76, 175, 80, 0.3);
+        touch-action: manipulation;
+        -webkit-user-select: none;
+        user-select: none;
     }
     
-    .status-toggle-button:hover {
+    .status-toggle-button:hover,
+    .status-toggle-button:active {
         background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
         transform: translateY(-1px);
+        -webkit-transform: translateY(-1px);
         box-shadow: 0 6px 16px rgba(76, 175, 80, 0.35);
     }
     
     .status-toggle-button .status-icon {
         font-size: 1rem;
         transition: transform 0.3s ease;
+        -webkit-transition: -webkit-transform 0.3s ease;
     }
     
-    .status-toggle-button:hover .status-icon {
+    .status-toggle-button:hover .status-icon,
+    .status-toggle-button:active .status-icon {
         transform: scale(1.1);
+        -webkit-transform: scale(1.1);
     }
     
-    /* Score display slide animation */
+    /* Score display slide animation - iOS Compatible */
     .score-display {
         transition: all 0.4s ease;
+        -webkit-transition: all 0.4s ease;
         max-height: 0;
         overflow: hidden;
         opacity: 0;
+        -webkit-overflow-scrolling: touch;
     }
     
     .score-display.visible {
@@ -2013,7 +2025,7 @@ if ('speechSynthesis' in window) {
         backdrop-filter: blur(5px);
     }
 
-    /* Quiz Resume/Restart Modal Styling */
+    /* Quiz Resume/Restart Modal Styling - iOS Compatible */
     .modal {
         position: fixed;
         top: 0;
@@ -2026,7 +2038,10 @@ if ('speechSynthesis' in window) {
         justify-content: center;
         z-index: 3000;
         backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         animation: fadeIn 0.3s ease-out;
+        -webkit-animation: fadeIn 0.3s ease-out;
+        -webkit-overflow-scrolling: touch;
     }
 
     .modal .modal-content {
@@ -2039,7 +2054,9 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 20px 60px rgba(255, 193, 7, 0.4);
         border: 3px solid rgba(255, 193, 7, 0.6);
         animation: modalSlideUp 0.4s ease-out;
+        -webkit-animation: modalSlideUp 0.4s ease-out;
         position: relative;
+        -webkit-overflow-scrolling: touch;
     }
 
     .modal .modal-content h2 {
@@ -2059,16 +2076,35 @@ if ('speechSynthesis' in window) {
         font-size: 1.2em;
     }
 
-    .modal button:hover {
+    .modal button {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        touch-action: manipulation;
+        -webkit-user-select: none;
+        user-select: none;
+        transition: all 0.2s ease;
+        -webkit-transition: all 0.2s ease;
+    }
+
+    .modal button:hover,
+    .modal button:active {
         transform: translateY(-2px);
+        -webkit-transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
-
+    
     .modal button:active {
         transform: translateY(0);
+        -webkit-transform: translateY(0);
+    }    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
     }
 
-    @keyframes fadeIn {
+    @-webkit-keyframes fadeIn {
         from {
             opacity: 0;
         }
@@ -2085,6 +2121,17 @@ if ('speechSynthesis' in window) {
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
+        }
+    }
+
+    @-webkit-keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            -webkit-transform: translateY(50px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            -webkit-transform: translateY(0) scale(1);
         }
     }
 
@@ -7932,7 +7979,13 @@ function pronounceWordFromReport(word) {
 
 // Kid-friendly confirmation for back to menu
 // Toggle Status Menu
-function toggleStatusMenu() {
+function toggleStatusMenu(event) {
+    // Prevent double-firing on iOS (both touch and click)
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
     const scoreDisplay = document.getElementById('scoreDisplay');
     const toggleBtn = document.getElementById('toggleStatusBtn');
     
@@ -8292,10 +8345,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
                 console.log('✅ Buzz Dust badge displayed:', beeClass.label, correctedFileName);
                 
-                // 🎬 Add click handler for random intro FX animation
+                // 🎬 Add click/touch handler for random intro FX animation (iOS compatible)
                 badgeImg.style.cursor = 'pointer';
-                badgeImg.addEventListener('click', function() {
-                    console.log('🎨 Badge clicked - triggering random intro FX');
+                badgeImg.style.webkitTapHighlightColor = 'rgba(255, 193, 7, 0.3)';
+                badgeImg.style.touchAction = 'manipulation';
+                
+                const playBadgeAnimation = function(e) {
+                    if (e) e.preventDefault();
+                    console.log('🎨 Badge clicked/touched - triggering random intro FX');
                     if (window.AvatarFX) {
                         // Get random effect from available effects
                         const effects = ['honey-glow', 'hex-reveal', 'buzz-dust', 'wing-sweep', 'honey-drip', 'golden-flash', 'portal', 'swipe-glow', 'drop-bounce', 'shape-morph'];
@@ -8305,7 +8362,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else {
                         console.warn('⚠️ AvatarFX not loaded - cannot play animation');
                     }
-                });
+                };
+                
+                // Support both click (desktop) and touchend (iOS/mobile)
+                badgeImg.addEventListener('click', playBadgeAnimation);
+                badgeImg.addEventListener('touchend', playBadgeAnimation);
             }
         }
     } catch (rankError) {
@@ -8440,6 +8501,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 5000);
             }
         }, 500);
+        
+        // 📱 Add iOS touch event listener for status toggle button
+        const statusToggleBtn = document.getElementById('toggleStatusBtn');
+        if (statusToggleBtn) {
+            statusToggleBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleStatusMenu(e);
+            });
+            console.log('📱 iOS touch event added to status toggle button');
+        }
     }
     } catch (error) {
         console.error('🚨 Critical initialization error:', error);
