@@ -12293,12 +12293,14 @@ def api_get_avatars():
                         is_locked = False
                         print(f"  ✅ ADMIN UNLOCK: {avatar_slug} unlocked for admin/premium user")
                     elif is_guest:
-                        # Guest users: only show mascot avatar (honey-comb)
-                        if catalog_avatar and catalog_avatar.get('tier') != 'mascot_free':
-                            # Skip non-mascot avatars for guests entirely
-                            continue
-                        # Mascot avatar is always unlocked for guests
-                        is_locked = False
+                        # Guest users: show all avatars but lock non-mascot ones
+                        if catalog_avatar and catalog_avatar.get('tier') == 'mascot_free':
+                            # Mascot avatar is always unlocked for guests
+                            is_locked = False
+                        else:
+                            # All other avatars are locked for guests - show them greyed out
+                            is_locked = True
+                            unlock_message = "Please register to customize your bee! 🐝"
                     elif catalog_avatar:
                         # Registered users: check unlock status using avatar_catalog helper (returns dict)
                         unlock_result = check_avatar_unlocked(
