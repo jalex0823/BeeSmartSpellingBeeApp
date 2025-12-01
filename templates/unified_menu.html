@@ -20,21 +20,20 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=202511301803">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=202511301803">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=202511301803">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=202511301803">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
-    <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=202511301803"></script>
-    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v=202511301803"></script>
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
+    <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v=20251129"></script>
     <!-- Matrix Rain Effect -->
-    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=202511301803"></script>
+    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
-    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}" onerror="console.warn('Three.js failed to load')"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     
     <!-- Three.js Loaders - Must load after Three.js core -->
-    <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}" onerror="console.warn('GLTFLoader failed to load'); window.GLTF_LOADER_FAILED = true;"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
     <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
@@ -75,13 +74,11 @@
         })();
     </script>
     <!-- Mascot Bee 3D Component -->
-    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}?v=202511301803"></script>
+    <script src="{{ url_for('static', filename='js/mascot-3d.js') }}?v=20251129"></script>
     <!-- User Avatar Loader -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=202511301803"></script>
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
-    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=202511301803"></script>
-    <!-- Avatar Intro FX System -->
-    <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=202511301803"></script>
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
     
     <!-- Homepage Avatar Sync: Load user's selected avatar on main page -->
     <script>
@@ -98,11 +95,10 @@
                 console.log('Loading user avatar on homepage:', id);
                 window.userAvatarLoader.loadUserAvatar(id, 'mascotBee3D');
                 
-                // Update avatar name display (remove " Avatar" suffix for cleaner display)
+                // Update avatar name display
                 const registeredAvatarName = document.getElementById('registeredAvatarName');
                 if (registeredAvatarName) {
-                    const fullName = window.userAvatarLoader.getAvatarDisplayName();
-                    const displayName = fullName.replace(/ Avatar$/i, '');
+                    const displayName = window.userAvatarLoader.getAvatarDisplayName(id);
                     registeredAvatarName.textContent = displayName;
                 }
             } else {
@@ -2923,7 +2919,7 @@
                 <div class="guest-avatar-carousel">
                     <div class="avatar-slide">
                         <!-- 3D Avatar Display -->
-                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 460px; height: 360px; margin: 0 auto; cursor: pointer;"></div>
+                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 320px; height: 240px; margin: 0 auto; cursor: pointer;"></div>
                         <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
@@ -3001,12 +2997,12 @@
                 <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
                     <div class="avatar-slide">
                         <!-- Progressive 3D canvas (shown when available) -->
-                        <div id="guestAvatar3D" class="avatar-fx-container" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
+                        <div id="guestAvatar3D" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
                         <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
                     <div class="carousel-cta">
-                        <span class="cta-text">Join the hive - pick your Bee style!</span>
+                        <span class="cta-text">Join the hive — pick your Bee style!</span>
                         <a class="register-button" href="/auth/register" aria-label="Start your free trial and create your Bee Avatar" data-subscribe="1">
                             {% if (subscription_trial_days or 0) | int > 0 %}
                                 Start {{ subscription_trial_days | int }}‑day Free Trial
@@ -3679,6 +3675,10 @@
                         }
                     });
                     
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const data = await response.json();
                     const count = data.words ? data.words.length : 0;
                     
@@ -3690,7 +3690,13 @@
                     console.log(`📚 WordBank library count: ${count} words`);
                     return count;
                 } catch (error) {
-                    console.error('❌ Failed to fetch wordbank:', error);
+                    // Silently return cached value or 0 if server not ready yet
+                    // (This prevents console spam during page load)
+                    if (this._cachedCount === null) {
+                        console.log(`⏳ WordBank server not ready yet, will retry...`);
+                    } else {
+                        console.warn(`⚠️ WordBank fetch failed, using cached count: ${this._cachedCount}`);
+                    }
                     return this._cachedCount || 0;
                 }
             },
@@ -3766,9 +3772,7 @@
         // 🗑️ Lightweight delete helper (frontend convenience)
         window.deleteWordFromCurrentList = async function(wordOrIndex){
             try{
-                const body = (typeof wordOrIndex === 'number')
-                    ? { index: wordOrIndex }
-                    : { word: String(wordOrIndex ?? '') };
+                const body = (typeof wordOrIndex === 'number') ? { index: wordOrIndex } : { word: String(wordOrIndex||'') };
                 const res = await fetch('/api/wordbank/delete',{
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
@@ -4323,8 +4327,8 @@
             // Refresh status and show modal
             checkContentFilterStatus().then(() => {
                 showContentFilterModal(title, content, true, 
-                    (currentFilterStatus && currentFilterStatus.violation_count_24h !== undefined) ? currentFilterStatus.violation_count_24h : 1, 
-                    (currentFilterStatus && currentFilterStatus.guardian_notification_triggered !== undefined) ? currentFilterStatus.guardian_notification_triggered : false
+                    currentFilterStatus?.violation_count_24h || 1, 
+                    currentFilterStatus?.guardian_notification_triggered || false
                 );
             });
         }
@@ -4597,9 +4601,7 @@
                 const ofetch=window.fetch.bind(window);
                 window.fetch=function(resource, init){
                     try {
-                        let url = typeof resource==='string'
-                            ? resource
-                            : ((resource && resource.url) ?? '');
+                        let url=typeof resource==='string'?resource:(resource && resource.url)||'';
                         // Only rewrite EXACT legacy '/upload' (optionally with query), not '/api/upload-*' or other paths
                         const origin = (typeof location!=='undefined' ? location.origin : '');
                         const u = new URL(url, origin);
@@ -4695,7 +4697,7 @@
 
             // 🔐 Guests don't have saved lists; skip the fetch entirely
             if (window.IS_AUTH !== true) {
-                console.log('🔐 Guest mode - skipping /api/saved-lists badge fetch');
+                console.log('🔐 Guest mode — skipping /api/saved-lists badge fetch');
                 badge.style.display = 'none';
                 return;
             }
@@ -4770,7 +4772,7 @@
             const { bar, msg, fill, pct } = ensureTopBar();
             if (!bar) return;
             bar.classList.add('visible');
-            if (msg) msg.textContent = message || 'Loading...';
+            if (msg) msg.textContent = message || 'Loading…';
             if (typeof percent === 'number' && fill && pct){
                 const p = Math.max(0, Math.min(100, Math.round(percent)));
                 fill.style.width = p + '%';
@@ -5368,7 +5370,7 @@
                                 // ✅ Update word count badge AND start quiz button using centralized manager
                                 await WordBankManager.updateAllDisplays(true);
                                 
-                                showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz...`);
+                                showSuccessMessage(`✅ Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz…`);
                                 
                                 // Short delay to show success message
                                 setTimeout(() => {
@@ -5480,7 +5482,7 @@
                 
                 // iOS Fix: Perform actual save function without await to maintain user gesture context
                 function doActualSave() {
-                    statusEl.textContent = 'Saving...';
+                    statusEl.textContent = 'Saving…';
                     fetch('/api/saved-lists/save', {
                         method: 'POST',
                         headers: {'Content-Type':'application/json'},
@@ -6438,8 +6440,8 @@
 
     function createBattle() {
             console.log('🎯 createBattle() called');
-            const battleName = (function(){ const el = document.getElementById('battleName'); return (el && el.value) ? el.value.trim() : ''; })();
-            const creatorName = (function(){ const el = document.getElementById('creatorName'); return (el && el.value) ? el.value.trim() : ''; })();
+            const battleName = document.getElementById('battleName')?.value?.trim();
+            const creatorName = document.getElementById('creatorName')?.value?.trim();
             
             console.log('Battle Name:', battleName);
             console.log('Creator Name:', creatorName);
@@ -6502,9 +6504,7 @@
                 if (data && (data.ok === true || data.status === 'success')) {
                     closeBattleModal();
                     // Read battle code from response
-                    const battleCode = (data.battle && data.battle.code)
-                        ? data.battle.code
-                        : (data.battle_code ?? '');
+                    const battleCode = (data.battle && data.battle.code) ? data.battle.code : (data.battle_code || '');
                     
                     // Show success with battle code and redirect option
                     openFriendlyInfoModal({
@@ -9934,7 +9934,7 @@
         // DON'T call initializeWordCount() here - let the loading system call it after completion
         
         // ✅ Attach Start Quiz button click handler
-        (function(){ const el = document.getElementById('startQuizBtn'); if(el) el.addEventListener('click', function(e) {
+        document.getElementById('startQuizBtn')?.addEventListener('click', function(e) {
             if (this.disabled) {
                 console.log('❌ Start Quiz button is disabled');
                 return;
@@ -10103,7 +10103,7 @@
 
             // Quick tap ripple feedback at click location (or center)
             try {
-                const rect = (mascotContainer ? mascotContainer.getBoundingClientRect() : null);
+                const rect = mascotContainer?.getBoundingClientRect();
                 const x = (evt && rect) ? (evt.clientX - rect.left) : (rect ? rect.width / 2 : 80);
                 const y = (evt && rect) ? (evt.clientY - rect.top) : (rect ? rect.height / 2 : 60);
                 if (mascotContainer) createTapRipple(mascotContainer, x, y);
@@ -10140,9 +10140,7 @@
             // Get current avatar info for theme-based effects
             getCurrentAvatarInfo()
                 .then(avatarInfo => {
-                    const avatarName = (avatarInfo && avatarInfo.name !== undefined)
-                        ? (avatarInfo.name || 'mascot-bee')
-                        : 'mascot-bee';
+                    const avatarName = avatarInfo?.name || 'mascot-bee';
                     const theme = getAvatarTheme(avatarName);
                     
                     console.log(`🎭 Playing rotation show with ${theme} theme for ${avatarName}`);
@@ -10380,7 +10378,7 @@
                     { name: 'Cutie Bee', file: 'CutieBee.glb' },
                     { name: 'Detective Bee', file: 'DetectiveBee.glb' },
                     { name: 'Diva Bee', file: 'DivaBee.glb' },
-                    { name: 'Doc Bee', file: 'DocBee.glb' },
+                    { name: 'Doc Bee', file: 'DoctorBee.glb' },
                     { name: 'Explorer Bee', file: 'ExplorerBee.glb' },
                     { name: 'Franken Bee', file: 'Frankenbee.glb' },
                     { name: 'HoneyComb Bee', file: 'HoneyComb.glb' },
@@ -10689,13 +10687,6 @@
                             animateCrossfade(outgoingGroup, currentGroup, 700);
                             // Restore wrap transform after a tick
                             setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
-                            
-                            // Apply random intro FX after GLB loads
-                            setTimeout(() => {
-                                if (window.AvatarFX && canvasWrap) {
-                                    window.AvatarFX.init(canvasWrap);
-                                }
-                            }, 100);
                         },
                         undefined,
                         (err) => {
@@ -10731,7 +10722,7 @@
                 window.addEventListener('beforeunload', () => {
                     disposed = true;
                     try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){}
-                    if (current) { disposeObject(current); }
+                    if (currentGroup) { disposeObject(currentGroup); }
                     try { renderer.dispose(); } catch(_){}
                 }, { once: true });
 
@@ -10783,7 +10774,7 @@
                 { name: 'Cutie Bee', file: 'CutieBee!.png' },
                 { name: 'Detective Bee', file: 'DetectiveBee!.png' },
                 { name: 'Diva Bee', file: 'DivaBee!.png' },
-                { name: 'Doc Bee', file: 'DocBee!.png' },
+                { name: 'Doctor Bee', file: 'DoctorBee!.png' },
                 { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
                 { name: 'Franken Bee', file: 'FrankenBee!.png' },
                 { name: 'HoneyComb Bee', file: 'HoneyComb!.png' },
@@ -12104,9 +12095,7 @@
             };
             
             // Map avatar ID to persona, fallback to theme parameter or mascot
-            const avatarId = (mascot.options && mascot.options.avatarId !== undefined)
-                ? (mascot.options.avatarId || theme)
-                : (theme || 'mascot');
+            const avatarId = mascot.options?.avatarId || theme;
             const persona = avatarPersonaMap[avatarId] || theme || 'mascot';
             const config = rotationConfigs[persona] || rotationConfigs.mascot;
             
@@ -13410,7 +13399,7 @@
                 try { btn.classList.add('ready-flash'); } catch (e) { /* no-op */ }
                 // Fallback override in case inline animation persists
                 btn.style.animation = 'readyFlash 1s ease-in-out infinite';
-                btn.setAttribute('title', 'All systems ready - tap to start!');
+                btn.setAttribute('title', 'All systems ready — tap to start!');
                 btn.addEventListener('click', () => this.dismissLoader());
             }
 
@@ -13520,9 +13509,7 @@
             const LOADING_EMERGENCY_TIMEOUT = 5000;
             const emergencyTimeout = setTimeout(() => {
                 console.error('🚨 EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
-                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined)
-                    ? (window.loadingSystem.progress ?? 'unknown')
-                    : 'unknown');
+                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
                 console.error('Loader element:', document.getElementById('honeyLoader') ? 'found' : 'missing');
                 console.error('Stack trace of where we are stuck:');
                 console.trace();
@@ -13613,9 +13600,9 @@
                 try {
                     const mode = (window.IS_AUTH === true) ? 'registered' : 'guest';
                     if (mode === 'guest') {
-                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Guest - Carousel preview enabled; tap to register.');
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Guest — Carousel preview enabled; tap to register.');
                     } else {
-                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Registered - Rendering your selected avatar.');
+                        window.loadingSystem.updateProgress(79, '🖼️ Avatar mode: Registered — Rendering your selected avatar.');
                     }
                 } catch(_) {}
                 
@@ -13737,9 +13724,7 @@
                 console.error('🚨 CRITICAL LOADING ERROR:', loadingError);
                 console.error('Error stack:', loadingError.stack);
                 console.error('LoadingSystem exists:', !!window.loadingSystem);
-                console.error('Current progress:', (window.loadingSystem && window.loadingSystem.progress !== undefined)
-                    ? (window.loadingSystem.progress ?? 'unknown')
-                    : 'unknown');
+                console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
                 
                 // Force completion even on error
                 try {
@@ -13772,7 +13757,7 @@
                 console.log('[AvatarDisplay] mode=%s visible: carousel=%s mascot=%s', mode, visible(guestWrap), visible(mascot));
             } catch(_) {}
 
-            // Initialize guest avatar carousel (guests only) - prefer 3D when available
+            // Initialize guest avatar carousel (guests only) — prefer 3D when available
             try {
                 // Reset on fresh page load (not navigation) to allow re-initialization
                 if (performance && performance.navigation && performance.navigation.type === 1) {
@@ -14752,7 +14737,7 @@
                         await waitForGLTFLoader();
                         
                         const gltfLoader = new THREE.GLTFLoader();
-                        if(window.loadingSystem) window.loadingSystem.updateProgress(85, '📦 Loading GLB model...');
+                        window.loadingSystem?.updateProgress(85, '📦 Loading GLB model...');
                         
                         gltfLoader.load(
                             modelUrl,
@@ -14815,7 +14800,7 @@
                             (xhr) => {
                                 if (xhr.lengthComputable) {
                                     const percentComplete = (xhr.loaded / xhr.total) * 100;
-                                    if(window.loadingSystem) window.loadingSystem.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
+                                    window.loadingSystem?.updateProgress(85 + (percentComplete * 0.15), `📦 Loading model: ${Math.floor(percentComplete)}%`);
                                 }
                             },
                             (error) => {
@@ -15104,23 +15089,23 @@
                     },
                     'anxious-bee': {
                         title: 'Anxious Bee',
-                        tagline: 'Takes a deep breath-and spells anyway.',
-                        story: 'Anxious Bee gets a little wiggly before big words, but bravery is buzzing inside. One letter at a time and-ta-da!-victory.'
+                        tagline: 'Takes a deep breath—and spells anyway.',
+                        story: 'Anxious Bee gets a little wiggly before big words, but bravery is buzzing inside. One letter at a time and—ta-da!—victory.'
                     },
                     'astro-bee': {
                         title: 'Astro Bee',
                         tagline: 'Spelling among the stars.',
-                        story: 'Astro Bee rockets through space dictionaries, mapping constellations like "C-A-T" to "C-O-N-S-T-E-L-L-A-T-I-O-N."'
+                        story: 'Astro Bee rockets through space dictionaries, mapping constellations like “C-A-T” to “C-O-N-S-T-E-L-L-A-T-I-O-N.”'
                     },
                     'biker-bee': {
                         title: 'Biker Bee',
                         tagline: 'Rolls over rough words like a champ.',
-                        story: 'With a tiny helmet and roaring "vroom-buzz," Biker Bee speeds past typos and sticks the landing on tricky endings.'
+                        story: 'With a tiny helmet and roaring “vroom-buzz,” Biker Bee speeds past typos and sticks the landing on tricky endings.'
                     },
                     'brother-bee': {
                         title: 'Brother Bee',
                         tagline: 'Team player of the hive.',
-                        story: 'Brother Bee always shares tips and high-fives. When a friend forgets a letter, he\'s there with a cheerful nudge.'
+                        story: 'Brother Bee always shares tips and high-fives. When a friend forgets a letter, he’s there with a cheerful nudge.'
                     },
                     'builder-bee': {
                         title: 'Builder Bee',
@@ -15130,7 +15115,7 @@
                     'cool-bee': {
                         title: 'Cool Bee',
                         tagline: 'Too chill to miss a silent letter.',
-                        story: 'Cool Bee wears shades and keeps it smooth. Whether it\'s "knight" or "knowledge," this bee never breaks a sweat.'
+                        story: 'Cool Bee wears shades and keeps it smooth. Whether it’s “knight” or “knowledge,” this bee never breaks a sweat.'
                     },
                     'detective-bee': {
                         title: 'Detective Bee',
@@ -15140,7 +15125,7 @@
                     'diva-bee': {
                         title: 'Diva Bee',
                         tagline: 'Big voice, bigger vocabulary.',
-                        story: 'Diva Bee loves center stage and dazzling definitions. Every correct word gets a fabulous "Bravo!"'
+                        story: 'Diva Bee loves center stage and dazzling definitions. Every correct word gets a fabulous “Bravo!”'
                     },
                     'doctor-bee': {
                         title: 'Doctor Bee',
@@ -15155,7 +15140,7 @@
                     'explorer-bee': {
                         title: 'Explorer Bee',
                         tagline: 'Adventures through jungle words and desert dictionaries!',
-                        story: 'Explorer Bee finds new words in wild places. From "cactus" to "canoe," this bee loves discovering how words traveled to our hive.'
+                        story: 'Explorer Bee finds new words in wild places. From “cactus” to “canoe,” this bee loves discovering how words traveled to our hive.'
                     },
                     'frankenbee': {
                         title: 'FrankenBee',
@@ -15165,7 +15150,7 @@
                     'knight-bee': {
                         title: 'Knight Bee',
                         tagline: 'Defender of vowels and vanquisher of typos!',
-                        story: 'Clad in shiny armor, Knight Bee protects every vowel order with bravery. Hyphens beware-order in the kingdom of words will be kept!'
+                        story: 'Clad in shiny armor, Knight Bee protects every vowel order with bravery. Hyphens beware—order in the kingdom of words will be kept!'
                     },
                     'mascot-bee': {
                         title: 'Mascot Bee',
@@ -15180,7 +15165,7 @@
                     'professor-bee': {
                         title: 'Professor Bee',
                         tagline: 'Knows the history of every word.',
-                        story: 'Professor Bee tells tales of roots and origins-Latin, Greek, and beyond-making every word feel like a mini adventure.'
+                        story: 'Professor Bee tells tales of roots and origins—Latin, Greek, and beyond—making every word feel like a mini adventure.'
                     },
                     'queen-bee': {
                         title: 'Queen Bee',
@@ -15199,8 +15184,8 @@
                     },
                     'seabea': {
                         title: 'SeaBea',
-                        tagline: 'Sails the seven C\'s (and all the other letters).',
-                        story: 'SeaBea charts courses through tricky homophones-there, their, and they\'re-like a true captain of words.'
+                        tagline: 'Sails the seven C’s (and all the other letters).',
+                        story: 'SeaBea charts courses through tricky homophones—there, their, and they’re—like a true captain of words.'
                     },
                     'superbee': {
                         title: 'SuperBee',
@@ -15210,7 +15195,7 @@
                     'vamp-bee': {
                         title: 'Vamp Bee',
                         tagline: 'A night owl who loves bright ideas.',
-                        story: 'Vamp Bee practices in the moonlight and never misses a vowel-especially a, e, i, ooo, and u.'
+                        story: 'Vamp Bee practices in the moonlight and never misses a vowel—especially a, e, i, ooo, and u.'
                     },
                     'ware-bee': {
                         title: 'Ware Bee',
@@ -15219,7 +15204,7 @@
                     },
                     'zom-bee': {
                         title: 'Zom Bee',
-                        tagline: 'Slow and steady... but unstoppable.',
+                        tagline: 'Slow and steady… but unstoppable.',
                         story: 'Zom Bee takes it letter by letter. Even the longest words give up and become friends.'
                     }
                 };

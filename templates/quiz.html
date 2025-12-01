@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251130">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
@@ -2107,7 +2108,7 @@ if ('speechSynthesis' in window) {
         animation: avatarFullRotation 2s ease-in-out;
     }
 
-    /* Exit Modal Styling */
+    /* Exit Modal Styling - iOS Optimized */
     .exit-modal {
         position: fixed;
         top: 0;
@@ -2120,6 +2121,10 @@ if ('speechSynthesis' in window) {
         justify-content: center;
         z-index: 2000;
         backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        /* iOS: Hardware acceleration */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
 
     .exit-modal-content {
@@ -2133,8 +2138,12 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 20px 40px rgba(255, 193, 7, 0.3);
         border: 3px solid rgba(255, 193, 7, 0.5);
         animation: modalBounceIn 0.4s ease-out;
+        -webkit-animation: modalBounceIn 0.4s ease-out;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        /* iOS: Prevent content shifting */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
 
     .exit-modal-header h3 {
@@ -2169,10 +2178,16 @@ if ('speechSynthesis' in window) {
         min-height: 50px;
     }
 
+    @-webkit-keyframes modalBounceIn {
+        0% { -webkit-transform: scale(0.3) rotate(-10deg); transform: scale(0.3) rotate(-10deg); opacity: 0; }
+        50% { -webkit-transform: scale(1.05) rotate(2deg); transform: scale(1.05) rotate(2deg); opacity: 1; }
+        100% { -webkit-transform: scale(1) rotate(0deg); transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
     @keyframes modalBounceIn {
-        0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
-        50% { transform: scale(1.05) rotate(2deg); opacity: 1; }
-        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        0% { -webkit-transform: scale(0.3) rotate(-10deg); transform: scale(0.3) rotate(-10deg); opacity: 0; }
+        50% { -webkit-transform: scale(1.05) rotate(2deg); transform: scale(1.05) rotate(2deg); opacity: 1; }
+        100% { -webkit-transform: scale(1) rotate(0deg); transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
     /* Voice Intro Modal - iOS Friendly */
@@ -3400,8 +3415,8 @@ if ('speechSynthesis' in window) {
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
 
         <div class="quiz-buttons">
-            <!-- Show Stats Toggle -->
-            <button type="button" class="action-btn secondary" id="showStatsToggle" style="background: linear-gradient(135deg, #FFD700, #FFC107); color: #5c4600;">
+            <!-- Show Stats Toggle - iOS Optimized -->
+            <button type="button" class="action-btn secondary" id="showStatsToggle" style="background: linear-gradient(135deg, #FFD700, #FFC107); color: #5c4600; -webkit-tap-highlight-color: rgba(255, 215, 0, 0.3); touch-action: manipulation;">
                 <span class="bee-icon" aria-hidden="true">📊</span>
                 Show Stats
             </button>
@@ -8327,27 +8342,6 @@ function unlockiOSAudio() {
     ['touchstart', 'touchend', 'click', 'keydown'].forEach(evt => document.addEventListener(evt, unlock, { passive: true }));
 }
 
-function initStatsToggle() {
-    const toggleBtn = document.getElementById('showStatsToggle');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    let hideTimer = null;
-    
-    if (!toggleBtn || !scoreDisplay) return;
-    
-    const showStats = () => {
-        if (hideTimer) clearTimeout(hideTimer);
-        scoreDisplay.classList.remove('stats-hidden');
-        toggleBtn.textContent = '📊 Stats';
-        hideTimer = setTimeout(() => {
-            scoreDisplay.classList.add('stats-hidden');
-            toggleBtn.textContent = '📊 Show Stats';
-        }, 5000);
-    };
-    
-    toggleBtn.addEventListener('click', (e) => { e.preventDefault(); showStats(); });
-    toggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); showStats(); });
-}
-
 // 🛡️ Safe JSON parsing helper
 function safeParseJSON(txt, label = 'payload') {
     try { 
@@ -8440,141 +8434,299 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 </script>
+<script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251130"></script>
 <script>
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-    // 📊 Initialize stats toggle (hide by default, show on click)
-    initStatsToggle();
+// 📊 Stats toggle initialization (moved here to ensure it's available for DOMContentLoaded)
+function initStatsToggle() {
+    const toggleBtn = document.getElementById('showStatsToggle');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    let hideTimer = null;
     
-    // 🎭 Initialize morphing controller
-    window.morphController = new MorphController('morphContainer');
-    // DEBUG gated logging helper
-    window.DEBUG_MODE = (window.DEBUG_MODE !== undefined && window.DEBUG_MODE !== null) ? window.DEBUG_MODE : false; // Set to true in console to enable verbose logs
-    const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
-    debugLog('🎭 Morph controller initialized');
-
-    // Helper: Load and display Buzz Dust badge once
-    const loadBuzzDustBadge = async () => {
-        try {
-            const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-            if (!rankResponse.ok) return;
-            const rankData = await rankResponse.json();
-            const badgeImg = document.getElementById('quizHeaderBadge');
-            if (badgeImg && rankData.current_class) {
-                const beeClass = rankData.current_class;
-                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
-                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
-                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
-                badgeImg.alt = beeClass.label;
-                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
-                debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
-            }
-        } catch (rankError) {
-            console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
-        }
-    };
-    
-    const delight = new BeeDelightManager();
-    
-    // Bee swarm and hive removed - too distracting during quiz
-    // Only keep the 3D mascot bee for companionship
-    
-    // Initialize 3D Mascot with user's selected avatar
-    let smartyBee = null;
-    try {
-        debugLog('🎯 Quiz page: Starting avatar initialization...');
-        
-        // Ensure avatar loader exists (should be loaded from base.html)
-        if (!window.userAvatarLoader) {
-            console.warn('⚠️ UserAvatarLoader not found - creating new instance');
-            window.userAvatarLoader = new UserAvatarLoader();
-        }
-        
-        // Wait for avatar loader to fetch user's avatar
-        debugLog('🔄 Fetching user avatar from API...');
-        await window.userAvatarLoader.init();
-        
-        // Get avatar options from loader
-        const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-            width: 180,
-            height: 180,
-            autoRotate: true,
-            enableInteraction: true
-        });
-        
-        const avatarId = window.userAvatarLoader.getAvatarId();
-        debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
-        
-        // Render into mascot container using userAvatarLoader
-        // Use the user's actual avatar ID, not the container ID
-        const userAvatarId = window.userAvatarLoader.getAvatarId();
-        debugLog('Loading user avatar:', userAvatarId);
-        await window.userAvatarLoader.loadUserAvatar(userAvatarId, 'mascotBee3D');
-        
-        debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
-        
-        // Add click handler for themed animation
-        const mascotContainer = document.getElementById('mascotBee3D');
-        if (mascotContainer) {
-            mascotContainer.style.cursor = 'pointer';
-            mascotContainer.addEventListener('click', () => {
-                debugLog('🐝 Quiz mascot clicked - playing themed animation');
-                playThemedAvatarEffect(avatarId, mascotContainer);
-            });
-        }
-    } catch (error) {
-        console.error('❌ 3D mascot failed to load:', error);
-        console.error('Error details:', error.message, error.stack);
-        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
-        try {
-            debugLog('🔄 Attempting 2D fallback...');
-            if (window.userAvatarLoader) {
-                await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                debugLog('✅ 2D fallback loaded successfully');
-            }
-        } catch (fallbackError) {
-            console.error('❌ Fallback avatar also failed:', fallbackError);
-        }
+    if (!toggleBtn || !scoreDisplay) {
+        console.warn('⚠️ Stats toggle elements not found');
+        return;
     }
     
-    // 🐝 Load and display Buzz Dust badge (deduplicated)
-    await loadBuzzDustBadge();
-
-    fetch('/api/wordbank', {
-        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
-        cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache'
+    const showStats = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.words || data.words.length === 0) {
-                BeeSmart.showError('No words loaded for the quiz!');
-                setTimeout(() => window.location.href = '/', 2800);
-                return;
-            }
-            
-            // Initialize progress displays with actual word count
-            const totalWords = data.words.length;
-            const progressText = document.getElementById('progressText');
-            const progressPercentage = document.getElementById('progressPercentage');
-            
-            if (progressText) {
-                progressText.textContent = `Question 1 of ${totalWords}`;
-            }
-            
-            if (progressPercentage) {
-                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
-            }
+        
+        if (hideTimer) clearTimeout(hideTimer);
+        scoreDisplay.classList.remove('stats-hidden');
+        toggleBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">📊</span> Stats (auto-hide)';
+        hideTimer = setTimeout(() => {
+            scoreDisplay.classList.add('stats-hidden');
+            toggleBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">📊</span> Show Stats';
+        }, 5000);
+    };
+    
+    // iOS: Support both click and touch events
+    toggleBtn.addEventListener('click', showStats);
+    toggleBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        showStats(e);
+    }, { passive: false });
+    
+    console.log('✅ Stats toggle initialized - iOS compatible, hidden by default, shows for 5s on click');
+}
 
-            window.quizManager = new QuizManager({ delight, smartyBee });
+// 🔄 Check for resumable quiz session on page load
+async function checkResumeQuiz() {
+    try {
+        const response = await fetch('/api/quiz/status', { credentials: 'same-origin' });
+        if (!response.ok) return false;
+        const data = await response.json();
+        
+        if (data.can_resume) {
+            // Show resume/restart modal
+            return await showResumeModal(data);
+        }
+        return false;
+    } catch (error) {
+        console.warn('Could not check quiz resume status:', error);
+        return false;
+    }
+}
+
+function showResumeModal(quizData) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'exit-modal';
+        modal.style.display = 'block';
+        // iOS: Prevent background scrolling
+        modal.style.cssText = `
+            display: block;
+            -webkit-overflow-scrolling: touch;
+            touch-action: none;
+        `;
+        modal.innerHTML = `
+            <div class="exit-modal-content" style="-webkit-overflow-scrolling: touch;">
+                <div class="exit-modal-header">
+                    <h3>🐝 Welcome Back, Busy Bee!</h3>
+                </div>
+                <div class="exit-modal-body">
+                    <p>You have a quiz in progress!</p>
+                    <div class="exit-stats">
+                        <p><strong>Progress:</strong> ${quizData.index} of ${quizData.total} words</p>
+                        <p><strong>Correct:</strong> ${quizData.correct} ✅</p>
+                        <p><strong>Incorrect:</strong> ${quizData.incorrect} ❌</p>
+                        <p><strong>Points:</strong> ${quizData.session_points || 0} 🏆</p>
+                    </div>
+                    <p style="margin-top: 1rem;">Would you like to continue or start fresh?</p>
+                </div>
+                <div class="exit-modal-buttons">
+                    <button type="button" class="action-btn secondary" id="resumeQuizBtn" style="-webkit-tap-highlight-color: rgba(255, 215, 0, 0.3);">
+                        <span class="bee-icon" aria-hidden="true">▶️</span>
+                        Resume Quiz
+                    </button>
+                    <button type="button" class="action-btn exit" id="restartQuizBtn" style="-webkit-tap-highlight-color: rgba(231, 76, 60, 0.3);">
+                        <span class="bee-icon" aria-hidden="true">🔄</span>
+                        Start Fresh
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // iOS: Prevent body scroll when modal is open
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        
+        const cleanup = () => {
+            modal.remove();
+            document.body.style.overflow = originalOverflow;
+            document.body.style.position = '';
+            document.body.style.width = '';
+        };
+        
+        const resumeBtn = modal.querySelector('#resumeQuizBtn');
+        const restartBtn = modal.querySelector('#restartQuizBtn');
+        
+        // Support both click and touch events for iOS
+        const handleResume = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            cleanup();
+            resolve(true); // Resume
+        };
+        
+        const handleRestart = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            cleanup();
+            // Clear quiz state and start fresh
+            try {
+                await fetch('/api/clear', { 
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+            } catch (err) {
+                console.warn('Could not clear quiz state:', err);
+            }
+            resolve(false); // Start fresh
+        };
+        
+        resumeBtn.addEventListener('click', handleResume);
+        resumeBtn.addEventListener('touchend', handleResume, { passive: false });
+        
+        restartBtn.addEventListener('click', handleRestart);
+        restartBtn.addEventListener('touchend', handleRestart, { passive: false });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 🔄 Check for resume before initializing
+        const shouldResume = await checkResumeQuiz();
+        console.log(shouldResume ? '▶️ Resuming quiz...' : '🆕 Starting new quiz...');
+        
+        // 📊 Initialize stats toggle (hide by default, show on click)
+        initStatsToggle();
+        
+        // 🎭 Initialize morphing controller
+        window.morphController = new MorphController('morphContainer');
+        
+        // DEBUG gated logging helper
+        window.DEBUG_MODE = (window.DEBUG_MODE !== undefined && window.DEBUG_MODE !== null) ? window.DEBUG_MODE : false; // Set to true in console to enable verbose logs
+        const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
+        debugLog('🎭 Morph controller initialized');
+
+        // Helper: Load and display Buzz Dust badge once
+        const loadBuzzDustBadge = async () => {
+            try {
+                const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+                if (!rankResponse.ok) return;
+                const rankData = await rankResponse.json();
+                const badgeImg = document.getElementById('quizHeaderBadge');
+                if (badgeImg && rankData.current_class) {
+                    const beeClass = rankData.current_class;
+                    const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                    const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                    badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                    badgeImg.alt = beeClass.label;
+                    badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
+                    debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
+                }
+            } catch (rankError) {
+                console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+            }
+        };
+        
+        const delight = new BeeDelightManager();
+        
+        // Bee swarm and hive removed - too distracting during quiz
+        // Only keep the 3D mascot bee for companionship
+        
+        // Initialize 3D Mascot with user's selected avatar
+        let smartyBee = null;
+        try {
+            debugLog('🎯 Quiz page: Starting avatar initialization...');
+            
+            // Ensure avatar loader exists (should be loaded from base.html)
+            if (!window.userAvatarLoader) {
+                console.warn('⚠️ UserAvatarLoader not found - creating new instance');
+                window.userAvatarLoader = new UserAvatarLoader();
+            }
+            
+            // Wait for avatar loader to fetch user's avatar
+            debugLog('🔄 Fetching user avatar from API...');
+            await window.userAvatarLoader.init();
+            
+            // Get avatar options from loader
+            const avatarOptions = window.userAvatarLoader.getAvatarOptions({
+                width: 180,
+                height: 180,
+                autoRotate: true,
+                enableInteraction: true
+            });
+            
+            const avatarId = window.userAvatarLoader.getAvatarId();
+            debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
+            
+            // Render into mascot container using userAvatarLoader
+            // Use the user's actual avatar ID, not the container ID
+            const userAvatarId = window.userAvatarLoader.getAvatarId();
+            debugLog('Loading user avatar:', userAvatarId);
+            await window.userAvatarLoader.loadUserAvatar(userAvatarId, 'mascotBee3D');
+            
+            debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
+            
+            // 🎨 Play avatar intro FX after loading
+            const mascotContainer = document.getElementById('mascotBee3D');
+            if (mascotContainer && window.AvatarFX) {
+                // Random intro effect for variety
+                const effects = ['honey-glow', 'buzz-dust', 'golden-flash', 'drop-bounce'];
+                const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+                window.AvatarFX.init(mascotContainer, randomEffect);
+                debugLog('🎨 Avatar intro FX played:', randomEffect);
+            }
+            
+            // Add click handler for themed animation
+            if (mascotContainer) {
+                mascotContainer.style.cursor = 'pointer';
+                mascotContainer.addEventListener('click', () => {
+                    debugLog('🐝 Quiz mascot clicked - playing themed animation');
+                    playThemedAvatarEffect(avatarId, mascotContainer);
+                });
+            }
+        } catch (error) {
+            console.error('❌ 3D mascot failed to load:', error);
+            console.error('Error details:', error.message, error.stack);
+            // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+            try {
+                debugLog('🔄 Attempting 2D fallback...');
+                if (window.userAvatarLoader) {
+                    await window.userAvatarLoader.load2DFallback('mascotBee3D');
+                    debugLog('✅ 2D fallback loaded successfully');
+                }
+            } catch (fallbackError) {
+                console.error('❌ Fallback avatar also failed:', fallbackError);
+            }
+        }
+        
+        // 🐝 Load and display Buzz Dust badge (deduplicated)
+        await loadBuzzDustBadge();
+
+        fetch('/api/wordbank', {
+            credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
         })
-        .catch(error => {
-            console.error('Failed to check word bank:', error);
-            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
-            setTimeout(() => window.location.href = '/', 2800);
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (!data.words || data.words.length === 0) {
+                    BeeSmart.showError('No words loaded for the quiz!');
+                    setTimeout(() => window.location.href = '/', 2800);
+                    return;
+                }
+                
+                // Initialize progress displays with actual word count
+                const totalWords = data.words.length;
+                const progressText = document.getElementById('progressText');
+                const progressPercentage = document.getElementById('progressPercentage');
+                
+                if (progressText) {
+                    progressText.textContent = `Question 1 of ${totalWords}`;
+                }
+                
+                if (progressPercentage) {
+                    progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+                }
+
+                window.quizManager = new QuizManager({ delight, smartyBee });
+            })
+            .catch(error => {
+                console.error('Failed to check word bank:', error);
+                BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+                setTimeout(() => window.location.href = '/', 2800);
+            });
     } catch (error) {
         console.error('🚨 Critical initialization error:', error);
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
@@ -8608,26 +8760,26 @@ window.addEventListener('beforeunload', async (event) => {
         }
     }
     
-    // Save progress
-    try {
-        // Use sendBeacon for reliable delivery even during page unload
-        const response = await fetch('/api/save-partial-progress', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            keepalive: true  // Ensures request completes even if page is closing
-        });
-        
-        if (response.ok) {
-            console.log('✅ Partial quiz progress saved');
-        }
-    } catch (error) {
-        // Use sendBeacon as fallback (more reliable during unload)
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('💾 Progress save sent via beacon');
-    }
+    // Save progress - DISABLED (feature not yet implemented)
+    // try {
+    //     // Use sendBeacon for reliable delivery even during page unload
+    //     const response = await fetch('/api/save-partial-progress', {
+    //         method: 'POST',
+    //         headers: {
+    //             'Content-Type': 'application/json'
+    //         },
+    //         keepalive: true  // Ensures request completes even if page is closing
+    //     });
+    //     
+    //     if (response.ok) {
+    //         console.log('✅ Partial quiz progress saved');
+    //     }
+    // } catch (error) {
+    //     // Use sendBeacon as fallback (more reliable during unload)
+    //     const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+    //     navigator.sendBeacon('/api/save-partial-progress', blob);
+    //     console.log('💾 Progress save sent via beacon');
+    // }
 });
 
 // Also save when navigating away programmatically
@@ -8650,9 +8802,9 @@ window.addEventListener('pagehide', () => {
         }
     }
     
-    // Save progress via beacon
-    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    navigator.sendBeacon('/api/save-partial-progress', blob);
+    // Save progress via beacon - DISABLED (feature not yet implemented)
+    // const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+    // navigator.sendBeacon('/api/save-partial-progress', blob);
     console.log('✅ Final cleanup complete');
 });
 

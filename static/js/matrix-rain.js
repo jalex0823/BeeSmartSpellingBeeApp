@@ -42,12 +42,23 @@ class MatrixRain {
         this.fontSize = this.isMobile ? 12 : 16;
         this.speed = this.isMobile ? 0.5 : 1;
         
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        // Get device pixel ratio for crisp rendering
+        const dpr = window.devicePixelRatio || 1;
         
-        // Fewer columns on mobile for cleaner effect
-        const columnSpacing = this.isMobile ? this.fontSize * 1.5 : this.fontSize;
-        this.columns = Math.floor(this.canvas.width / columnSpacing);
+        // Set actual canvas size (accounting for high DPI displays)
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
+        
+        // Scale canvas back to CSS size
+        this.canvas.style.width = window.innerWidth + 'px';
+        this.canvas.style.height = window.innerHeight + 'px';
+        
+        // Scale context to match device pixel ratio
+        this.ctx.scale(dpr, dpr);
+        
+        // Wider column spacing on mobile to prevent overlap
+        const columnSpacing = this.isMobile ? this.fontSize * 2 : this.fontSize;
+        this.columns = Math.floor(window.innerWidth / columnSpacing);
         
         this.initDrops();
     }
@@ -64,22 +75,23 @@ class MatrixRain {
         // Slightly more opaque fade on mobile for better trail visibility
         const fadeOpacity = this.isMobile ? 0.04 : 0.02;
         this.ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
         
         // Set font with better rendering for mobile
         this.ctx.font = `bold ${this.fontSize}px 'Courier New', monospace`;
+        this.ctx.textBaseline = 'top'; // Consistent text alignment
         
-        // Calculate column spacing (wider on mobile)
-        const columnSpacing = this.isMobile ? this.fontSize * 1.5 : this.fontSize;
+        // Calculate column spacing (wider on mobile to prevent overlap)
+        const columnSpacing = this.isMobile ? this.fontSize * 2 : this.fontSize;
         
         // Draw characters
         for (let i = 0; i < this.drops.length; i++) {
             // Random character
             const char = this.characters[Math.floor(Math.random() * this.characters.length)];
             
-            // Calculate position with proper spacing
-            const x = i * columnSpacing;
-            const y = this.drops[i] * this.fontSize;
+            // Calculate position with proper spacing and alignment
+            const x = Math.floor(i * columnSpacing + columnSpacing / 2);
+            const y = Math.floor(this.drops[i] * this.fontSize);
             
             // Enhanced brightness gradient for mobile visibility
             const brightThreshold = this.isMobile ? 0.95 : 0.975;
@@ -104,8 +116,8 @@ class MatrixRain {
             // Reset shadow for next character
             this.ctx.shadowBlur = 0;
             
-            // Reset drop to top when it reaches bottom
-            if (y > this.canvas.height && Math.random() > 0.975) {
+            // Reset drop to top when it reaches bottom (use CSS height, not canvas height)
+            if (y > window.innerHeight && Math.random() > 0.975) {
                 this.drops[i] = 0;
             }
             
@@ -135,7 +147,7 @@ class MatrixRain {
     }
     
     clear() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     }
 }
 

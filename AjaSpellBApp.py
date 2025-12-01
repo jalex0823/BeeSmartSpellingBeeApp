@@ -7414,8 +7414,9 @@ def api_answer():
         "newly_unlocked_avatars": state.get("newly_unlocked_avatars", []) if quiz_complete else []
     })
 
-@app.route("/api/save-partial-progress", methods=["POST"])
-def api_save_partial_progress():
+# FEATURE DISABLED - Save partial quiz progress
+# @app.route("/api/save-partial-progress", methods=["POST"])
+def api_save_partial_progress_DISABLED():
     """
     Save quiz progress even if quiz is incomplete
     This ensures points, achievements, and progress are saved when users exit early
