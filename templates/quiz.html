@@ -5464,34 +5464,40 @@ class QuizManager {
             }
 
             // Store the word data with the actual sentence/definition being displayed
-            // Fetch complete word info from /api/pronounce to get both sentence AND definition
+            // ALWAYS fetch complete word info from /api/pronounce to ensure we have both sentence AND definition
             let actualSentence = data.sentence || '';
             let actualDefinition = data.definition || '';
             
-            // If we don't have both sentence and definition, fetch from /api/pronounce
-            if (!actualSentence || !actualDefinition) {
-                try {
-                    const pronounceData = await this.fetchPronounce(true);
-                    if (pronounceData) {
-                        if (!actualSentence && pronounceData.sentence) {
-                            actualSentence = pronounceData.sentence;
-                            console.log('✓ Fetched sentence from /api/pronounce:', actualSentence);
-                        }
-                        if (!actualDefinition && pronounceData.definition) {
-                            actualDefinition = pronounceData.definition;
-                            console.log('✓ Fetched definition from /api/pronounce:', actualDefinition);
-                        }
+            console.log('🔍 Word data from /api/next:', { sentence: actualSentence, definition: actualDefinition });
+            
+            // Always fetch from /api/pronounce to get complete word info
+            try {
+                const pronounceData = await this.fetchPronounce(true);
+                console.log('🔍 Word data from /api/pronounce:', pronounceData);
+                
+                if (pronounceData) {
+                    // Use pronounce data to populate sentence and definition
+                    if (pronounceData.sentence) {
+                        actualSentence = pronounceData.sentence;
+                        console.log('✓ Using sentence from /api/pronounce:', actualSentence);
                     }
-                } catch (err) {
-                    console.warn('Could not fetch word info:', err);
+                    if (pronounceData.definition) {
+                        actualDefinition = pronounceData.definition;
+                        console.log('✓ Using definition from /api/pronounce:', actualDefinition);
+                    }
                 }
+            } catch (err) {
+                console.warn('Could not fetch word info from /api/pronounce:', err);
             }
             
+            // Store with fallbacks
             this.currentWordData = {
                 word: data.word || '',
-                sentence: actualSentence || chosen || 'No sentence available for this word.',
-                definition: actualDefinition || chosen || 'No definition available for this word.'
+                sentence: actualSentence || chosen || '',
+                definition: actualDefinition || chosen || ''
             };
+            
+            console.log('✅ currentWordData stored:', this.currentWordData);
 
             // Enable input immediately - users can type right away
             const spellingInput = document.getElementById('spellingInput');
@@ -6825,7 +6831,10 @@ class QuizManager {
 
     // Show sentence with the target word masked
     showSentence() {
+        console.log('🔍 showSentence called, currentWordData:', this.currentWordData);
+        
         if (!this.currentWordData || !this.currentWordData.sentence) {
+            console.error('❌ No sentence available. currentWordData:', this.currentWordData);
             BeeSmart.showError('No sentence available for this word.');
             return;
         }
@@ -6833,8 +6842,12 @@ class QuizManager {
         const sentence = this.currentWordData.sentence;
         const word = this.currentWordData.word;
         
+        console.log('📝 Showing sentence:', { sentence, word });
+        
         // Mask the word with underscores (case-insensitive replacement)
         const maskedSentence = this.maskWordInText(sentence, word);
+        
+        console.log('📝 Masked sentence:', maskedSentence);
         
         // Display in voice definition area (below visualization)
         const voiceDefElement = document.getElementById('voiceDefinition');
@@ -6845,14 +6858,18 @@ class QuizManager {
                     <span style="font-size: 1.05em; color: #000; line-height: 1.6;">${maskedSentence}</span>
                 </div>
             `;
+            console.log('✅ Sentence displayed in voiceDefinition element');
+        } else {
+            console.error('❌ voiceDefinition element not found!');
         }
-
-        console.log('📝 Sentence displayed (word masked)');
     }
 
     // Show definition with the target word masked
     showDefinition() {
+        console.log('🔍 showDefinition called, currentWordData:', this.currentWordData);
+        
         if (!this.currentWordData || !this.currentWordData.definition) {
+            console.error('❌ No definition available. currentWordData:', this.currentWordData);
             BeeSmart.showError('No definition available for this word.');
             return;
         }
@@ -6860,8 +6877,12 @@ class QuizManager {
         const definition = this.currentWordData.definition;
         const word = this.currentWordData.word;
         
+        console.log('📖 Showing definition:', { definition, word });
+        
         // Mask the word with underscores (case-insensitive replacement)
         const maskedDefinition = this.maskWordInText(definition, word);
+        
+        console.log('📖 Masked definition:', maskedDefinition);
         
         // Display in voice definition area (below visualization)
         const voiceDefElement = document.getElementById('voiceDefinition');
@@ -6872,9 +6893,10 @@ class QuizManager {
                     <span style="font-size: 1.05em; color: #000; line-height: 1.6;">${maskedDefinition}</span>
                 </div>
             `;
+            console.log('✅ Definition displayed in voiceDefinition element');
+        } else {
+            console.error('❌ voiceDefinition element not found!');
         }
-
-        console.log('📖 Definition displayed (word masked)');
     }
 
     // Helper method to mask the target word in text with underscores
