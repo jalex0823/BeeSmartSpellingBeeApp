@@ -218,6 +218,53 @@ if ('speechSynthesis' in window) {
     .exit-button:hover .exit-icon {
         transform: scale(1.1);
     }
+
+    /* Status Toggle Button */
+    .status-toggle-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+    }
+    
+    .status-toggle-button:hover {
+        background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(76, 175, 80, 0.35);
+    }
+    
+    .status-toggle-button .status-icon {
+        font-size: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .status-toggle-button:hover .status-icon {
+        transform: scale(1.1);
+    }
+    
+    /* Score display slide animation */
+    .score-display {
+        transition: all 0.4s ease;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+    
+    .score-display.visible {
+        max-height: 200px;
+        opacity: 1;
+    }
     
     /* Honey Jar centered at top */
     .honey-jar-top {
@@ -2873,13 +2920,19 @@ if ('speechSynthesis' in window) {
             <div class="progress-section">
                 <span id="progressText">Question 1 of 10</span>
             </div>
-            <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
-                <span class="exit-icon">×</span>
-                <span>Exit Quiz</span>
-            </a>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button id="toggleStatusBtn" class="status-toggle-button" onclick="toggleStatusMenu()" role="button" aria-label="Toggle Status Menu">
+                    <span class="status-icon">📊</span>
+                    <span>Stats</span>
+                </button>
+                <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
+                    <span class="exit-icon">×</span>
+                    <span>Exit Quiz</span>
+                </a>
+            </div>
         </div>
 
-        <div class="score-display">
+        <div class="score-display" id="scoreDisplay" style="display: none;">
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
@@ -7878,6 +7931,24 @@ function pronounceWordFromReport(word) {
 }
 
 // Kid-friendly confirmation for back to menu
+// Toggle Status Menu
+function toggleStatusMenu() {
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const toggleBtn = document.getElementById('toggleStatusBtn');
+    
+    if (scoreDisplay.style.display === 'none' || scoreDisplay.style.display === '') {
+        scoreDisplay.style.display = 'flex';
+        setTimeout(() => scoreDisplay.classList.add('visible'), 10);
+        toggleBtn.innerHTML = '<span class="status-icon">📊</span><span>Hide</span>';
+        console.log('📊 Status menu shown');
+    } else {
+        scoreDisplay.classList.remove('visible');
+        setTimeout(() => scoreDisplay.style.display = 'none', 400);
+        toggleBtn.innerHTML = '<span class="status-icon">📊</span><span>Stats</span>';
+        console.log('📊 Status menu hidden');
+    }
+}
+
 function confirmBackToMenu(event) {
     event.preventDefault();
     
