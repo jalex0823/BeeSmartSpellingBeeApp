@@ -2922,7 +2922,7 @@
                 <div class="guest-avatar-carousel">
                     <div class="avatar-slide">
                         <!-- 3D Avatar Display -->
-                        <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="position:relative; width: 320px; height: 240px; margin: 0 auto; cursor: pointer;"></div>
+                        <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 320px; height: 240px; margin: 0 auto; cursor: pointer;"></div>
                         <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
@@ -4656,11 +4656,17 @@
                     if(restoreData && restoreData.ok){
                         window.__wordbankRestored=true;
                         console.log('✅ Mobile wordbank rehydrate success:', restoreData.count, 'words');
+                        
+                        // Fetch current wordbank to get accurate count
+                        const currentWbResp = await fetch('/api/wordbank?_ts='+Date.now(), {cache:'no-store', credentials:'same-origin'});
+                        const currentWbData = await currentWbResp.json();
+                        const actualCount = (currentWbData && (currentWbData.count || (currentWbData.words && currentWbData.words.length) || 0)) || restoreData.count;
+                        
                         const btn=document.getElementById('startQuizBtn');
                         if(btn){
                             btn.disabled=false;
                             btn.removeAttribute('disabled');
-                            btn.innerHTML=`🚀 Start Quiz (${restoreData.count} words)`;
+                            btn.innerHTML=`🚀 Start Quiz (${actualCount} words)`;
                             btn.classList.add('ready-to-play');
                             btn.classList.remove('waiting-to-play');
                             btn.style.opacity='1';
@@ -4668,7 +4674,7 @@
                             btn.style.pointerEvents='auto';
                         }
                         if (typeof showSuccessMessage==='function'){
-                            showSuccessMessage(`Restored ${restoreData.count} saved words! 🐝`);
+                            showSuccessMessage(`Restored ${actualCount} saved word${actualCount !== 1 ? 's' : ''}! 🐝`);
                         }
                     } else {
                         console.warn('⚠️ Wordbank rehydrate failed:', restoreData);
@@ -12991,8 +12997,20 @@
                 const percentElement = document.getElementById('loadingPercentage');
                 const statusElement = document.getElementById('loadingStatus');
                 
+                // Check if this is the "Buzz On!" message (at 90%)
+                if (status.includes('Buzz On!') && percentElement) {
+                    // Fade out percentage
+                    percentElement.style.transition = 'opacity 0.6s ease-out';
+                    percentElement.style.opacity = '0';
+                    
+                    // Show sparkle FX
+                    this.showBuzzOnFX(percentElement.parentElement);
+                }
+                
                 // Update percentage display (no honey fill animation)
-                if (percentElement) percentElement.textContent = `${Math.floor(this.progress)}%`;
+                if (percentElement && !status.includes('Buzz On!')) {
+                    percentElement.textContent = `${Math.floor(this.progress)}%`;
+                }
                 if (statusElement) statusElement.textContent = status;
                 
                 console.log(`📊 Loading: ${Math.floor(this.progress)}% - ${status}`);
@@ -13001,6 +13019,42 @@
                 if (this.progress >= 100 && !this.tapToEnterShown) {
                     this.tapToEnterShown = true;
                     this.showTapToEnter();
+                }
+            }
+            
+            showBuzzOnFX(container) {
+                // Create sparkle effect around the loading area
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const sparkle = document.createElement('div');
+                        sparkle.textContent = ['✨', '⭐', '🌟', '💫', '🐝'][Math.floor(Math.random() * 5)];
+                        sparkle.style.cssText = `
+                            position: absolute;
+                            font-size: ${Math.random() * 20 + 20}px;
+                            left: ${Math.random() * 100}%;
+                            top: ${Math.random() * 100}%;
+                            pointer-events: none;
+                            animation: buzzSparkle 1.2s ease-out forwards;
+                            z-index: 10000;
+                        `;
+                        container.appendChild(sparkle);
+                        
+                        setTimeout(() => sparkle.remove(), 1200);
+                    }, i * 50);
+                }
+                
+                // Add CSS animation if not already present
+                if (!document.getElementById('buzzOnFXStyle')) {
+                    const style = document.createElement('style');
+                    style.id = 'buzzOnFXStyle';
+                    style.textContent = `
+                        @keyframes buzzSparkle {
+                            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+                            50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+                            100% { transform: scale(0.5) translateY(-30px) rotate(360deg); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
                 }
             }
 
