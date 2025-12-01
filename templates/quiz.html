@@ -2962,9 +2962,10 @@ if ('speechSynthesis' in window) {
 <div class="quiz-container quiz-shell">
     <!-- Quiz Header -->
     <div class="quiz-header">
-        <!-- Modern header layout: progress left, exit right -->
+        <!-- Modern header layout: buttons on right, progress hidden in stats -->
         <div class="quiz-header-top">
-            <div class="progress-section">
+            <div class="progress-section" style="visibility: hidden;">
+                <!-- Progress hidden - shown in status menu instead -->
                 <span id="progressText">Question 1 of 10</span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -2980,6 +2981,12 @@ if ('speechSynthesis' in window) {
         </div>
 
         <div class="score-display" id="scoreDisplay" style="display: none;">
+            <!-- Progress Info (moved from top) -->
+            <div class="score-item" style="grid-column: span 2;">
+                <span class="score-number" id="progressStatus" style="color: #4CAF50; font-size: 1.1rem;">Question 1 of 10</span>
+                <span class="score-label">Progress</span>
+            </div>
+            
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
@@ -7081,13 +7088,19 @@ class QuizManager {
      * @param {number} total - Total number of words
      */
     updateProgressDisplays(current, total) {
-        // Update traditional question counter
+        // Update traditional question counter (hidden in UI, but kept for reference)
         const progressText = document.getElementById('progressText');
         if (progressText) {
             progressText.textContent = `Question ${current} of ${total}`;
         }
         
-        // Update new percentage display
+        // Update progress in stats display
+        const progressStatus = document.getElementById('progressStatus');
+        if (progressStatus) {
+            progressStatus.textContent = `Question ${current} of ${total}`;
+        }
+        
+        // Update new percentage display (if it exists)
         const progressPercentage = document.getElementById('progressPercentage');
         if (progressPercentage && total > 0) {
             const percentage = Math.round(((current - 1) / total) * 100);
@@ -8461,12 +8474,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Helper function to initialize quiz
     function initializeQuiz(data, totalWords, delight, smartyBee, isNewStart) {
         const progressText = document.getElementById('progressText');
+        const progressStatus = document.getElementById('progressStatus');
         const progressPercentage = document.getElementById('progressPercentage');
         const quizState = data.quiz_state || {};
         const currentIndex = quizState.idx || 0;  // Use 'idx' not 'current_index'
         
         if (progressText) {
             progressText.textContent = `Question ${currentIndex + 1} of ${totalWords}`;
+        }
+        
+        if (progressStatus) {
+            progressStatus.textContent = `Question ${currentIndex + 1} of ${totalWords}`;
         }
         
         if (progressPercentage) {
