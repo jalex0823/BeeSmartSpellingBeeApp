@@ -809,21 +809,6 @@
   const modalBody = document.getElementById("modalBody");
   const modalConfirmBtn = document.getElementById("modalConfirmBtn");
 
-  // Make functions globally accessible for onclick handlers (prevents ReferenceError)
-  // These assignments happen before the functions are defined due to hoisting
-  window.createNewList = null;
-  window.useListInQuiz = null;
-  window.viewWordList = null;
-  window.deleteWordList = null;
-  window.toggleFavorite = null;
-  window.openEditModal = null;
-  window.saveEditModal = null;
-  window.closeEditModal = null;
-  window.closeBeeModal = null;
-  window.confirmBeeModal = null;
-  window.closeBeePrompt = null;
-  window.closeBeeSheet = null;
-
   document.addEventListener("DOMContentLoaded", async () => {
     runBeeFlyover();
     await loadBuzzDustProgress();
@@ -1579,7 +1564,6 @@
   }
 
   // TOAST
-  // TOAST
   function showToast(message, type = "success") {
     (function() {
       const el = document.querySelector(".toast");
@@ -1603,6 +1587,21 @@
       setTimeout(() => toast.remove(), 250);
     }, 2600);
   }
+
+  // Make functions globally accessible for onclick handlers
+  window.createNewList = createNewList;
+  window.useListInQuiz = useListInQuiz;
+  window.viewWordList = viewWordList;
+  window.deleteWordList = deleteWordList;
+  window.toggleFavorite = toggleFavorite;
+  window.openEditModal = openEditModal;
+  window.saveEditModal = saveEditModal;
+  window.closeEditModal = closeEditModal;
+  window.closeBeeModal = closeBeeModal;
+  window.confirmBeeModal = confirmBeeModal;
+  window.closeBeePrompt = closeBeePrompt;
+  window.closeBeeSheet = closeBeeSheet;
+
   const style=document.createElement("style");
   style.textContent=`
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
