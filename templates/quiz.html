@@ -5460,10 +5460,11 @@ class QuizManager {
                 definition: data.definition || ''
             };
 
-            // DISABLE input until timer starts
-            document.getElementById('spellingInput').disabled = true;
-            document.getElementById('spellingInput').value = '';
-            document.getElementById('spellingInput').placeholder = 'Wait for timer...';
+            // Enable input immediately - users can type right away
+            const spellingInput = document.getElementById('spellingInput');
+            spellingInput.disabled = false;
+            spellingInput.value = '';
+            spellingInput.placeholder = 'Type your answer...';
 
             // If this first question is also the last, announce that explicitly
             if (data.total && questionNumber === data.total) {
@@ -5570,11 +5571,9 @@ class QuizManager {
         // Start the timer
         this.countdownTimer.start();
         
-        // ENABLE input now that timer has started
+        // Input is already enabled - just ensure focus
         const spellingInput = document.getElementById('spellingInput');
         if (spellingInput) {
-            spellingInput.disabled = false;
-            spellingInput.placeholder = 'Type your answer...';
             spellingInput.focus();
         }
     }
@@ -6423,11 +6422,11 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // DISABLE input until timer starts
+            // Enable input immediately - users can type right away
             const spellingInput = document.getElementById('spellingInput');
-            spellingInput.disabled = true;
+            spellingInput.disabled = false;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Wait for timer...';
+            spellingInput.placeholder = 'Type your answer...';
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
