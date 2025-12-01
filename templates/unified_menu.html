@@ -12967,6 +12967,7 @@
                 this.checks = [];
                 this.startTime = Date.now();
                 this.tapToEnterShown = false;
+                this.liftOffShown = false;
             }
             
             // Fetch with timeout protection using AbortController
@@ -12996,14 +12997,14 @@
                 const percentElement = document.getElementById('loadingPercentage');
                 const statusElement = document.getElementById('loadingStatus');
                 
-                // Check if this is the "Buzz On!" message (at 90%)
-                if (status.includes('Buzz On!') && percentElement) {
-                    // Flash "We Have Lift Off!" message
-                    const originalText = percentElement.textContent;
+                // Check if we've reached 90% - show "Ready for Lift Off"
+                if (this.progress >= 90 && this.progress < 100 && percentElement && !this.liftOffShown) {
+                    this.liftOffShown = true;
+                    // Flash "Ready for Lift Off!" message
                     percentElement.style.transition = 'all 0.3s ease-in-out';
                     percentElement.style.transform = 'scale(1.2)';
                     percentElement.style.color = '#FFD700';
-                    percentElement.textContent = '🚀 We Have Lift Off! 🚀';
+                    percentElement.textContent = '🚀 Ready for Lift Off! 🚀';
                     
                     // Show sparkle FX
                     this.showBuzzOnFX(percentElement.parentElement);
