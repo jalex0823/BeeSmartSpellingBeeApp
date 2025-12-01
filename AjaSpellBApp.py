@@ -12210,9 +12210,13 @@ def api_get_avatars():
                     is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
             else:
                 is_admin_or_premium = getattr(current_user, 'role', '') == 'admin'
+            
+            # CRITICAL DEBUG: Log admin status
+            print(f"🔍 Avatar API - User: {current_user.username}, Role: {getattr(current_user, 'role', 'none')}, is_admin_or_premium: {is_admin_or_premium}, is_guest: {is_guest}")
         else:
             # Not authenticated = guest by default
             is_guest = True
+            print(f"🔍 Avatar API - Unauthenticated user (guest mode)")
 
         # Request filters
         category = request.args.get('category')
@@ -12272,16 +12276,17 @@ def api_get_avatars():
                     tier_val = None
                     price_val = None
 
-                    # MONETIZATION: Enforce tier-based access control
-                    if is_guest:
+                    # MONETIZATION: Enforce tier-based access control with proper admin bypass
+                    # CRITICAL: Admins must be checked FIRST before guest restrictions
+                    if is_admin_or_premium:
+                        # Admins and premium members have FULL unrestricted access to ALL avatars
+                        is_locked = False
+                    elif is_guest:
                         # Guest users: only show mascot avatar (honey-comb)
                         if catalog_avatar and catalog_avatar.get('tier') != 'mascot_free':
                             # Skip non-mascot avatars for guests entirely
                             continue
                         # Mascot avatar is always unlocked for guests
-                        is_locked = False
-                    elif is_admin_or_premium:
-                        # Admins and premium members have access to all avatars
                         is_locked = False
                     elif catalog_avatar:
                         # Registered users: check unlock status using avatar_catalog helper (returns dict)
