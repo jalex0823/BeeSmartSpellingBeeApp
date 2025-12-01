@@ -2315,14 +2315,14 @@ window.addEventListener('error', (event) => {
     let particles = [];
     const particleCount = 200;
     
-    // Bee-themed colors (golden honey to amber to black)
+    // Blue swarm colors (light to deep blue)
     const colors = [
-        { r: 255, g: 193, b: 7 },   // Golden
-        { r: 255, g: 167, b: 38 },  // Amber
-        { r: 251, g: 140, b: 0 },   // Orange
-        { r: 50, g: 40, b: 30 },    // Dark brown
-        { r: 30, g: 25, b: 20 },    // Nearly black
-        { r: 255, g: 213, b: 79 }   // Light Gold
+        { r: 135, g: 206, b: 250 }, // Light Sky Blue
+        { r: 100, g: 149, b: 237 }, // Cornflower Blue
+        { r: 65, g: 105, b: 225 },  // Royal Blue
+        { r: 30, g: 144, b: 255 },  // Dodger Blue
+        { r: 0, g: 191, b: 255 },   // Deep Sky Blue
+        { r: 70, g: 130, b: 180 }   // Steel Blue
     ];
 
     // Create organic swarm shape mask
@@ -2448,10 +2448,10 @@ window.addEventListener('error', (event) => {
         if (energy > 0.4) {
             ctx.save();
             ctx.translate(W / 2, H / 2);
-            ctx.strokeStyle = `rgba(255, 193, 7, ${(energy - 0.4) * 0.5})`;
+            ctx.strokeStyle = `rgba(100, 149, 237, ${(energy - 0.4) * 0.5})`;
             ctx.lineWidth = 3 + energy * 5;
             ctx.shadowBlur = 20 + energy * 30;
-            ctx.shadowColor = 'rgba(255, 193, 7, 0.8)';
+            ctx.shadowColor = 'rgba(100, 149, 237, 0.8)';
             
             ctx.beginPath();
             swarmShape.forEach((point, i) => {
