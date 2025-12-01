@@ -189,6 +189,15 @@ const AVATAR_THEMES = {
         personality: 'quirky',
         soundCue: 'franken-bee.mp3'
     },
+    'inventor-bee': {
+        primary: '#FFB74D',
+        secondary: '#FFA726',
+        accent: '#FF9800',
+        bgGradient: 'linear-gradient(135deg, #FFE082 0%, #FFB74D 100%)',
+        borderGlow: '0 0 35px rgba(255, 152, 0, 0.9)',
+        personality: 'innovative',
+        soundCue: 'inventor-bee.mp3'
+    },
     'knight-bee': {
         primary: '#4682B4',
         secondary: '#708090',

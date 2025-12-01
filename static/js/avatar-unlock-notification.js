@@ -80,14 +80,8 @@
             }
         });
 
-        // Optional: Play celebration sound
-        try {
-            const audio = new Audio('/static/sounds/unlock.mp3');
-            audio.volume = 0.5;
-            audio.play().catch(err => console.log('Sound play failed:', err));
-        } catch (err) {
-            // Silently fail if sound not available
-        }
+        // Note: Unlock sound removed - file not available
+        // Visual confetti animation provides feedback instead
     };
 
     /**
