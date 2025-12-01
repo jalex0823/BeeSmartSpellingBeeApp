@@ -1966,6 +1966,81 @@ if ('speechSynthesis' in window) {
         backdrop-filter: blur(5px);
     }
 
+    /* Quiz Resume/Restart Modal Styling */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 3000;
+        backdrop-filter: blur(8px);
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal .modal-content {
+        background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(255, 193, 7, 0.4);
+        border: 3px solid rgba(255, 193, 7, 0.6);
+        animation: modalSlideUp 0.4s ease-out;
+        position: relative;
+    }
+
+    .modal .modal-content h2 {
+        color: #FFD700;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        margin-bottom: 1rem;
+        font-size: 1.8rem;
+    }
+
+    .modal .modal-content p {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .modal .modal-content strong {
+        color: #FF9800;
+        font-size: 1.2em;
+    }
+
+    .modal button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal button:active {
+        transform: translateY(0);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
     .exit-modal-content {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
@@ -2728,6 +2803,48 @@ if ('speechSynthesis' in window) {
 {% endblock %}
 
 {% block content %}
+<!-- 🔄 Quiz Resume/Restart Modal -->
+<div id="quizResumeModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px; text-align: center; padding: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🐝</div>
+        <h2 style="color: #FFD700; margin-bottom: 1rem;">Continue Your Quiz?</h2>
+        <p style="color: #666; margin-bottom: 1.5rem; font-size: 1.1rem;">
+            You have an unfinished quiz with <strong id="modalRemainingWords">0</strong> words remaining.
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button id="btnContinueQuiz" class="button-primary" style="
+                padding: 1rem 2rem;
+                font-size: 1.1rem;
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                border: none;
+                border-radius: 8px;
+                color: white;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            ">
+                ▶️ Continue Quiz
+            </button>
+            <button id="btnRestartQuiz" class="button-secondary" style="
+                padding: 1rem 2rem;
+                font-size: 1.1rem;
+                background: linear-gradient(135deg, #FF9800, #F57C00);
+                border: none;
+                border-radius: 8px;
+                color: white;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            ">
+                🔄 Start Fresh
+            </button>
+        </div>
+        <p style="color: #999; margin-top: 1rem; font-size: 0.9rem;">
+            Starting fresh will reset your progress on this word list.
+        </p>
+    </div>
+</div>
+
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -8124,8 +8241,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
     }
 
+    // 🔄 Check for existing quiz state and show resume/restart modal if needed
     fetch('/api/wordbank', {
-        credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
+        credentials: 'same-origin',
         cache: 'no-store',
         headers: {
             'Cache-Control': 'no-cache'
@@ -8139,26 +8257,91 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            // Initialize progress displays with actual word count
             const totalWords = data.words.length;
-            const progressText = document.getElementById('progressText');
-            const progressPercentage = document.getElementById('progressPercentage');
             
-            if (progressText) {
-                progressText.textContent = `Question 1 of ${totalWords}`;
-            }
+            // Check if there's an existing quiz state with progress
+            const quizState = data.quiz_state || {};
+            const currentIndex = quizState.current_index || 0;
+            const hasProgress = currentIndex > 0 && currentIndex < totalWords;
             
-            if (progressPercentage) {
-                progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
+            if (hasProgress) {
+                // Show resume/restart modal
+                const modal = document.getElementById('quizResumeModal');
+                const remainingWords = totalWords - currentIndex;
+                document.getElementById('modalRemainingWords').textContent = remainingWords;
+                
+                modal.style.display = 'flex';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+                
+                // Continue button - keeps existing progress
+                document.getElementById('btnContinueQuiz').onclick = () => {
+                    console.log('✅ User chose to continue quiz from question', currentIndex + 1);
+                    modal.style.display = 'none';
+                    initializeQuiz(data, totalWords, delight, smartyBee, false);
+                };
+                
+                // Restart button - resets quiz state
+                document.getElementById('btnRestartQuiz').onclick = async () => {
+                    console.log('🔄 User chose to restart quiz');
+                    modal.style.display = 'none';
+                    
+                    // Reset quiz state on server
+                    try {
+                        await fetch('/api/quiz/reset', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        console.log('✅ Quiz state reset on server');
+                    } catch (error) {
+                        console.warn('⚠️ Failed to reset quiz state on server:', error);
+                    }
+                    
+                    // Reload wordbank with fresh state
+                    const freshResponse = await fetch('/api/wordbank', {
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+                    const freshData = await freshResponse.json();
+                    initializeQuiz(freshData, totalWords, delight, smartyBee, true);
+                };
+            } else {
+                // No progress or completed - start fresh automatically
+                console.log('📝 Starting fresh quiz (no previous progress)');
+                initializeQuiz(data, totalWords, delight, smartyBee, true);
             }
-
-            window.quizManager = new QuizManager({ delight, smartyBee });
         })
         .catch(error => {
             console.error('Failed to check word bank:', error);
             BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
             setTimeout(() => window.location.href = '/', 2800);
         });
+    
+    // Helper function to initialize quiz
+    function initializeQuiz(data, totalWords, delight, smartyBee, isNewStart) {
+        const progressText = document.getElementById('progressText');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const quizState = data.quiz_state || {};
+        const currentIndex = quizState.current_index || 0;
+        
+        if (progressText) {
+            progressText.textContent = `Question ${currentIndex + 1} of ${totalWords}`;
+        }
+        
+        if (progressPercentage) {
+            const percentage = Math.round((currentIndex / totalWords) * 100);
+            progressPercentage.textContent = `Progress: ${percentage}% (${currentIndex} of ${totalWords} words)`;
+        }
+        
+        if (isNewStart) {
+            console.log('🎯 Initializing NEW quiz with', totalWords, 'words');
+        } else {
+            console.log('▶️ Resuming quiz from question', currentIndex + 1, 'of', totalWords);
+        }
+        
+        window.quizManager = new QuizManager({ delight, smartyBee });
+    }
     } catch (error) {
         console.error('🚨 Critical initialization error:', error);
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {

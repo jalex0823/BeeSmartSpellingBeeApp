@@ -5440,7 +5440,8 @@ def api_get_wordbank():
         "words": words,
         "success": len(words) > 0,
         "count": len(words),
-        "using_default": session.get("using_default_words", False)
+        "using_default": session.get("using_default_words", False),
+        "quiz_state": session.get(QUIZ_STATE_KEY, {})
     })
     # Add cache-control headers to prevent Safari caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -5480,6 +5481,29 @@ def api_wordbank_delete():
         init_quiz_state()
         return jsonify({"ok": True, "count": len(wb), "removed": removed.get("word")})
     except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/quiz/reset", methods=["POST"])
+def api_quiz_reset():
+    """
+    Reset quiz state to start fresh from the beginning.
+    Resets current_index and reshuffles word order.
+    """
+    try:
+        # Reset quiz state using the same initialization logic
+        init_quiz_state()
+        
+        # Clear any accumulated quiz stats for fresh start
+        wordbank = get_wordbank()
+        
+        return jsonify({
+            "ok": True,
+            "message": "Quiz reset successfully",
+            "total_words": len(wordbank),
+            "quiz_state": session.get(QUIZ_STATE_KEY, {})
+        })
+    except Exception as e:
+        print(f"❌ Error resetting quiz: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/api/content-filter-status", methods=["GET"])
