@@ -789,6 +789,7 @@
   // NEW: backup the original button handlers so we can restore them
   let _originalCancelOnclick = null;
   let _originalConfirmOnclick = null;
+  let _promptKeyHandler = null;
 
   // favorites stored locally unless API exists
   const favKey = "beesmart_favorites";
@@ -800,6 +801,13 @@
   // long press sheet state
   let pressTimer = null;
   let sheetTarget = null;
+
+  // Explicit DOM references for modal elements
+  const beeModal = document.getElementById("beeModal");
+  const modalIcon = document.getElementById("modalIcon");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  const modalConfirmBtn = document.getElementById("modalConfirmBtn");
 
   // Make functions globally accessible for onclick handlers (prevents ReferenceError)
   // These assignments happen before the functions are defined due to hoisting
@@ -820,6 +828,12 @@
     runBeeFlyover();
     await loadBuzzDustProgress();
     await loadWordLists();
+    
+    // Attach edit word count listener once (prevents duplicate listeners)
+    const editWordsEl = document.getElementById("editWords");
+    if (editWordsEl) {
+      editWordsEl.addEventListener("input", updateEditWordCount);
+    }
   });
 
   // Load Buzz Dust Progress
@@ -1308,9 +1322,6 @@
       // Update initial word count display
       updateEditWordCount();
       
-      // Add real-time word count listener
-      editWords.addEventListener('input', updateEditWordCount);
-      
       editModal.classList.add("active");
     }catch(err){
       console.error(err);
@@ -1514,6 +1525,19 @@
       confirmBtn.className = "bee-modal-btn primary";
       confirmBtn.onclick = () => closeBeePrompt(input.value);
 
+      // Keyboard: Enter = confirm, Esc = cancel
+      _promptKeyHandler = (evt) => {
+        if (!beeModal.classList.contains("active")) return;
+        if (evt.key === "Enter") {
+          evt.preventDefault();
+          closeBeePrompt(input.value);
+        } else if (evt.key === "Escape" || evt.key === "Esc") {
+          evt.preventDefault();
+          closeBeePrompt("");
+        }
+      };
+      document.addEventListener("keydown", _promptKeyHandler);
+
       beeModal.classList.add("active");
 
       // Auto-focus input
@@ -1532,6 +1556,12 @@
     beeModal.classList.remove("active");
     if (modalResolve) modalResolve(value);
     modalResolve = null;
+
+    // Remove key handler if present
+    if (_promptKeyHandler) {
+      document.removeEventListener("keydown", _promptKeyHandler);
+      _promptKeyHandler = null;
+    }
 
     // Restore original handlers
     if (_originalCancelOnclick) cancelBtn.onclick = _originalCancelOnclick;
