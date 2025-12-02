@@ -52,9 +52,16 @@ async function verifyUserAuthentication() {
         console.log('📋 Template user_data:', templateUserData);
         
         // Fetch fresh user session status from server
+        // iOS/Safari compatible fetch with proper credentials and headers
         const response = await fetch('/api/user/session', { 
+            method: 'GET',
             credentials: 'same-origin',
-            cache: 'no-cache'
+            cache: 'no-cache',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
         });
         
         if (response.ok) {
@@ -78,7 +85,7 @@ async function verifyUserAuthentication() {
             }
         }
         
-        // Brief delay so user sees the auth check
+        // Brief delay so user sees the auth check (iOS-safe timing)
         await new Promise(resolve => setTimeout(resolve, 300));
         
     } catch (error) {
@@ -274,10 +281,13 @@ async function loadAvatars() {
     try {
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
         const timestamp = new Date().getTime();
+        // iOS/Safari compatible fetch with explicit headers
         const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, { 
+            method: 'GET',
             credentials: 'same-origin',
             cache: 'no-cache',
             headers: {
+                'Accept': 'application/json',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             }

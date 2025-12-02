@@ -10015,19 +10015,78 @@ def debug_my_permissions():
     <!DOCTYPE html>
     <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="apple-mobile-web-app-capable" content="yes">
         <title>Permission Debug - {current_user.username}</title>
         <style>
-            body {{ font-family: monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }}
-            .section {{ margin: 20px 0; padding: 15px; background: #2a2a2a; border: 2px solid #00ff00; }}
+            body {{ 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; 
+                padding: 10px; 
+                background: #1a1a1a; 
+                color: #00ff00;
+                font-size: 14px;
+                line-height: 1.4;
+                overflow-x: hidden;
+            }}
+            .section {{ 
+                margin: 15px 0; 
+                padding: 12px; 
+                background: #2a2a2a; 
+                border: 2px solid #00ff00;
+                border-radius: 8px;
+                word-wrap: break-word;
+            }}
             .label {{ color: #ffff00; font-weight: bold; }}
             .value {{ color: #00ff00; }}
             .error {{ color: #ff0000; }}
             .success {{ color: #00ff00; }}
-            pre {{ background: #0a0a0a; padding: 10px; border: 1px solid #333; }}
+            pre {{ 
+                background: #0a0a0a; 
+                padding: 8px; 
+                border: 1px solid #333;
+                border-radius: 4px;
+                overflow-x: auto;
+                font-size: 12px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }}
+            h1 {{ 
+                font-size: 1.2rem; 
+                margin: 10px 0;
+                word-wrap: break-word;
+            }}
+            h2 {{ 
+                font-size: 1rem; 
+                margin: 8px 0;
+            }}
+            ul {{ 
+                padding-left: 20px;
+                margin: 10px 0;
+            }}
+            li {{ 
+                margin: 8px 0;
+                word-wrap: break-word;
+            }}
+            a {{
+                color: #00ff00;
+                text-decoration: none;
+                padding: 8px 12px;
+                display: inline-block;
+                background: #2a2a2a;
+                border: 1px solid #00ff00;
+                border-radius: 4px;
+                margin: 5px 0;
+            }}
+            /* iOS touch feedback */
+            a:active {{
+                background: #00ff00;
+                color: #1a1a1a;
+            }}
         </style>
     </head>
     <body>
-        <h1>🔍 Permission Debug for: {current_user.username}</h1>
+        <h1>🔍 Permission Debug: {current_user.username}</h1>
         
         <div class="section">
             <h2>User Information</h2>
