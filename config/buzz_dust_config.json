@@ -32,7 +32,7 @@
       "label": "Apprentice Bee",
       "emoji": "📚",
       "badge_image": "Apprentice.glb",
-      "min_buzz_dust": 500,
+      "min_buzz_dust": 500000,
       "description": "Learning the hive way",
       "color": "#E8F4F8",
       "badge_color": "#4A90E2"
@@ -42,7 +42,7 @@
       "label": "Scholar Bee",
       "emoji": "🎓",
       "badge_image": "Scholar.glb",
-      "min_buzz_dust": 2500,
+      "min_buzz_dust": 10000000,
       "description": "Dedicated learner",
       "color": "#F0E6FF",
       "badge_color": "#9B59B6"
@@ -52,7 +52,7 @@
       "label": "Elite Bee",
       "emoji": "🏆",
       "badge_image": "Elite.glb",
-      "min_buzz_dust": 10000,
+      "min_buzz_dust": 25000000,
       "description": "Spelling champion",
       "color": "#FFE6E6",
       "badge_color": "#E74C3C"
@@ -62,7 +62,7 @@
       "label": "Magistrate Bee",
       "emoji": "👑",
       "badge_image": "Magistrate.glb",
-      "min_buzz_dust": 50000,
+      "min_buzz_dust": 550000000,
       "description": "Hive leader",
       "color": "#FFF0E6",
       "badge_color": "#E67E22"
@@ -72,7 +72,7 @@
       "label": "Buzz Dust Master",
       "emoji": "✨",
       "badge_image": "BuzzDustMaster.glb",
-      "min_buzz_dust": 100000,
+      "min_buzz_dust": 1000000000,
       "description": "Legendary BeeSmart hero",
       "color": "#FFD700",
       "badge_color": "#F39C12"
