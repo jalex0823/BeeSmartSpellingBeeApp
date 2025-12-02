@@ -1,0 +1,322 @@
+{
+  "al-bee": {
+    "name": "Al Bee Avatar",
+    "glb_file": "AlBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/AlBee.glb",
+    "link": "/static/assets/avatars/glb_files/AlBee.glb"
+  },
+  "brother-bee": {
+    "name": "Brother Bee Avatar",
+    "glb_file": "BrotherBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/BrotherBee.glb",
+    "link": "/static/assets/avatars/glb_files/BrotherBee.glb"
+  },
+  "builder-bee": {
+    "name": "Builder Bee Avatar",
+    "glb_file": "BuilderBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/BuilderBee.glb",
+    "link": "/static/assets/avatars/glb_files/BuilderBee.glb"
+  },
+  "buda-bee": {
+    "name": "Buda Bee Avatar",
+    "glb_file": "BudaBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/BudaBee.glb",
+    "link": "/static/assets/avatars/glb_files/BudaBee.glb"
+  },
+  "buzz-bee": {
+    "name": "Buzz Bee Avatar",
+    "glb_file": "BuzzBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/BuzzBee.glb",
+    "link": "/static/assets/avatars/glb_files/BuzzBee.glb"
+  },
+  "cool-bee": {
+    "name": "Cool Bee Avatar",
+    "glb_file": "CoolBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/CoolBee.glb",
+    "link": "/static/assets/avatars/glb_files/CoolBee.glb"
+  },
+  "cutie-bee": {
+    "name": "Cutie Bee Avatar",
+    "glb_file": "CutieBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/CutieBee.glb",
+    "link": "/static/assets/avatars/glb_files/CutieBee.glb"
+  },
+  "detective-bee": {
+    "name": "Detective Bee Avatar",
+    "glb_file": "DetectiveBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/DetectiveBee.glb",
+    "link": "/static/assets/avatars/glb_files/DetectiveBee.glb"
+  },
+  "diva-bee": {
+    "name": "Diva Bee Avatar",
+    "glb_file": "DivaBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/DivaBee.glb",
+    "link": "/static/assets/avatars/glb_files/DivaBee.glb"
+  },
+  "doc-bee": {
+    "name": "Doc Bee Avatar",
+    "glb_file": "DoctorBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/DoctorBee.glb",
+    "link": "/static/assets/avatars/glb_files/DoctorBee.glb"
+  },
+  "explorer-bee": {
+    "name": "Explorer Bee Avatar",
+    "glb_file": "ExplorerBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/ExplorerBee.glb",
+    "link": "/static/assets/avatars/glb_files/ExplorerBee.glb"
+  },
+  "fairy-bee": {
+    "name": "Fairy Bee Avatar",
+    "glb_file": "FairyBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/FairyBee.glb",
+    "link": "/static/assets/avatars/glb_files/FairyBee.glb"
+  },
+  "firefighter-bee": {
+    "name": "Firefighter Bee Avatar",
+    "glb_file": "FirefighterBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/FirefighterBee.glb",
+    "link": "/static/assets/avatars/glb_files/FirefighterBee.glb"
+  },
+  "honey-comb": {
+    "name": "Honey Comb Avatar",
+    "glb_file": "HoneyComb.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/HoneyComb.glb",
+    "link": "/static/assets/avatars/glb_files/HoneyComb.glb"
+  },
+  "j-rock-bee": {
+    "name": "J Rock Bee Avatar",
+    "glb_file": "JRockBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/JRockBee.glb",
+    "link": "/static/assets/avatars/glb_files/JRockBee.glb"
+  },
+  "knight-bee": {
+    "name": "Knight Bee Avatar",
+    "glb_file": "KnightBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/KnightBee.glb",
+    "link": "/static/assets/avatars/glb_files/KnightBee.glb"
+  },
+  "mascot-bee": {
+    "name": "Mascot Bee Avatar",
+    "glb_file": "MascotBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/MascotBee.glb",
+    "link": "/static/assets/avatars/glb_files/MascotBee.glb"
+  },
+  "professor-bee": {
+    "name": "Professor Bee Avatar",
+    "glb_file": "ProfessorBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/ProfessorBee.glb",
+    "link": "/static/assets/avatars/glb_files/ProfessorBee.glb"
+  },
+  "queen-bee": {
+    "name": "Queen Bee Avatar",
+    "glb_file": "QueenBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/QueenBee.glb",
+    "link": "/static/assets/avatars/glb_files/QueenBee.glb"
+  },
+  "robo-bee": {
+    "name": "Robo Bee Avatar",
+    "glb_file": "RoboBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/RoboBee.glb",
+    "link": "/static/assets/avatars/glb_files/RoboBee.glb"
+  },
+  "rocker-bee": {
+    "name": "Rocker Bee Avatar",
+    "glb_file": "RockerBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/RockerBee.glb",
+    "link": "/static/assets/avatars/glb_files/RockerBee.glb"
+  },
+  "sea-bee": {
+    "name": "Sea Bee Avatar",
+    "glb_file": "SeaBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/SeaBee.glb",
+    "link": "/static/assets/avatars/glb_files/SeaBee.glb"
+  },
+  "selfie-bee": {
+    "name": "Selfie Bee Avatar",
+    "glb_file": "SelfieBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/SelfieBee.glb",
+    "link": "/static/assets/avatars/glb_files/SelfieBee.glb"
+  },
+  "vamp-bee": {
+    "name": "Vamp Bee Avatar",
+    "glb_file": "VampBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/VampBee.glb",
+    "link": "/static/assets/avatars/glb_files/VampBee.glb"
+  },
+  "ware-bee": {
+    "name": "Ware Bee Avatar",
+    "glb_file": "WareBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/WareBee.glb",
+    "link": "/static/assets/avatars/glb_files/WareBee.glb"
+  },
+  "zom-bee": {
+    "name": "Zom Bee Avatar",
+    "glb_file": "ZomBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/ZomBee.glb",
+    "link": "/static/assets/avatars/glb_files/ZomBee.glb"
+  },
+  "motor-bee": {
+    "name": "Motor Bee Avatar",
+    "glb_file": "MotorBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/MotorBee.glb",
+    "link": "/static/assets/avatars/glb_files/MotorBee.glb"
+  },
+  "o-bee": {
+    "name": "O Bee Avatar",
+    "glb_file": "OBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/OBee.glb",
+    "link": "/static/assets/avatars/glb_files/OBee.glb"
+  },
+  "singer-bee": {
+    "name": "Singer Bee Avatar",
+    "glb_file": "SingerBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/SingerBee.glb",
+    "link": "/static/assets/avatars/glb_files/SingerBee.glb"
+  },
+  "space-bee": {
+    "name": "Space Bee Avatar",
+    "glb_file": "SpaceBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/SpaceBee.glb",
+    "link": "/static/assets/avatars/glb_files/SpaceBee.glb"
+  },
+  "super-bee": {
+    "name": "Super Bee Avatar",
+    "glb_file": "SuperBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/SuperBee.glb",
+    "link": "/static/assets/avatars/glb_files/SuperBee.glb"
+  },
+  "gamer-bee": {
+    "name": "Gamer Bee Avatar",
+    "glb_file": "GamerBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/GamerBee.glb",
+    "link": "/static/assets/avatars/glb_files/GamerBee.glb"
+  },
+  "inventor-bee": {
+    "name": "Inventor Bee Avatar",
+    "glb_file": "InventorBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/InventorBee.glb",
+    "link": "/static/assets/avatars/glb_files/InventorBee.glb"
+  },
+  "lumberjack-bee": {
+    "name": "Lumberjack Bee Avatar",
+    "glb_file": "LumberjackBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/LumberjackBee.glb",
+    "link": "/static/assets/avatars/glb_files/LumberjackBee.glb"
+  },
+  "nurse-bee": {
+    "name": "Nurse Bee Avatar",
+    "glb_file": "NurseBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/NurseBee.glb",
+    "link": "/static/assets/avatars/glb_files/NurseBee.glb"
+  },
+  "plumber-bee": {
+    "name": "Plumber Bee Avatar",
+    "glb_file": "PlumberBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/PlumberBee.glb",
+    "link": "/static/assets/avatars/glb_files/PlumberBee.glb"
+  },
+  "techno-bee": {
+    "name": "Techno Bee Avatar",
+    "glb_file": "TechnoBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/TechnoBee.glb",
+    "link": "/static/assets/avatars/glb_files/TechnoBee.glb"
+  },
+  "umpire-bee": {
+    "name": "Umpire Bee Avatar",
+    "glb_file": "UmpireBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/UmpireBee.glb",
+    "link": "/static/assets/avatars/glb_files/UmpireBee.glb"
+  },
+  "xray-bee": {
+    "name": "Xray Bee Avatar",
+    "glb_file": "XrayBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/XrayBee.glb",
+    "link": "/static/assets/avatars/glb_files/XrayBee.glb"
+  },
+  "yeti-bee": {
+    "name": "Yeti Bee Avatar",
+    "glb_file": "YetiBee.glb",
+    "db": false,
+    "disk": true,
+    "disk_path": "static/assets/avatars/glb_files/YetiBee.glb",
+    "link": "/static/assets/avatars/glb_files/YetiBee.glb"
+  }
+}

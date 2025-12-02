@@ -1140,14 +1140,50 @@ if not app.config.get('SECRET_KEY'):
 ADMIN_REGISTRATION_KEY = os.environ.get("BEESMART_ADMIN_KEY", "BEE-ADMIN-2025-SECURE-KEY")
 
 # Railway Speed Round optimization
+def get_railway_speed_round_engine_options():
+    """Return optimized SQLAlchemy engine options for Railway Speed Round operations.
+
+    These settings keep connection pools small and responsive in ephemeral environments.
+    Safe to call even if not on Railway; returns empty dict when not applicable.
+    """
+    if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
+        return {
+            'pool_timeout': 5,          # Short wait before giving up on a connection
+            'pool_recycle': 300,        # Recycle connections every 5 minutes
+            'pool_pre_ping': True,      # Validate connections before use
+            'pool_size': 3,             # Small steady-state pool
+            'max_overflow': 2,          # Allow brief bursts
+            'connect_args': {
+                'connect_timeout': 5,
+                'application_name': 'BeeSmart_SpeedRound',
+                'options': '-c statement_timeout=10000'  # 10s statement timeout
+            }
+        }
+    return {}
+
+# Dedicated logger for Speed Round DB ops (added here because original helper file not imported)
+speed_logger = logging.getLogger('SpeedRound_Railway')
+if (os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL')) and not speed_logger.handlers:
+    speed_logger.setLevel(logging.INFO)
+    _speed_handler = logging.StreamHandler()
+    _speed_handler.setFormatter(logging.Formatter('%(asctime)s - SpeedRound - %(levelname)s - %(message)s'))
+    speed_logger.addHandler(_speed_handler)
+else:
+    # Avoid duplicate stderr noise if imported multiple times locally
+    if not speed_logger.handlers:
+        speed_logger.addHandler(logging.NullHandler())
+
 if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
     # Configure Flask session for Railway Speed Round
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
     
     # Update SQLAlchemy configuration for Railway Speed Round optimization
     railway_engine_options = get_railway_speed_round_engine_options()
-    if railway_engine_options and hasattr(app.config, 'SQLALCHEMY_ENGINE_OPTIONS'):
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'].update(railway_engine_options)
+    if railway_engine_options:
+        # Merge with any existing engine options (dictionary key, not attribute)
+        existing_opts = app.config.get('SQLALCHEMY_ENGINE_OPTIONS', {})
+        existing_opts.update(railway_engine_options)
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = existing_opts
         
     speed_logger.info("Speed Round Railway configuration applied")
 
@@ -13577,6 +13613,12 @@ def api_get_avatar(avatar_id):
         base_path = f"/static/assets/avatars/{avatar.folder_path}"
         # GLB-only: obj_file contains GLB filename
         is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+
+        # Prefer DB-backed GLB if present (CDN-free deployment)
+        if getattr(avatar, 'glb_data', None):
+            glb_url = url_for('api_avatar_glb_binary', slug=avatar.slug)
+        else:
+            glb_url = f"{base_path}/{avatar.obj_file}" if is_glb else None
         
         avatar_info = {
             'id': avatar.slug,
@@ -13586,7 +13628,7 @@ def api_get_avatar(avatar_id):
             'category': avatar.category,
             'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
             'preview_url': f"{base_path}/{avatar.thumbnail_file}",
-            'glb_url': f"{base_path}/{avatar.obj_file}" if is_glb else None,  # GLB files stored in obj_file field
+            'glb_url': glb_url,  # Prefer DB-served GLB when available
             'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
             'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
             'fallback_url': "/static/assets/avatars/fallback.png",
@@ -13606,6 +13648,27 @@ def api_get_avatar(avatar_id):
             'status': 'error',
             'message': str(e)
         }), 500
+
+# Stream GLB binary directly from database (model/gltf-binary)
+@app.route('/api/avatars/<slug>/glb', methods=['GET'])
+def api_avatar_glb_binary(slug):
+    try:
+        from models import Avatar
+        avatar = Avatar.get_by_slug(slug)
+        if not avatar or not getattr(avatar, 'glb_data', None):
+            return jsonify({'status': 'error', 'message': 'GLB not found'}), 404
+
+        data = avatar.glb_data
+        resp = Response(data, status=200, mimetype='model/gltf-binary')
+        # Basic caching headers
+        resp.headers['Cache-Control'] = 'public, max-age=86400'
+        resp.headers['Content-Length'] = str(len(data) if data else 0)
+        filename = (avatar.obj_file or f"{slug}.glb").rsplit('/',1)[-1]
+        resp.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+        return resp
+    except Exception as e:
+        print(f"❌ Error serving GLB for {slug}: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to read GLB'}), 500
 
 
 @app.route("/api/avatars/categories", methods=["GET"])

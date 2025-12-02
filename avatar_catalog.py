@@ -777,7 +777,7 @@ def get_avatars_by_tier(tier):
     """Returns avatars filtered by tier (default_free, earn_or_buy, premium, mascot, special)"""
     return [a for a in get_avatar_catalog() if a.get("tier") == tier]
 
-def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None, is_guest=False):
+def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None, is_guest=False, user_role: str | None = None):
     """
     Check if user has unlocked an avatar via points or purchase.
     Admin users bypass all checks via their user profile.
@@ -798,7 +798,8 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
     if not avatar:
         return {"unlocked": False, "reason": "Avatar not found", "required_points": 0, "price": 0}
     
-    # MONETIZATION: Guest users can only access mascot avatar
+    # Normalize role flags: guest overrides other roles
+    role = (user_role or '').strip().lower()
     if is_guest:
         tier = avatar.get("tier", "premium")
         if tier == "mascot_free":
@@ -810,6 +811,43 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
                 "required_points": 0,
                 "price": 0
             }
+
+    # Role-based restrictions (very restricted availability)
+    # - admin: full access
+    # - teacher: default_free + earn_or_buy (no direct premium unless purchased)
+    # - parent: default_free; can purchase premium for child accounts
+    # - child/student: default_free + earn_or_buy; premium via points or purchase
+    # - fallback/unknown: default_free only unless purchase
+    tier = avatar.get("tier", "premium")
+    if role == "admin":
+        return {"unlocked": True, "reason": "Admin role", "required_points": 0, "price": 0}
+    elif role == "teacher":
+        if avatar.get("is_default_free", False) or tier == "earn_or_buy":
+            # proceed to normal points/purchase checks below
+            pass
+        else:
+            # premium requires purchase explicitly
+            if avatar_id in (purchased_avatars or []):
+                return {"unlocked": True, "reason": "Purchased (teacher)", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+            return {"unlocked": False, "reason": "Teacher role: premium requires purchase", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+    elif role in ("parent", "guardian"):
+        # Parents see free set; premium only if purchased
+        if avatar.get("is_default_free", False):
+            return {"unlocked": True, "reason": "Free avatar (parent)", "required_points": 0, "price": 0}
+        if avatar_id in (purchased_avatars or []):
+            return {"unlocked": True, "reason": "Purchased (parent)", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+        return {"unlocked": False, "reason": "Parent role: premium requires purchase", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+    elif role in ("child", "student"):
+        # Child can use default_free; earn_or_buy by points; premium by purchase or points if allowed
+        # proceed to default logic below
+        pass
+    else:
+        # Unknown role: restrict to default_free unless purchased
+        if avatar.get("is_default_free", False):
+            return {"unlocked": True, "reason": "Free avatar", "required_points": 0, "price": 0}
+        if avatar_id in (purchased_avatars or []):
+            return {"unlocked": True, "reason": "Purchased", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
+        return {"unlocked": False, "reason": "Restricted role: purchase required", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
     
     # Default free avatars are always unlocked for registered users
     if avatar.get("is_default_free", False):
@@ -831,6 +869,28 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
         "required_points": required_points,
         "price": avatar.get("price", 0)
     }
+
+
+def get_avatars_for_role(user_role: str) -> list[dict]:
+    """Return catalog entries filtered by role with very restricted availability.
+    admin: all
+    teacher: default_free + earn_or_buy
+    parent/guardian: default_free (other require purchase)
+    child/student: default_free + earn_or_buy (premium via points/purchase handled by check)
+    unknown: default_free
+    """
+    role = (user_role or '').strip().lower()
+    cats = get_avatar_catalog()
+    if role == "admin":
+        return cats
+    if role == "teacher":
+        return [a for a in cats if a.get("is_default_free", False) or a.get("tier") == "earn_or_buy"]
+    if role in ("parent", "guardian"):
+        return [a for a in cats if a.get("is_default_free", False)]
+    if role in ("child", "student"):
+        return [a for a in cats if a.get("is_default_free", False) or a.get("tier") == "earn_or_buy"]
+    # Unknown role
+    return [a for a in cats if a.get("is_default_free", False)]
 
 
 # --- Dynamic name overrides from original '!' PNGs ---------------------------
