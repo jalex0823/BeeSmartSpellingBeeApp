@@ -3444,6 +3444,9 @@ if ('speechSynthesis' in window) {
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
+        <!-- Definition/Sentence area shown BELOW the timer when revealed -->
+        <div class="definition-display" id="postTimerDefinition" style="display:none;"></div>
+
         <div class="bee-input" id="beeInputWrapper">
             <input type="text"
                    id="spellingInput"
@@ -5394,6 +5397,15 @@ class QuizManager {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
             this.hintUsedThisWord = false;
+            // Reset definition gating for the new word
+            this.definitionUnlocked = false;
+            const defBtnIntro = document.getElementById('showDefinitionButton');
+            if (defBtnIntro) {
+                defBtnIntro.disabled = true;
+                defBtnIntro.setAttribute('title', 'Spell the word correctly to view the definition');
+            }
+            const postDefIntro = document.getElementById('postTimerDefinition');
+            if (postDefIntro) postDefIntro.style.display = 'none';
             
             const response = await fetch('/api/next', { 
                 method: 'POST',
@@ -6132,6 +6144,9 @@ class QuizManager {
         }
 
         if (showDefinitionButton) {
+            // Start each word with definition disabled until spelled correctly
+            showDefinitionButton.disabled = true;
+            showDefinitionButton.setAttribute('title', 'Spell the word correctly to view the definition');
             showDefinitionButton.addEventListener('click', () => {
                 console.log('📖 Show Definition button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
@@ -6438,11 +6453,35 @@ class QuizManager {
                 voiceDefBox.textContent = finalDefinition;
             }
 
-            // Store the word data for pronunciation
+            // Always fetch full word info to populate both sentence and definition
+            let actualSentence = data.sentence || '';
+            let actualDefinition = data.definition || '';
+            try {
+                const pronounceData = await this.fetchPronounce(true);
+                if (pronounceData) {
+                    if (pronounceData.sentence) actualSentence = pronounceData.sentence;
+                    if (pronounceData.definition) actualDefinition = pronounceData.definition;
+                }
+            } catch (e) {
+                console.warn('fetchPronounce failed in loadNextWord:', e);
+            }
+            // Store the word data for UI helpers
             this.currentWordData = {
                 word: data.word || '',
-                definition: data.definition || ''
+                sentence: actualSentence || chosen || '',
+                definition: actualDefinition || chosen || ''
             };
+
+            // Reset definition unlock for the new word
+            this.definitionUnlocked = false;
+            const defBtnReset = document.getElementById('showDefinitionButton');
+            if (defBtnReset) {
+                defBtnReset.disabled = true;
+                defBtnReset.setAttribute('title', 'Spell the word correctly to view the definition');
+            }
+            // Hide any previous post-timer definition/sentence
+            const postDef = document.getElementById('postTimerDefinition');
+            if (postDef) postDef.style.display = 'none';
             
             // Don't animate mascot on every question - keep it calm during gameplay
             // Mascot will only animate when answers are submitted
@@ -6849,13 +6888,28 @@ class QuizManager {
         
         console.log('📝 Masked sentence:', maskedSentence);
         
-        // Display in voice definition area (below visualization)
+        // If timer is showing, render below timer; otherwise use voice area
+        const isTimerMode = window.morphController?.getMode && window.morphController.getMode() === 'timer';
+        if (isTimerMode) {
+            const postDef = document.getElementById('postTimerDefinition');
+            if (postDef) {
+                postDef.innerHTML = `
+                    <div style="padding: 8px 0; margin: 8px 0;">
+                        <strong style="color: #000;">📝 Sentence:</strong><br>
+                        <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedSentence}</span>
+                    </div>
+                `;
+                postDef.style.display = 'block';
+                console.log('✅ Sentence displayed below timer');
+                return;
+            }
+        }
         const voiceDefElement = document.getElementById('voiceDefinition');
         if (voiceDefElement) {
             voiceDefElement.innerHTML = `
                 <div style="padding: 8px 0; margin: 8px 0;">
                     <strong style="color: #000;">📝 Sentence:</strong><br>
-                    <span style="font-size: 1.05em; color: #000; line-height: 1.6;">${maskedSentence}</span>
+                    <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedSentence}</span>
                 </div>
             `;
             console.log('✅ Sentence displayed in voiceDefinition element');
@@ -6864,8 +6918,15 @@ class QuizManager {
         }
     }
 
-    // Show definition with the target word masked
+    // Show definition with the target word masked (only after correct spelling)
     showDefinition() {
+        const defBtn = document.getElementById('showDefinitionButton');
+        if (!this.definitionUnlocked) {
+            // Guard: not yet allowed
+            BeeSmart.showError('Spell the word correctly first to view the definition.');
+            if (defBtn) defBtn.disabled = true;
+            return;
+        }
         console.log('🔍 showDefinition called, currentWordData:', this.currentWordData);
         
         if (!this.currentWordData || !this.currentWordData.definition) {
@@ -6884,18 +6945,19 @@ class QuizManager {
         
         console.log('📖 Masked definition:', maskedDefinition);
         
-        // Display in voice definition area (below visualization)
-        const voiceDefElement = document.getElementById('voiceDefinition');
-        if (voiceDefElement) {
-            voiceDefElement.innerHTML = `
+        // Always display below the timer area
+        const postDef = document.getElementById('postTimerDefinition');
+        if (postDef) {
+            postDef.innerHTML = `
                 <div style="padding: 8px 0; margin: 8px 0;">
                     <strong style="color: #000;">📖 Definition:</strong><br>
-                    <span style="font-size: 1.05em; color: #000; line-height: 1.6;">${maskedDefinition}</span>
+                    <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedDefinition}</span>
                 </div>
             `;
-            console.log('✅ Definition displayed in voiceDefinition element');
+            postDef.style.display = 'block';
+            console.log('✅ Definition displayed below timer');
         } else {
-            console.error('❌ voiceDefinition element not found!');
+            console.error('❌ postTimerDefinition element not found!');
         }
     }
 
@@ -7034,6 +7096,13 @@ class QuizManager {
     const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
 
         if (result.correct) {
+            // Unlock definition button after correct spelling
+            this.definitionUnlocked = true;
+            const defBtnOk = document.getElementById('showDefinitionButton');
+            if (defBtnOk) {
+                defBtnOk.disabled = false;
+                defBtnOk.setAttribute('title', 'Click to view the definition below the timer');
+            }
             // 🏆 Use points from backend response
             const pointsData = result.points || {};
             let earnedPoints = pointsData.earned || 0;
