@@ -67,6 +67,7 @@ def upload_avatar_files(app, avatar_dir):
             # Handle special cases from avatar catalog
             slug_map = {
                 'AlBee': 'al-bee',
+                'AnxiousBee': 'anxious-bee',
                 'BrotherBee': 'brother-bee',
                 'BudaBee': 'buda-bee',
                 'BuilderBee': 'builder-bee',
@@ -77,14 +78,15 @@ def upload_avatar_files(app, avatar_dir):
                 'DivaBee': 'diva-bee',
                 'DoctorBee': 'doctor-bee',
                 'ExplorerBee': 'explorer-bee',
-                'Frankenbee': 'frankenbee',
+                'FrankenBee': 'franken-bee',
                 'GamerBee': 'gamer-bee',
-                'HoneyComb': 'honeycomb',
+                'HoneyComb': 'honey-comb',
                 'InventorBee': 'inventor-bee',
                 'JRockBee': 'j-rock-bee',
                 'KnightBee': 'knight-bee',
                 'LumberjackBee': 'lumberjack-bee',
                 'MascotBee': 'mascot-bee',
+                'MonsterBee': 'monster-bee',
                 'MotorBee': 'motor-bee',
                 'NurseBee': 'nurse-bee',
                 'OBee': 'o-bee',
@@ -104,7 +106,7 @@ def upload_avatar_files(app, avatar_dir):
                 'WareBee': 'ware-bee',
                 'XrayBee': 'xray-bee',
                 'YetiBee': 'yeti-bee',
-                'ZomBee': 'zombee'
+                'ZomBee': 'zom-bee'
             }
             
             slug = slug_map.get(file_name)

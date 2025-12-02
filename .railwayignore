@@ -61,3 +61,33 @@ static/assets/badges/glb_files/
 
 # Ephemeral local data
 data/wordbanks/
+ 
+# Additional ignores to minimize Railway upload size
+# Exclude thumbnails, previews, and renders (served from DB or generated)
+static/assets/avatars/glb_files/AvatarThumbnails/**
+static/assets/avatars/thumbnails/**
+static/assets/avatars/**/thumbnails/**
+static/assets/avatars/**/previews/**
+static/assets/avatars/**/renders/**
+
+# Common heavy media and archives not needed in deploy artifact
+*.ai
+*.obj
+*.mtl
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.bmp
+*.svg
+*.gif
+*.webp
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.ogg
+*.7z
+*.tar
+*.gz
