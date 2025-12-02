@@ -2969,9 +2969,11 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         session["wordbank_storage_id"] = storage_id
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
     
+    # ⚡ CRITICAL: COMPLETE REPLACEMENT (NOT APPEND!)
+    # This is direct assignment - old wordbank is COMPLETELY WIPED and replaced with new rows
     # Store full word list in server-side WORD_STORAGE (not in cookies!)
     with WORD_STORAGE_LOCK:
-        WORD_STORAGE[storage_id] = rows
+        WORD_STORAGE[storage_id] = rows  # ← DIRECT ASSIGNMENT = TOTAL REPLACEMENT
     # Persist to disk for durability across restarts
     _save_wordbank_to_disk(storage_id, rows)
     
@@ -6511,10 +6513,15 @@ def api_upload():
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
     
+    # Clear previous quiz state to prevent reverting between old/new word lists
+    if session.get(QUIZ_STATE_KEY):
+        session.pop(QUIZ_STATE_KEY, None)
+        session.modified = True
+    
     # Clear Random Play flag since user is now uploading custom words
     session.pop("is_random_play", None)
     
-    # Set wordbank (USER UPLOAD - marks has_uploaded_once)
+    # Set wordbank (USER UPLOAD - marks has_uploaded_once) - COMPLETE REPLACEMENT
     set_wordbank(deduped, is_user_upload=True)
     init_quiz_state()
     
@@ -6704,10 +6711,15 @@ def api_upload_manual_words():
         # CRITICAL: Set flag to prevent default word loading
         session["skip_default_load"] = True
         
+        # Clear previous quiz state to prevent reverting between old/new word lists
+        if session.get(QUIZ_STATE_KEY):
+            session.pop(QUIZ_STATE_KEY, None)
+            session.modified = True
+        
         # Clear Random Play flag since user is entering manual words
         session.pop("is_random_play", None)
         
-        # Store and initialize quiz (USER UPLOAD - manual words)
+        # Store and initialize quiz (USER UPLOAD - manual words) - COMPLETE REPLACEMENT
         set_wordbank(enriched, is_user_upload=True)
         init_quiz_state()
         
