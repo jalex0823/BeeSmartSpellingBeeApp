@@ -9969,7 +9969,7 @@ def api_user_session():
                 'username': current_user.username,
                 'user_id': current_user.id,
                 'role': getattr(current_user, 'role', 'user'),
-                'is_guest': session.get('is_guest', False) or is_guest_user(current_user),
+                'is_guest': False,  # Authenticated users are never guests
                 'is_admin': current_user.is_admin_or_premium() if hasattr(current_user, 'is_admin_or_premium') else False,
                 'honey_points': getattr(current_user, 'honey_points', 0),
                 'premium_member': getattr(current_user, 'premium_member', False)
