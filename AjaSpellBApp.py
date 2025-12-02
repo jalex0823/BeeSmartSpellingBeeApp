@@ -10409,7 +10409,8 @@ def api_user_session():
                 'is_guest': False,  # Authenticated users are never guests
                 'is_admin': current_user.is_admin_or_premium() if hasattr(current_user, 'is_admin_or_premium') else False,
                 'honey_points': getattr(current_user, 'honey_points', 0),
-                'premium_member': getattr(current_user, 'premium_member', False)
+                'premium_member': getattr(current_user, 'premium_member', False),
+                'purchased_avatars': list(getattr(current_user, 'purchased_avatars', []) or [])  # CRITICAL: Avatar unlock gate
             })
         else:
             return jsonify({

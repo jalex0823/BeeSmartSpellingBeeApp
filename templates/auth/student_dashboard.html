@@ -1050,7 +1050,8 @@
         try {
             if (typeof load3DAvatar === 'function') {
                 const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
-                load3DAvatar(avatarData.id, avatarName);
+                const glbUrl = (avatarData.urls && avatarData.urls.glb) || avatarData.model_url || `/static/assets/avatars/glb_files/${avatarData.id}.glb`;
+                load3DAvatar(glbUrl, avatarName, avatarData.id);
             } else {
                 console.warn('3D viewer not available; falling back to image.');
                 if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {

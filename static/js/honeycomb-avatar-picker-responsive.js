@@ -311,8 +311,9 @@ async function loadAvatars() {
         window.avatarUserInfo = {
             is_guest: data.is_guest || false,
             is_admin: data.is_admin || false,
-            user_role: data.user_role || null,
-            user_authenticated: data.user_authenticated || false
+            user_role: data.role || null,  // Fixed: use 'role' from API
+            user_authenticated: data.authenticated || false,  // Fixed: use 'authenticated' from API
+            purchased_avatars: data.purchased_avatars || []  // CRITICAL: Avatar unlock gate
         };
         console.log('👤 User Info:', window.avatarUserInfo);
         

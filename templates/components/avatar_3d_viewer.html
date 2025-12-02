@@ -274,11 +274,19 @@ function init3DViewer() {
 }
 
 // Function to load a specific avatar
-function load3DAvatar(avatarId, avatarName = null) {
+function load3DAvatar(glbUrlOrId, avatarName = null, fallbackId = null) {
     const viewer = init3DViewer();
     
-    // Use GLB file from the glb_files directory
-    const glbUrl = `/static/assets/avatars/glb_files/${avatarId}.glb`;
+    // Support both direct URL and legacy ID-based loading
+    let glbUrl;
+    if (glbUrlOrId && glbUrlOrId.startsWith('/')) {
+        // Direct URL provided (new method)
+        glbUrl = glbUrlOrId;
+    } else {
+        // Legacy: construct from ID
+        const avatarId = glbUrlOrId || fallbackId || 'MascotBee';
+        glbUrl = `/static/assets/avatars/glb_files/${avatarId}.glb`;
+    }
     
     viewer.loadAvatar(glbUrl, avatarName);
 }
