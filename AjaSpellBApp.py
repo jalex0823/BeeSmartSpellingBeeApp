@@ -13409,8 +13409,12 @@ def api_select_avatar():
             }), 400
         
         # ✅ SECURITY CHECK 1: Guest users cannot select avatars (beyond mascot)
-        is_user_guest = session.get('is_guest', False) or is_guest_user(current_user)
-        if is_user_guest or not current_user.password_hash:
+        # NOTE: @login_required prevents actual guests from reaching this endpoint
+        # Authenticated users with passwords are NEVER guests
+        is_user_guest = False  # Authenticated users are not guests
+        
+        # Additional check: users without passwords cannot select avatars
+        if not current_user.password_hash:
             # Guest users can only use the mascot avatar (honey-comb)
             from avatar_catalog import AVATAR_CATALOG
             avatar_tier = next(
