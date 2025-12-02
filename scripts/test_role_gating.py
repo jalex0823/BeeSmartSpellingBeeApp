@@ -40,6 +40,54 @@ with app.test_client() as client:
 
     client.get('/auth/logout')
 
+    # TEACHER
+    teacher_user = f'teacher_{rand}'
+    payload_teacher = {
+        "username": teacher_user,
+        "display_name": "Teacher",
+        "password": "Passw0rd!",
+        "email": f"{teacher_user}@example.com",
+        "role": "teacher",
+        "avatar_id": "mascot-bee"
+    }
+    r = client.post('/auth/register', json=payload_teacher)
+    print('REGISTER TEACHER', r.status_code, (r.get_json() or {}).get('success'))
+    # Avatars API for teacher
+    r = client.get('/api/avatars')
+    td = r.get_json() or {}
+    t_avatars = td.get('avatars', [])
+    t_locked = sum(1 for a in t_avatars if a.get('is_locked'))
+    t_unlocked = sum(1 for a in t_avatars if not a.get('is_locked'))
+    print('TEACHER STATUS', r.status_code, 'locked/unlocked:', t_locked, t_unlocked)
+    # Teacher dashboard access
+    r = client.get('/teacher/dashboard')
+    print('TEACHER DASHBOARD', r.status_code)
+
+    client.get('/auth/logout')
+
+    # PARENT
+    parent_user = f'parent_{rand}'
+    payload_parent = {
+        "username": parent_user,
+        "display_name": "Parent",
+        "password": "Passw0rd!",
+        "email": f"{parent_user}@example.com",
+        "role": "parent",
+        "avatar_id": "mascot-bee"
+    }
+    r = client.post('/auth/register', json=payload_parent)
+    print('REGISTER PARENT', r.status_code, (r.get_json() or {}).get('success'))
+    # Avatars API for parent
+    r = client.get('/api/avatars')
+    pd = r.get_json() or {}
+    p_avatars = pd.get('avatars', [])
+    p_locked = sum(1 for a in p_avatars if a.get('is_locked'))
+    p_unlocked = sum(1 for a in p_avatars if not a.get('is_locked'))
+    print('PARENT STATUS', r.status_code, 'locked/unlocked:', p_locked, p_unlocked)
+    # Parent dashboard access
+    r = client.get('/parent/dashboard')
+    print('PARENT DASHBOARD', r.status_code)
+
     admin_user = f'admin_{rand}'
     payload_admin = {
         "username": admin_user,
