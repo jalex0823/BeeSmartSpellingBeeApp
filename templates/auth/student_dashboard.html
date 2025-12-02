@@ -1050,7 +1050,9 @@
         try {
             if (typeof load3DAvatar === 'function') {
                 const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
-                load3DAvatar(avatarData.id, avatarName);
+                // Use full GLB URL from avatarData.urls.glb if available, fallback to ID
+                const glbPath = (avatarData.urls && avatarData.urls.glb) ? avatarData.urls.glb : avatarData.id;
+                load3DAvatar(glbPath, avatarName);
             } else {
                 console.warn('3D viewer not available; falling back to image.');
                 if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {

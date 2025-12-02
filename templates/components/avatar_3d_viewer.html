@@ -274,11 +274,21 @@ function init3DViewer() {
 }
 
 // Function to load a specific avatar
-function load3DAvatar(avatarId, avatarName = null) {
+// Can accept either:
+// - Full GLB URL (if avatarIdOrUrl starts with '/' or 'http')
+// - Avatar ID (will construct path as /static/assets/avatars/glb_files/{id}.glb)
+function load3DAvatar(avatarIdOrUrl, avatarName = null) {
     const viewer = init3DViewer();
     
-    // Use GLB file from the glb_files directory
-    const glbUrl = `/static/assets/avatars/glb_files/${avatarId}.glb`;
+    // Determine if we have a full URL or just an ID
+    let glbUrl;
+    if (avatarIdOrUrl.startsWith('/') || avatarIdOrUrl.startsWith('http')) {
+        // Full URL provided
+        glbUrl = avatarIdOrUrl;
+    } else {
+        // Just an ID - construct path
+        glbUrl = `/static/assets/avatars/glb_files/${avatarIdOrUrl}.glb`;
+    }
     
     viewer.loadAvatar(glbUrl, avatarName);
 }
