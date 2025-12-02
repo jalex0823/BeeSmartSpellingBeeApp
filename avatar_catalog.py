@@ -501,23 +501,8 @@ AVATAR_CATALOG: List[Dict] = [
     },
 ]
 
-# ------------------------------
-# Pricing tiers derived from catalog
-# ------------------------------
-# Premium $1.99 tier (e.g., Fairy Bee)
-try:
-    PREMIUM_199_IDS: List[str] = [
-        a.get('id') for a in AVATAR_CATALOG
-        if float(a.get('price') or 0.0) == 1.99
-    ]
-except Exception:
-    PREMIUM_199_IDS = []
-
-# Back-compat alias: some scripts may expect a set
-try:
-    PREMIUM_199_IDS_SET = set(PREMIUM_199_IDS)
-except Exception:
-    PREMIUM_199_IDS_SET = set()
+# Append additional avatars that were previously split out by mistake
+ADDITIONAL_AVATARS: List[Dict] = [
     {
         "id": "space-bee",
         "product_id": "beesmart.avatar.space_bee",
@@ -706,6 +691,9 @@ except Exception:
         "price": 1.99
     }
 ]
+
+# Merge in the additional avatars
+AVATAR_CATALOG.extend(ADDITIONAL_AVATARS)
 
 
 # --- Monetization Constants & Helpers ----------------------------------------

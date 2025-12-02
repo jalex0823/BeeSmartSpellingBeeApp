@@ -88,6 +88,16 @@ else:
 print("📚 Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
 
 # ------------------------------
+# Ensure Flask app exists BEFORE any route decorators
+# ------------------------------
+# Some routes (e.g., wordbank APIs) are defined early in this module. To avoid
+# NameError during module import, make sure `app` is created up front.
+try:
+    app  # type: ignore[name-defined]
+except NameError:
+    app = Flask(__name__)
+
+# ------------------------------
 # Simple in-memory cache for avatar API
 # ------------------------------
 AVATAR_LIST_CACHE: Dict[str, Dict] = {}
@@ -509,13 +519,7 @@ BADGE_METADATA = {
 # Public policy pages
 # ------------------------------
 
-# Ensure Flask app object exists before any route decorators are applied
-# Some routes are defined early in this module; define `app` up-front to avoid NameError at import time.
-print("🔧 Creating Flask app (early)...")
-try:
-    app  # type: ignore[name-defined]
-except NameError:
-    app = Flask(__name__)
+# Flask app already created earlier to support early route decorators
 
 # Reliable, post-app-creation lightweight routes
 @app.route('/')
@@ -702,11 +706,44 @@ def api_avatars():
     # Build role-aware list
     result = []
 
-    # Guest rule: picker is not available; deny access explicitly
+    # Guest rule: only show the Honey Comb avatar (full color); hide all others
     if role == 'guest':
-        payload = {
-            "status": "forbidden",
-            "message": "Avatar picker is only available for registered users",
+        guest_list = []
+        try:
+            # Find Honey Comb entry by canonical id
+            honey = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
+            # Fallback to Mascot if Honey Comb missing
+            if honey is None:
+                honey = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
+
+            if honey is not None:
+                thumb = _avatar_thumbnail_url_from_glb(honey.get('obj_file'))
+                folder = honey.get('folder') or 'glb_files'
+                obj_file = honey.get('obj_file') or ''
+                glb_url = f"/static/assets/avatars/{folder}/{obj_file}" if obj_file else None
+                guest_list.append({
+                    'id': honey.get('id'),
+                    'name': honey.get('name'),
+                    'tier': honey.get('tier'),
+                    'category': honey.get('category'),
+                    'description': honey.get('description'),
+                    'price_usd': float(honey.get('price') or 0.0) if honey.get('price') is not None else None,
+                    'unlock_requirement': int(honey.get('unlock_points') or 0) or None,
+                    'is_locked': False,  # Full color for the one visible guest avatar
+                    'urls': {
+                        'thumbnail': thumb,
+                        'glb': glb_url
+                    }
+                })
+        except Exception as _e:
+            print(f"⚠️ Guest avatar list build error: {_e}")
+
+        # Cache and return minimal guest payload (no other avatars exposed)
+        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_list }
+        return jsonify({
+            "status": "success",
+            "avatars": guest_list,
+            "cached": False,
             "user": {
                 "role": role,
                 "is_authenticated": False,
@@ -714,8 +751,7 @@ def api_avatars():
                 "is_admin": False,
                 "honey_points": 0,
             }
-        }
-        return jsonify(payload), 403
+        })
 
     # Registered users and admins: evaluate all catalog entries
     locked_count = 0
