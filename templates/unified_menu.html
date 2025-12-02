@@ -76,6 +76,8 @@
             });
         })();
     </script>
+    <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
+    <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251201"></script>
     <!-- Mascot Bee 3D Component -->
     <script src="{{ url_for('static', filename='js/mascot-3d.js') }}?v=20251129"></script>
     <!-- User Avatar Loader -->
