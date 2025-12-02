@@ -706,29 +706,29 @@ def api_avatars():
     # Build role-aware list
     result = []
 
-    # Guest rule: only show the Honey Comb avatar (full color); hide all others
+    # Guest rule: only show the Mascot Bee avatar (full color); hide all others
     if role == 'guest':
         guest_list = []
         try:
-            # Find Honey Comb entry by canonical id
-            honey = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
-            # Fallback to Mascot if Honey Comb missing
-            if honey is None:
-                honey = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
+            # Prefer Mascot Bee for guests
+            mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
+            # Fallback to Honey Comb if Mascot is missing
+            if mascot is None:
+                mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
 
-            if honey is not None:
-                thumb = _avatar_thumbnail_url_from_glb(honey.get('obj_file'))
-                folder = honey.get('folder') or 'glb_files'
-                obj_file = honey.get('obj_file') or ''
+            if mascot is not None:
+                thumb = _avatar_thumbnail_url_from_glb(mascot.get('obj_file'))
+                folder = mascot.get('folder') or 'glb_files'
+                obj_file = mascot.get('obj_file') or ''
                 glb_url = f"/static/assets/avatars/{folder}/{obj_file}" if obj_file else None
                 guest_list.append({
-                    'id': honey.get('id'),
-                    'name': honey.get('name'),
-                    'tier': honey.get('tier'),
-                    'category': honey.get('category'),
-                    'description': honey.get('description'),
-                    'price_usd': float(honey.get('price') or 0.0) if honey.get('price') is not None else None,
-                    'unlock_requirement': int(honey.get('unlock_points') or 0) or None,
+                    'id': mascot.get('id'),
+                    'name': mascot.get('name'),
+                    'tier': mascot.get('tier'),
+                    'category': mascot.get('category'),
+                    'description': mascot.get('description'),
+                    'price_usd': float(mascot.get('price') or 0.0) if mascot.get('price') is not None else None,
+                    'unlock_requirement': int(mascot.get('unlock_points') or 0) or None,
                     'is_locked': False,  # Full color for the one visible guest avatar
                     'urls': {
                         'thumbnail': thumb,
