@@ -38,6 +38,19 @@ def main() -> int:
     else:
         print(f"⚠️ Schema script not found at {schema_script} (skipping)")
 
+    # Run wordbank persistence migration (non-fatal)
+    wordbank_migration = "add_wordbank_columns.py"
+    if os.path.exists(wordbank_migration):
+        try:
+            print(f"🔧 Running wordbank persistence migration: {wordbank_migration}")
+            rc = run([sys.executable, wordbank_migration])
+            if rc != 0:
+                print(f"⚠️ wordbank migration exited with code {rc} (continuing anyway)")
+        except Exception as e:
+            print(f"⚠️ wordbank migration failed: {e} (continuing anyway)")
+    else:
+        print(f"⚠️ Wordbank migration not found at {wordbank_migration} (skipping)")
+
     print("✅ Pre-deploy diagnostics complete. Proceeding to deploy.")
     return 0
 
