@@ -6,6 +6,74 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
+
+<script>
+// 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
+window.QUIZ_CACHED_VOICE = null;
+window.QUIZ_VOICE_INITIALIZED = false;
+
+// Initialize global voice cache on page load
+window.initializeGlobalVoice = function() {
+    if (window.QUIZ_VOICE_INITIALIZED) return;
+    
+    if ('speechSynthesis' in window) {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            window.QUIZ_VOICE_INITIALIZED = true;
+            console.log('🎤 Global voice initialized:', window.QUIZ_CACHED_VOICE?.name || 'Default');
+        }
+    }
+};
+
+// Global function to select best natural female voice
+function selectBestFemaleVoiceGlobal(voices) {
+    if (!voices || voices.length === 0) return null;
+    
+    const scoredVoices = voices
+        .filter(v => v.lang?.startsWith('en'))
+        .map(voice => {
+            let score = 0;
+            const name = voice.name.toLowerCase();
+            const lang = voice.lang.toLowerCase();
+            
+            // Prefer US English
+            if (lang.includes('en-us')) score += 50;
+            else if (lang.includes('en-gb')) score += 30;
+            else if (lang.includes('en-au')) score += 25;
+            
+            // Local voices sound better
+            if (voice.localService) score += 30;
+            
+            // Premium natural-sounding female voices (kids-friendly)
+            const premiumVoices = {
+                'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
+                'moira': 87, 'salli': 85, 'kendra': 85, 'susan': 75, 'victoria': 82,
+                'nova': 80, 'allison': 78, 'zira': 75
+            };
+            
+            for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                if (name.includes(voiceName)) {
+                    score += points;
+                    break;
+                }
+            }
+            
+            return { voice, score };
+        })
+        .sort((a, b) => b.score - a.score);
+    
+    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+}
+
+// Initialize voice when voices are loaded
+if ('speechSynthesis' in window) {
+    speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);
+    // Try immediate initialization
+    setTimeout(window.initializeGlobalVoice, 100);
+}
+</script>
+
 <style>
     .quiz-container {
         max-width: 700px;
@@ -1426,7 +1494,7 @@
     /* Honey pot container - Fixed positioning with proper spacing */
     .honey-pot-container {
         text-align: center;
-        background: linear-gradient(135deg, rgba(255, 250, 227, 0.95), rgba(255, 240, 245, 0.95));
+    background: linear-gradient(135deg, rgba(255, 250, 227, 0.95), rgba(255, 228, 150, 0.9));
         padding: 1.5rem 2rem 2rem;
         border-radius: 20px;
         box-shadow: 0 -5px 30px rgba(255, 193, 7, 0.3);
@@ -1489,7 +1557,7 @@
     }
 
     .quiz-logo img {
-        width: 200px;
+        width: 120px;
         height: auto;
         opacity: 0.95;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
@@ -2496,12 +2564,30 @@
         </div>
     </div>
 
+    <!-- Word List Metadata Anchor (for quiz-wordlist.js) -->
+    <div id="quiz-root" 
+         data-selected-list-id="{{ selected_list.id if selected_list else 'default' }}"
+         data-selected-list-name="{{ selected_list.name if selected_list else 'Word List' }}"
+         data-words-url="/api/wordbank"
+         style="display: none;">
+    </div>
+
+    <!-- Refresh List Button (optional UI element) -->
+    <div style="text-align: center; margin: 0.5rem 0;">
+        <button id="refreshWordListBtn" 
+                class="action-btn secondary" 
+                style="font-size: 0.85rem; padding: 0.4rem 1rem;"
+                title="Clear the current word list and start fresh">
+            🔄 Refresh List
+        </button>
+    </div>
+
     <!-- Quiz Card -->
     <div class="quiz-card" id="quizCard">
         <!-- Logo at top center -->
         <div class="quiz-logo">
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
-            <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo">
+            <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo">
             
             <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
             <div id="mascotBee3D" class="mascot-3d-container"></div>
@@ -2560,7 +2646,6 @@
 
         <!-- Hidden definition storage for JavaScript (shown in visualizer instead) -->
         <div class="definition-display" id="definitionDisplay" style="display: none;">
-            Loading your first word...
         </div>
         
         <!-- Voice Toggle Button - Centered -->
@@ -3262,7 +3347,7 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.92) {
+    speakWord(word, onEndCallback = null, rate = 0.85) {
         if (!word || !('speechSynthesis' in window)) {
             if (onEndCallback) onEndCallback();
             return;
@@ -3272,8 +3357,8 @@ class BeeSoundboard {
         
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.35;
-            utterance.rate = rate; // Use provided rate instead of fixed 0.92
+            utterance.pitch = 1.0; // Natural neutral female voice
+            utterance.rate = rate; // Use provided rate (default 0.85 - natural conversational pace)
             utterance.volume = 0.9;
             utterance.text = word;
             
@@ -3287,8 +3372,13 @@ class BeeSoundboard {
                 utterance.addEventListener('error', onEndCallback);
             }
             
-            // Use enhanced voice selection for natural-sounding female voices
-            if (!this.cachedVoice) {
+        // Use enhanced voice selection for natural-sounding female voices
+        if (!this.cachedVoice) {
+            // Try global cached voice first for consistency
+            if (window.QUIZ_CACHED_VOICE) {
+                this.cachedVoice = window.QUIZ_CACHED_VOICE;
+                console.log('🎤 speakWord using global cached voice:', this.cachedVoice.name);
+            } else {
                 this.cachedVoice = this.selectBestFemaleVoice();
                 
                 if (this.cachedVoice) {
@@ -3299,12 +3389,11 @@ class BeeSoundboard {
                     console.warn('⚠️ speakWord: No suitable voice found, using browser default');
                 }
             }
-            
-            if (this.cachedVoice) {
-                utterance.voice = this.cachedVoice;
-            }
-            
-            // Sync visual display with announcer + morph to voice visualizer
+        }
+        
+        if (this.cachedVoice) {
+            utterance.voice = this.cachedVoice;
+        }            // Sync visual display with announcer + morph to voice visualizer
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
                 if (statusEl) statusEl.textContent = this.cachedVoice
@@ -3411,10 +3500,11 @@ class BeeSoundboard {
                 if (name.includes('premium')) score += 60;
                 if (name.includes('neural')) score += 60;
                 
-                // Known high-quality female voices
+                // Known high-quality natural-sounding female voices (prioritized for kids)
                 const premiumVoices = {
-                    'samantha': 90, 'aria': 85, 'jenny': 85, 'alex': 85,
-                    'victoria': 80, 'nova': 80, 'zira': 75, 'allison': 70
+                    'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
+                    'moira': 87, 'aria': 85, 'jenny': 85, 'salli': 85, 'kendra': 85,
+                    'victoria': 82, 'nova': 80, 'allison': 78, 'zira': 75, 'susan': 75
                 };
                 
                 for (const [voiceName, points] of Object.entries(premiumVoices)) {
@@ -3998,9 +4088,9 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            // Speak a friendly prompt and the word twice
-            const phrase = `Spell the word ${data.word}. ${data.word}.`;
-            const rate = data.rate || 0.92; // Use provided rate or default
+            // Speak a friendly prompt and the word once (removed echo)
+            const phrase = `Spell the word, ${data.word}.`;
+            const rate = data.rate || 0.85; // Use provided rate or default natural pace
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -4328,21 +4418,23 @@ class QuizManager {
                 if (name.includes('premium')) score += 60;
                 if (name.includes('neural')) score += 60;
                 
-                // Known high-quality female voices (ordered by naturalness)
+                // Known high-quality natural-sounding female voices (prioritized for kids)
                 const premiumVoices = {
-                    'samantha': 90,     // macOS - very natural
-                    'alex': 85,         // macOS - excellent quality
-                    'victoria': 80,     // Windows - natural sounding
-                    'zira': 75,         // Windows - clear and natural
-                    'aria': 85,         // Modern Windows neural
-                    'jenny': 85,        // Modern neural voice
+                    'samantha': 95,     // macOS - very natural, excellent for kids
+                    'ava': 92,          // macOS - warm and clear
+                    'emma': 90,         // Modern neural - friendly tone
+                    'joanna': 88,       // Amazon Polly - professional but warm
+                    'karen': 88,        // Clear enunciation for spelling
+                    'moira': 87,        // Irish accent - pleasant and clear
+                    'aria': 85,         // Modern Windows neural - natural
+                    'jenny': 85,        // Modern neural voice - friendly
+                    'salli': 85,        // Amazon Polly - clear pronunciation
+                    'kendra': 85,       // Amazon Polly - warm tone
+                    'victoria': 82,     // Windows - natural sounding
                     'nova': 80,         // Modern neural voice
-                    'allison': 70,      // Traditional but good
-                    'ava': 70,          // Traditional but good
-                    'joanna': 65,       // Amazon Polly style
-                    'susan': 60,        // Traditional
-                    'karen': 55,        // Traditional
-                    'moira': 50         // Traditional Irish
+                    'allison': 78,      // Traditional but good clarity
+                    'zira': 75,         // Windows - clear and natural
+                    'susan': 75         // Traditional - good for spelling
                 };
                 
                 // Check for premium voice names
@@ -4423,20 +4515,26 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.0;  // Normal speed for US English
-                utterance.pitch = 1.1;
+                utterance.rate = 0.85;  // Natural conversational pace (consistent with speakWord)
+                utterance.pitch = 1.0; // Natural neutral female voice
                 utterance.volume = 0.85;
                 
                 // Cache the selected voice to ensure consistency using enhanced selection
                 if (!this.cachedVoice) {
-                    this.cachedVoice = this.selectBestFemaleVoice();
-                    
-                    if (this.cachedVoice) {
-                        const voiceType = this.cachedVoice.lang === 'en-US' 
-                            ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
-                        console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
+                    // Try global cached voice first for consistency
+                    if (window.QUIZ_CACHED_VOICE) {
+                        this.cachedVoice = window.QUIZ_CACHED_VOICE;
+                        console.log('🎤 speakDefinition using global cached voice:', this.cachedVoice.name);
                     } else {
-                        console.warn('⚠️ No suitable enhanced female voice found, using browser default');
+                        this.cachedVoice = this.selectBestFemaleVoice();
+                        
+                        if (this.cachedVoice) {
+                            const voiceType = this.cachedVoice.lang === 'en-US' 
+                                ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
+                            console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
+                        } else {
+                            console.warn('⚠️ No suitable enhanced female voice found, using browser default');
+                        }
                     }
                 }
                 
@@ -4688,19 +4786,23 @@ class QuizManager {
                     iosVoiceStatus.style.color = '#4CAF50';
                     iosVoiceStatus.style.fontWeight = '600';
                     
-                    const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
-                    const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
-                                       "Listen carefully to each word, then spell what you hear. " +
-                                       "Let's start spelling and fill that honey jar!";
-                    
-                    // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
-                    speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(introMessage);
-                    utterance.rate = 0.95;
-                    utterance.pitch = 1.1;
-                    utterance.volume = 0.9;
-                    
-                    utterance.onend = () => {
+                const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
+                const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
+                                   "Listen carefully to each word, then spell what you hear. " +
+                                   "Let's start spelling and fill that honey jar!";
+                
+                // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(introMessage);
+                
+                // Use global cached voice for consistency
+                if (window.QUIZ_CACHED_VOICE) {
+                    utterance.voice = window.QUIZ_CACHED_VOICE;
+                }
+                
+                utterance.rate = 0.85; // Natural conversational pace (consistent)
+                utterance.pitch = 1.0; // Natural neutral female voice
+                utterance.volume = 0.9;                    utterance.onend = () => {
                         console.log('✅ iOS intro voice completed successfully');
                         iosVoiceStatus.textContent = '✅ Great! Starting quiz...';
                         iosVoiceStatus.style.color = '#4CAF50';
@@ -5852,11 +5954,12 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // DISABLE input until timer starts
+            // ✅ ENABLE input immediately - no waiting for timer
             const spellingInput = document.getElementById('spellingInput');
-            spellingInput.disabled = true;
+            spellingInput.disabled = false;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Wait for timer...';
+            spellingInput.placeholder = 'Type your answer...';
+            spellingInput.focus();
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
@@ -5865,14 +5968,9 @@ class QuizManager {
             this.delight?.clearFeedbackState();
             
             // ⏱️ Announce and start timer AFTER word announcement completes
-            // Input will be enabled when timer starts
+            // Input is already enabled - users can start typing immediately
             if (this.timerEnabled && this.quizStarted) {
                 await this.announceAndStartTimer();
-            } else {
-                // If timer is disabled, enable input immediately
-                spellingInput.disabled = false;
-                spellingInput.placeholder = 'Type your answer...';
-                spellingInput.focus();
             }
         } catch (error) {
             console.error('Error loading next word:', error);
@@ -6083,7 +6181,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
+    async pronounceWord({ refresh = false, rate = 0.85 } = {}) {
         try {
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
@@ -6094,7 +6192,7 @@ class QuizManager {
                 const data = {
                     word: this.currentWordData.word,
                     definition: this.currentWordData.definition,
-                    rate: rate // Pass speech rate to handlers
+                    rate: rate // Pass speech rate to handlers (default 0.85 - natural pace)
                 };
                 
                 // Start visualizer animation BEFORE speaking
@@ -6120,15 +6218,15 @@ class QuizManager {
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                            const phrase = `Spell the word, ${data.word}.`;
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word, ${data.word}.`;
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = `Spell the word, ${data.word}.`;
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
@@ -6149,17 +6247,20 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = 0.85) {
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = rate;
+                utterance.rate = rate; // Default 0.85 - natural conversational pace
                 utterance.pitch = 1.0;
                 utterance.volume = 0.9;
                 
-                // Use the same female voice selection as other speech methods
-                if (this.cachedVoice) {
+                // Use global cached voice for consistency first
+                if (window.QUIZ_CACHED_VOICE) {
+                    utterance.voice = window.QUIZ_CACHED_VOICE;
+                    console.log(`Using global cached voice: ${window.QUIZ_CACHED_VOICE.name}`);
+                } else if (this.cachedVoice) {
                     utterance.voice = this.cachedVoice;
                     console.log(`Using cached female voice: ${this.cachedVoice.name}`);
                 } else {
@@ -6194,14 +6295,14 @@ class QuizManager {
         }
     }
 
-    // Pronounce word at slower speed for learning
+    // Pronounce word at natural pace (same as default)
     async pronounceWordSlow() {
-        return await this.pronounceWord({ rate: 0.7 });
+        return await this.pronounceWord({ rate: 0.85 });
     }
 
-    // Repeat word at normal speed
+    // Repeat word at natural pace
     async repeatWord() {
-        return await this.pronounceWord({ rate: 1.0 });
+        return await this.pronounceWord({ rate: 0.85 });
     }
 
     async submitAnswer() {
@@ -7326,16 +7427,14 @@ function pronounceWordFromReport(word) {
         speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(word);
-        const voices = speechSynthesis.getVoices();
         
-        // Prefer US English voice
-        const enUSVoice = voices.find(v => v.lang === 'en-US') || 
-                         voices.find(v => v.lang?.startsWith('en')) || 
-                         null;
-        if (enUSVoice) utterance.voice = enUSVoice;
+        // Use global cached voice for consistency
+        if (window.QUIZ_CACHED_VOICE) {
+            utterance.voice = window.QUIZ_CACHED_VOICE;
+        }
         
-        utterance.rate = 0.85;  // Slow for clarity
-        utterance.pitch = 1.0;
+        utterance.rate = 0.85;  // Natural conversational pace (consistent)
+        utterance.pitch = 1.0; // Natural neutral female voice
         utterance.volume = 1.0;
         
         speechSynthesis.speak(utterance);
@@ -7607,15 +7706,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🔄 Fetching user avatar from API...');
         await window.userAvatarLoader.init();
         
-        // Get avatar options from loader
-        const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-            width: 180,
-            height: 180,
-            autoRotate: true,
-            enableInteraction: true
-        });
+        // Check if user is registered or guest
+        const isGuest = window.userAvatarLoader.isGuest();
+        let avatarId;
+        let avatarOptions;
         
-        const avatarId = window.userAvatarLoader.getAvatarId();
+        if (isGuest) {
+            // Guest users: always use default mascot-bee
+            console.log('👤 Guest user detected - using default Mascot Bee');
+            avatarId = 'mascot-bee';
+            avatarOptions = {
+                avatarId: 'mascot-bee',
+                format: 'obj',
+                modelBase: '/static/assets/avatars/mascot-bee/',
+                modelName: 'MascotBee',
+                modelPath: '/static/assets/avatars/mascot-bee/MascotBee.obj',
+                mtlPath: '/static/assets/avatars/mascot-bee/MascotBee.mtl',
+                texturePath: '/static/assets/avatars/mascot-bee/MascotBee.png',
+                width: 180,
+                height: 180,
+                autoRotate: true,
+                enableInteraction: true
+            };
+        } else {
+            // Registered users: use their chosen avatar
+            console.log('👤 Registered user - loading chosen avatar');
+            avatarOptions = window.userAvatarLoader.getAvatarOptions({
+                width: 180,
+                height: 180,
+                autoRotate: true,
+                enableInteraction: true
+            });
+            avatarId = window.userAvatarLoader.getAvatarId();
+        }
+        
         console.log(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
     // Render into mascot container (replaces old smartyBee3D)
@@ -7635,15 +7759,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('❌ 3D mascot failed to load:', error);
         console.error('Error details:', error.message, error.stack);
-        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+        // Hide avatar container instead of showing 2D fallback
         try {
-            console.log('🔄 Attempting 2D fallback...');
-            if (window.userAvatarLoader) {
-                await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                console.log('✅ 2D fallback loaded successfully');
+            console.log('🔄 Hiding avatar container (3D load failed)...');
+            const mascotContainer = document.getElementById('mascotBee3D');
+            if (mascotContainer) {
+                mascotContainer.style.display = 'none';
+                console.log('✅ Avatar container hidden');
             }
         } catch (fallbackError) {
-            console.error('❌ Fallback avatar also failed:', fallbackError);
+            console.error('❌ Could not hide avatar container:', fallbackError);
         }
     }
 
@@ -8182,5 +8307,36 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
+</script>
+
+<!-- Word List Manager -->
+<script src="{{ url_for('static', filename='js/quiz-wordlist.js') }}?v={{ timestamp }}"></script>
+<script>
+// Initialize word list manager with server-provided data
+document.addEventListener('DOMContentLoaded', () => {
+    const quizRoot = document.getElementById('quiz-root');
+    if (quizRoot && window.wordListManager) {
+        const selectedListId = quizRoot.dataset.selectedListId;
+        const selectedListName = quizRoot.dataset.selectedListName;
+        const wordsUrl = quizRoot.dataset.wordsUrl;
+        
+        console.log('🎯 Initializing word list manager with server data:', {
+            selectedListId,
+            selectedListName,
+            wordsUrl
+        });
+        
+        // Ensure using the selected list from server
+        window.wordListManager.ensureUsingSelectedList({
+            selectedListId: selectedListId,
+            selectedListName: selectedListName,
+            wordsUrl: wordsUrl
+        }).then(list => {
+            console.log('✅ Word list manager initialized:', list);
+        }).catch(error => {
+            console.error('❌ Error initializing word list manager:', error);
+        });
+    }
+});
 </script>
 {% endblock %}

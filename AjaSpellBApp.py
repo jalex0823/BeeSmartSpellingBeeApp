@@ -1,4 +1,5 @@
-﻿# -*- coding: utf-8 -*-
+﻿HOME_PREVIEW_ENABLED = True  # feature flag for new honey home page preview
+# -*- coding: utf-8 -*-
 import sys
 import io
 
@@ -69,6 +70,14 @@ print(f"📍 Python version: {sys.version}")
 print(f"📍 Platform: {sys.platform}")
 print(f"📍 Working directory: {os.getcwd()}")
 print("="*70)
+
+# Fast-boot mode: skip heavy startup checks/initializers that can delay first load
+# Default is OFF to run full system checks prior to entering the home page.
+FAST_BOOT = os.getenv('FAST_BOOT', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+if FAST_BOOT:
+    print("⚡ FAST_BOOT=on → Skipping heavy startup checks to unblock app load")
+else:
+    print("⚙️ FAST_BOOT=off → Running full startup checks")
 
 # Dictionary API with robust error handling
 try:
@@ -220,6 +229,17 @@ try:
 except NameError:
     app = Flask(__name__)
 
+# Reliable, post-app-creation lightweight routes
+@app.route('/')
+def home_root_direct():
+    """Primary application landing page: shows loader then auto-redirects to app."""
+    return render_template('unified_menu.html')
+
+# Optional legacy preview alias retained (can be removed later)
+@app.route('/home_preview')
+def home_preview():
+    return render_template('honey_home.html')
+
 def _safe_template(name):
     """Small helper to render a template if present without crashing the app."""
     try:
@@ -288,29 +308,13 @@ def save_dictionary_cache(cache_data):
     except Exception as e:
         print(f"Warning: Failed to save dictionary cache: {e}")
 
-# Load cache at startup
-print("🔧 Loading dictionary cache...")
-DICTIONARY_CACHE = load_dictionary_cache()
+# Dictionary cache - loaded on-demand by get_word_info(), not at startup
+DICTIONARY_CACHE = {}
 
-# Load Simple English Wiktionary (50K+ words with definitions)
-# DISABLED for Railway - this takes too long and blocks startup
-# Load it in background after app starts
-print("🔧 Simple English Wiktionary loading scheduled for background...")
-SIMPLE_WIKTIONARY = {}  # Start with empty dict, will load async
+# Simple English Wiktionary - DISABLED (we use built-in dictionary API instead)
+SIMPLE_WIKTIONARY = {}
 
-def load_wiktionary_background():
-    """Load wiktionary in background thread after app starts"""
-    global SIMPLE_WIKTIONARY
-    print("🔧 Background: Loading Simple English Wiktionary (this may take 30-60 seconds)...")
-    SIMPLE_WIKTIONARY = load_simple_wiktionary()
-    print(f"✅ Background: Wiktionary loaded with {len(SIMPLE_WIKTIONARY)} words")
-
-# Start background loading
-import threading
-wiktionary_thread = threading.Thread(target=load_wiktionary_background, daemon=True)
-wiktionary_thread.start()
-
-print("✅ Dictionary resources initialized (Wiktionary loading in background)")
+print("✅ Dictionary resources initialized (on-demand loading enabled)")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -344,15 +348,39 @@ def get_railway_speed_round_engine_options():
 IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1') in ('1', 'true', 'True', 'yes')
 IAP_VERIFICATION_MODE = os.getenv('IAP_VERIFICATION_MODE', 'mock' if IAP_MOCK_MODE else 'live_strict').strip().lower()
 
+# Subscription Product IDs (for App Store Connect)
+SUBSCRIPTION_PRODUCT_IDS = {
+    'monthly': 'beesmart.premium.monthly',      # $4.99/month
+    'yearly': 'beesmart.premium.yearly',        # $39.99/year (Save 33%)
+    'family': 'beesmart.premium.family.monthly', # $7.99/month (Up to 6 members)
+    'legacy': 'beesmart.sub.full_monthly'       # Legacy subscription (backward compatibility)
+}
+
 # Product -> entitlement mapping (override via env if needed)
 PRODUCT_MAP = {
-    # Full unlock (premium membership)
+    # Full unlock (premium membership - one-time purchase)
     os.getenv('PRODUCT_FULL_UNLOCK_ID', 'beesmart.full_unlock'): {
         'type': 'premium'
     },
-    # Monthly subscription full access (maps to premium entitlement; renewal handled by store)
+    # SUBSCRIPTION TIERS (Auto-Renewable)
+    # Legacy subscription (kept for backward compatibility)
     os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly'): {
-        'type': 'premium', 'subscription': True
+        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
+    },
+    # Monthly Premium Subscription ($4.99/month)
+    'beesmart.premium.monthly': {
+        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month',
+        'name': 'Premium Monthly Membership'
+    },
+    # Yearly Premium Subscription ($39.99/year - Best Value, Save 33%)
+    'beesmart.premium.yearly': {
+        'type': 'premium', 'subscription': True, 'price': 39.99, 'duration': '1 year',
+        'name': 'Premium Yearly Membership'
+    },
+    # Family Premium Subscription ($7.99/month - Up to 6 members)
+    'beesmart.premium.family.monthly': {
+        'type': 'premium', 'subscription': True, 'price': 7.99, 'duration': '1 month',
+        'name': 'Premium Family Membership', 'family_sharing': True
     },
     # Individual avatar unlocks
     os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee'): {
@@ -690,6 +718,12 @@ def get_word_info(word):
     """Get definition and example sentence for a word. 
     Priority: 1) Simple Wiktionary (50K words), 2) API cache, 3) API lookup
     Returns: Formatted definition string OR "Definition not available" for spelling-only quiz."""
+    global DICTIONARY_CACHE
+    
+    # Lazy load dictionary cache on first use
+    if not DICTIONARY_CACHE:
+        DICTIONARY_CACHE = load_dictionary_cache()
+    
     word_lower = word.lower()
     
     # PRIORITY 1: Check Simple English Wiktionary FIRST (50K+ words, kid-friendly)
@@ -884,11 +918,9 @@ except Exception:  # pragma: no cover
 # FLASK APP INITIALIZATION WITH DATABASE & AUTHENTICATION
 # ============================================================================
 
-print("🔧 Creating Flask app...")
-# `app` may already be created above to satisfy early decorators; avoid reassigning
-try:
-    app  # type: ignore[name-defined]
-except NameError:
+print("🔧 Creating Flask app (main init)...")
+# Preserve existing app if earlier created; do NOT overwrite to keep early routes.
+if 'app' not in globals():
     app = Flask(__name__)
 # --- Avatar GLB sync helper ---
 def _sync_glb_avatars():
@@ -917,8 +949,11 @@ def _sync_glb_avatars():
     except Exception as e:
         print(f"[avatar-sync] Error: {e}")
 
-# Run sync at startup
-_sync_glb_avatars()
+# Run sync at startup (skipped in FAST_BOOT)
+if not FAST_BOOT:
+    _sync_glb_avatars()
+else:
+    print("⏭️ Skipping GLB avatar sync at startup (FAST_BOOT)")
 
 # Load configuration from config.py (includes database settings)
 print("🔧 Loading configuration...")
@@ -1078,36 +1113,43 @@ def get_badge_description_filter(badge_type):
 
 @app.template_filter('gpa_to_grade')
 def gpa_to_grade_filter(gpa):
-    """Convert numerical GPA (0-4.0) to letter grade"""
+    """
+    Convert numerical GPA (0-4.0) to letter grade.
+    
+    Must match the grade_to_gpa mapping in models.py:
+    A+: 4.0, A: 4.0, A-: 3.7, B+: 3.3, B: 3.0, B-: 2.7,
+    C+: 2.3, C: 2.0, C-: 1.7, D+: 1.3, D: 1.0, D-: 0.7, F: 0.0
+    """
     try:
         gpa_value = float(gpa) if gpa else 0.0
     except (ValueError, TypeError):
         return "N/A"
     
-    if gpa_value >= 3.85:
-        return "A+"
-    elif gpa_value >= 3.50:
-        return "A"
-    elif gpa_value >= 3.15:
+    # Exact reverse of grade_to_gpa mapping
+    if gpa_value >= 4.0:
+        return "A+"  # 4.0 = A+ or A, prefer A+
+    elif gpa_value >= 3.7:
         return "A-"
-    elif gpa_value >= 2.85:
+    elif gpa_value >= 3.3:
         return "B+"
-    elif gpa_value >= 2.50:
+    elif gpa_value >= 3.0:
         return "B"
-    elif gpa_value >= 2.15:
+    elif gpa_value >= 2.7:
         return "B-"
-    elif gpa_value >= 1.85:
+    elif gpa_value >= 2.3:
         return "C+"
-    elif gpa_value >= 1.50:
+    elif gpa_value >= 2.0:
         return "C"
-    elif gpa_value >= 1.15:
+    elif gpa_value >= 1.7:
         return "C-"
-    elif gpa_value >= 0.85:
+    elif gpa_value >= 1.3:
         return "D+"
-    elif gpa_value >= 0.50:
+    elif gpa_value >= 1.0:
         return "D"
-    elif gpa_value > 0:
+    elif gpa_value >= 0.7:
         return "D-"
+    elif gpa_value > 0:
+        return "F"
     else:
         return "N/A"
 
@@ -1172,14 +1214,17 @@ def format_percentage_filter(value):
 # Ensure sessions are persistent and trackable
 @app.before_request
 def ensure_session():
-    """Ensure every request has a session with unique ID and permanent flag"""
+    """Ensure every request has a session with unique ID and permanent flag
+    Skip for static files, health checks, and other non-interactive endpoints to improve performance"""
+    # Skip session creation for static files and health/utility endpoints
+    if request.path.startswith(('/static/', '/health', '/favicon.ico', '/.well-known/')):
+        return
+    
     if not session.get("session_id"):
         session["session_id"] = str(uuid.uuid4())
         session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
-        print(f"DEBUG: New session created - id={session['session_id']}")
     elif not session.permanent:
         session.permanent = True  # Ensure existing sessions are permanent
-        print(f"DEBUG: Made existing session permanent - id={session.get('session_id')}")
 
 
 # --- Session Logging Helper --------------------------------------------------
@@ -2316,6 +2361,12 @@ def load_saved_wordlist():
             print("WARNING /api/saved-lists/load: Fresh quiz state length mismatch, reinitializing once more")
             init_quiz_state()
 
+        # Store active list metadata in session for word list manager
+        session["active_list_id"] = str(wl.id)
+        session["active_list_name"] = wl.list_name
+        session.modified = True
+        print(f"DEBUG /api/saved-lists/load: Set active_list_id={wl.id}, active_list_name={wl.list_name}")
+
         return jsonify({
             "ok": True,
             "loaded": {
@@ -2475,7 +2526,7 @@ def home():
     <style>body{font-family:Arial,sans-serif;padding:2rem;text-align:center}
     img{max-width:260px;margin:1rem auto;display:block}</style></head>
     <body>
-    <img src='/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' alt='BeeSmart Logo'>
+    <img src='/static/BeeSmartCrestLogo1.png' alt='BeeSmart Logo'>
       <p>Loading BeeSmart… If not redirected, <a href='/app'>click here</a>.</p>
       <script>try{window.location.replace('/app')}catch(e){}</script>
     </body></html>"""
@@ -2522,6 +2573,30 @@ def app_home():
         avatar_product_ids = AVATAR_SKUS
     except Exception:
         avatar_product_ids = {}
+    
+    # Expose subscription product IDs to client
+    subscription_products = {
+        'monthly': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
+            'price': 4.99,
+            'duration': '1 month',
+            'name': 'Premium Monthly Membership'
+        },
+        'yearly': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
+            'price': 39.99,
+            'duration': '1 year',
+            'name': 'Premium Yearly Membership',
+            'savings': '33%'
+        },
+        'family': {
+            'id': SUBSCRIPTION_PRODUCT_IDS['family'],
+            'price': 7.99,
+            'duration': '1 month',
+            'name': 'Premium Family Membership',
+            'family_sharing': True
+        }
+    }
 
     html = render_template(
         "unified_menu.html",
@@ -2532,6 +2607,7 @@ def app_home():
         subscription_intro_price_usd=intro_price,
         subscription_intro_months=intro_months,
         subscription_product_id=subscription_product_id,
+        subscription_products=subscription_products,
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids
     )
@@ -2554,7 +2630,7 @@ def __test_home():
         <h1>BeeSmart Test Home ✅</h1>
         <p>If you can see this, Flask routing works. Root path blockage likely external.</p>
         <p>Timestamp: %s</p>
-    <img src='/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' alt='Logo' style='max-width:300px;'>
+    <img src='/static/BeeSmartCrestLogo1.png' alt='Logo' style='max-width:300px;'>
         </body></html>""" % (int(time.time()))
         resp = make_response(body)
         resp.headers["Cache-Control"] = "no-store, max-age=0"
@@ -2643,7 +2719,28 @@ def quiz_page():
         user_name = current_user.display_name
         print(f"DEBUG /quiz: User logged in as {user_name}")
     
-    return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
+    # Prepare selected_list metadata for frontend word list manager
+    # Check if there's a currently active saved list ID in session
+    active_list_id = session.get("active_list_id", None)
+    active_list_name = session.get("active_list_name", "Word List")
+    
+    # If no active list ID, generate a default identifier based on word count and hash
+    if not active_list_id:
+        # Create a simple hash of the wordbank to identify this specific set of words
+        import hashlib
+        words_str = "_".join([w.get("word", "") for w in wordbank[:5]])  # Use first 5 words as signature
+        word_hash = hashlib.md5(words_str.encode()).hexdigest()[:8]
+        active_list_id = f"wordbank_{word_hash}"
+        active_list_name = f"Word List ({len(wordbank)} words)"
+    
+    selected_list = {
+        "id": active_list_id,
+        "name": active_list_name
+    }
+    
+    print(f"DEBUG /quiz: Passing selected_list to template: {selected_list}")
+    
+    return render_template("quiz.html", user_name=user_name, timestamp=timestamp, selected_list=selected_list)
 
 @app.route("/battle/<battle_code>")
 @login_required
@@ -2735,8 +2832,8 @@ def upload_page():
 
 @app.route("/magical_quiz")
 def magical_quiz_page():
-    """Legacy magical quiz experience (kept for backwards compatibility)"""
-    return render_template("magical_quiz.html")
+    """Legacy route - redirects to main quiz"""
+    return redirect("/quiz")
 
 @app.route("/health")
 def health_check():
@@ -4987,7 +5084,7 @@ def check_newly_unlocked_avatars(old_honey_points, new_honey_points):
     Returns list of newly unlocked avatar objects with name, slug, description, thumbnail.
     """
     try:
-        from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+        from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
         from models import Avatar
         
         newly_unlocked = []
@@ -5171,7 +5268,7 @@ def api_answer():
     user_obj = get_or_create_guest_user()
     if user_obj and state.get("db_session_id"):
         try:
-            # Save individual word result
+            # Save individual word result with detailed points breakdown
             quiz_result = QuizResult(
                 session_id=state["db_session_id"],
                 user_id=user_obj.id,
@@ -5181,7 +5278,12 @@ def api_answer():
                 correct_spelling=correct_spelling,
                 time_taken_seconds=(elapsed_ms / 1000.0) if elapsed_ms else None,
                 input_method=method,
-                points_earned=int(state.get("session_points", 0) and (points_earned if is_correct else 0)),
+                points_earned=points_earned if is_correct else 0,
+                base_points=points_breakdown.get("base", 0) if is_correct else 0,
+                time_bonus=points_breakdown.get("time_bonus", 0) if is_correct else 0,
+                streak_bonus=points_breakdown.get("streak_bonus", 0) if is_correct else 0,
+                first_attempt_bonus=points_breakdown.get("first_attempt", 0) if is_correct else 0,
+                no_hints_bonus=points_breakdown.get("no_hints", 0) if is_correct else 0,
                 hints_used=state.get("hints_used_current_word", 0),
                 # Use the 1-based question sequence; idx was incremented above after processing this answer
                 question_number=state.get("idx", 0)
@@ -5273,13 +5375,23 @@ def api_answer():
                 quiz_session.incorrect_count = state["incorrect"]
                 quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
                 
-                # 🍯 Save session points earned (from gamification system)
-                quiz_session.points_earned = state.get("session_points", 0)
+                # 🍯 Calculate total points from all sources
+                word_points = state.get("session_points", 0)  # Points from answering words correctly
+                badge_points = sum(b["points"] for b in badges_unlocked)  # Badge bonus points
+                extra_bonus = state.get("extra_points", 0)  # Any additional bonus points
+                
+                # Store detailed breakdown
+                quiz_session.points_earned = word_points  # Word answer points (already includes time/streak bonuses)
+                quiz_session.badge_bonus_points = badge_points  # Badge achievement points
+                quiz_session.extra_points = extra_bonus  # Any extra/special bonus points
+                
+                # Calculate cumulative total (all points combined)
+                total_points = word_points + badge_points + extra_bonus
+                quiz_session.total_points = total_points  # Store cumulative total
+                
+                print(f"📊 POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
                 
                 quiz_session.complete_session()
-                
-                # Calculate points (includes points_earned + any database bonus)
-                total_points = quiz_session.total_points
                 
                 # 🏆 Save badges to Achievement table
                 if badges_unlocked and current_user.is_authenticated:
@@ -5309,7 +5421,7 @@ def api_answer():
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
                     
                     # 🐝 Check for newly unlocked avatars based on honey points
-                    from avatar_catalog import AVATARS_CATALOG, check_avatar_unlocked
+                    from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
                     old_honey_points = current_user.honey_points or 0
                     new_honey_points = old_honey_points + total_points
                     current_user.honey_points = new_honey_points
@@ -5320,8 +5432,11 @@ def api_answer():
                     for avatar_data in AVATARS_CATALOG:
                         avatar_id = avatar_data.get('id')
                         # Check if avatar was locked with old points but unlocked with new points
-                        was_locked = not check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
-                        is_now_unlocked = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                        old_unlock_result = check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
+                        new_unlock_result = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                        
+                        was_locked = not old_unlock_result.get('unlocked', False)
+                        is_now_unlocked = new_unlock_result.get('unlocked', False)
                         
                         if was_locked and is_now_unlocked:
                             newly_unlocked_avatars.append({
@@ -5506,6 +5621,73 @@ def api_save_partial_progress():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/add-bonus-points", methods=["POST"])
+def api_add_bonus_points():
+    """
+    Add extra/bonus points to the current quiz session
+    Useful for special achievements, milestones, events, etc.
+    
+    Body JSON: {
+        "points": <int>,           # Amount of bonus points to add
+        "reason": "<string>",      # Description of why points were awarded
+        "category": "<string>"     # Optional: "achievement", "milestone", "event", "special"
+    }
+    """
+    try:
+        session.permanent = True
+        session.modified = True
+        
+        payload = request.get_json(force=True)
+        bonus_points = int(payload.get("points", 0))
+        reason = payload.get("reason", "Bonus points")
+        category = payload.get("category", "bonus")
+        
+        if bonus_points <= 0:
+            return jsonify({"error": "Bonus points must be positive"}), 400
+        
+        state = get_quiz_state()
+        if not state:
+            return jsonify({"error": "No active quiz session"}), 400
+        
+        # Add bonus points to session extra_points tracker
+        current_extra = state.get("extra_points", 0)
+        state["extra_points"] = current_extra + bonus_points
+        
+        # Also add to session_points for immediate cumulative total
+        state["session_points"] = state.get("session_points", 0) + bonus_points
+        
+        # Track bonus point awards in history
+        if "bonus_awards" not in state:
+            state["bonus_awards"] = []
+        
+        state["bonus_awards"].append({
+            "points": bonus_points,
+            "reason": reason,
+            "category": category,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        session[QUIZ_STATE_KEY] = state
+        session.modified = True
+        
+        print(f"🎁 BONUS POINTS AWARDED: +{bonus_points} points for '{reason}' (category: {category})")
+        print(f"   New session total: {state['session_points']} points (extra_points: {state['extra_points']})")
+        
+        return jsonify({
+            "success": True,
+            "bonus_points_added": bonus_points,
+            "reason": reason,
+            "category": category,
+            "new_session_total": state["session_points"],
+            "total_extra_points": state["extra_points"]
+        })
+        
+    except Exception as e:
+        print(f"❌ Error adding bonus points: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/user/level", methods=["GET"])
 def api_user_level():
     """
@@ -5640,6 +5822,8 @@ def api_clear():
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("wordbank_count", None)
         session.pop("using_default_words", None)  # Clear default flag
+        session.pop("active_list_id", None)  # Clear active list metadata
+        session.pop("active_list_name", None)
         
         # CRITICAL: Prevent auto-loading defaults after explicit clear
         # User explicitly cleared everything, so don't auto-load defaults
@@ -5977,6 +6161,189 @@ def api_bundles_redeem():
         "source": source,
         "unlocked_count": int((res or {}).get('details', {}).get('unlocked_count') or 0),
         "entitlements": _entitlements_summary(current_user)
+    })
+
+
+
+# ----------------------------------------------------------------------------
+# BeeKey Redemption for Linked Users (Admin/Parent/Teacher)
+# ----------------------------------------------------------------------------
+@app.route('/api/beekey/redeem-for-linked', methods=['POST'])
+@login_required
+def api_beekey_redeem_for_linked():
+    """Redeem a BeeKey and unlock avatars for all users linked to the redeemer's admin/teacher key.
+    
+    This endpoint allows Admin, Parent, and Teacher users to redeem a BeeKey code and automatically
+    unlock the avatars in that BeeKey pack for all students/children linked to their account via
+    admin_key or teacher_key.
+    
+    Request JSON: { beekey: string }
+    Response: { success, bundle_id, avatars_count, users_unlocked, message }
+    """
+    data = request.get_json(silent=True) or {}
+    raw_key = (data.get('beekey') or '').strip()
+    
+    if not raw_key:
+        return jsonify({"success": False, "error": "Missing BeeKey code"}), 400
+    
+    # Normalize the key
+    norm_key = re.sub(r"\s+", "", raw_key).upper()
+    
+    # Find the BeeKey in database
+    try:
+        _ensure_db_initialized()
+        bundle_key_row = BundleKey.query.filter_by(key_norm=norm_key).first()
+    except Exception as e:
+        app.logger.error(f"BeeKey lookup error: {e}")
+        return jsonify({"success": False, "error": "Database error"}), 500
+    
+    if not bundle_key_row:
+        return jsonify({"success": False, "error": "Invalid BeeKey code"}), 400
+    
+    # Check if the BeeKey can be redeemed
+    can_redeem, reason = bundle_key_row.can_redeem()
+    if not can_redeem:
+        error_messages = {
+            'status_not_active': 'This BeeKey has been revoked or is no longer active',
+            'expired': 'This BeeKey has expired',
+            'key_exhausted': 'This BeeKey has reached its maximum number of uses'
+        }
+        return jsonify({"success": False, "error": error_messages.get(reason, reason)}), 400
+    
+    bundle_id = bundle_key_row.bundle_id
+    
+    # Get the avatars from the bundle (check DynamicBundle first, then BUNDLE_CATALOG)
+    avatars = []
+    bundle_name = bundle_id
+    
+    try:
+        dyn_bundle = DynamicBundle.query.filter_by(bundle_id=bundle_id).first()
+        if dyn_bundle:
+            avatars = list(dyn_bundle.avatars or [])
+            bundle_name = dyn_bundle.name or bundle_id
+        else:
+            # Fallback to BUNDLE_CATALOG
+            bundle_cfg = (BUNDLE_CATALOG or {}).get(bundle_id, {})
+            avatars = list(bundle_cfg.get('avatars', []) or [])
+            bundle_name = bundle_cfg.get('name') or bundle_id
+    except Exception as e:
+        app.logger.error(f"Bundle lookup error: {e}")
+        return jsonify({"success": False, "error": "Bundle not found"}), 404
+    
+    if not avatars:
+        return jsonify({"success": False, "error": "No avatars found in this BeeKey pack"}), 400
+    
+    # Find all linked users based on the current user's role
+    linked_users = []
+    
+    try:
+        if current_user.role == 'admin':
+            # For admins, find all users linked via their teacher_key (admins have a teacher_key too)
+            if current_user.teacher_key:
+                # Find via TeacherStudent relationship
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        elif current_user.role == 'parent':
+            # For parents, find all users linked via their teacher_key (parents also use teacher_key)
+            if current_user.teacher_key:
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        elif current_user.role == 'teacher':
+            # For teachers, find all students linked via their teacher_key
+            if current_user.teacher_key:
+                links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key).all()
+                student_ids = [link.student_id for link in links]
+                linked_users = User.query.filter(User.id.in_(student_ids)).all() if student_ids else []
+        
+        else:
+            return jsonify({"success": False, "error": "Only Admin, Parent, and Teacher accounts can redeem BeeKeys for linked users"}), 403
+    
+    except Exception as e:
+        app.logger.error(f"Error finding linked users: {e}")
+        return jsonify({"success": False, "error": "Error finding linked users"}), 500
+    
+    if not linked_users:
+        return jsonify({"success": False, "error": "No students/children are linked to your account"}), 400
+    
+    # Unlock avatars for all linked users
+    unlocked_count = 0
+    
+    for user in linked_users:
+        try:
+            # Get user's current purchased avatars list
+            purchased = user.purchased_avatars or []
+            if not isinstance(purchased, list):
+                purchased = []
+            
+            # Add new avatars (avoiding duplicates)
+            initial_count = len(purchased)
+            for avatar_id in avatars:
+                if avatar_id not in purchased:
+                    purchased.append(avatar_id)
+            
+            # Update user's purchased avatars
+            user.purchased_avatars = purchased
+            
+            # If avatars were added, count this user
+            if len(purchased) > initial_count:
+                unlocked_count += 1
+        
+        except Exception as e:
+            app.logger.error(f"Error unlocking avatars for user {user.id}: {e}")
+            continue
+    
+    # Record the BeeKey usage
+    try:
+        bundle_key_row.apply_use(current_user.id)
+        db.session.add(bundle_key_row)
+        
+        # Create redemption trace
+        trace = BundleKeyRedemption(
+            bundle_key_id=bundle_key_row.id,
+            user_id=current_user.id,
+            bundle_id=bundle_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:300]
+        )
+        db.session.add(trace)
+        
+        # Log purchase record for the redeemer
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform='web',
+            product_id=f"beekey:{bundle_id}",
+            status='verified',
+            transaction_id=None,
+            purchase_token=None,
+            raw_payload={
+                'redeemed_key': norm_key,
+                'bundle_id': bundle_id,
+                'redemption_type': 'for_linked_users',
+                'users_unlocked': unlocked_count,
+                'total_linked_users': len(linked_users)
+            }
+        )
+        db.session.add(rec)
+        
+        db.session.commit()
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saving BeeKey redemption: {e}")
+        return jsonify({"success": False, "error": "Failed to save redemption"}), 500
+    
+    return jsonify({
+        "success": True,
+        "bundle_id": bundle_id,
+        "bundle_name": bundle_name,
+        "avatars_count": len(avatars),
+        "users_unlocked": unlocked_count,
+        "total_linked_users": len(linked_users),
+        "message": f"Successfully unlocked {len(avatars)} avatar(s) for {unlocked_count} user(s)"
     })
 
 
@@ -7528,15 +7895,40 @@ def teacher_student_detail(student_id: int):
     except Exception:
         avatar_data = None
 
-    # Aggregate stats
-    total_quizzes = QuizSession.query.filter_by(user_id=student.id, completed=True).count()
+    # Aggregate stats - count both completed and in-progress quizzes with attempts
+    total_quizzes = QuizSession.query.filter(
+        QuizSession.user_id == student.id,
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
+    ).count()
+    
     avg_accuracy = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter(
         QuizSession.user_id == student.id,
-        QuizSession.completed == True
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
     ).scalar() or 0
 
-    # Recent quiz sessions
-    recent_sessions = QuizSession.query.filter_by(user_id=student.id, completed=True).order_by(
+    # Recent quiz sessions - include in-progress with attempts
+    recent_sessions = QuizSession.query.filter(
+        QuizSession.user_id == student.id,
+        or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
+    ).order_by(
         QuizSession.session_end.desc().nullslast()
     ).limit(10).all()
 
@@ -7652,163 +8044,174 @@ def api_generate_teacher_key():
 @login_required
 def admin_dashboard():
     """Admin dashboard"""
-    if current_user.role != 'admin':
-        flash('Access denied: Admins only', 'error')
-        return redirect(url_for('home'))
-    
-    # Get MY teacher key to find students/family under my supervision
-    # (Admins use teacher_key field for tracking their students)
-    my_key = current_user.teacher_key
-    
-    # Find all students who registered with MY teacher key
-    # Use TeacherStudent link table to find students linked to this admin
-    my_students = []
-    if my_key:
-        # Get student IDs from TeacherStudent link table
-        student_links = TeacherStudent.query.filter_by(
-            teacher_key=my_key,
-            is_active=True
-        ).all()
+    try:
+        if current_user.role != 'admin':
+            flash('Access denied: Admins only', 'error')
+            return redirect(url_for('home'))
         
-        # Get the actual user objects for these students (exclude guests)
-        student_ids = [link.student_id for link in student_links]
-        if student_ids:
-            my_students = filter_non_guest_users(
-                User.query.filter(User.id.in_(student_ids))
-            ).order_by(User.created_at.desc()).all()
+        # Get MY teacher key to find students/family under my supervision
+        # (Admins use teacher_key field for tracking their students)
+        my_key = current_user.teacher_key
         
-        # Double-check to filter out any remaining guests
-        my_students = [student for student in my_students if not is_guest_user(student)]
-        
-        # Enrich student data with their stats
-        for student in my_students:
-            # Build a reusable query for sessions with actual activity
-            session_q = QuizSession.query.filter_by(
-                user_id=student.id
-            ).filter(
-                or_(
-                    QuizSession.completed == True,
-                    and_(
-                        QuizSession.completed == False,
-                        (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+        # Find all students who registered with MY teacher key
+        # Use TeacherStudent link table to find students linked to this admin
+        my_students = []
+        if my_key:
+            # Get student IDs from TeacherStudent link table
+            student_links = TeacherStudent.query.filter_by(
+                teacher_key=my_key,
+                is_active=True
+            ).all()
+            
+            # Get the actual user objects for these students (exclude guests)
+            student_ids = [link.student_id for link in student_links]
+            if student_ids:
+                my_students = filter_non_guest_users(
+                    User.query.filter(User.id.in_(student_ids))
+                ).order_by(User.created_at.desc()).all()
+            
+            # Double-check to filter out any remaining guests
+            my_students = [student for student in my_students if not is_guest_user(student)]
+            
+            # Enrich student data with their stats
+            for student in my_students:
+                # Build a reusable query for sessions with actual activity
+                session_q = QuizSession.query.filter_by(
+                    user_id=student.id
+                ).filter(
+                    or_(
+                        QuizSession.completed == True,
+                        and_(
+                            QuizSession.completed == False,
+                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+                        )
                     )
                 )
-            )
 
-            # Count quizzes with activity (completed or in-progress with attempts)
-            student.quiz_count = session_q.count()
+                # Count quizzes with activity (completed or in-progress with attempts)
+                student.quiz_count = session_q.count()
 
-            # Prefer robust counts from QuizSession aggregates to avoid gaps when QuizResult rows are missing
-            from sqlalchemy import func
-            total_correct = session_q.with_entities(func.coalesce(func.sum(QuizSession.correct_count), 0)).scalar() or 0
-            total_incorrect = session_q.with_entities(func.coalesce(func.sum(QuizSession.incorrect_count), 0)).scalar() or 0
+                # Prefer robust counts from QuizSession aggregates to avoid gaps when QuizResult rows are missing
+                from sqlalchemy import func
+                total_correct = session_q.with_entities(func.coalesce(func.sum(QuizSession.correct_count), 0)).scalar() or 0
+                total_incorrect = session_q.with_entities(func.coalesce(func.sum(QuizSession.incorrect_count), 0)).scalar() or 0
 
-            student.correct_count = int(total_correct)
-            student.words_practiced = int(total_correct + total_incorrect)
+                student.correct_count = int(total_correct)
+                student.words_practiced = int(total_correct + total_incorrect)
 
-            # Accuracy for parent view should mirror the student's dashboard value
-            # Use the stored per-session average_accuracy field for exact consistency
-            try:
-                student.accuracy = round(float(student.average_accuracy or 0.0), 1)
-            except Exception:
-                student.accuracy = round((student.correct_count / student.words_practiced) * 100, 1) if student.words_practiced > 0 else 0
+                # Accuracy for parent view should mirror the student's dashboard value
+                # Use the stored per-session average_accuracy field for exact consistency
+                try:
+                    student.accuracy = round(float(student.average_accuracy or 0.0), 1)
+                except Exception:
+                    student.accuracy = round((student.correct_count / student.words_practiced) * 100, 1) if student.words_practiced > 0 else 0
 
-            # Get latest quiz date (including incomplete sessions)
-            latest_quiz = session_q.order_by(
-                QuizSession.session_end.desc().nullslast(),
-                QuizSession.session_start.desc()
-            ).first()
-            
-            student.last_active = (
-                latest_quiz.session_end if (latest_quiz and latest_quiz.session_end)
-                else latest_quiz.session_start if (latest_quiz and latest_quiz.session_start)
-                else student.created_at
-            )
+                # Get latest quiz date (including incomplete sessions)
+                latest_quiz = session_q.order_by(
+                    QuizSession.session_end.desc().nullslast(),
+                    QuizSession.session_start.desc()
+                ).first()
+                
+                student.last_active = (
+                    latest_quiz.session_end if (latest_quiz and latest_quiz.session_end)
+                    else latest_quiz.session_start if (latest_quiz and latest_quiz.session_start)
+                    else student.created_at
+                )
+        
+        # System-wide statistics (exclude guest users)
+        stats = {
+            'total_users': get_non_guest_users_query().count(),
+            'total_students': filter_non_guest_users(User.query.filter_by(role='student')).count(),
+            'total_teachers': filter_non_guest_users(User.query.filter_by(role='teacher')).count(),
+            'total_quizzes': QuizSession.query.join(User).filter(
+                and_(
+                    or_(
+                        QuizSession.completed == True,
+                        and_(
+                            QuizSession.completed == False,
+                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+                        )
+                    ),
+                    # Exclude guest users from quiz counts
+                    not_(User.username.like('guest_%')),
+                    User.password_hash.isnot(None)
+                )
+            ).count(),
+            'total_words_attempted': QuizResult.query.join(User).filter(
+                and_(
+                    not_(User.username.like('guest_%')),
+                    User.password_hash.isnot(None)
+                )
+            ).count(),
+            'my_students_count': len(my_students)
+        }
+        
+        # Battle Bee Statistics - Query actual battle sessions
+        try:
+            total_battles = BattleSession.query.count()
+            active_battles = BattleSession.query.filter(
+                BattleSession.status.in_(['waiting', 'in_progress'])
+            ).count()
+            completed_battles = BattleSession.query.filter_by(status='completed').count()
+        except Exception as e:
+            print(f"Error loading battle stats: {e}")
+            total_battles = 0
+            active_battles = 0
+            completed_battles = 0
+        
+        # Get top 10 players on the leaderboard (exclude guests)
+        try:
+            leaderboard = get_leaderboard_no_guests(10)
+        except Exception as e:
+            print(f"Error loading leaderboard: {e}")
+            leaderboard = []
+        
+        # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
+        for idx, player in enumerate(leaderboard, start=1):
+            player.rank = idx
+            # Placeholder: battle stats not yet implemented
+            player.total_battles_played = getattr(player, 'total_battles_played', 0)
+            player.total_battles_won = getattr(player, 'total_battles_won', 0)
+            player.win_rate = round((player.total_battles_won / player.total_battles_played * 100), 1) if player.total_battles_played > 0 else 0
+            # Use total_lifetime_points as honey_points for now
+            player.honey_points = getattr(player, 'honey_points', player.total_lifetime_points)
+        
+        battle_stats = {
+            'total_battles': total_battles,
+            'active_battles': active_battles,
+            'completed_battles': completed_battles,
+            'total_battle_participants': 0  # Placeholder until Battle models implemented
+        }
+        
+        # Get current user's avatar data for immediate display
+        try:
+            user_avatar_data = current_user.get_avatar_data()
+            use_mascot = current_user.has_selected_avatar() == False
+        except Exception as e:
+            print(f"⚠️ Could not load user avatar data: {e}")
+            user_avatar_data = None
+            use_mascot = True
+        
+        return render_template('admin/dashboard.html', 
+                             user=current_user, 
+                             stats=stats,
+                             battle_stats=battle_stats,
+                             leaderboard=leaderboard,
+                             my_students=my_students,
+                             admin_key=my_key,
+                             BUNDLE_CATALOG=BUNDLE_CATALOG or {},
+                             user_avatar=user_avatar_data,
+                             use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
     
-    # System-wide statistics (exclude guest users)
-    stats = {
-        'total_users': get_non_guest_users_query().count(),
-        'total_students': filter_non_guest_users(User.query.filter_by(role='student')).count(),
-        'total_teachers': filter_non_guest_users(User.query.filter_by(role='teacher')).count(),
-        'total_quizzes': QuizSession.query.join(User).filter(
-            and_(
-                or_(
-                    QuizSession.completed == True,
-                    and_(
-                        QuizSession.completed == False,
-                        (QuizSession.correct_count + QuizSession.incorrect_count) > 0
-                    )
-                ),
-                # Exclude guest users from quiz counts
-                not_(User.username.like('guest_%')),
-                User.password_hash.isnot(None)
-            )
-        ).count(),
-        'total_words_attempted': QuizResult.query.join(User).filter(
-            and_(
-                not_(User.username.like('guest_%')),
-                User.password_hash.isnot(None)
-            )
-        ).count(),
-        'my_students_count': len(my_students)
-    }
-    
-    # Battle Bee Statistics - Query actual battle sessions
-    try:
-        total_battles = BattleSession.query.count()
-        active_battles = BattleSession.query.filter(
-            BattleSession.status.in_(['waiting', 'in_progress'])
-        ).count()
-        completed_battles = BattleSession.query.filter_by(status='completed').count()
     except Exception as e:
-        print(f"Error loading battle stats: {e}")
-        total_battles = 0
-        active_battles = 0
-        completed_battles = 0
-    
-    # Get top 10 players on the leaderboard (exclude guests)
-    try:
-        leaderboard = get_leaderboard_no_guests(10)
-    except Exception as e:
-        print(f"Error loading leaderboard: {e}")
-        leaderboard = []
-    
-    # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
-    for idx, player in enumerate(leaderboard, start=1):
-        player.rank = idx
-        # Placeholder: battle stats not yet implemented
-        player.total_battles_played = getattr(player, 'total_battles_played', 0)
-        player.total_battles_won = getattr(player, 'total_battles_won', 0)
-        player.win_rate = round((player.total_battles_won / player.total_battles_played * 100), 1) if player.total_battles_played > 0 else 0
-        # Use total_lifetime_points as honey_points for now
-        player.honey_points = getattr(player, 'honey_points', player.total_lifetime_points)
-    
-    battle_stats = {
-        'total_battles': total_battles,
-        'active_battles': active_battles,
-        'completed_battles': completed_battles,
-        'total_battle_participants': 0  # Placeholder until Battle models implemented
-    }
-    
-    # Get current user's avatar data for immediate display
-    try:
-        user_avatar_data = current_user.get_avatar_data()
-        use_mascot = current_user.has_selected_avatar() == False
-    except Exception as e:
-        print(f"⚠️ Could not load user avatar data: {e}")
-        user_avatar_data = None
-        use_mascot = True
-    
-    return render_template('admin/dashboard.html', 
-                         user=current_user, 
-                         stats=stats,
-                         battle_stats=battle_stats,
-                         leaderboard=leaderboard,
-                         my_students=my_students,
-                         admin_key=my_key,
-                         BUNDLE_CATALOG=BUNDLE_CATALOG or {},
-                         user_avatar=user_avatar_data,
-                         use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ ADMIN DASHBOARD ERROR: {str(e)}")
+        print(error_details)
+        flash(f'Error loading admin dashboard: {str(e)}', 'error')
+        return render_template('error.html', 
+                             error_message=f"Admin Dashboard Error: {str(e)}",
+                             error_details=error_details if app.debug else None), 500
 
 
 @app.route('/admin/battle-bees')
@@ -7911,6 +8314,54 @@ def admin_user_detail(user_id):
                          target_user=target_user,
                          stats=stats,
                          battle_participations=battle_participations)
+
+
+@app.route('/admin/sync-avatar-names', methods=['POST'])
+@login_required
+def admin_sync_avatar_names():
+    """Sync DB avatar names with catalog (Apple Store compliance - add ' Avatar' suffix)"""
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+    
+    try:
+        from models import Avatar
+        from avatar_catalog import AVATAR_CATALOG
+        
+        # Build catalog lookup
+        catalog_map = {a['id']: a for a in AVATAR_CATALOG}
+        
+        updated_count = 0
+        updated_avatars = []
+        
+        # Update DB avatars to match catalog names
+        db_avatars = Avatar.query.filter_by(is_active=True).all()
+        
+        for avatar in db_avatars:
+            catalog_entry = catalog_map.get(avatar.slug)
+            if catalog_entry:
+                catalog_name = catalog_entry['name']
+                if avatar.name != catalog_name:
+                    old_name = avatar.name
+                    avatar.name = catalog_name
+                    updated_count += 1
+                    updated_avatars.append({
+                        'slug': avatar.slug,
+                        'old_name': old_name,
+                        'new_name': catalog_name
+                    })
+        
+        if updated_count > 0:
+            db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "updated_count": updated_count,
+            "updated_avatars": updated_avatars
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/admin/users', methods=['GET'])
@@ -8825,6 +9276,11 @@ def speed_round_results():
 
 
 # --- 3D Avatar API Routes ----------------------------------------------------
+# Simple in-memory cache for avatar list (invalidates on app restart)
+_AVATAR_CACHE = {"data": None, "timestamp": 0, "ttl": 300}  # 5 minute TTL
+# Cache for GLB file scanning (expensive filesystem operation)
+_GLB_SCAN_CACHE = {"data": None, "timestamp": 0, "ttl": 600}  # 10 minute TTL
+
 @app.route("/api/avatars", methods=["GET"])
 def api_get_avatars():
     """Get the complete avatar catalog with optional filtering, plus canonical asset URLs.
@@ -8835,6 +9291,18 @@ def api_get_avatars():
     - Alphabetize the final hive list for stable ordering
     - Include unlock status based on user's honey points and purchases
     """
+    # Check cache first
+    global _AVATAR_CACHE
+    current_time = time.time()
+    
+    # Use cache for both authenticated and unauthenticated users
+    # Cache key includes user ID to separate per-user unlock status
+    cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+    
+    if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
+        print(f"⚡ Returning cached avatar list for {cache_key}")
+        return jsonify(_AVATAR_CACHE[cache_key])
+    
     try:
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
         try:
@@ -8843,27 +9311,24 @@ def api_get_avatars():
             print(f"⚠️ Avatar model import failed, falling back to filesystem-only avatars: {_imp_err}")
             Avatar = None  # type: ignore
         try:
-            from avatar_catalog import check_avatar_unlocked, AVATARS_CATALOG
+            from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
+            AVATARS_CATALOG = AVATAR_CATALOG  # Alias for backward compatibility
         except Exception as _cat_err:
             print(f"⚠️ Avatar catalog import failed, disabling unlock checks: {_cat_err}")
             AVATARS_CATALOG = []  # type: ignore
             def check_avatar_unlocked(*_args, **_kwargs):
-                return True  # Treat as unlocked if catalog unavailable
+                # Return dict format to match avatar_catalog.check_avatar_unlocked
+                return {"unlocked": True, "reason": "Catalog unavailable", "required_points": 0, "price": 0}
         import re as _re
         
-        # Helper: append a cache-busting query using file mtime if available
+        # Helper: append a simple cache-busting query (use app start time instead of checking each file)
+        # This avoids expensive os.path.getmtime() calls for every asset
+        _APP_VERSION = str(int(time.time()))  # Changes on each app restart
         def _cachebust_url(url: str) -> str:
-            try:
-                # Convert URL like /static/../Foo.png to filesystem path
-                rel = url.lstrip('/')
-                fs_path = os.path.join(app.root_path, rel)
-                if os.path.exists(fs_path):
-                    ts = int(os.path.getmtime(fs_path))
-                    sep = '&' if '?' in url else '?'
-                    return f"{url}{sep}v={ts}"
-            except Exception:
-                pass
-            return url
+            if not url:
+                return url
+            sep = '&' if '?' in url else '?'
+            return f"{url}{sep}v={_APP_VERSION}"
 
     # Get current user's unlock status
         user_honey_points = 0
@@ -8935,12 +9400,13 @@ def api_get_avatars():
                         # Admins and premium members have access to all avatars
                         is_locked = False
                     elif catalog_avatar:
-                        # Check unlock status using avatar_catalog helper
-                        is_locked = not check_avatar_unlocked(
+                        # Check unlock status using avatar_catalog helper (returns dict)
+                        unlock_result = check_avatar_unlocked(
                             avatar_slug,
                             user_honey_points,
                             purchased_avatars
                         )
+                        is_locked = not unlock_result.get('unlocked', False)
 
                         if is_locked:
                             # Generate unlock message based on tier
@@ -8965,6 +9431,20 @@ def api_get_avatars():
                     thumb_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
                     thumb_cb = _cachebust_url(thumb_url) if thumb_url else None
 
+                    # Build urls object with GLB support
+                    model_obj_url = f"{base_path}/{avatar.obj_file}"
+                    urls_obj = {
+                        'model_obj': model_obj_url,
+                        'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
+                        'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
+                        'thumbnail': thumb_cb,
+                        'preview': thumb_cb,
+                    }
+                    
+                    # If it's a GLB file, add explicit glb key for GLTFLoader
+                    if is_glb:
+                        urls_obj['glb'] = model_obj_url
+
                     enriched_avatars.append({
                         'id': avatar.slug,
                         'name': avatar.name,
@@ -8974,13 +9454,7 @@ def api_get_avatars():
                         'is_glb': is_glb,
                         'thumbnail': thumb_cb,
                         'preview': thumb_cb,
-                        'urls': {
-                            'model_obj': f"{base_path}/{avatar.obj_file}",
-                            'model_mtl': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-                            'texture': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-                            'thumbnail': thumb_cb,
-                            'preview': thumb_cb,
-                        },
+                        'urls': urls_obj,
                         'unlock_level': avatar.unlock_level,
                         'points_required': avatar.points_required,
                         'is_premium': avatar.is_premium,
@@ -9012,11 +9486,11 @@ def api_get_avatars():
             cand_fs = os.path.join(thumb_dir, f"{base}!.png")
             if os.path.exists(cand_fs):
                 return candidate
-            # 2) known aliases (e.g., DoctorBee -> DocBee consolidated to DocBee)
+            # 2) known aliases (e.g., DoctorBee -> DocBee thumbnail)
             # Support multiple alias candidates per base to handle spacing/hyphenation variants
             # Python 3.9 compatibility: use typing.Union instead of PEP 604 (|) unions
             aliases: Dict[str, Union[List[str], str]] = {
-                'DocBee': ['DoctorBee'],
+                'DoctorBee': ['DocBee'],
                 'FrankenBee': ['Franken Bee', 'Franken-Bee'],
             }
             alias_val = aliases.get(base)
@@ -9030,8 +9504,15 @@ def api_get_avatars():
             return None
 
         # Build a map of slug -> latest GLB file info so duplicates resolve to the newest
+        # Use cache to avoid expensive filesystem scanning on every request
+        global _GLB_SCAN_CACHE
         glb_latest: dict = {}
-        if os.path.isdir(glb_dir):
+        
+        if _GLB_SCAN_CACHE["data"] and (time.time() - _GLB_SCAN_CACHE["timestamp"]) < _GLB_SCAN_CACHE["ttl"]:
+            print("⚡ Using cached GLB scan results")
+            glb_latest = _GLB_SCAN_CACHE["data"]
+        elif os.path.isdir(glb_dir):
+            print("🔍 Scanning GLB files...")
             for fname in os.listdir(glb_dir):
                 if not fname.lower().endswith('.glb'):
                     continue
@@ -9054,6 +9535,11 @@ def api_get_avatars():
                         'name': name_with_spaces,
                         'mtime': mtime,
                     }
+            
+            # Cache the results
+            _GLB_SCAN_CACHE["data"] = glb_latest
+            _GLB_SCAN_CACHE["timestamp"] = time.time()
+            print(f"💾 Cached {len(glb_latest)} GLB files")
 
         # If certain GLB slugs exist, prefer them over older OBJ variants with different slugs
         # Example: if 'j-rock-bee' (from JRockBee.glb) exists, drop legacy 'rocker-bee' DB entry
@@ -9062,6 +9548,8 @@ def api_get_avatars():
             'j-rock-bee': ['rocker-bee'],
             # Prefer concise GLB slug 'doc-bee' over legacy DB slug 'doctor-bee'
             'doc-bee': ['doctor-bee'],
+            # Prefer 'robo-bee' over legacy 'buzzbot-bee'
+            'robo-bee': ['buzzbot-bee'],
         }
         if glb_slugs:
             pruned = []
@@ -9096,14 +9584,20 @@ def api_get_avatars():
             tier_val = None
             price_val = None
             
+            # Use catalog name if available (Apple Store compliant with " Avatar" suffix)
+            display_name = catalog_avatar.get('name') if catalog_avatar else info['name']
+            catalog_desc = catalog_avatar.get('description') if catalog_avatar else auto_desc
+            
             if is_admin_or_premium:
                 is_locked = False
             elif catalog_avatar:
-                is_locked = not check_avatar_unlocked(
+                # Check unlock status using avatar_catalog helper (returns dict)
+                unlock_result = check_avatar_unlocked(
                     slug, 
                     user_honey_points, 
                     purchased_avatars
                 )
+                is_locked = not unlock_result.get('unlocked', False)
                 
                 if is_locked:
                     tier = catalog_avatar.get('tier', 'premium')
@@ -9127,15 +9621,16 @@ def api_get_avatars():
 
             enriched_avatars.append({
                 'id': slug,
-                'name': info['name'],
-                'description': auto_desc,
+                'name': display_name,
+                'description': catalog_desc,
                 'category': 'classic',
                 'folder': 'glb_files',
                 'is_glb': True,
                 'thumbnail': thumb_cb,
                 'preview': thumb_cb,
                 'urls': {
-                    'model_obj': model_url,
+                    'glb': model_url,  # PRIMARY: GLB file path for GLTFLoader
+                    'model_obj': model_url,  # BACKUP: For compatibility with code checking model_obj
                     'model_mtl': None,
                     'texture': None,
                     'thumbnail': thumb_cb,
@@ -9196,13 +9691,21 @@ def api_get_avatars():
 
         enriched_avatars = deduped
 
-        return jsonify({
+        response_data = {
             'status': 'success',
             'avatars': enriched_avatars,
             'total': len(enriched_avatars),
             # include current user honey points for client-side computations
             'user_honey_points': user_honey_points
-        })
+        }
+        
+        # Cache for all users (with per-user cache key)
+        cache_key = f"user_{current_user.id if current_user.is_authenticated else 'guest'}"
+        _AVATAR_CACHE[cache_key] = response_data
+        _AVATAR_CACHE[f"{cache_key}_timestamp"] = time.time()
+        print(f"💾 Cached {len(enriched_avatars)} avatars for {cache_key}")
+        
+        return jsonify(response_data)
 
     except Exception as e:
         import traceback
@@ -9213,6 +9716,184 @@ def api_get_avatars():
             'message': str(e),
             'trace': traceback.format_exc()
         }), 500
+
+@app.route("/api/subscriptions", methods=["GET"])
+def api_get_subscriptions():
+    """Get available subscription products with pricing and details.
+    
+    Returns subscription tiers for App Store Connect integration:
+    - Monthly Premium ($4.99/month)
+    - Yearly Premium ($39.99/year - Save 33%)
+    - Family Premium ($7.99/month - Up to 6 members)
+    """
+    try:
+        subscriptions = {
+            'status': 'success',
+            'products': [
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
+                    'type': 'monthly',
+                    'name': 'Premium Monthly Membership',
+                    'displayName': 'Premium Monthly',
+                    'price': 4.99,
+                    'currency': 'USD',
+                    'duration': '1 month',
+                    'subscription': True,
+                    'familySharing': False,
+                    'description': 'Unlock unlimited spelling practice with Premium Monthly Membership!',
+                    'benefits': [
+                        'Unlimited word lists and quizzes',
+                        'All 39 premium bee avatars unlocked',
+                        'Ad-free experience',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'Monthly content updates'
+                    ]
+                },
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
+                    'type': 'yearly',
+                    'name': 'Premium Yearly Membership',
+                    'displayName': 'Premium Yearly',
+                    'price': 39.99,
+                    'currency': 'USD',
+                    'duration': '1 year',
+                    'subscription': True,
+                    'familySharing': False,
+                    'savings': '33%',
+                    'savingsAmount': 20.00,
+                    'monthlyEquivalent': 3.33,
+                    'recommended': True,
+                    'badge': 'Best Value',
+                    'description': 'Best Value! Unlock unlimited spelling practice for a full year!',
+                    'benefits': [
+                        'Everything in Monthly Premium',
+                        'Save 33% compared to monthly billing',
+                        'All 39 premium bee avatars unlocked forever',
+                        'Ad-free experience for the entire year',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'All future content updates included'
+                    ]
+                },
+                {
+                    'id': SUBSCRIPTION_PRODUCT_IDS['family'],
+                    'type': 'family',
+                    'name': 'Premium Family Membership',
+                    'displayName': 'Premium Family',
+                    'price': 7.99,
+                    'currency': 'USD',
+                    'duration': '1 month',
+                    'subscription': True,
+                    'familySharing': True,
+                    'maxMembers': 6,
+                    'description': 'Perfect for families! Share Premium access with up to 6 family members!',
+                    'benefits': [
+                        'Premium access for up to 6 family members',
+                        'Each member gets their own progress tracking',
+                        'All 39 premium bee avatars unlocked',
+                        'Ad-free experience for everyone',
+                        'Speed Round mode access',
+                        'Offline mode for practice anywhere',
+                        'Priority customer support',
+                        'Individual leaderboards and achievements'
+                    ]
+                }
+            ],
+            'subscriptionGroup': 'BeeSmart Premium Membership',
+            'freeTrial': {
+                'available': True,
+                'duration': 7,
+                'durationUnit': 'days'
+            }
+        }
+        
+        # Include user's current subscription status if authenticated
+        if current_user.is_authenticated:
+            subscriptions['user'] = {
+                'isPremium': getattr(current_user, 'premium_member', False),
+                'activeSubscription': None  # TODO: Track active subscription type
+            }
+        
+        return jsonify(subscriptions)
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error fetching subscriptions: {e}")
+        print(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'trace': traceback.format_exc()
+        }), 500
+
+@app.route("/subscription")
+@app.route("/premium")
+def subscription_page():
+    """
+    Subscription landing page for BeeSmart Premium
+    Shows all 3 tiers (Monthly, Yearly, Family) with pricing comparison
+    """
+    try:
+        # Check if user is authenticated
+        user_authenticated = 'user_id' in session
+        current_user = None
+        
+        if user_authenticated:
+            user_id = session.get('user_id')
+            current_user = User.query.get(user_id)
+        
+        return render_template(
+            'subscription.html',
+            user_authenticated=user_authenticated,
+            current_user=current_user
+        )
+    
+    except Exception as e:
+        print(f"❌ Error loading subscription page: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template(
+            'subscription.html',
+            user_authenticated=False,
+            current_user=None
+        )
+
+@app.route("/api/validate-receipt", methods=["POST"])
+def validate_receipt():
+    """
+    Validate App Store receipt and update user's subscription status.
+    
+    iOS app sends receipt data after purchase/restore.
+    We validate with Apple's servers and update database.
+    
+    TEMPORARILY DISABLED: Database migration required.
+    """
+    return jsonify({
+        'status': 'error',
+        'message': 'Subscription system temporarily disabled for database migration',
+        'migration_needed': True
+    }), 503
+    
+
+@app.route("/apple-webhook", methods=["POST"])
+def apple_subscription_webhook():
+    """
+    Apple App Store Server-to-Server Notifications webhook.
+    
+    Apple automatically POSTs to this endpoint for subscription events:
+    - DID_RENEW: Subscription renewed successfully
+    - DID_FAIL_TO_RENEW: Billing failed (enters grace period)
+    - DID_CHANGE_RENEWAL_STATUS: User canceled or re-enabled auto-renew
+    - REFUND: User received refund
+    - CANCEL: Subscription canceled by Apple support
+    
+    TEMPORARILY DISABLED: Database migration required.
+    """
+    return jsonify({'status': 'received', 'migration_needed': True}), 200
+    
 
 @app.route("/api/speed-round/health")
 def speed_round_health_railway():
@@ -10103,52 +10784,58 @@ print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
 
 # Initialize GLB avatars on startup (idempotent)
-try:
-    from init_glb_avatars import init_glb_avatars
-    init_glb_avatars()
-except Exception as e:
-    print(f"⚠️ GLB avatar initialization warning: {e}")
-
-# Validate and fix avatar thumbnail paths on EVERY startup
-try:
-    with app.app_context():
-        all_avatars = Avatar.query.filter_by(is_active=True).all()
-        fixed_count = 0
-        
-        for avatar in all_avatars:
-            if not avatar.thumbnail_file:
-                continue
-                
-            current_thumb = avatar.thumbnail_file
-            expected_thumb = None
-            
-            # GLB avatars MUST have AvatarThumbnails/ prefix
-            if avatar.folder_path == 'glb_files':
-                filename = os.path.basename(current_thumb)
-                if not current_thumb.startswith('AvatarThumbnails/'):
-                    expected_thumb = f'AvatarThumbnails/{filename}'
-            
-            # OBJ avatars MUST NOT have AvatarThumbnails/ prefix
-            elif current_thumb.startswith('AvatarThumbnails/'):
-                expected_thumb = os.path.basename(current_thumb)
-            
-            # Fix if needed
-            if expected_thumb and expected_thumb != current_thumb:
-                avatar.thumbnail_file = expected_thumb
-                fixed_count += 1
-        
-        if fixed_count > 0:
-            db.session.commit()
-            print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
-        else:
-            print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
-            
-except Exception as e:
-    print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+if not FAST_BOOT:
     try:
-        db.session.rollback()
-    except:
-        pass
+        from init_glb_avatars import init_glb_avatars
+        init_glb_avatars()
+    except Exception as e:
+        print(f"⚠️ GLB avatar initialization warning: {e}")
+else:
+    print("⏭️ Skipping init_glb_avatars() at startup (FAST_BOOT)")
+
+# Validate and fix avatar thumbnail paths on EVERY startup (skipped in FAST_BOOT)
+if not FAST_BOOT:
+    try:
+        with app.app_context():
+            all_avatars = Avatar.query.filter_by(is_active=True).all()
+            fixed_count = 0
+            
+            for avatar in all_avatars:
+                if not avatar.thumbnail_file:
+                    continue
+                    
+                current_thumb = avatar.thumbnail_file
+                expected_thumb = None
+                
+                # GLB avatars MUST have AvatarThumbnails/ prefix
+                if avatar.folder_path == 'glb_files':
+                    filename = os.path.basename(current_thumb)
+                    if not current_thumb.startswith('AvatarThumbnails/'):
+                        expected_thumb = f'AvatarThumbnails/{filename}'
+                
+                # OBJ avatars MUST NOT have AvatarThumbnails/ prefix
+                elif current_thumb.startswith('AvatarThumbnails/'):
+                    expected_thumb = os.path.basename(current_thumb)
+                
+                # Fix if needed
+                if expected_thumb and expected_thumb != current_thumb:
+                    avatar.thumbnail_file = expected_thumb
+                    fixed_count += 1
+            
+            if fixed_count > 0:
+                db.session.commit()
+                print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
+            else:
+                print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
+                
+    except Exception as e:
+        print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+else:
+    print("⏭️ Skipping avatar thumbnail validation at startup (FAST_BOOT)")
 
 def _is_port_free(p: int) -> bool:
     try:

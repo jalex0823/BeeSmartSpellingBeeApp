@@ -1,0 +1,10 @@
+Missing avatars from image that need to be added to catalog:
+
+1. **Buzzbot Bee** - need to add
+2. **Buzzhero Bee** - need to add  
+3. **Doc Bee** - need to add (NOT doctor-bee)
+4. **Honey Comb** - need to add
+5. **J Rock Bee** - need to add
+6. **Sea Bee** - need to add (NOT seabea)
+
+Total needed: 30 + 6 = 36 avatars in catalog to match the image!

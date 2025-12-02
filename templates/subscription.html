@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeSmart Premium - Unlock All Features!</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FFD54F 0%, #FFA726 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .subscription-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .header .emoji {
+            font-size: 4rem;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .pricing-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .pricing-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 50px rgba(0,0,0,0.2);
+        }
+
+        .pricing-card.recommended {
+            border: 4px solid #FFB300;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.recommended::before {
+            content: '⭐ BEST VALUE';
+            position: absolute;
+            top: 20px;
+            right: -35px;
+            background: linear-gradient(135deg, #FFB300, #FF8F00);
+            color: white;
+            padding: 8px 40px;
+            font-weight: 900;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            transform: rotate(45deg);
+            box-shadow: 0 4px 12px rgba(255, 179, 0, 0.4);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .card-icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .card-subtitle {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .pricing {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #FFF9E6, #FFECB3);
+            border-radius: 16px;
+        }
+
+        .price {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #FF8F00;
+            line-height: 1;
+        }
+
+        .price-period {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .savings {
+            display: inline-block;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .features {
+            list-style: none;
+            margin: 25px 0;
+        }
+
+        .features li {
+            padding: 12px 0;
+            font-size: 1.05rem;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .features li::before {
+            content: '✓';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+            border-radius: 50%;
+            font-weight: 900;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #FFB300, #FF8F00);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(255, 179, 0, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cta-button:hover {
+            background: linear-gradient(135deg, #FF8F00, #F57C00);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 143, 0, 0.5);
+        }
+
+        .cta-button:active {
+            transform: translateY(0);
+        }
+
+        .benefits-section {
+            background: white;
+            border-radius: 24px;
+            padding: 50px 40px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .benefits-section h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .benefit-item {
+            text-align: center;
+        }
+
+        .benefit-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .benefit-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .benefit-text {
+            font-size: 1rem;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .faq-section {
+            background: white;
+            border-radius: 24px;
+            padding: 50px 40px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .faq-section h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 40px;
+        }
+
+        .faq-item {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+
+        .faq-question {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .faq-answer {
+            font-size: 1.05rem;
+            color: #666;
+            line-height: 1.7;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            color: white;
+            font-size: 0.95rem;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header .emoji {
+                font-size: 3rem;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.recommended {
+                transform: scale(1);
+            }
+
+            .price {
+                font-size: 2.5rem;
+            }
+
+            .benefits-section, .faq-section {
+                padding: 30px 20px;
+            }
+
+            .benefits-section h2, .faq-section h2 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="subscription-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="emoji">🐝</div>
+            <h1>BeeSmart Premium</h1>
+            <p>Unlock unlimited spelling practice and all 39 bee avatars!</p>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="pricing-grid">
+            <!-- Monthly Plan -->
+            <div class="pricing-card">
+                <div class="card-header">
+                    <div class="card-icon">📅</div>
+                    <h3 class="card-title">Monthly</h3>
+                    <p class="card-subtitle">Perfect for trying it out</p>
+                </div>
+
+                <div class="pricing">
+                    <div class="price">$4.99</div>
+                    <div class="price-period">/month</div>
+                </div>
+
+                <ul class="features">
+                    <li>Unlimited word lists & quizzes</li>
+                    <li>All 39 premium bee avatars</li>
+                    <li>Ad-free experience</li>
+                    <li>Speed Round mode</li>
+                    <li>Offline practice mode</li>
+                    <li>Priority support</li>
+                    <li>Monthly content updates</li>
+                </ul>
+
+                <button class="cta-button" onclick="subscribe('monthly')">Start Monthly</button>
+            </div>
+
+            <!-- Yearly Plan (Recommended) -->
+            <div class="pricing-card recommended">
+                <div class="card-header">
+                    <div class="card-icon">🎯</div>
+                    <h3 class="card-title">Yearly</h3>
+                    <p class="card-subtitle">Best value for learners</p>
+                </div>
+
+                <div class="pricing">
+                    <div class="price">$39.99</div>
+                    <div class="price-period">/year</div>
+                    <div class="savings">Save $20/year (33% off!)</div>
+                </div>
+
+                <ul class="features">
+                    <li>Everything in Monthly</li>
+                    <li>Save 33% ($3.33/month)</li>
+                    <li>All 39 avatars unlocked forever</li>
+                    <li>Full year of learning</li>
+                    <li>All future updates included</li>
+                    <li>Priority support</li>
+                    <li>Best bang for your buck!</li>
+                </ul>
+
+                <button class="cta-button" onclick="subscribe('yearly')">Start Yearly</button>
+            </div>
+
+            <!-- Family Plan -->
+            <div class="pricing-card">
+                <div class="card-header">
+                    <div class="card-icon">👨‍👩‍👧‍👦</div>
+                    <h3 class="card-title">Family</h3>
+                    <p class="card-subtitle">Share with up to 6 members</p>
+                </div>
+
+                <div class="pricing">
+                    <div class="price">$7.99</div>
+                    <div class="price-period">/month</div>
+                    <div class="savings">Up to 6 family members!</div>
+                </div>
+
+                <ul class="features">
+                    <li>Everything in Monthly</li>
+                    <li>Share with 6 family members</li>
+                    <li>Individual progress tracking</li>
+                    <li>All 39 avatars for everyone</li>
+                    <li>Ad-free for whole family</li>
+                    <li>Individual leaderboards</li>
+                    <li>Perfect for siblings!</li>
+                </ul>
+
+                <button class="cta-button" onclick="subscribe('family')">Start Family</button>
+            </div>
+        </div>
+
+        <!-- Benefits Section -->
+        <div class="benefits-section">
+            <h2>Why Go Premium? 🌟</h2>
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <div class="benefit-icon">🎨</div>
+                    <h3 class="benefit-title">39 Amazing Avatars</h3>
+                    <p class="benefit-text">Choose from our full collection of 3D bee characters - from Einstein Bee to Queen Bee!</p>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">📚</div>
+                    <h3 class="benefit-title">Unlimited Practice</h3>
+                    <p class="benefit-text">No limits on word lists, quizzes, or practice sessions. Learn at your own pace!</p>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🚫</div>
+                    <h3 class="benefit-title">Ad-Free Learning</h3>
+                    <p class="benefit-text">Focus on spelling without interruptions. Pure learning experience!</p>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">⚡</div>
+                    <h3 class="benefit-title">Speed Round Mode</h3>
+                    <p class="benefit-text">Challenge yourself with timed spelling rounds and compete for high scores!</p>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">📱</div>
+                    <h3 class="benefit-title">Offline Mode</h3>
+                    <p class="benefit-text">Practice anywhere, even without internet connection!</p>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">🎁</div>
+                    <h3 class="benefit-title">Monthly Updates</h3>
+                    <p class="benefit-text">Get new content, features, and avatars added regularly!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+            <h2>Frequently Asked Questions 🤔</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I cancel anytime?</div>
+                <div class="faq-answer">Yes! You can cancel your subscription anytime from your iPhone settings. No questions asked. If you cancel, you'll keep premium access until the end of your billing period.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">How does the Family plan work?</div>
+                <div class="faq-answer">With Family Sharing enabled, up to 6 family members can share one subscription. Each member gets their own account, progress tracking, and avatar customization. Perfect for households with multiple kids!</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Is there a free trial?</div>
+                <div class="faq-answer">Yes! All new subscribers get a 7-day free trial to test out all premium features before committing. You won't be charged until the trial ends.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What happens to my avatars if I downgrade?</div>
+                <div class="faq-answer">If you cancel or downgrade, you'll lose access to premium avatars but keep all your progress and unlocked achievements. You can always re-subscribe to get them back!</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Which plan should I choose?</div>
+                <div class="faq-answer">If you have multiple kids or family members learning spelling, go with Family ($7.99/mo). For individual learners committed to year-round practice, Yearly ($39.99/yr) saves you $20. Monthly ($4.99/mo) is great for trying it out!</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Are payments secure?</div>
+                <div class="faq-answer">Absolutely! All payments are processed through Apple's secure payment system. We never see or store your payment information.</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Questions? Contact us at <a href="mailto:support@beesmartspelling.com">support@beesmartspelling.com</a></p>
+            <p style="margin-top: 10px;">
+                <a href="/privacy">Privacy Policy</a> • 
+                <a href="/terms">Terms of Service</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.85rem; opacity: 0.9;">
+                Payment charged to iTunes Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function subscribe(plan) {
+            const productIds = {
+                'monthly': 'beesmart.premium.monthly',
+                'yearly': 'beesmart.premium.yearly',
+                'family': 'beesmart.premium.family.monthly'
+            };
+
+            const productId = productIds[plan];
+            
+            // Check if running in native app with iOS bridge
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iapBridge) {
+                window.webkit.messageHandlers.iapBridge.postMessage({
+                    action: 'purchase',
+                    productId: productId
+                });
+            } 
+            // Check for Android bridge
+            else if (window.AndroidBridge && window.AndroidBridge.purchase) {
+                window.AndroidBridge.purchase(productId);
+            }
+            // Fallback for web - redirect to registration/signup
+            else {
+                alert(`Selected ${plan.toUpperCase()} plan!\n\nProduct ID: ${productId}\n\nIn-app purchase will be processed through the App Store.`);
+                // Could redirect to registration page
+                // window.location.href = '/register?plan=' + plan;
+            }
+        }
+
+        // Auto-select plan from URL parameter
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedPlan = urlParams.get('plan');
+            
+            if (selectedPlan) {
+                // Highlight the selected plan
+                const cards = document.querySelectorAll('.pricing-card');
+                cards.forEach(card => {
+                    const title = card.querySelector('.card-title').textContent.toLowerCase();
+                    if (title === selectedPlan) {
+                        card.style.border = '4px solid #4CAF50';
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+╔════════════════════════════════════════════════════════════════════╗
+║           Quiz Word List Manager - Architecture Overview           ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          USER INTERACTION                           │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+                    ▼              ▼              ▼
+            ┌──────────┐   ┌──────────┐   ┌──────────┐
+            │  Load    │   │  Refresh │   │   Page   │
+            │ Saved    │   │   List   │   │  Reload  │
+            │  List    │   │  Button  │   │          │
+            └──────────┘   └──────────┘   └──────────┘
+                    │              │              │
+                    └──────────────┼──────────────┘
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         FLASK BACKEND                               │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ Route: /api/saved-lists/load                                  │  │
+│  │  • Loads words from database                                  │  │
+│  │  • Sets session["active_list_id"] = list.id                   │  │
+│  │  • Sets session["active_list_name"] = list.name               │  │
+│  │  • Calls init_quiz_state()                                    │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                   │                                 │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ Route: /quiz                                                   │  │
+│  │  • Gets active_list_id from session (or generates hash)       │  │
+│  │  • Creates selected_list = { id, name }                       │  │
+│  │  • Passes to template                                         │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      TEMPLATE (quiz.html)                           │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ <div id="quiz-root"                                           │  │
+│  │      data-selected-list-id="{{ selected_list.id }}"           │  │
+│  │      data-selected-list-name="{{ selected_list.name }}"       │  │
+│  │      data-words-url="/api/wordbank">                          │  │
+│  │ </div>                                                         │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ <button id="refreshWordListBtn">🔄 Refresh List</button>      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ <script src="quiz-wordlist.js"></script>                      │  │
+│  │ <script>                                                       │  │
+│  │   wordListManager.ensureUsingSelectedList({...})              │  │
+│  │ </script>                                                      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              WORD LIST MANAGER (quiz-wordlist.js)                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ class WordListManager {                                       │  │
+│  │   init(serverProvidedList) {                                  │  │
+│  │     storedList = loadFromStorage()                            │  │
+│  │     if (serverList.id !== storedList.id) {                    │  │
+│  │       // Override storage with server list                    │  │
+│  │       setActiveList(serverList)                               │  │
+│  │     }                                                          │  │
+│  │   }                                                            │  │
+│  │                                                                │  │
+│  │   setActiveList(listData) {                                   │  │
+│  │     this.activeList = { id, name, words, ... }                │  │
+│  │     saveToStorage()      // → localStorage                    │  │
+│  │     notifyListChanged()  // → Update globals + dispatch event │  │
+│  │   }                                                            │  │
+│  │                                                                │  │
+│  │   clearActiveList() {                                         │  │
+│  │     localStorage.removeItem('beesmart_active_wordlist')       │  │
+│  │     notifyListChanged()                                       │  │
+│  │   }                                                            │  │
+│  │ }                                                              │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+                    ▼              ▼              ▼
+         ┌────────────────┐  ┌──────────┐  ┌────────────────┐
+         │  localStorage  │  │ Globals  │  │ Custom Event   │
+         │ ─────────────  │  │ ────────  │  │ ─────────────  │
+         │ Key:           │  │ QUIZ_    │  │ wordlist:      │
+         │ beesmart_      │  │ WORDS    │  │ changed        │
+         │ active_        │  │          │  │                │
+         │ wordlist       │  │ QUIZ_    │  │ detail: {      │
+         │                │  │ CURRENT_ │  │   list,        │
+         │ Value:         │  │ INDEX    │  │   words,       │
+         │ {              │  │          │  │   listId,      │
+         │   id,          │  │ QUIZ_    │  │   listName     │
+         │   name,        │  │ ACTIVE_  │  │ }              │
+         │   words,       │  │ LIST_ID  │  │                │
+         │   loadedAt,    │  │          │  │                │
+         │   version      │  │ QUIZ_    │  │                │
+         │ }              │  │ ACTIVE_  │  │                │
+         │                │  │ LIST_    │  │                │
+         │                │  │ NAME     │  │                │
+         └────────────────┘  └──────────┘  └────────────────┘
+                    │              │              │
+                    └──────────────┼──────────────┘
+                                   ▼
+         ┌────────────────────────────────────────────────┐
+         │         EXISTING QUIZ CODE                     │
+         │  Uses window.QUIZ_WORDS (backward compatible)  │
+         │  Listens to wordlist:changed event (optional)  │
+         └────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║                      KEY FEATURES                                  ║
+╠════════════════════════════════════════════════════════════════════╣
+║ ✅ Server-side list metadata (active_list_id, active_list_name)    ║
+║ ✅ Client-side persistence (localStorage)                          ║
+║ ✅ Automatic conflict resolution (server ID vs stored ID)          ║
+║ ✅ Backward-compatible globals (QUIZ_WORDS, etc.)                  ║
+║ ✅ Event-driven architecture (wordlist:changed)                    ║
+║ ✅ User control (Refresh button with confirmation)                 ║
+╚════════════════════════════════════════════════════════════════════╝

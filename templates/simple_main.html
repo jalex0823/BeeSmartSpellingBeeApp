@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BeeSmart Spelling App - Simple Version</title>
-    <link rel="icon" type="image/png" href="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108">
-    <script>window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' };</script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
+    <script>window.BeeSmartBrand = { logoPath: "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" };</script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
     <style>
@@ -221,7 +221,7 @@
 <body>
     <!-- Logo Section -->
     <section class="logo-section-header">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" />
     </section>
 
     <!-- Main Content Card -->

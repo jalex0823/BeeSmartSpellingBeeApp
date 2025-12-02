@@ -125,13 +125,8 @@ function renderAvatarGrid(avatarsToRender) {
         thumbContainer.style.borderRadius = '8px';
         thumbContainer.style.background = 'linear-gradient(135deg, #FFE8CC 0%, #FFD700 100%)';
 
-        // Extract display name from PNG filename (remove ! and .png)
-        // e.g., "AlBee!.png" → "AlBee"
-        let displayName = avatar.name;
-        if (avatar.urls?.thumbnail) {
-            const pngFilename = avatar.urls.thumbnail.split('/').pop();
-            displayName = pngFilename.replace('!.png', '').replace('.png', '');
-        }
+        // Use standardized name from catalog (includes "Avatar" suffix for Apple compliance)
+        const displayName = avatar.name;
 
         // Create name div (appears below thumbnail)
         const nameDiv = document.createElement('div');

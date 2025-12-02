@@ -1,0 +1,52 @@
+/* BeeSmart Dark Loader - no motion, no drift */
+#app-loader {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 12000;
+  background-color: #000; /* fallback */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#app-loader .loader-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app-loader .loader-logo {
+  width: clamp(220px, 32vw, 420px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,0.6));
+}
+
+/* Big translucent percent centered over the crest */
+#app-loader .loader-percent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  font-size: clamp(36px, 9vw, 120px);
+  line-height: 1;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 1px;
+  text-shadow: 0 6px 18px rgba(0,0,0,0.55);
+  pointer-events: none;
+}
+
+/* Accessible off-screen text for screen readers if needed */
+#app-loader .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* Fade-out ONLY when we remove the loader; no animation otherwise */
+#app-loader.fade-out { opacity: 0; transition: opacity 320ms ease; }

@@ -359,7 +359,7 @@
 {% block content %}
 <!-- Logo Section - Outside main container for white background -->
 <section class="logo-section-header">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" />
 </section>
 
 <!-- Main Content Card -->
@@ -590,7 +590,7 @@ class UnifiedSpellingApp {
             <div class="upload-interface">
                 <h4>📚 Saved Word Lists</h4>
                 <p>Access your previously uploaded word lists</p>
-                <button type="button" class="action-btn primary" onclick="window.location.href='/magical-quiz'">
+                <button type="button" class="action-btn primary" onclick="window.location.href='/quiz'">
                     📖 View Saved Lists
                 </button>
                 <div class="status-message" id="savedStatus"></div>

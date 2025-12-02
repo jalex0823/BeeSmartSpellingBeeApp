@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Loader Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/honey-loader.css') }}">
+</head>
+<body>
+    <!-- Honeycomb Loader -->
+    <div id="appHoneyLoader" style="background-image: url('{{ url_for('static', filename='images/backgrounds/HoneyCombBg2.png') }}');">
+        <div class="loader-logo-wrapper">
+            <img id="loaderLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo">
+            <div id="loaderPercentText">0%</div>
+            <div id="loaderProcessName">Initializing BeeSmart…</div>
+            <div id="loaderStatusDetail">Loading core modules…</div>
+        </div>
+        <div id="loaderAriaStatus" class="sr-only"></div>
+        <button id="skipLoaderBtn" class="loader-skip" type="button" hidden>Skip</button>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/honey-loader.js') }}"></script>
+</body>
+</html>
