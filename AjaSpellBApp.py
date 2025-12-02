@@ -12254,19 +12254,25 @@ def api_get_avatars():
         global _AVATAR_CACHE
         current_time = time.time()
         
-        # Use cache for both authenticated and unauthenticated users
-        # Cache key includes user ID AND role to separate guest/registered/admin unlock status
+        # CRITICAL: Determine cache key BEFORE checking cache
+        # Cache key MUST include user ID AND role to prevent cross-user data leaks
         if current_user.is_authenticated:
             user_role = getattr(current_user, 'role', 'registered')
             cache_key = f"user_{current_user.id}_role_{user_role}"
+            print(f"🔑 Cache key for authenticated user: {cache_key}")
         else:
             cache_key = "user_guest"
+            print(f"🔑 Cache key for guest: {cache_key}")
         
         # Allow cache bypass for immediate troubleshooting (e.g., force=1)
         if request.args.get('force') != '1':
             if _AVATAR_CACHE.get(cache_key) and (current_time - _AVATAR_CACHE.get(f"{cache_key}_timestamp", 0)) < _AVATAR_CACHE["ttl"]:
-                print(f"⚡ Returning cached avatar list for {cache_key}")
-                return jsonify(_AVATAR_CACHE[cache_key])
+                cached_data = _AVATAR_CACHE[cache_key]
+                print(f"⚡ Returning CACHED avatar list for {cache_key}")
+                print(f"   Cached user_authenticated: {cached_data.get('user_authenticated')}")
+                print(f"   Cached user_role: {cached_data.get('user_role')}")
+                print(f"   Cached is_admin: {cached_data.get('is_admin')}")
+                return jsonify(cached_data)
         
         # Be resilient: if DB or catalog imports fail, fall back to filesystem avatars
         try:

@@ -216,7 +216,16 @@ function computeLockedMessage(avatar) {
 // Load avatars from API
 async function loadAvatars() {
     try {
-        const response = await fetch('/api/avatars', { credentials: 'same-origin' });
+        // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, { 
+            credentials: 'same-origin',
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
         if (!response.ok) {
             let bodySnippet = '';
             try {
