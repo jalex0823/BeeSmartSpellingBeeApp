@@ -30,6 +30,12 @@
     
     <!-- Avatar Theme System (must load before picker) -->
     <script src="{{ url_for('static', filename='js/avatar-theme-system.js') }}?v={{ timestamp }}"></script>
+    
+    <!-- CRITICAL: Inject user context for frontend authentication checks -->
+    <script>
+        window.avatarUserInfo = {{ user_data | tojson | safe }};
+        console.log('🔑 User context loaded:', window.avatarUserInfo);
+    </script>
 </head>
 <body class="honeycomb-avatar-picker" {% if picker_bg_url %}style="--picker-bg-image: url('{{ picker_bg_url }}')"{% endif %}>
     
