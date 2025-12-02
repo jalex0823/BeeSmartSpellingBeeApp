@@ -2907,7 +2907,7 @@ def get_wordbank() -> List[Dict[str, str]]:
     wb = []
 
     # 🔧 NEW: If session lost storage_id but user is authenticated, recover from database
-    if not storage_id and current_user.is_authenticated:
+    if not storage_id and current_user.is_authenticated and hasattr(current_user, 'wordbank_storage_id'):
         db_storage_id = current_user.wordbank_storage_id
         if db_storage_id:
             print(f"🔄 get_wordbank: Session lost storage_id, recovering from database for user {current_user.username}")
@@ -2977,7 +2977,7 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     
     # 🔧 NEW: For authenticated users, persist storage_id in database
     # This allows recovery if session is lost (mobile browsers, cookie clearing, etc.)
-    if current_user.is_authenticated:
+    if current_user.is_authenticated and hasattr(current_user, 'wordbank_storage_id'):
         try:
             current_user.wordbank_storage_id = storage_id
             current_user.wordbank_last_updated = datetime.utcnow()
