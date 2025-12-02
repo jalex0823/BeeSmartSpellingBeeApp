@@ -12175,6 +12175,14 @@ def api_get_avatars():
     """
     try:
         print(f"🔍 DEBUG /api/avatars GET: Starting request")
+        print(f"🔍 current_user object: {current_user}")
+        print(f"🔍 current_user.is_authenticated: {current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else 'NO ATTRIBUTE'}")
+        print(f"🔍 session contents: {dict(session)}")
+        print(f"🔍 request.cookies: {dict(request.cookies)}")
+        if current_user.is_authenticated:
+            print(f"✅ USER IS AUTHENTICATED: {current_user.username} (ID: {current_user.id})")
+        else:
+            print(f"❌ USER IS NOT AUTHENTICATED")
         
         # Test database connection first
         try:
