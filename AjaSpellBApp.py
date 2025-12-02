@@ -9928,9 +9928,11 @@ def honeycomb_avatar_picker():
             picker_bg_url = url_for('static', filename=bg.lstrip('/'))
 
     # Pass user context to template/JavaScript
+    # IMPORTANT: This route has @login_required, so guests never reach here
+    # All users accessing this page are authenticated registered users
     user_data = {
         'is_authenticated': current_user.is_authenticated,
-        'is_guest': session.get('is_guest', False) or is_guest_user(current_user) if current_user.is_authenticated else True,
+        'is_guest': False,  # Guests redirected by @login_required
         'is_admin': current_user.role == 'admin' if current_user.is_authenticated else False,
         'user_role': current_user.role if current_user.is_authenticated else None,
         'username': current_user.username if current_user.is_authenticated else None,
@@ -12403,8 +12405,9 @@ def api_get_avatars():
             user_honey_points = getattr(current_user, 'honey_points', 0) or 0
             purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
             
-            # Check if user is a guest (temporary account)
-            is_guest = session.get('is_guest', False) or is_guest_user(current_user)
+            # IMPORTANT: Authenticated users are NOT guests
+            # Guest mode is only for non-logged-in users (handled by current_user.is_authenticated check)
+            is_guest = False
             
             # Check if user has admin_all_access method
             if hasattr(current_user, 'is_admin_or_premium'):
