@@ -8771,25 +8771,32 @@ window.addEventListener('beforeunload', async (event) => {
         }
     }
     
-    // Save progress
-    try {
-        // Use sendBeacon for reliable delivery even during page unload
-        const response = await fetch('/api/save-partial-progress', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            keepalive: true  // Ensures request completes even if page is closing
-        });
-        
-        if (response.ok) {
-            console.log('✅ Partial quiz progress saved');
+    // Save progress ONLY if quiz has actually started
+    // This prevents 400 errors when wordbank is empty or no progress made
+    if (window.spellingQuiz && window.spellingQuiz.quizStarted) {
+        try {
+            // Use sendBeacon for reliable delivery even during page unload
+            const response = await fetch('/api/save-partial-progress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                keepalive: true  // Ensures request completes even if page is closing
+            });
+            
+            if (response.ok) {
+                console.log('✅ Partial quiz progress saved');
+            } else {
+                console.log('ℹ️ No progress to save (quiz not started or no answers yet)');
+            }
+        } catch (error) {
+            // Use sendBeacon as fallback (more reliable during unload)
+            const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+            navigator.sendBeacon('/api/save-partial-progress', blob);
+            console.log('💾 Progress save sent via beacon');
         }
-    } catch (error) {
-        // Use sendBeacon as fallback (more reliable during unload)
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('💾 Progress save sent via beacon');
+    } else {
+        console.log('ℹ️ Skipping progress save - quiz not started yet');
     }
 });
 
@@ -8813,9 +8820,14 @@ window.addEventListener('pagehide', () => {
         }
     }
     
-    // Save progress via beacon
-    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-    navigator.sendBeacon('/api/save-partial-progress', blob);
+    // Save progress via beacon ONLY if quiz has started
+    if (window.spellingQuiz && window.spellingQuiz.quizStarted) {
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('💾 Progress saved via beacon on pagehide');
+    } else {
+        console.log('ℹ️ Skipping progress save - quiz not started');
+    }
     console.log('✅ Final cleanup complete');
 });
 
