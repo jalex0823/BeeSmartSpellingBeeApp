@@ -4,6 +4,70 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+
+<script>
+// 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout speed round
+window.QUIZ_CACHED_VOICE = null;
+window.QUIZ_VOICE_INITIALIZED = false;
+
+// Initialize global voice cache on page load
+window.initializeGlobalVoice = function() {
+    if (window.QUIZ_VOICE_INITIALIZED) return;
+    
+    if ('speechSynthesis' in window) {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            window.QUIZ_VOICE_INITIALIZED = true;
+            console.log('🎤 Global voice initialized:', window.QUIZ_CACHED_VOICE?.name || 'Default');
+        }
+    }
+};
+
+// Global function to select best natural female voice
+function selectBestFemaleVoiceGlobal(voices) {
+    if (!voices || voices.length === 0) return null;
+    
+    const scoredVoices = voices
+        .filter(v => v.lang?.startsWith('en'))
+        .map(voice => {
+            let score = 0;
+            const name = voice.name.toLowerCase();
+            const lang = voice.lang.toLowerCase();
+            
+            if (lang.includes('en-us')) score += 50;
+            else if (lang.includes('en-gb')) score += 30;
+            else if (lang.includes('en-au')) score += 25;
+            
+            if (voice.localService) score += 30;
+            
+            const premiumVoices = {
+                'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
+                'moira': 87, 'salli': 85, 'kendra': 85, 'susan': 75, 'victoria': 82,
+                'nova': 80, 'allison': 78, 'zira': 75
+            };
+            
+            for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                if (name.includes(voiceName)) {
+                    score += points;
+                    break;
+                }
+            }
+            
+            return { voice, score };
+        })
+        .sort((a, b) => b.score - a.score);
+    
+    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+}
+
+// Initialize voice when voices are loaded
+if ('speechSynthesis' in window) {
+    speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);
+    setTimeout(window.initializeGlobalVoice, 100);
+}
+</script>
+
 <style>
     body {
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
@@ -619,11 +683,7 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay" style="display: none;">
-    <div class="loading-bee">🐝</div>
-    <div class="loading-text">Loading Speed Round...</div>
-</div>
+<!-- Removed duplicate loading overlay: rely on unified global honey pot loading screen -->
 
 <script src="/static/js/voice-visualizer-config.js"></script>
 <script>
@@ -711,17 +771,24 @@ function selectBestFemaleVoice() {
                 if (name.includes('female') || name.includes('voice 2') || name.includes('voice 4')) score += 40;
             }
 
-            // Known high-quality female voices (ordered by naturalness)
+            // Known high-quality natural-sounding female voices (prioritized for kids in speed round)
             const premiumVoices = {
-                'samantha': 90,     // macOS - very natural
-                'alex': 85,         // macOS - excellent quality
-                'victoria': 80,     // Windows - natural sounding
-                'zira': 75,         // Windows - clear and natural
-                'aria': 85,         // Modern Windows neural
-                'jenny': 85,        // Modern neural voice
+                'samantha': 95,     // macOS - very natural, excellent for kids
+                'ava': 92,          // macOS - warm and clear
+                'emma': 90,         // Modern neural - friendly tone
+                'joanna': 88,       // Amazon Polly - professional but warm
+                'karen': 88,        // Clear enunciation for spelling
+                'moira': 87,        // Irish accent - pleasant and clear
+                'aria': 85,         // Modern Windows neural - natural
+                'jenny': 85,        // Modern neural voice - friendly
+                'salli': 85,        // Amazon Polly - clear pronunciation
+                'kendra': 85,       // Amazon Polly - warm tone
+                'victoria': 82,     // Windows - natural sounding
                 'nova': 80,         // Modern neural voice
-                'allison': 70,      // Traditional but good
-                'ava': 70,          // Traditional but good
+                'allison': 78,      // Traditional but good clarity
+                'zira': 75,         // Windows - clear and natural
+                'susan': 75         // Traditional - good for spelling
+            };
                 'joanna': 65,       // Amazon Polly style
                 'susan': 60,        // Traditional
                 'karen': 55,        // Traditional
@@ -845,8 +912,8 @@ function announceSpeedRoundIntro() {
     // iOS Fix: Add 100ms delay after cancel
     setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(intro);
-        utterance.pitch = 1.35;
-        utterance.rate = 0.95;
+        utterance.pitch = 1.0; // Natural neutral female voice
+        utterance.rate = 0.7; // Slower for clearer introduction
         utterance.volume = 0.9;
 
         // Use the same best-female voice selector as regular quiz
@@ -1266,15 +1333,17 @@ function announceWord(wordIndex, totalWords) {
     
     setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(announcement);
-        utterance.pitch = 1.35;
-        utterance.rate = 0.92;
+        utterance.pitch = 1.0; // Natural neutral female voice
+        utterance.rate = 0.7; // Slower for clearer announcements
         utterance.volume = 0.9;
         
-        // Use cached voice or select enhanced one (US English)
-        if (cachedVoice) {
+        // Use global cached voice for consistency
+        if (window.QUIZ_CACHED_VOICE) {
+            utterance.voice = window.QUIZ_CACHED_VOICE;
+            cachedVoice = window.QUIZ_CACHED_VOICE;
+        } else if (cachedVoice) {
             utterance.voice = cachedVoice;
         } else {
-            // Select and cache the best female voice (same logic as quiz)
             cachedVoice = selectBestFemaleVoice();
             if (cachedVoice) {
                 utterance.voice = cachedVoice;
@@ -1350,23 +1419,29 @@ function pronounceWord() {
     speechSynthesis.cancel();
 
     setTimeout(() => {
-    // Speak a friendly prompt and the word twice
-    const phrase = `Spell the word ${word}. ${word}.`;
+    // Speak a friendly prompt and the word once (clear and slow)
+    const phrase = `Spell the word, ${word}.`;
     const utterance = new SpeechSynthesisUtterance(phrase);
-        utterance.pitch = 1.35;
-        utterance.rate = 0.7; // Slower rate for better comprehension (same as Pronounce button)
+        utterance.pitch = 1.0; // Natural neutral female voice
+        utterance.rate = 0.65; // Very slow for maximum clarity
         utterance.volume = 0.9;
 
-        // Select enhanced US English female voice for American pronunciation
-        if (!cachedVoice) {
+        // Use global cached voice for consistency
+        if (window.QUIZ_CACHED_VOICE) {
+            utterance.voice = window.QUIZ_CACHED_VOICE;
+            cachedVoice = window.QUIZ_CACHED_VOICE;
+            status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
+        } else if (!cachedVoice) {
             cachedVoice = selectBestFemaleVoice();
-        }
-
-        if (cachedVoice) {
+            if (cachedVoice) {
+                utterance.voice = cachedVoice;
+                status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
+            } else {
+                status.textContent = '🎙️ Speaking';
+            }
+        } else {
             utterance.voice = cachedVoice;
             status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
-        } else {
-            status.textContent = '🎙️ Speaking';
         }
 
         // Visualizer state + robust start/unlock fallback for Safari/macOS

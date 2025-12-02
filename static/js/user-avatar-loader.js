@@ -32,7 +32,24 @@ class UserAvatarLoader {
         
         // Quick DB connection check instead of loading all avatars
         this.verifyDatabaseConnection();
-        
+    }
+
+    /**
+     * Safe fetch with timeout to prevent infinite hangs
+     * @param {string} url - URL to fetch
+     * @param {object} opts - Fetch options
+     * @param {number} timeoutMs - Timeout in milliseconds (default 1500ms)
+     * @returns {Promise} Fetch promise with timeout
+     */
+    async _safeFetch(url, opts = {}, timeoutMs = 1500) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...opts, signal: controller.signal })
+            .finally(() => clearTimeout(timeout));
+    }
+
+    // Legacy properties preserved for compatibility
+    _legacyInit() {
         // DEPRECATED - Old hardcoded map (kept for fallback only) - UPDATED TO NEW PATHS
         // Only includes the 9 working avatars with verified files
         this._oldAvatarMap = {
@@ -130,7 +147,7 @@ class UserAvatarLoader {
     async verifyDatabaseConnection() {
         try {
             console.log('🔍 Verifying avatar database connection...');
-            const response = await fetch('/api/avatars?category=classic', { credentials: 'same-origin' });
+            const response = await this._safeFetch('/api/avatars?category=classic', { credentials: 'same-origin' }, 1500);
             if (response.ok) {
                 this.dbConnectionVerified = true;
                 console.log('✅ Avatar database connection verified');
@@ -157,7 +174,7 @@ class UserAvatarLoader {
         
         try {
             console.log('📡 Loading avatar catalog from database API...');
-            const response = await fetch('/api/avatars', { credentials: 'same-origin' });
+            const response = await this._safeFetch('/api/avatars', { credentials: 'same-origin' }, 2000);
             if (!response.ok) {
                 throw new Error(`API returned ${response.status}`);
             }
@@ -344,7 +361,7 @@ class UserAvatarLoader {
         
         for (const fileUrl of filesToCheck) {
             try {
-                const response = await fetch(fileUrl, { method: 'HEAD' });
+                const response = await this._safeFetch(fileUrl, { method: 'HEAD' }, 1000);
                 if (response.ok) {
                     validFiles.push({
                         url: fileUrl,
@@ -618,61 +635,19 @@ class UserAvatarLoader {
 
     /**
      * Emergency 2D fallback when even MascotBee 3D fails
+     * UPDATED: Hide container instead of showing 2D bee circle
      */
     loadEmergency2DFallback(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        console.log('🔄 Loading emergency 2D fallback...');
+        console.log('🔄 Hiding avatar container - no fallback shown');
         
-        // Create simple 2D bee emoji display as last resort
-        container.innerHTML = `
-            <div style="
-                width: 100%;
-                height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: linear-gradient(135deg, #FFB300, #FF8F00);
-                border-radius: 50%;
-                border: 3px solid rgba(255, 179, 0, 0.8);
-                box-shadow: 0 8px 16px rgba(255, 179, 0, 0.4);
-                position: relative;
-                overflow: hidden;
-            ">
-                <div style="
-                    font-size: 4rem;
-                    line-height: 1;
-                    text-align: center;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                ">🐝</div>
-                <div style="
-                    position: absolute;
-                    bottom: -5px;
-                    right: -5px;
-                    width: 20px;
-                    height: 20px;
-                    background: rgba(255, 255, 255, 0.9);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 12px;
-                    border: 1px solid rgba(0,0,0,0.2);
-                ">📚</div>
-            </div>
-        `;
-
-        // Add click animation
-        container.addEventListener('click', () => {
-            container.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                container.style.transform = 'scale(1)';
-            }, 150);
-        });
-
-        console.log('✅ Emergency 2D fallback loaded');
-        this.showStatusMessage('Emergency avatar mode - Please check 3D files', 'warning', 5000);
+        // Hide the container completely - no 2D fallback
+        container.style.display = 'none';
+        
+        console.log('✅ Avatar container hidden (3D load failed)');
+        this.showStatusMessage('3D avatar loading issue - container hidden', 'info', 3000);
     }
 
     /**
@@ -798,9 +773,9 @@ class UserAvatarLoader {
         this.showLoadingState();
         
         try {
-            const response = await fetch('/api/users/me/avatar', {
+            const response = await this._safeFetch('/api/users/me/avatar', {
                 credentials: 'same-origin'
-            });
+            }, 1500);
             
             if (response.ok) {
                 const data = await response.json();
@@ -858,14 +833,14 @@ class UserAvatarLoader {
         // GLB-first validation: only need the .glb file
         if (paths.glb) {
             try {
-                const res = await fetch(paths.glb, { method: 'HEAD' });
+                const res = await this._safeFetch(paths.glb, { method: 'HEAD' }, 1000);
                 if (!res.ok) {
                     console.error('❌ GLB file not accessible:', paths.glb, res.status);
                     return false;
                 }
                 return true;
             } catch (e) {
-                console.error('❌ GLB validation error:', e);
+                console.error('❌ GLB validation error (timeout or network):', e.name === 'Error' && e.message === 'fetch timeout' ? 'TIMEOUT' : e);
                 return false;
             }
         }
@@ -880,7 +855,7 @@ class UserAvatarLoader {
         try {
             const checks = filesToCheck.map(async (url) => {
                 try {
-                    const response = await fetch(url, { method: 'HEAD' });
+                    const response = await this._safeFetch(url, { method: 'HEAD' }, 1000);
                     return response.ok;
                 } catch {
                     return false;
@@ -982,7 +957,28 @@ class UserAvatarLoader {
 // Create global instance
 window.userAvatarLoader = new UserAvatarLoader();
 
-// Auto-initialize on page load
+// DEFER initialization until honey loader finishes to prevent blocking
+let avatarInitialized = false;
+
+// Listen for honey loader to finish
+document.addEventListener('honeyLoaderFinished', () => {
+    if (!avatarInitialized) {
+        console.log('🍯 Honey loader finished, initializing avatar loader');
+        avatarInitialized = true;
+        // Delay slightly to let page become interactive first
+        setTimeout(() => {
+            window.userAvatarLoader.init();
+        }, 100);
+    }
+});
+
+// Fallback: Initialize after DOM load if honey loader doesn't fire within 2 seconds
 document.addEventListener('DOMContentLoaded', () => {
-    window.userAvatarLoader.init();
+    setTimeout(() => {
+        if (!avatarInitialized) {
+            console.warn('⚠️ Honey loader timeout, initializing avatar loader anyway');
+            avatarInitialized = true;
+            window.userAvatarLoader.init();
+        }
+    }, 2000);
 });

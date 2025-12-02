@@ -52,6 +52,18 @@ class User(UserMixin, db.Model):
     premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
     admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
     
+    # 📱 App Store Subscription System (nullable until migration)
+    # subscription_type = db.Column(db.String(50), nullable=True, index=True)  # 'monthly', 'yearly', 'family', or None
+    # subscription_product_id = db.Column(db.String(100), nullable=True)  # e.g., 'beesmart.premium.monthly'
+    # subscription_status = db.Column(db.String(20), nullable=True, default='none')  # 'active', 'grace_period', 'expired', 'canceled', 'none'
+    # subscription_expires_at = db.Column(db.DateTime, nullable=True, index=True)  # When current subscription period ends
+    # subscription_auto_renew = db.Column(db.Boolean, nullable=True, default=True)  # Whether auto-renewal is enabled
+    # original_transaction_id = db.Column(db.String(100), nullable=True, unique=True, index=True)  # Apple's unique transaction ID
+    # latest_receipt_data = db.Column(db.Text, nullable=True)  # Latest App Store receipt (base64)
+    # subscription_started_at = db.Column(db.DateTime, nullable=True)  # When subscription first started
+    # subscription_canceled_at = db.Column(db.DateTime, nullable=True)  # When user canceled (still has access until expires_at)
+    # family_shared_from = db.Column(db.String(100), nullable=True)  # If using family sharing, original subscriber's transaction ID
+    
     # �📊 GPA Tracking
     cumulative_gpa = db.Column(db.Numeric(3, 2), default=0.0)  # 0.00 to 4.00 scale
     average_accuracy = db.Column(db.Numeric(5, 2), default=0.0)  # 0.00 to 100.00%
@@ -236,6 +248,138 @@ class User(UserMixin, db.Model):
             return False, "Avatar already purchased"
         
         self.purchased_avatars.append(avatar_id)
+        return True, f"Avatar {avatar_id} purchased successfully"
+    
+    # 📱 Subscription Helper Methods
+    
+    def is_premium_active(self) -> bool:
+        """
+        Check if user has active premium subscription.
+        
+        Returns True if:
+        - Admin/admin_all_access (bypass)
+        - Active subscription that hasn't expired
+        - Subscription in grace period (billing issue)
+        """
+        # Admin bypass
+        if self.role == 'admin' or self.admin_all_access:
+            return True
+        
+        # Legacy premium_member flag (backward compatibility)
+        if self.premium_member:
+            return True
+        
+        # Check if subscription columns exist (migration check)
+        if not hasattr(self, 'subscription_status'):
+            return False
+        
+        # Check subscription status
+        if not self.subscription_status or self.subscription_status == 'none':
+            return False
+        
+        # Active subscription or grace period
+        if self.subscription_status in ['active', 'grace_period']:
+            # Verify not expired
+            if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at:
+                return datetime.utcnow() < self.subscription_expires_at
+            return True  # Active status but no expiration means lifetime
+        
+        return False
+    
+    def get_subscription_status(self) -> dict:
+        """
+        Get comprehensive subscription status information.
+        
+        Returns:
+            dict: Subscription details including type, status, expiration, auto-renew
+        """
+        # Check if subscription columns exist (migration check)
+        if not hasattr(self, 'subscription_status'):
+            return {
+                'is_premium': self.premium_member or False,
+                'subscription_type': 'none',
+                'product_id': None,
+                'status': 'none',
+                'expires_at': None,
+                'auto_renew': False,
+                'started_at': None,
+                'canceled_at': None,
+                'family_shared': False,
+                'days_remaining': 0
+            }
+        
+        return {
+            'is_premium': self.is_premium_active(),
+            'subscription_type': getattr(self, 'subscription_type', None),
+            'product_id': getattr(self, 'subscription_product_id', None),
+            'status': getattr(self, 'subscription_status', 'none') or 'none',
+            'expires_at': self.subscription_expires_at.isoformat() if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at else None,
+            'auto_renew': getattr(self, 'subscription_auto_renew', False),
+            'started_at': self.subscription_started_at.isoformat() if hasattr(self, 'subscription_started_at') and self.subscription_started_at else None,
+            'canceled_at': self.subscription_canceled_at.isoformat() if hasattr(self, 'subscription_canceled_at') and self.subscription_canceled_at else None,
+            'family_shared': bool(getattr(self, 'family_shared_from', None)),
+            'days_remaining': (self.subscription_expires_at - datetime.utcnow()).days if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow() else 0
+        }
+    
+    def update_subscription(self, receipt_data: dict) -> bool:
+        """
+        Update subscription status from App Store receipt data.
+        
+        Args:
+            receipt_data: Decoded receipt from Apple's verification response
+        
+        Returns:
+            bool: True if subscription updated successfully
+        """
+        try:
+            from datetime import datetime, timezone
+            
+            # Extract subscription info from latest_receipt_info
+            latest_info = receipt_data.get('latest_receipt_info', [{}])[0]
+            
+            self.subscription_product_id = latest_info.get('product_id')
+            self.original_transaction_id = latest_info.get('original_transaction_id')
+            
+            # Determine subscription type from product ID
+            if 'monthly' in self.subscription_product_id:
+                self.subscription_type = 'family' if 'family' in self.subscription_product_id else 'monthly'
+            elif 'yearly' in self.subscription_product_id:
+                self.subscription_type = 'yearly'
+            
+            # Parse expiration date (Apple sends milliseconds since epoch)
+            expires_ms = int(latest_info.get('expires_date_ms', 0))
+            if expires_ms:
+                self.subscription_expires_at = datetime.fromtimestamp(expires_ms / 1000, tz=timezone.utc).replace(tzinfo=None)
+            
+            # Set subscription start date if first time
+            if not self.subscription_started_at:
+                purchase_ms = int(latest_info.get('purchase_date_ms', 0))
+                if purchase_ms:
+                    self.subscription_started_at = datetime.fromtimestamp(purchase_ms / 1000, tz=timezone.utc).replace(tzinfo=None)
+            
+            # Check auto-renew status
+            pending_renewal = receipt_data.get('pending_renewal_info', [{}])[0]
+            self.subscription_auto_renew = pending_renewal.get('auto_renew_status') == '1'
+            
+            # Determine status
+            if self.subscription_expires_at and datetime.utcnow() < self.subscription_expires_at:
+                # Check if in billing retry (grace period)
+                is_in_billing_retry = pending_renewal.get('is_in_billing_retry_period') == '1'
+                self.subscription_status = 'grace_period' if is_in_billing_retry else 'active'
+            else:
+                self.subscription_status = 'expired'
+            
+            # Store latest receipt for future validation
+            self.latest_receipt_data = receipt_data.get('latest_receipt')
+            
+            # Update legacy premium_member flag for backward compatibility
+            self.premium_member = self.is_premium_active()
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error updating subscription: {e}")
+            return False
         return True, f"Avatar {avatar_id} purchased successfully"
     
     def purchase_bundle(self, bundle_id: str, included_avatars: list) -> tuple[bool, str]:
@@ -470,7 +614,10 @@ class QuizSession(db.Model):
     correct_count = db.Column(db.Integer, default=0)
     incorrect_count = db.Column(db.Integer, default=0)
     skipped_count = db.Column(db.Integer, default=0)
-    total_points = db.Column(db.Integer, default=0)
+    total_points = db.Column(db.Integer, default=0)  # Deprecated - use points_earned instead
+    points_earned = db.Column(db.Integer, default=0)  # Total session points (word points + bonuses + badges)
+    badge_bonus_points = db.Column(db.Integer, default=0)  # Points from badges only
+    extra_points = db.Column(db.Integer, default=0)  # Additional bonus points (achievements, special events)
     max_streak = db.Column(db.Integer, default=0)
     accuracy_percentage = db.Column(db.Numeric(5, 2))
     difficulty_level = db.Column(db.String(20), default='normal')  # easy, normal, challenge, mixed
@@ -1036,8 +1183,8 @@ class Avatar(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(50), unique=True, nullable=False, index=True)  # e.g., 'cool-bee', 'explorer-bee'
-    name = db.Column(db.String(100), nullable=False)  # Display name: "Cool Bee", "Explorer Bee"
-    description = db.Column(db.Text)  # Kid-friendly description
+    name = db.Column(db.String(100), nullable=False, index=True)  # Display name: "Cool Bee", "Explorer Bee" - indexed for search
+    description = db.Column(db.Text, index=True)  # Kid-friendly description - indexed for search
     category = db.Column(db.String(50), default='classic', index=True)  # classic, adventure, sports, etc.
     
     # File paths (relative to static/assets/avatars/)
@@ -1057,10 +1204,16 @@ class Avatar(db.Model):
     unlock_level = db.Column(db.Integer, default=1)  # Minimum level to unlock (1 = always available)
     points_required = db.Column(db.Integer, default=0)  # Points needed to unlock
     is_premium = db.Column(db.Boolean, default=False)  # Premium/paid avatars
-    sort_order = db.Column(db.Integer, default=0)  # Display order in picker
-    is_active = db.Column(db.Boolean, default=True)  # Can be selected by users
+    sort_order = db.Column(db.Integer, default=0, index=True)  # Display order in picker - indexed for sorting
+    is_active = db.Column(db.Boolean, default=True, index=True)  # Can be selected by users - indexed for filtering
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Composite index for common query pattern: active avatars ordered by sort_order and name
+    __table_args__ = (
+        db.Index('idx_active_sorted', 'is_active', 'sort_order', 'name'),
+        db.Index('idx_category_active', 'category', 'is_active'),
+    )
     
     # Relationship (users who have selected this avatar)
     users = db.relationship('User', backref='avatar', lazy='dynamic',
@@ -1086,8 +1239,21 @@ class Avatar(db.Model):
     
     @staticmethod
     def get_by_slug(slug):
-        """Get avatar by slug (e.g., 'cool-bee')"""
-        return Avatar.query.filter_by(slug=slug, is_active=True).first()
+        """Get avatar by slug (e.g., 'cool-bee') with request-level caching"""
+        from flask import g
+        
+        # Initialize cache if not exists
+        if not hasattr(g, '_avatar_cache'):
+            g._avatar_cache = {}
+        
+        # Return cached result if available
+        if slug in g._avatar_cache:
+            return g._avatar_cache[slug]
+        
+        # Query database and cache result
+        avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
+        g._avatar_cache[slug] = avatar
+        return avatar
     
     @staticmethod
     def get_all_active(category=None):

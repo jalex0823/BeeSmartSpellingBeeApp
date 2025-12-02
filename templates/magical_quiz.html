@@ -3,6 +3,70 @@
 {% block title %}Aja's Magical Spelling Bee - BeeSmart{% endblock %}
 
 {% block extra_css %}
+
+<script>
+// 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout magical quiz
+window.QUIZ_CACHED_VOICE = null;
+window.QUIZ_VOICE_INITIALIZED = false;
+
+// Initialize global voice cache on page load
+window.initializeGlobalVoice = function() {
+    if (window.QUIZ_VOICE_INITIALIZED) return;
+    
+    if ('speechSynthesis' in window) {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            window.QUIZ_VOICE_INITIALIZED = true;
+            console.log('🎤 Global voice initialized:', window.QUIZ_CACHED_VOICE?.name || 'Default');
+        }
+    }
+};
+
+// Global function to select best natural female voice
+function selectBestFemaleVoiceGlobal(voices) {
+    if (!voices || voices.length === 0) return null;
+    
+    const scoredVoices = voices
+        .filter(v => v.lang?.startsWith('en'))
+        .map(voice => {
+            let score = 0;
+            const name = voice.name.toLowerCase();
+            const lang = voice.lang.toLowerCase();
+            
+            if (lang.includes('en-us')) score += 50;
+            else if (lang.includes('en-gb')) score += 30;
+            else if (lang.includes('en-au')) score += 25;
+            
+            if (voice.localService) score += 30;
+            
+            const premiumVoices = {
+                'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
+                'moira': 87, 'salli': 85, 'kendra': 85, 'susan': 75, 'victoria': 82,
+                'nova': 80, 'allison': 78, 'zira': 75
+            };
+            
+            for (const [voiceName, points] of Object.entries(premiumVoices)) {
+                if (name.includes(voiceName)) {
+                    score += points;
+                    break;
+                }
+            }
+            
+            return { voice, score };
+        })
+        .sort((a, b) => b.score - a.score);
+    
+    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+}
+
+// Initialize voice when voices are loaded
+if ('speechSynthesis' in window) {
+    speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);
+    setTimeout(window.initializeGlobalVoice, 100);
+}
+</script>
+
 <style>
     .quiz-main-container {
         max-width: 700px;
@@ -673,8 +737,8 @@ class MagicalSpellingBee {
             if (voice.quality === 'high' || voice.quality === 'enhanced') score += 50;
             if (voice.localService) score += 30;
             
-            // Premium voice name patterns (often higher quality)
-            const premiumNames = ['samantha', 'alex', 'victoria', 'aria', 'jenny', 'nova', 'hazel', 'karen', 'ava'];
+            // Premium natural-sounding female voice names (prioritized for kids)
+            const premiumNames = ['samantha', 'ava', 'emma', 'joanna', 'karen', 'moira', 'aria', 'jenny', 'salli', 'kendra', 'victoria', 'nova', 'allison', 'susan', 'hazel'];
             if (premiumNames.some(name => voice.name.toLowerCase().includes(name))) {
                 score += 40;
             }
@@ -736,29 +800,33 @@ class MagicalSpellingBee {
                     return;
                 }
                 
-                // Cancel any ongoing speech
-                window.speechSynthesis.cancel();
-                
-                // Get the best female voice
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            
+            // Create utterance
+            const utterance = new SpeechSynthesisUtterance(currentWord.word);
+            // Natural spoken pace for quiz (distinct from Speed Round's slightly elevated rate/pitch)
+            // If a global override is ever set (window.QUIZ_TTS_RATE), prefer it.
+            const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 0.65;   // 0.65 = very slow, maximum clarity
+            const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0; // Neutral pitch for natural female voice
+            utterance.rate = QUIZ_TTS_RATE;
+            utterance.pitch = QUIZ_TTS_PITCH;
+            utterance.volume = 1.0;
+            utterance.lang = 'en-US';
+            
+            // Use global cached voice for consistency
+            if (window.QUIZ_CACHED_VOICE) {
+                utterance.voice = window.QUIZ_CACHED_VOICE;
+                console.log('🎤 Using global cached voice:', window.QUIZ_CACHED_VOICE.name);
+            } else {
+                // Fallback to selecting best female voice
                 const bestVoice = this.selectBestFemaleVoice();
-                
-                // Create utterance
-                const utterance = new SpeechSynthesisUtterance(currentWord.word);
-                // Natural spoken pace for quiz (distinct from Speed Round's slightly elevated rate/pitch)
-                // If a global override is ever set (window.QUIZ_TTS_RATE), prefer it.
-                const QUIZ_TTS_RATE = window.QUIZ_TTS_RATE || 1.0;   // 1.0 = browser default “natural”
-                const QUIZ_TTS_PITCH = window.QUIZ_TTS_PITCH || 1.0; // Keep neutral pitch for clarity
-                utterance.rate = QUIZ_TTS_RATE;
-                utterance.pitch = QUIZ_TTS_PITCH;
-                utterance.volume = 1.0;
-                utterance.lang = 'en-US';
-                
-                // Apply the selected voice
                 if (bestVoice) {
                     utterance.voice = bestVoice;
                     console.log('🎤 Using voice:', bestVoice.name, '(', bestVoice.lang, ')');
                 }
-                
+            }
+            
                 // Add event handlers
                 utterance.onstart = () => {
                     this.showStatus('🗣️ Speaking word...', 'info');

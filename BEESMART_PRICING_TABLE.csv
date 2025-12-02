@@ -1,0 +1,33 @@
+Type,SKU/ID,Title,USD Price,Points Unlock,Notes
+Subscription,hive_membership_monthly,Hive Membership (Monthly),3.99,,Auto-renewing; manage in store settings
+Subscription,hive_membership_annual,Hive Membership (Annual),29.99,,Annual option; save vs monthly
+Pack,classroom-starter-pack,Classroom Starter Pack,4.99,,"Includes BeeKey; 5 avatars (Queen, Superbee, Knight, Rocker, Doctor)"
+Pack,family-fun-pack,Family Fun Pack,4.99,,"Includes BeeKey; 5 avatars (Explorer, Astro, Biker, etc)"
+Bundle,top-bee,Top Bee Bundle,9.99,,Unlock all premium avatars ($1.99 tier)
+Bundle,ultimate-hive,Ultimate Hive Bundle,14.99,,Unlock all avatars (present & future)
+Avatar,brother-bee,Brother Bee Avatar,,,Free starter avatar
+Avatar,builder-bee,Builder Bee Avatar,,,Free starter avatar
+Avatar,cool-bee,Cool Bee Avatar,,,Free starter avatar
+Avatar,detective-bee,Detective Bee Avatar,,,Free starter avatar
+Avatar,explorer-bee,Explorer Bee Avatar,,,Free starter avatar
+Avatar,mascot-bee,Mascot Bee Avatar,,,Free starter avatar
+Avatar,doctor-bee,Doctor Bee Avatar,0.99,2000,"Standard tier - 2,000 points to unlock"
+Avatar,buzz-bee,Buzz Bee Avatar,0.99,3000,"Standard tier - 3,000 points to unlock"
+Avatar,knight-bee,Knight Bee Avatar,0.99,4000,"Standard tier - 4,000 points to unlock"
+Avatar,anxious-bee,Anxious Bee Avatar,0.99,5000,"Standard tier - 5,000 points to unlock"
+Avatar,selfie-bee,Selfie Bee Avatar,0.99,5000,"Standard tier - 5,000 points to unlock"
+Avatar,monster-bee,Monster Bee Avatar,0.99,6000,"Standard tier - 6,000 points to unlock"
+Avatar,rocker-bee,Rocker Bee Avatar,0.99,8000,"Standard tier - 8,000 points to unlock"
+Avatar,seabea,Seabea Avatar,0.99,10000,"Standard tier - 10,000 points to unlock"
+Avatar,professor-bee,Professor Bee Avatar,0.99,22000,"Standard tier - 22,000 points to unlock"
+Avatar,vamp-bee,Vamp Bee Avatar,0.99,24000,"Standard tier - 24,000 points to unlock"
+Avatar,franken-bee,Franken Bee Avatar,0.99,25000,"Standard tier - 25,000 points to unlock"
+Avatar,diva-bee,Diva Bee Avatar,1.99,12000,"PREMIUM tier - 12,000 points to unlock"
+Avatar,biker-bee,Biker Bee Avatar,1.99,15000,"PREMIUM tier - 15,000 points to unlock"
+Avatar,astro-bee,Astro Bee Avatar,1.99,18000,"PREMIUM tier - 18,000 points to unlock"
+Avatar,al-bee,Al Bee Avatar,1.99,20000,"PREMIUM tier - 20,000 points to unlock"
+Avatar,zom-bee,Zom Bee Avatar,1.99,25000,"PREMIUM tier - 25,000 points to unlock"
+Avatar,superbee,Superbee Avatar,1.99,26000,"PREMIUM tier - 26,000 points to unlock"
+Avatar,ware-bee,Ware Bee Avatar,1.99,27000,"PREMIUM tier - 27,000 points to unlock"
+Avatar,queen-bee,Queen Bee Avatar,1.99,28000,"PREMIUM tier - 28,000 points to unlock"
+Avatar,robo-bee,Robo Bee Avatar,1.99,30000,"PREMIUM tier - 30,000 points to unlock"

@@ -37,7 +37,7 @@
     <div class="test-card">
         <h1>🧪 Debug Test Page</h1>
         <p>This is a simple test to see if basic HTML and CSS are working.</p>
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" class="logo" />
+    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Logo" class="logo" />
         <p>If you can see this page with pink background and the logo, the server is working.</p>
         <p>Current time: {{ timestamp or 'No timestamp' }}</p>
         <button onclick="alert('JavaScript is working!')">Test JavaScript</button>

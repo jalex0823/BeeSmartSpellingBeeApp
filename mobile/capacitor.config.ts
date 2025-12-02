@@ -8,7 +8,6 @@ const config: CapacitorConfig = {
   appId: 'com.beesmart.spelling',
   appName: 'BeeSmart Spelling',
   webDir: 'static',
-  bundledWebRuntime: false,
   server: {
     // Production Railway URL (canonical)
     url: 'https://beesmartspellingbeeapp-production.up.railway.app',

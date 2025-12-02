@@ -24,7 +24,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-screen.css') }}">
-    <script>window.BeeSmartBrand = { logoPath: '/static/images/BeeSmartSpellingBeeApplication.png?v=20251108' };</script>
+    
+    <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
+    <script src="{{ url_for('static', filename='js/logo-config.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}"></script>
     <!-- Three.js for 3D Bees - Updated CDN for iOS Safari compatibility -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -554,11 +556,15 @@
             }
         }
         
-        /* Main container */
+        /* Main container - ENHANCED: Better centering and padding */
         .main-container {
             max-width: 600px;
             margin: 0 auto;
             padding: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Sticky top load bar for small screens */
@@ -706,14 +712,14 @@
             overflow: visible;        /* Prevent clipping of 3D avatar */
             z-index: 30;              /* Ensure the avatar/name area sits above following sections */
             /* Perfect centering alignment to match main menu column */
-            max-width: 420px;
+            max-width: 100%;
             margin: 0 auto;
         }
         
-        /* FINAL CONTAINER SIZE - Clean optimized dimensions (match guest carousel 240x180) */
+        /* FINAL CONTAINER SIZE - Enlarged and centered for better avatar showcase */
         div#mascotBee3D {
-            width: 240px !important;
-            height: 180px !important;
+            width: 480px !important;
+            height: 420px !important;
             margin: 0 auto 1.2rem auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
@@ -723,7 +729,7 @@
             justify-content: center !important;
             z-index: 100 !important;
             overflow: visible !important;
-            pointer-events: none !important; /* allow clicks to pass through mascot area */
+            pointer-events: auto !important; /* enable clicks for interaction */
         }
 
         /* Avatar container: fully transparent with no backdrop */
@@ -1837,6 +1843,9 @@
             .main-container {
                 margin: 0 auto;
                 padding: 0 0.5rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
             
             .logo-section {
@@ -1850,8 +1859,8 @@
             }
             
             #mascotBee3D {
-                width: 160px;
-                height: 120px; /* UPDATED: Match new container size (was 260px) */
+                width: 280px;
+                height: 240px; /* ENHANCED: Larger for better detail showcase (was 120px) */
                 margin: 0 auto 1.2rem auto;
                 transform: translateY(-10px);  /* Reduced upward movement (was -20px) */
                 position: relative;
@@ -1933,17 +1942,6 @@
     </style>
 </head>
 <body class="home-no-shimmer">
-    <!-- Injected global loading overlay (since this template does not extend base.html) -->
-    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks">
-    <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" class="crest-logo" decoding="async" />
-        <h1>Preparing Magic...</h1>
-        <div class="checks" id="loadingChecks" aria-live="polite">
-            <h2>System Checks</h2>
-        </div>
-        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true">Tap to Start</button>
-        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()">Skip</button>
-        <div class="footer-note">All systems must pass before starting for the best experience.</div>
-    </div>
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
@@ -2176,8 +2174,9 @@
         ">🎤 Voice input ready</div>
         <!-- Brand Logo with TM (replaces emoji bee) -->
         <img
-            src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108"
+            src=""
             alt="BeeSmart Spelling Bee Application™ logo"
+            class="brand-logo crest-logo"
             style="
                 width: clamp(260px, 65vw, 560px);
                 height: auto;
@@ -2476,7 +2475,7 @@
             pointer-events: auto;
         }
 
-        /* keep canvas filling the space and perfectly centered */
+        /* keep canvas filling the space and perfectly centered with enhanced detail */
         #mascotBee3D canvas {
             width: 100% !important;
             height: 100% !important;
@@ -2485,7 +2484,7 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -50%) scale(1.1) !important; /* ENHANCED: Perfect centering with slight scale up */
+            transform: translate(-50%, -50%) scale(1.5) !important; /* ENHANCED: Larger scale for maximum avatar presence */
             pointer-events: none;
             z-index: 100 !important;
         }
@@ -2521,7 +2520,7 @@
                 </div>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
-                <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo" style="
+                <img src="" alt="BeeSmart Logo" class="brand-logo crest-logo" style="
                     width: clamp(180px, 40vw, 320px);
                     height: auto;
                     margin: 6px auto 8px;
@@ -2531,30 +2530,32 @@
                 " />
                 
                 {% if current_user.is_authenticated %}
-                <!-- 3D Avatar Display (registered users only): reuse picker preview container but with NO border/background -->
+                <!-- 3D Avatar Display (registered users only): enlarged for better detail showcase -->
                 <div class="avatar-preview-panel" style="
                     background: transparent;   /* override picker panel bg */
                     border: 0;                 /* no outer panel border */
                     padding: 0;                /* flush to preview box */
                     box-shadow: none;          /* remove panel glow */
-                    max-width: clamp(240px, 60vw, 520px);
-                    margin: 0 auto 8px auto;
+                    max-width: 100%;
+                    margin: 0 auto 12px auto;
+                    display: flex;
+                    justify-content: center;
                 ">
-                    <!-- Use carousel-matched aspect with soft drop-shadow for vivid look -->
+                    <!-- Enlarged and centered avatar container for better detail showcase -->
                     <div class="preview-avatar-container" style="
-                        width: 240px;                     /* match guest carousel width */
-                        height: 180px;                    /* match guest carousel height */
+                        width: 480px;                     /* enlarged from 400px for better detail */
+                        height: 420px;                    /* enlarged from 350px for better detail */
                         background: transparent;
                         border: 0;
-                        border-radius: 16px;
+                        border-radius: 20px;
                         box-shadow: none;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         overflow: visible;
                         position: relative;
-                        filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
-                        transform: translateY(-4px);
+                        filter: drop-shadow(0 12px 35px rgba(255, 193, 7, 0.4));
+                        transform: translateY(-6px);
                     ">
                         <div id="mascotBee3D" onclick="playMascotShow(event)" title="Click me to see what I do!" style="
                             width: 100%; height: 100%; position: relative;
@@ -2845,18 +2846,17 @@
                                                             function $(id){return document.getElementById(id);}    
                                                             function gradeFromGpa(g){
                                                                 var v = Number(g)||0;
-                                                                if(v>=3.97) return 'A+';
-                                                                if(v>=3.85) return 'A';
-                                                                if(v>=3.70) return 'A-';
-                                                                if(v>=3.30) return 'B+';
-                                                                if(v>=3.00) return 'B';
-                                                                if(v>=2.70) return 'B-';
-                                                                if(v>=2.30) return 'C+';
-                                                                if(v>=2.00) return 'C';
-                                                                if(v>=1.70) return 'C-';
-                                                                if(v>=1.30) return 'D+';
-                                                                if(v>=1.00) return 'D';
-                                                                if(v>=0.70) return 'D-';
+                                                                if(v>=4.0) return 'A+';
+                                                                if(v>=3.7) return 'A-';
+                                                                if(v>=3.3) return 'B+';
+                                                                if(v>=3.0) return 'B';
+                                                                if(v>=2.7) return 'B-';
+                                                                if(v>=2.3) return 'C+';
+                                                                if(v>=2.0) return 'C';
+                                                                if(v>=1.7) return 'C-';
+                                                                if(v>=1.3) return 'D+';
+                                                                if(v>=1.0) return 'D';
+                                                                if(v>=0.7) return 'D-';
                                                                 return 'F';
                                                             }
                                                             async function updateStats(){
@@ -2867,7 +2867,7 @@
                                                                     if(d.status!=='success' || !d.authenticated) return;
                                                                     const s = d.stats||{};
                                                                     if($('stats-gpa-value')) $('stats-gpa-value').textContent = Number(s.cumulative_gpa||0).toFixed(2);
-                                                                    const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
+                                                                    const letter = gradeFromGpa(s.cumulative_gpa);
                                                                     if($('stats-grade-letter')) $('stats-grade-letter').textContent = letter;
                                                                     if($('stats-points')) $('stats-points').textContent = (s.total_lifetime_points||0).toLocaleString();
                                                                     if($('stats-quizzes')) $('stats-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
@@ -3167,6 +3167,21 @@
                         🔧 Admin Guide
                     </a>
                 </div>
+                
+                <a href="/subscription" class="action-btn" style="
+                    text-decoration: none; 
+                    display: inline-block; 
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, #FFB300 0%, #FF8F00 100%);
+                    border: 3px solid rgba(255, 179, 0, 0.3);
+                    box-shadow: 0 6px 20px rgba(255, 179, 0, 0.4);
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    padding: 16px 24px;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(255, 143, 0, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 179, 0, 0.4)';" title="⭐ Unlock all 39 avatars, unlimited quizzes, and ad-free learning!">
+                    ⭐ Upgrade to Premium - From $3.33/month
+                </a>
                 
                 <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" onclick="kidSounds.playHappyDing(); startQuiz()" onmouseover="kidSounds.playRandomEffect()" disabled title="🚀 Begin your spelling adventure!">
                     🐝 Let's Get Buzzing Spelling Some Words!
@@ -4162,6 +4177,31 @@
         
         let currentSelection = null;
         
+        // 📱 Auto-scroll utility for mobile - scrolls opened content into view
+        function autoScrollToElement(element, offset = -20) {
+            if (!element) return;
+            
+            // Detect mobile device
+            const isMobile = window.innerWidth <= 768 || /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Small delay to allow content to render
+                setTimeout(() => {
+                    const rect = element.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const elementTop = rect.top + scrollTop + offset;
+                    
+                    // Smooth scroll to element
+                    window.scrollTo({
+                        top: elementTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    console.log('📱 Auto-scrolled to opened item for mobile');
+                }, 150);
+            }
+        }
+        
         function selectOption(type, element) {
             console.log('selectOption called with type:', type);
             
@@ -4200,6 +4240,8 @@
             // Add active to clicked/resolved option
             if (element) {
                 element.classList.add('active');
+                // 📱 Auto-scroll to the selected option on mobile
+                autoScrollToElement(element);
             }
             currentSelection = type;
             
@@ -6930,6 +6972,10 @@
                 `;
                 document.body.appendChild(overlay);
             }
+            
+            // Use centralized logo if available
+            const logoUrl = window.BeeSmartLogo ? window.BeeSmartLogo.getUrl() : '/static/images/BeeSmartSpellingBeeApplication.png?v=20251112';
+            
             overlay.innerHTML = `
                 <div style="
                     text-align: center;
@@ -6942,6 +6988,13 @@
                     width: calc(100% - 3rem);
                     position: relative;
                 ">
+                    <img src="${logoUrl}" alt="BeeSmart Logo" class="brand-logo" style="
+                        width: 180px;
+                        height: auto;
+                        margin: 0 auto 1rem;
+                        display: block;
+                        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+                    " />
                     <div id="beeHiveLoader" style="
                         width: 200px;
                         height: 200px;
@@ -8866,15 +8919,20 @@
             // 🧪 Science & Academic
             if (name.includes('al bee') || name.includes('al-bee') || simplified.includes('albee')) return 'einstein';
             if (name.includes('professor') || simplified.includes('professorbee')) return 'academic';
+            if (name.includes('inventor') || simplified.includes('inventorbee')) return 'scientist';
 
             // 🎸 Music/Stage
             if (name.includes('rocker') || name.includes('j‑rock') || name.includes('jrock') || simplified.includes('jrockbee') || name.includes('rock')) return 'rockstar';
+            if (name.includes('singer') || simplified.includes('singerbee')) return 'performer';
 
             // 🤖 Tech
             if (name.includes('robo') || name.includes('bot') || simplified.includes('robobee')) return 'robot';
+            if (name.includes('techno') || simplified.includes('technobee')) return 'cyber';
 
-            // 🏍️ Action
+            // 🏍️ Action/Sports
             if (name.includes('biker') || name.includes('motor') || simplified.includes('motorbee')) return 'biker';
+            if (name.includes('umpire') || simplified.includes('umpirebee')) return 'sports';
+            if (name.includes('gamer') || simplified.includes('gamerbee')) return 'gaming';
 
             // 👑 Royal/Medieval
             if (name.includes('knight') || simplified.includes('beeknight')) return 'knight';
@@ -8883,7 +8941,10 @@
             // 🔍 Professions / Roles
             if (name.includes('detective') || simplified.includes('detectivebee')) return 'detective';
             if (name.includes('doctor') || name.includes('doc') || simplified.includes('docbee')) return 'doctor';
+            if (name.includes('nurse') || simplified.includes('nursebee')) return 'medical';
             if (name.includes('builder') || simplified.includes('builderbee')) return 'builder';
+            if (name.includes('plumber') || simplified.includes('plumberbee')) return 'mechanic';
+            if (name.includes('lumberjack') || simplified.includes('lumberjackbee')) return 'lumberjack';
 
             // 🌍 Adventure / Travel / Space / Ocean
             if (name.includes('explorer') || simplified.includes('explorerbee')) return 'explorer';
@@ -8896,20 +8957,25 @@
             if (name.includes('vamp') || simplified.includes('vampbee')) return 'vampire';
             if (name.includes('zom') || name.includes('zombie') || simplified.includes('zombee')) return 'zombie';
             if (name.includes('ware') || name.includes('werewolf') || name.includes('wolf') || simplified.includes('warebee')) return 'werewolf';
+            if (name.includes('xray') || name.includes('x-ray') || simplified.includes('xraybee')) return 'skeleton';
+            if (name.includes('yeti') || simplified.includes('yetibee')) return 'yeti';
 
             // 🌟 Personality / Archetypes
-            if (name.includes('diva') || name.includes('cutie') || simplified.includes('selfiebee')) return 'diva';
-            if (name.includes('super')) return 'superhero';
-            if (name.includes('cool') || name.includes('buda') || name.includes('obee') || simplified.includes('coolbee')) return 'cool';
-            if (name.includes('selfie')) return 'diva';
-            if (name.includes('buzz') || simplified.includes('buzzbee')) return 'mascot';
+            if (name.includes('diva') || simplified.includes('divabee')) return 'diva';
+            if (name.includes('cutie') || simplified.includes('cutiebee')) return 'cute';
+            if (name.includes('selfie') || simplified.includes('selfiebee')) return 'influencer';
+            if (name.includes('super') || simplified.includes('superbee')) return 'superhero';
+            if (name.includes('cool') || simplified.includes('coolbee')) return 'cool';
+            if (name.includes('buda') || simplified.includes('budabee')) return 'zen';
+            if (name.includes('buzz') || simplified.includes('buzzbee')) return 'energetic';
             if (name.includes('brother') || simplified.includes('brotherbee')) return 'brother';
             if (name.includes('anxious')) return 'nervous';
+            if (name.includes('obee') || simplified.includes('obee')) return 'classic';
 
             // 🍯 Honeycomb variant → use mascot effects
-            if (name.includes('honeycomb')) return 'mascot';
+            if (name.includes('honeycomb') || simplified.includes('honeycomb')) return 'honeycomb';
 
-            // 🅾️ O-Bee and all others → generic happy
+            // 🅾️ All others → generic happy
             return 'happy';
         }
 
@@ -10311,6 +10377,197 @@
                     count: 25,
                     speed: 1500,
                     distance: 80
+                },
+                // 🔬 NEW THEME ARTIFACTS - Matching avatar personas!
+                scientist: {
+                    colors: ['#00ff00', '#00ffff', '#87ceeb'],
+                    symbols: ['⚗️', '🔬', '🧪', '🧬', '💡', '⚛️', '🔭', '🌡️', '🔋', '💻', '⚡', '🧲'],
+                    count: 24,
+                    speed: 1600,
+                    distance: 85
+                },
+                performer: {
+                    colors: ['#ff1493', '#9370db', '#ffd700'],
+                    symbols: ['🎤', '🎵', '🎶', '🎼', '🎹', '🎧', '🎸', '🌟', '💫', '✨', '🎭', '🎪'],
+                    count: 28,
+                    speed: 1400,
+                    distance: 90
+                },
+                cyber: {
+                    colors: ['#00ffff', '#00ff00', '#ff00ff', '#0080ff'],
+                    symbols: ['💻', '⌨️', '🖥️', '📱', '🔌', '⚡', '🔋', '💾', '📡', '🛰️', '🤖', '🌐'],
+                    count: 26,
+                    speed: 1200,
+                    distance: 95
+                },
+                sports: {
+                    colors: ['#ff0000', '#ffffff', '#000000'],
+                    symbols: ['⚾', '🏆', '🎯', '⚡', '💪', '🏅', '👊', '🔥', '⭐', '📢', '🥇', '🎖️'],
+                    count: 24,
+                    speed: 1300,
+                    distance: 85
+                },
+                gaming: {
+                    colors: ['#ff00ff', '#00ffff', '#ffff00', '#00ff00'],
+                    symbols: ['🎮', '🕹️', '👾', '🎯', '💥', '⚡', '🏆', '⭐', '🔥', '💫', '🌟', '🎲'],
+                    count: 30,
+                    speed: 1100,
+                    distance: 100
+                },
+                medical: {
+                    colors: ['#ff69b4', '#ffffff', '#ff1493'],
+                    symbols: ['💊', '💉', '🩺', '❤️', '💗', '💝', '🏥', '⚕️', '🩹', '💕', '🌸', '✨'],
+                    count: 22,
+                    speed: 1500,
+                    distance: 80
+                },
+                mechanic: {
+                    colors: ['#ff6347', '#4682b4', '#daa520'],
+                    symbols: ['🔧', '🔨', '🪛', '⚙️', '🛠️', '🪠', '💧', '🚿', '⚡', '🔩', '💪', '🔥'],
+                    count: 24,
+                    speed: 1400,
+                    distance: 85
+                },
+                lumberjack: {
+                    colors: ['#8b4513', '#228b22', '#ff6347'],
+                    symbols: ['🪓', '🌲', '🌳', '🪵', '🍁', '🌿', '🏔️', '💪', '🔥', '⛺', '🦌', '🌲'],
+                    count: 26,
+                    speed: 1500,
+                    distance: 90
+                },
+                skeleton: {
+                    colors: ['#00ffff', '#00ff00', '#ffffff'],
+                    symbols: ['💀', '🦴', '☠️', '⚡', '🩻', '💚', '🌟', '✨', '💫', '👻', '🔦', '💡'],
+                    count: 24,
+                    speed: 1400,
+                    distance: 85
+                },
+                yeti: {
+                    colors: ['#ffffff', '#87ceeb', '#add8e6'],
+                    symbols: ['❄️', '⛄', '🌨️', '🏔️', '🦶', '💨', '🌬️', '⛷️', '🧊', '🌟', '✨', '💎'],
+                    count: 28,
+                    speed: 1600,
+                    distance: 95
+                },
+                cute: {
+                    colors: ['#ffb6c1', '#ff69b4', '#ffc0cb'],
+                    symbols: ['💕', '💖', '💗', '💝', '💓', '💞', '🌸', '🌺', '🌷', '✨', '🦋', '🌈'],
+                    count: 30,
+                    speed: 1500,
+                    distance: 85
+                },
+                influencer: {
+                    colors: ['#ff1493', '#ffd700', '#00ffff'],
+                    symbols: ['📸', '📷', '✨', '💫', '⭐', '🌟', '💎', '👑', '💅', '💄', '🎀', '🌸'],
+                    count: 28,
+                    speed: 1300,
+                    distance: 90
+                },
+                zen: {
+                    colors: ['#ffd700', '#ff8c00', '#daa520'],
+                    symbols: ['🧘', '🕉️', '☮️', '✨', '🌸', '🍃', '💫', '🌟', '🙏', '💛', '🌻', '🌼'],
+                    count: 22,
+                    speed: 2000,
+                    distance: 75
+                },
+                energetic: {
+                    colors: ['#ffff00', '#ffd700', '#ff8c00'],
+                    symbols: ['⚡', '💥', '🔥', '✨', '💫', '⭐', '🌟', '💪', '🚀', '🎉', '🎊', '🐝'],
+                    count: 32,
+                    speed: 1000,
+                    distance: 100
+                },
+                classic: {
+                    colors: ['#ffd700', '#ffff00', '#fff8dc'],
+                    symbols: ['🐝', '🍯', '🌻', '🌼', '🌸', '🌺', '🌷', '💛', '✨', '🌟', '💫', '😊'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 80
+                },
+                honeycomb: {
+                    colors: ['#ff8c00', '#ffd700', '#ffb347'],
+                    symbols: ['🍯', '⬡', '⬢', '🐝', '🌼', '🌻', '💛', '🧡', '✨', '🌟', '💫', '🏵️'],
+                    count: 26,
+                    speed: 1400,
+                    distance: 85
+                },
+                // 🤖 EXISTING THEMES - Now with complete particle effects!
+                robot: {
+                    colors: ['#c0c0c0', '#00ffff', '#0080ff'],
+                    symbols: ['🤖', '⚙️', '🔩', '⚡', '💻', '📡', '🔧', '💾', '⌨️', '🖥️', '🔋', '💫'],
+                    count: 26,
+                    speed: 1300,
+                    distance: 85
+                },
+                biker: {
+                    colors: ['#000000', '#ff4500', '#ffd700'],
+                    symbols: ['🏍️', '💨', '⚡', '🔥', '💪', '🛣️', '🏁', '⚙️', '🔧', '💀', '⭐', '💥'],
+                    count: 28,
+                    speed: 1200,
+                    distance: 95
+                },
+                knight: {
+                    colors: ['#c0c0c0', '#4169e1', '#ffd700'],
+                    symbols: ['⚔️', '🛡️', '🏰', '👑', '🏆', '⚡', '🌟', '💫', '🦅', '🗡️', '🏇', '✨'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 85
+                },
+                queen: {
+                    colors: ['#9370db', '#ff1493', '#ffd700'],
+                    symbols: ['👑', '💎', '✨', '🌟', '💫', '⭐', '🌹', '💜', '💖', '👗', '🏰', '🦋'],
+                    count: 30,
+                    speed: 1400,
+                    distance: 90
+                },
+                detective: {
+                    colors: ['#8b4513', '#2f4f4f', '#ffd700'],
+                    symbols: ['🔍', '🕵️', '📝', '💡', '🔎', '📋', '🎩', '🧐', '⚡', '🔦', '📖', '🗝️'],
+                    count: 22,
+                    speed: 1500,
+                    distance: 80
+                },
+                doctor: {
+                    colors: ['#ffffff', '#1e90ff', '#00ff00'],
+                    symbols: ['🩺', '💊', '💉', '🏥', '⚕️', '❤️', '💚', '🩹', '🔬', '📋', '✨', '💫'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 85
+                },
+                builder: {
+                    colors: ['#ff8c00', '#ffff00', '#4682b4'],
+                    symbols: ['🔨', '🔧', '🛠️', '⚒️', '🏗️', '🧱', '📐', '⚙️', '💪', '🏠', '⚡', '🔩'],
+                    count: 26,
+                    speed: 1400,
+                    distance: 85
+                },
+                explorer: {
+                    colors: ['#8b4513', '#228b22', '#ffd700'],
+                    symbols: ['🧭', '🗺️', '🎒', '🏔️', '🌍', '⛰️', '🌲', '🔦', '🧗', '⛺', '🌟', '💫'],
+                    count: 24,
+                    speed: 1500,
+                    distance: 90
+                },
+                space: {
+                    colors: ['#000080', '#4169e1', '#ffffff'],
+                    symbols: ['🚀', '🌟', '⭐', '🌙', '💫', '🌌', '🛸', '👽', '🌠', '🪐', '☄️', '✨'],
+                    count: 28,
+                    speed: 1600,
+                    distance: 100
+                },
+                ocean: {
+                    colors: ['#0080ff', '#00ffff', '#87ceeb'],
+                    symbols: ['🌊', '🐠', '🐟', '🐚', '🦈', '🐙', '💧', '🌈', '🐬', '⚓', '🏄', '🌊'],
+                    count: 26,
+                    speed: 1500,
+                    distance: 90
+                },
+                frankenstein: {
+                    colors: ['#00ff00', '#228b22', '#ffff00'],
+                    symbols: ['⚡', '🧪', '🔬', '💚', '⚙️', '🔩', '🧟', '🌩️', '💥', '🔋', '💫', '✨'],
+                    count: 26,
+                    speed: 1300,
+                    distance: 85
                 }
             };
             
@@ -10407,7 +10664,36 @@
                 werewolf: { speed: 0.18, bounce: true, wobble: false },
                 rockstar: { speed: 0.20, bounce: true, wobble: true },
                 nervous: { speed: 0.14, bounce: false, wobble: true, jitter: true },
-                mascot: { speed: 0.15, bounce: true, wobble: false }
+                mascot: { speed: 0.15, bounce: true, wobble: false },
+                // 🎭 NEW ROTATION BEHAVIORS - Persona-driven animations!
+                scientist: { speed: 0.13, bounce: true, wobble: false, pulse: true }, // Eureka bounce
+                performer: { speed: 0.22, bounce: true, wobble: true, spin: true }, // Stage energy
+                cyber: { speed: 0.25, bounce: false, wobble: false, glitch: true }, // Digital glitch
+                sports: { speed: 0.18, bounce: true, wobble: false, power: true }, // Athletic power
+                gaming: { speed: 0.24, bounce: true, wobble: true, rapid: true }, // Fast reflexes
+                medical: { speed: 0.12, bounce: true, wobble: false, gentle: true }, // Caring motion
+                mechanic: { speed: 0.16, bounce: true, wobble: false, wrench: true }, // Tool swing
+                lumberjack: { speed: 0.14, bounce: true, wobble: false, chop: true }, // Axe swing
+                skeleton: { speed: 0.17, bounce: false, wobble: false, rattle: true }, // Bone rattle
+                yeti: { speed: 0.11, bounce: true, wobble: true, stomp: true }, // Heavy stomp
+                cute: { speed: 0.16, bounce: true, wobble: true, twirl: true }, // Adorable twirl
+                influencer: { speed: 0.19, bounce: true, wobble: false, pose: true }, // Camera pose
+                zen: { speed: 0.08, bounce: false, wobble: false, float: true }, // Peaceful float
+                energetic: { speed: 0.28, bounce: true, wobble: true, hyperactive: true }, // Buzzing energy
+                classic: { speed: 0.15, bounce: true, wobble: false }, // Traditional bee
+                honeycomb: { speed: 0.14, bounce: true, wobble: false, hexagon: true }, // Hexagonal pattern
+                // 🎯 EXISTING THEMES - Now with complete rotation behaviors!
+                robot: { speed: 0.16, bounce: true, wobble: false, mechanical: true }, // Robotic precision
+                biker: { speed: 0.22, bounce: false, wobble: true, lean: true }, // Motorcycle lean
+                knight: { speed: 0.14, bounce: true, wobble: false, march: true }, // Noble march
+                queen: { speed: 0.12, bounce: true, wobble: true, regal: true }, // Royal grace
+                detective: { speed: 0.13, bounce: false, wobble: false, investigate: true }, // Searching motion
+                doctor: { speed: 0.15, bounce: true, wobble: false, examine: true }, // Medical examination
+                builder: { speed: 0.16, bounce: true, wobble: false, hammer: true }, // Hammering motion
+                explorer: { speed: 0.14, bounce: true, wobble: true, trek: true }, // Adventurous trek
+                space: { speed: 0.12, bounce: false, wobble: false, orbit: true }, // Orbital float
+                ocean: { speed: 0.13, bounce: true, wobble: true, swim: true }, // Swimming motion
+                frankenstein: { speed: 0.17, bounce: true, wobble: false, electric: true } // Electric surge
             };
             
             const config = rotationConfigs[theme] || rotationConfigs.mascot;
@@ -10459,6 +10745,188 @@
                         model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.03;
                         model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.03;
                     }
+                }
+                
+                // 🎨 NEW PERSONA-DRIVEN ANIMATIONS
+                if (config.pulse) {
+                    // Scientist - Eureka pulsing (like a lightbulb moment)
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 5) * 0.12;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 5) * 0.05;
+                }
+                
+                if (config.spin) {
+                    // Performer - Extra theatrical spin
+                    model.rotation.x = Math.sin(currentRotation * 2) * 0.1;
+                }
+                
+                if (config.glitch) {
+                    // Cyber - Digital glitch effect
+                    if (animationFrame % 5 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.08;
+                        model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.08;
+                    }
+                }
+                
+                if (config.power) {
+                    // Sports - Athletic power stance
+                    model.position.y = originalPosition.y + Math.abs(Math.sin(currentRotation * 4)) * 0.18;
+                }
+                
+                if (config.rapid) {
+                    // Gaming - Fast reflexes with quick movements
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 8) * 0.1;
+                }
+                
+                if (config.gentle) {
+                    // Medical - Gentle caring motion
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 2.5) * 0.08;
+                }
+                
+                if (config.wrench) {
+                    // Mechanic - Tool swinging motion
+                    model.rotation.z = Math.sin(currentRotation * 3) * 0.15;
+                }
+                
+                if (config.chop) {
+                    // Lumberjack - Axe chopping motion
+                    model.rotation.x = Math.abs(Math.sin(currentRotation * 4)) * 0.2;
+                }
+                
+                if (config.rattle) {
+                    // Skeleton - Bone rattling
+                    if (animationFrame % 3 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.06;
+                        model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.04;
+                    }
+                }
+                
+                if (config.stomp) {
+                    // Yeti - Heavy stomping
+                    if (animationFrame % 8 === 0) {
+                        model.position.y = originalPosition.y - 0.1;
+                    } else {
+                        model.position.y = originalPosition.y + Math.sin(currentRotation * 2) * 0.08;
+                    }
+                }
+                
+                if (config.twirl) {
+                    // Cute - Adorable twirling
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 4) * 0.12;
+                    model.rotation.x = Math.sin(currentRotation * 3) * 0.08;
+                }
+                
+                if (config.pose) {
+                    // Influencer - Camera-ready posing
+                    if (animationFrame % 12 === 0) {
+                        model.rotation.z = (Math.random() - 0.5) * 0.12;
+                    }
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 3) * 0.1;
+                }
+                
+                if (config.float) {
+                    // Zen - Peaceful floating meditation
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 1.5) * 0.15;
+                    model.position.x = originalPosition.x + Math.cos(currentRotation * 1.5) * 0.06;
+                }
+                
+                if (config.hyperactive) {
+                    // Energetic - Buzzing hyperactive movement
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 10) * 0.12;
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 12) * 0.15;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 8) * 0.08;
+                }
+                
+                if (config.hexagon) {
+                    // Honeycomb - Hexagonal pattern movement
+                    const hexAngle = (currentRotation * 6) % (Math.PI * 2);
+                    model.position.x = originalPosition.x + Math.cos(hexAngle) * 0.08;
+                    model.position.y = originalPosition.y + Math.sin(hexAngle) * 0.08;
+                }
+                
+                // 🎯 EXISTING THEME ANIMATIONS - Now complete!
+                if (config.mechanical) {
+                    // Robot - Precise mechanical movements
+                    if (animationFrame % 8 === 0) {
+                        model.position.y = originalPosition.y + 0.08;
+                    } else if (animationFrame % 4 === 0) {
+                        model.position.y = originalPosition.y;
+                    }
+                    model.rotation.z = Math.sin(currentRotation * 6) * 0.05;
+                }
+                
+                if (config.lean) {
+                    // Biker - Motorcycle leaning into turns
+                    model.rotation.z = Math.sin(currentRotation * 2) * 0.25;
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 2) * 0.12;
+                }
+                
+                if (config.march) {
+                    // Knight - Noble marching motion
+                    model.position.y = originalPosition.y + Math.abs(Math.sin(currentRotation * 4)) * 0.15;
+                    if (animationFrame % 6 === 0) {
+                        model.rotation.z = (Math.random() - 0.5) * 0.08;
+                    }
+                }
+                
+                if (config.regal) {
+                    // Queen - Graceful royal movement
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 2) * 0.1;
+                    model.rotation.x = Math.sin(currentRotation * 1.5) * 0.06;
+                }
+                
+                if (config.investigate) {
+                    // Detective - Searching/investigating motion
+                    model.rotation.x = Math.sin(currentRotation * 3) * 0.12;
+                    if (animationFrame % 10 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.06;
+                    }
+                }
+                
+                if (config.examine) {
+                    // Doctor - Medical examination motion
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 3) * 0.09;
+                    model.rotation.z = Math.sin(currentRotation * 2) * 0.08;
+                }
+                
+                if (config.hammer) {
+                    // Builder - Hammering motion
+                    if (animationFrame % 6 === 0) {
+                        model.position.y = originalPosition.y + 0.15;
+                        model.rotation.x = 0.2;
+                    } else {
+                        model.position.y = originalPosition.y + Math.sin(currentRotation * 4) * 0.08;
+                        model.rotation.x = Math.sin(currentRotation * 4) * 0.1;
+                    }
+                }
+                
+                if (config.trek) {
+                    // Explorer - Adventurous trekking
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 3) * 0.12;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 3) * 0.08;
+                }
+                
+                if (config.orbit) {
+                    // Space - Orbital floating motion
+                    model.position.x = originalPosition.x + Math.cos(currentRotation * 1.5) * 0.15;
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 1.5) * 0.15;
+                    model.position.z = originalPosition.z + Math.cos(currentRotation * 2) * 0.06;
+                }
+                
+                if (config.swim) {
+                    // Ocean - Swimming/wave motion
+                    model.position.y = originalPosition.y + Math.sin(currentRotation * 4) * 0.12;
+                    model.position.x = originalPosition.x + Math.sin(currentRotation * 2) * 0.08;
+                    model.rotation.z = Math.sin(currentRotation * 3) * 0.1;
+                }
+                
+                if (config.electric) {
+                    // Frankenstein - Electric surge effect
+                    if (animationFrame % 4 === 0) {
+                        model.position.x = originalPosition.x + (Math.random() - 0.5) * 0.1;
+                        model.position.y = originalPosition.y + (Math.random() - 0.5) * 0.1;
+                        model.position.z = originalPosition.z + (Math.random() - 0.5) * 0.05;
+                    }
+                    model.rotation.y += Math.sin(currentRotation * 5) * 0.02;
                 }
                 
                 // Complete rotation
@@ -11314,16 +11782,82 @@
                     });
                     const data = await response.json();
                     if (data.success && data.count > 0) {
-                        this.updateCheck(check8, `${data.count} words ready`, '✅', 65);
-                        this.updateProgress(65, `📚 ${data.count} words loaded`);
+                        this.updateCheck(check8, `${data.count} words ready`, '✅', 60);
+                        this.updateProgress(60, `📚 ${data.count} words loaded`);
                     } else {
-                        this.updateCheck(check8, 'No words loaded', '⚠️', 65);
-                        this.updateProgress(65, '⚠️ Upload word list to start');
+                        this.updateCheck(check8, 'No words loaded', '⚠️', 60);
+                        this.updateProgress(60, '⚠️ Upload word list to start');
                     }
                 } catch (e) {
-                    this.updateCheck(check8, 'Check failed', '⚠️', 65);
-                    this.updateProgress(65, '⚠️ Session check failed');
+                    this.updateCheck(check8, 'Check failed', '⚠️', 60);
+                    this.updateProgress(60, '⚠️ Session check failed');
                     console.error('Session check error:', e);
+                }
+                
+                // Check 9: GPA, Grade & Points Validation
+                const check9 = this.addCheck('Stats Validation', 'Checking...', '⏳');
+                await this.delay(200);
+                try {
+                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    
+                    if (isAuthenticated) {
+                        const statsResponse = await fetch('/api/users/stats', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        
+                        if (statsResponse.ok) {
+                            const statsData = await statsResponse.json();
+                            if (statsData.status === 'success' && statsData.stats) {
+                                const s = statsData.stats;
+                                const gpa = Number(s.cumulative_gpa || 0).toFixed(2);
+                                const points = (s.total_lifetime_points || 0).toLocaleString();
+                                
+                                // Calculate expected grade from GPA
+                                function gradeFromGpa(g) {
+                                    const v = Number(g) || 0;
+                                    if (v >= 4.0) return 'A+';
+                                    if (v >= 3.7) return 'A-';
+                                    if (v >= 3.3) return 'B+';
+                                    if (v >= 3.0) return 'B';
+                                    if (v >= 2.7) return 'B-';
+                                    if (v >= 2.3) return 'C+';
+                                    if (v >= 2.0) return 'C';
+                                    if (v >= 1.7) return 'C-';
+                                    if (v >= 1.3) return 'D+';
+                                    if (v >= 1.0) return 'D';
+                                    if (v >= 0.7) return 'D-';
+                                    return 'F';
+                                }
+                                
+                                const calculatedGrade = gradeFromGpa(gpa);
+                                
+                                // Validate GPA and grade are in sync
+                                if (gpa > 0) {
+                                    this.updateCheck(check9, `GPA ${gpa} → ${calculatedGrade} | ${points} pts`, '✅', 65);
+                                    this.updateProgress(65, `📊 Stats verified: ${calculatedGrade}`);
+                                    console.log('✅ Stats validated:', {gpa, grade: calculatedGrade, points});
+                                } else {
+                                    this.updateCheck(check9, 'No stats yet', '⚠️', 65);
+                                    this.updateProgress(65, '📊 Complete quizzes to earn stats');
+                                }
+                            } else {
+                                this.updateCheck(check9, 'No data', '⚠️', 65);
+                                this.updateProgress(65, '⚠️ Stats unavailable');
+                            }
+                        } else {
+                            this.updateCheck(check9, 'API error', '⚠️', 65);
+                            this.updateProgress(65, '⚠️ Stats check failed');
+                        }
+                    } else {
+                        // Guest user - no stats
+                        this.updateCheck(check9, 'Guest mode', 'ℹ️', 65);
+                        this.updateProgress(65, 'ℹ️ Login to track stats');
+                    }
+                } catch (e) {
+                    this.updateCheck(check9, 'Check failed', '⚠️', 65);
+                    this.updateProgress(65, '⚠️ Stats check error');
+                    console.error('Stats validation error:', e);
                 }
                 
                 return true;
@@ -12373,7 +12907,7 @@
                         canvas.style.position = 'absolute';
                         canvas.style.top = '50%'; /* FIXED: Center vertically instead of top:0 */
                         canvas.style.left = '50%';
-                        canvas.style.transform = 'translate(-50%, -50%) scale(1.1)'; /* ENHANCED: Perfect centering with scale */
+                        canvas.style.transform = 'translate(-50%, -50%) scale(1.5)'; /* ENHANCED: Larger scale for maximum avatar presence */
                         canvas.style.pointerEvents = 'none'; // Allow clicks through to UI
                         canvas.style.zIndex = '10';
                         

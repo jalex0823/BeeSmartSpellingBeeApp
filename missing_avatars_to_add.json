@@ -1,0 +1,352 @@
+{
+  "glb_missing": [
+    {
+      "filename": "BeeKnight.glb",
+      "base": "BeeKnight",
+      "slug": "bee-knight",
+      "display_name": "Bee Knight",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "BudaBee.glb",
+      "base": "BudaBee",
+      "slug": "buda-bee",
+      "display_name": "Buda Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "CutieBee.glb",
+      "base": "CutieBee",
+      "slug": "cutie-bee",
+      "display_name": "Cutie Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "DocBee.glb",
+      "base": "DocBee",
+      "slug": "doc-bee",
+      "display_name": "Doc Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "Frankenbee.glb",
+      "base": "Frankenbee",
+      "slug": "frankenbee",
+      "display_name": "Frankenbee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "HoneyComb.glb",
+      "base": "HoneyComb",
+      "slug": "honey-comb",
+      "display_name": "Honey Comb",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "JRockBee.glb",
+      "base": "JRockBee",
+      "slug": "j-rock-bee",
+      "display_name": "J Rock Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "MotorBee.glb",
+      "base": "MotorBee",
+      "slug": "motor-bee",
+      "display_name": "Motor Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "OBee.glb",
+      "base": "OBee",
+      "slug": "o-bee",
+      "display_name": "O Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "SeaBee.glb",
+      "base": "SeaBee",
+      "slug": "sea-bee",
+      "display_name": "Sea Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "SingerBee.glb",
+      "base": "SingerBee",
+      "slug": "singer-bee",
+      "display_name": "Singer Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "SpaceBee.glb",
+      "base": "SpaceBee",
+      "slug": "space-bee",
+      "display_name": "Space Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    },
+    {
+      "filename": "SuperBee.glb",
+      "base": "SuperBee",
+      "slug": "super-bee",
+      "display_name": "Super Bee",
+      "in_catalog": false,
+      "catalog_name": null
+    }
+  ],
+  "obj_missing": [],
+  "suggested_entries": [
+    {
+      "id": "bee-knight",
+      "name": "Bee Knight Avatar",
+      "folder": "glb_files",
+      "obj_file": "BeeKnight.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Bee Knight is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "buda-bee",
+      "name": "Buda Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "BudaBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Buda Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "cutie-bee",
+      "name": "Cutie Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "CutieBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Cutie Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "doc-bee",
+      "name": "Doc Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "DocBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Doc Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "frankenbee",
+      "name": "Frankenbee Avatar",
+      "folder": "glb_files",
+      "obj_file": "Frankenbee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Frankenbee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "honey-comb",
+      "name": "Honey Comb Avatar",
+      "folder": "glb_files",
+      "obj_file": "HoneyComb.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Honey Comb is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "j-rock-bee",
+      "name": "J Rock Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "JRockBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "J Rock Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "motor-bee",
+      "name": "Motor Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "MotorBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Motor Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "o-bee",
+      "name": "O Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "OBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "O Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "sea-bee",
+      "name": "Sea Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "SeaBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Sea Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "singer-bee",
+      "name": "Singer Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "SingerBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Singer Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "space-bee",
+      "name": "Space Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "SpaceBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Space Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    },
+    {
+      "id": "super-bee",
+      "name": "Super Bee Avatar",
+      "folder": "glb_files",
+      "obj_file": "SuperBee.glb",
+      "mtl_file": "",
+      "texture_file": "",
+      "description": "Super Bee is ready to spell! \ud83d\udc1d",
+      "variants": [
+        "default"
+      ],
+      "category": "classic",
+      "tier": "default_free",
+      "is_default_free": true,
+      "is_purchasable": false,
+      "unlock_points": 0,
+      "price": 0.0
+    }
+  ],
+  "stats": {
+    "total_in_picker": 32,
+    "total_in_catalog": 26,
+    "glb_count": 23,
+    "obj_count": 9,
+    "missing_count": 13
+  }
+}
