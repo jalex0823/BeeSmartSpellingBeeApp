@@ -5748,10 +5748,21 @@ def _entitlements_summary(user: User) -> dict:
         unlocked = user.get_unlocked_avatars()
     except Exception:
         unlocked = []
+    # Resolve bundle friendly names when available
+    bundle_ids = list(getattr(user, 'purchased_bundles', []) or [])
+    bundle_names = []
+    try:
+        catalog = BUNDLE_CATALOG or {}
+        for bid in bundle_ids:
+            name = (catalog.get(bid) or {}).get('name') or bid
+            bundle_names.append(name)
+    except Exception:
+        bundle_names = bundle_ids
     return {
         "premium_member": bool(getattr(user, 'premium_member', False)),
         "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []),
-        "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []),
+        "purchased_bundles": bundle_ids,
+        "purchased_bundle_names": bundle_names,
         "unlocked_avatars": unlocked,
     }
 
@@ -9440,6 +9451,7 @@ def api_admin_or_user_update_avatar(user_id):
             'status': 'success',
             'message': message,
             'avatar': avatar_data,
+            'entitlements': _entitlements_summary(user),
             'use_mascot': use_mascot
         })
     
@@ -9557,6 +9569,7 @@ def api_select_avatar():
                 'slug': avatar.slug,
                 'name': avatar.name
             },
+            'entitlements': _entitlements_summary(current_user),
             'redirect': url_for('student_dashboard')  # Or wherever you want to redirect
         })
     
@@ -9890,6 +9903,13 @@ def api_get_my_avatar():
                         'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                     }
                 },
+                # For guest, no entitlements
+                'entitlements': {
+                    'premium_member': False,
+                    'purchased_avatars': [],
+                    'purchased_bundles': [],
+                    'unlocked_avatars': []
+                },
                 'use_mascot': True
             })
         
@@ -9911,6 +9931,12 @@ def api_get_my_avatar():
                         'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                     }
                 },
+                'entitlements': _entitlements_summary(user) if current_user.is_authenticated else {
+                    'premium_member': False,
+                    'purchased_avatars': [],
+                    'purchased_bundles': [],
+                    'unlocked_avatars': []
+                },
                 'use_mascot': True
             })
         
@@ -9919,6 +9945,12 @@ def api_get_my_avatar():
         return jsonify({
             'status': 'success',
             'avatar': avatar_data,
+            'entitlements': _entitlements_summary(user) if current_user.is_authenticated else {
+                'premium_member': False,
+                'purchased_avatars': [],
+                'purchased_bundles': [],
+                'unlocked_avatars': []
+            },
             'use_mascot': False
         })
     
@@ -9937,6 +9969,12 @@ def api_get_my_avatar():
                     'texture': '/static/assets/avatars/mascot-bee/MascotBee.png',
                     'thumbnail': '/static/assets/avatars/mascot-bee/MascotBee!.png'
                 }
+            },
+            'entitlements': _entitlements_summary(current_user) if current_user.is_authenticated else {
+                'premium_member': False,
+                'purchased_avatars': [],
+                'purchased_bundles': [],
+                'unlocked_avatars': []
             },
             'use_mascot': True
         })

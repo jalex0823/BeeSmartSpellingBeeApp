@@ -12,6 +12,8 @@ let currentLoadingAvatar = null;
 let previewLoadProgress = 0;
 // Current user's honey points from API
 let currentUserHoneyPoints = 0;
+// Map of avatar slug -> friendly name (populated after loading avatars)
+const avatarNameMap = new Map();
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -22,7 +24,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('OBJLoader available:', typeof THREE !== 'undefined' && typeof THREE.OBJLoader !== 'undefined');
     console.log('MTLLoader available:', typeof THREE !== 'undefined' && typeof THREE.MTLLoader !== 'undefined');
     
-    loadAvatars();
+    // First, load user entitlements to drive gating
+    loadUserEntitlements()
+        .catch(err => console.warn('⚠️ Failed to pre-load user entitlements:', err))
+        .finally(() => {
+            loadAvatars();
+        });
     setupSearchFilter();
 
     // Safety: hide loading overlay after 10s even if some thumbnails stall
@@ -34,6 +41,86 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 10000);
 });
+
+// Cached user info for gating
+let currentUserInfo = { role: 'guest', authenticated: false };
+let currentUserEntitlements = { premium_member: false, purchased_avatars: [], purchased_bundles: [], unlocked_avatars: [] };
+
+async function loadUserEntitlements() {
+    try {
+        // Basic user info (role, points, etc.)
+        const meResp = await fetch('/api/users/me', { credentials: 'same-origin' });
+        if (meResp.ok) {
+            const meData = await meResp.json();
+            currentUserInfo.authenticated = !!meData.authenticated;
+            currentUserInfo.role = (meData.user && meData.user.role) ? meData.user.role : 'guest';
+            currentUserHoneyPoints = (meData.user && typeof meData.user.honey_points === 'number') ? meData.user.honey_points : 0;
+        }
+
+        // Avatar + entitlements snapshot
+        const avResp = await fetch('/api/users/me/avatar', { credentials: 'same-origin' });
+        if (avResp.ok) {
+            const avData = await avResp.json();
+            if (avData && avData.entitlements) {
+                currentUserEntitlements = {
+                    premium_member: !!avData.entitlements.premium_member,
+                    purchased_avatars: Array.isArray(avData.entitlements.purchased_avatars) ? avData.entitlements.purchased_avatars : [],
+                    purchased_bundles: Array.isArray(avData.entitlements.purchased_bundles) ? avData.entitlements.purchased_bundles : [],
+                    unlocked_avatars: Array.isArray(avData.entitlements.unlocked_avatars) ? avData.entitlements.unlocked_avatars.map(s => String(s).toLowerCase()) : []
+                };
+            }
+        }
+        console.log('👤 User role:', currentUserInfo.role, 'auth:', currentUserInfo.authenticated);
+        console.log('🎟️ Entitlements:', currentUserEntitlements);
+
+        // Render entitlement system check card
+        renderEntitlementCard();
+    } catch (e) {
+        console.warn('Failed to load user/entitlements:', e);
+    }
+}
+
+function renderEntitlementCard() {
+    try {
+        const card = document.getElementById('entitlement-check');
+        if (!card) return;
+        const roleEl = document.getElementById('entitlement-role');
+        const premiumEl = document.getElementById('entitlement-premium');
+        const pointsEl = document.getElementById('entitlement-points');
+        const bundlesEl = document.getElementById('entitlement-bundles');
+        const purchasedEl = document.getElementById('entitlement-purchased');
+        const unlockedEl = document.getElementById('entitlement-unlocked');
+
+        // Role & visibility
+        if (roleEl) roleEl.textContent = `Role: ${currentUserInfo.role || 'guest'}`;
+        card.style.display = 'block';
+
+        // Premium
+        const isPremium = !!(currentUserEntitlements && currentUserEntitlements.premium_member);
+        if (premiumEl) premiumEl.textContent = isPremium ? 'Yes' : 'No';
+
+        // Points
+        if (pointsEl) pointsEl.textContent = Number(currentUserHoneyPoints || 0).toLocaleString();
+
+        // Bundles
+        const bundleIds = (currentUserEntitlements && Array.isArray(currentUserEntitlements.purchased_bundles)) ? currentUserEntitlements.purchased_bundles : [];
+        const bundleNames = (currentUserEntitlements && Array.isArray(currentUserEntitlements.purchased_bundle_names)) ? currentUserEntitlements.purchased_bundle_names : [];
+        const bundlesDisplay = (bundleNames.length ? bundleNames : bundleIds);
+        if (bundlesEl) bundlesEl.textContent = bundlesDisplay.length ? bundlesDisplay.join(', ') : 'None';
+
+        // Purchased avatars
+        const purchased = (currentUserEntitlements && Array.isArray(currentUserEntitlements.purchased_avatars)) ? currentUserEntitlements.purchased_avatars : [];
+        const purchasedNames = purchased.map(s => avatarNameMap.get(String(s).toLowerCase()) || s);
+        if (purchasedEl) purchasedEl.textContent = purchasedNames.length ? purchasedNames.join(', ') : 'None';
+
+        // Unlocked avatars
+        const unlocked = (currentUserEntitlements && Array.isArray(currentUserEntitlements.unlocked_avatars)) ? currentUserEntitlements.unlocked_avatars : [];
+        const unlockedNames = unlocked.map(s => avatarNameMap.get(String(s).toLowerCase()) || s);
+        if (unlockedEl) unlockedEl.textContent = unlockedNames.length ? unlockedNames.join(', ') : '(none)';
+    } catch (err) {
+        console.warn('Failed to render entitlement card:', err);
+    }
+}
 
 // Update loading progress with detailed status
 function updateLoadingProgress(customMessage = null) {
@@ -148,6 +235,20 @@ function updateDynamicMarquee(avatars) {
     // Honey Points hint
     if (typeof currentUserHoneyPoints === 'number') {
         messages.push(`🍯 You have ${Number(currentUserHoneyPoints).toLocaleString()} Honey Points`);
+    }
+    // Premium status and purchases
+    if (currentUserInfo && currentUserInfo.authenticated) {
+        if (currentUserEntitlements && currentUserEntitlements.premium_member) {
+            messages.push('👑 Premium member benefits active');
+        }
+        const purchasedBundles = (currentUserEntitlements && Array.isArray(currentUserEntitlements.purchased_bundles)) ? currentUserEntitlements.purchased_bundles.length : 0;
+        const purchasedAvatars = (currentUserEntitlements && Array.isArray(currentUserEntitlements.purchased_avatars)) ? currentUserEntitlements.purchased_avatars.length : 0;
+        if (purchasedBundles > 0) {
+            messages.push(`📦 ${purchasedBundles} bundle(s) redeemed`);
+        }
+        if (purchasedAvatars > 0) {
+            messages.push(`🛒 ${purchasedAvatars} purchased avatar(s)`);
+        }
     }
     
     // Congratulate on unlocked count
@@ -266,7 +367,7 @@ async function loadAvatars() {
             obj_file: (avatar.urls && avatar.urls.model_obj ? avatar.urls.model_obj : (avatar.model_obj_url || avatar.obj_file_url || '')).split('/').pop() || null,
             mtl_file: (avatar.urls && avatar.urls.model_mtl ? avatar.urls.model_mtl : (avatar.model_mtl_url || avatar.mtl_file_url || '')).split('/').pop() || null,
             thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
-            // NEW: Lock status from monetization system
+            // NEW: Lock status will be derived from API + entitlements
             is_locked: avatar.is_locked || false,
             unlock_message: avatar.unlock_message || '',
             // NEW: Numeric unlock info for computing remaining points
@@ -274,6 +375,25 @@ async function loadAvatars() {
             tier: avatar.tier || null,
             price: typeof avatar.price === 'number' ? avatar.price : null,
         }));
+
+        // Build name map for entitlement card friendly display
+        avatarNameMap.clear();
+        rawAvatars.forEach(av => {
+            const slug = String(av.slug || '').toLowerCase();
+            if (slug) avatarNameMap.set(slug, av.name || slug);
+        });
+
+        // Apply gating overrides based on role and entitlements
+        const isAdmin = currentUserInfo.role === 'admin';
+        const unlockedSet = new Set(currentUserEntitlements.unlocked_avatars || []);
+        rawAvatars.forEach(av => {
+            const slug = (av.slug || '').toLowerCase();
+            if (isAdmin) {
+                av.is_locked = false; // Admins see all avatars as available
+            } else if (unlockedSet.has(slug)) {
+                av.is_locked = false; // Explicitly unlocked for user
+            }
+        });
 
         // Helper: normalize string to a canonical key
         const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -357,6 +477,8 @@ async function loadAvatars() {
     console.log('Loaded avatars:', avatarsData.length);
     updateDynamicMarquee(avatarsData);
     renderAvatarGrid();
+    // Update entitlement card now that names are available
+    renderEntitlementCard();
     // Show a celebratory modal if new avatars have become unlocked since last visit
     maybeShowNewlyUnlockedModal(avatarsData);
     } catch (error) {
@@ -1103,6 +1225,11 @@ function chooseAvatar() {
                     console.log('✅ User avatar loader refreshed');
                 });
             }
+
+            // Refresh entitlements and re-render card after selection
+            loadUserEntitlements().then(() => {
+                renderEntitlementCard();
+            });
             
             // Redirect after brief delay to show success
             setTimeout(() => {
