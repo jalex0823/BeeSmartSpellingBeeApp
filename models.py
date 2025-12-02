@@ -77,6 +77,10 @@ class User(UserMixin, db.Model):
     current_streak = db.Column(db.Integer, default=0, nullable=True)  # Current consecutive correct answers
     longest_streak = db.Column(db.Integer, default=0, nullable=True)  # All-time longest streak
     
+    # 📚 Wordbank Session Persistence (Fix for session loss issues)
+    wordbank_storage_id = db.Column(db.String(36), nullable=True, index=True)  # UUID pointer to WORD_STORAGE and disk cache
+    wordbank_last_updated = db.Column(db.DateTime, nullable=True)  # Track when wordbank was last modified
+    
     # Relationships
     quiz_sessions = db.relationship('QuizSession', backref='user', lazy=True, cascade='all, delete-orphan')
     quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')

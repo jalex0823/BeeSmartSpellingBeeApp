@@ -2901,9 +2901,20 @@ def get_wordbank() -> List[Dict[str, str]]:
     
     Avoids cookie size limits by keeping full word list server-side.
     Session only stores small UUID pointer (~36 bytes).
+    If session is lost but user is authenticated, recover storage_id from database.
     """
     storage_id = session.get("wordbank_storage_id")
     wb = []
+
+    # 🔧 NEW: If session lost storage_id but user is authenticated, recover from database
+    if not storage_id and current_user.is_authenticated:
+        db_storage_id = current_user.wordbank_storage_id
+        if db_storage_id:
+            print(f"🔄 get_wordbank: Session lost storage_id, recovering from database for user {current_user.username}")
+            print(f"   Recovered storage_id={db_storage_id}")
+            storage_id = db_storage_id
+            session["wordbank_storage_id"] = storage_id  # Restore to session
+            session.modified = True
 
     # Try to load from WORD_STORAGE using storage_id pointer
     if storage_id:
@@ -2947,6 +2958,7 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     
     Cookie-based sessions have ~4KB limit - large word lists cause data loss.
     WORD_STORAGE is server-side in-memory, session only stores UUID pointer.
+    For authenticated users, also persist storage_id in database to recover from session loss.
     """
     import uuid
     
@@ -2962,6 +2974,18 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         WORD_STORAGE[storage_id] = rows
     # Persist to disk for durability across restarts
     _save_wordbank_to_disk(storage_id, rows)
+    
+    # 🔧 NEW: For authenticated users, persist storage_id in database
+    # This allows recovery if session is lost (mobile browsers, cookie clearing, etc.)
+    if current_user.is_authenticated:
+        try:
+            current_user.wordbank_storage_id = storage_id
+            current_user.wordbank_last_updated = datetime.utcnow()
+            db.session.commit()
+            print(f"✅ set_wordbank: Persisted storage_id={storage_id} to user {current_user.username} (user_id={current_user.id})")
+        except Exception as e:
+            print(f"⚠️ set_wordbank: Failed to persist storage_id to database: {e}")
+            db.session.rollback()
     
     # Only store lightweight metadata in session
     session["wordbank_count"] = len(rows)
