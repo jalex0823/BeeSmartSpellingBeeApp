@@ -75,6 +75,9 @@ print("="*70)
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# App semantic version used by health endpoint and logs
+APP_VERSION = "1.6"
+
 # Fast-boot mode: skip heavy startup checks/initializers that can delay first load
 # Default is OFF to run full system checks prior to entering the home page.
 FAST_BOOT = os.getenv('FAST_BOOT', '0').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -350,6 +353,26 @@ def home_preview():
     return render_template('honey_home.html')
 
 
+@app.route('/health', methods=['GET'])
+def healthcheck():
+    """Lightweight health endpoint for Railway and uptime checks.
+
+    Returns immediately with a 200 and minimal JSON payload. Avoid any heavy
+    initialization or database calls here so deploy healthchecks do not flap.
+    """
+    try:
+        payload = {
+            "status": "ok",
+            "version": APP_VERSION,
+            "time": datetime.now(timezone.utc).isoformat()
+        }
+        return jsonify(payload), 200
+    except Exception:
+        # Even if something odd happens during JSON building, ensure a 200 so
+        # the platform doesn't roll back a healthy instance due to trivial issues.
+        return Response("ok", status=200, mimetype='text/plain')
+
+
 @app.route('/points-buzz-dust-explanation')
 def points_buzz_dust_explanation():
     """Show Points vs Buzz Dust explanation screen"""
@@ -404,18 +427,7 @@ def api_admin_avatar_glb_audit():
     except Exception as e:
         print(f"❌ GLB audit error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-            'pool_timeout': 5,          # Shorter timeout for Railway
-            'pool_recycle': 300,        # 5 minutes
-            'pool_pre_ping': True,      # Test connections
-            'pool_size': 3,             # Smaller pool for Speed Round
-            'max_overflow': 2,          # Limited overflow
-            'connect_args': {
-                'connect_timeout': 5,
-                'application_name': 'BeeSmart_SpeedRound',
-                'options': '-c statement_timeout=10000'  # 10 second query timeout
-            }
-        }
-    return {}
+
 
 # ----------------------------------------------------------------------------
 # In-App Purchases (Apple/Google) – server-side verification stubs and mapping
@@ -576,24 +588,43 @@ def _apply_entitlement(user: User, product_id: str) -> dict:
             except Exception as e:
                 print(f"❌ GLB audit error: {e}")
                 return jsonify({"status": "error", "message": str(e)}), 500
-    Returns (ok, status_message, details)
-    Modes:
-      - IAP_MOCK=1                 → always succeed with mock
-      - IAP_VERIFICATION_MODE=live_strict (default when mock off)
-      - IAP_VERIFICATION_MODE=live_permissive (accept if basic checks pass)
-    """
-    if IAP_MOCK_MODE or IAP_VERIFICATION_MODE == 'mock':
-        return True, 'mock_verified', {'mock': True}
+        def verify_purchase(platform: str, payload: dict):
+            """Verify an in-app purchase with the appropriate store API.
 
-    try:
-        if platform == 'apple':
-            return _verify_with_store_apple(payload)
-        elif platform == 'google':
-            return _verify_with_store_google(payload)
-        else:
-            return False, 'unsupported_platform', {}
-    except Exception as e:
-        return False, f'verification_error: {e}', {}
+            Returns (ok, status_message, details)
+            Modes:
+              - IAP_MOCK=1                 → always succeed with mock
+              - IAP_VERIFICATION_MODE=live_strict (default when mock off)
+              - IAP_VERIFICATION_MODE=live_permissive (accept if basic checks pass)
+            """
+            if IAP_MOCK_MODE or IAP_VERIFICATION_MODE == 'mock':
+                return True, 'mock_verified', {'mock': True}
+
+            try:
+                if platform == 'apple':
+                    return _verify_with_store_apple(payload)
+                elif platform == 'google':
+                    return _verify_with_store_google(payload)
+                else:
+                    return False, 'unsupported_platform', {}
+            except Exception as e:
+                return False, f'verification_error: {e}', {}
+
+        def _verify_with_store_apple(payload: dict):
+            """Lightweight Apple verification placeholder.
+            In strict/live modes this should call App Store Server API.
+            """
+            if IAP_VERIFICATION_MODE in ('mock', 'live_permissive'):
+                return True, 'apple_mock_permissive', {'platform': 'apple', 'mock': True}
+            return False, 'apple_verification_not_configured', {}
+
+        def _verify_with_store_google(payload: dict):
+            """Lightweight Google verification placeholder.
+            In strict/live modes this should call Google Play Developer API.
+            """
+            if IAP_VERIFICATION_MODE in ('mock', 'live_permissive'):
+                return True, 'google_mock_permissive', {'platform': 'google', 'mock': True}
+            return False, 'google_verification_not_configured', {}
 
 def generate_smart_fallback(word):
     """Generate an educational challenge for words not found via API."""
@@ -3677,8 +3708,8 @@ def load_saved_wordlist():
         # Clear Random Play flag since user is loading a saved list
         session.pop("is_random_play", None)
 
-    # Load into session with fresh storage id (safeguard against stale mixing)
-    set_wordbank(rows, is_user_upload=True, force_new=True)
+        # Load into session with fresh storage id (safeguard against stale mixing)
+        set_wordbank(rows, is_user_upload=True, force_new=True)
         init_quiz_state()
 
         return jsonify({
@@ -5730,8 +5761,8 @@ def process_upload_with_progress(session_id, request_obj):
         session.pop("is_random_play", None)
         
         # Store the wordbank and initialize quiz (USER UPLOAD)
-    # Enhanced upload session: always force new storage id
-    set_wordbank(filtered_enriched, is_user_upload=True, force_new=True)
+        # Enhanced upload session: always force new storage id
+        set_wordbank(filtered_enriched, is_user_upload=True, force_new=True)
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -6191,8 +6222,8 @@ def api_upload_manual_words():
         session.pop("is_random_play", None)
         
         # Store and initialize quiz (USER UPLOAD - manual words)
-    # Manual entry upload: force new storage id for clean replacement
-    set_wordbank(enriched, is_user_upload=True, force_new=True)
+        # Manual entry upload: force new storage id for clean replacement
+        set_wordbank(enriched, is_user_upload=True, force_new=True)
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -8090,9 +8121,9 @@ def api_clear():
         
         # CRITICAL: Explicitly set empty word list to prevent restoration from fallback
         # This prevents get_wordbank() from finding session fallback data after reload
-    session[DATA_KEY] = []  # Set explicit empty list instead of removing key
-    # Remove deprecated wordbank_count (dynamic computation authoritative)
-    session.pop("wordbank_count", None)
+        session[DATA_KEY] = []  # Set explicit empty list instead of removing key
+        # Remove deprecated wordbank_count (dynamic computation authoritative)
+        session.pop("wordbank_count", None)
         session["wordbank_cleared"] = True  # Flag that clear was intentional
         
         # Clear from WORD_STORAGE again to be absolutely certain
@@ -13544,8 +13575,8 @@ def api_get_avatar(avatar_id):
         
         # Build avatar info dict with all URLs
         base_path = f"/static/assets/avatars/{avatar.folder_path}"
-    # GLB-only: obj_file contains GLB filename
-    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+        # GLB-only: obj_file contains GLB filename
+        is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
         
         avatar_info = {
             'id': avatar.slug,
@@ -14591,7 +14622,11 @@ print(f"✅ App version: 1.6")
 print(f"✅ Environment: {os.environ.get('FLASK_ENV', 'development')}")
 print(f"✅ Database: {app.config['SQLALCHEMY_DATABASE_URI'][:30]}...")
 print(f"✅ Sessions: {'Database (persistent)' if SESSION_INIT_SUCCESS else 'Filesystem (temporary)'}")
-print(f"✅ Dictionary cache: {len(DICTIONARY_CACHE.get('words', {}))} words loaded")
+try:
+    _dict_count = len(DICTIONARY_CACHE.get('words', {})) if 'DICTIONARY_CACHE' in globals() and isinstance(DICTIONARY_CACHE, dict) else 0
+except Exception:
+    _dict_count = 0
+print(f"✅ Dictionary cache: {_dict_count} words loaded (lazy)")
 print(f"✅ Health check endpoint: /health")
 print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)

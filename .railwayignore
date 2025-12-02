@@ -1,4 +1,6 @@
-# Railway ignore file - exclude test and debug files
+# Railway ignore file - exclude dev/test files and oversized assets for deploy
+
+# Existing basic ignores
 Dockerfile
 Dockerfile.*
 test_*.py
@@ -22,3 +24,40 @@ __pycache__/
 .vscode/
 .env
 *.log
+
+# Node/Python/build caches
+node_modules/
+.venv/
+venv/
+dist/
+build/
+
+# Large design/source files
+*.psd
+*.blend
+*.fbx
+*.zip
+*.rar
+
+# Legacy / development 3D assets not needed at runtime
+3DFiles/
+static/3DFiles/
+static/models/
+Badges/
+
+# Exclude all avatar subfolders except GLB-only folder
+static/assets/avatars/*
+!static/assets/avatars/glb_files
+!static/assets/avatars/glb_files/**
+# Exclude known backups
+static/assets/avatars/glb_files_backup/
+
+# Temporarily exclude heavy GLB payloads; keep thumbnails only
+static/assets/avatars/glb_files/*.glb
+!static/assets/avatars/glb_files/AvatarThumbnails/**
+
+# Badge GLBs are not required for runtime (PNG images are used)
+static/assets/badges/glb_files/
+
+# Ephemeral local data
+data/wordbanks/
