@@ -4714,6 +4714,16 @@ def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
     return jsonify({"status": "ok", "version": "1.6"}), 200
 
+# Extra health endpoints for PaaS defaults (Railway/Render/Heroku variants)
+# Many platforms probe different default paths; keep them lightweight and identical
+@app.route("/healthcheck")
+@app.route("/healthz")
+@app.route("/__health")
+@app.route("/_/health")
+@app.route("/ready")
+def health_check_aliases():
+    return jsonify({"status": "ok", "version": "1.6"}), 200
+
 @app.route("/health/iap")
 def health_iap():
     """IAP health and configuration status for ops visibility."""
