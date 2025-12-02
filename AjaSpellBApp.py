@@ -87,6 +87,12 @@ else:
 # No external dictionary_api imports - we use Simple Wiktionary (50K+ words)
 print("📚 Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
 
+# ------------------------------
+# Simple in-memory cache for avatar API
+# ------------------------------
+AVATAR_LIST_CACHE: Dict[str, Dict] = {}
+AVATAR_LIST_CACHE_TTL_SECONDS = 60  # small TTL to avoid stale data
+
 
 # Content Filter and Guardian Reporting System
 try:
@@ -115,6 +121,8 @@ except Exception as e:
 DICTIONARY_CACHE_FILE = "data/dictionary.json"
 SIMPLE_WIKTIONARY_FILE = "data/simple-wiktionary.jsonl"
 WORDBANK_DIR = "data/wordbanks"
+DATA_KEY = "wordbank_v1"
+QUIZ_STATE_KEY = "quiz_state_v1"
 
 def _ensure_dir(path):
     try:
@@ -208,6 +216,177 @@ def load_simple_wiktionary():
     except Exception as e:
         print(f"❌ Failed to load Simple Wiktionary: {e}")
     return {}
+
+# ------------------------------
+# Wordbank helpers (single source of truth for quizzes)
+# ------------------------------
+def _normalize_word(s: str) -> str:
+    try:
+        return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    except Exception:
+        return (s or "").lower()
+
+def _ensure_session_storage_id() -> str:
+    sid = session.get('wordbank_storage_id')
+    if not sid:
+        sid = str(uuid.uuid4())
+        session['wordbank_storage_id'] = sid
+        session.modified = True
+    return sid
+
+def get_wordbank() -> list:
+    """Return the active wordbank rows from disk for this session."""
+    sid = _ensure_session_storage_id()
+    rows = load_wordbank_safe(sid)
+    return rows
+
+def set_wordbank(rows: list, clear_first: bool = True) -> int:
+    """Replace the active wordbank with the provided rows.
+
+    Normalizes and de-duplicates entries. Optionally clears prior data first.
+    Returns the number of rows stored.
+    """
+    sid = _ensure_session_storage_id()
+
+    # Clear by overwriting with empty list if requested
+    if clear_first:
+        save_wordbank_atomic(sid, [])
+
+    # Normalize to shape {word,sentence,hint}
+    cleaned = []
+    seen = set()
+    for r in rows or []:
+        if isinstance(r, dict):
+            w = str(r.get('word', '')).strip()
+            if not w:
+                continue
+            key = _normalize_word(w)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            cleaned.append({
+                'word': w,
+                'sentence': str(r.get('sentence', '')).strip(),
+                'hint': str(r.get('hint', '')).strip()
+            })
+        else:
+            w = str(r).strip()
+            if not w:
+                continue
+            key = _normalize_word(w)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            cleaned.append({'word': w, 'sentence': '', 'hint': ''})
+
+    save_wordbank_atomic(sid, cleaned)
+    # Reset quiz state whenever wordbank changes
+    init_quiz_state(len(cleaned))
+    return len(cleaned)
+
+def clear_wordbank() -> None:
+    sid = _ensure_session_storage_id()
+    save_wordbank_atomic(sid, [])
+    init_quiz_state(0)
+
+def init_quiz_state(total_words: int) -> None:
+    """Initialize quiz state: shuffled indices and counters."""
+    indices = list(range(max(0, int(total_words))))
+    random.shuffle(indices)
+    session[QUIZ_STATE_KEY] = {
+        'order': indices,
+        'current': 0,
+        'correct': 0,
+        'incorrect': 0,
+        'started_at': time.time()
+    }
+    session.modified = True
+
+# ------------------------------
+# Wordbank API endpoints
+# ------------------------------
+@app.route('/api/wordbank', methods=['GET'])
+def api_wordbank_get():
+    try:
+        rows = get_wordbank()
+        return jsonify({
+            'status': 'success',
+            'count': len(rows),
+            'rows': rows[:100],  # safety: return a preview only
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/wordbank', methods=['POST'])
+def api_wordbank_set():
+    try:
+        data = request.get_json(silent=True) or {}
+        rows = data.get('rows') or []
+        clear_first = bool(data.get('clear_first', True))
+        stored = set_wordbank(rows, clear_first=clear_first)
+        return jsonify({'status': 'success', 'stored': stored})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/wordbank/clear', methods=['POST'])
+def api_wordbank_clear():
+    try:
+        clear_wordbank()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/wordbank/import-text', methods=['POST'])
+def api_wordbank_import_text():
+    """Import a simple text list (newline or delimiter separated).
+
+    Body JSON: { text: str, delimiter?: str, clear_first?: bool }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        text = str(data.get('text', '') or '')
+        delimiter = data.get('delimiter')
+        clear_first = bool(data.get('clear_first', True))
+        parts = []
+        if delimiter:
+            parts = [p.strip() for p in text.split(delimiter)]
+        else:
+            # default: split on newlines/commas
+            temp = re.split(r"[\r\n,]+", text)
+            parts = [p.strip() for p in temp]
+        # Convert to rows
+        rows = [{'word': p, 'sentence': '', 'hint': ''} for p in parts if p]
+        stored = set_wordbank(rows, clear_first=clear_first)
+        return jsonify({'status': 'success', 'stored': stored})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route('/api/wordbank/count', methods=['GET'])
+def api_wordbank_count():
+    """Return counts and system checks for loading state."""
+    try:
+        sid = _ensure_session_storage_id()
+        path = _wordbank_path(sid)
+        rows = get_wordbank()
+        exists = os.path.exists(path)
+        last_modified = None
+        try:
+            if exists:
+                last_modified = datetime.fromtimestamp(os.path.getmtime(path)).isoformat()
+        except Exception:
+            last_modified = None
+
+        return jsonify({
+            'status': 'success',
+            'storage_id': sid,
+            'exists': exists,
+            'last_modified': last_modified,
+            'count': len(rows),
+            'loaded': len(rows) > 0,
+            'source': 'uploaded' if len(rows) > 0 else 'dictionary'
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # 🏆 Badge metadata for display
 BADGE_METADATA = {
@@ -377,6 +556,84 @@ def privacy_page():
     """Public privacy policy page required for Play Console disclosures."""
     return _safe_template("privacy.html")
 
+# ------------------------------
+# Avatar API helpers
+# ------------------------------
+def _avatar_thumbnail_url_from_glb(glb_filename: str) -> str:
+    """Derive the standard thumbnail URL from a GLB filename.
+
+    Convention used in this repo:
+      static/assets/avatars/glb_files/AvatarThumbnails/<BaseName>!.png
+    """
+    try:
+        base = os.path.splitext(os.path.basename(glb_filename or ""))[0]
+        if not base:
+            return "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
+        return f"/static/assets/avatars/glb_files/AvatarThumbnails/{base}!.png"
+    except Exception:
+        return "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
+
+def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"]) -> Dict[str, object]:
+    """Compute lock state and reason for an avatar entry based on role and user state.
+
+    Returns dict with keys: unlocked (bool), reason (str), points_needed (int|None)
+    """
+    # Admin: always unlocked
+    if role == 'admin':
+        return {"unlocked": True, "reason": "Admin access", "points_needed": None}
+
+    # Guest: by product decision only show Honey Comb avatar; anything else considered locked/hidden
+    if role == 'guest':
+        return {"unlocked": False, "reason": "Guest access limited", "points_needed": None}
+
+    # Registered users (student/teacher/parent)
+    tier = (entry.get('tier') or '').lower()
+    is_default_free = bool(entry.get('is_default_free'))
+    unlock_points = int(entry.get('unlock_points') or 0)
+    avatar_id = entry.get('id')
+
+    # Defaults for missing user
+    honey_points = 0
+    purchased = []
+    premium_member = False
+    if user is not None:
+        try:
+            honey_points = int(user.honey_points or 0)
+        except Exception:
+            honey_points = 0
+        try:
+            purchased = list(user.purchased_avatars or [])
+        except Exception:
+            purchased = []
+        try:
+            premium_member = bool(getattr(user, 'premium_member', False))
+        except Exception:
+            premium_member = False
+
+    # Default free tiers are unlocked
+    if tier in ('default_free', 'mascot_free') or is_default_free:
+        return {"unlocked": True, "reason": "Default free avatar", "points_needed": 0}
+
+    # Earn-or-buy tier: unlock by points or purchase
+    if tier == 'earn_or_buy':
+        if avatar_id in purchased:
+            return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
+        if honey_points >= unlock_points:
+            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
+        return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
+
+    # Premium tier: unlock by purchase (optionally by premium membership if policy allows)
+    if tier == 'premium':
+        if avatar_id in purchased:
+            return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
+        # If premium membership should unlock all premium avatars, uncomment next lines:
+        # if premium_member:
+        #     return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
+        return {"unlocked": False, "reason": "Premium - purchase to unlock", "points_needed": None}
+
+    # Fallback - treat unknown tiers as locked
+    return {"unlocked": False, "reason": "Locked", "points_needed": None}
+
 def load_dictionary_cache():
     """Load cached dictionary entries from JSON file"""
     try:
@@ -391,6 +648,140 @@ def load_dictionary_cache():
     except Exception as e:
         print(f"❌ Failed to load dictionary cache: {e}")
     return {}
+
+# ------------------------------
+# Avatars API: returns role-aware list with lock state
+# ------------------------------
+@app.route('/api/avatars', methods=['GET'])
+def api_avatars():
+    """Return the avatar catalog with per-user lock state and thumbnails.
+
+    Caching:
+      - Guests: single cache key 'guest_role_guest'
+      - Authenticated: cache key 'user_{id}_role_{role}'
+    """
+    try:
+        # Lazy import to avoid circulars at module import time
+        from avatar_catalog import AVATAR_CATALOG
+    except Exception as e:
+        print(f"❌ Failed to import AVATAR_CATALOG: {e}")
+        return jsonify({"status": "error", "message": "Catalog unavailable"}), 500
+
+    # Identify user and role
+    user = current_user if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
+    role = 'guest'
+    if user is not None:
+        try:
+            role = (user.role or 'student').lower()
+        except Exception:
+            role = 'student'
+
+    # Build cache key per user+role (prevents admin cache bleed)
+    if user is None:
+        cache_key = 'guest_role_guest'
+    else:
+        cache_key = f"user_{getattr(user, 'id', 'unknown')}_role_{role}"
+
+    now_ts = time.time()
+    cached = AVATAR_LIST_CACHE.get(cache_key)
+    if cached and (now_ts - cached.get('ts', 0)) <= AVATAR_LIST_CACHE_TTL_SECONDS:
+        payload = {
+            "status": "success",
+            "avatars": cached.get('data', []),
+            "cached": True,
+            "user": {
+                "role": role,
+                "is_authenticated": bool(user is not None),
+                "is_guest": bool(user is None),
+                "is_admin": bool(role == 'admin'),
+                "honey_points": int(getattr(user, 'honey_points', 0) or 0) if user is not None else 0,
+            }
+        }
+        return jsonify(payload)
+
+    # Build role-aware list
+    result = []
+
+    # Guest rule: picker is not available; deny access explicitly
+    if role == 'guest':
+        payload = {
+            "status": "forbidden",
+            "message": "Avatar picker is only available for registered users",
+            "user": {
+                "role": role,
+                "is_authenticated": False,
+                "is_guest": True,
+                "is_admin": False,
+                "honey_points": 0,
+            }
+        }
+        return jsonify(payload), 403
+
+    # Registered users and admins: evaluate all catalog entries
+    locked_count = 0
+    unlocked_count = 0
+    for entry in AVATAR_CATALOG:
+        # Compute lock state
+        lc = _is_avatar_unlocked_for_user(entry, role, user)
+        is_unlocked = bool(lc.get('unlocked'))
+
+        # Special admin debug log per item
+        if role == 'admin' and is_unlocked:
+            try:
+                print(f"✅ ADMIN UNLOCK: {entry.get('id')} - {entry.get('name')}")
+            except Exception:
+                pass
+
+        thumb = _avatar_thumbnail_url_from_glb(entry.get('obj_file'))
+        folder = entry.get('folder') or 'glb_files'
+        obj_file = entry.get('obj_file') or ''
+        glb_url = f"/static/assets/avatars/{folder}/{obj_file}" if obj_file else None
+        dto = {
+            'id': entry.get('id'),
+            'name': entry.get('name'),
+            'tier': entry.get('tier'),
+            'category': entry.get('category'),
+            'description': entry.get('description'),
+            'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
+            'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
+            'is_locked': not is_unlocked,
+            'urls': {
+                'thumbnail': thumb,
+                'glb': glb_url
+            }
+        }
+
+        if is_unlocked:
+            unlocked_count += 1
+        else:
+            locked_count += 1
+
+        result.append(dto)
+
+    # Verification logging
+    try:
+        print(f"🔎 Avatar availability for role={role}: unlocked={unlocked_count}, locked={locked_count}, total={len(result)}")
+        if role == 'admin' and locked_count > 0:
+            print("⚠️ WARNING: Admin user has locked avatars in response — investigate caching or gating logic.")
+        if role == 'admin' and unlocked_count == len(result):
+            print("✅ Admin verification: all avatars unlocked.")
+    except Exception:
+        pass
+
+    # Store in cache and return
+    AVATAR_LIST_CACHE[cache_key] = { 'ts': now_ts, 'data': result }
+    return jsonify({
+        "status": "success",
+        "avatars": result,
+        "cached": False,
+        "user": {
+            "role": role,
+            "is_authenticated": bool(user is not None),
+            "is_guest": bool(user is None),
+            "is_admin": bool(role == 'admin'),
+            "honey_points": int(getattr(user, 'honey_points', 0) or 0) if user is not None else 0,
+        }
+    })
 
 def save_dictionary_cache(cache_data):
     """Save dictionary cache to JSON file"""

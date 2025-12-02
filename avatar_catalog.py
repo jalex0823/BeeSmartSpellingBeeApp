@@ -499,6 +499,25 @@ AVATAR_CATALOG: List[Dict] = [
         "unlock_points": 22000,
         "price": 0.99
     },
+]
+
+# ------------------------------
+# Pricing tiers derived from catalog
+# ------------------------------
+# Premium $1.99 tier (e.g., Fairy Bee)
+try:
+    PREMIUM_199_IDS: List[str] = [
+        a.get('id') for a in AVATAR_CATALOG
+        if float(a.get('price') or 0.0) == 1.99
+    ]
+except Exception:
+    PREMIUM_199_IDS = []
+
+# Back-compat alias: some scripts may expect a set
+try:
+    PREMIUM_199_IDS_SET = set(PREMIUM_199_IDS)
+except Exception:
+    PREMIUM_199_IDS_SET = set()
     {
         "id": "space-bee",
         "product_id": "beesmart.avatar.space_bee",

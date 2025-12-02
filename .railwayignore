@@ -22,3 +22,8 @@ __pycache__/
 .vscode/
 .env
 *.log
+# Exclude heavy 3D model binaries from upload; keep thumbnails
+**/*.glb
+static/assets/avatars/**/*.glb
+# Do NOT ignore thumbnails; they are small and required by UI
+# static/assets/avatars/glb_files/AvatarThumbnails/*.png
