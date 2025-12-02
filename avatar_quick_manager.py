@@ -33,11 +33,10 @@ class SimpleAvatarManager:
         self.static_avatars_path = self.base_path / "static" / "Avatars" / "3D Avatar Files"
         self.js_avatar_loader_path = self.base_path / "static" / "js" / "user-avatar-loader.js"
         self.backup_path = self.base_path / "backups" / "avatars"
-        
-        # Required files for each avatar
-        self.required_extensions = ['.obj', '.mtl', '.png']
+        # Required files for each avatar (GLB-only architecture)
+        self.required_extensions = ['.glb']
         self.thumbnail_suffix = '!.png'
-        
+
         print(f"🐝 BeeSmart Simple Avatar Manager")
         print(f"📂 Avatars Directory: {self.static_avatars_path}")
 
@@ -112,12 +111,10 @@ class SimpleAvatarManager:
                 file_count = len(files)
                 
                 # Check completeness
-                has_obj = any(f.suffix == '.obj' for f in files)
-                has_mtl = any(f.suffix == '.mtl' for f in files)
-                has_png = any(f.suffix == '.png' and '!' not in f.name for f in files)
+                has_glb = any(f.suffix == '.glb' for f in files)
                 has_thumb = any('!' in f.name and f.suffix == '.png' for f in files)
-                
-                complete = has_obj and has_mtl and has_png and has_thumb
+                has_texture_png = any(f.suffix == '.png' and '!' not in f.name for f in files)  # optional now
+                complete = has_glb and has_thumb
                 status = "✅" if complete else "❌"
                 
                 print(f"{avatar_dir.name:<20} {file_count:<8} {status}")
@@ -160,10 +157,7 @@ class SimpleAvatarManager:
             # Copy files
             copied_files = []
             for ext in self.required_extensions + [self.thumbnail_suffix]:
-                if ext == self.thumbnail_suffix:
-                    src_file = source_path / f"{avatar_name}{ext}"
-                else:
-                    src_file = source_path / f"{avatar_name}{ext}"
+                src_file = source_path / f"{avatar_name}{ext}"
                 
                 if src_file.exists():
                     dest_file = dest_dir / src_file.name
@@ -202,9 +196,7 @@ class SimpleAvatarManager:
             # Generate mapping entry
             avatar_key = avatar_name.lower()
             new_mapping = f"""            '{avatar_key}': {{
-                obj: '/static/Avatars/3D Avatar Files/{avatar_name}/{avatar_name}.obj',
-                mtl: '/static/Avatars/3D Avatar Files/{avatar_name}/{avatar_name}.mtl',
-                texture: '/static/Avatars/3D Avatar Files/{avatar_name}/{avatar_name}.png',
+                glb: '/static/Avatars/3D Avatar Files/{avatar_name}/{avatar_name}.glb',
                 thumbnail: '/static/Avatars/3D Avatar Files/{avatar_name}/{avatar_name}!.png'
             }},"""
             
@@ -258,9 +250,7 @@ class SimpleAvatarManager:
         """Show expected file structure"""
         print(f"\n📋 Expected file structure for '{avatar_name}':")
         print(f"📁 {avatar_name}/")
-        print(f"   📄 {avatar_name}.obj     (3D model)")
-        print(f"   📄 {avatar_name}.mtl     (material definition)")  
-        print(f"   📄 {avatar_name}.png     (texture image)")
+        print(f"   📄 {avatar_name}.glb     (3D model)")
         print(f"   📄 {avatar_name}!.png    (thumbnail for UI)")
         print(f"\n💡 All files must use exact same name as folder")
 

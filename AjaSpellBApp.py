@@ -372,117 +372,38 @@ def _safe_template(name):
         return "<html><head><meta charset='utf-8'><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>BeeSmart Spelling Bee privacy policy.</p></body></html>"
 
 
-@app.route("/privacy")
-def privacy_page():
-    """Public privacy policy page required for Play Console disclosures."""
-    return _safe_template("privacy.html")
-
-def load_dictionary_cache():
-    """Load cached dictionary entries from JSON file"""
+@app.route('/api/admin/avatar-glb-audit', methods=['GET'])
+@login_required
+def api_admin_avatar_glb_audit():
+    """Admin audit endpoint: report any legacy file references (should be GLB-only)."""
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
     try:
-        if os.path.exists(DICTIONARY_CACHE_FILE):
-            with open(DICTIONARY_CACHE_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                words = data.get('words', {})
-                print(f"✅ Loaded dictionary cache with {len(words)} words from {DICTIONARY_CACHE_FILE}")
-                return words
-        else:
-            print(f"⚠️ Dictionary cache file not found: {DICTIONARY_CACHE_FILE}")
+        from models import Avatar
+        all_avatars = Avatar.query.all()
+        legacy = []
+        missing_glb = []
+        base_glb_dir = os.path.join(app.root_path, 'static', 'assets', 'avatars', 'glb_files')
+        for avatar in all_avatars:
+            path_val = (avatar.obj_file or '').strip()
+            if path_val and path_val.lower().endswith('.obj'):
+                legacy.append({'slug': avatar.slug, 'current_value': path_val})
+            # Check existence of GLB file if value ends with .glb
+            if path_val and path_val.lower().endswith('.glb'):
+                disk_path = os.path.join(base_glb_dir, path_val)
+                if not os.path.exists(disk_path):
+                    missing_glb.append({'slug': avatar.slug, 'expected_file': path_val})
+        return jsonify({
+            'status': 'success',
+            'total_avatars': len(all_avatars),
+            'legacy_obj_references': legacy,
+            'missing_glb_files': missing_glb,
+            'legacy_count': len(legacy),
+            'missing_glb_count': len(missing_glb)
+        })
     except Exception as e:
-        print(f"❌ Failed to load dictionary cache: {e}")
-    return {}
-
-def save_dictionary_cache(cache_data):
-    """Save dictionary cache to JSON file"""
-    try:
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(DICTIONARY_CACHE_FILE), exist_ok=True)
-        
-        # Load existing data or create new
-        if os.path.exists(DICTIONARY_CACHE_FILE):
-            with open(DICTIONARY_CACHE_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        else:
-            data = {
-                "_metadata": {
-                    "version": "1.6",
-                    "created": datetime.now().strftime("%Y-%m-%d"),
-                    "description": "BeeSmart dictionary cache - API fetched definitions only"
-                },
-                "words": {},
-                "stats": {
-                    "total_words": 0,
-                    "api_calls": 0,
-                    "cache_hits": 0
-                }
-            }
-        
-        # Update words cache and stats
-        data['words'].update(cache_data)
-        data['last_updated'] = datetime.now().isoformat()
-        data['stats']['total_words'] = len(data['words'])
-        
-        # Save to file
-        with open(DICTIONARY_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-            
-        print(f"Dictionary cache updated with {len(cache_data)} entries")
-        
-    except Exception as e:
-        print(f"Warning: Failed to save dictionary cache: {e}")
-
-# Dictionary cache - loaded on-demand by get_word_info(), not at startup
-DICTIONARY_CACHE = {}
-
-# In-memory acceleration structures
-from collections import OrderedDict
-WORD_INFO_CACHE_MAX = 3000  # soft cap for LRU
-WORD_INFO_CACHE = OrderedDict()  # LRU of formatted definition sentences
-SIMPLE_WIKTIONARY_INDEX = None  # set of lowercase words for O(1) membership
-_WORD_INFO_HITS = 0
-_WORD_INFO_MISSES = 0
-
-# Simple English Wiktionary - Lazy load on first use (for Random Word feature)
-# This improves Railway startup time by ~2-3 seconds
-SIMPLE_WIKTIONARY = None  # Loaded on-demand when random words are requested
-SIMPLE_WIKTIONARY_LOADED = False
-
-def ensure_simple_wiktionary_loaded():
-    """
-    Lazy-load Simple Wiktionary only when needed.
-    This prevents blocking Railway app startup with 50K+ word dictionary load.
-    """
-    global SIMPLE_WIKTIONARY, SIMPLE_WIKTIONARY_LOADED, SIMPLE_WIKTIONARY_INDEX
-    
-    if SIMPLE_WIKTIONARY_LOADED:
-        return SIMPLE_WIKTIONARY
-    
-    print("📚 Loading Simple English Wiktionary on-demand (first use)...")
-    SIMPLE_WIKTIONARY = load_simple_wiktionary()
-    SIMPLE_WIKTIONARY_LOADED = True
-    # Build fast index (lowercase keys already) for O(1) membership checks
-    try:
-        SIMPLE_WIKTIONARY_INDEX = set(SIMPLE_WIKTIONARY.keys())
-        print(f"✅ Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready (index built)")
-    except Exception as _idx_err:
-        SIMPLE_WIKTIONARY_INDEX = None
-        print(f"⚠️ Failed building wiktionary index: {_idx_err}")
-    return SIMPLE_WIKTIONARY
-
-print("✅ Dictionary resources initialized (on-demand loading enabled)")
-
-# Speed Round logging configuration for Railway
-speed_logger = logging.getLogger('SpeedRound_Railway')
-if not speed_logger.handlers:
-    speed_logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(asctime)s - SpeedRound - %(levelname)s - %(message)s'))
-    speed_logger.addHandler(handler)
-
-def get_railway_speed_round_engine_options():
-    """Get Railway-optimized engine options for Speed Round"""
-    if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
-        return {
+        print(f"❌ GLB audit error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
             'pool_timeout': 5,          # Shorter timeout for Railway
             'pool_recycle': 300,        # 5 minutes
             'pool_pre_ping': True,      # Test connections
@@ -612,119 +533,49 @@ def _apply_entitlement(user: User, product_id: str) -> dict:
 
     if mapping.get('type') == 'bundle':
         bundle_id = mapping.get('bundle_id')
-        avatars = mapping.get('avatars', [])
-        if not user.purchased_bundles:
-            user.purchased_bundles = []
-        if bundle_id and bundle_id not in user.purchased_bundles:
-            user.purchased_bundles.append(bundle_id)
-            # Unlock avatars
-            if not user.purchased_avatars:
-                user.purchased_avatars = []
-            new_ones = 0
-            for a in avatars:
-                if a not in user.purchased_avatars:
-                    user.purchased_avatars.append(a)
-                    new_ones += 1
-            result["applied"] = True
-            result["details"] = {"bundle": bundle_id, "unlocked_count": new_ones}
-        else:
-            result["details"] = {"bundle": bundle_id, "unlocked_count": 0}
-        return result
+        @app.route('/api/admin/avatar-glb-audit', methods=['GET'])
+        @login_required
+        def api_admin_avatar_glb_audit():
+            """Admin audit: verify all active avatars reference GLB models only (OBJ/MTL deprecated)."""
+            if current_user.role != 'admin':
+                return jsonify({"status": "error", "message": "Admin access required"}), 403
 
-    return result
+            try:
+                from models import Avatar
+                avatars = Avatar.query.filter_by(is_active=True).all()
+                legacy_refs = []
+                missing_glb = []
+                base_glb_root = os.path.join(os.path.dirname(__file__), 'static', 'assets', 'avatars', 'glb_files')
 
+                for avatar in avatars:
+                    path_val = (avatar.obj_file or '').strip()
+                    if not path_val:
+                        missing_glb.append(avatar.slug)
+                        continue
+                    # Flag if still ends with .obj
+                    if path_val.lower().endswith('.obj'):
+                        legacy_refs.append({
+                            'slug': avatar.slug,
+                            'name': avatar.name,
+                            'value': path_val
+                        })
+                    # Basic existence check if path appears to be in glb_files folder
+                    if path_val.lower().endswith('.glb') and ('glb_files/' in path_val.lower()):
+                        filename = path_val.split('glb_files/')[-1]
+                        full_path = os.path.join(base_glb_root, filename)
+                        if not os.path.exists(full_path):
+                            missing_glb.append(avatar.slug)
 
-# ----------------------------
-# IAP verification (scaffolds)
-# ----------------------------
-def _verify_with_store_apple(data: dict) -> tuple[bool, str, dict]:
-    """Scaffold for App Store Server API verification.
-    Env (planned):
-      - APPLE_ISSUER_ID
-      - APPLE_KEY_ID
-      - APPLE_PRIVATE_KEY (PEM) or APPLE_PRIVATE_KEY_PATH
-      - APPLE_APP_BUNDLE_ID
-      - APPLE_ENV ("Sandbox" | "Production")
-      - IAP_LIVE_ACCEPT_BASIC (optional: accept basic checks only for dev)
-    """
-    # Basic presence checks
-    product_id = (data or {}).get('product_id')
-    payload = (data or {}).get('payload') or {}
-    txn = (data or {}).get('transaction_id') or (payload.get('transactionId'))
-
-    # Require product mapping to exist
-    if product_id not in PRODUCT_MAP:
-        return False, 'unknown_product', {'reason': 'product_id not in PRODUCT_MAP'}
-
-    # Require some form of transaction evidence
-    if not (txn or payload):
-        return False, 'missing_transaction', {'reason': 'no transaction_id or payload provided'}
-
-    # Check configuration availability
-    has_conf = all(os.getenv(k) for k in ('APPLE_ISSUER_ID', 'APPLE_KEY_ID')) and (
-        os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_PATH')
-    )
-    if not has_conf:
-        if os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1', 'true', 'True', 'yes'):
-            return True, 'basic_accepted_unverified', {'note': 'APPLE_* env not fully configured'}
-        return False, 'apple_verification_not_configured', {}
-
-    # Attempt live verification if module available
-    try:
-        from iap_verification import verify_apple_purchase  # type: ignore
-        ok, status, details = verify_apple_purchase(data)
-        if ok:
-            return True, status, details
-        # If strict, propagate failure; if permissive and basic acceptance allowed, accept
-        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
-            return True, f'permissive_{status}', details
-        return False, status, details
-    except Exception as e:
-        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
-            return True, f'permissive_exception: {e}', {}
-        return False, f'apple_verifier_unavailable: {e}', {}
-
-
-def _verify_with_store_google(data: dict) -> tuple[bool, str, dict]:
-    """Scaffold for Google Play Developer API verification.
-    Env (planned):
-      - GOOGLE_PLAY_SERVICE_ACCOUNT (JSON string) or GOOGLE_PLAY_SERVICE_ACCOUNT_PATH
-      - GOOGLE_PLAY_PACKAGE_NAME
-      - IAP_LIVE_ACCEPT_BASIC (optional: accept basic checks only for dev)
-    """
-    product_id = (data or {}).get('product_id')
-    purchase_token = (data or {}).get('purchase_token') or ((data or {}).get('payload') or {}).get('purchaseToken')
-
-    if product_id not in PRODUCT_MAP:
-        return False, 'unknown_product', {'reason': 'product_id not in PRODUCT_MAP'}
-    if not purchase_token:
-        return False, 'missing_purchase_token', {'reason': 'no purchase_token provided'}
-
-    has_conf = bool(os.getenv('GOOGLE_PLAY_PACKAGE_NAME')) and (
-        os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT') or os.getenv('GOOGLE_PLAY_SERVICE_ACCOUNT_PATH')
-    )
-    if not has_conf:
-        if os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1', 'true', 'True', 'yes'):
-            return True, 'basic_accepted_unverified', {'note': 'GOOGLE_* env not fully configured'}
-        return False, 'google_verification_not_configured', {}
-
-    # Attempt live verification if module available
-    try:
-        from iap_verification import verify_google_purchase  # type: ignore
-        ok, status, details = verify_google_purchase(data)
-        if ok:
-            return True, status, details
-        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
-            return True, f'permissive_{status}', details
-        return False, status, details
-    except Exception as e:
-        if IAP_VERIFICATION_MODE == 'live_permissive' or os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1','true','True','yes'):
-            return True, f'permissive_exception: {e}', {}
-        return False, f'google_verifier_unavailable: {e}', {}
-
-
-def _verify_with_store(platform: str, payload: dict) -> tuple[bool, str, dict]:
-    """Verify purchase with Apple/Google based on env-driven mode.
+                return jsonify({
+                    'status': 'success',
+                    'total_active': len(avatars),
+                    'legacy_obj_references': legacy_refs,
+                    'avatars_missing_glb': missing_glb,
+                    'message': 'GLB-only avatar audit complete'
+                })
+            except Exception as e:
+                print(f"❌ GLB audit error: {e}")
+                return jsonify({"status": "error", "message": str(e)}), 500
     Returns (ok, status_message, details)
     Modes:
       - IAP_MOCK=1                 → always succeed with mock
@@ -1331,6 +1182,29 @@ def _ensure_db_initialized() -> None:
                     print("✅ Added is_favorite column")
             except Exception as e:
                 print(f"⚠️ is_favorite migration: {e}")
+                db.session.rollback()
+
+            # Migration: Add glb_data / glb_file_size columns to avatars if missing
+            try:
+                avatar_columns = [col['name'] for col in inspector.get_columns('avatars')]
+                need_glb_data = 'glb_data' not in avatar_columns
+                need_glb_size = 'glb_file_size' not in avatar_columns
+                if need_glb_data or need_glb_size:
+                    print("🔧 Adding missing avatar GLB columns (glb_data, glb_file_size)...")
+                    dialect = db.engine.url.get_backend_name()
+                    # Use appropriate column types per dialect
+                    if need_glb_data:
+                        if dialect == 'sqlite':
+                            db.session.execute(text("ALTER TABLE avatars ADD COLUMN glb_data BLOB"))
+                        else:
+                            # Postgres (Railway) or others supporting BYTEA
+                            db.session.execute(text("ALTER TABLE avatars ADD COLUMN glb_data BYTEA"))
+                    if need_glb_size:
+                        db.session.execute(text("ALTER TABLE avatars ADD COLUMN glb_file_size INTEGER"))
+                    db.session.commit()
+                    print("✅ Avatar GLB columns migration complete")
+            except Exception as e:
+                print(f"⚠️ Avatar GLB column migration failed: {e}")
                 db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
@@ -2512,34 +2386,57 @@ def get_wordbank() -> List[Dict[str, str]]:
     if not wb:
         print("DEBUG get_wordbank: Wordbank is empty - user needs to upload or add words")
     
-    session["wordbank_count"] = len(wb)
+    # Deprecated: do not persist word count in session; always compute dynamically.
+    session.pop("wordbank_count", None)
     return wb
 
-def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
+def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False, force_new: bool = False):
     """Store wordbank in WORD_STORAGE to avoid cookie size limits.
     
+    Robust replacement semantics:
+      - If this is a user upload OR force_new=True we *always* discard any previous
+        in-memory/disk wordbank and allocate a brand new storage_id. This prevents
+        rare race conditions where a stale request referencing the previous UUID
+        re-hydrates old words (mixing old + new during a quiz).
+      - Otherwise (system/default loads) we reuse the existing storage_id.
+    
+    This function is the ONLY place that should mutate WORD_STORAGE for the active session.
     Cookie-based sessions have ~4KB limit - large word lists cause data loss.
     WORD_STORAGE is server-side in-memory, session only stores UUID pointer.
     """
     import uuid
+
+    # Decide whether to force a new storage id (user initiated upload or explicit override)
+    must_reset = force_new or is_user_upload
+    previous_id = session.get("wordbank_storage_id")
     
-    # Get or create storage_id for this session
+    if must_reset and previous_id:
+        try:
+            with WORD_STORAGE_LOCK:
+                removed = WORD_STORAGE.pop(previous_id, None)
+            _delete_wordbank_from_disk(previous_id)
+            print(f"DEBUG set_wordbank: Disposed previous storage_id={previous_id} (removed {len(removed) if removed else 0} words)")
+        except Exception as e:
+            print(f"⚠️ set_wordbank: Failed disposing previous storage_id={previous_id}: {e}")
+        session.pop(DATA_KEY, None)  # ensure no legacy fallback leaks old data
+
     storage_id = session.get("wordbank_storage_id")
-    if not storage_id:
+    if not storage_id or must_reset:
         storage_id = str(uuid.uuid4())
         session["wordbank_storage_id"] = storage_id
-        print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
-    
-    # Store full word list in server-side WORD_STORAGE (not in cookies!)
+        print(f"DEBUG set_wordbank: Created new storage_id={storage_id} (must_reset={must_reset})")
+
+    # Store full word list in server-side WORD_STORAGE (not in cookies!) - pure replacement
     with WORD_STORAGE_LOCK:
         WORD_STORAGE[storage_id] = rows
-    # Persist to disk for durability across restarts
+    # Persist to disk for durability across restarts (also pure replacement semantics)
     _save_wordbank_to_disk(storage_id, rows)
-    
-    # Only store lightweight metadata in session
-    session["wordbank_count"] = len(rows)
-    # Provide a tiny durability fallback for very small lists (survive dev reloads)
-    # We avoid bloating cookies: only persist if JSON size <= ~2KB
+
+    # Deprecated: do not persist word count in session; always compute dynamically.
+    session.pop("wordbank_count", None)
+
+    # Provide a tiny durability fallback for very small lists (survive dev reloads).
+    # Avoid bloating cookies: only persist if JSON size <= ~2KB
     try:
         payload = json.dumps(rows, ensure_ascii=False)
         if len(payload.encode('utf-8')) <= 2048:
@@ -2547,24 +2444,52 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
             print(f"DEBUG set_wordbank: Stored compact fallback list in session (len={len(rows)})")
         else:
             session.pop(DATA_KEY, None)
-    except Exception as _e:
-        # On any failure, ensure legacy key is cleared
+    except Exception:
         session.pop(DATA_KEY, None)
+
     session.modified = True
     session.permanent = True  # Strengthen persistence on mobile browsers
 
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
-        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words → WORD_STORAGE[{storage_id}]")
+        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words → WORD_STORAGE[{storage_id}] (fresh list)")
     else:
         session["using_default_words"] = True
         print(f"DEBUG set_wordbank: System words {len(rows)} → WORD_STORAGE[{storage_id}]")
 
-    # Always clear skip flag when new words are loaded
+    # Always clear skip flag when new words are loaded; user action supersedes defaults
     session.pop("skip_default_load", None)
-    
+
+    # Defensive: mark intentional replacement to suppress accidental migrations
+    session["wordbank_replaced_at"] = datetime.utcnow().isoformat()
+
     print(f"DEBUG set_wordbank: Server-side session updated, keys={list(session.keys())}")
+
+def get_word_count() -> int:
+    """Return authoritative word count for active wordbank."""
+    try:
+        return len(get_wordbank())
+    except Exception as e:
+        print(f"⚠️ get_word_count: {e}")
+        return 0
+
+def get_quiz_progress() -> Dict[str, int]:
+    """Return quiz progress metrics derived from quiz state and wordbank."""
+    total = get_word_count()
+    state = get_quiz_state() or {}
+    answered = len(state.get("history", []))
+    remaining = max(total - answered, 0)
+    return {
+        "total_words": total,
+        "answered": answered,
+        "remaining": remaining,
+        "correct": state.get("correct", 0),
+        "incorrect": state.get("incorrect", 0),
+        "streak": state.get("streak", 0),
+        "max_streak": state.get("max_streak", 0),
+        "session_points": state.get("session_points", 0)
+    }
 
 def init_quiz_state():
     wordbank = get_wordbank()
@@ -2617,6 +2542,22 @@ def init_quiz_state():
 
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
+
+@app.route("/api/wordbank/stats", methods=["GET"])
+def api_wordbank_stats():
+    """Unified wordbank + quiz progress stats endpoint."""
+    wb = get_wordbank()
+    progress = get_quiz_progress()
+    return jsonify({
+        "ok": True,
+        "wordbank_count": progress["total_words"],
+        "wordbank_preview": wb[:5] if wb else [],
+        "replaced_at": session.get("wordbank_replaced_at"),
+        "has_uploaded_once": session.get("has_uploaded_once", False),
+        "using_default_words": session.get("using_default_words", False),
+        "is_random_play": session.get("is_random_play", False),
+        "progress": progress
+    })
 
 # Register Battle of the Bees API Blueprint
 print("🔧 Registering Battle API...")
@@ -3736,8 +3677,8 @@ def load_saved_wordlist():
         # Clear Random Play flag since user is loading a saved list
         session.pop("is_random_play", None)
 
-        # Load into session
-        set_wordbank(rows, is_user_upload=True)
+    # Load into session with fresh storage id (safeguard against stale mixing)
+    set_wordbank(rows, is_user_upload=True, force_new=True)
         init_quiz_state()
 
         return jsonify({
@@ -4777,8 +4718,9 @@ def api_random_words():
                     "message": f"Could not find enough words at difficulty level {difficulty}"
                 }), 404
             
-            # Store in session (same as file upload)
-            set_wordbank(random_words)
+            # Store in session using fresh storage id to avoid mixing with prior lists
+            # Treat as user upload for consistency (earn points / suppress default warnings)
+            set_wordbank(random_words, is_user_upload=True, force_new=True)
             init_quiz_state()
             
             # Mark this as a Random Play session to suppress default words warning
@@ -5788,7 +5730,8 @@ def process_upload_with_progress(session_id, request_obj):
         session.pop("is_random_play", None)
         
         # Store the wordbank and initialize quiz (USER UPLOAD)
-        set_wordbank(filtered_enriched, is_user_upload=True)
+    # Enhanced upload session: always force new storage id
+    set_wordbank(filtered_enriched, is_user_upload=True, force_new=True)
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -6054,7 +5997,8 @@ def api_upload():
     session.pop("is_random_play", None)
     
     # Set wordbank (USER UPLOAD - marks has_uploaded_once)
-    set_wordbank(deduped, is_user_upload=True)
+    # Standard upload: force new storage id for clean replacement
+    set_wordbank(deduped, is_user_upload=True, force_new=True)
     init_quiz_state()
     
     # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -6247,7 +6191,8 @@ def api_upload_manual_words():
         session.pop("is_random_play", None)
         
         # Store and initialize quiz (USER UPLOAD - manual words)
-        set_wordbank(enriched, is_user_upload=True)
+    # Manual entry upload: force new storage id for clean replacement
+    set_wordbank(enriched, is_user_upload=True, force_new=True)
         init_quiz_state()
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
@@ -8145,8 +8090,9 @@ def api_clear():
         
         # CRITICAL: Explicitly set empty word list to prevent restoration from fallback
         # This prevents get_wordbank() from finding session fallback data after reload
-        session[DATA_KEY] = []  # Set explicit empty list instead of removing key
-        session["wordbank_count"] = 0
+    session[DATA_KEY] = []  # Set explicit empty list instead of removing key
+    # Remove deprecated wordbank_count (dynamic computation authoritative)
+    session.pop("wordbank_count", None)
         session["wordbank_cleared"] = True  # Flag that clear was intentional
         
         # Clear from WORD_STORAGE again to be absolutely certain
@@ -8628,6 +8574,18 @@ def api_beekey_redeem_for_linked():
             
             # Update user's purchased avatars
             user.purchased_avatars = purchased
+
+            # Track BeeKey origin for locked_reason differentiation
+            try:
+                prefs = user.preferences or {}
+                unlocked_list = list(prefs.get('beekey_unlocked_avatars', []) or [])
+                for avatar_id in avatars:
+                    if avatar_id not in unlocked_list and avatar_id in purchased:
+                        unlocked_list.append(avatar_id)
+                prefs['beekey_unlocked_avatars'] = unlocked_list
+                user.preferences = prefs
+            except Exception:
+                pass
             
             # If avatars were added, count this user
             if len(purchased) > initial_count:
@@ -8685,6 +8643,177 @@ def api_beekey_redeem_for_linked():
         "users_unlocked": unlocked_count,
         "total_linked_users": len(linked_users),
         "message": f"Successfully unlocked {len(avatars)} avatar(s) for {unlocked_count} user(s)"
+    })
+
+
+# ----------------------------------------------------------------------------
+# BeeKey Redemption for Single Student (Teacher/Parent targeted unlock)
+# ----------------------------------------------------------------------------
+@app.route('/api/beekey/redeem-for-student', methods=['POST'])
+@login_required
+def api_beekey_redeem_for_student():
+    """Redeem a BeeKey for a single linked student.
+
+    Request JSON: { beekey: string, student_id: int, include_self: bool? }
+    Response: { success, bundle_id, bundle_name, student_id, unlocked_count, message }
+    Rules:
+      - Only teacher, parent, admin roles
+      - student_id must be linked via TeacherStudent.teacher_key
+      - BeeKey usage increments on successful redemption
+      - Optionally unlock for redeemer (include_self)
+    """
+    data = request.get_json(silent=True) or {}
+    raw_key = (data.get('beekey') or '').strip()
+    student_id = data.get('student_id')
+    include_self = bool(data.get('include_self'))
+
+    if not raw_key:
+        return jsonify({'success': False, 'error': 'Missing BeeKey code'}), 400
+    if not student_id:
+        return jsonify({'success': False, 'error': 'Missing student_id'}), 400
+    if current_user.role not in ('teacher','parent','admin'):
+        return jsonify({'success': False, 'error': 'Forbidden'}), 403
+
+    # Debug observability: capture early request context (non-sensitive)
+    try:
+        app.logger.debug(
+            f"BeeKey redeem(student) start user={getattr(current_user,'username',None)} role={getattr(current_user,'role',None)} auth={current_user.is_authenticated} student_id={student_id} raw_key_len={len(raw_key)}"
+        )
+    except Exception:
+        pass
+
+    norm_key = re.sub(r"\s+", "", raw_key).upper()
+
+    try:
+        _ensure_db_initialized()
+        bundle_key_row = BundleKey.query.filter_by(key_norm=norm_key).first()
+    except Exception as e:
+        app.logger.error(f"BeeKey lookup error: {e}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    if not bundle_key_row:
+        return jsonify({'success': False, 'error': 'Invalid BeeKey code'}), 400
+
+    can_redeem, reason = bundle_key_row.can_redeem()
+    if not can_redeem:
+        return jsonify({'success': False, 'error': reason}), 400
+
+    bundle_id = bundle_key_row.bundle_id
+
+    # Resolve bundle avatars
+    avatars = []
+    bundle_name = bundle_id
+    try:
+        dyn_bundle = DynamicBundle.query.filter_by(bundle_id=bundle_id).first()
+        if dyn_bundle:
+            avatars = list(dyn_bundle.avatars or [])
+            bundle_name = dyn_bundle.name or bundle_id
+        else:
+            bundle_cfg = (BUNDLE_CATALOG or {}).get(bundle_id, {})
+            avatars = list(bundle_cfg.get('avatars', []) or [])
+            bundle_name = bundle_cfg.get('name') or bundle_id
+    except Exception as e:
+        app.logger.error(f"Bundle lookup error: {e}")
+        return jsonify({'success': False, 'error': 'Bundle not found'}), 404
+
+    if not avatars:
+        return jsonify({'success': False, 'error': 'No avatars in bundle'}), 400
+
+    # Validate linkage (TeacherStudent)
+    try:
+        link = TeacherStudent.query.filter_by(student_id=student_id, teacher_key=current_user.teacher_key).first()
+    except Exception as e:
+        app.logger.error(f"Link lookup error: {e}")
+        return jsonify({'success': False, 'error': 'Link lookup failed'}), 500
+
+    if not link and current_user.role != 'admin':  # admin may bypass linkage
+        return jsonify({'success': False, 'error': 'Student not linked to your account'}), 403
+
+    # Fetch student
+    student = None
+    try:
+        student = User.query.filter_by(id=student_id).first()
+    except Exception:
+        student = None
+    if not student:
+        return jsonify({'success': False, 'error': 'Student not found'}), 404
+
+    unlocked_for_student = 0
+    try:
+        purchased = student.purchased_avatars or []
+        if not isinstance(purchased, list):
+            purchased = []
+        initial = set(purchased)
+        for av in avatars:
+            if av not in purchased:
+                purchased.append(av)
+        student.purchased_avatars = purchased
+        # Preferences tagging
+        prefs = student.preferences or {}
+        teacher_list = set(prefs.get('beekey_unlocked_avatars', []) or [])
+        for av in avatars:
+            if av in purchased:
+                teacher_list.add(av)
+        prefs['beekey_unlocked_avatars'] = list(teacher_list)
+        student.preferences = prefs
+        unlocked_for_student = len(set(purchased) - initial)
+    except Exception as e:
+        app.logger.error(f"Error applying avatars to student: {e}")
+        return jsonify({'success': False, 'error': 'Failed to unlock avatars for student'}), 500
+
+    # Optionally unlock for redeemer
+    if include_self:
+        try:
+            rpurch = current_user.purchased_avatars or []
+            if not isinstance(rpurch, list):
+                rpurch = []
+            for av in avatars:
+                if av not in rpurch:
+                    rpurch.append(av)
+            current_user.purchased_avatars = rpurch
+            rprefs = current_user.preferences or {}
+            rlist = set(rprefs.get('beekey_unlocked_avatars', []) or [])
+            for av in avatars:
+                rlist.add(av)
+            rprefs['beekey_unlocked_avatars'] = list(rlist)
+            current_user.preferences = rprefs
+        except Exception as e:
+            app.logger.error(f"Error applying avatars to redeemer: {e}")
+
+    # Record usage & trace
+    try:
+        bundle_key_row.apply_use(current_user.id)
+        db.session.add(bundle_key_row)
+        trace = BundleKeyRedemption(
+            bundle_key_id=bundle_key_row.id,
+            user_id=current_user.id,
+            bundle_id=bundle_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')[:300]
+        )
+        db.session.add(trace)
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform='web',
+            product_id=f"beekey-student:{bundle_id}",
+            status='verified',
+            raw_payload={'redeemed_key': norm_key, 'bundle_id': bundle_id, 'student_id': student_id, 'unlocked_for_student': unlocked_for_student}
+        )
+        db.session.add(rec)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error saving BeeKey single redemption: {e}")
+        return jsonify({'success': False, 'error': 'Failed to save redemption'}), 500
+
+    return jsonify({
+        'success': True,
+        'bundle_id': bundle_id,
+        'bundle_name': bundle_name,
+        'student_id': student_id,
+        'unlocked_count': unlocked_for_student,
+        'include_self': include_self,
+        'message': f"Unlocked {unlocked_for_student} avatar(s) for student {student_id}"
     })
 
 
@@ -12280,7 +12409,8 @@ def api_get_avatars():
         
         # Test database connection first
         try:
-            db.session.execute('SELECT 1')
+            from sqlalchemy import text as _sa_text
+            db.session.execute(_sa_text('SELECT 1'))
             print(f"✅ DEBUG /api/avatars GET: Database connection successful")
         except Exception as db_test_error:
             print(f"❌ ERROR /api/avatars GET: Database connection failed: {db_test_error}")
@@ -12430,9 +12560,49 @@ def api_get_avatars():
             print(f"   is_admin_or_premium: {is_admin_or_premium}")
             print(f"   is_guest: {is_guest}")
         else:
-            # Not authenticated = guest by default
+            # Not authenticated = guest by default. Enforce STRICT guest limiting.
             is_guest = True
-            print(f"🔍 Avatar API - Unauthenticated user (guest mode)")
+            print(f"🔍 Avatar API - Unauthenticated user (guest STRICT mode)")
+            # Return ONLY mascot/honey-comb avatar to guests for preview; omit full catalog
+            mascot_slug_candidates = {"honey-comb", "honeycomb", "mascot-bee"}
+            mascot_entry = None
+            try:
+                from avatar_catalog import AVATAR_CATALOG as _AC
+                for _av in _AC:
+                    if _av.get('id') in mascot_slug_candidates or _av.get('tier') == 'mascot_free':
+                        mascot_entry = _av
+                        break
+            except Exception as _e:
+                print(f"⚠️ Could not load avatar_catalog for guest mascot lookup: {_e}")
+            if mascot_entry is None:
+                mascot_entry = {
+                    'id': 'honey-comb',
+                    'name': 'HoneyComb Avatar',
+                    'description': 'Create a free account to unlock more bees! 🐝',
+                    'folder': 'glb_files',
+                    'is_glb': True,
+                    'urls': {
+                        'glb': '/static/assets/avatars/glb_files/HoneyComb.glb',
+                        'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png',
+                        'preview': '/static/assets/avatars/glb_files/AvatarThumbnails/HoneyComb!.png'
+                    },
+                    'is_locked': False,
+                    'locked_reason': 'guest_mascot',
+                    'unlock_message': 'Create a free account to customize your bee!'
+                }
+            # Shape response consistent with authenticated payload but minimal
+            guest_payload = {
+                'status': 'success',
+                'avatars': [mascot_entry],
+                'user_authenticated': False,
+                'user_role': 'guest',
+                'is_guest': True,
+                'total_unlocked': 1,
+                'total_locked': 0,
+                'guest_limited': True,
+                'message': 'Guest access limited – register to see the full hive.'
+            }
+            return jsonify(guest_payload)
 
         # Request filters
         category = request.args.get('category')
@@ -12465,20 +12635,10 @@ def api_get_avatars():
                 # Enrichment
                 for avatar in avatars:
                     base_path = f"/static/assets/avatars/{avatar.folder_path}"
-                    # NOTE: avatar.obj_file is a LEGACY field name. Some records still have .obj from legacy era.
+                    # GLB-only architecture: obj_file field stores GLB filename.
                     raw_name = avatar.obj_file or ''
                     is_glb = raw_name.lower().endswith('.glb')
                     desc = avatar.description
-
-                    # HARD OVERRIDE (UNCONDITIONAL): Any legacy .obj gets remapped to glb_files/<Name>.glb
-                    # We no longer skip if the file is missing; we assume all canonical GLBs exist.
-                    if raw_name.lower().endswith('.obj'):
-                        stem = raw_name.rsplit('.', 1)[0]
-                        base_path = "/static/assets/avatars/glb_files"
-                        avatar.folder_path = 'glb_files'
-                        raw_name = f"{stem}.glb"
-                        is_glb = True
-                        print(f"🔁 Remapped legacy OBJ to GLB for avatar: {avatar.slug} -> {raw_name}")
                     if (avatar.slug or '').lower() in ('obee', 'o-bee'):
                         desc = "A wise Jedi Master of the hive. May the buzz be with you. 🐝✨"
 
@@ -12491,22 +12651,27 @@ def api_get_avatars():
                     unlock_points_val = None
                     tier_val = None
                     price_val = None
+                    locked_reason = None
+                    purchased_flag = False
 
                     # MONETIZATION: Enforce tier-based access control with proper admin bypass
                     # CRITICAL: Admins must be checked FIRST before guest restrictions
                     if is_admin_or_premium:
                         # Admins and premium members have FULL unrestricted access to ALL avatars
                         is_locked = False
+                        locked_reason = 'admin_unlocked'
                         print(f"  ✅ ADMIN UNLOCK: {avatar_slug} unlocked for admin/premium user")
                     elif is_guest:
                         # Guest users: show all avatars but lock non-mascot ones
                         if catalog_avatar and catalog_avatar.get('tier') == 'mascot_free':
                             # Mascot avatar is always unlocked for guests
                             is_locked = False
+                            locked_reason = 'guest_mascot'
                         else:
                             # All other avatars are locked for guests - show them greyed out
                             is_locked = True
                             unlock_message = "Please register to customize your bee! 🐝"
+                            locked_reason = 'guest_restriction'
                     elif catalog_avatar:
                         # Registered users: check unlock status using avatar_catalog helper (returns dict)
                         unlock_result = check_avatar_unlocked(
@@ -12516,6 +12681,7 @@ def api_get_avatars():
                             is_guest=is_guest
                         )
                         is_locked = not unlock_result.get('unlocked', False)
+                        purchased_flag = avatar_slug in (purchased_avatars or [])
 
                         if is_locked:
                             # Generate unlock message based on tier
@@ -12531,10 +12697,28 @@ def api_get_avatars():
                             if tier == 'earn_or_buy':
                                 points_needed = unlock_points - user_honey_points
                                 unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
+                                locked_reason = 'not_enough_points' if points_needed > 0 else 'not_purchased'
                             elif tier == 'premium':
                                 unlock_message = f"Purchase for ${price:.2f}"
+                                locked_reason = 'not_purchased'
                             else:
                                 unlock_message = "Complete more quizzes to unlock!"
+                                locked_reason = 'progress_required'
+                        else:
+                            # Determine if unlock originated via BeeKey (teacher unlock)
+                            try:
+                                prefs = getattr(current_user, 'preferences', {}) or {}
+                                beekey_avs = set(prefs.get('beekey_unlocked_avatars', []) or [])
+                                if purchased_flag and avatar_slug in beekey_avs:
+                                    locked_reason = 'teacher_unlocked'
+                                else:
+                                    locked_reason = 'unlocked'
+                            except Exception:
+                                locked_reason = 'unlocked'
+                    else:
+                        # Not in catalog, assume it's a free avatar
+                        is_locked = False
+                        locked_reason = 'free'
 
                     # Build thumb/preview with cache-busting
                     thumb_url = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else None
@@ -12567,6 +12751,14 @@ def api_get_avatars():
                         'unlock_points': unlock_points_val,
                         'tier': tier_val,
                         'price': price_val,
+                        'locked_reason': locked_reason,
+                        'unlock_requirements': {
+                            'required_points': unlock_points_val,
+                            'user_points': user_honey_points,
+                            'price': price_val,
+                            'tier': tier_val,
+                            'purchased': purchased_flag
+                        }
                     })
             except Exception as _db_err:
                 print(f"⚠️ Avatar DB query failed, continuing with filesystem-only avatars: {_db_err}")
@@ -12708,6 +12900,7 @@ def api_get_avatars():
             
             if is_admin_or_premium:
                 is_locked = False
+                locked_reason = 'admin_unlocked'
                 print(f"  ✅ ADMIN UNLOCK: {slug} (GLB) unlocked for admin/premium user")
             elif catalog_avatar:
                 # Check unlock status using avatar_catalog helper (returns dict)
@@ -12717,6 +12910,7 @@ def api_get_avatars():
                     purchased_avatars
                 )
                 is_locked = not unlock_result.get('unlocked', False)
+                purchased_flag = slug in (purchased_avatars or [])
                 
                 if is_locked:
                     tier = catalog_avatar.get('tier', 'premium')
@@ -12730,13 +12924,19 @@ def api_get_avatars():
                     if tier == 'earn_or_buy':
                         points_needed = unlock_points - user_honey_points
                         unlock_message = f"Earn {points_needed:,} more Honey Points or purchase for ${price:.2f}"
+                        locked_reason = 'not_enough_points' if points_needed > 0 else 'not_purchased'
                     elif tier == 'premium':
                         unlock_message = f"Purchase for ${price:.2f}"
+                        locked_reason = 'not_purchased'
                     else:
                         unlock_message = "Complete more quizzes to unlock!"
+                        locked_reason = 'progress_required'
+                else:
+                    locked_reason = 'unlocked'
             else:
                 # Not in catalog, assume it's a free avatar
                 is_locked = False
+                locked_reason = 'free'
 
             enriched_avatars.append({
                 'id': slug,
@@ -12761,6 +12961,14 @@ def api_get_avatars():
                 'unlock_points': unlock_points_val,
                 'tier': tier_val,
                 'price': price_val,
+                'locked_reason': locked_reason,
+                'unlock_requirements': {
+                    'required_points': unlock_points_val,
+                    'user_points': user_honey_points,
+                    'price': price_val,
+                    'tier': tier_val,
+                    'purchased': slug in (purchased_avatars or [])
+                }
             })
 
         # Post-process: fix any DB-provided thumbnails that point to the generic HoneyComb
@@ -12795,14 +13003,9 @@ def api_get_avatars():
         for _av in enriched_avatars:
             _maybe_fix_thumbnail(_av)
 
-        # Post-clean: ensure all URLs are GLB (safety net)
+        # Post-clean: enforce GLB folder
         for av in enriched_avatars:
-            urls = av.get('urls') or {}
-            for k in ('glb','preview','thumbnail'):
-                v = urls.get(k)
-                if isinstance(v, str) and v.lower().endswith('.obj'):
-                    urls[k] = v[:-4] + '.glb'
-            av['urls'] = urls
+            av['urls'] = av.get('urls') or {}
             if av.get('folder') != 'glb_files':
                 av['folder'] = 'glb_files'
         # Final dedupe by slug (in case) and alphabetize for stable hive order
@@ -12817,18 +13020,81 @@ def api_get_avatars():
 
         enriched_avatars = deduped
 
+        # Build enriched user meta for client-side avatar picker logic.
+        # We add a few extra fields (role alias, admin_all_access, premium_member) to reduce
+        # front-end inference bugs where user_role was null but is_admin true.
+        derived_role = None
+        if current_user.is_authenticated:
+            # Prefer explicit role from model; fallback to admin/guest markers
+            derived_role = getattr(current_user, 'role', None) or (
+                'admin' if is_admin_or_premium else 'registered'
+            )
+        else:
+            derived_role = 'guest'
+
+        # Count unlocked avatars for convenience (avoids recomputation client-side)
+        unlocked_count = sum(1 for av in enriched_avatars if not av.get('is_locked'))
+
         response_data = {
             'status': 'success',
             'avatars': enriched_avatars,
             'total': len(enriched_avatars),
+            'total_unlocked': unlocked_count,
             # include current user honey points for client-side computations
             'user_honey_points': user_honey_points,
             # include user authentication and role info for client-side logic
-            'user_authenticated': current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False,
+            'user_authenticated': bool(current_user.is_authenticated) if hasattr(current_user, 'is_authenticated') else False,
             'user_role': getattr(current_user, 'role', None) if current_user.is_authenticated else None,
+            'role': derived_role,  # alias for user_role with fallbacks
             'is_guest': is_guest,
-            'is_admin': is_admin_or_premium if 'is_admin_or_premium' in locals() else False
+            'is_admin': bool(is_admin_or_premium) if 'is_admin_or_premium' in locals() else False,
+            'admin_all_access': getattr(current_user, 'admin_all_access', False) if current_user.is_authenticated else False,
+            'premium_member': getattr(current_user, 'premium_member', False) if current_user.is_authenticated else False
         }
+
+        # Delegated unlocking support: expose assigned students for teacher/parent/admin roles
+        try:
+            user_role_val = getattr(current_user, 'role', None)
+            if current_user.is_authenticated and user_role_val in ('teacher', 'parent', 'admin'):
+                from models import TeacherStudent  # local import to avoid circulars
+                assigned_students = []
+                # Admin: can view all active students (limit for safety)
+                if user_role_val == 'admin':
+                    try:
+                        student_query = User.query.filter(User.role == 'student').limit(50).all()
+                        for stu in student_query:
+                            assigned_students.append({
+                                'id': stu.id,
+                                'username': stu.username,
+                                'display_name': stu.display_name,
+                                'avatar_id': getattr(stu, 'avatar_id', None),
+                                'avatar_locked': getattr(stu, 'avatar_locked', False)
+                            })
+                    except Exception as _adm_err:
+                        print(f"⚠️ Admin delegated student fetch failed: {_adm_err}")
+                else:
+                    # Teacher/Parent: fetch via TeacherStudent link table
+                    try:
+                        links = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key, is_active=True).all()
+                        student_ids = [ln.student_id for ln in links]
+                        if student_ids:
+                            students = User.query.filter(User.id.in_(student_ids)).all()
+                            for stu in students:
+                                assigned_students.append({
+                                    'id': stu.id,
+                                    'username': stu.username,
+                                    'display_name': stu.display_name,
+                                    'avatar_id': getattr(stu, 'avatar_id', None),
+                                    'avatar_locked': getattr(stu, 'avatar_locked', False)
+                                })
+                    except Exception as _link_err:
+                        print(f"⚠️ Delegated link fetch failed: {_link_err}")
+                response_data['assigned_students'] = assigned_students
+                response_data['can_delegated_unlock'] = True
+                response_data['delegated_unlock_roles'] = ['teacher', 'parent', 'admin']
+        except Exception as _delegated_err:
+            print(f"⚠️ Failed building delegated unlock metadata: {_delegated_err}")
+            response_data['can_delegated_unlock'] = False
         
         # Cache for all users (with per-user cache key)
         if current_user.is_authenticated:
@@ -12860,6 +13126,7 @@ def api_get_avatars():
         
         return jsonify(response_data)
 
+
     except Exception as e:
         import traceback
         print(f"❌ Error fetching avatars: {e}")
@@ -12869,6 +13136,165 @@ def api_get_avatars():
             'message': str(e),
             'trace': traceback.format_exc()
         }), 500
+
+@app.route("/api/user/me", methods=["GET"])
+def api_get_user_me():
+    """Return consolidated user meta for front-end components.
+
+    Provides consistent fields so UI code doesn't have to infer admin/premium status.
+    """
+    try:
+        from models import User  # noqa: F401
+    except Exception:
+        return jsonify({
+            'status': 'success',
+            'user_authenticated': False,
+            'role': 'guest',
+            'is_guest': True,
+            'is_admin': False,
+            'admin_all_access': False,
+            'premium_member': False,
+            'user_role': None,
+            'user_honey_points': 0,
+            'total_lifetime_points': 0,
+            'cumulative_gpa': 0.0,
+            'average_accuracy': 0.0,
+            'best_grade': None,
+            'total_quizzes_completed': 0,
+            'total_unlocked': None,
+            'timestamp': int(time.time())
+        })
+
+    is_auth = bool(getattr(current_user, 'is_authenticated', False))
+    if not is_auth:
+        guest_cache = _AVATAR_CACHE.get('user_guest') or {}
+        total_unlocked = guest_cache.get('total_unlocked') or guest_cache.get('total')
+        return jsonify({
+            'status': 'success',
+            'user_authenticated': False,
+            'role': 'guest',
+            'is_guest': True,
+            'is_admin': False,
+            'admin_all_access': False,
+            'premium_member': False,
+            'user_role': None,
+            'user_honey_points': 0,
+            'total_lifetime_points': 0,
+            'cumulative_gpa': 0.0,
+            'average_accuracy': 0.0,
+            'best_grade': None,
+            'total_quizzes_completed': 0,
+            'total_unlocked': total_unlocked,
+            'timestamp': int(time.time())
+        })
+
+    role_raw = getattr(current_user, 'role', None)
+    admin_all_access = bool(getattr(current_user, 'admin_all_access', False))
+    premium_member = bool(getattr(current_user, 'premium_member', False))
+    is_admin_flag = False
+    try:
+        if hasattr(current_user, 'is_admin_or_premium'):
+            is_admin_flag = bool(current_user.is_admin_or_premium())
+        elif role_raw == 'admin' or admin_all_access:
+            is_admin_flag = True
+    except Exception:
+        is_admin_flag = role_raw == 'admin' or admin_all_access
+
+    derived_role = role_raw or ('admin' if is_admin_flag else 'registered')
+
+    user_honey_points = getattr(current_user, 'honey_points', 0) or 0
+    total_lifetime_points = getattr(current_user, 'total_lifetime_points', 0) or 0
+    cumulative_gpa = float(getattr(current_user, 'cumulative_gpa', 0.0) or 0.0)
+    average_accuracy = float(getattr(current_user, 'average_accuracy', 0.0) or 0.0)
+    best_grade = getattr(current_user, 'best_grade', None)
+    total_quizzes_completed = getattr(current_user, 'total_quizzes_completed', 0) or 0
+
+    user_cache_key = f"user_{getattr(current_user, 'id', '0')}_role_{derived_role}"
+    cached_avatar_meta = _AVATAR_CACHE.get(user_cache_key) or {}
+    total_unlocked = cached_avatar_meta.get('total_unlocked') or cached_avatar_meta.get('total')
+
+    return jsonify({
+        'status': 'success',
+        'user_authenticated': True,
+        'role': derived_role,
+        'user_role': role_raw,
+        'is_guest': False,
+        'is_admin': is_admin_flag,
+        'admin_all_access': admin_all_access,
+        'premium_member': premium_member,
+        'user_honey_points': user_honey_points,
+        'total_lifetime_points': total_lifetime_points,
+        'cumulative_gpa': cumulative_gpa,
+        'average_accuracy': average_accuracy,
+        'best_grade': best_grade,
+        'total_quizzes_completed': total_quizzes_completed,
+        'total_unlocked': total_unlocked,
+        'timestamp': int(time.time())
+    })
+
+@app.route('/api/avatars/delegated-unlock', methods=['POST'])
+def api_avatar_delegated_unlock():
+    """Allow a teacher/parent/admin to unlock or assign an avatar to a linked student.
+
+    Request JSON:
+        {
+          "avatar_slug": "robo-bee",
+          "target_user_id": 123
+        }
+    Rules:
+      * Caller must be authenticated.
+      * Caller role must be teacher, parent, or admin.
+      * Non-admin callers must have an active TeacherStudent link to the target user.
+      * Admin can act on any student (limited to role=='student').
+      * If avatar not currently accessible to the student, we add it to purchased_avatars list (force-unlock).
+    """
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        caller_role = getattr(current_user, 'role', None)
+        if caller_role not in ('teacher', 'parent', 'admin'):
+            return jsonify({'success': False, 'error': 'Delegated unlock not permitted', 'reason': 'role_not_allowed'}), 403
+        data = request.get_json(silent=True) or {}
+        avatar_slug = (data.get('avatar_slug') or '').strip()
+        target_user_id = data.get('target_user_id')
+        from models import User, Avatar, TeacherStudent
+        if not avatar_slug or not target_user_id:
+            return jsonify({'success': False, 'error': 'avatar_slug and target_user_id required'}), 400
+        target_user = User.query.get(int(target_user_id))
+        if not target_user or target_user.role != 'student':
+            return jsonify({'success': False, 'error': 'Target user not found or not a student'}), 404
+        # Authorization: admin bypass; teacher/parent must have link
+        if caller_role != 'admin':
+            link = TeacherStudent.query.filter_by(teacher_key=current_user.teacher_key, student_id=target_user.id, is_active=True).first()
+            if not link:
+                return jsonify({'success': False, 'error': 'No active link to target student', 'reason': 'link_missing'}), 403
+        # Validate avatar exists (DB or catalog)
+        avatar_obj = Avatar.get_by_slug(avatar_slug) if hasattr(Avatar, 'get_by_slug') else None
+        if not avatar_obj:
+            # Fallback: ensure slug appears in catalog list
+            try:
+                from avatar_catalog import AVATAR_CATALOG
+                if avatar_slug not in [a['id'] for a in AVATAR_CATALOG]:
+                    return jsonify({'success': False, 'error': 'Invalid avatar slug'}), 400
+            except Exception:
+                return jsonify({'success': False, 'error': 'Invalid avatar slug'}), 400
+        # Unlock if needed by adding to purchased_avatars
+        if not target_user.purchased_avatars:
+            target_user.purchased_avatars = []
+        if avatar_slug not in target_user.purchased_avatars:
+            target_user.purchased_avatars.append(avatar_slug)
+        # Assign avatar (ignores lock if forced by delegation)
+        ok, msg = target_user.update_avatar(avatar_slug)
+        if not ok:
+            return jsonify({'success': False, 'error': msg}), 400
+        # Persist changes
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Avatar {avatar_slug} assigned to {target_user.username}', 'target_user_id': target_user.id})
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"❌ Delegated unlock error: {e}\n{traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route("/api/subscriptions", methods=["GET"])
 def api_get_subscriptions():
@@ -13118,8 +13544,8 @@ def api_get_avatar(avatar_id):
         
         # Build avatar info dict with all URLs
         base_path = f"/static/assets/avatars/{avatar.folder_path}"
-        # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
-        is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+    # GLB-only: obj_file contains GLB filename
+    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
         
         avatar_info = {
             'id': avatar.slug,
@@ -13618,18 +14044,8 @@ def serve_avatar_file_from_db(slug, filename):
         
         # Determine which binary field to serve based on file extension
         ext = filename.lower().split('.')[-1]
-        
-        if ext == 'obj':
-            if not avatar.obj_data:
-                return send_from_directory(f'static/assets/avatars/{slug}', filename)
-            return Response(avatar.obj_data, mimetype='application/octet-stream')
-        
-        elif ext == 'mtl':
-            if not avatar.mtl_data:
-                return send_from_directory(f'static/assets/avatars/{slug}', filename)
-            return Response(avatar.mtl_data, mimetype='text/plain')
-        
-        elif ext == 'glb':
+
+        if ext == 'glb':
             if not avatar.glb_data:
                 return send_from_directory(f'static/assets/avatars/{slug}', filename)
             return Response(
@@ -14179,6 +14595,46 @@ print(f"✅ Dictionary cache: {len(DICTIONARY_CACHE.get('words', {}))} words loa
 print(f"✅ Health check endpoint: /health")
 print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
+
+# ----------------------------------------------------------------------------
+# Conditional Admin Seeding (Railway / Staging Safety)
+# ----------------------------------------------------------------------------
+# We only auto-create an admin account if ALL of the following are true:
+#   1. ENV var AUTO_SEED_ADMIN=1
+#   2. No existing admin user found
+#   3. Running in a non-production environment (FLASK_ENV != 'production')
+# This prevents accidental creation of a known-credential admin in production.
+# Railway staging can set AUTO_SEED_ADMIN=1 for automated smoke tests.
+try:
+    if os.environ.get('AUTO_SEED_ADMIN') == '1' and os.environ.get('FLASK_ENV','development') != 'production':
+        from models import User, db
+        from werkzeug.security import generate_password_hash
+        with app.app_context():
+            existing_admin = User.query.filter(User.role == 'admin').first()
+            if not existing_admin:
+                seeded_password = os.environ.get('AUTO_SEED_ADMIN_PASSWORD', 'ChangeMeNow!42')
+                admin = User(
+                    username='admin',
+                    display_name='Staging Admin',
+                    email='admin@staging.local',
+                    role='admin',
+                    password_hash=generate_password_hash(seeded_password),
+                    honey_points=999999,
+                    premium_member=True,
+                    admin_all_access=True,
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print(f"✅ [SEED] Admin user created (username=admin, password='{seeded_password}')")
+                print("⚠️ IMPORTANT: Rotate AUTO_SEED_ADMIN_PASSWORD or disable AUTO_SEED_ADMIN=1 in production.")
+            else:
+                print("ℹ️ [SEED] Admin user already present; skipping auto-seed.")
+    else:
+        if os.environ.get('AUTO_SEED_ADMIN') == '1':
+            print("⚠️ AUTO_SEED_ADMIN=1 ignored because environment is production or already initialized.")
+except Exception as e:
+    print(f"⚠️ Admin auto-seed failed: {e}")
+
 
 # Initialize GLB avatars on startup (idempotent)
 if not FAST_BOOT:

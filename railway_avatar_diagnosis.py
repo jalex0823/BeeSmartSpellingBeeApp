@@ -61,7 +61,8 @@ def diagnose_railway_avatar_issues():
             print("   ✅ Sample avatar folder exists")
             
             # Check files
-            test_files = ["CoolBee.obj", "CoolBee.mtl", "CoolBee.png", "CoolBee!.png"]
+            # GLB-only asset expectation
+            test_files = ["CoolBee.glb", "CoolBee!.png"]
             for file in test_files:
                 file_path = os.path.join(avatar_path, file)
                 if os.path.exists(file_path):
@@ -171,7 +172,7 @@ def diagnose_railway_avatar_issues():
             print("   • Ensure proper file permissions on Railway")
         
         if any("file" in issue.lower() for issue in issues_found):
-            print("   • Upload missing avatar files (.obj, .mtl, .png)")
+            print("   • Upload missing avatar files (.glb + thumbnail .png)")
             print("   • Check file naming conventions (case sensitivity)")
         
         if any("API" in issue for issue in issues_found):

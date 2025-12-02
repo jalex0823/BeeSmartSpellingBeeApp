@@ -928,9 +928,25 @@ document.addEventListener('DOMContentLoaded', ()=>{
                 placeholder="Type your answer..." 
                 autocomplete="off"
                 autocorrect="off"
-                autocapitalize="off"
+                autocapitalize="none"
                 spellcheck="false"
+                inputmode="latin"
+                enterkeyhint="go"
+                data-mobile-sanitize="true"
             />
+
+            <!-- 📊 Wordbank / Progress Stats (Speed Round) -->
+            <div id="srWordbankStats" class="wordbank-stats-panel" aria-live="polite" style="margin:0.75rem 0 0.85rem; padding:0.55rem 0.8rem; background:rgba(255,215,0,0.1); border:1px solid #FFC400; border-radius:8px; font-size:0.75rem; display:flex; flex-direction:column; gap:0.4rem;">
+                <div style="display:flex; flex-wrap:wrap; gap:0.65rem;">
+                    <span id="srWbCount">Words: …</span>
+                    <span id="srWbAnswered">Answered: …</span>
+                    <span id="srWbRemaining">Remaining: …</span>
+                    <span id="srWbStreak">Streak: …</span>
+                </div>
+                <div style="width:100%; height:5px; background:rgba(255,215,0,0.25); border-radius:3px; overflow:hidden;">
+                    <div id="srWbProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg,#FFD700,#FF9E00); transition:width 0.35s;"></div>
+                </div>
+            </div>
 
             <div class="action-buttons">
                 <button class="btn-speed btn-submit" id="submitBtn">
@@ -2501,6 +2517,53 @@ window.addEventListener('error', (event) => {
     window.BeeSwarmVisualizer = BeeSwarmVisualizer;
     
     console.log('✅ Bee Swarm Visualizer module loaded for Speed Round');
+</script>
+
+<script>
+// 📊 Speed Round Wordbank Stats Polling (shared endpoint)
+async function srRefreshWordbankStats(trigger='poll') {
+    try {
+        const resp = await fetch('/api/wordbank/stats', { credentials:'same-origin', cache:'no-cache' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data.ok) return;
+        const p = data.progress || {};
+        const total = p.total_words ?? data.wordbank_count ?? 0;
+        const answered = p.answered ?? 0;
+        const remaining = p.remaining ?? Math.max(total - answered, 0);
+        const streak = p.streak ?? 0;
+        const fill = document.getElementById('srWbProgressFill');
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        setText('srWbCount', `Words: ${total}`);
+        setText('srWbAnswered', `Answered: ${answered}`);
+        setText('srWbRemaining', `Remaining: ${remaining}`);
+        setText('srWbStreak', `Streak: ${streak}`);
+        if (fill) {
+            const pct = total > 0 ? (answered / total) * 100 : 0;
+            fill.style.width = pct.toFixed(1) + '%';
+            if (trigger !== 'initial') {
+                fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = 'srPulse 0.5s';
+            }
+        }
+        // 🔊 Broadcast stats for speed round listeners / popups
+        window.dispatchEvent(new CustomEvent('wordbank-stats-updated', {
+            detail: { total, answered, remaining, streak, source: 'speed_round', trigger }
+        }));
+    } catch (e) { /* silent */ }
+}
+// Keyframe animation for progress pulse
+(function(){
+    const id='sr-wb-anim';
+    if(!document.getElementById(id)){
+        const s=document.createElement('style');
+        s.id=id; s.textContent='@keyframes srPulse {0%{filter:brightness(1);}50%{filter:brightness(1.4);}100%{filter:brightness(1);} }';
+        document.head.appendChild(s);
+    }
+})();
+document.addEventListener('DOMContentLoaded', ()=>{
+    srRefreshWordbankStats('initial');
+    setInterval(()=>srRefreshWordbankStats('poll'), 30000);
+});
 </script>
 
 {% endblock %}

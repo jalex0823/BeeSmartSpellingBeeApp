@@ -3756,6 +3756,10 @@
                 });
                 
                 console.log(`✅ All displays synchronized to ${count} words`);
+                // 🔊 Emit global events so any modal / popup can update immediately
+                window.dispatchEvent(new CustomEvent('wordbank-count-updated', { detail: { count, source: 'menu', trigger: forceRefresh ? 'forced' : 'cached' } }));
+                // Backward-compatible stats event (count only when outside quiz context)
+                window.dispatchEvent(new CustomEvent('wordbank-stats-updated', { detail: { total: count, answered: null, remaining: null, streak: null, source: 'menu' } }));
                 return count;
             },
             
@@ -10390,7 +10394,7 @@
                     { name: 'Diva Bee', file: 'DivaBee.glb' },
                     { name: 'Doc Bee', file: 'DoctorBee.glb' },
                     { name: 'Explorer Bee', file: 'ExplorerBee.glb' },
-                    { name: 'Franken Bee', file: 'Frankenbee.glb' },
+                    { name: 'Firefighter Bee', file: 'FirefighterBee.glb' },
                     { name: 'HoneyComb Bee', file: 'HoneyComb.glb' },
                     { name: 'Motor Bee', file: 'MotorBee.glb' },
                     { name: 'O‑Bee', file: 'OBee.glb' },
@@ -10786,7 +10790,7 @@
                 { name: 'Diva Bee', file: 'DivaBee!.png' },
                 { name: 'Doctor Bee', file: 'DoctorBee!.png' },
                 { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
-                { name: 'Franken Bee', file: 'FrankenBee!.png' },
+                { name: 'Firefighter Bee', file: 'FirefighterBee!.png' },
                 { name: 'HoneyComb Bee', file: 'HoneyComb!.png' },
                 { name: 'J‑Rock Bee', file: 'JRockBee!.png' },
                 { name: 'Mascot Bee', file: 'MascotBee!.png' },
@@ -12027,7 +12031,7 @@
                 'knight-bee': 'knight',           // Noble marching
                 'queen-bee': 'queen',             // Regal grace
                 'super-bee': 'sports',            // Athletic superhero power
-                'franken-bee': 'frankenstein',    // Electric surge
+                'firefighter-bee': 'fire-rescue',    // Brave rescue
                 
                 // 👻 SPOOKY & HALLOWEEN
                 'vamp-bee': 'vampire',            // Fluttering bat-like
@@ -14061,13 +14065,12 @@
                         playSound('superhero-whoosh');
                         break;
                     
-                    case 'franken-bee':
-                        // Frankenstein electric + bolts + spark
-                        createElectricArc(effectOverlay);
-                        createFloatingIcon(effectOverlay, '⚡🔩', 5);
-                        createSparkles(effectOverlay, '✨', '#00ff00');
-                        quickShake(effectOverlay.parentElement || container);
-                        playSound('electric-zap');
+                    case 'firefighter-bee':
+                        // Firefighter theme: siren glow + water spray + badge
+                        createSparkles(effectOverlay, '🚒🔥✨', '#ff3b30');
+                        createFloatingIcon(effectOverlay, '🚒', 6);
+                        createWaterSpray(effectOverlay);
+                        playSound('siren');
                         break;
                     
                     // 👻 SPOOKY & HALLOWEEN

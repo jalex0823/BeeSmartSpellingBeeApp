@@ -3445,13 +3445,30 @@ if ('speechSynthesis' in window) {
         </div> <!-- End morph-container -->
 
         <div class="bee-input" id="beeInputWrapper">
-            <input type="text"
-                   id="spellingInput"
-                   placeholder="Type your spelling here..."
-                   autocomplete="off"
-                   autocorrect="off"
-                   autocapitalize="off"
-                   spellcheck="false">
+         <input type="text"
+             id="spellingInput"
+             placeholder="Type your spelling here..."
+             autocomplete="off"
+             autocorrect="off"
+             autocapitalize="none"
+             spellcheck="false"
+             inputmode="latin" 
+             enterkeyhint="done"
+             data-mobile-sanitize="true">
+        </div>
+
+        <!-- 📊 Wordbank / Progress Stats Panel (dynamic via /api/wordbank/stats) -->
+        <div id="wordbankStats" class="wordbank-stats-panel" aria-live="polite" style="margin:0.75rem 0 1rem; padding:0.65rem 0.9rem; background:rgba(255,215,0,0.12); border:1px solid #FFD700; border-radius:10px; font-size:0.85rem; display:flex; flex-direction:column; gap:0.45rem;">
+            <div class="stats-line" style="display:flex; flex-wrap:wrap; gap:0.9rem; align-items:center;">
+                <span id="wbCount">Words: …</span>
+                <span id="wbAnswered">Answered: …</span>
+                <span id="wbRemaining">Remaining: …</span>
+                <span id="wbStreak">Streak: …</span>
+                <span id="wbSessionPoints" style="display:none;">Points: …</span>
+            </div>
+            <div class="progress-wrapper" style="width:100%; height:6px; background:rgba(255,215,0,0.25); border-radius:4px; overflow:hidden;">
+                <div id="wbProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg,#FFD700,#FFA500); transition:width 0.4s ease;"></div>
+            </div>
         </div>
 
         <!-- Letter Hint Display -->
@@ -6971,6 +6988,8 @@ class QuizManager {
             await this.showFeedback(result);
             
             this.updateScoreDisplay(result.progress);
+            // 📊 Refresh wordbank stats after processing this answer
+            try { refreshWordbankStats('answer'); } catch (e) { console.warn('wordbank stats refresh failed:', e); }
             
             // 🔄 CRITICAL FIX: If answer was INCORRECT, STOP HERE and wait for user choice
             if (!result.correct) {
@@ -9182,6 +9201,90 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
+</script>
+<script>
+// 📊 Wordbank Stats Polling & Rendering
+async function refreshWordbankStats(trigger='poll') {
+    try {
+        const resp = await fetch('/api/wordbank/stats', { credentials: 'same-origin', cache: 'no-cache' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data || !data.ok) return;
+        const progress = data.progress || {};
+        const total = progress.total_words ?? data.wordbank_count ?? 0;
+        const answered = progress.answered ?? 0;
+        const remaining = progress.remaining ?? Math.max(total - answered, 0);
+        const streak = progress.streak ?? 0;
+        const sessionPoints = progress.session_points ?? 0;
+        // Elements
+        const elCount = document.getElementById('wbCount');
+        const elAnswered = document.getElementById('wbAnswered');
+        const elRemaining = document.getElementById('wbRemaining');
+        const elStreak = document.getElementById('wbStreak');
+        const elPoints = document.getElementById('wbSessionPoints');
+        const fill = document.getElementById('wbProgressFill');
+        if (elCount) elCount.textContent = `Words: ${total}`;
+        if (elAnswered) elAnswered.textContent = `Answered: ${answered}`;
+        if (elRemaining) elRemaining.textContent = `Remaining: ${remaining}`;
+        if (elStreak) elStreak.textContent = `Streak: ${streak}`;
+        if (elPoints) {
+            elPoints.textContent = `Points: ${sessionPoints}`;
+            // Show points only after first answer to reduce initial UI noise
+            elPoints.style.display = answered > 0 ? 'inline' : 'none';
+        }
+        if (fill) {
+            const pct = total > 0 ? (answered / total) * 100 : 0;
+            fill.style.width = `${pct.toFixed(1)}%`;
+        }
+        // Optional subtle animation on update (except initial)
+        if (trigger !== 'initial' && fill) {
+            fill.style.animation = 'none';
+            void fill.offsetWidth; // reflow
+            fill.style.animation = 'wbPulse 0.6s';
+        }
+        // 🔊 Dispatch global event so any popup / system check can react in real-time
+        window.dispatchEvent(new CustomEvent('wordbank-stats-updated', {
+            detail: { total, answered, remaining, streak, sessionPoints, source: 'quiz', trigger }
+        }));
+    } catch (e) {
+        // Silent fail – non-critical UI
+    }
+}
+
+// Add keyframe for progress pulse
+(() => {
+    const styleId = 'wb-stats-anim';
+    if (!document.getElementById(styleId)) {
+        const s = document.createElement('style');
+        s.id = styleId;
+        s.textContent = '@keyframes wbPulse { 0%{filter:brightness(1);} 50%{filter:brightness(1.4);} 100%{filter:brightness(1);} }';
+        document.head.appendChild(s);
+    }
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshWordbankStats('initial');
+    // Poll every 30s for passive updates (covers multi-tab scenarios)
+    setInterval(() => refreshWordbankStats('poll'), 30000);
+});
+</script>
+<script>
+// 🔒 Mobile Input Hardening: enforce disabling of spellcheck & autocorrect at runtime
+document.addEventListener('DOMContentLoaded', () => {
+    const sanitizeFields = () => {
+        document.querySelectorAll('input[data-mobile-sanitize="true"]').forEach(inp => {
+            inp.setAttribute('autocomplete','off');
+            inp.setAttribute('autocorrect','off');
+            inp.setAttribute('autocapitalize','none');
+            inp.setAttribute('spellcheck','false');
+            inp.setAttribute('inputmode','latin');
+            inp.style.webkitTextSizeAdjust = '100%';
+        });
+    };
+    sanitizeFields();
+    // Re-apply after potential dynamic UI morphs
+    setInterval(sanitizeFields, 3000);
+});
 </script>
 <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
 {% endblock %}

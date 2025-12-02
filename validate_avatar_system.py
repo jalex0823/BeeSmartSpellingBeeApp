@@ -202,14 +202,16 @@ class AvatarSystemValidator:
                         broken_avatars.append(f"{avatar.slug} (missing folder)")
                         continue
                     
-                    # Check required files
-                    required_files = [avatar.obj_file, avatar.mtl_file, avatar.texture_file]
+                    # GLB-only: require a .glb model and thumbnail (if recorded)
+                    required_files = []
+                    if avatar.obj_file:  # stores path to .glb now
+                        required_files.append(avatar.obj_file)
+                    if getattr(avatar, 'thumbnail_file', None):
+                        required_files.append(avatar.thumbnail_file)
                     missing_files = []
-                    
                     for filename in required_files:
                         if filename and not (avatar_path / filename).exists():
                             missing_files.append(filename)
-                    
                     if missing_files:
                         broken_avatars.append(f"{avatar.slug} (missing: {', '.join(missing_files)})")
                 

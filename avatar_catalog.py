@@ -223,16 +223,16 @@ AVATAR_CATALOG: List[Dict] = [
         "price": 1.99
     },
     {
-        "id": "franken-bee",
-        "product_id": "beesmart.avatar.franken_bee",
-        "name": "Franken Bee Avatar",
+        "id": "firefighter-bee",
+        "product_id": "beesmart.avatar.firefighter_bee",
+        "name": "Firefighter Bee Avatar",
         "folder": "glb_files",
-        "obj_file": "FrankenBee.glb",
+        "obj_file": "FirefighterBee.glb",
         "mtl_file": "",
         "texture_file": "",
-        "description": "A silly spooky bee with a big heart — Franken Bee is always stitched together with fun!",
+        "description": "Brave and ready to help — Firefighter Bee rushes in to save the day and keep the hive safe!",
         "variants": ["default"],
-        "category": "fantasy",
+        "category": "profession",
         "tier": "premium",
         "is_default_free": False,
         "is_purchasable": True,
@@ -1012,10 +1012,8 @@ def get_avatar_info(avatar_id, variant='default'):
     # All our avatars use 'default' variant (no male/female)
     variant = 'default'
     
-    # Get specific filenames from catalog (with fallback to generic names for backward compatibility)
-    obj_file = avatar.get('obj_file', 'model.obj')
-    mtl_file = avatar.get('mtl_file', 'model.mtl')
-    texture_file = avatar.get('texture_file', 'texture.png')
+    # GLB-only: catalog entries store GLB filename in obj_file legacy field
+    glb_file = avatar.get('obj_file', 'model.glb')
     
     # Get thumbnail filename from catalog folder name (e.g., al-bee -> AlBee!.png)
     # Convert folder name to proper case for thumbnail
@@ -1164,9 +1162,8 @@ def get_avatar_info(avatar_id, variant='default'):
         'category': avatar['category'],
         'thumbnail_url': f"{base_path}/{thumbnail_file}",
         'preview_url': f"{base_path}/{thumbnail_file}",  # Use same as thumbnail
-        'model_obj_url': f"{base_path}/{obj_file}",  # Now uses specific filename (e.g., ProfessorBee.obj)
-        'model_mtl_url': f"{base_path}/{mtl_file}",  # Now uses specific filename (e.g., ProfessorBee.mtl)
-        'texture_url': f"{base_path}/{texture_file}",  # Now uses specific filename (e.g., ProfessorBee.png)
+        'model_obj_url': f"{base_path}/{glb_file}",  # Stores GLB path despite legacy key name
+        'glb_url': f"{base_path}/{glb_file}",
         'fallback_url': "/static/assets/avatars/fallback.png"
     }
 
@@ -1583,10 +1580,8 @@ def install_new_avatar(folder_name, display_name=None, category=None, descriptio
     
     # Check for required files
     required_files = [
-        f"{folder_name}.obj",
-        f"{folder_name}.mtl", 
-        f"{folder_name}.png",
-        f"{folder_name}!.png"  # Thumbnail
+        f"{folder_name}.glb",
+        f"{folder_name}!.png"  # Thumbnail (render image)
     ]
     
     missing_files = []
@@ -1603,9 +1598,7 @@ def install_new_avatar(folder_name, display_name=None, category=None, descriptio
         "id": avatar_id,
         "name": display_name,
         "folder": folder_name,
-        "obj_file": f"{folder_name}.obj",
-        "mtl_file": f"{folder_name}.mtl", 
-        "texture_file": f"{folder_name}.png",
+    "obj_file": f"{folder_name}.glb",  # Legacy field name storing GLB filename
         "description": description,
         "variants": ["default"],
         "category": category,
@@ -1958,12 +1951,9 @@ def create_avatar_folder_structure(folder_name, display_name=None):
         
         # Create both 3D model files and thumbnail with ! annotation
         placeholder_files = {
-            # 3D Model Files
-            f"{folder_name}.obj": "# Placeholder OBJ file for " + folder_name,
-            f"{folder_name}.mtl": "# Placeholder MTL file for " + folder_name,
-            f"{folder_name}.png": "PLACEHOLDER_PNG_TEXTURE",
-            
-            # Thumbnail with ! annotation (uses folder_name for file discovery)
+            # GLB model file (single file)
+            f"{folder_name}.glb": "# Placeholder GLB file for " + folder_name,
+            # Thumbnail with ! annotation
             f"{folder_name}!.png": "PLACEHOLDER_THUMBNAIL_RENDER"
         }
         
@@ -1978,12 +1968,8 @@ def create_avatar_folder_structure(folder_name, display_name=None):
                 # Log file type for clarity
                 if filename.endswith('!.png'):
                     print(f"📸 Created thumbnail: {filename} (display name source)")
-                elif filename.endswith('.png') and not filename.endswith('!.png'):
-                    print(f"🎨 Created texture: {filename} (3D model texture)")
-                elif filename.endswith('.obj'):
-                    print(f"📐 Created model: {filename} (3D geometry)")
-                elif filename.endswith('.mtl'):
-                    print(f"🎭 Created material: {filename} (3D materials)")
+                elif filename.endswith('.glb'):
+                    print(f"📐 Created model: {filename} (GLB geometry)")
         
         if files_created:
             print(f"📄 Created placeholder files: {', '.join(files_created)}")

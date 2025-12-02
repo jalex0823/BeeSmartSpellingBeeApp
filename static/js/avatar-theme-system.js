@@ -180,14 +180,14 @@ const AVATAR_THEMES = {
         personality: 'adventurous',
         soundCue: 'explorer-bee.mp3'
     },
-    'franken-bee': {
-        primary: '#228B22',
-        secondary: '#32CD32',
-        accent: '#ADFF2F',
-        bgGradient: 'linear-gradient(135deg, #2F4F2F 0%, #228B22 100%)',
-        borderGlow: '0 0 30px rgba(34, 139, 34, 0.8)',
-        personality: 'quirky',
-        soundCue: 'franken-bee.mp3'
+    'firefighter-bee': {
+        primary: '#FF3B30',
+        secondary: '#FFD700',
+        accent: '#C0392B',
+        bgGradient: 'linear-gradient(135deg, #8B0000 0%, #FF3B30 60%, #FFD700 100%)',
+        borderGlow: '0 0 35px rgba(255, 59, 48, 0.9)',
+        personality: 'brave',
+        soundCue: 'firefighter-bee.mp3'
     },
     'inventor-bee': {
         primary: '#FFB74D',

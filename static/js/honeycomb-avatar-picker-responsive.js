@@ -19,10 +19,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('THREE available:', typeof THREE !== 'undefined');
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
-    
-    // CRITICAL: Verify user authentication FIRST during loading screen
+
+    // Step 1: Verify session/auth
     await verifyUserAuthentication();
-    
+
+    // Step 2: Fetch consolidated user meta for robust role gating
+    await fetchUserMeta();
+
+    // Gate guests completely from picker (except showing mascot + prompt)
+    if (!window.avatarUserInfo || !window.avatarUserInfo.user_authenticated) {
+        showGuestRestriction();
+        // Still load minimal HoneyComb avatar for preview UX familiarity
+        try { await loadAvatars(true); } catch (_) {}
+        setupSearchFilter();
+        return; // Do NOT proceed with full picker for guests
+    }
+
+    // Authenticated path
     loadAvatars();
     setupSearchFilter();
 
@@ -52,7 +65,6 @@ async function verifyUserAuthentication() {
         console.log('📋 Template user_data:', templateUserData);
         
         // Fetch fresh user session status from server
-        // iOS/Safari compatible fetch with proper credentials and headers
         const response = await fetch('/api/user/session', { 
             method: 'GET',
             credentials: 'same-origin',
@@ -249,35 +261,57 @@ function updateDynamicMarquee(avatars) {
     const marqueeHTML = messages.map(msg => 
         `<span class="banner-message" style="display: inline-block; padding: 0 3rem;">${msg}</span>`
     ).join('');
-    
     marquee.innerHTML = marqueeHTML;
-}
 
-// Compute a consistent locked message based on user points and avatar tier
-function computeLockedMessage(avatar) {
-    const tier = avatar.tier;
-    const price = (typeof avatar.price === 'number') ? avatar.price : null;
-    const hasPointsTier = (typeof avatar.unlock_points === 'number' && avatar.unlock_points > 0);
-    const isPremiumOnly = (tier === 'premium') || (price && !hasPointsTier);
-
-    if (hasPointsTier && !isPremiumOnly) {
-        const remaining = Math.max(avatar.unlock_points - (currentUserHoneyPoints || 0), 0);
-        if (remaining > 0) {
-            let msg = `You need ${remaining.toLocaleString()} more Honey Points to unlock this bee.`;
-            if (price && tier === 'earn_or_buy') {
-                msg += ` Or purchase for $${Number(price).toFixed(2)}.`;
-            }
-            return msg;
+        if (reason === 'not_purchased') {
+            actionHtml = `
+                <p style="margin-top: 1rem; color: #FFB300;">💎 This is a premium avatar available for purchase.</p>
+                <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            `;
+        } else if (reason === 'not_enough_points') {
+            actionHtml = `
+                <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to earn more Honey Points!</p>
+                <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            `;
+        } else if (reason === 'guest_restriction') {
+            actionHtml = `
+                <p style="margin-top: 1rem; color: #FFB300;">Create a free account to unlock and customize more bees!</p>
+                <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
+                    <button onclick="window.location.href='/auth/register'" style="background:#FFD700;color:#222;font-weight:600;padding:0.5rem 0.8rem;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;">Register</button>
+                    <button onclick="window.location.href='/auth/login'" style="background:#222;color:#FFD700;font-weight:600;padding:0.5rem 0.8rem;border:1px solid #FFD700;border-radius:6px;cursor:pointer;font-size:0.85rem;">Log In</button>
+                </div>
+            `;
+        } else if (reason === 'progress_required') {
+            actionHtml = `
+                <p style="margin-top: 1rem; color: #FFB300;">Complete more quizzes to unlock this bee!</p>
+                <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            `;
+        } else {
+            actionHtml = `
+                <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to unlock more awesome bees!</p>
+                <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            `;
         }
-        return 'You have enough Honey Points to unlock this bee! Try selecting again.';
-    } else if (isPremiumOnly && price) {
-        return `Purchase for $${Number(price).toFixed(2)}.`;
-    }
-    return avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
-}
 
-// Load avatars from API
-async function loadAvatars() {
+        const modal = document.createElement('div');
+        modal.className = 'locked-avatar-modal';
+        modal.innerHTML = `
+            <div class="locked-modal-content">
+                <button class="locked-modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                <div class="locked-modal-icon">🔒</div>
+                <h2>${avatar.name} is Locked</h2>
+                <p>${message}</p>
+                ${actionHtml}
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    }
+// internal loader with guest-minimal mode
+async function loadAvatars(guestMinimal) {
     try {
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
         const timestamp = new Date().getTime();
@@ -306,15 +340,39 @@ async function loadAvatars() {
         }
         
         const data = await response.json();
+
+        // Store assigned students / delegated unlock metadata if provided
+        if (Array.isArray(data.assigned_students)) {
+            window.avatarAssignedStudents = data.assigned_students;
+        }
+        if (data.can_delegated_unlock) {
+            window.canDelegatedUnlock = true;
+        }
         
         // Store user info globally for chooseAvatar to check admin/guest status
+        // Build robust user info object with defensive fallbacks.
+        const inferredRole = data.user_role || data.role || (data.is_admin ? 'admin' : (data.is_guest ? 'guest' : (data.user_authenticated ? 'registered' : null)));
         window.avatarUserInfo = {
-            is_guest: data.is_guest || false,
-            is_admin: data.is_admin || false,
-            user_role: data.user_role || null,
-            user_authenticated: data.user_authenticated || false
+            is_guest: !!(data.is_guest),
+            is_admin: !!(data.is_admin),
+            user_role: inferredRole,
+            role: inferredRole, // alias for convenience
+            user_authenticated: !!(data.user_authenticated),
+            admin_all_access: !!(data.admin_all_access),
+            premium_member: !!(data.premium_member),
+            total_unlocked: typeof data.total_unlocked === 'number' ? data.total_unlocked : null
         };
-        console.log('👤 User Info:', window.avatarUserInfo);
+        // If total_unlocked not provided by API, derive it now.
+        if (window.avatarUserInfo.total_unlocked === null && Array.isArray(data.avatars)) {
+            window.avatarUserInfo.total_unlocked = data.avatars.filter(a => !a.is_locked).length;
+        }
+        console.log('👤 User Info (enhanced):', window.avatarUserInfo);
+        if (!window.avatarUserInfo.user_role) {
+            console.warn('⚠️ user_role is null after inference; front-end may treat user as guest.');
+        }
+
+        // Inject an auth mismatch banner if we appear unauthenticated yet many avatars are unlocked.
+        maybeShowAuthMismatchBanner();
         
         // Capture current user's honey points if provided
         if (data && typeof data.user_honey_points === 'number') {
@@ -342,7 +400,13 @@ async function loadAvatars() {
             console.log('📦 Sample avatar structure:', JSON.stringify(apiAvatars[0], null, 2));
         }
         
-        const rawAvatars = apiAvatars.map(avatar => {
+        let sourceAvatars = apiAvatars;
+        if (guestMinimal) {
+            // Restrict guests to ONLY mascot avatar (honey-comb) for rendering clarity
+            sourceAvatars = apiAvatars.filter(a => (a.id === 'honey-comb' || a.id === 'honeycomb'));
+        }
+
+        const rawAvatars = sourceAvatars.map(avatar => {
             // Extract GLB URL from standard urls.glb field (all avatars are now GLB-only)
             var urlsObj = (avatar && typeof avatar.urls === 'object') ? avatar.urls : {};
             var glbUrl = urlsObj.glb;
@@ -365,6 +429,8 @@ async function loadAvatars() {
                 unlock_points: typeof avatar.unlock_points === 'number' ? avatar.unlock_points : null,
                 tier: avatar.tier || null,
                 price: typeof avatar.price === 'number' ? avatar.price : null,
+                locked_reason: avatar.locked_reason || null,
+                unlock_requirements: (avatar.unlock_requirements && typeof avatar.unlock_requirements === 'object') ? avatar.unlock_requirements : null,
             };
         });
 
@@ -437,12 +503,14 @@ async function loadAvatars() {
         });
         if (duplicates.length) console.log(`🧹 Collapsed ${duplicates.length} duplicate variants (base/name/slug)`);
         
-        totalThumbnails = avatarsData.length;
+    totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
         
     console.log('Loaded avatars:', avatarsData.length);
     updateDynamicMarquee(avatarsData);
     renderAvatarGrid();
+    // Inject delegated unlock UI if role qualifies
+    maybeInjectDelegatedUnlockUI();
     // Show a celebratory modal if new avatars have become unlocked since last visit
     maybeShowNewlyUnlockedModal(avatarsData);
     } catch (error) {
@@ -496,6 +564,39 @@ function maybeShowNewlyUnlockedModal(avatars) {
         }
     } catch (err) {
         console.warn('Failed to show newly unlocked avatar modal:', err);
+    }
+}
+
+// Detect potential session/auth mismatch: lots of unlocked avatars but not authenticated.
+function maybeShowAuthMismatchBanner() {
+    try {
+        const info = window.avatarUserInfo || {};
+        // Heuristic: if user not authenticated and unlocked total >= 10, show banner
+        if (info.user_authenticated || typeof info.total_unlocked !== 'number') return;
+        if (info.total_unlocked < 10) return; // small counts fine for guests
+        const existing = document.getElementById('auth-mismatch-banner');
+        if (existing) return; // already shown
+
+        const banner = document.createElement('div');
+        banner.id = 'auth-mismatch-banner';
+        banner.style.cssText = 'background:linear-gradient(90deg,#ffbf47,#ff9f1c);color:#222;padding:0.6rem 1rem;font-weight:600;font-size:0.9rem;display:flex;align-items:center;gap:0.75rem;justify-content:center;border-bottom:2px solid #d08900;position:relative;z-index:1000;';
+        banner.innerHTML = `🔐 You have many avatars unlocked, but you are not signed in. <button id="auth-mismatch-login" style="background:#222;color:#FFD700;border:1px solid #222;padding:0.35rem 0.75rem;border-radius:4px;cursor:pointer;font-weight:600;">Log In</button>`;
+
+        banner.querySelector('#auth-mismatch-login').addEventListener('click', () => {
+            const next = encodeURIComponent(window.location.pathname);
+            window.location.href = `/auth/login?next=${next}`;
+        });
+
+        // Insert banner at top of body or before main content wrapper
+        const target = document.body;
+        if (target.firstChild) {
+            target.insertBefore(banner, target.firstChild);
+        } else {
+            target.appendChild(banner);
+        }
+        console.log('⚠️ Auth mismatch banner displayed');
+    } catch (e) {
+        console.warn('Auth mismatch banner failed:', e);
     }
 }
 
@@ -641,6 +742,20 @@ function load3DAvatarGLB(avatar, containerId) {
     
     const width = container.clientWidth || 250;
     const height = container.clientHeight || 250;
+
+    // 🔄 Dispose any previous preview renderer to prevent WebGL context leaks
+    if (window._avatarPreviewCtx && window._avatarPreviewCtx.renderer) {
+        try {
+            window._avatarPreviewCtx.renderer.dispose();
+        } catch (e) {
+            console.warn('⚠️ Previous renderer dispose failed (safe to ignore):', e);
+        }
+        const oldCanvas = window._avatarPreviewCtx.renderer.domElement;
+        if (oldCanvas && oldCanvas.parentNode) {
+            oldCanvas.parentNode.removeChild(oldCanvas);
+        }
+        window._avatarPreviewCtx = null;
+    }
     
     console.log(`🔄 Loading GLB: ${avatar.name}, container: ${width}x${height}`);
     updatePreviewProgress(10, 'Initializing 3D viewer...');
@@ -657,6 +772,9 @@ function load3DAvatarGLB(avatar, containerId) {
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
+
+    // Store current preview context globally for lifecycle management
+    window._avatarPreviewCtx = { renderer, scene, avatarSlug: avatar.slug };
     
     updatePreviewProgress(20, 'Setting up lights...');
     
@@ -832,6 +950,8 @@ function selectAvatar(avatar, element) {
     
     // Update preview panel
     updatePreview(avatar);
+    // Refresh delegated unlock target selector if present
+    refreshDelegatedTargetSelector();
 }
 
 // Update preview panel with loading progress
@@ -1080,6 +1200,128 @@ function chooseAvatar() {
     });
 }
 
+// Fetch /api/user/me for unified meta (role, auth, counts)
+async function fetchUserMeta() {
+    try {
+        const resp = await fetch('/api/user/me', { credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const meta = await resp.json();
+        // Merge into existing avatarUserInfo if present
+        window.avatarUserInfo = Object.assign(window.avatarUserInfo || {}, {
+            user_authenticated: !!meta.user_authenticated,
+            user_role: meta.user_role || meta.role,
+            role: meta.role || meta.user_role,
+            is_guest: meta.role === 'guest',
+            is_admin: !!meta.is_admin,
+            premium_member: !!meta.premium_member,
+            total_unlocked: meta.total_unlocked || (window.avatarUserInfo ? window.avatarUserInfo.total_unlocked : null)
+        });
+        console.log('🔐 Fetched user meta:', window.avatarUserInfo);
+    } catch (e) {
+        console.warn('Failed to fetch /api/user/me:', e);
+    }
+}
+
+// Show guest restriction overlay instead of full picker
+function showGuestRestriction() {
+    const grid = document.querySelector('.honeycomb-grid');
+    if (grid) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:2rem;color:#FFD700;">
+                <h2 style="margin:0 0 1rem;">🔐 Avatar Customization Locked</h2>
+                <p style="max-width:520px;margin:0 auto 1.25rem;font-size:1.05rem;line-height:1.5;">
+                    Guest users can explore the mascot bee but need a free account to unlock and customize other avatars.
+                </p>
+                <div style="display:flex;gap:1rem;justify-content:center;">
+                    <button onclick="window.location.href='/auth/register'" style="background:#FFD700;color:#222;font-weight:600;padding:0.6rem 1.2rem;border:none;border-radius:6px;cursor:pointer;">Register Free</button>
+                    <button onclick="window.location.href='/auth/login'" style="background:#222;color:#FFD700;font-weight:600;padding:0.6rem 1.2rem;border:1px solid #FFD700;border-radius:6px;cursor:pointer;">Log In</button>
+                </div>
+            </div>`;
+    }
+}
+
+// Inject delegated unlock UI (teacher/parent/admin only)
+function maybeInjectDelegatedUnlockUI() {
+    try {
+        const info = window.avatarUserInfo || {};
+        if (!info.user_authenticated) return;
+        if (!['teacher','parent','admin'].includes(info.user_role)) return;
+        const sidebar = document.querySelector('.preview-content');
+        if (!sidebar) return;
+        if (document.getElementById('delegated-unlock-panel')) return; // already inserted
+        const panel = document.createElement('div');
+        panel.id = 'delegated-unlock-panel';
+        panel.style.cssText = 'margin-top:1rem;padding:0.75rem;border:1px solid rgba(255,215,0,0.3);border-radius:8px;background:rgba(255,215,0,0.08);';
+        panel.innerHTML = `
+            <div style="font-weight:600;color:#FFD700;display:flex;align-items:center;gap:0.5rem;">
+                <span>👪 Assign Avatar To Student</span>
+            </div>
+            <div style="margin-top:0.5rem;">
+                <select id="delegated-target-select" style="width:100%;padding:0.4rem;border-radius:6px;border:1px solid #444;background:#222;color:#FFD700;font-size:0.9rem;"></select>
+            </div>
+            <button id="delegated-unlock-btn" style="margin-top:0.6rem;width:100%;background:linear-gradient(90deg,#ffbf47,#ff9f1c);color:#222;font-weight:600;padding:0.55rem 0;border:none;border-radius:6px;cursor:pointer;">Unlock & Assign To Student</button>
+            <div id="delegated-unlock-status" style="margin-top:0.5rem;font-size:0.75rem;color:#FFA500;"></div>
+        `;
+        sidebar.appendChild(panel);
+        refreshDelegatedTargetSelector();
+        document.getElementById('delegated-unlock-btn').addEventListener('click', delegatedUnlockSubmit);
+    } catch (e) {
+        console.warn('Delegated unlock UI failed:', e);
+    }
+}
+
+function refreshDelegatedTargetSelector() {
+    const sel = document.getElementById('delegated-target-select');
+    if (!sel) return;
+    const students = window.avatarAssignedStudents || [];
+    sel.innerHTML = '';
+    if (!students.length) {
+        sel.innerHTML = '<option value="">No linked students</option>';
+        sel.disabled = true;
+        return;
+    }
+    students.forEach(stu => {
+        const opt = document.createElement('option');
+        opt.value = stu.id;
+        opt.textContent = `${stu.display_name || stu.username} (#${stu.id})`;
+        sel.appendChild(opt);
+    });
+    sel.disabled = false;
+}
+
+async function delegatedUnlockSubmit() {
+    const statusEl = document.getElementById('delegated-unlock-status');
+    if (!selectedAvatar) {
+        statusEl.textContent = 'Select an avatar first.';
+        return;
+    }
+    const sel = document.getElementById('delegated-target-select');
+    if (!sel || !sel.value) {
+        statusEl.textContent = 'Choose a student.';
+        return;
+    }
+    statusEl.textContent = 'Assigning avatar...';
+    try {
+        const resp = await fetch('/api/avatars/delegated-unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ avatar_slug: selectedAvatar.slug, target_user_id: Number(sel.value) })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+            statusEl.textContent = 'Failed: ' + (data.error || `HTTP ${resp.status}`);
+            statusEl.style.color = '#ff4d4f';
+            return;
+        }
+        statusEl.textContent = '✅ Assigned successfully!';
+        statusEl.style.color = '#4caf50';
+    } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.style.color = '#ff4d4f';
+    }
+}
+
 // Search/filter functionality
 function setupSearchFilter() {
     const searchInput = document.querySelector('.honeycomb-search');
@@ -1107,29 +1349,85 @@ function filterAvatars(query) {
 }
 
 // Show locked avatar message
+function computeLockedMessage(avatar) {
+    // Prefer server-provided structured reason codes for consistency
+    const reason = avatar.locked_reason;
+    const req = avatar.unlock_requirements || {};
+    const tier = avatar.tier || req.tier;
+    const price = (typeof avatar.price === 'number') ? avatar.price : (typeof req.price === 'number' ? req.price : null);
+    const requiredPoints = (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : (typeof req.required_points === 'number' ? req.required_points : null);
+    const userPoints = (typeof currentUserHoneyPoints === 'number') ? currentUserHoneyPoints : (typeof req.user_points === 'number' ? req.user_points : 0);
+
+    if (!avatar.is_locked) {
+        return 'Unlocked!';
+    }
+    switch (reason) {
+        case 'guest_restriction':
+            return 'Register to customize your bee!';
+        case 'guest_mascot':
+            return 'Mascot bee is always available!';
+        case 'not_enough_points': {
+            if (requiredPoints != null) {
+                const remaining = Math.max(requiredPoints - userPoints, 0);
+                let msg = `Earn ${remaining.toLocaleString()} more Honey Points to unlock.`;
+                if (price && tier === 'earn_or_buy') {
+                    msg += ` Or purchase for $${Number(price).toFixed(2)}.`;
+                }
+                return msg;
+            }
+            return 'Earn more Honey Points to unlock.';
+        }
+        case 'not_purchased':
+            if (price) {
+                if (tier === 'earn_or_buy' && requiredPoints != null) {
+                    const remaining = Math.max(requiredPoints - userPoints, 0);
+                    return remaining > 0
+                        ? `Earn ${remaining.toLocaleString()} more Honey Points or purchase for $${Number(price).toFixed(2)}.`
+                        : `Purchase for $${Number(price).toFixed(2)}.`;
+                }
+                return `Purchase for $${Number(price).toFixed(2)}.`;
+            }
+            return 'Purchase required to unlock.';
+        case 'progress_required':
+            return 'Complete more quizzes to unlock this bee!';
+        case 'admin_unlocked':
+            return 'Admin access granted.';
+        case 'free':
+            return 'Free avatar';
+        default:
+            // Fallback to legacy message if provided
+            return avatar.unlock_message || 'Locked';
+    }
+}
+
+// Show a modal explaining the lock reason with contextual actions
 function showLockedMessage(avatar) {
-    // Use the unified computation for consistency across UI
+    if (!avatar) return;
     const message = computeLockedMessage(avatar);
-    
-    // Determine if this is a guest restriction
-    const isGuestRestriction = message.includes('Guest users must register');
-    const tier = avatar.tier || 'premium';
-    
-    // Create appropriate messaging
+    const reason = avatar.locked_reason;
     let actionHtml = '';
-    if (isGuestRestriction) {
-        actionHtml = `
-            <p style="margin-top: 1rem; color: #FFB300; font-weight: 600;">
-                🎓 Register for free to unlock amazing bee avatars!
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
-                <button class="locked-modal-btn" onclick="window.location.href='/auth/register'">Register Now</button>
-                <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
-            </div>
-        `;
-    } else if (tier === 'premium') {
+
+    if (reason === 'not_purchased') {
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This is a premium avatar available for purchase.</p>
+            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+        `;
+    } else if (reason === 'not_enough_points') {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300;">Keep spelling to earn more Honey Points!</p>
+            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+        `;
+    } else if (reason === 'guest_restriction') {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300;">Create a free account to unlock and customize more bees!</p>
+            <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
+                <button onclick="window.location.href='/auth/register'" style="background:#FFD700;color:#222;font-weight:600;padding:0.5rem 0.8rem;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;">Register</button>
+                <button onclick="window.location.href='/auth/login'" style="background:#222;color:#FFD700;font-weight:600;padding:0.5rem 0.8rem;border:1px solid #FFD700;border-radius:6px;cursor:pointer;font-size:0.85rem;">Log In</button>
+            </div>
+        `;
+    } else if (reason === 'progress_required') {
+        actionHtml = `
+            <p style="margin-top: 1rem; color: #FFB300;">Complete more quizzes to unlock this bee!</p>
             <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
         `;
     } else {
@@ -1138,7 +1436,7 @@ function showLockedMessage(avatar) {
             <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
         `;
     }
-    
+
     const modal = document.createElement('div');
     modal.className = 'locked-avatar-modal';
     modal.innerHTML = `
@@ -1151,13 +1449,41 @@ function showLockedMessage(avatar) {
         </div>
     `;
     document.body.appendChild(modal);
-    
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
+
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
+
+// --- Real-time Wordbank Integration ---------------------------------------
+// Listen for wordbank-stats-updated events (emitted by quiz/menu pages) to
+// update honey points display and trigger auto-refresh if unlock thresholds reached.
+// This keeps avatar unlock messaging responsive without a full page reload.
+let _avatarAutoRefreshScheduled = false;
+function _maybeAutoRefreshUnlocks() {
+    if (_avatarAutoRefreshScheduled) return;
+    // If any locked avatar now meets its unlock_points threshold, schedule a refresh
+    const unlockable = avatarsData && avatarsData.some(a => a.is_locked && typeof a.unlock_points === 'number' && typeof currentUserHoneyPoints === 'number' && a.unlock_points <= currentUserHoneyPoints);
+    if (!unlockable) return;
+    _avatarAutoRefreshScheduled = true;
+    console.log('🔄 Detected newly unlockable avatar(s); scheduling avatar list refresh...');
+    setTimeout(() => {
+        // Refresh with full list (not guest minimal)
+        loadAvatars(false).catch(e => console.warn('Avatar refresh after unlock failed:', e));
+        _avatarAutoRefreshScheduled = false;
+    }, 800);
+}
+
+function _handleWordbankStatsUpdated(evt) {
+    const detail = (evt && evt.detail) || {};
+    const incomingPoints = (typeof detail.sessionPoints === 'number') ? detail.sessionPoints : (typeof detail.honey_points === 'number' ? detail.honey_points : null);
+    if (incomingPoints != null && incomingPoints !== currentUserHoneyPoints) {
+        console.log(`🍯 Honey/Session points updated via wordbank event: ${incomingPoints}`);
+        currentUserHoneyPoints = incomingPoints;
+        // Re-render marquee to reflect new honey points
+        updateDynamicMarquee(avatarsData || []);
+        _maybeAutoRefreshUnlocks();
+    }
+}
+
+document.addEventListener('wordbank-stats-updated', _handleWordbankStatsUpdated);
 
 

@@ -14,17 +14,16 @@ copied = 0
 for avatar in AVATAR_CATALOG:
     avatar_id = avatar['id']
     folder = avatar.get('folder', avatar_id)
-    obj_file = avatar.get('obj_file', 'model.obj')
-    mtl_file = avatar.get('mtl_file', 'model.mtl')
-    tex_file = avatar.get('texture_file', 'texture.png')
-    
+    glb_file = avatar.get('obj_file', 'model.glb')  # legacy key holds GLB path
+
     src_dir = os.path.join(SOURCE_BASE, folder)
     dst_dir = os.path.join(TARGET_BASE, avatar_id)
     os.makedirs(dst_dir, exist_ok=True)
-    
+
     print(f"\n{avatar['name']} -> {avatar_id}")
-    
-    for filename in [obj_file, mtl_file, tex_file]:
+
+    # Copy GLB
+    for filename in [glb_file]:
         src = os.path.join(src_dir, filename)
         dst = os.path.join(dst_dir, filename)
         if os.path.exists(src):
@@ -34,9 +33,9 @@ for avatar in AVATAR_CATALOG:
             copied += 1
         else:
             print(f"  [SKIP] {filename} not found")
-    
-    # Copy thumbnails
-    pngs = [f for f in os.listdir(src_dir) if f.endswith('.png') and f != tex_file]
+
+    # Copy first PNG as thumbnail/preview if present
+    pngs = [f for f in os.listdir(src_dir) if f.endswith('.png')]
     if pngs:
         shutil.copy2(os.path.join(src_dir, pngs[0]), os.path.join(dst_dir, 'thumbnail.png'))
         shutil.copy2(os.path.join(dst_dir, 'thumbnail.png'), os.path.join(dst_dir, 'preview.png'))
