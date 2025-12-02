@@ -14,11 +14,14 @@ let previewLoadProgress = 0;
 let currentUserHoneyPoints = 0;
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🐝 BeeSmart Avatar Picker - Initializing...');
     console.log('THREE available:', typeof THREE !== 'undefined');
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
+    
+    // CRITICAL: Verify user authentication FIRST during loading screen
+    await verifyUserAuthentication();
     
     loadAvatars();
     setupSearchFilter();
@@ -32,6 +35,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 10000);
 });
+
+// Verify user authentication before loading avatars
+async function verifyUserAuthentication() {
+    const loadingDetail = document.getElementById('loading-detail');
+    
+    try {
+        if (loadingDetail) {
+            loadingDetail.textContent = '🔐 Verifying authentication...';
+        }
+        
+        console.log('🔐 AUTHENTICATION CHECK: Starting verification...');
+        
+        // Check if user data was passed from template
+        const templateUserData = window.user_data || {};
+        console.log('📋 Template user_data:', templateUserData);
+        
+        // Fetch fresh user session status from server
+        const response = await fetch('/api/user/session', { 
+            credentials: 'same-origin',
+            cache: 'no-cache'
+        });
+        
+        if (response.ok) {
+            const sessionData = await response.json();
+            console.log('✅ Session data received:', sessionData);
+            
+            // Store for later use
+            window.userSessionData = sessionData;
+            
+            if (loadingDetail) {
+                if (sessionData.authenticated) {
+                    loadingDetail.textContent = `✅ Authenticated as ${sessionData.username || 'user'}`;
+                } else {
+                    loadingDetail.textContent = '👋 Guest mode - Register to unlock more bees!';
+                }
+            }
+        } else {
+            console.warn('⚠️ Could not fetch session data, proceeding with template data');
+            if (loadingDetail) {
+                loadingDetail.textContent = 'Proceeding with cached credentials...';
+            }
+        }
+        
+        // Brief delay so user sees the auth check
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+    } catch (error) {
+        console.error('❌ Authentication verification failed:', error);
+        if (loadingDetail) {
+            loadingDetail.textContent = 'Initializing...';
+        }
+    }
+}
 
 // Update loading progress with detailed status
 function updateLoadingProgress(customMessage = null) {

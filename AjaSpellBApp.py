@@ -9954,6 +9954,39 @@ def test_api():
     """Test page for API debugging"""
     return render_template('test_api.html')
 
+@app.route('/api/user/session', methods=['GET'])
+def api_user_session():
+    """
+    Get current user's session information.
+    Called during avatar picker loading to verify authentication.
+    """
+    try:
+        if current_user.is_authenticated:
+            return jsonify({
+                'authenticated': True,
+                'username': current_user.username,
+                'user_id': current_user.id,
+                'role': getattr(current_user, 'role', 'user'),
+                'is_guest': session.get('is_guest', False) or is_guest_user(current_user),
+                'is_admin': current_user.is_admin_or_premium() if hasattr(current_user, 'is_admin_or_premium') else False,
+                'honey_points': getattr(current_user, 'honey_points', 0),
+                'premium_member': getattr(current_user, 'premium_member', False)
+            })
+        else:
+            return jsonify({
+                'authenticated': False,
+                'is_guest': True,
+                'message': 'No active session'
+            })
+    except Exception as e:
+        print(f"❌ Error in /api/user/session: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'authenticated': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/test/avatar-loading')
 def test_avatar_loading():
     """Test page for avatar 3D loading diagnostics"""
