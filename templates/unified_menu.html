@@ -5150,12 +5150,11 @@
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
                         
-                        // Show quiz-ready notification (async, uses WordBankManager)
-                        showQuizReadyNotification();
-
-                        // DON'T call updateWordCount() - causes race condition and re-disables button
-                        // Button already enabled above with correct count from upload response
-                        console.log('✅ Manual entry complete - quiz button enabled with', data.count, 'words');
+                        // 🚀 Auto-navigate to quiz after successful manual entry
+                        setTimeout(() => {
+                            console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                            window.location.href = '/quiz';
+                        }, 1200); // Short delay to show success message
                     } else {
                         console.warn('🚫 startQuizBtn not found; quiz-ready UI tweaks skipped');
                         showQuizReadyNotification();
@@ -7708,6 +7707,12 @@
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
                         console.log('✅ Quiz button enabled after text upload, word count:', data.count);
                         
+                        // 🚀 Auto-navigate to quiz after successful upload
+                        setTimeout(() => {
+                            console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                            window.location.href = '/quiz';
+                        }, 1200); // Short delay to show success message
+                        
                         // Force immediate visual update
                         const btn = document.getElementById('startQuizBtn');
                         if (btn) btn.offsetHeight; // Trigger reflow
@@ -7861,14 +7866,15 @@
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
                         console.log('✅ Quiz button enabled after image upload, word count:', data.count);
                         
-                        // Show quiz-ready notification (async, uses WordBankManager)
+                        // 🚀 Auto-navigate to quiz after successful image upload
                         if (data.count > 0) {
-                            showQuizReadyNotification();
+                            setTimeout(() => {
+                                console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                                window.location.href = '/quiz';
+                            }, 1200); // Short delay to show success message
                         }
                         
-                        // DON'T call updateWordCount() - causes race condition and re-disables button
-                        // Button already enabled above with correct count from upload response
-                        console.log('✅ Image upload complete - quiz button enabled with', data.count, 'words');
+                        console.log('✅ Image upload complete - navigating to quiz with', data.count, 'words');
                     }, 500); // Show completion message briefly
                 } else {
                     // Error occurred - hide progress immediately
