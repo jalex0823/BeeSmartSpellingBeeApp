@@ -93,21 +93,13 @@
     <script>
         (function(){
             try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(e) {}
-            function jumpTop(){ try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch(e){ window.scrollTo(0,0); } }
-                    fxBtn.onclick = function() {
-                        const target = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
-                        if (target && window.AvatarFX) {
-                            // Play a random intro effect for the current avatar
-                            window.AvatarFX.init(target, null);
-                        } else {
-                            // Graceful fallback: quick sparkle burst
-                            const s = document.createElement('div');
-                            s.className = 'sparkle';
-                            s.style.left = (target?.getBoundingClientRect().left || 50) + 'px';
-                            s.style.top = (target?.getBoundingClientRect().top || 50) + 'px';
-                            document.body.appendChild(s);
-                            setTimeout(()=> s.remove(), 1000);
-                        }
+            function jumpTop(){
+                try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+                catch(e){ window.scrollTo(0,0); }
+            }
+            if (document.readyState === 'complete') { jumpTop(); }
+            else { window.addEventListener('load', jumpTop, { once: true }); }
+        })();
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
