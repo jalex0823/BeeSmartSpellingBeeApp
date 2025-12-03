@@ -4152,6 +4152,17 @@ def save_current_wordlist():
 def load_saved_wordlist():
     """Load a saved list into the current session and initialize quiz state."""
     try:
+        # CRITICAL DEBUG: Track session across request
+        incoming_session_id = session.get("session_id", "NEW")
+        incoming_storage_id = session.get("wordbank_storage_id", "NONE")
+        print(f"\n{'='*80}")
+        print(f"📥 /api/saved-lists/load REQUEST RECEIVED")
+        print(f"{'='*80}")
+        print(f"   Incoming session_id: {incoming_session_id}")
+        print(f"   Incoming storage_id: {incoming_storage_id}")
+        print(f"   Session keys: {list(session.keys())}")
+        print(f"   Cookie header: {request.headers.get('Cookie', 'NO COOKIE')[:200]}")
+        
         user = get_or_create_guest_user()
         if not user:
             print("❌ /api/saved-lists/load: Unable to resolve user")
@@ -4196,10 +4207,30 @@ def load_saved_wordlist():
         # Load into session (complete replacement)
         set_wordbank(rows, is_user_upload=True)
         
+        # CRITICAL DEBUG: Verify wordbank was actually saved
+        verify_wb = get_wordbank()
+        verify_storage_id = session.get("wordbank_storage_id")
+        print(f"🔍 /api/saved-lists/load: VERIFICATION after set_wordbank:")
+        print(f"   storage_id in session: {verify_storage_id}")
+        print(f"   get_wordbank() returned: {len(verify_wb)} words")
+        print(f"   Session keys: {list(session.keys())}")
+        if len(verify_wb) != len(rows):
+            print(f"⚠️ WARNING: Mismatch! Saved {len(rows)} but got {len(verify_wb)} back")
+        
         # Initialize fresh quiz state from new wordbank
         init_quiz_state()
         
         print(f"✅ /api/saved-lists/load: Initialized quiz state for {len(rows)} words")
+
+        # FINAL VERIFICATION
+        final_session_id = session.get("session_id", "MISSING")
+        final_storage_id = session.get("wordbank_storage_id", "MISSING")
+        print(f"📤 /api/saved-lists/load RESPONSE:")
+        print(f"   Final session_id: {final_session_id}")
+        print(f"   Final storage_id: {final_storage_id}")
+        print(f"   Wordbank count: {len(verify_wb)}")
+        print(f"   Session modified: {session.modified}")
+        print(f"{'='*80}\n")
 
         return jsonify({
             "ok": True,
