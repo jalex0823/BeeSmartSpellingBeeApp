@@ -774,10 +774,8 @@
             display: none !important;
         }
         
-        /* FINAL CONTAINER SIZE - Larger avatar (280x280) */
+        /* FINAL CONTAINER SIZE - Responsive avatar container */
         div#mascotBee3D {
-            width: 460px !important;
-            height: 360px !important;
             margin: 0 auto !important;
             position: relative !important;
             transform: translateY(0px) !important;
@@ -886,8 +884,10 @@
         
         .avatar-viewer-wrapper {
             position: relative;
-            width: 240px;
-            height: 240px;
+            width: 100%;
+            max-width: 460px;
+            height: auto;
+            min-height: 360px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
@@ -897,8 +897,9 @@
         
         #mascotBee3D {
             position: relative;
-            width: 220px;
-            height: 220px;
+            width: 100%;
+            max-width: 460px;
+            height: 360px;
             margin: 0 auto;
             cursor: pointer;
             touch-action: manipulation;
@@ -906,7 +907,8 @@
         }
         
         .avatar-caption {
-            margin-top: 0.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
             font-size: 14px;
             font-weight: 600;
             text-align: center;
@@ -3177,6 +3179,11 @@
                 <div id="avatarFxHost" class="avatar-viewer-wrapper">
                     <div id="mascotBee3D" class="avatar-fx-container"></div>
                     
+                    <!-- Interactive Caption -->
+                    <div id="mascotCaption" class="avatar-caption">
+                        ✨ Click on me to see what I do! ✨
+                    </div>
+                    
                     <!-- Compact avatar controls -->
                     <div class="avatar-controls">
                         <button type="button" data-avatar-control="zoom-in" title="Zoom In">＋</button>
@@ -3185,11 +3192,6 @@
                         <button type="button" data-avatar-control="rot-right" title="Rotate Right">⟳</button>
                         <button type="button" data-avatar-control="reset" title="Reset View">⟲⟳</button>
                     </div>
-                </div>
-                
-                <!-- Interactive Caption -->
-                <div id="mascotCaption" class="avatar-caption" style="margin-bottom: 16px;">
-                    ✨ Click on me to see what I do! ✨
                 </div>
                 
                 <!-- Server-side avatar initialization -->
