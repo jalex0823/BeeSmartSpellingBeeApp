@@ -124,3 +124,6 @@ node_modules/
 # Office temp/lock files
 ~$*
 *.tmp
+
+# Transient wordbank storage files (runtime-generated; not source-controlled)
+data/wordbanks/*.json
