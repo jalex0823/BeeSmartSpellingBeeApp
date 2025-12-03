@@ -84,7 +84,7 @@
     font-size:14px; opacity:.8; margin-bottom:8px;
     display:flex; align-items:center; gap:6px;
     position:relative; z-index:1;
-    max-width:1060px;
+  max-width:1060px;
     margin-left:auto;
     margin-right:auto;
   }
@@ -95,7 +95,7 @@
   .list-title-row{
     display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
     gap:12px; margin-bottom:14px; position:relative; z-index:1;
-    max-width:1060px;
+  max-width:1060px;
     margin-left:auto;
     margin-right:auto;
     flex-direction:column;
@@ -124,7 +124,7 @@
   .list-btn:hover{transform:translateY(-2px); box-shadow:var(--shadow-med)}
   .list-btn:active{transform:translateY(0); box-shadow:var(--shadow-soft)}
 
-  /* List Board Container */
+  /* NEW: List Board Container */
   .list-board{
     max-width:1060px;
     margin:0 auto;
@@ -136,7 +136,7 @@
     z-index:1;
   }
 
-  /* Badge Banner */
+  /* NEW: Badge Banner */
   .badge-banner{
     display:flex;
     align-items:center;
@@ -159,7 +159,7 @@
     font-weight:900;
   }
 
-  /* stats bar */
+  /* stats bar - Buzz Dust focused */
   .list-stats-bar{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
@@ -248,7 +248,7 @@
     font-weight:800;
   }
 
-  /* JAR GRID - 2 per row */
+  /* HONEY JAR GRID - 2 per row */
   .grid{
     display:grid;
     grid-template-columns:repeat(2, 1fr);
@@ -269,13 +269,17 @@
     100%{transform:translateY(0) scale(1)}
   }
 
-  /* base list cell container */
+  /* =============================================
+     ORIGINAL JAR CARD (CSS drawn) -- neutralized
+     We keep the selector for backward compatibility
+     but override with the new Pixar jar artwork card.
+     ============================================= */
   .list-cell{
     position:relative;
     text-decoration:none;
     color:inherit;
     cursor:pointer;
-    width:300px;
+    width:300px; /* widened so all elements (title, badge, buttons) fit without overlap */
     height:420px;
     display:flex;
     align-items:center;
@@ -285,17 +289,39 @@
     background:transparent;
     transition:transform var(--transition-med);
   }
+  
+  /* Honey jar glass body */
+  /* Neutralize old pseudo elements */
   .list-cell::before, .list-cell::after{content:none !important; display:none !important;}
+  
+  /* Jar lid/cap - brown wavy top */
+  /* New hover treatment */
   .list-cell:hover{transform:translateY(-4px) scale(1.02);}
+  
+  /* Remove old animation reference (optional keep) */
 
-  .list-cell-title{display:none !important;}
-  .jar-content{display:none !important;}
-  .list-cell-badge{display:none !important;}
-  .list-cell-actions{display:none !important;}
-  .list-cell-meta{display:none !important;}
-  .jar-separator{display:none !important;}
-  .list-cell-delete-wrapper{display:none !important;}
+  /* List title at top of jar (on lid) */
+  .list-cell-title{
+    position:absolute;
+    top:48px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:17px;
+    font-weight:900;
+    color:#1f1f1f;
+    text-align:center;
+    padding:0 16px;
+    max-width:200px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    z-index:5;
+    text-shadow:0 1px 2px rgba(255,255,255,.5);
+    line-height:1.2;
+    pointer-events:none;
+  }
 
+  /* FAVORITE glow ring */
   .list-cell.is-favorite{
     filter: drop-shadow(0 0 12px rgba(255,201,74,0.8)) drop-shadow(0 8px 24px rgba(0,0,0,0.2));
     animation: favPulse 2.4s ease-in-out infinite;
@@ -305,16 +331,166 @@
     50%{filter: drop-shadow(0 0 20px rgba(255,201,74,0.95)) drop-shadow(0 8px 28px rgba(0,0,0,0.25)) brightness(1.05)}
   }
 
-  /* NEW PIXAR-STYLE JAR UI */
+  /* Jar content area - cream/beige background */
+  .jar-content{display:none !important;}
+
+  /* Word count badge on jar */
+  .list-cell-badge{display:none !important;}
+
+  /* actions - centered icon buttons in jar */
+  .list-cell-actions{display:none !important;}
+  .action-btn-wrapper{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+  .action-label{
+    font-size:11px;
+    font-weight:900;
+    color:#1f1f1f;
+    text-align:center;
+    line-height:1.1;
+    max-width:56px;
+  }
+  .list-cell-action-btn{
+    width:48px;
+    height:48px;
+    border:none;
+    cursor:pointer;
+    border-radius:50%;
+    font-size:19px;
+    font-weight:900;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
+    transition:transform var(--transition-fast), filter var(--transition-fast);
+    padding:0;
+    border:2px solid #3e3e3e;
+  }
+  .list-cell-action-btn:hover{transform:translateY(-3px) scale(1.08)}
+  .list-cell-action-btn.quiz{font-size:22px; background:#4caf50; color:#fff}
+  .list-cell-action-btn.view{background:#90caf9; font-size:20px}
+  .list-cell-action-btn.edit{background:#ffb74d; font-size:20px}
+  
+  /* Date and meta info */
+  .list-cell-meta{display:none !important;}
+  .list-cell-meta .row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+  
+  /* Separator line */
+  .jar-separator{display:none !important;}
+  
+  /* Delete button at bottom of jar */
+  .list-cell-delete-wrapper{display:none !important;}
+
+  /* ================= NEW PIXAR-STYLE JAR UI ================= */
   .list-cell-inner-jar{
     position:relative;
     width:220px;
     height:380px;
+    /* Background removed - using explicit img tag to avoid double jar */
     background:transparent;
   }
+  /* Remove legacy center asset dependency */
   .list-cell-inner-jar.fallback{
     background:transparent;
   }
+  /* Legacy .jar-title not used; keep selector minimal without external asset */
+  .jar-title{position:absolute; top:84px; left:50%; transform:translateX(-50%); width:180px; height:90px; pointer-events:none;}
+  .jar-words{
+    position:absolute;
+    top:155px;
+    left:50%;
+    transform:translateX(-50%);
+    width:120px;
+    height:120px;
+  }
+  .jar-word-ring{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    padding:6px;
+    background:conic-gradient(#ffc94a 0deg,#ffc94a calc(var(--pct,0)*3.6deg),transparent calc(var(--pct,0)*3.6deg));
+  }
+  .jar-word-badge{
+    position:absolute;
+    inset:10px;
+    border-radius:999px;
+    background:url('/static/assets/WordListImages/badge_word_count.png') no-repeat center / contain;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-weight:900;
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.25);
+    box-shadow:0 3px 8px rgba(0,0,0,.25);
+  }
+  .jar-use-leaf{
+    position:absolute;
+    left:-12px;
+    top:185px;
+    width:82px;
+    height:110px;
+    border:none;
+    background:url('/static/assets/WordListImages/btn_use_in_quiz.png') no-repeat center / contain;
+    padding:0;
+    cursor:pointer;
+  }
+  .jar-use-leaf-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:#ffffff; text-align:center;}
+  .jar-view-btn{
+    position:absolute;
+    right:-8px;
+    top:185px;
+    width:80px;
+    height:80px;
+    border:none;
+    background:url('/static/assets/WordListImages/btn_view.png') no-repeat center / contain;
+    cursor:pointer;
+    padding:0;
+  }
+  .jar-meta{
+    position:absolute;
+    left:50%;
+    bottom:88px;
+    transform:translateX(-50%);
+    width:180px;
+    height:54px;
+    /* Use new sticker asset; fallback if renamed */
+    background:url('/static/assets/WordListImages/Sticker.png') no-repeat center / contain;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    font-size:11px;
+    font-weight:800;
+    color:#5a4a2e;
+    text-align:center;
+    text-shadow:0 1px 2px rgba(255,255,255,0.5);
+  }
+  .jar-delete-btn{
+    position:absolute;
+    left:50%;
+    bottom:36px;
+    transform:translateX(-50%);
+    border:none;
+    cursor:pointer;
+    width:130px;
+    height:44px;
+    background:url('/static/assets/WordListImages/btn_delete_puddle.png') no-repeat center / contain;
+    padding:0;
+  }
+  .list-cell.is-favorite{filter:drop-shadow(0 0 12px rgba(255,201,74,0.85)) drop-shadow(0 8px 24px rgba(0,0,0,0.2));}
+  @media (hover:hover){.jar-use-leaf:hover,.jar-view-btn:hover,.jar-delete-btn:hover{filter:brightness(1.1) drop-shadow(0 2px 6px rgba(0,0,0,0.25));}}
+  /* =========================================================== */
 
   .list-cell-inner{
     position:relative;
@@ -388,7 +564,7 @@
   .bee-modal-btn.secondary{background:#f3f3f3}
   .bee-modal-btn.danger{background:linear-gradient(135deg,#ffb3b3,#ff6b6b);color:#3b0a0a}
 
-  /* progress bar (if needed later) */
+  /* progress bar for quiz usage */
   .progress-wrap{
     margin-top:12px;
     width:100%;
@@ -419,7 +595,7 @@
     transition:width .35s ease-out;
   }
 
-  /* action sheet */
+  /* action sheet for long-press */
   .bee-sheet{
     position:fixed;
     left:50%;
@@ -460,6 +636,9 @@
       max-width:320px;
     }
     .list-cell{width:280px; height:380px}
+    .list-cell::before{width:240px; height:340px}
+    .list-cell::after{width:240px}
+    .jar-content{width:228px; height:248px}
   }
   @media (max-width: 600px){
     .list-board{padding:12px}
@@ -546,6 +725,7 @@
     </div>
   </div>
 
+  <!-- NEW: List Board Container -->
   <div class="list-board">
     <!-- Badge Banner -->
     <div class="badge-banner">
@@ -593,7 +773,7 @@
     </div>
 
     <!-- Grid -->
-    <div class="grid" id="grid" role="list" aria-label="Saved word lists">
+    <div class="grid" id="grid">
       <div style="grid-column:1/-1;text-align:center;padding:3.5rem;">
         <div style="font-size:2.5rem;margin-bottom:.6rem;">🐝</div>
         <div style="font-size:1.1rem;color:var(--bee-brown);font-weight:800;">Loading your lists...</div>
@@ -607,17 +787,23 @@
   let filteredLists = [];
   let modalResolve = null;
 
+  // NEW: backup the original button handlers so we can restore them
   let _originalCancelOnclick = null;
   let _originalConfirmOnclick = null;
   let _promptKeyHandler = null;
 
+  // favorites stored locally unless API exists
   const favKey = "beesmart_favorites";
   const localFavs = new Set(JSON.parse(localStorage.getItem(favKey) || "[]"));
 
+  // edit modal state
   let editTarget = null;
+
+  // long press sheet state
   let pressTimer = null;
   let sheetTarget = null;
 
+  // Explicit DOM references for modal elements
   const beeModal = document.getElementById("beeModal");
   const modalIcon = document.getElementById("modalIcon");
   const modalTitle = document.getElementById("modalTitle");
@@ -628,21 +814,24 @@
     runBeeFlyover();
     await loadBuzzDustProgress();
     await loadWordLists();
-
+    
+    // Attach edit word count listener once (prevents duplicate listeners)
     const editWordsEl = document.getElementById("editWords");
     if (editWordsEl) {
       editWordsEl.addEventListener("input", updateEditWordCount);
     }
   });
 
+  // Load Buzz Dust Progress
   async function loadBuzzDustProgress(){
     try{
       const res = await fetch("/api/buzz-dust/info",{credentials:"same-origin",cache:"no-store"});
       if(res.ok){
         const data = await res.json();
         console.log('✅ [Word Lists] Buzz Dust API response:', data);
-
+        
         if(data && data.current_class){
+          // Update badge with 3D renderer (NO ROTATION)
           const badgeEl = document.getElementById('badgeIcon');
           if(badgeEl && data.current_class.badge_image && window.Badge3DRenderer){
             badgeEl.innerHTML = '';
@@ -650,31 +839,27 @@
               badgeFile: data.current_class.badge_image,
               width: 48,
               height: 48,
-              autoRotate: false,
+              autoRotate: false,  // Disable rotation
               rotationSpeed: 0,
               enableLighting: true
             });
             badgeEl.style.display = 'block';
-          } else if (badgeEl) {
-            badgeEl.innerHTML = "";
-            badgeEl.style.backgroundImage = "url('/static/assets/badges/png/Novice.png')";
-            badgeEl.style.backgroundSize = "contain";
-            badgeEl.style.backgroundRepeat = "no-repeat";
-            badgeEl.style.backgroundPosition = "center";
-            badgeEl.style.display = 'block';
           }
-
+          
+          // Update badge name
           const badgeNameEl = document.getElementById('badgeName');
           if(badgeNameEl){
             badgeNameEl.textContent = data.current_class.label || 'Novice Bee';
           }
-
+          
+          // Update total buzz dust
           const buzzDustEl = document.getElementById('buzzDustTotal');
           if(buzzDustEl){
             const total = data.total_buzz_dust || 0;
             buzzDustEl.textContent = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
           }
-
+          
+          // Update dust to next badge (use real calculation from API)
           const dustToNextEl = document.getElementById('statDustToNext');
           if(dustToNextEl){
             if(data.at_max_rank){
@@ -686,6 +871,7 @@
               dustToNextEl.textContent = "0";
             }
           }
+          
           return;
         }
       }
@@ -693,8 +879,10 @@
       console.log("Buzz Dust API not available, using defaults:", err);
     }
 
+    // Fallback: use defaults
     const badgeEl = document.getElementById('badgeIcon');
     if (badgeEl) {
+      // Set fallback badge as background image (badgeEl is a div, not img)
       badgeEl.style.backgroundImage = "url('/static/assets/badges/png/Novice.png')";
       badgeEl.style.backgroundSize = "contain";
       badgeEl.style.backgroundRepeat = "no-repeat";
@@ -713,6 +901,7 @@
 
       if(data.ok && data.lists){
         allLists = data.lists;
+        // merge server favorites if present
         for(const l of allLists){
           if(l.is_favorite) localFavs.add(l.id);
         }
@@ -734,11 +923,12 @@
     const totalLists = allLists.length;
     const totalWords = allLists.reduce((s,l)=>s+(l.word_count||0),0);
 
-    document.getElementById("statTotalLists").textContent = totalLists;
-    document.getElementById("statTotalWords").textContent = totalWords;
+    statTotalLists.textContent = totalLists;
+    statTotalWords.textContent = totalWords;
     console.log(`📊 Stats updated: ${totalLists} lists, ${totalWords} total words`);
   }
 
+  // Refresh stats when page gains focus (after upload redirect)
   window.addEventListener('focus', async () => {
     console.log('👀 Page gained focus - checking for new uploads...');
     await loadWordLists();
@@ -748,6 +938,7 @@
     const grid = document.getElementById("grid");
     if(!filteredLists.length){ displayEmptyList(); return; }
 
+    // pin favorites to top always
     const favFirst = [...filteredLists].sort((a,b)=>{
       const af = localFavs.has(a.id)?1:0;
       const bf = localFavs.has(b.id)?1:0;
@@ -758,238 +949,95 @@
     favFirst.forEach((list)=> grid.appendChild(createlistCell(list)));
   }
 
-  // NEW: no inline handlers, all DOM-built
-  function createlistCell(list) {
+  function createlistCell(list){
     const cell = document.createElement("a");
     cell.className = "list-cell";
-    cell.href = "#";
+    cell.href="#";
+    cell.dataset.name=(list.name||"").toLowerCase();
+    cell.dataset.words=list.word_count||0;
+    cell.dataset.updated=list.updated_at||list.created_at||"";
+    if(localFavs.has(list.id)) cell.classList.add("is-favorite");
 
-    cell.dataset.name = (list.name || "").toLowerCase();
-    cell.dataset.words = list.word_count || 0;
-    cell.dataset.updated = list.updated_at || list.created_at || "";
-
-    if (localFavs.has(list.id)) {
-      cell.classList.add("is-favorite");
-    }
-
-    cell.setAttribute("role", "listitem");
-    const ariaLabelName = list.name || "Unnamed list";
-    const ariaLabelWords = list.word_count || 0;
-    cell.setAttribute("aria-label", `${ariaLabelName} (${ariaLabelWords} words)`);
-
-    cell.addEventListener("click", (e) => {
+    // Click jar = use in quiz (unless a positioned button was clicked)
+    cell.onclick=(e)=>{
       e.preventDefault();
-      useListInQuiz(list.id);
-    });
+      if(!e.target.closest("button")){
+        useListInQuiz(list.id);
+      }
+    };
 
-    cell.addEventListener(
-      "touchstart",
-      (e) => {
-        pressTimer = setTimeout(() => openBeeSheet(list), 520);
-      },
-      { passive: true }
-    );
-    cell.addEventListener("touchend", () => clearTimeout(pressTimer));
-    cell.addEventListener("touchmove", () => clearTimeout(pressTimer));
+    // long press mobile
+    cell.addEventListener("touchstart",(e)=>{
+      pressTimer = setTimeout(()=> openBeeSheet(list), 520);
+    },{passive:true});
+    cell.addEventListener("touchend",()=> clearTimeout(pressTimer));
+    cell.addEventListener("touchmove",()=> clearTimeout(pressTimer));
 
-    const formattedDate =
-      list.updated_at || list.created_at
-        ? new Date(list.updated_at || list.created_at).toLocaleDateString()
-        : "No date yet";
+    const formattedDate = (list.updated_at||list.created_at)
+      ? new Date(list.updated_at||list.created_at).toLocaleDateString()
+      : "No date yet";
 
     const isEmpty = !list.word_count || list.word_count === 0;
     let pct = 0;
-    if (typeof list.percent_used === "number") {
+    if(typeof list.percent_used === "number"){
       pct = Math.max(0, Math.min(100, Math.round(list.percent_used)));
     }
 
-    const jarInner = document.createElement("div");
-    jarInner.className = "list-cell-inner-jar";
-    cell.appendChild(jarInner);
+    cell.innerHTML = `
+      <div class="list-cell-inner-jar">
+        <!-- Jar base image -->
+        <img class="jar-base-img" src="/static/assets/WordListImages/jar_base.png" alt="Honey jar" />
+        
+        
+        <!-- Title at top with word list name -->
+        <div class="jar-title-plate">
+          <img class="jar-title-img" src="/static/assets/WordListImages/Title.png" alt="Title" />
+          <div class="jar-title-text" title="${escapeHtml(list.name)}">${escapeHtml(list.name)}</div>
+        </div>
 
-    const baseImg = document.createElement("img");
-    baseImg.className = "jar-base-img";
-    baseImg.src = "/static/assets/WordListImages/jar_base.png";
-    baseImg.alt = "Honey jar";
-    jarInner.appendChild(baseImg);
+        <!-- WORDS badge in center -->
+        <div class="jar-words-badge-container">
+          <img class="jar-badge-img" src="/static/assets/WordListImages/badge_word_count.png" alt="Word count badge" />
+          <div class="jar-word-count">${isEmpty ? "0" : list.word_count}</div>
+          <div class="jar-word-label">WORDS</div>
+        </div>
 
-    const titlePlate = document.createElement("div");
-    titlePlate.className = "jar-title-plate";
+        <!-- Date centered below words badge -->
+        <div class="jar-date-container">
+          <img class="jar-date-img" src="/static/assets/WordListImages/date.png" alt="Date" />
+          <div class="jar-date-text">${formattedDate}</div>
+        </div>
 
-    const titleImg = document.createElement("img");
-    titleImg.className = "jar-title-img";
-    titleImg.src = "/static/assets/WordListImages/Title.png";
-    titleImg.alt = "Word list title";
+        <!-- Delete button at bottom center -->
+        <div class="jar-delete-container">
+          <img class="jar-delete-img" src="/static/assets/WordListImages/btn_delete_puddle.png" alt="Delete word list" title="Delete word list" onclick="deleteWordList(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
+        </div>
 
-    const titleText = document.createElement("div");
-    titleText.className = "jar-title-text";
-    const rawName = list.name || "Unnamed List";
-    titleText.textContent = rawName;
-    titleText.title = rawName;
+        <!-- Leaf (Use in quiz) - positioned on left side -->
+        <img class="jar-use-leaf" src="/static/assets/WordListImages/btn_use_in_quiz.png" alt="Use in quiz" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});" style="cursor:pointer;" />
 
-    titlePlate.appendChild(titleImg);
-    titlePlate.appendChild(titleText);
-    jarInner.appendChild(titlePlate);
-
-    try {
-      const nameLen = rawName.length;
-      let size = 15;
-      if (nameLen > 24) size = 11;
-      else if (nameLen > 18) size = 12;
-      else if (nameLen > 14) size = 13;
-      titleText.style.fontSize = size + "px";
-    } catch (_) {}
-
-    const wordsContainer = document.createElement("div");
-    wordsContainer.className = "jar-words-badge-container";
-
-    const badgeImg = document.createElement("img");
-    badgeImg.className = "jar-badge-img";
-    badgeImg.src = "/static/assets/WordListImages/badge_word_count.png";
-    badgeImg.alt = "Word count badge";
-
-    const wordCountEl = document.createElement("div");
-    wordCountEl.className = "jar-word-count";
-    wordCountEl.textContent = isEmpty ? "0" : list.word_count;
-
-    const wordLabelEl = document.createElement("div");
-    wordLabelEl.className = "jar-word-label";
-    wordLabelEl.textContent = "WORDS";
-
-    wordsContainer.appendChild(badgeImg);
-    wordsContainer.appendChild(wordCountEl);
-    wordsContainer.appendChild(wordLabelEl);
-    jarInner.appendChild(wordsContainer);
-
-    const dateContainer = document.createElement("div");
-    dateContainer.className = "jar-date-container";
-
-    const dateImg = document.createElement("img");
-    dateImg.className = "jar-date-img";
-    dateImg.src = "/static/assets/WordListImages/date.png";
-    dateImg.alt = "Date sticker";
-
-    const dateText = document.createElement("div");
-    dateText.className = "jar-date-text";
-    dateText.textContent = formattedDate;
-
-    dateContainer.appendChild(dateImg);
-    dateContainer.appendChild(dateText);
-    jarInner.appendChild(dateContainer);
-
-    const deleteContainer = document.createElement("div");
-    deleteContainer.className = "jar-delete-container";
-
-    const deleteImg = document.createElement("img");
-    deleteImg.className = "jar-delete-img";
-    deleteImg.src = "/static/assets/WordListImages/btn_delete_puddle.png";
-    deleteImg.alt = "Delete word list";
-    deleteImg.title = "Delete word list";
-    deleteImg.style.cursor = "pointer";
-
-    deleteImg.tabIndex = 0;
-    deleteImg.setAttribute("role", "button");
-
-    const handleDelete = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      deleteWordList(e, list.id, rawName);
-    };
-
-    deleteImg.addEventListener("click", handleDelete);
-    deleteImg.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        handleDelete(e);
-      }
-    });
-
-    deleteContainer.appendChild(deleteImg);
-    jarInner.appendChild(deleteContainer);
-
-    const useLeaf = document.createElement("img");
-    useLeaf.className = "jar-use-leaf";
-    useLeaf.src = "/static/assets/WordListImages/btn_use_in_quiz.png";
-    useLeaf.alt = isEmpty ? "Upload words first" : "Use in quiz";
-    useLeaf.title = isEmpty ? "Upload words first" : "Use in quiz";
-    useLeaf.style.cursor = "pointer";
-
-    useLeaf.tabIndex = 0;
-    useLeaf.setAttribute("role", "button");
-
-    const handleUse = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isEmpty) {
-        showToast("❌ This list is empty. Add words before using in quiz.", "error");
-        return;
-      }
-      useListInQuiz(list.id);
-    };
-
-    useLeaf.addEventListener("click", handleUse);
-    useLeaf.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        handleUse(e);
-      }
-    });
-
-    jarInner.appendChild(useLeaf);
-
-    const viewBtn = document.createElement("img");
-    viewBtn.className = "jar-view-btn";
-    viewBtn.src = "/static/assets/WordListImages/btn_view.png";
-    viewBtn.alt = "View list";
-    viewBtn.title = "View list";
-    viewBtn.style.cursor = "pointer";
-
-    viewBtn.tabIndex = 0;
-    viewBtn.setAttribute("role", "button");
-
-    const handleView = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      viewWordList(e, list.id, rawName);
-    };
-
-    viewBtn.addEventListener("click", handleView);
-    viewBtn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        handleView(e);
-      }
-    });
-
-    jarInner.appendChild(viewBtn);
-
-    const editBtn = document.createElement("img");
-    editBtn.className = "jar-edit-btn";
-    editBtn.src = "/static/assets/WordListImages/btn_edit_dipper.png";
-    editBtn.alt = "Edit list";
-    editBtn.title = "Edit list";
-    editBtn.style.cursor = "pointer";
-
-    editBtn.tabIndex = 0;
-    editBtn.setAttribute("role", "button");
-
-    const handleEdit = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openEditModal(e, list.id, rawName);
-    };
-
-    editBtn.addEventListener("click", handleEdit);
-    editBtn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        handleEdit(e);
-      }
-    });
-
-    jarInner.appendChild(editBtn);
+        <!-- Magnifier (View) - positioned on right side -->
+        <img class="jar-view-btn" src="/static/assets/WordListImages/btn_view.png" alt="View" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
+        
+        <!-- Edit dipper (positioned appropriately) -->
+        <img class="jar-edit-btn" src="/static/assets/WordListImages/btn_edit_dipper.png" alt="Edit" title="Edit list" onclick="openEditModal(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
+      </div>
+    `;
+    // Dynamic title scaling to keep long names within the plate without wrapping
+    try{
+      const titleEl = cell.querySelector('.jar-title-text');
+      const nameLen = (list.name || '').length;
+      let size = 15; // base size
+      if(nameLen > 24) size = 11;
+      else if(nameLen > 18) size = 12;
+      else if(nameLen > 14) size = 13;
+      if(titleEl) titleEl.style.fontSize = size + 'px';
+    }catch(_e){}
 
     return cell;
   }
 
   function displayEmptyList(){
-    const grid = document.getElementById("grid");
     grid.innerHTML = `
       <div class="list-empty">
         <div style="font-size:64px;margin-bottom:10px;">🐝</div>
@@ -1001,7 +1049,6 @@
   }
 
   function displayLoginRequired(){
-    const grid = document.getElementById("grid");
     grid.innerHTML = `
       <div class="list-empty">
         <div style="font-size:64px;margin-bottom:10px;">🔒</div>
@@ -1012,11 +1059,10 @@
     `;
   }
 
+  // Search + Sort
   (function(){
     const searchInput = document.getElementById("listSearchInput");
     const sortSelect = document.getElementById("listSortSelect");
-
-    let searchDebounce = null;
 
     function applyFilterAndSort(){
       const term=(searchInput.value||"").toLowerCase().trim();
@@ -1026,6 +1072,7 @@
         ? [...allLists]
         : allLists.filter(l=>(l.name||"").toLowerCase().includes(term));
 
+      // sort non-favs only; favs pinned later
       switch(sortBy){
         case "name":
           filteredLists.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
@@ -1048,32 +1095,31 @@
       renderLists();
     }
 
-    searchInput.addEventListener("input", () => {
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(applyFilterAndSort, 150);
-    });
-
+    searchInput.addEventListener("input",applyFilterAndSort);
     sortSelect.addEventListener("change",applyFilterAndSort);
   })();
 
+  // QUIZ LOAD
   async function useListInQuiz(id){
     try{
+      // First, get details of the list being loaded
       const listRes = await fetch(`/api/saved-lists/${id}`);
       const listData = await listRes.json();
-
+      
       if(!listData.ok || !listData.list){
         showToast("❌ Could not load this word list","error");
         return;
       }
-
+      
       const newList = listData.list;
       const newWordCount = newList.words ? newList.words.length : 0;
-
+      
       if(newWordCount === 0){
         showToast("❌ This list is empty. Add words before using in quiz.","error");
         return;
       }
-
+      
+      // Check current wordbank
       const wbRes = await fetch("/api/wordbank");
       const wbData = await wbRes.json();
       const currentCount = wbData.words ? wbData.words.length : 0;
@@ -1112,6 +1158,7 @@
     }
   }
 
+  // CREATE
   async function createNewList(){
     const name = await showBeePrompt("🐝","Create New word list!","What should we call this list?");
     if(!name||!name.trim()) return;
@@ -1136,6 +1183,7 @@
     }
   }
 
+  // VIEW
   async function viewWordList(event,listId,listName){
     event.preventDefault(); event.stopPropagation();
     try{
@@ -1143,15 +1191,16 @@
       const data = await res.json();
       if(data.ok && data.list){
         const words = data.list.words||[];
+        // Extract word strings from word objects {id, word, sentence, hint, ...}
         const wordStrings = words.map(w => {
           if (typeof w === 'string') return w;
           if (w && typeof w === 'object' && w.word) return w.word;
           return String(w);
         }).filter(Boolean);
-
+        
         const preview = wordStrings.slice(0,12).join(", ");
         const more = wordStrings.length>12 ? `<br>…and ${wordStrings.length-12} more.` : "";
-        await showBeeModal("👁️",escapeHtml(listName),`<strong>Total Words:</strong> ${wordStrings.length}<br><br>${escapeHtml(preview)}${more}`,"Close","primary");
+        await showBeeModal("👁️",listName,`<strong>Total Words:</strong> ${wordStrings.length}<br><br>${preview}${more}`,"Close","primary");
       }else{
         showToast("❌ Could not load hive details","error");
       }
@@ -1161,13 +1210,14 @@
     }
   }
 
+  // DELETE
   async function deleteWordList(event,listId,listName){
     event.preventDefault(); event.stopPropagation();
 
     const confirmed = await showBeeModal(
       "🗑️",
       "Delete word list?",
-      `Delete "<strong>${escapeHtml(listName)}</strong>"?<br><br>This list will be gone forever.`,
+      `Delete "<strong>${listName}</strong>"?<br><br>This list will be gone forever.`,
       "Yes, Delete It",
       "danger"
     );
@@ -1194,14 +1244,17 @@
     }
   }
 
+  // FAVORITE / PIN
   async function toggleFavorite(event,listId){
     event.preventDefault(); event.stopPropagation();
     const isFav = localFavs.has(listId);
     if(isFav) localFavs.delete(listId); else localFavs.add(listId);
     persistFavs();
 
+    // sparkle burst
     burstSparkles(event.clientX, event.clientY);
 
+    // try server persist if endpoint exists
     try{
       await fetch("/api/saved-lists/favorite",{
         method:"POST",
@@ -1209,7 +1262,7 @@
         credentials:"same-origin",
         body:JSON.stringify({id:listId,is_favorite:!isFav})
       });
-    }catch(_){}
+    }catch(_){ /* silent fallback */ }
 
     renderLists();
   }
@@ -1243,6 +1296,7 @@
     }
   }
 
+  // EDIT MODAL
   async function openEditModal(event,listId,listName){
     if(event){
       event.preventDefault();
@@ -1263,45 +1317,48 @@
       editTarget = { id:listId };
       const list = data.list;
       const wordsArray = list.words || [];
-
+      
+      // Extract word strings from word objects {id, word, sentence, hint, ...}
       const wordStrings = wordsArray.map(w => {
         if (typeof w === 'string') return w;
         if (w && typeof w === 'object' && w.word) return w.word;
         return String(w);
       }).filter(Boolean);
 
-      document.getElementById("editName").value = list.name || "";
-      document.getElementById("editWords").value = wordStrings.join("\n");
-
+      editName.value = list.name || "";
+      editWords.value = wordStrings.join("\n");
+      
+      // Update initial word count display
       updateEditWordCount();
-
-      document.getElementById("editModal").classList.add("active");
+      
+      editModal.classList.add("active");
     }catch(err){
       console.error(err);
       showToast("❌ Error loading list for editing","error");
     }
   }
-
+  
   function updateEditWordCount(){
     const wordsInput = document.getElementById("editWords");
     const countDisplay = document.getElementById("editWordCount");
     if(!wordsInput || !countDisplay) return;
-
+    
     const rawLines = (wordsInput.value||"").split(/\r?\n/);
     const words = rawLines.map(w => w.trim()).filter(Boolean);
     const count = words.length;
-
-    let color = "#42A5F5";
-    if(count > 500) color = "#FF4444";
-    else if(count === 0) color = "#9E9E9E";
-    else if(count > 400) color = "#FF9800";
-
+    
+    // Color code based on count
+    let color = "#42A5F5"; // blue
+    if(count > 500) color = "#FF4444"; // red
+    else if(count === 0) color = "#9E9E9E"; // gray
+    else if(count > 400) color = "#FF9800"; // orange
+    
     countDisplay.textContent = `(${count} word${count !== 1 ? 's' : ''})`;
     countDisplay.style.color = color;
   }
 
   function closeEditModal(){
-    document.getElementById("editModal").classList.remove("active");
+    editModal.classList.remove("active");
     editTarget=null;
   }
 
@@ -1314,10 +1371,12 @@
     const newNameRaw = (nameInput.value||"").trim();
     const rawLines = (wordsInput.value||"").split(/\r?\n/);
 
+    // Normalize & filter
     const words = rawLines
       .map(w => w.trim())
       .filter(Boolean);
 
+    // VALIDATION
     if(!newNameRaw){
       showToast("❌ List name cannot be empty","error");
       nameInput.focus();
@@ -1335,6 +1394,7 @@
       return;
     }
 
+    // Optional: prevent obvious duplicates
     const uniqueCount = new Set(words.map(w => w.toLowerCase())).size;
     if(uniqueCount < words.length){
       const ok = await showBeeModal(
@@ -1347,6 +1407,7 @@
       if(!ok) return;
     }
 
+    // Save to backend
     try{
       const res = await fetch(`/api/saved-lists/${editTarget.id}`,{
         method:"PUT",
@@ -1373,36 +1434,34 @@
     }
   }
 
+  // LONG-PRESS ACTION SHEET
   function openBeeSheet(list){
     sheetTarget = list;
-    document.getElementById("beeSheetTitle").textContent = list.name || "List Actions";
-    document.getElementById("beeSheet").classList.add("active");
+    beeSheetTitle.textContent = list.name || "List Actions";
+    beeSheet.classList.add("active");
 
-    document.getElementById("sheetQuizBtn").onclick   = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
-    document.getElementById("sheetViewBtn").onclick   = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name || ""); };
-    document.getElementById("sheetEditBtn").onclick   = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name || ""); };
-    document.getElementById("sheetFavBtn").onclick    = (e)=>{ closeBeeSheet(); toggleFavorite(fakeEvent(e), list.id); };
-    document.getElementById("sheetDeleteBtn").onclick = (e)=>{ closeBeeSheet(); deleteWordList(fakeEvent(e), list.id, list.name || ""); };
+    sheetQuizBtn.onclick = ()=>{ closeBeeSheet(); useListInQuiz(list.id); };
+    sheetViewBtn.onclick = (e)=>{ closeBeeSheet(); viewWordList(fakeEvent(e), list.id, list.name); };
+    sheetEditBtn.onclick = (e)=>{ closeBeeSheet(); openEditModal(fakeEvent(e), list.id, list.name); };
+    sheetFavBtn.onclick  = (e)=>{ closeBeeSheet(); toggleFavorite(fakeEvent(e), list.id); };
+    sheetDeleteBtn.onclick=(e)=>{ closeBeeSheet(); deleteWordList(fakeEvent(e), list.id, list.name); };
   }
 
   function closeBeeSheet(){
-    document.getElementById("beeSheet").classList.remove("active");
+    beeSheet.classList.remove("active");
     sheetTarget=null;
   }
 
   function fakeEvent(e){
-    return {
-      preventDefault(){},
-      stopPropagation(){},
-      clientX:(e && e.clientX !== undefined) ? (e.clientX||innerWidth/2) : innerWidth/2,
-      clientY:(e && e.clientY !== undefined) ? (e.clientY||innerHeight/2) : innerHeight/2
-    };
+    return { preventDefault(){}, stopPropagation(){}, clientX:(e && e.clientX !== undefined) ? (e.clientX||innerWidth/2) : innerWidth/2, clientY:(e && e.clientY !== undefined) ? (e.clientY||innerHeight/2) : innerHeight/2 };
   }
 
+  // MODAL (confirm/info)
   function showBeeModal(icon, title, message, confirmText = "OK", confirmType = "primary") {
     return new Promise(resolve => {
       modalResolve = resolve;
 
+      // These are the existing elements in your HTML
       modalIcon.textContent = icon;
       modalTitle.textContent = title;
       modalBody.innerHTML = message;
@@ -1410,6 +1469,9 @@
       modalConfirmBtn.textContent = confirmText;
       modalConfirmBtn.className = "bee-modal-btn " + confirmType;
 
+      // Make sure confirm button runs the normal confirm handler
+      // (it will call modalResolve(true))
+      // Inline onclick from HTML still points to confirmBeeModal()
       beeModal.classList.add("active");
     });
   }
@@ -1426,6 +1488,7 @@
     modalResolve = null;
   }
 
+  // PROMPT (create) – DOM-based, no template HTML
   function showBeePrompt(icon, title, message) {
     return new Promise(resolve => {
       modalResolve = resolve;
@@ -1434,12 +1497,15 @@
       const cancelBtn = modal.querySelector(".bee-modal-btn.secondary");
       const confirmBtn = modal.querySelector("#modalConfirmBtn");
 
+      // Backup original handlers (from inline onclick attributes)
       if (_originalCancelOnclick === null) _originalCancelOnclick = cancelBtn.onclick;
       if (_originalConfirmOnclick === null) _originalConfirmOnclick = confirmBtn.onclick;
 
+      // Set icon/title
       modalIcon.textContent = icon;
       modalTitle.textContent = title;
 
+      // Clear body and insert message + input
       modalBody.innerHTML = "";
       const msgDiv = document.createElement("div");
       msgDiv.innerHTML = message;
@@ -1460,6 +1526,7 @@
       `;
       modalBody.appendChild(input);
 
+      // Rewire buttons for prompt behavior
       cancelBtn.textContent = "Cancel";
       cancelBtn.onclick = () => closeBeePrompt("");
 
@@ -1467,6 +1534,7 @@
       confirmBtn.className = "bee-modal-btn primary";
       confirmBtn.onclick = () => closeBeePrompt(input.value);
 
+      // Keyboard: Enter = confirm, Esc = cancel
       _promptKeyHandler = (evt) => {
         if (!beeModal.classList.contains("active")) return;
         if (evt.key === "Enter") {
@@ -1481,6 +1549,7 @@
 
       beeModal.classList.add("active");
 
+      // Auto-focus input
       setTimeout(() => {
         if (input) input.focus();
       }, 80);
@@ -1492,18 +1561,22 @@
     const cancelBtn = modal.querySelector(".bee-modal-btn.secondary");
     const confirmBtn = modal.querySelector("#modalConfirmBtn");
 
+    // Close + resolve promise
     beeModal.classList.remove("active");
     if (modalResolve) modalResolve(value);
     modalResolve = null;
 
+    // Remove key handler if present
     if (_promptKeyHandler) {
       document.removeEventListener("keydown", _promptKeyHandler);
       _promptKeyHandler = null;
     }
 
+    // Restore original handlers
     if (_originalCancelOnclick) cancelBtn.onclick = _originalCancelOnclick;
     if (_originalConfirmOnclick) confirmBtn.onclick = _originalConfirmOnclick;
 
+    // Restore default confirm modal content
     modalIcon.textContent = "🐝";
     modalTitle.textContent = "Bzzzz!";
     modalBody.innerHTML = "Are you sure about this?";
@@ -1511,6 +1584,7 @@
     confirmBtn.className = "bee-modal-btn primary";
   }
 
+  // TOAST
   function showToast(message, type = "success") {
     (function() {
       const el = document.querySelector(".toast");
@@ -1535,56 +1609,67 @@
     }, 2600);
   }
 
-  window.createNewList   = createNewList;
-  window.useListInQuiz   = useListInQuiz;
-  window.viewWordList    = viewWordList;
-  window.deleteWordList  = deleteWordList;
-  window.toggleFavorite  = toggleFavorite;
-  window.openEditModal   = openEditModal;
-  window.saveEditModal   = saveEditModal;
-  window.closeEditModal  = closeEditModal;
-  window.closeBeeModal   = closeBeeModal;
+  // Make functions globally accessible for onclick handlers
+  window.createNewList = createNewList;
+  window.useListInQuiz = useListInQuiz;
+  window.viewWordList = viewWordList;
+  window.deleteWordList = deleteWordList;
+  window.toggleFavorite = toggleFavorite;
+  window.openEditModal = openEditModal;
+  window.saveEditModal = saveEditModal;
+  window.closeEditModal = closeEditModal;
+  window.closeBeeModal = closeBeeModal;
   window.confirmBeeModal = confirmBeeModal;
-  window.closeBeePrompt  = closeBeePrompt;
-  window.closeBeeSheet   = closeBeeSheet;
+  window.closeBeePrompt = closeBeePrompt;
+  window.closeBeeSheet = closeBeeSheet;
 
   const style=document.createElement("style");
   style.textContent=`
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
-    .list-cell-inner-jar{position:relative; min-height:420px; padding-bottom:20px; width:300px;}
+    /* --- Word List Jar layout overrides --- */
+    .list-cell-inner-jar{position:relative; min-height:420px; padding-bottom:20px; width:300px;} /* widened to 300px */
     .jar-base-img{width:100%; height:auto; display:block; position:relative; z-index:1;}
-    .jar-title-plate{position:absolute; top:140px; left:50%; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center;}
+    .jar-title-plate{position:absolute; top:140px; left:50%; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center;} /* positioned lower on jar */
     .jar-title-img{width:140px; height:auto;}
     .jar-title-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#5b3b0a; font-size:15px; text-align:center; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .jar-words-badge-container{position:absolute; top:180px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+    .jar-words-badge-container{position:absolute; top:180px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* centered on jar */
     .jar-badge-img{width:120px; height:auto;}
     .jar-word-count{position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:900; color:white;}
     .jar-word-label{position:absolute; top:60%; left:50%; transform:translate(-50%,-50%); font-size:13px; letter-spacing:0.08em; font-weight:900; color:white;}
-    .jar-date-container{position:absolute; bottom:95px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+    .jar-date-container{position:absolute; bottom:95px; left:50%; transform:translateX(-50%); z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* positioned higher per arrow */
     .jar-date-img{width:140px; height:auto;}
     .jar-date-text{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:14px; font-weight:700; color:#5b3b0a;}
-    .jar-delete-container{position:absolute; bottom:30px; right:20px; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+    .jar-delete-container{position:absolute; bottom:30px; right:20px; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;} /* moved inside jar */
     .jar-delete-img{width:100px; height:auto;}
+    /* .jar-delete-text removed: text label no longer needed (image has the word) */
     .jar-use-leaf{position:absolute; top:30%; left:10px; width:90px; height:auto; z-index:4;}
     .jar-view-btn{position:absolute; top:30%; right:10px; width:90px; height:auto; z-index:4;}
     .jar-edit-btn{position:absolute; top:55%; right:-15px; width:110px; height:auto; z-index:4; transition:transform 0.2s ease;}
     .jar-edit-btn:hover{transform:translateX(-5px) scale(1.05);}
+    
+    /* Adaptive tone for dark mode - removed since using jar_base.png image */
   `;
   document.head.appendChild(style);
 
-  function escapeHtml(text){
-    const d=document.createElement("div");
-    d.textContent=text||"";
-    return d.innerHTML;
+  // helpers
+  function escapeHtml(text){ const d=document.createElement("div"); d.textContent=text||""; return d.innerHTML; }
+  
+  // Escape for inline JavaScript strings (handles <, >, ", ', \)
+  function escapeForJS(str) {
+    if (!str) return "";
+    return str
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"')
+      .replace(/</g, "\\u003C")
+      .replace(/>/g, "\\u003E")
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r");
   }
 
+  // Bee flyover
   function runBeeFlyover(){
-    const prefersReduced =
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-
     const bee=document.createElement("div");
     bee.className="bee-flyover";
     bee.textContent="🐝";
@@ -1607,6 +1692,20 @@
       bee.remove();
     },3200);
   }
+
+  // Assign functions to window for onclick handlers (after all functions are defined)
+  window.createNewList = createNewList;
+  window.useListInQuiz = useListInQuiz;
+  window.viewWordList = viewWordList;
+  window.deleteWordList = deleteWordList;
+  window.toggleFavorite = toggleFavorite;
+  window.openEditModal = openEditModal;
+  window.saveEditModal = saveEditModal;
+  window.closeEditModal = closeEditModal;
+  window.closeBeeModal = closeBeeModal;
+  window.confirmBeeModal = confirmBeeModal;
+  window.closeBeePrompt = closeBeePrompt;
+  window.closeBeeSheet = closeBeeSheet;
 </script>
 
 {% endblock %}
