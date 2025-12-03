@@ -676,16 +676,12 @@ def api_avatars():
     role = 'guest'
     if user is not None:
         try:
-            # CRITICAL: Passwordless students should be treated as guests
-            if is_guest_user(user) or not user.password_hash:
-                role = 'guest'
-            else:
-                role = (user.role or 'student').lower()
+            role = (user.role or 'student').lower()
         except Exception:
             role = 'student'
 
     # Build cache key per user+role (prevents admin cache bleed)
-    if user is None or role == 'guest':
+    if user is None:
         cache_key = 'guest_role_guest'
     else:
         cache_key = f"user_{getattr(user, 'id', 'unknown')}_role_{role}"
@@ -10445,15 +10441,15 @@ def api_user_session():
     """
     try:
         if current_user.is_authenticated:
-            # CRITICAL: Check if user is a passwordless student (should be treated as guest for avatars)
-            user_is_guest = is_guest_user(current_user) or not current_user.password_hash
+            # Check if user is an actual guest (guest_ username or no password AND guest role)
+            user_is_guest = is_guest_user(current_user)
             
             return jsonify({
                 'authenticated': True,
                 'username': current_user.username,
                 'user_id': current_user.id,
                 'role': getattr(current_user, 'role', 'user'),
-                'is_guest': user_is_guest,  # TRUE for passwordless students
+                'is_guest': user_is_guest,  # Only TRUE for actual guest users
                 'is_admin': current_user.is_admin_or_premium() if hasattr(current_user, 'is_admin_or_premium') else False,
                 'honey_points': getattr(current_user, 'honey_points', 0),
                 'premium_member': getattr(current_user, 'premium_member', False),
@@ -13894,8 +13890,9 @@ def api_select_avatar():
             }), 400
         
         # ✅ SECURITY CHECK 1: Guest users cannot select avatars (beyond mascot)
+        # IMPORTANT: Students without passwords are still authenticated users with full access
         is_user_guest = session.get('is_guest', False) or is_guest_user(current_user)
-        if is_user_guest or not current_user.password_hash:
+        if is_user_guest:
             # Guest users can only use the mascot avatar (honey-comb)
             from avatar_catalog import AVATAR_CATALOG
             avatar_tier = next(
