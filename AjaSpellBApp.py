@@ -4356,15 +4356,29 @@ def load_saved_wordlist():
             print(f"❌ /api/saved-lists/load: List has no items. list_id={wl.id}")
             return jsonify({"ok": False, "error": "This list is empty. Please upload words to this list first."}), 400
 
-        # 🔧 EXPLICIT QUIZ STATE CLEARING (matches upload endpoints pattern)
-        # Clear quiz state BEFORE loading new wordbank to prevent reverting to old state
+        # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+        # Treat saved list load EXACTLY like fresh upload - prevent duplicate words from appended lists
+        
+        # Step 1: Clear quiz state BEFORE touching wordbank
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("is_random_play", None)
         session.modified = True
         
-        print(f"✅ /api/saved-lists/load: Cleared quiz state before loading {len(rows)} words")
+        # Step 2: Delete old wordbank completely (database + disk + memory)
+        old_storage_id = session.get("wordbank_storage_id")
+        if old_storage_id:
+            print(f"🗑️ /api/saved-lists/load: Deleting old wordbank storage_id={old_storage_id}")
+            _delete_wordbank_from_disk(old_storage_id)
+            # Clear from memory
+            with WORD_STORAGE_LOCK:
+                WORD_STORAGE.pop(old_storage_id, None)
+            # Remove pointer from session
+            session.pop("wordbank_storage_id", None)
+            session.modified = True
+        
+        print(f"✅ /api/saved-lists/load: Wiped old wordbank, loading {len(rows)} fresh words from saved list")
 
-        # Load into session (complete replacement)
+        # Step 3: Load saved list as brand new wordbank (creates new storage_id)
         set_wordbank(rows, is_user_upload=True)
         
         # CRITICAL DEBUG: Verify wordbank was actually saved
@@ -6717,15 +6731,29 @@ def api_upload():
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
     
-    # Clear previous quiz state to prevent reverting between old/new word lists
-    if session.get(QUIZ_STATE_KEY):
-        session.pop(QUIZ_STATE_KEY, None)
+    # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+    # Prevent duplicate words from appended/mixed lists
+    
+    # Step 1: Clear quiz state
+    session.pop(QUIZ_STATE_KEY, None)
+    session.pop("is_random_play", None)
+    session.modified = True
+    
+    # Step 2: Delete old wordbank completely (database + disk + memory)
+    old_storage_id = session.get("wordbank_storage_id")
+    if old_storage_id:
+        print(f"🗑️ /api/upload: Deleting old wordbank storage_id={old_storage_id}")
+        _delete_wordbank_from_disk(old_storage_id)
+        # Clear from memory
+        with WORD_STORAGE_LOCK:
+            WORD_STORAGE.pop(old_storage_id, None)
+        # Remove pointer from session
+        session.pop("wordbank_storage_id", None)
         session.modified = True
     
-    # Clear Random Play flag since user is now uploading custom words
-    session.pop("is_random_play", None)
+    print(f"✅ /api/upload: Wiped old wordbank, uploading {len(deduped)} fresh words")
     
-    # Set wordbank (USER UPLOAD - marks has_uploaded_once) - COMPLETE REPLACEMENT
+    # Step 3: Set new wordbank (USER UPLOAD - marks has_uploaded_once) - CREATES NEW STORAGE_ID
     set_wordbank(deduped, is_user_upload=True)
     init_quiz_state()
     
@@ -6915,15 +6943,29 @@ def api_upload_manual_words():
         # CRITICAL: Set flag to prevent default word loading
         session["skip_default_load"] = True
         
-        # Clear previous quiz state to prevent reverting between old/new word lists
-        if session.get(QUIZ_STATE_KEY):
-            session.pop(QUIZ_STATE_KEY, None)
+        # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+        # Prevent duplicate words from appended/mixed lists
+        
+        # Step 1: Clear quiz state
+        session.pop(QUIZ_STATE_KEY, None)
+        session.pop("is_random_play", None)
+        session.modified = True
+        
+        # Step 2: Delete old wordbank completely (database + disk + memory)
+        old_storage_id = session.get("wordbank_storage_id")
+        if old_storage_id:
+            print(f"🗑️ /api/upload-manual-words: Deleting old wordbank storage_id={old_storage_id}")
+            _delete_wordbank_from_disk(old_storage_id)
+            # Clear from memory
+            with WORD_STORAGE_LOCK:
+                WORD_STORAGE.pop(old_storage_id, None)
+            # Remove pointer from session
+            session.pop("wordbank_storage_id", None)
             session.modified = True
         
-        # Clear Random Play flag since user is entering manual words
-        session.pop("is_random_play", None)
+        print(f"✅ /api/upload-manual-words: Wiped old wordbank, uploading {len(enriched)} fresh manual words")
         
-        # Store and initialize quiz (USER UPLOAD - manual words) - COMPLETE REPLACEMENT
+        # Step 3: Store and initialize quiz (USER UPLOAD - manual words) - CREATES NEW STORAGE_ID
         set_wordbank(enriched, is_user_upload=True)
         init_quiz_state()
         
