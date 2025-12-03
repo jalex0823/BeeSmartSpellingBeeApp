@@ -1,5 +1,6 @@
 ﻿HOME_PREVIEW_ENABLED = True  # feature flag for new honey home page preview
 # -*- coding: utf-8 -*-
+# Updated: 2025-12-03 - Fixed word_lists.html div structure
 import sys
 import io
 
