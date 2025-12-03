@@ -297,9 +297,26 @@ def _ensure_session_storage_id() -> str:
 #     return len(cleaned)
 
 def clear_wordbank() -> None:
+    """Clear the active wordbank safely and reset quiz state.
+
+    Robust to filesystem issues in ephemeral environments (e.g., Railway):
+    - Ensures a session storage id exists
+    - Attempts atomic save of an empty list
+    - Always resets quiz state even if disk operation fails
+    """
     sid = _ensure_session_storage_id()
-    save_wordbank_atomic(sid, [])
-    init_quiz_state(0)
+    try:
+        # Best-effort: clear persisted wordbank
+        ok = save_wordbank_atomic(sid, [])
+        if not ok:
+            print("⚠️ clear_wordbank: atomic save failed; proceeding to reset quiz state")
+    except Exception as e:
+        print(f"⚠️ clear_wordbank: exception during save: {e}")
+    # Always reset quiz state (cleared list)
+    try:
+        init_quiz_state(0)
+    except Exception as e:
+        print(f"⚠️ clear_wordbank: init_quiz_state failed: {e}")
 
 def init_quiz_state(total_words: int) -> None:
     """Initialize quiz state: shuffled indices and counters."""
@@ -344,11 +361,13 @@ def api_wordbank_set():
 
 @app.route('/api/wordbank/clear', methods=['POST'])
 def api_wordbank_clear():
+    # Always attempt to clear and return success, even if underlying storage write fails.
+    # This avoids blocking UX in ephemeral environments.
     try:
         clear_wordbank()
-        return jsonify({'status': 'success'})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        print(f"⚠️ api_wordbank_clear: non-fatal error: {e}")
+    return jsonify({'status': 'success'})
 
 @app.route('/api/wordbank/import-text', methods=['POST'])
 def api_wordbank_import_text():
