@@ -310,13 +310,22 @@ def init_quiz_state(total_words: int) -> None:
 # ------------------------------
 @app.route('/api/wordbank', methods=['GET'])
 def api_wordbank_get():
+    """
+    Get wordbank from Railway database - returns 'words' key for compatibility
+    """
     try:
-        rows = get_wordbank()
-        return jsonify({
+        words = get_wordbank()
+        response = jsonify({
             'status': 'success',
-            'count': len(rows),
-            'rows': rows[:100],  # safety: return a preview only
+            'count': len(words),
+            'words': words,  # Changed from 'rows' to 'words' for WordBankManager compatibility
+            'rows': words[:100],  # Keep 'rows' for backward compatibility
         })
+        # Add cache-control headers to prevent caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
