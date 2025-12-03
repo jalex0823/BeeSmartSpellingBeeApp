@@ -4181,17 +4181,21 @@ def load_saved_wordlist():
             print(f"❌ /api/saved-lists/load: List has no items. list_id={wl.id}")
             return jsonify({"ok": False, "error": "This list is empty. Please upload words to this list first."}), 400
 
-        # Clear previous quiz state
-        if session.get(QUIZ_STATE_KEY):
-            session.pop(QUIZ_STATE_KEY, None)
-            session.modified = True
-
-        # Clear Random Play flag since user is loading a saved list
+        # 🔧 EXPLICIT QUIZ STATE CLEARING (matches upload endpoints pattern)
+        # Clear quiz state BEFORE loading new wordbank to prevent reverting to old state
+        session.pop(QUIZ_STATE_KEY, None)
         session.pop("is_random_play", None)
+        session.modified = True
+        
+        print(f"✅ /api/saved-lists/load: Cleared quiz state before loading {len(rows)} words")
 
-        # Load into session
+        # Load into session (complete replacement)
         set_wordbank(rows, is_user_upload=True)
+        
+        # Initialize fresh quiz state from new wordbank
         init_quiz_state()
+        
+        print(f"✅ /api/saved-lists/load: Initialized quiz state for {len(rows)} words")
 
         return jsonify({
             "ok": True,
