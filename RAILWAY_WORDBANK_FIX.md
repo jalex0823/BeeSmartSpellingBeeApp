@@ -29,12 +29,22 @@ Upload → Session (storage_id) → WORD_STORAGE (in-memory) → PostgreSQL word
 ### 1. Deploy Code (Already Done)
 The code has been pushed to GitHub and will auto-deploy to Railway.
 
-### 2. Create Database Table
-After Railway finishes deploying, run this command in Railway's terminal or locally against Railway DB:
+### 2. Create Database Table in Railway PostgreSQL
+**IMPORTANT:** Run this in **RAILWAY**, not locally!
+
+1. Go to Railway Dashboard → Your Project → Click on your service
+2. Click "Shell" or "Terminal" tab
+3. Run this command:
 
 ```bash
-python scripts/add_wordbank_storage_table.py
+python railway_add_wordbank_table.py
 ```
+
+**What this does:**
+- Connects to Railway's PostgreSQL database (uses DATABASE_URL automatically)
+- Creates the `wordbank_storage` table
+- Shows you the schema and confirms creation
+- Verifies the table exists
 
 This creates the `wordbank_storage` table with these columns:
 - `id` (primary key)
