@@ -13288,7 +13288,6 @@ def api_select_avatar():
     ✅ SECURITY: Validates avatar unlock status before allowing selection.
     - Admins bypass all unlock checks
     - Regular users must have earned/purchased the avatar
-    - Guest users cannot select avatars
     - Respects parental locks on account
     """
     try:
@@ -13320,30 +13319,8 @@ def api_select_avatar():
                 'error': 'avatar_slug is required'
             }), 400
         
-        # ✅ SECURITY CHECK 1: Guest users cannot select avatars (beyond mascot)
-        # IMPORTANT: Students without passwords are still authenticated users with full access
-        # Fix: If an authenticated non-guest user is present, clear any stale session guest flag
-        if current_user.is_authenticated and not is_guest_user(current_user):
-            try:
-                if session.get('is_guest', False):
-                    print("⚙️ Clearing stale session is_guest flag for authenticated user")
-                session['is_guest'] = False
-            except Exception as _sess_e:
-                print(f"⚠️ Could not update session is_guest flag: {_sess_e}")
-        is_user_guest = is_guest_user(current_user) or bool(session.get('is_guest', False))
-        if is_user_guest:
-            # Guest users can only use the mascot avatar (honey-comb)
-            from avatar_catalog import AVATAR_CATALOG
-            avatar_tier = next(
-                (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_slug),
-                'premium'
-            )
-            if avatar_tier != 'mascot_free':
-                return jsonify({
-                    'success': False,
-                    'error': 'Guest users can only use the Honey Comb mascot avatar. Please register to customize your bee!',
-                    'reason': 'guest_restricted'
-                }), 403
+        # 🚫 Guest logic removed: guests do not have access to avatar picker UI.
+        # Any access to this endpoint assumes authenticated non-guest users.
         
         # ✅ SECURITY CHECK 2: Parental lock
         if getattr(current_user, 'avatar_locked', False):
@@ -13433,10 +13410,9 @@ def api_select_avatar():
                 
                 # Check if avatar is unlocked
                 unlock_result = check_avatar_unlocked(
-                    avatar_slug, 
-                    user_honey_points, 
-                    purchased_avatars,
-                    is_guest=is_user_guest
+                    avatar_slug,
+                    user_honey_points,
+                    purchased_avatars
                 )
                 
                 if not unlock_result.get('unlocked', False):
