@@ -1188,8 +1188,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 1.6rem;
-            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
             border: 3px solid var(--tile-border);
             border-radius: 24px;
             background: var(--tile-bg);
@@ -1201,13 +1201,6 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
-            z-index: 200 !important;  /* Ensure tiles are above decorative elements */
-            pointer-events: auto !important;
-            /* 🍎 iOS optimization: Fast tap response and prevent tap highlight */
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         /* Locked (guest) state for tiles */
