@@ -101,6 +101,8 @@
             else { window.addEventListener('load', jumpTop, { once: true }); }
         })();
     </script>
+    <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
+    <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203"></script>
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
