@@ -244,55 +244,57 @@ def _ensure_session_storage_id() -> str:
         session.modified = True
     return sid
 
-def get_wordbank() -> list:
-    """Return the active wordbank rows from disk for this session."""
-    sid = _ensure_session_storage_id()
-    rows = load_wordbank_safe(sid)
-    return rows
+# DEPRECATED: OLD disk-based get_wordbank (replaced by WORD_STORAGE version at line ~2899)
+# def get_wordbank() -> list:
+#     """Return the active wordbank rows from disk for this session."""
+#     sid = _ensure_session_storage_id()
+#     rows = load_wordbank_safe(sid)
+#     return rows
 
-def set_wordbank(rows: list, clear_first: bool = True) -> int:
-    """Replace the active wordbank with the provided rows.
-
-    Normalizes and de-duplicates entries. Optionally clears prior data first.
-    Returns the number of rows stored.
-    """
-    sid = _ensure_session_storage_id()
-
-    # Clear by overwriting with empty list if requested
-    if clear_first:
-        save_wordbank_atomic(sid, [])
-
-    # Normalize to shape {word,sentence,hint}
-    cleaned = []
-    seen = set()
-    for r in rows or []:
-        if isinstance(r, dict):
-            w = str(r.get('word', '')).strip()
-            if not w:
-                continue
-            key = _normalize_word(w)
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            cleaned.append({
-                'word': w,
-                'sentence': str(r.get('sentence', '')).strip(),
-                'hint': str(r.get('hint', '')).strip()
-            })
-        else:
-            w = str(r).strip()
-            if not w:
-                continue
-            key = _normalize_word(w)
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            cleaned.append({'word': w, 'sentence': '', 'hint': ''})
-
-    save_wordbank_atomic(sid, cleaned)
-    # Reset quiz state whenever wordbank changes
-    init_quiz_state(len(cleaned))
-    return len(cleaned)
+# DEPRECATED: OLD disk-based set_wordbank (replaced by WORD_STORAGE version at line ~2956)
+# def set_wordbank(rows: list, clear_first: bool = True) -> int:
+#     """Replace the active wordbank with the provided rows.
+#
+#     Normalizes and de-duplicates entries. Optionally clears prior data first.
+#     Returns the number of rows stored.
+#     """
+#     sid = _ensure_session_storage_id()
+#
+#     # Clear by overwriting with empty list if requested
+#     if clear_first:
+#         save_wordbank_atomic(sid, [])
+#
+#     # Normalize to shape {word,sentence,hint}
+#     cleaned = []
+#     seen = set()
+#     for r in rows or []:
+#         if isinstance(r, dict):
+#             w = str(r.get('word', '')).strip()
+#             if not w:
+#                 continue
+#             key = _normalize_word(w)
+#             if not key or key in seen:
+#                 continue
+#             seen.add(key)
+#             cleaned.append({
+#                 'word': w,
+#                 'sentence': str(r.get('sentence', '')).strip(),
+#                 'hint': str(r.get('hint', '')).strip()
+#             })
+#         else:
+#             w = str(r).strip()
+#             if not w:
+#                 continue
+#             key = _normalize_word(w)
+#             if not key or key in seen:
+#                 continue
+#             seen.add(key)
+#             cleaned.append({'word': w, 'sentence': '', 'hint': ''})
+#
+#     save_wordbank_atomic(sid, cleaned)
+#     # Reset quiz state whenever wordbank changes
+#     init_quiz_state(len(cleaned))
+#     return len(cleaned)
 
 def clear_wordbank() -> None:
     sid = _ensure_session_storage_id()
@@ -332,9 +334,11 @@ def api_wordbank_set():
     try:
         data = request.get_json(silent=True) or {}
         rows = data.get('rows') or []
-        clear_first = bool(data.get('clear_first', True))
-        stored = set_wordbank(rows, clear_first=clear_first)
-        return jsonify({'status': 'success', 'stored': stored})
+        # NOTE: OLD implementation used clear_first, NEW uses is_user_upload
+        # Treating POST to /api/wordbank as user upload (manual API call)
+        stored_count = len(rows)
+        set_wordbank(rows, is_user_upload=True)
+        return jsonify({'status': 'success', 'stored': stored_count})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
