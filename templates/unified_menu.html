@@ -2924,6 +2924,14 @@
                     <div class="avatar-slide">
                         <!-- 3D Avatar Display -->
                         <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 480px; height: 360px; margin: 0 auto; cursor: pointer;"></div>
+                        <!-- Avatar Controls: Zoom/Rotate/Reset -->
+                        <div id="avatarControls" style="display:flex; gap:8px; justify-content:center; align-items:center; margin:10px 0;">
+                            <button type="button" id="avatarZoomIn" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">🔍 Zoom In</button>
+                            <button type="button" id="avatarZoomOut" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">🔎 Zoom Out</button>
+                            <button type="button" id="avatarRotateLeft" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">↶ Rotate Left</button>
+                            <button type="button" id="avatarRotateRight" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">↷ Rotate Right</button>
+                            <button type="button" id="avatarReset" class="action-btn info" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">⟲ Reset</button>
+                        </div>
                         <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
@@ -9991,6 +9999,69 @@
             kidSounds.playHappyDing();
             startQuiz();
         });
+
+        // 🧭 Avatar Controls (Zoom/Rotate/Reset) for main page mascot
+        (function(){
+            const container = document.getElementById('mascotBee3D');
+            if (!container) return;
+            const btnZoomIn = document.getElementById('avatarZoomIn');
+            const btnZoomOut = document.getElementById('avatarZoomOut');
+            const btnRotateLeft = document.getElementById('avatarRotateLeft');
+            const btnRotateRight = document.getElementById('avatarRotateRight');
+            const btnReset = document.getElementById('avatarReset');
+
+            // Maintain lightweight UI state
+            let scale = 1.0;
+            let rotation = 0; // deg
+
+            function applyTransform(){
+                // Combine rotation with existing translate if any
+                container.style.transform = `translateY(0px) scale(${scale}) rotateY(${rotation}deg)`;
+            }
+
+            function zoom(delta){
+                scale = Math.max(0.6, Math.min(1.8, scale + delta));
+                applyTransform();
+            }
+
+            function rotate(deltaDeg){
+                rotation = (rotation + deltaDeg) % 360;
+                applyTransform();
+            }
+
+            // Prefer SmartyBee3D controller if available
+            const sb3d = (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function')
+                ? window.SmartyBee3D.getController('mascotBee3D')
+                : null;
+
+            function animatePress(btn){
+                if (!btn) return;
+                btn.classList.add('press-pop');
+                setTimeout(()=>btn.classList.remove('press-pop'), 180);
+            }
+
+            btnZoomIn && btnZoomIn.addEventListener('click', function(){
+                animatePress(btnZoomIn);
+                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(0.1); } else { zoom(0.1); }
+            });
+            btnZoomOut && btnZoomOut.addEventListener('click', function(){
+                animatePress(btnZoomOut);
+                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(-0.1); } else { zoom(-0.1); }
+            });
+            btnRotateLeft && btnRotateLeft.addEventListener('click', function(){
+                animatePress(btnRotateLeft);
+                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(-10); } else { rotate(-10); }
+            });
+            btnRotateRight && btnRotateRight.addEventListener('click', function(){
+                animatePress(btnRotateRight);
+                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(10); } else { rotate(10); }
+            });
+            btnReset && btnReset.addEventListener('click', function(){
+                animatePress(btnReset);
+                if (sb3d && typeof sb3d.resetView === 'function') { sb3d.resetView(); }
+                scale = 1.0; rotation = 0; applyTransform();
+            });
+        })();
         
         // Background Music System
         let musicAudioContext = null;
