@@ -1175,6 +1175,7 @@
         .menu-container {
             padding: 0 2rem 2rem 2rem;
             background: transparent;
+            margin-top: 1.5rem;
         }
         
         /* Individual menu options */
@@ -1201,6 +1202,10 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
+            max-width: 707px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         /* Locked (guest) state for tiles */
@@ -3175,7 +3180,7 @@
                 </div>
                 
                 <!-- Interactive Caption -->
-                <div id="mascotCaption" class="avatar-caption">
+                <div id="mascotCaption" class="avatar-caption" style="margin-bottom: 16px;">
                     ✨ Click on me to see what I do! ✨
                 </div>
                 
@@ -3187,7 +3192,7 @@
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
                     display: none;
-                    margin: 12px auto 16px;
+                    margin: 18px auto 20px;
                     padding: 4px 8px;
                     background: rgba(0, 0, 0, 0.1);
                     border-radius: 12px;
@@ -3203,7 +3208,7 @@
                 <!-- Battles Status Badge (registered users only; shown when checked) -->
                 <div id="battleStatusBadge" style="
                     display: none;
-                    margin: 4px auto 8px;
+                    margin: 12px auto 18px;
                     padding: 4px 10px;
                     background: rgba(0, 0, 0, 0.06);
                     border-radius: 999px;
@@ -3218,7 +3223,7 @@
                 <!-- Avatar Refresh Button (hidden by default, shows if avatar fails) -->
                 <button id="avatarRefreshBtn" style="
                     display: none;
-                    margin: 20px auto 2rem;
+                    margin: 24px auto 2.5rem;
                     padding: 8px 16px;
                     background: linear-gradient(135deg, #FFD700, #FFA500);
                     border: none;
@@ -3269,17 +3274,17 @@
                 
                 
                 <!-- Website URL Badge -->
-                <div style="margin-top: 12px; font-size: 16px; font-weight: 600; color: #FF6B00; font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;">
+                <div style="margin-top: 24px; font-size: 16px; font-weight: 600; color: #FF6B00; font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;">
                     🌐 <a href="https://beesmartspelling.app" target="_blank" rel="noopener noreferrer" style="color: #FF6B00; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#FFB347'" onmouseout="this.style.color='#FF6B00'">beesmartspelling.app</a>
                 </div>
                 
                 <!-- Version badge below website -->
-                <div id="versionBadge" style="margin-top: 8px; font-size: 11px; color: rgba(0,0,0,0.4); font-family: monospace; letter-spacing: 0.5px;">
+                <div id="versionBadge" style="margin-top: 10px; font-size: 11px; color: rgba(0,0,0,0.4); font-family: monospace; letter-spacing: 0.5px;">
                     v1.6
                 </div>
                 
                 <!-- Sound Toggle Button -->
-                <div style="margin-top: 8px;">
+                <div style="margin-top: 14px;">
                     <button id="soundToggleBtn" onclick="kidSounds.toggleSound()" onmouseover="kidSounds.playPop()" style="
                         background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
                         color: white;
@@ -3297,7 +3302,7 @@
                 </div>
                 
                 <!-- Kid-Safe Content Badge -->
-                <div class="kid-safe-badge">
+                <div class="kid-safe-badge" style="margin-top: 14px;">
                     <span>Kid-Safe Content</span>
                 </div>
             </section>
@@ -3333,7 +3338,7 @@
             </section>
 
             <!-- Authentication Section -->
-            <section class="menu-container" style="padding-top: 0; margin-top: 0;">
+            <section class="menu-container" style="padding-top: 0; margin-top: 2rem;">
                 <div style="text-align: center;">
                     {% if current_user.is_authenticated %}
                         <!-- Logged In View -->
@@ -3343,7 +3348,8 @@
                             border-radius: 25px;
                             padding: 2rem 1.5rem;
                             box-shadow: 0 10px 30px rgba(210, 105, 30, 0.2);
-                            max-width: 800px;
+                            max-width: 707px;
+                            width: 100%;
                             margin: 0 auto;
                         ">
                             <!-- Welcome Message -->
@@ -3593,6 +3599,9 @@
                             border-radius: 20px;
                             padding: 1.5rem;
                             box-shadow: 0 8px 25px rgba(210, 105, 30, 0.1);
+                            max-width: 707px;
+                            width: 100%;
+                            margin: 0 auto;
                         ">
                             <div style="font-size: 1.2rem; font-weight: 700; color: #5A2C15; margin-bottom: 1rem;">
                                 🌟 Save Your Progress!
