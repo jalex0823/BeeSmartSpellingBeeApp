@@ -882,6 +882,248 @@
             transform: scale(1.1);
         }
 
+        /* === AVATAR PERSONIFICATION SYSTEM ===================================== */
+        
+        .avatar-viewer-wrapper {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        
+        #mascotBee3D {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto;
+            cursor: pointer;
+            touch-action: manipulation;
+            transform-origin: center center;
+        }
+        
+        .avatar-caption {
+            margin-top: 0.25rem;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            color: #FF6B00;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .avatar-caption:hover {
+            color: #FFB347;
+            transform: scale(1.05);
+        }
+        
+        /* Avatar Controls */
+        .avatar-controls {
+            display: inline-flex;
+            gap: 0.4rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .avatar-controls button {
+            border: none;
+            border-radius: 999px;
+            padding: 0.35rem 0.55rem;
+            min-width: 38px;
+            font-size: 0.9rem;
+            line-height: 1;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+        }
+        
+        .avatar-controls button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            background: #fff7d1;
+        }
+        
+        .avatar-controls button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* FX Host Pseudo-Layers */
+        #avatarFxHost {
+            position: relative;
+        }
+        
+        #avatarFxHost::before,
+        #avatarFxHost::after {
+            content: "";
+            position: absolute;
+            inset: -20px;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        /* Generic burst animation */
+        @keyframes avatarPulse {
+            0%   { transform: scale(0.95); opacity: 0.2; }
+            40%  { transform: scale(1.08); opacity: 0.8; }
+            100% { transform: scale(1.0);  opacity: 0;   }
+        }
+        
+        .avatar-burst-generic::before {
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* === PERSONA-SPECIFIC BACKGROUNDS ===================================== */
+        
+        /* Brother Bee – warm buddy aura */
+        .avatar-bg-brother::before {
+            background: radial-gradient(circle, rgba(255, 200, 120, 0.9) 0, rgba(255, 170, 60, 0.5) 50%, transparent 75%);
+            opacity: 0.9;
+        }
+        
+        /* Builder Bee – dusty dashed ring */
+        @keyframes builderDust {
+            0%   { box-shadow: 0 0 0 0 rgba(150, 100, 50, 0.25); }
+            100% { box-shadow: 0 0 18px 10px rgba(150, 100, 50, 0); }
+        }
+        .avatar-bg-builder::before {
+            border: 2px dashed rgba(150, 90, 40, 0.6);
+            opacity: 0.8;
+            animation: builderDust 2s infinite;
+        }
+        
+        /* Cool Bee – chill blue glow */
+        .avatar-bg-cool::before {
+            background: radial-gradient(circle, rgba(120, 210, 255, 0.9) 0, rgba(80, 170, 255, 0.4) 50%, transparent 75%);
+            opacity: 1;
+        }
+        .avatar-burst-cool::after {
+            border: 1px solid rgba(180, 230, 255, 0.8);
+            box-shadow: 0 0 18px rgba(180, 230, 255, 0.9);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* Fairy Bee – sparkly pastel aura */
+        @keyframes fairySparkle {
+            0%   { opacity: 0.3; box-shadow: 0 0 10px rgba(255, 220, 255, 0.6), 0 0 25px rgba(200, 240, 255, 0.5); }
+            50%  { opacity: 0.8; box-shadow: 0 0 18px rgba(255, 240, 255, 0.8), 0 0 40px rgba(200, 255, 230, 0.8); }
+            100% { opacity: 0.3; box-shadow: 0 0 10px rgba(255, 220, 255, 0.6), 0 0 25px rgba(200, 240, 255, 0.5); }
+        }
+        .avatar-bg-fairy::before {
+            background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), transparent 60%), radial-gradient(circle at 80% 80%, rgba(255, 200, 255, 0.65), transparent 70%);
+            opacity: 1;
+            animation: fairySparkle 2.3s infinite alternate;
+        }
+        .avatar-burst-fairy::after {
+            border: 2px solid rgba(255, 245, 255, 0.9);
+            box-shadow: 0 0 25px rgba(255, 240, 255, 0.9);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* Gamer Bee – neon grid + glow */
+        @keyframes gamerGlow {
+            0%   { box-shadow: 0 0 8px rgba(120, 255, 255, 0.5), 0 0 18px rgba(0, 255, 170, 0.5); }
+            50%  { box-shadow: 0 0 14px rgba(120, 255, 255, 0.9), 0 0 30px rgba(0, 255, 170, 0.8); }
+            100% { box-shadow: 0 0 8px rgba(120, 255, 255, 0.5), 0 0 18px rgba(0, 255, 170, 0.5); }
+        }
+        .avatar-bg-gamer::before {
+            background: conic-gradient(from 0deg, rgba(0, 255, 170, 0.9), rgba(0, 200, 255, 0.8), rgba(170, 0, 255, 0.7), rgba(0, 255, 170, 0.9));
+            opacity: 0.8;
+            animation: gamerGlow 1.8s infinite alternate;
+        }
+        .avatar-bg-gamer::after {
+            background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.0) 0, rgba(0, 0, 0, 0.0) 6px, rgba(0, 255, 170, 0.2) 7px), repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.0) 0, rgba(0, 0, 0, 0.0) 6px, rgba(0, 255, 170, 0.18) 7px);
+            mix-blend-mode: screen;
+            opacity: 0.6;
+        }
+        .avatar-burst-gamer::before {
+            border: 2px solid rgba(0, 255, 170, 0.8);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* Queen Bee – royal gold halo */
+        @keyframes queenHalo {
+            0%   { opacity: 0.4; transform: scale(0.98); }
+            50%  { opacity: 0.9; transform: scale(1.05); }
+            100% { opacity: 0.4; transform: scale(0.98); }
+        }
+        .avatar-bg-queen::before {
+            background: radial-gradient(circle, rgba(255, 215, 120, 0.9) 0, rgba(255, 215, 0, 0.4) 40%, transparent 70%);
+            opacity: 1;
+            animation: queenHalo 2s infinite ease-in-out;
+        }
+        .avatar-bg-queen::after {
+            border: 2px solid rgba(155, 100, 0, 0.5);
+            box-shadow: 0 0 20px rgba(255, 210, 120, 0.7);
+            opacity: 0.8;
+        }
+        .avatar-burst-queen::before {
+            border: 2px solid rgba(255, 240, 190, 0.95);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* Ware Bee – data grid + scan */
+        @keyframes wareScan {
+            0%   { background-position: 0 0, 0 0; }
+            100% { background-position: 40px 40px, -40px -40px; }
+        }
+        .avatar-bg-ware::before {
+            background-image: linear-gradient(90deg, rgba(0, 255, 255, 0.18) 1px, transparent 1px), linear-gradient(0deg, rgba(0, 255, 255, 0.18) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.45;
+            animation: wareScan 3.5s linear infinite;
+        }
+        .avatar-bg-ware::after {
+            border: 1px solid rgba(0, 255, 200, 0.5);
+            box-shadow: 0 0 25px rgba(0, 255, 200, 0.7);
+            opacity: 0.8;
+        }
+        .avatar-burst-ware::before {
+            border: 2px solid rgba(0, 255, 255, 0.9);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        /* Zom Bee – spooky fog */
+        @keyframes zomFog {
+            0%   { transform: translateX(-6px); opacity: 0.35; }
+            50%  { transform: translateX(6px);  opacity: 0.7; }
+            100% { transform: translateX(-6px); opacity: 0.35; }
+        }
+        .avatar-bg-zombee::before {
+            background: radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.4), transparent 60%), radial-gradient(circle at 70% 70%, rgba(40, 255, 0, 0.2), transparent 70%);
+            opacity: 1;
+            animation: zomFog 4s ease-in-out infinite;
+        }
+        .avatar-burst-zombee::after {
+            border: 2px solid rgba(150, 255, 150, 0.7);
+            box-shadow: 0 0 18px rgba(150, 255, 150, 0.7);
+            opacity: 1;
+            animation: avatarPulse 0.7s ease-out;
+        }
+        
+        @media (max-width: 480px) {
+            .avatar-viewer-wrapper {
+                transform: scale(0.9);
+            }
+        }
+
         /* Guest avatar carousel: spacing + smooth transitions */
         .guest-avatar-carousel {
             display: flex;
@@ -2926,30 +3168,30 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Registered User Avatar Display (compact, clean like student dashboard) -->
-                <div class="guest-avatar-carousel">
-                    <div class="avatar-slide">
-                        <!-- 3D Avatar Display - Compact 140x140 -->
-                        <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 140px; height: 140px; margin: 0 auto; cursor: pointer;"></div>
-                        <!-- Registered Avatar Name (matches guest carousel styling) -->
-                        <div class="avatar-name" id="registeredAvatarName"></div>
+                <!-- Registered User Avatar Display with Personification System -->
+                <div id="avatarFxHost" class="avatar-viewer-wrapper">
+                    <div id="mascotBee3D" class="avatar-fx-container"></div>
+                    <div class="avatar-name" id="registeredAvatarName"></div>
+                    
+                    <!-- Compact avatar controls -->
+                    <div class="avatar-controls">
+                        <button type="button" data-avatar-control="zoom-in" title="Zoom In">＋</button>
+                        <button type="button" data-avatar-control="zoom-out" title="Zoom Out">－</button>
+                        <button type="button" data-avatar-control="rot-left" title="Rotate Left">⟲</button>
+                        <button type="button" data-avatar-control="rot-right" title="Rotate Right">⟳</button>
+                        <button type="button" data-avatar-control="reset" title="Reset View">⟲⟳</button>
                     </div>
                 </div>
                 
-                <!-- Interactive Caption under mascot (matches guest carousel aesthetic) -->
-                <div id="mascotCaption" style="
-                    font-size: 14px;
-                    color: #FF6B00;
-                    font-weight: 600;
-                    margin-top: 12px;
-                    margin-bottom: 12px;
-                    text-align: center;
-                    animation: gentlePulse 2s ease-in-out infinite;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                " onclick="handleMascotCaptionClick(event)">
+                <!-- Interactive Caption -->
+                <div id="mascotCaption" class="avatar-caption">
                     ✨ Click on me to see what I do! ✨
                 </div>
+                
+                <!-- Server-side avatar initialization -->
+                <script>
+                    window.setCurrentAvatar("{{ current_user.avatar_id|default('mascot-bee') }}");
+                </script>
 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
@@ -16032,6 +16274,235 @@
             setTimeout(createFairyDustEffect, 800);
         }
 
+    </script>
+
+    <script>
+    // =============================================================
+    // AVATAR PERSONIFICATION SYSTEM – ALL 40 AVATARS
+    // =============================================================
+
+    const AVATAR_PERSONAS = {
+        // FREE (5)
+        brotherBee: { id: 'brother-bee', displayName: 'Brother Bee', tier: 'FREE', pointsRequired: 0, priceUsd: 0, vibe: 'Friendly, cool, and loyal.', signatureMoveKey: 'brother_bump', defaultAnimation: 'broWave', bgFxClass: 'avatar-bg-brother', clickBurstClass: 'avatar-burst-generic' },
+        builderBee: { id: 'builder-bee', displayName: 'Builder Bee', tier: 'FREE', pointsRequired: 0, priceUsd: 0, vibe: 'Hammer in hand, construction expert.', signatureMoveKey: 'builder_hammer', defaultAnimation: 'hammerSwing', bgFxClass: 'avatar-bg-builder', clickBurstClass: 'avatar-burst-generic' },
+        coolBee: { id: 'cool-bee', displayName: 'Cool Bee', tier: 'FREE', pointsRequired: 0, priceUsd: 0, vibe: 'Shades on, chill mode.', signatureMoveKey: 'cool_headbob', defaultAnimation: 'coolIdle', bgFxClass: 'avatar-bg-cool', clickBurstClass: 'avatar-burst-cool' },
+        detectiveBee: { id: 'detective-bee', displayName: 'Detective Bee', tier: 'FREE', pointsRequired: 0, priceUsd: 0, vibe: 'Always on the case.', signatureMoveKey: 'detective_scan', defaultAnimation: 'scanLoop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        explorerBee: { id: 'explorer-bee', displayName: 'Explorer Bee', tier: 'FREE', pointsRequired: 0, priceUsd: 0, vibe: 'Adventurous and curious.', signatureMoveKey: 'explorer_map', defaultAnimation: 'mapCheck', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        
+        // MASCOT (1)
+        mascotBee: { id: 'mascot-bee', displayName: 'BeeSmart Mascot', tier: 'MASCOT', pointsRequired: 0, priceUsd: 0, vibe: 'Official BeeSmart cheerleader.', signatureMoveKey: 'mascot_cheer', defaultAnimation: 'cheer', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        
+        // EARN OR BUY (7)
+        buzzBee: { id: 'buzz-bee', displayName: 'Buzz Bee', tier: 'EARN_OR_BUY', pointsRequired: 3000, priceUsd: 0.99, vibe: 'Energetic and always buzzing.', signatureMoveKey: 'buzz_spin', defaultAnimation: 'spinBurst', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        cutieBee: { id: 'cutie-bee', displayName: 'Cutie Bee', tier: 'EARN_OR_BUY', pointsRequired: 4000, priceUsd: 0.99, vibe: 'Adorable and playful.', signatureMoveKey: 'cutie_heart', defaultAnimation: 'heartPop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        knightBee: { id: 'knight-bee', displayName: 'Knight Bee', tier: 'EARN_OR_BUY', pointsRequired: 4000, priceUsd: 0.99, vibe: 'Brave defender of the hive.', signatureMoveKey: 'knight_guard', defaultAnimation: 'shieldRaise', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        professorBee: { id: 'professor-bee', displayName: 'Professor Bee', tier: 'EARN_OR_BUY', pointsRequired: 9000, priceUsd: 0.99, vibe: 'Wise and loves big words.', signatureMoveKey: 'professor_point', defaultAnimation: 'chalkboard', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        rockerBee: { id: 'rocker-bee', displayName: 'Rocker Bee', tier: 'EARN_OR_BUY', pointsRequired: 8000, priceUsd: 0.99, vibe: 'Rockstar with a guitar.', signatureMoveKey: 'rocker_riff', defaultAnimation: 'guitarSolo', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        selfieBee: { id: 'selfie-bee', displayName: 'Selfie Bee', tier: 'EARN_OR_BUY', pointsRequired: 5000, priceUsd: 0.99, vibe: 'Always camera-ready.', signatureMoveKey: 'selfie_snap', defaultAnimation: 'selfiePose', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        vampBee: { id: 'vamp-bee', displayName: 'Vamp Bee', tier: 'EARN_OR_BUY', pointsRequired: 10000, priceUsd: 0.99, vibe: 'Spooky but stylish.', signatureMoveKey: 'vamp_cape', defaultAnimation: 'capeSwirl', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        
+        // PREMIUM (27)
+        alBee: { id: 'al-bee', displayName: 'Al Bee', tier: 'PREMIUM', pointsRequired: 20000, priceUsd: 0.99, vibe: 'Boss of the books and budgets.', signatureMoveKey: 'al_confident', defaultAnimation: 'armsFold', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        budaBee: { id: 'buda-bee', displayName: 'Buda Bee', tier: 'PREMIUM', pointsRequired: 15000, priceUsd: 0.99, vibe: 'Calm and centered.', signatureMoveKey: 'buda_float', defaultAnimation: 'lotusPose', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        divaBee: { id: 'diva-bee', displayName: 'Diva Bee', tier: 'PREMIUM', pointsRequired: 12000, priceUsd: 0.99, vibe: 'Center stage with sparkle.', signatureMoveKey: 'diva_hairflip', defaultAnimation: 'stageBow', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        docBee: { id: 'doc-bee', displayName: 'Doc Bee', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Always on call to help.', signatureMoveKey: 'doc_stethoscope', defaultAnimation: 'checkup', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        fairyBee: { id: 'fairy-bee', displayName: 'Fairy Bee', tier: 'PREMIUM', pointsRequired: 25000, priceUsd: 1.99, vibe: 'Sparkly wings and magic dust.', signatureMoveKey: 'fairy_twirl', defaultAnimation: 'sparkleSpin', bgFxClass: 'avatar-bg-fairy', clickBurstClass: 'avatar-burst-fairy' },
+        frankenBee: { id: 'franken-bee', displayName: 'Franken Bee', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Stitched together and fun.', signatureMoveKey: 'franken_stomp', defaultAnimation: 'monsterWalk', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        gamerBee: { id: 'gamer-bee', displayName: 'Gamer Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Headset on, ready to play.', signatureMoveKey: 'gamer_combo', defaultAnimation: 'controllerMash', bgFxClass: 'avatar-bg-gamer', clickBurstClass: 'avatar-burst-gamer' },
+        honeyComb: { id: 'honey-comb', displayName: 'Honey Comb', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Sweet and golden.', signatureMoveKey: 'honey_drip', defaultAnimation: 'gooeyWave', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        inventorBee: { id: 'inventor-bee', displayName: 'Inventor Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Goggles on, always tinkering.', signatureMoveKey: 'inventor_idea', defaultAnimation: 'lightbulb', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        jRockBee: { id: 'j-rock-bee', displayName: 'J Rock Bee', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Hip-hop swagger and rhythm.', signatureMoveKey: 'jrock_poplock', defaultAnimation: 'danceLoop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        lumberjackBee: { id: 'lumberjack-bee', displayName: 'Lumberjack Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Strong and steady.', signatureMoveKey: 'lumberjack_chop', defaultAnimation: 'axeChop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        motorBee: { id: 'motor-bee', displayName: 'Motor Bee', tier: 'PREMIUM', pointsRequired: 20000, priceUsd: 0.99, vibe: 'Fast and noisy.', signatureMoveKey: 'motor_rev', defaultAnimation: 'engineRev', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        nurseBee: { id: 'nurse-bee', displayName: 'Nurse Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Kind and caring.', signatureMoveKey: 'nurse_shot', defaultAnimation: 'syringeReady', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        oBee: { id: 'o-bee', displayName: 'O Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 0.99, vibe: 'Mysterious and slick.', signatureMoveKey: 'obee_spin', defaultAnimation: 'cloakSpin', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        plumberBee: { id: 'plumber-bee', displayName: 'Plumber Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Fixes any leak.', signatureMoveKey: 'plumber_wrench', defaultAnimation: 'pipeFix', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        queenBee: { id: 'queen-bee', displayName: 'Queen Bee', tier: 'PREMIUM', pointsRequired: 28000, priceUsd: 0.99, vibe: 'Royal and commanding.', signatureMoveKey: 'queen_wave', defaultAnimation: 'royalWave', bgFxClass: 'avatar-bg-queen', clickBurstClass: 'avatar-burst-queen' },
+        roboBee: { id: 'robo-bee', displayName: 'Robo Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 0.99, vibe: 'Mechanical and precise.', signatureMoveKey: 'robo_scan', defaultAnimation: 'robotLoop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        seaBee: { id: 'sea-bee', displayName: 'Sea Bee', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Ocean-loving wave rider.', signatureMoveKey: 'sea_wave', defaultAnimation: 'surfPose', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        singerBee: { id: 'singer-bee', displayName: 'Singer Bee', tier: 'PREMIUM', pointsRequired: 22000, priceUsd: 0.99, vibe: 'Loves the spotlight.', signatureMoveKey: 'singer_belt', defaultAnimation: 'singLoop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        spaceBee: { id: 'space-bee', displayName: 'Space Bee', tier: 'PREMIUM', pointsRequired: 18000, priceUsd: 0.99, vibe: 'Rocket pack and stars.', signatureMoveKey: 'space_launch', defaultAnimation: 'liftOff', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        superBee: { id: 'super-bee', displayName: 'Super Bee', tier: 'PREMIUM', pointsRequired: 26000, priceUsd: 0.99, vibe: 'Cape and heroic stance.', signatureMoveKey: 'super_hero', defaultAnimation: 'heroLanding', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        technoBee: { id: 'techno-bee', displayName: 'Techno Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Neon lights and beats.', signatureMoveKey: 'techno_glitch', defaultAnimation: 'beatDrop', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        umpireBee: { id: 'umpire-bee', displayName: 'Umpire Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Calls it like it is.', signatureMoveKey: 'umpire_safe', defaultAnimation: 'safeOut', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        wareBee: { id: 'ware-bee', displayName: 'Ware Bee', tier: 'PREMIUM', pointsRequired: 27000, priceUsd: 0.99, vibe: 'Cyber security guardian.', signatureMoveKey: 'ware_shield', defaultAnimation: 'dataShield', bgFxClass: 'avatar-bg-ware', clickBurstClass: 'avatar-burst-ware' },
+        xrayBee: { id: 'xray-bee', displayName: 'Xray Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Sees through everything.', signatureMoveKey: 'xray_peek', defaultAnimation: 'xrayScan', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        yetiBee: { id: 'yeti-bee', displayName: 'Yeti Bee', tier: 'PREMIUM', pointsRequired: 30000, priceUsd: 1.99, vibe: 'Snowy and strong.', signatureMoveKey: 'yeti_roar', defaultAnimation: 'snowRoar', bgFxClass: null, clickBurstClass: 'avatar-burst-generic' },
+        zomBee: { id: 'zom-bee', displayName: 'Zom Bee', tier: 'PREMIUM', pointsRequired: 25000, priceUsd: 0.99, vibe: 'Shuffly and spooky but fun.', signatureMoveKey: 'zom_lurch', defaultAnimation: 'zombieWalk', bgFxClass: 'avatar-bg-zombee', clickBurstClass: 'avatar-burst-zombee' }
+    };
+
+    const AVATAR_ID_TO_KEY = {};
+    Object.keys(AVATAR_PERSONAS).forEach((key) => {
+        const cfg = AVATAR_PERSONAS[key];
+        AVATAR_ID_TO_KEY[cfg.id] = key;
+    });
+
+    let CURRENT_AVATAR_KEY = 'mascotBee';
+
+    // =============================================================
+    // CONTROLLER HELPERS
+    // =============================================================
+
+    function getAvatarController() {
+        try {
+            return window.SmartyBee3D && window.SmartyBee3D.getController('mascotBee3D');
+        } catch (e) {
+            console.warn('Avatar controller not available:', e);
+            return null;
+        }
+    }
+
+    function safeAvatarRotate(deltaDegrees) {
+        const controller = getAvatarController();
+        if (!controller) return;
+        if (typeof controller.rotate === 'function') {
+            controller.rotate(0, deltaDegrees * (Math.PI / 180));
+        } else if (typeof controller.orbit === 'function') {
+            controller.orbit(deltaDegrees * (Math.PI / 180), 0);
+        }
+    }
+
+    function safeAvatarZoom(deltaAmount) {
+        const controller = getAvatarController();
+        if (!controller) return;
+        if (typeof controller.zoom === 'function') {
+            controller.zoom(deltaAmount);
+        } else if (typeof controller.dolly === 'function') {
+            controller.dolly(deltaAmount);
+        }
+    }
+
+    function safeAvatarReset() {
+        const controller = getAvatarController();
+        if (!controller) return;
+        if (typeof controller.resetView === 'function') {
+            controller.resetView();
+        } else if (typeof controller.resetCamera === 'function') {
+            controller.resetCamera();
+        } else if (typeof controller.setDefaultPose === 'function') {
+            controller.setDefaultPose();
+        }
+    }
+
+    // =============================================================
+    // BACKGROUND FX HELPERS
+    // =============================================================
+
+    function applyAvatarBackground(persona) {
+        const host = document.getElementById('avatarFxHost');
+        if (!host || !persona) return;
+        host.classList.forEach((cls) => {
+            if (cls.startsWith('avatar-bg-')) {
+                host.classList.remove(cls);
+            }
+        });
+        if (persona.bgFxClass) {
+            host.classList.add(persona.bgFxClass);
+        }
+    }
+
+    function playAvatarBackgroundBurst(persona) {
+        const host = document.getElementById('avatarFxHost');
+        if (!host) return;
+        const burstClass = (persona && persona.clickBurstClass) || 'avatar-burst-generic';
+        host.classList.remove(burstClass);
+        void host.offsetWidth;
+        host.classList.add(burstClass);
+        setTimeout(() => {
+            host.classList.remove(burstClass);
+        }, 750);
+    }
+
+    // =============================================================
+    // PUBLIC API
+    // =============================================================
+
+    window.setCurrentAvatar = function (avatarIdFromServer) {
+        if (!avatarIdFromServer) {
+            CURRENT_AVATAR_KEY = 'mascotBee';
+        } else {
+            const key = AVATAR_ID_TO_KEY[avatarIdFromServer] || 'mascotBee';
+            CURRENT_AVATAR_KEY = key;
+        }
+
+        const persona = AVATAR_PERSONAS[CURRENT_AVATAR_KEY];
+        const nameEl = document.getElementById('registeredAvatarName');
+        if (nameEl && persona) {
+            nameEl.textContent = persona.displayName;
+        }
+
+        const captionEl = document.getElementById('mascotCaption');
+        if (captionEl && persona) {
+            captionEl.textContent = `✨ ${persona.displayName}: ${persona.vibe} ✨`;
+        }
+
+        applyAvatarBackground(persona);
+    };
+
+    // =============================================================
+    // CLICK FX
+    // =============================================================
+
+    function playAvatarClickFx(avatarKey) {
+        const persona = AVATAR_PERSONAS[avatarKey];
+        const controller = getAvatarController();
+        if (!persona || !controller) return;
+
+        const animationName = persona.defaultAnimation || 'cheer';
+        if (typeof controller.play === 'function') {
+            controller.play(animationName);
+        }
+
+        switch (persona.signatureMoveKey) {
+            case 'builder_hammer':
+            case 'lumberjack_chop':
+                safeAvatarZoom(-0.2);
+                break;
+            case 'fairy_twirl':
+            case 'techno_glitch':
+                safeAvatarRotate(15);
+                break;
+            case 'super_hero':
+            case 'queen_wave':
+                safeAvatarZoom(-0.1);
+                break;
+            default:
+                safeAvatarRotate(8);
+        }
+
+        playAvatarBackgroundBurst(persona);
+    }
+
+    // =============================================================
+    // DOM WIRING
+    // =============================================================
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const mascotEl = document.getElementById('mascotBee3D');
+        if (mascotEl) {
+            mascotEl.addEventListener('click', function () {
+                playAvatarClickFx(CURRENT_AVATAR_KEY);
+            });
+        }
+
+        document.querySelectorAll('.avatar-controls [data-avatar-control]').forEach((btn) => {
+            btn.addEventListener('click', function () {
+                const action = this.getAttribute('data-avatar-control');
+                switch (action) {
+                    case 'zoom-in': safeAvatarZoom(-0.15); break;
+                    case 'zoom-out': safeAvatarZoom(0.15); break;
+                    case 'rot-left': safeAvatarRotate(-15); break;
+                    case 'rot-right': safeAvatarRotate(15); break;
+                    case 'reset': safeAvatarReset(); break;
+                }
+            });
+        });
+
+        if (!window.BeeSmartAvatarInitialized) {
+            window.BeeSmartAvatarInitialized = true;
+            window.setCurrentAvatar(null);
+        }
+    });
     </script>
 </body>
 </html>
