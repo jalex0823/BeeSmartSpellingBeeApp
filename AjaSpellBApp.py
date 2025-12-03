@@ -360,7 +360,9 @@ def api_wordbank_import_text():
         data = request.get_json(silent=True) or {}
         text = str(data.get('text', '') or '')
         delimiter = data.get('delimiter')
-        clear_first = bool(data.get('clear_first', True))
+        # clear_first is no longer used; set_wordbank fully replaces the active list
+        # Accept the field for backward compatibility but ignore it.
+        _ = data.get('clear_first', True)
         parts = []
         if delimiter:
             parts = [p.strip() for p in text.split(delimiter)]
@@ -370,8 +372,16 @@ def api_wordbank_import_text():
             parts = [p.strip() for p in temp]
         # Convert to rows
         rows = [{'word': p, 'sentence': '', 'hint': ''} for p in parts if p]
-        stored = set_wordbank(rows, clear_first=clear_first)
-        return jsonify({'status': 'success', 'stored': stored})
+        stored_count = len(rows)
+        # Treat import-text as a user upload so small lists persist in session fallback
+        set_wordbank(rows, is_user_upload=True)
+        # Initialize quiz state immediately after import for a ready-to-play experience
+        try:
+            init_quiz_state()
+        except Exception as _e:
+            # Non-fatal; quiz can still start later via next/answer endpoints
+            print(f"⚠️ init_quiz_state after import failed: {_e}")
+        return jsonify({'status': 'success', 'stored': stored_count})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
@@ -381,7 +391,7 @@ def api_wordbank_count():
     try:
         sid = _ensure_session_storage_id()
         path = _wordbank_path(sid)
-        rows = get_wordbank()
+        rows = get_wordbank()  # Always compute from authoritative source
         exists = os.path.exists(path)
         last_modified = None
         try:
@@ -398,6 +408,39 @@ def api_wordbank_count():
             'count': len(rows),
             'loaded': len(rows) > 0,
             'source': 'uploaded' if len(rows) > 0 else 'dictionary'
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/wordbank/live-summary', methods=['GET'])
+def api_wordbank_live_summary():
+    """Real-time wordbank summary for UI modals and system checks.
+
+    Provides:
+    - count: live number of words (authoritative from get_wordbank)
+    - ready_for_quiz: True if count > 0
+    - storage_id: current session pointer
+    - quiz_state_present: True if a quiz state exists
+    - last_modified: disk timestamp of the active storage file if present
+    """
+    try:
+        sid = _ensure_session_storage_id()
+        rows = get_wordbank()
+        exists = os.path.exists(_wordbank_path(sid))
+        last_modified = None
+        if exists:
+            try:
+                last_modified = datetime.fromtimestamp(os.path.getmtime(_wordbank_path(sid))).isoformat()
+            except Exception:
+                last_modified = None
+        qs = session.get(QUIZ_STATE_KEY)
+        return jsonify({
+            'status': 'success',
+            'storage_id': sid,
+            'count': len(rows),
+            'ready_for_quiz': len(rows) > 0,
+            'quiz_state_present': bool(qs is not None),
+            'last_modified': last_modified
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -2993,20 +3036,12 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
             print(f"⚠️ set_wordbank: Failed to persist storage_id to database: {e}")
             db.session.rollback()
     
-    # Only store lightweight metadata in session
+    # Only store lightweight metadata in session; DO NOT store any copy of the word list
     session["wordbank_count"] = len(rows)
-    # Provide a tiny durability fallback for very small lists (survive dev reloads)
-    # We avoid bloating cookies: only persist if JSON size <= ~2KB
-    try:
-        payload = json.dumps(rows, ensure_ascii=False)
-        if len(payload.encode('utf-8')) <= 2048:
-            session[DATA_KEY] = rows  # allows get_wordbank() to migrate after reload
-            print(f"DEBUG set_wordbank: Stored compact fallback list in session (len={len(rows)})")
-        else:
-            session.pop(DATA_KEY, None)
-    except Exception as _e:
-        # On any failure, ensure legacy key is cleared
-        session.pop(DATA_KEY, None)
+    # Strict replacement semantics: ensure no legacy or fallback caches remain in session
+    # Remove any prior compact list or legacy keys to guarantee no merge/residual state
+    session.pop(DATA_KEY, None)
+    session.pop("wordbank_cleared", None)
     session.modified = True
     session.permanent = True  # Strengthen persistence on mobile browsers
 
@@ -3074,6 +3109,41 @@ def init_quiz_state():
 
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
+
+@app.route('/api/quiz/state', methods=['GET'])
+def api_quiz_state():
+    """Return current quiz state summary for resume/restore checks."""
+    try:
+        qs = session.get(QUIZ_STATE_KEY)
+        wb = get_wordbank()
+        return jsonify({
+            'status': 'success',
+            'has_state': bool(qs is not None),
+            'total_words': len(wb),
+            'state': qs or {}
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/quiz/resume', methods=['POST'])
+def api_quiz_resume():
+    """Resume or initialize a quiz session.
+
+    Behavior:
+    - If a quiz state exists in the session, keep it and return it.
+    - If missing, initialize a fresh quiz state based on the currently loaded wordbank.
+    - Does not merge word lists; relies on active WORD_STORAGE pointed by session.
+    """
+    try:
+        qs = session.get(QUIZ_STATE_KEY)
+        if qs:
+            return jsonify({'status': 'success', 'resumed': True, 'state': qs})
+
+        # Initialize fresh state if absent
+        init_quiz_state()
+        return jsonify({'status': 'success', 'resumed': False, 'state': session.get(QUIZ_STATE_KEY)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # Register Battle of the Bees API Blueprint
 print("🔧 Registering Battle API...")
@@ -3817,6 +3887,7 @@ def create_saved_list():
 
         data = request.get_json(force=True) or {}
         name = (data.get("name") or data.get("list_name") or "").strip()
+        load_into_session = bool(data.get("load_into_session", False))
 
         if not name:
             return jsonify({"ok": False, "error": "name_required"}), 400
@@ -3850,6 +3921,25 @@ def create_saved_list():
 
         db.session.commit()
         print(f"✅ Created word list '{name}' with {len(words)} words for user {user.id}")
+
+        # Optionally load this newly created list into the active session wordbank
+        if load_into_session and words:
+            # Transform normalized words into session wordbank shape
+            rows = [
+                {
+                    "word": w.get("word") or "",
+                    "sentence": w.get("sentence") or "",
+                    "hint": w.get("hint") or ""
+                }
+                for w in words if (w.get("word") or "").strip()
+            ]
+
+            # Clear existing quiz state before replacing words
+            session.pop(QUIZ_STATE_KEY, None)
+            session.pop("is_random_play", None)
+            set_wordbank(rows, is_user_upload=True)
+            init_quiz_state()
+            print(f"✅ Loaded newly created list into session wordbank (rows={len(rows)}) and initialized quiz state")
 
         return jsonify({"ok": True, "list": _serialize_word_list(wl)}), 201
 
@@ -4318,20 +4408,21 @@ def upload_to_saved_list():
 
         # Process the uploaded file (reuse existing upload logic)
         words = []
-        filename = file.filename.lower()
+        filename = (file.filename or '').lower()
+        file_bytes = file.read()  # Read raw bytes once for parser functions
 
         if filename.endswith('.csv'):
-            words = parse_csv(file)
+            words = parse_csv(file_bytes, filename)
         elif filename.endswith('.txt'):
-            words = parse_txt(file)
+            words = parse_txt(file_bytes)
         elif filename.endswith('.docx'):
-            words = parse_docx(file)
+            words = parse_docx(file_bytes)
         elif filename.endswith('.pdf'):
-            words = parse_pdf(file)
+            words = parse_pdf(file_bytes)
         elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
             if not TESSERACT_AVAILABLE:
                 return jsonify({"ok": False, "error": "Image processing requires Tesseract OCR installation"}), 400
-            words = parse_image_ocr(file)
+            words = parse_image_ocr(file_bytes)
         else:
             return jsonify({"ok": False, "error": "Unsupported file format"}), 400
 
