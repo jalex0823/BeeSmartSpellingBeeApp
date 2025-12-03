@@ -2956,19 +2956,11 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Registered User Avatar Display (matches non-registered carousel layout exactly) -->
+                <!-- Registered User Avatar Display (compact, clean like student dashboard) -->
                 <div class="guest-avatar-carousel">
                     <div class="avatar-slide">
-                        <!-- 3D Avatar Display -->
-                        <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 480px; height: 360px; margin: 0 auto; cursor: pointer;"></div>
-                        <!-- Avatar Controls: Zoom/Rotate/Reset -->
-                        <div id="avatarControls" style="display:flex; gap:6px; justify-content:center; align-items:center; margin:8px 0;">
-                            <button type="button" id="avatarZoomIn" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">🔍 Zoom In</button>
-                            <button type="button" id="avatarZoomOut" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">🔎 Zoom Out</button>
-                            <button type="button" id="avatarRotateLeft" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">↶ Rotate Left</button>
-                            <button type="button" id="avatarRotateRight" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">↷ Rotate Right</button>
-                            <button type="button" id="avatarReset" class="action-btn info" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">⟲ Reset</button>
-                        </div>
+                        <!-- 3D Avatar Display - Compact 140x140 -->
+                        <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 140px; height: 140px; margin: 0 auto; cursor: pointer;"></div>
                         <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
                     </div>
