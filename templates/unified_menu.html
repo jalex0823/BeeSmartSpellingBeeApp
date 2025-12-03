@@ -10609,11 +10609,16 @@
                 canvas.style.pointerEvents = 'none';
                 canvasWrap.appendChild(canvas);
 
-                // Lights
-                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-                const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+                // Lights - BRIGHTENED to match registered user avatar quality
+                scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+                const dir = new THREE.DirectionalLight(0xffffff, 1.3);
                 dir.position.set(4, 6, 6);
                 scene.add(dir);
+                
+                // Add fill light for better color showcase (matches registered avatar)
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                fillLight.position.set(-3, 3, -3);
+                scene.add(fillLight);
 
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
