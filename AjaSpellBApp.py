@@ -3035,6 +3035,8 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     if not storage_id:
         storage_id = str(uuid.uuid4())
         session["wordbank_storage_id"] = storage_id
+        session.permanent = True  # Critical for mobile browser persistence
+        session.modified = True  # Force immediate session save
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
     
     # ⚡ CRITICAL: COMPLETE REPLACEMENT (NOT APPEND!)
