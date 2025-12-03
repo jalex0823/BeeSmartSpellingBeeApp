@@ -1450,3 +1450,70 @@ class BundleKeyRedemption(db.Model):
 
     def __repr__(self):
         return f"<BundleKeyRedemption key={self.bundle_key_id} user={self.user_id} bundle={self.bundle_id}>"
+
+
+class WordBankStorage(db.Model):
+    """
+    Database-backed wordbank persistence for Railway deployment.
+    Solves the ephemeral filesystem problem where data/wordbanks/ files get deleted on restart.
+    Stores wordbanks in PostgreSQL for durability across container restarts and multi-instance deployments.
+    """
+    __tablename__ = 'wordbank_storage'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    storage_id = db.Column(db.String(36), unique=True, nullable=False, index=True)  # UUID matching session storage_id
+    words_data = db.Column(db.JSON, nullable=False)  # Array of {word, sentence, hint} objects
+    word_count = db.Column(db.Integer, nullable=False, index=True)  # Quick count without parsing JSON
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    last_accessed = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Optional: link to user for cleanup (nullable for guest users)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    
+    def __repr__(self):
+        return f"<WordBankStorage storage_id={self.storage_id} words={self.word_count}>"
+    
+    @classmethod
+    def save_wordbank(cls, storage_id: str, words: list, user_id: int = None):
+        """Save or update wordbank in database"""
+        existing = cls.query.filter_by(storage_id=storage_id).first()
+        
+        if existing:
+            existing.words_data = words
+            existing.word_count = len(words)
+            existing.updated_at = datetime.utcnow()
+            existing.last_accessed = datetime.utcnow()
+            if user_id:
+                existing.user_id = user_id
+        else:
+            new_storage = cls(
+                storage_id=storage_id,
+                words_data=words,
+                word_count=len(words),
+                user_id=user_id
+            )
+            db.session.add(new_storage)
+        
+        db.session.commit()
+        return True
+    
+    @classmethod
+    def load_wordbank(cls, storage_id: str):
+        """Load wordbank from database and update last_accessed timestamp"""
+        storage = cls.query.filter_by(storage_id=storage_id).first()
+        if storage:
+            storage.last_accessed = datetime.utcnow()
+            db.session.commit()
+            return storage.words_data
+        return None
+    
+    @classmethod
+    def delete_wordbank(cls, storage_id: str):
+        """Delete wordbank from database"""
+        storage = cls.query.filter_by(storage_id=storage_id).first()
+        if storage:
+            db.session.delete(storage)
+            db.session.commit()
+            return True
+        return False

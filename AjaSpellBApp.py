@@ -2934,34 +2934,80 @@ except Exception:
     pass
 
 def _load_wordbank_from_disk(storage_id: str) -> List[Dict[str, str]]:
+    """Load wordbank from database (primary) or disk fallback (legacy)"""
+    # PRIMARY: Try database first (Railway-safe)
+    try:
+        from models import WordBankStorage
+        words = WordBankStorage.load_wordbank(storage_id)
+        if words:
+            print(f"✅ Loaded {len(words)} words from database for storage_id={storage_id}")
+            return words
+    except Exception as e:
+        print(f"⚠️ Database load failed for {storage_id}: {e}")
+    
+    # FALLBACK: Try legacy disk storage (local dev)
     try:
         path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 if isinstance(data, list):
+                    print(f"✅ Loaded {len(data)} words from disk (legacy) for storage_id={storage_id}")
+                    # Migrate to database for future loads
+                    try:
+                        from models import WordBankStorage
+                        WordBankStorage.save_wordbank(storage_id, data)
+                        print(f"✅ Migrated {len(data)} words to database")
+                    except Exception:
+                        pass
                     return data
     except Exception as e:
         print(f"⚠️ Failed to load wordbank from disk for {storage_id}: {e}")
+    
     return []
 
 def _save_wordbank_to_disk(storage_id: str, rows: List[Dict[str, str]]):
+    """Save wordbank to database (primary) AND disk (legacy fallback)"""
+    # PRIMARY: Save to database for Railway persistence
+    try:
+        from models import WordBankStorage
+        user_id = current_user.id if current_user.is_authenticated else None
+        WordBankStorage.save_wordbank(storage_id, rows, user_id=user_id)
+        print(f"✅ Saved {len(rows)} words to database for storage_id={storage_id}")
+    except Exception as e:
+        print(f"⚠️ Database save failed for {storage_id}: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # FALLBACK: Also save to disk for local dev (best effort)
     try:
         path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(rows, f, ensure_ascii=False)
     except Exception as e:
-        print(f"⚠️ Failed to save wordbank to disk for {storage_id}: {e}")
+        # Non-fatal on Railway (ephemeral filesystem)
+        pass
 
 def _delete_wordbank_from_disk(storage_id: Optional[str]):
+    """Delete wordbank from database AND disk"""
+    if not storage_id:
+        return
+    
+    # Delete from database
     try:
-        if not storage_id:
-            return
+        from models import WordBankStorage
+        WordBankStorage.delete_wordbank(storage_id)
+        print(f"✅ Deleted wordbank from database for storage_id={storage_id}")
+    except Exception as e:
+        print(f"⚠️ Database delete failed for {storage_id}: {e}")
+    
+    # Delete from disk (legacy)
+    try:
         path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
         if os.path.exists(path):
             os.remove(path)
     except Exception as e:
-        print(f"⚠️ Failed to delete wordbank file for {storage_id}: {e}")
+        pass  # Non-fatal
 
 def get_wordbank() -> List[Dict[str, str]]:
     """Read wordbank from WORD_STORAGE using session's storage_id pointer.
