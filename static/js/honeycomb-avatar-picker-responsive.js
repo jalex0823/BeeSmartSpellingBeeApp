@@ -12,6 +12,19 @@ let currentLoadingAvatar = null;
 let previewLoadProgress = 0;
 // Current user's honey points from API
 let currentUserHoneyPoints = 0;
+// 3D viewer state to support zoom/rotate/reset controls
+const avatarViewerState = {
+    scene: null,
+    camera: null,
+    renderer: null,
+    model: null,
+    containerId: null,
+    default: {
+        cameraPos: { x: 0, y: 0.5, z: 3.5 },
+        modelRotationY: 0,
+        modelScale: 1,
+    }
+};
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', async function() {
@@ -22,6 +35,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // CRITICAL: Verify user authentication FIRST during loading screen
     await verifyUserAuthentication();
+    // Apply initial role-based UI before heavy loading
+    applyRoleBasedUI();
     
     loadAvatars();
     setupSearchFilter();
@@ -93,6 +108,57 @@ async function verifyUserAuthentication() {
         if (loadingDetail) {
             loadingDetail.textContent = 'Initializing...';
         }
+    }
+}
+
+// Apply role-based UI consistency at avatar loading screen
+function applyRoleBasedUI() {
+    try {
+        const session = window.userSessionData || {};
+        const userInfo = window.avatarUserInfo || {};
+        const isAuthenticated = !!(session.authenticated || userInfo.user_authenticated);
+        const isAdmin = !!(session.is_admin || userInfo.is_admin || (session.role === 'admin') || (userInfo.user_role === 'admin'));
+        const isGuest = !!(session.is_guest || userInfo.is_guest);
+
+        // Expose simple flags globally for other scripts
+        window.isUserLoggedIn = isAuthenticated;
+        window.isUserAdmin = isAdmin;
+        window.isUserGuest = isGuest && !isAdmin && !isAuthenticated ? true : false;
+
+        // Toggle any admin-only UI elements
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.style.display = isAdmin ? '' : 'none';
+        });
+
+        // Toggle any authenticated-only UI elements
+        document.querySelectorAll('.auth-only').forEach(el => {
+            el.style.display = isAuthenticated ? '' : 'none';
+        });
+
+        // Toggle any guest-only hints
+        document.querySelectorAll('.guest-only').forEach(el => {
+            el.style.display = window.isUserGuest ? '' : 'none';
+        });
+
+        // Admin Portal badge in header (if present)
+        const adminBadge = document.getElementById('admin-portal-badge');
+        if (adminBadge) {
+            adminBadge.classList.toggle('hidden', !isAdmin);
+        }
+
+        // Loading overlay detail line reflects role
+        const loadingDetail = document.getElementById('loading-detail');
+        if (loadingDetail) {
+            if (isAdmin) {
+                loadingDetail.textContent = `✅ Admin access confirmed for ${session.username || 'admin'}`;
+            } else if (isAuthenticated) {
+                loadingDetail.textContent = `✅ Authenticated as ${session.username || 'user'}`;
+            } else if (window.isUserGuest) {
+                loadingDetail.textContent = '👋 Guest mode - Register to unlock more bees!';
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Failed to apply role-based UI:', e);
     }
 }
 
@@ -318,6 +384,8 @@ async function loadAvatars() {
             purchased_avatars: data.purchased_avatars || userData.purchased_avatars || []  // CRITICAL: Avatar unlock gate
         };
         console.log('👤 User Info:', window.avatarUserInfo);
+        // Re-apply role UI with fresh data from avatars API
+        applyRoleBasedUI();
         
         // Capture current user's honey points from data.user.honey_points
         if (userData && typeof userData.honey_points === 'number') {
@@ -660,6 +728,11 @@ function load3DAvatarGLB(avatar, containerId) {
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
+    // Save viewer state for controls
+    avatarViewerState.scene = scene;
+    avatarViewerState.camera = camera;
+    avatarViewerState.renderer = renderer;
+    avatarViewerState.containerId = containerId;
     
     updatePreviewProgress(20, 'Setting up lights...');
     
@@ -707,6 +780,10 @@ function load3DAvatarGLB(avatar, containerId) {
             model.position.sub(center);
             model.scale.set(scale, scale, scale);
             model.position.y = 0; // Center vertically
+            // Save model in viewer state
+            avatarViewerState.model = model;
+            avatarViewerState.default.modelRotationY = 0;
+            avatarViewerState.default.modelScale = scale;
             
             updatePreviewProgress(85, 'Applying textures...');
             
@@ -733,6 +810,9 @@ function load3DAvatarGLB(avatar, containerId) {
             // Camera position for full-body view
             camera.position.set(0, 0.5, 3.5); // Elevated view to see full avatar
             camera.lookAt(0, 0, 0);
+            avatarViewerState.default.cameraPos = { x: 0, y: 0.5, z: 3.5 };
+            // Enable controls UI now that model is ready
+            enablePreviewControls(true);
             
             // Animation loop with auto-rotation
             function animate() {
@@ -773,6 +853,8 @@ function load3DAvatarGLB(avatar, containerId) {
             } else {
                 container.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
             }
+            // Disable controls UI in fallback
+            enablePreviewControls(false);
         }
     );
 }
@@ -940,8 +1022,86 @@ function updatePreview(avatar) {
         };
 
         // Start loading after a brief delay to show the loading screen
+        // Ensure control bar exists
+        ensureControlsToolbar(previewContent);
         setTimeout(loadPreview, 100);
     }
+}
+
+// Ensure controls toolbar exists in preview panel
+function ensureControlsToolbar(previewContent) {
+    let toolbar = previewContent.querySelector('.preview-controls');
+    if (!toolbar) {
+        toolbar = document.createElement('div');
+        toolbar.className = 'preview-controls';
+        toolbar.style.cssText = 'display:flex; gap:0.5rem; align-items:center; justify-content:center; margin-top:0.5rem;';
+        toolbar.innerHTML = `
+            <button class="ctrl-btn" id="ctrl-zoom-in" title="Zoom In">＋</button>
+            <button class="ctrl-btn" id="ctrl-zoom-out" title="Zoom Out">－</button>
+            <button class="ctrl-btn" id="ctrl-rotate-left" title="Rotate Left">⟲</button>
+            <button class="ctrl-btn" id="ctrl-rotate-right" title="Rotate Right">⟳</button>
+            <button class="ctrl-btn" id="ctrl-reset" title="Reset View">⟲⟳</button>
+        `;
+        const descEl = previewContent.querySelector('.preview-description');
+        if (descEl && descEl.parentNode) {
+            descEl.parentNode.insertBefore(toolbar, descEl.nextSibling);
+        } else {
+            previewContent.appendChild(toolbar);
+        }
+        bindControls(toolbar);
+    }
+}
+
+// Enable/disable controls UI
+function enablePreviewControls(enabled) {
+    document.querySelectorAll('.preview-controls .ctrl-btn').forEach(btn => {
+        btn.disabled = !enabled;
+        btn.style.opacity = enabled ? '1' : '0.5';
+        btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    });
+}
+
+// Bind control handlers
+function bindControls(toolbar) {
+    const zoomIn = toolbar.querySelector('#ctrl-zoom-in');
+    const zoomOut = toolbar.querySelector('#ctrl-zoom-out');
+    const rotLeft = toolbar.querySelector('#ctrl-rotate-left');
+    const rotRight = toolbar.querySelector('#ctrl-rotate-right');
+    const resetBtn = toolbar.querySelector('#ctrl-reset');
+
+    const zoomStep = 0.3; // move camera closer/farther
+    const rotStep = 0.15; // radians per click
+
+    if (zoomIn) zoomIn.addEventListener('click', () => {
+        const cam = avatarViewerState.camera;
+        if (!cam) return;
+        cam.position.z = Math.max(0.8, cam.position.z - zoomStep);
+    });
+    if (zoomOut) zoomOut.addEventListener('click', () => {
+        const cam = avatarViewerState.camera;
+        if (!cam) return;
+        cam.position.z = Math.min(10, cam.position.z + zoomStep);
+    });
+    if (rotLeft) rotLeft.addEventListener('click', () => {
+        const model = avatarViewerState.model;
+        if (!model) return;
+        model.rotation.y -= rotStep;
+    });
+    if (rotRight) rotRight.addEventListener('click', () => {
+        const model = avatarViewerState.model;
+        if (!model) return;
+        model.rotation.y += rotStep;
+    });
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        const cam = avatarViewerState.camera;
+        const model = avatarViewerState.model;
+        const d = avatarViewerState.default;
+        if (cam) cam.position.set(d.cameraPos.x, d.cameraPos.y, d.cameraPos.z);
+        if (model) {
+            model.rotation.y = d.modelRotationY;
+            model.scale.set(d.modelScale, d.modelScale, d.modelScale);
+        }
+    });
 }
 
 // Choose avatar and save selection
@@ -1012,12 +1172,8 @@ function chooseAvatar() {
                 const errorReason = data.reason || 'unknown';
                 console.error(`❌ Avatar select failed (${response.status}): ${errorMsg}`, data);
                 
-                // Handle specific error reasons
-                if (errorReason === 'guest_restricted') {
-                    // Guest user trying to select non-mascot avatar
-                    alert('🔐 Guest users can only use the Honey Comb mascot avatar.\\n\\nPlease register for a free account to unlock more bee avatars!');
-                    return Promise.reject(new Error('Guest user restriction'));
-                } else if (errorReason === 'premium_locked') {
+                // Handle specific error reasons (server no longer uses guest_restricted)
+                if (errorReason === 'premium_locked') {
                     // Premium avatar that must be purchased
                     alert(`🔒 ${selectedAvatar.name} is a premium avatar.\\n\\nThis avatar is only available for purchase.`);
                     return Promise.reject(new Error('Premium avatar locked'));
