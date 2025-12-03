@@ -142,6 +142,9 @@
             try {
                 const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
                 if (container && !document.getElementById('fxTriggerButton')) {
+                    // Apply brightness enhancement
+                    container.classList.add('avatar-bright');
+                    
                     const fxBtn = document.createElement('button');
                     fxBtn.id = 'fxTriggerButton';
                     fxBtn.className = 'fx-trigger-btn';
@@ -788,6 +791,11 @@
             /* Smooth transitions */
             transition: transform 0.3s ease, filter 0.3s ease;
         }
+
+        /* Optional brightness boost for avatar visuals */
+        .avatar-bright {
+            filter: brightness(1.08) saturate(1.12);
+        }
         
         .bee-avatar-container:hover,
         #mascotBee3D:hover,
@@ -811,6 +819,8 @@
             pointer-events: none;
             z-index: 101 !important;
             background: transparent !important;
+            /* Slight global brightness/saturation bump for clarity */
+            filter: brightness(1.06) saturate(1.08);
         }
         
         /* Remove any pseudo-elements */
