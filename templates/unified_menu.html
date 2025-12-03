@@ -2994,12 +2994,12 @@
                         <!-- 3D Avatar Display -->
                         <div id="mascotBee3D" class="avatar-fx-container" data-fx-effect="random" title="Click me for animations!" style="position:relative; width: 480px; height: 360px; margin: 0 auto; cursor: pointer;"></div>
                         <!-- Avatar Controls: Zoom/Rotate/Reset -->
-                        <div id="avatarControls" style="display:flex; gap:8px; justify-content:center; align-items:center; margin:10px 0;">
-                            <button type="button" id="avatarZoomIn" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">🔍 Zoom In</button>
-                            <button type="button" id="avatarZoomOut" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">🔎 Zoom Out</button>
-                            <button type="button" id="avatarRotateLeft" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">↶ Rotate Left</button>
-                            <button type="button" id="avatarRotateRight" class="action-btn secondary" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">↷ Rotate Right</button>
-                            <button type="button" id="avatarReset" class="action-btn info" style="max-width:160px; padding:8px 12px; font-size:0.9rem;">⟲ Reset</button>
+                        <div id="avatarControls" style="display:flex; gap:6px; justify-content:center; align-items:center; margin:8px 0;">
+                            <button type="button" id="avatarZoomIn" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">🔍 Zoom In</button>
+                            <button type="button" id="avatarZoomOut" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">🔎 Zoom Out</button>
+                            <button type="button" id="avatarRotateLeft" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">↶ Rotate Left</button>
+                            <button type="button" id="avatarRotateRight" class="action-btn secondary" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">↷ Rotate Right</button>
+                            <button type="button" id="avatarReset" class="action-btn info" style="max-width:130px; padding:6px 10px; font-size:0.8rem;">⟲ Reset</button>
                         </div>
                         <!-- Registered Avatar Name (matches guest carousel styling) -->
                         <div class="avatar-name" id="registeredAvatarName"></div>
@@ -3285,99 +3285,108 @@
                                                         </div>
                                                         <script>
                                                         (function(){
-                                                            function $(id){return document.getElementById(id);}    
-                                                            function gradeFromGpa(g){
-                                                                var v = Number(g)||0;
-                                                                if(v>=4.0) return 'A+';
-                                                                if(v>=3.7) return 'A-';
-                                                                if(v>=3.3) return 'B+';
-                                                                if(v>=3.0) return 'B';
-                                                                if(v>=2.7) return 'B-';
-                                                                if(v>=2.3) return 'C+';
-                                                                if(v>=2.0) return 'C';
-                                                                if(v>=1.7) return 'C-';
-                                                                if(v>=1.3) return 'D+';
-                                                                if(v>=1.0) return 'D';
-                                                                if(v>=0.7) return 'D-';
-                                                                return 'F';
+                                                            // Collapsible control panel under a gear icon
+                                                            const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                                                            if (!container) return;
+                                                            container.style.position = 'relative';
+                                                            if (!document.getElementById('avatarGearToggle')) {
+                                                                const gear = document.createElement('button');
+                                                                gear.id = 'avatarGearToggle';
+                                                                gear.setAttribute('aria-expanded', 'false');
+                                                                gear.setAttribute('aria-controls', 'avatarControlPanel');
+                                                                gear.title = 'Avatar controls';
+                                                                gear.style.cssText = `
+                                                                    position: absolute; top: 10px; right: 10px; z-index: 120;
+                                                                    width: 36px; height: 36px; border-radius: 18px;
+                                                                    border: 2px solid rgba(255, 215, 0, 0.6);
+                                                                    background: linear-gradient(135deg, #FFF8E1, #FFE082);
+                                                                    color: #5A2C15; font-weight: 900; cursor: pointer;
+                                                                    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+                                                                `;
+                                                                gear.innerText = '⚙️';
+                                                                container.appendChild(gear);
+
+                                                                const panel = document.createElement('div');
+                                                                panel.id = 'avatarControlPanel';
+                                                                panel.style.cssText = `
+                                                                    position: absolute; top: 52px; right: 10px; z-index: 119;
+                                                                    display: none; flex-direction: column; gap: 8px;
+                                                                    padding: 10px; background: rgba(255,255,255,0.92);
+                                                                    border: 2px solid rgba(255, 215, 0, 0.5);
+                                                                    border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+                                                                    min-width: 220px;
+                                                                `;
+                                                                panel.innerHTML = `
+                                                                    <div style="display:flex; gap:8px; align-items:center; justify-content:flex-end;">
+                                                                      <button id="fxTriggerButton" class="ctrl" title="Play Intro FX" aria-label="Play Intro FX">✨</button>
+                                                                    </div>
+                                                                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+                                                                      <button class="ctrl" title="Zoom In" aria-label="Zoom In">+</button>
+                                                                      <button class="ctrl" title="Zoom Out" aria-label="Zoom Out">-</button>
+                                                                      <button class="ctrl" title="Rotate Left" aria-label="Rotate Left">⟲</button>
+                                                                      <button class="ctrl" title="Rotate Right" aria-label="Rotate Right">⟳</button>
+                                                                      <button class="ctrl" title="Reset" aria-label="Reset">↺</button>
+                                                                    </div>
+                                                                `;
+                                                                container.appendChild(panel);
+
+                                                                // Style ctrl buttons
+                                                                Array.from(panel.querySelectorAll('.ctrl')).forEach(btn => {
+                                                                    btn.style.cssText = `
+                                                                        width: 36px; height: 36px; border-radius: 8px;
+                                                                        border: 2px solid rgba(255, 215, 0, 0.6);
+                                                                        background: linear-gradient(135deg, #FFF8E1, #FFE082);
+                                                                        color: #5A2C15; font-weight: 800; cursor: pointer;
+                                                                        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+                                                                    `;
+                                                                });
+
+                                                                // Toggle behavior
+                                                                gear.onclick = () => {
+                                                                    const open = panel.style.display === 'block';
+                                                                    panel.style.display = open ? 'none' : 'block';
+                                                                    gear.setAttribute('aria-expanded', (!open).toString());
+                                                                };
+
+                                                                // Helper to get controller
+                                                                const getCtrl = () => {
+                                                                    try {
+                                                                        if (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function') {
+                                                                            return window.SmartyBee3D.getController('mascotBee3D');
+                                                                        }
+                                                                    } catch(e) {}
+                                                                    return null;
+                                                                };
+
+                                                                // FX trigger
+                                                                const fxBtn = panel.querySelector('#fxTriggerButton');
+                                                                fxBtn.onclick = function(){
+                                                                    const target = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                                                                    if (target && window.AvatarFX) {
+                                                                        window.AvatarFX.init(target, null);
+                                                                    } else {
+                                                                        const s = document.createElement('div');
+                                                                        s.className = 'sparkle';
+                                                                        const rect = target?.getBoundingClientRect();
+                                                                        s.style.left = ((rect?.left || 50) + 'px');
+                                                                        s.style.top = ((rect?.top || 50) + 'px');
+                                                                        document.body.appendChild(s);
+                                                                        setTimeout(()=> s.remove(), 1000);
+                                                                    }
+                                                                };
+
+                                                                // Controls wiring
+                                                                let scale = 1, rot = 0;
+                                                                const applyFallback = () => {
+                                                                    container.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
+                                                                };
+                                                                const [btnPlus, btnMinus, btnLeft, btnRight, btnReset] = panel.querySelectorAll('.ctrl:not(#fxTriggerButton)');
+                                                                btnPlus.onclick = () => { const c = getCtrl(); if (c?.zoomIn) c.zoomIn(); else { scale = Math.min(1.8, scale + 0.08); applyFallback(); } };
+                                                                btnMinus.onclick = () => { const c = getCtrl(); if (c?.zoomOut) c.zoomOut(); else { scale = Math.max(0.6, scale - 0.08); applyFallback(); } };
+                                                                btnLeft.onclick = () => { const c = getCtrl(); if (c?.rotateLeft) c.rotateLeft(); else { rot -= 10; applyFallback(); } };
+                                                                btnRight.onclick = () => { const c = getCtrl(); if (c?.rotateRight) c.rotateRight(); else { rot += 10; applyFallback(); } };
+                                                                btnReset.onclick = () => { const c = getCtrl(); if (c?.resetView) c.resetView(); scale = 1; rot = 0; applyFallback(); };
                                                             }
-                                                            async function updateStats(){
-                                                                try{
-                                                                    const r = await fetch('/api/users/stats', {cache:'no-store'});
-                                                                    if(!r.ok) return; 
-                                                                    const d = await r.json();
-                                                                    if(d.status!=='success' || !d.authenticated) return;
-                                                                    const s = d.stats||{};
-                                                                    if($('stats-gpa-value')) $('stats-gpa-value').textContent = Number(s.cumulative_gpa||0).toFixed(2);
-                                                                    const letter = gradeFromGpa(s.cumulative_gpa);
-                                                                    if($('stats-grade-letter')) $('stats-grade-letter').textContent = letter;
-                                                                    if($('stats-points')) $('stats-points').textContent = (s.total_lifetime_points||0).toLocaleString();
-                                                                    if($('stats-quizzes')) $('stats-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
-                                                                    if($('stats-accuracy')) $('stats-accuracy').textContent = Number(s.average_accuracy||0).toFixed(1);
-                                                                }catch(e){ /* silent */ }
-                                                            }
-                                                            updateStats();
-                                                            setInterval(updateStats, 12000);
-                                                        })();
-                                                        </script>
-                            
-                            <!-- Teacher/Parent Access Key Display -->
-                            {% if current_user.role in ['teacher', 'parent', 'admin'] and current_user.teacher_key %}
-                            <div style="
-                                background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
-                                border: 3px solid rgba(156, 39, 176, 0.3);
-                                border-radius: 20px;
-                                padding: 1.2rem;
-                                margin: 1.5rem auto 0;
-                                max-width: 600px;
-                                box-shadow: 0 8px 20px rgba(156, 39, 176, 0.3);
-                            ">
-                                <div style="font-size: 0.9rem; color: #FFF; font-weight: 600; margin-bottom: 0.5rem; opacity: 0.9;">
-                                    🔑 Your {{ current_user.role|title }} Access Key
-                                </div>
-                                <div style="font-size: 1.6rem; font-weight: 800; color: #FFF; margin-bottom: 0.5rem; letter-spacing: 1px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); font-family: monospace;">
-                                    {{ current_user.teacher_key or 'Not Available' }}
-                                </div>
-                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.85);">
-                                    Share this key with students/children to link their accounts
-                                </div>
-                            </div>
-                            {% endif %}
-                            
-                            <!-- Action Buttons -->
-                            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem;">
-                                <a href="{% if current_user.role == 'admin' %}/admin/dashboard{% else %}/auth/dashboard{% endif %}" style="
-                                    padding: 0.8rem 2rem;
-                                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                                    color: white;
-                                    border-radius: 15px;
-                                    text-decoration: none;
-                                    font-weight: 700;
-                                    font-size: 1rem;
-                                    box-shadow: 0 6px 15px rgba(76, 175, 80, 0.3);
-                                    transition: all 0.3s ease;
-                                    display: inline-block;
-                                    border: 2px solid rgba(255, 255, 255, 0.3);
-                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 20px rgba(76, 175, 80, 0.4)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 15px rgba(76, 175, 80, 0.3)'">
-                                    📊 Dashboard
-                                </a>
-                                <a href="/auth/logout" style="
-                                    padding: 0.8rem 2rem;
-                                    background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
-                                    color: white;
-                                    border-radius: 15px;
-                                    text-decoration: none;
-                                    font-weight: 700;
-                                    font-size: 1rem;
-                                    box-shadow: 0 6px 15px rgba(255, 107, 107, 0.3);
-                                    transition: all 0.3s ease;
-                                    display: inline-block;
-                                    border: 2px solid rgba(255, 255, 255, 0.3);
-                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 20px rgba(255, 107, 107, 0.4)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 15px rgba(255, 107, 107, 0.3)'">
-                                    🚪 Sign Out
-                                </a>
                             </div>
                         </div>
                     {% else %}
