@@ -3382,6 +3382,8 @@
                                                                 btnRight.onclick = () => { const c = getCtrl(); if (c?.rotateRight) c.rotateRight(); else { rot += 10; applyFallback(); } };
                                                                 btnReset.onclick = () => { const c = getCtrl(); if (c?.resetView) c.resetView(); scale = 1; rot = 0; applyFallback(); };
                                                             }
+                                                        })();
+                                                        </script>
                             </div>
                         </div>
                     {% else %}
