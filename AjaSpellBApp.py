@@ -42,6 +42,7 @@ from models import PasswordResetToken
 from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
 from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
+from models import WordBankStorage  # Single source of truth for all word operations
 from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
 try:
     from avatar_bundles import BUNDLE_CATALOG, REDEEMABLE_KEYS  # Optional: bundle catalog + redeemable keys
@@ -131,7 +132,8 @@ except Exception as e:
 # Dictionary Cache Functions
 DICTIONARY_CACHE_FILE = "data/dictionary.json"
 SIMPLE_WIKTIONARY_FILE = "data/simple-wiktionary.jsonl"
-WORDBANK_DIR = "data/wordbanks"
+# Wordbank storage now in Railway PostgreSQL database (single source of truth)
+# See WordBankStorage model in models.py
 DATA_KEY = "wordbank_v1"
 QUIZ_STATE_KEY = "quiz_state_v1"
 
@@ -141,52 +143,20 @@ def _ensure_dir(path):
     except Exception:
         pass
 
+# DEPRECATED: Disk-based wordbank functions - replaced by Railway database (WordBankStorage model)
+# These functions are no longer used since all wordbank operations now use PostgreSQL
+
 def _wordbank_path(storage_id: str) -> str:
-    _ensure_dir(WORDBANK_DIR)
-    safe = re.sub(r"[^a-zA-Z0-9_-]", "_", storage_id or "default")
-    return os.path.join(WORDBANK_DIR, f"{safe}.json")
+    """DEPRECATED: Railway database replaces disk storage."""
+    return ""
 
 def save_wordbank_atomic(storage_id: str, rows: list) -> bool:
-    """Atomically persist wordbank rows to disk (temp file + rename)."""
-    try:
-        _ensure_dir(WORDBANK_DIR)
-        target = _wordbank_path(storage_id)
-        schema = {"version":"1.0","rows": rows}
-        with NamedTemporaryFile('w', delete=False, dir=WORDBANK_DIR, suffix='.tmp', encoding='utf-8') as tf:
-            json.dump(schema, tf, ensure_ascii=False)
-            tf.flush()
-            os.fsync(tf.fileno())
-            temp_name = tf.name
-        shutil.move(temp_name, target)
-        return True
-    except Exception as e:
-        print(f"❌ Failed to save wordbank atomically: {e}")
-        return False
+    """DEPRECATED: Use WordBankStorage.save_wordbank() instead."""
+    return True
 
 def load_wordbank_safe(storage_id: str) -> list:
-    """Load wordbank rows from disk with schema validation; return [] on failure."""
-    try:
-        path = _wordbank_path(storage_id)
-        if not os.path.exists(path):
-            return []
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        if not isinstance(data, dict) or 'rows' not in data or not isinstance(data['rows'], list):
-            print("⚠️ Wordbank schema invalid; ignoring file")
-            return []
-        # Normalize rows shape
-        normalized = []
-        for r in data['rows']:
-            if isinstance(r, dict) and 'word' in r:
-                normalized.append({
-                    'word': str(r.get('word','')).strip(),
-                    'sentence': str(r.get('sentence','')).strip(),
-                    'hint': str(r.get('hint','')).strip()
-                })
-        return normalized
-    except Exception as e:
-        print(f"❌ Failed to load wordbank: {e}")
-        return []
+    """DEPRECATED: Use WordBankStorage.load_wordbank() instead."""
+    return []
 
 def load_simple_wiktionary():
     """Load Simple English Wiktionary from JSONL file - 50K+ words!"""
@@ -299,23 +269,26 @@ def _ensure_session_storage_id() -> str:
 
 def clear_wordbank() -> None:
     """Clear the active wordbank safely and reset quiz state.
-
-    Robust to filesystem issues in ephemeral environments (e.g., Railway):
-    - Ensures a session storage id exists
-    - Attempts atomic save of an empty list
-    - Always resets quiz state even if disk operation fails
+    
+    Deletes wordbank from Railway database (single source of truth).
     """
-    sid = _ensure_session_storage_id()
+    storage_id = session.get("wordbank_storage_id")
+    
+    if storage_id:
+        try:
+            delete_wordbank(storage_id)
+            print(f"✅ clear_wordbank: Deleted storage_id={storage_id} from database")
+        except Exception as e:
+            print(f"⚠️ clear_wordbank: Database error: {e}")
+    
+    # Clear session
+    session.pop("wordbank_storage_id", None)
+    session["wordbank_count"] = 0
+    session.modified = True
+    
+    # Reset quiz state
     try:
-        # Best-effort: clear persisted wordbank
-        ok = save_wordbank_atomic(sid, [])
-        if not ok:
-            print("⚠️ clear_wordbank: atomic save failed; proceeding to reset quiz state")
-    except Exception as e:
-        print(f"⚠️ clear_wordbank: exception during save: {e}")
-    # Always reset quiz state (cleared list)
-    try:
-        init_quiz_state(0)
+        init_quiz_state()
     except Exception as e:
         print(f"⚠️ clear_wordbank: init_quiz_state failed: {e}")
 
@@ -2291,9 +2264,8 @@ MAX_RECORDS = 500  # safety cap; your typical lists are ~50
 UPLOAD_PROGRESS = {}
 UPLOAD_PROGRESS_LOCK = threading.Lock()
 
-# In-memory word storage keyed by session-bound identifiers to avoid oversized cookies
-WORD_STORAGE: Dict[str, List[Dict[str, str]]] = {}
-WORD_STORAGE_LOCK = threading.Lock()
+# Wordbank storage moved to Railway PostgreSQL database (WordBankStorage model)
+# No more in-memory WORD_STORAGE dictionary - database is single source of truth
 
 # --- Database Helpers --------------------------------------------------------
 
@@ -2934,145 +2906,51 @@ except Exception:
     pass
 
 def _load_wordbank_from_disk(storage_id: str) -> List[Dict[str, str]]:
-    """Load wordbank from database (primary) or disk fallback (legacy)"""
-    # PRIMARY: Try database first (Railway-safe)
-    try:
-        from models import WordBankStorage
-        words = WordBankStorage.load_wordbank(storage_id)
-        if words:
-            print(f"✅ Loaded {len(words)} words from database for storage_id={storage_id}")
-            return words
-    except Exception as e:
-        print(f"⚠️ Database load failed for {storage_id}: {e}")
-    
-    # FALLBACK: Try legacy disk storage (local dev)
-    try:
-        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    print(f"✅ Loaded {len(data)} words from disk (legacy) for storage_id={storage_id}")
-                    # Migrate to database for future loads
-                    try:
-                        from models import WordBankStorage
-                        WordBankStorage.save_wordbank(storage_id, data)
-                        print(f"✅ Migrated {len(data)} words to database")
-                    except Exception:
-                        pass
-                    return data
-    except Exception as e:
-        print(f"⚠️ Failed to load wordbank from disk for {storage_id}: {e}")
-    
+    """DEPRECATED: Replaced by get_wordbank() which uses WordBankStorage model."""
     return []
 
 def _save_wordbank_to_disk(storage_id: str, rows: List[Dict[str, str]]):
-    """Save wordbank to database (primary) AND disk (legacy fallback)"""
-    # PRIMARY: Save to database for Railway persistence
-    try:
-        from models import WordBankStorage
-        user_id = current_user.id if current_user.is_authenticated else None
-        WordBankStorage.save_wordbank(storage_id, rows, user_id=user_id)
-        print(f"✅ Saved {len(rows)} words to database for storage_id={storage_id}")
-    except Exception as e:
-        print(f"⚠️ Database save failed for {storage_id}: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # FALLBACK: Also save to disk for local dev (best effort)
-    try:
-        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(rows, f, ensure_ascii=False)
-    except Exception as e:
-        # Non-fatal on Railway (ephemeral filesystem)
-        pass
+    """DEPRECATED: Replaced by set_wordbank() which uses WordBankStorage model."""
+    pass
 
 def _delete_wordbank_from_disk(storage_id: Optional[str]):
-    """Delete wordbank from database AND disk"""
-    if not storage_id:
-        return
-    
-    # Delete from database
-    try:
-        from models import WordBankStorage
-        WordBankStorage.delete_wordbank(storage_id)
-        print(f"✅ Deleted wordbank from database for storage_id={storage_id}")
-    except Exception as e:
-        print(f"⚠️ Database delete failed for {storage_id}: {e}")
-    
-    # Delete from disk (legacy)
-    try:
-        path = os.path.join(WORD_STORAGE_DIR, f"{storage_id}.json")
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception as e:
-        pass  # Non-fatal
+    """DEPRECATED: Replaced by delete_wordbank() which uses WordBankStorage model."""
+    pass
 
 def get_wordbank() -> List[Dict[str, str]]:
-    """Read wordbank from WORD_STORAGE using session's storage_id pointer.
+    """Read wordbank from Railway database (ONLY source of truth).
     
-    Avoids cookie size limits by keeping full word list server-side.
-    Session only stores small UUID pointer (~36 bytes).
-    If session is lost but user is authenticated, recover storage_id from database.
+    All word operations use wordbank_storage table in PostgreSQL.
+    Session stores small UUID pointer (~36 bytes) to avoid cookie limits.
     """
     storage_id = session.get("wordbank_storage_id")
-    wb = []
-
-    # 🔧 NEW: If session lost storage_id but user is authenticated, recover from database
-    if not storage_id and current_user.is_authenticated and hasattr(current_user, 'wordbank_storage_id'):
-        db_storage_id = current_user.wordbank_storage_id
-        if db_storage_id:
-            print(f"🔄 get_wordbank: Session lost storage_id, recovering from database for user {current_user.username}")
-            print(f"   Recovered storage_id={db_storage_id}")
-            storage_id = db_storage_id
-            session["wordbank_storage_id"] = storage_id  # Restore to session
-            session.modified = True
-
-    # Try to load from WORD_STORAGE using storage_id pointer
-    if storage_id:
-        with WORD_STORAGE_LOCK:
-            wb = WORD_STORAGE.get(storage_id, [])
-        if wb:
-            print(f"DEBUG get_wordbank: Loaded {len(wb)} words from WORD_STORAGE[{storage_id}]")
+    
+    if not storage_id:
+        print("DEBUG get_wordbank: No storage_id in session - wordbank is empty")
+        session["wordbank_count"] = 0
+        return []
+    
+    # Query Railway database (ONLY storage location)
+    try:
+        words = WordBankStorage.load_wordbank(storage_id)
+        if words:
+            print(f"✅ get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
+            session["wordbank_count"] = len(words)
+            return list(words)  # Return copy to prevent modification
         else:
-            print(f"⚠️ WARNING get_wordbank: storage_id={storage_id} exists but WORD_STORAGE is empty (server restart?)")
-            # Try disk restore
-            disk_rows = _load_wordbank_from_disk(storage_id)
-            if disk_rows:
-                with WORD_STORAGE_LOCK:
-                    WORD_STORAGE[storage_id] = disk_rows
-                wb = disk_rows
-                print(f"✅ Restored {len(wb)} words from disk cache for storage_id={storage_id}")
-    
-    # Fallback: try legacy direct session storage (migrate to WORD_STORAGE)
-    # BUT respect explicit clear operation - don't restore if user cleared intentionally
-    if not wb:
-        legacy = session.get(DATA_KEY)
-        was_cleared = session.get("wordbank_cleared", False)
-        
-        if was_cleared:
-            print("DEBUG get_wordbank: Wordbank was intentionally cleared - not restoring from fallback")
-        elif isinstance(legacy, list) and legacy:
-            wb = legacy
-            print(f"DEBUG get_wordbank: Migrating {len(wb)} words from session to WORD_STORAGE")
-            set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
-
-    # NO DEFAULT LOADING - Users must upload or type their own words
-    # Wordbank starts empty until user provides words
-    if not wb:
-        print("DEBUG get_wordbank: Wordbank is empty - user needs to upload or add words")
-    
-    session["wordbank_count"] = len(wb)
-    # CRITICAL: Return a copy to prevent callers from accidentally modifying WORD_STORAGE
-    return list(wb) if wb else []
+            print(f"⚠️ get_wordbank: storage_id={storage_id} not found in Railway database")
+            session["wordbank_count"] = 0
+            return []
+    except Exception as e:
+        print(f"❌ get_wordbank: Database error: {e}")
+        session["wordbank_count"] = 0
+        return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Store wordbank in WORD_STORAGE to avoid cookie size limits.
+    """Save wordbank to Railway database (ONLY storage location).
     
-    Cookie-based sessions have ~4KB limit - large word lists cause data loss.
-    WORD_STORAGE is server-side in-memory, session only stores UUID pointer.
-    For authenticated users, also persist storage_id in database to recover from session loss.
+    ⚡ CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
+    Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
     """
     import uuid
     
@@ -3081,51 +2959,49 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     if not storage_id:
         storage_id = str(uuid.uuid4())
         session["wordbank_storage_id"] = storage_id
-        session.permanent = True  # Critical for mobile browser persistence
-        session.modified = True  # Force immediate session save
+        session.permanent = True
+        session.modified = True
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
     
-    # ⚡ CRITICAL: COMPLETE REPLACEMENT (NOT APPEND!)
-    # This is direct assignment - old wordbank is COMPLETELY WIPED and replaced with new rows
-    # Store full word list in server-side WORD_STORAGE (not in cookies!)
-    with WORD_STORAGE_LOCK:
-        WORD_STORAGE[storage_id] = rows  # ← DIRECT ASSIGNMENT = TOTAL REPLACEMENT
-    # Persist to disk for durability across restarts
-    _save_wordbank_to_disk(storage_id, rows)
+    # Save to Railway database (ONLY storage location)
+    try:
+        user_id = current_user.id if current_user.is_authenticated else None
+        WordBankStorage.save_wordbank(storage_id, rows, user_id)
+        print(f"✅ set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
+    except Exception as e:
+        print(f"❌ set_wordbank: Database error: {e}")
+        db.session.rollback()
+        raise
     
-    # 🔧 NEW: For authenticated users, persist storage_id in database
-    # This allows recovery if session is lost (mobile browsers, cookie clearing, etc.)
-    if current_user.is_authenticated and hasattr(current_user, 'wordbank_storage_id'):
-        try:
-            current_user.wordbank_storage_id = storage_id
-            current_user.wordbank_last_updated = datetime.utcnow()
-            db.session.commit()
-            print(f"✅ set_wordbank: Persisted storage_id={storage_id} to user {current_user.username} (user_id={current_user.id})")
-        except Exception as e:
-            print(f"⚠️ set_wordbank: Failed to persist storage_id to database: {e}")
-            db.session.rollback()
-    
-    # Only store lightweight metadata in session; DO NOT store any copy of the word list
+    # Update session metadata (lightweight)
     session["wordbank_count"] = len(rows)
-    # Strict replacement semantics: ensure no legacy or fallback caches remain in session
-    # Remove any prior compact list or legacy keys to guarantee no merge/residual state
-    session.pop(DATA_KEY, None)
-    session.pop("wordbank_cleared", None)
+    session.permanent = True
     session.modified = True
-    session.permanent = True  # Strengthen persistence on mobile browsers
-
+    
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
-        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words → WORD_STORAGE[{storage_id}]")
+        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words")
     else:
         session["using_default_words"] = True
-        print(f"DEBUG set_wordbank: System words {len(rows)} → WORD_STORAGE[{storage_id}]")
+        print(f"DEBUG set_wordbank: System loaded {len(rows)} words")
 
-    # Always clear skip flag when new words are loaded
-    session.pop("skip_default_load", None)
+def delete_wordbank(storage_id: str):
+    """Delete wordbank from Railway database (single source of truth).
     
-    print(f"DEBUG set_wordbank: Server-side session updated, keys={list(session.keys())}")
+    Used when loading new word lists or clearing wordbank completely.
+    """
+    try:
+        success = WordBankStorage.delete_wordbank(storage_id)
+        if success:
+            print(f"✅ delete_wordbank: Removed storage_id={storage_id} from Railway database")
+        else:
+            print(f"⚠️ delete_wordbank: storage_id={storage_id} not found in Railway database")
+        return success
+    except Exception as e:
+        print(f"❌ delete_wordbank: Database error: {e}")
+        db.session.rollback()
+        return False
 
 def init_quiz_state():
     wordbank = get_wordbank()
@@ -4364,15 +4240,11 @@ def load_saved_wordlist():
         session.pop("is_random_play", None)
         session.modified = True
         
-        # Step 2: Delete old wordbank completely (database + disk + memory)
+        # Step 2: Delete old wordbank completely from Railway database
         old_storage_id = session.get("wordbank_storage_id")
         if old_storage_id:
             print(f"🗑️ /api/saved-lists/load: Deleting old wordbank storage_id={old_storage_id}")
-            _delete_wordbank_from_disk(old_storage_id)
-            # Clear from memory
-            with WORD_STORAGE_LOCK:
-                WORD_STORAGE.pop(old_storage_id, None)
-            # Remove pointer from session
+            delete_wordbank(old_storage_id)
             session.pop("wordbank_storage_id", None)
             session.modified = True
         
@@ -6084,13 +5956,13 @@ def api_battle_export_DEPRECATED(battle_code):
 @app.route("/api/wordbank", methods=["GET"])
 def api_get_wordbank():
     """
-    Returns the ACTUAL current wordbank from session storage.
+    Returns the ACTUAL current wordbank from Railway database.
     NEVER returns defaults - only what user has uploaded/entered.
     If empty, returns [] (empty list) - user must upload their own words.
     """
     # Enhanced debugging for mobile troubleshooting
     storage_id = session.get("wordbank_storage_id")
-    words = get_wordbank()
+    words = get_wordbank()  # Queries Railway database
     was_cleared = session.get("wordbank_cleared", False)
     has_uploaded = session.get("has_uploaded_once", False)
     
@@ -6100,17 +5972,10 @@ def api_get_wordbank():
           f"session_keys={list(session.keys())}, "
           f"user_agent={request.headers.get('User-Agent', 'UNKNOWN')[:50]}")
     
-    # Check if storage exists in WORD_STORAGE (this is NOT a default - it's real user data)
-    if storage_id:
-        with WORD_STORAGE_LOCK:
-            stored_words = WORD_STORAGE.get(storage_id, [])
-            print(f"DEBUG /api/wordbank: WORD_STORAGE contains {len(stored_words)} words for storage_id={storage_id}")
-            if len(stored_words) > 0:
-                print(f"ℹ️ /api/wordbank: Returning {len(stored_words)} REAL words from user's session (NOT defaults)")
-            else:
-                print(f"ℹ️ /api/wordbank: Returning 0 words - wordbank is empty (no defaults loaded)")
+    if len(words) > 0:
+        print(f"ℹ️ /api/wordbank: Returning {len(words)} words from Railway database (storage_id={storage_id})")
     else:
-        print(f"ℹ️ /api/wordbank: No storage_id - fresh session with no words uploaded yet")
+        print(f"ℹ️ /api/wordbank: Returning 0 words - wordbank is empty (no words uploaded)")
     
     # Return both 'words' (for backward compatibility) and 'success'/'count' (for LoadingSystem)
     response = jsonify({
@@ -6739,15 +6604,11 @@ def api_upload():
     session.pop("is_random_play", None)
     session.modified = True
     
-    # Step 2: Delete old wordbank completely (database + disk + memory)
+    # Step 2: Delete old wordbank completely from Railway database
     old_storage_id = session.get("wordbank_storage_id")
     if old_storage_id:
         print(f"🗑️ /api/upload: Deleting old wordbank storage_id={old_storage_id}")
-        _delete_wordbank_from_disk(old_storage_id)
-        # Clear from memory
-        with WORD_STORAGE_LOCK:
-            WORD_STORAGE.pop(old_storage_id, None)
-        # Remove pointer from session
+        delete_wordbank(old_storage_id)
         session.pop("wordbank_storage_id", None)
         session.modified = True
     
@@ -6951,15 +6812,11 @@ def api_upload_manual_words():
         session.pop("is_random_play", None)
         session.modified = True
         
-        # Step 2: Delete old wordbank completely (database + disk + memory)
+        # Step 2: Delete old wordbank completely from Railway database
         old_storage_id = session.get("wordbank_storage_id")
         if old_storage_id:
             print(f"🗑️ /api/upload-manual-words: Deleting old wordbank storage_id={old_storage_id}")
-            _delete_wordbank_from_disk(old_storage_id)
-            # Clear from memory
-            with WORD_STORAGE_LOCK:
-                WORD_STORAGE.pop(old_storage_id, None)
-            # Remove pointer from session
+            delete_wordbank(old_storage_id)
             session.pop("wordbank_storage_id", None)
             session.modified = True
         
@@ -8842,48 +8699,29 @@ def api_clear():
         storage_id = session.get("wordbank_storage_id")
         print(f"DEBUG /api/clear: Current storage_id={storage_id}")
         
-        # Clear from storage first
+        # Delete from Railway database (single source of truth)
         if storage_id:
-            with WORD_STORAGE_LOCK:
-                removed = WORD_STORAGE.pop(storage_id, None)
-                print(f"DEBUG /api/clear: Removed {len(removed) if removed else 0} words from WORD_STORAGE")
-            _delete_wordbank_from_disk(storage_id)
+            delete_wordbank(storage_id)
+            print(f"DEBUG /api/clear: Deleted wordbank from Railway database")
         
         # Clear all session data thoroughly
         session.pop("wordbank_storage_id", None)
         session.pop(DATA_KEY, None)
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("wordbank_count", None)
-        session.pop("using_default_words", None)  # Clear default flag
+        session.pop("using_default_words", None)
+        session.pop("skip_default_load", None)
+        session.pop("has_uploaded_once", None)
+        session.pop("is_random_play", None)
         
-        # 🔧 TOTAL RESET: Clear flags so user gets fresh start (NO default words auto-load)
-        # This ensures refresh button truly clears EVERYTHING including default word list
-        session.pop("skip_default_load", None)  # Remove flag
-        session.pop("has_uploaded_once", None)  # Remove flag
-        session.pop("is_random_play", None)  # Clear Random Play flag
-        
-        # CRITICAL: Explicitly set empty word list to prevent restoration from fallback
-        # This prevents get_wordbank() from finding session fallback data after reload
-        session[DATA_KEY] = []  # Set explicit empty list instead of removing key
+        # Mark wordbank as intentionally cleared
         session["wordbank_count"] = 0
-        session["wordbank_cleared"] = True  # Flag that clear was intentional
-        
-        # Clear from WORD_STORAGE again to be absolutely certain
-        if storage_id:
-            with WORD_STORAGE_LOCK:
-                WORD_STORAGE[storage_id] = []  # Ensure it's empty, not deleted
-                print(f"DEBUG /api/clear: Set WORD_STORAGE[{storage_id}] to empty list []")
-            _delete_wordbank_from_disk(storage_id)
-        
-        # Set flag to explicitly prevent auto-loading defaults after clear
-        # User must manually upload or select "Random Words" to get any words
-        session["skip_default_load"] = True  # Don't auto-load defaults after clear
+        session["wordbank_cleared"] = True
         
         # Force session modification
         session.modified = True
         
-        print(f"DEBUG /api/clear: Session cleared. Remaining keys: {list(session.keys())}")
-        print(f"DEBUG /api/clear: User must manually upload words or use Random Words feature")
+        print(f"DEBUG /api/clear: Session cleared. User must manually upload words or use Random Words feature")
         
         return jsonify({
             "ok": True, 
