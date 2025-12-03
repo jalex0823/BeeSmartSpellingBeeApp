@@ -308,18 +308,20 @@ async function loadAvatars() {
         const data = await response.json();
         
         // Store user info globally for chooseAvatar to check admin/guest status
+        // CRITICAL FIX: API returns data.user.{field}, not data.{field}
+        const userData = data.user || {};
         window.avatarUserInfo = {
-            is_guest: data.is_guest || false,
-            is_admin: data.is_admin || false,
-            user_role: data.role || null,  // Fixed: use 'role' from API
-            user_authenticated: data.authenticated || false,  // Fixed: use 'authenticated' from API
-            purchased_avatars: data.purchased_avatars || []  // CRITICAL: Avatar unlock gate
+            is_guest: userData.is_guest || false,
+            is_admin: userData.is_admin || false,
+            user_role: userData.role || null,
+            user_authenticated: userData.is_authenticated || false,  // From data.user.is_authenticated
+            purchased_avatars: data.purchased_avatars || userData.purchased_avatars || []  // CRITICAL: Avatar unlock gate
         };
         console.log('👤 User Info:', window.avatarUserInfo);
         
-        // Capture current user's honey points if provided
-        if (data && typeof data.user_honey_points === 'number') {
-            currentUserHoneyPoints = data.user_honey_points;
+        // Capture current user's honey points from data.user.honey_points
+        if (userData && typeof userData.honey_points === 'number') {
+            currentUserHoneyPoints = userData.honey_points;
             console.log('🍯 Current user honey points:', currentUserHoneyPoints);
         }
         
