@@ -754,7 +754,7 @@
             margin: 0 auto;
         }
         
-        /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Matching student dashboard style */
+        /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Compact size matching student dashboard */
         .bee-avatar-container,
         #mascotBee3D,
         .mascot-3d-container {
@@ -769,27 +769,22 @@
             justify-content: center;
             margin: 0 auto;
             
-            /* Circular container like student dashboard */
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            
-            /* Visibility */
+            /* Clean transparent container */
+            background: transparent;
+            overflow: visible;
             z-index: 100;
             
             /* Interaction */
             pointer-events: auto;
             
             /* Smooth transitions */
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease;
         }
         
         .bee-avatar-container:hover,
         #mascotBee3D:hover,
         .mascot-3d-container:hover {
             transform: scale(1.05);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
         }
         
         /* Canvas styling for Three.js avatars */
@@ -798,7 +793,7 @@
         .mascot-3d-container canvas {
             width: 100% !important;
             height: 100% !important;
-            object-fit: cover !important;
+            object-fit: contain !important;
         }
         
         /* Remove any pseudo-elements */
@@ -1991,24 +1986,21 @@
                 margin: 0 auto;
             }
             
-            /* 📱 MOBILE: Avatar container - matching student dashboard style */
+            /* 📱 MOBILE: Avatar container - compact size, clean transparent */
             .bee-avatar-container,
             #mascotBee3D,
             .mascot-3d-container {
                 width: 140px !important;
                 height: 140px !important;
                 margin: 0 auto 1rem auto !important;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.5);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                overflow: hidden;
+                background: transparent;
+                overflow: visible;
             }
             
             .bee-avatar-container:hover,
             #mascotBee3D:hover,
             .mascot-3d-container:hover {
                 transform: scale(1.05) !important;
-                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
             }
             
             .logo-section img {
