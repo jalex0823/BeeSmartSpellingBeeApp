@@ -60,6 +60,35 @@
             clearTimeout(window.THREE_LOAD_TIMEOUT);
         }
     </script>
+    <!-- Inline FX Trigger Button (small) -->
+    <style>
+        .fx-trigger-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 120;
+            background: linear-gradient(135deg, #FFD54F, #FFB300);
+            color: #3b2b04;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            box-shadow: 0 8px 18px rgba(255, 193, 7, 0.35);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .fx-trigger-btn:hover { transform: translateY(-2px); }
+        .fx-trigger-icon { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2)); }
+        /* Container to anchor the FX button near the avatar */
+        .fx-anchor {
+            position: relative;
+            width: 100%;
+            height: 0;
+        }
+    </style>
     <!-- Ensure page starts at top: disable scroll restoration and force top after load -->
     <script>
         (function(){
@@ -107,6 +136,37 @@
                 }
             } else {
                 console.log('No registered user avatar, using default SmartyBee');
+            }
+
+            // Attach small FX trigger button next to the avatar container
+            try {
+                const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                if (container && !document.getElementById('fxTriggerButton')) {
+                    const fxBtn = document.createElement('button');
+                    fxBtn.id = 'fxTriggerButton';
+                    fxBtn.className = 'fx-trigger-btn';
+                    fxBtn.setAttribute('aria-label', 'Play Intro FX');
+                    fxBtn.innerHTML = '<span class="fx-trigger-icon">✨</span><span>FX</span>';
+                    fxBtn.onclick = function() {
+                        const target = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                        if (target && window.AvatarFX) {
+                            // Play a random intro effect for the current avatar
+                            window.AvatarFX.init(target, null);
+                        } else {
+                            // Graceful fallback: quick sparkle burst
+                            const s = document.createElement('div');
+                            s.className = 'sparkle';
+                            s.style.left = (target?.getBoundingClientRect().left || 50) + 'px';
+                            s.style.top = (target?.getBoundingClientRect().top || 50) + 'px';
+                            document.body.appendChild(s);
+                            setTimeout(()=> s.remove(), 1000);
+                        }
+                    };
+                    container.style.position = 'relative';
+                    container.appendChild(fxBtn);
+                }
+            } catch (e) {
+                console.warn('FX trigger attach failed:', e);
             }
         }
         
