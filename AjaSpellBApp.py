@@ -3128,7 +3128,8 @@ def init_quiz_state():
         "history": [],  # list of {word, user_input, correct, method, elapsed_ms, ts}
         "db_session_id": db_session_id  # Link to database session
     }
-    session.modified = True  # Critical for mobile session persistence
+    session.permanent = True  # Critical for mobile session persistence
+    session.modified = True  # Force immediate session save
 
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
@@ -6433,6 +6434,10 @@ def api_upload():
       - file upload (.csv, .txt, .docx, .pdf)
       - OR raw JSON body: { "words": [ {"word": "...", "sentence":"", "hint":""}, ... ] }
     """
+    # CRITICAL: Set session persistence FIRST before any session operations
+    session.permanent = True
+    session.modified = True
+    
     rows: List[Dict[str, str]] = []
 
     # JSON payload path
