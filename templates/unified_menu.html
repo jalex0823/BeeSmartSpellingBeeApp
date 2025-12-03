@@ -754,13 +754,13 @@
             margin: 0 auto;
         }
         
-        /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Used across all pages */
+        /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Matching student dashboard style */
         .bee-avatar-container,
         #mascotBee3D,
         .mascot-3d-container {
-            /* Container sizing */
-            width: 460px;
-            height: 360px;
+            /* Container sizing - compact like student dashboard */
+            width: 140px;
+            height: 140px;
             
             /* Layout */
             position: relative;
@@ -769,33 +769,27 @@
             justify-content: center;
             margin: 0 auto;
             
-            /* Visibility */
-            overflow: visible;
-            z-index: 100;
+            /* Circular container like student dashboard */
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
             
-            /* Visual effects */
-            background: transparent;
-            border: none;
-            filter: drop-shadow(0 10px 30px rgba(255, 193, 7, 0.3));
+            /* Visibility */
+            z-index: 100;
             
             /* Interaction */
             pointer-events: auto;
-            cursor: pointer;
             
             /* Smooth transitions */
-            transition: transform 0.3s ease, filter 0.3s ease;
-        }
-
-        /* Optional brightness boost for avatar visuals */
-        .avatar-bright {
-            filter: brightness(1.08) saturate(1.12);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
         .bee-avatar-container:hover,
         #mascotBee3D:hover,
         .mascot-3d-container:hover {
-            transform: translateY(-8px) scale(1.05);
-            filter: drop-shadow(0 15px 40px rgba(255, 193, 7, 0.5));
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
         }
         
         /* Canvas styling for Three.js avatars */
@@ -804,17 +798,7 @@
         .mascot-3d-container canvas {
             width: 100% !important;
             height: 100% !important;
-            max-width: 100% !important;
-            max-height: 100% !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            pointer-events: none;
-            z-index: 101 !important;
-            background: transparent !important;
-            /* Slight global brightness/saturation bump for clarity */
-            filter: brightness(1.06) saturate(1.08);
+            object-fit: cover !important;
         }
         
         /* Remove any pseudo-elements */
@@ -825,12 +809,6 @@
         .mascot-3d-container::before,
         .mascot-3d-container::after {
             display: none !important;
-        }
-        
-        /* MAIN MENU SPECIFIC: Larger avatar (280x280) */
-        .logo-section #mascotBee3D {
-            width: 460px !important;
-            height: 360px !important;
         }
         
         /* FINAL CONTAINER SIZE - Larger avatar (280x280) */
@@ -2013,27 +1991,24 @@
                 margin: 0 auto;
             }
             
-            /* 📱 MOBILE: Avatar container standards */
+            /* 📱 MOBILE: Avatar container - matching student dashboard style */
             .bee-avatar-container,
             #mascotBee3D,
             .mascot-3d-container {
-                width: 240px !important;
-                height: 240px !important;
+                width: 140px !important;
+                height: 140px !important;
                 margin: 0 auto 1rem auto !important;
-                transform: translateY(-10px) !important;
-                filter: drop-shadow(0 8px 25px rgba(255, 193, 7, 0.35));
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.5);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                overflow: hidden;
             }
             
             .bee-avatar-container:hover,
             #mascotBee3D:hover,
             .mascot-3d-container:hover {
-                transform: translateY(-15px) scale(1.05) !important;
-            }
-            
-            /* Main menu specific - slightly larger */
-            .logo-section #mascotBee3D {
-                width: 460px !important;
-                height: 360px !important;
+                transform: scale(1.05) !important;
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
             }
             
             .logo-section img {
