@@ -3170,6 +3170,8 @@
                                     border: 2px solid rgba(255, 215, 0, 0.3);
                                     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
                                     min-width: 140px;
+                                    max-width: 160px;
+                                    flex: 1;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 0.85rem; color: #8B4513; font-weight: 600; margin-bottom: 0.3rem;">
@@ -3190,6 +3192,8 @@
                                     border: 2px solid rgba(255, 215, 0, 0.3);
                                     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
                                     min-width: 140px;
+                                    max-width: 160px;
+                                    flex: 1;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 0.85rem; color: #8B4513; font-weight: 600; margin-bottom: 0.3rem;">
@@ -3210,6 +3214,8 @@
                                     border: 2px solid rgba(255, 215, 0, 0.3);
                                     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
                                     min-width: 140px;
+                                    max-width: 160px;
+                                    flex: 1;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 0.85rem; color: #8B4513; font-weight: 600; margin-bottom: 0.3rem;">
@@ -3230,6 +3236,8 @@
                                     border: 2px solid rgba(255, 215, 0, 0.3);
                                     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
                                     min-width: 140px;
+                                    max-width: 160px;
+                                    flex: 1;
                                     text-align: center;
                                 ">
                                     <div style="font-size: 0.85rem; color: #8B4513; font-weight: 600; margin-bottom: 0.3rem;">
@@ -3242,7 +3250,50 @@
                                         &nbsp;
                                     </div>
                                 </div>
-                                                        </div>
+                            </div>
+
+                            <!-- Dashboard and Sign Out Buttons -->
+                            <div style="
+                                display: flex;
+                                gap: 1rem;
+                                justify-content: center;
+                                margin-top: 1.5rem;
+                                flex-wrap: wrap;
+                            ">
+                                <a href="/student_dashboard" style="
+                                    padding: 0.8rem 2rem;
+                                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                                    color: white;
+                                    border-radius: 15px;
+                                    text-decoration: none;
+                                    font-weight: 700;
+                                    font-size: 1.05rem;
+                                    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+                                    transition: all 0.3s ease;
+                                    display: inline-block;
+                                    border: 3px solid rgba(76, 175, 80, 0.6);
+                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(76, 175, 80, 0.5)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(76, 175, 80, 0.4)'">
+                                    📊 Student Dashboard
+                                </a>
+                                <a href="/auth/logout" style="
+                                    padding: 0.8rem 2rem;
+                                    background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
+                                    color: white;
+                                    border-radius: 15px;
+                                    text-decoration: none;
+                                    font-weight: 700;
+                                    font-size: 1.05rem;
+                                    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+                                    transition: all 0.3s ease;
+                                    display: inline-block;
+                                    border: 3px solid rgba(255, 107, 107, 0.6);
+                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(255, 107, 107, 0.5)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 107, 0.4)'">
+                                    🚪 Sign Out
+                                </a>
+                            </div>
+                        </div>
                                                         <script>
                                                         (function(){
                                                             // Collapsible control panel under a gear icon
