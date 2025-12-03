@@ -13322,7 +13322,15 @@ def api_select_avatar():
         
         # ✅ SECURITY CHECK 1: Guest users cannot select avatars (beyond mascot)
         # IMPORTANT: Students without passwords are still authenticated users with full access
-        is_user_guest = session.get('is_guest', False) or is_guest_user(current_user)
+        # Fix: If an authenticated non-guest user is present, clear any stale session guest flag
+        if current_user.is_authenticated and not is_guest_user(current_user):
+            try:
+                if session.get('is_guest', False):
+                    print("⚙️ Clearing stale session is_guest flag for authenticated user")
+                session['is_guest'] = False
+            except Exception as _sess_e:
+                print(f"⚠️ Could not update session is_guest flag: {_sess_e}")
+        is_user_guest = is_guest_user(current_user) or bool(session.get('is_guest', False))
         if is_user_guest:
             # Guest users can only use the mascot avatar (honey-comb)
             from avatar_catalog import AVATAR_CATALOG
