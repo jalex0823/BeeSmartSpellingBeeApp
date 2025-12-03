@@ -94,21 +94,20 @@
         (function(){
             try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch(e) {}
             function jumpTop(){ try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch(e){ window.scrollTo(0,0); } }
-            window.addEventListener('DOMContentLoaded', function(){
-                // run twice to win against late layout shifts
-                setTimeout(jumpTop, 0);
-                setTimeout(jumpTop, 150);
-            });
-            window.addEventListener('load', function(){
-                setTimeout(jumpTop, 0);
-                setTimeout(jumpTop, 300);
-            });
-        })();
-    </script>
-        <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader)
-            Important: include ONLY ONE provider of SmartyBee3D to avoid 'already declared' errors. -->
-        <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251201"></script>
-    <!-- User Avatar Loader -->
+                    fxBtn.onclick = function() {
+                        const target = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                        if (target && window.AvatarFX) {
+                            // Play a random intro effect for the current avatar
+                            window.AvatarFX.init(target, null);
+                        } else {
+                            // Graceful fallback: quick sparkle burst
+                            const s = document.createElement('div');
+                            s.className = 'sparkle';
+                            s.style.left = (target?.getBoundingClientRect().left || 50) + 'px';
+                            s.style.top = (target?.getBoundingClientRect().top || 50) + 'px';
+                            document.body.appendChild(s);
+                            setTimeout(()=> s.remove(), 1000);
+                        }
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
