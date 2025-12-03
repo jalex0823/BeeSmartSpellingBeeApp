@@ -1010,17 +1010,17 @@
 
         <!-- Delete button at bottom center -->
         <div class="jar-delete-container">
-          <img class="jar-delete-img" src="/static/assets/WordListImages/btn_delete_puddle.png" alt="Delete word list" title="Delete word list" onclick="deleteWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')" style="cursor:pointer;" />
+          <img class="jar-delete-img" src="/static/assets/WordListImages/btn_delete_puddle.png" alt="Delete word list" title="Delete word list" onclick="deleteWordList(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
         </div>
 
         <!-- Leaf (Use in quiz) - positioned on left side -->
         <img class="jar-use-leaf" src="/static/assets/WordListImages/btn_use_in_quiz.png" alt="Use in quiz" title="${isEmpty ? "Upload words first" : "Use in quiz"}" onclick="event.preventDefault(); event.stopPropagation(); useListInQuiz(${list.id});" style="cursor:pointer;" />
 
         <!-- Magnifier (View) - positioned on right side -->
-        <img class="jar-view-btn" src="/static/assets/WordListImages/btn_view.png" alt="View" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')" style="cursor:pointer;" />
+        <img class="jar-view-btn" src="/static/assets/WordListImages/btn_view.png" alt="View" title="View list" onclick="viewWordList(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
         
         <!-- Edit dipper (positioned appropriately) -->
-        <img class="jar-edit-btn" src="/static/assets/WordListImages/btn_edit_dipper.png" alt="Edit" title="Edit list" onclick="openEditModal(event, ${list.id}, '${escapeHtml(list.name).replace(/'/g,"\\'")}')" style="cursor:pointer;" />
+        <img class="jar-edit-btn" src="/static/assets/WordListImages/btn_edit_dipper.png" alt="Edit" title="Edit list" onclick="openEditModal(event, ${list.id}, '${escapeForJS(list.name)}')" style="cursor:pointer;" />
       </div>
     `;
     // Dynamic title scaling to keep long names within the plate without wrapping
@@ -1654,6 +1654,19 @@
 
   // helpers
   function escapeHtml(text){ const d=document.createElement("div"); d.textContent=text||""; return d.innerHTML; }
+  
+  // Escape for inline JavaScript strings (handles <, >, ", ', \)
+  function escapeForJS(str) {
+    if (!str) return "";
+    return str
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"')
+      .replace(/</g, "\\u003C")
+      .replace(/>/g, "\\u003E")
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r");
+  }
 
   // Bee flyover
   function runBeeFlyover(){
