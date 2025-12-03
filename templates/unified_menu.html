@@ -100,6 +100,7 @@
             if (document.readyState === 'complete') { jumpTop(); }
             else { window.addEventListener('load', jumpTop, { once: true }); }
         })();
+    </script>
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
