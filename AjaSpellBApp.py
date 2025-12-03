@@ -3018,7 +3018,8 @@ def get_wordbank() -> List[Dict[str, str]]:
         print("DEBUG get_wordbank: Wordbank is empty - user needs to upload or add words")
     
     session["wordbank_count"] = len(wb)
-    return wb
+    # CRITICAL: Return a copy to prevent callers from accidentally modifying WORD_STORAGE
+    return list(wb) if wb else []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     """Store wordbank in WORD_STORAGE to avoid cookie size limits.
@@ -3115,7 +3116,7 @@ def init_quiz_state():
     session[QUIZ_STATE_KEY] = {
         "idx": 0,
         "order": order,
-    "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
         "correct": 0,
         "incorrect": 0,
         "streak": 0,
