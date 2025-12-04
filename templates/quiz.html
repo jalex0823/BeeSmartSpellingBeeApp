@@ -317,6 +317,34 @@ if ('speechSynthesis' in window) {
         -webkit-transform: scale(1.1);
     }
     
+    /* Progress Pill - Matches Submit Button Color */
+    .progress-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        background: linear-gradient(90deg, #FFB300 0%, #FFD54F 100%);
+        color: #2b2100;
+        border: 2px solid rgba(255, 193, 7, 0.3);
+        border-radius: 20px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    
+    .progress-pill .progress-icon {
+        font-size: 1rem;
+    }
+    
+    .progress-pill-text {
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+    
     /* Score display slide animation - iOS Compatible */
     .score-display {
         transition: all 0.4s ease;
@@ -3034,13 +3062,18 @@ if ('speechSynthesis' in window) {
 <div class="quiz-container quiz-shell">
     <!-- Quiz Header -->
     <div class="quiz-header">
-        <!-- Modern header layout: buttons on right, progress hidden in stats -->
+        <!-- Modern header layout: buttons on right, progress pill with stats and exit -->
         <div class="quiz-header-top">
             <div class="progress-section" style="visibility: hidden;">
-                <!-- Progress hidden - shown in status menu instead -->
+                <!-- Progress hidden - shown in pill instead -->
                 <span id="progressText">Question 1 of 10</span>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <!-- Progress Pill -->
+                <div class="progress-pill" id="progressPill">
+                    <span class="progress-icon">📊</span>
+                    <span class="progress-pill-text" id="floatingWordCount">0/0</span>
+                </div>
                 <button id="toggleStatusBtn" class="status-toggle-button" onclick="toggleStatusMenu()" role="button" aria-label="Toggle Status Menu">
                     <span class="status-icon">📊</span>
                     <span>Stats</span>
@@ -7393,9 +7426,9 @@ class QuizManager {
             floatingStreak.textContent = streak;
         }
         
-        // Show the floating stats bar once quiz starts
-        if (sessionStatsBar && total > 0) {
-            sessionStatsBar.style.display = 'flex';
+        // Keep the old floating stats bar hidden (we use progress pill now)
+        if (sessionStatsBar) {
+            sessionStatsBar.style.display = 'none';
         }
 
         // Update honey jar fill level based on progress
