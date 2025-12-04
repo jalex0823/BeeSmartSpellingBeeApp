@@ -3072,7 +3072,7 @@ if ('speechSynthesis' in window) {
                 <!-- Progress Pill -->
                 <div class="progress-pill" id="progressPill">
                     <span class="progress-icon">📊</span>
-                    <span class="progress-pill-text" id="floatingWordCount">0/0</span>
+                    <span class="progress-pill-text" id="progressPillCount">0/0</span>
                 </div>
                 <button id="toggleStatusBtn" class="status-toggle-button" onclick="toggleStatusMenu()" role="button" aria-label="Toggle Status Menu">
                     <span class="status-icon">📊</span>
@@ -7228,11 +7228,11 @@ class QuizManager {
                     }
                     
                     // After all modals shown, load next word (which will show completion if quiz is done)
-                    setTimeout(() => this.loadNextWord(), 800);
+                    setTimeout(() => this.loadNextWordWithIntro(), 800);
                 }, 1500);
             } else {
                 // Normal flow (CORRECT answer): Add a small delay after speech finishes, then load next word
-                setTimeout(() => this.loadNextWord(), 800);
+                setTimeout(() => this.loadNextWordWithIntro(), 800);
             }
             
         } catch (error) {
@@ -7419,14 +7419,18 @@ class QuizManager {
             sessionPointsElement.textContent = points.toLocaleString();
         }
         
-        // 🎯 Update floating session stats bar
+        // 🎯 Update floating session stats bar and progress pill
         const floatingWordCount = document.getElementById('floatingWordCount');
+        const progressPillCount = document.getElementById('progressPillCount');
         const floatingPoints = document.getElementById('floatingPoints');
         const floatingStreak = document.getElementById('floatingStreak');
         const sessionStatsBar = document.getElementById('sessionStatsBar');
         
         if (floatingWordCount) {
             floatingWordCount.textContent = `${correct}/${total}`;
+        }
+        if (progressPillCount) {
+            progressPillCount.textContent = `${correct}/${total}`;
         }
         if (floatingPoints) {
             const points = Number(this.sessionPoints) || 0;
