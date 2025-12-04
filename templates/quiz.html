@@ -6286,6 +6286,7 @@ class QuizManager {
             modal.style.display = 'none';
             this.updateVoiceToggleUI();
             // Don't call showIntroAnnouncer - just start quiz silently
+            this.quizStarted = true; // <-- BUG FIX: Set quizStarted flag
             this.loadNextWord();
         }, { once: true });
     }
