@@ -3706,13 +3706,12 @@
                                 </div>
                             </div>
 
-                            <!-- Dashboard and Sign Out Buttons Row -->
+                            <!-- All Three Buttons on Same Line -->
                             <div style="
                                 display: flex;
                                 gap: 0.75rem;
                                 justify-content: center;
                                 margin-top: 1.5rem;
-                                margin-bottom: 0.75rem;
                                 width: 100%;
                             ">
                                 <a href="/auth/dashboard" style="
@@ -3725,12 +3724,36 @@
                                     font-size: 0.9rem;
                                     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
                                     transition: all 0.3s ease;
-                                    display: inline-block;
+                                    display: inline-flex;
+                                    align-items: center;
+                                    justify-content: center;
                                     border: 2px solid rgba(76, 175, 80, 0.6);
+                                    flex: 1;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(76, 175, 80, 0.4)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.3)'">
                                     📊 Dashboard
                                 </a>
+                                <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
+                                    padding: 0.5rem 1.2rem;
+                                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+                                    color: #5A2C15;
+                                    border-radius: 12px;
+                                    font-weight: 600;
+                                    font-size: 0.9rem;
+                                    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+                                    transition: all 0.3s ease;
+                                    display: inline-flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 0.3rem;
+                                    border: 2px solid rgba(255, 215, 0, 0.6);
+                                    cursor: pointer;
+                                    flex: 1;
+                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 215, 0, 0.5)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.4)'"
+                                   onclick="startQuiz()">
+                                    📝 Quiz (<span id="wordCountDisplay">0</span>)
+                                </button>
                                 <a href="/auth/logout" style="
                                     padding: 0.5rem 1.2rem;
                                     background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
@@ -3741,36 +3764,16 @@
                                     font-size: 0.9rem;
                                     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
                                     transition: all 0.3s ease;
-                                    display: inline-block;
+                                    display: inline-flex;
+                                    align-items: center;
+                                    justify-content: center;
                                     border: 2px solid rgba(255, 107, 107, 0.6);
+                                    flex: 1;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 107, 107, 0.4)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 107, 0.3)'">
                                     🚪 Sign Out
                                 </a>
                             </div>
-
-                            <!-- Start Quiz Button - Full Width -->
-                            <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
-                                padding: 0.8rem 1.5rem;
-                                background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-                                color: #5A2C15;
-                                border-radius: 12px;
-                                font-weight: 700;
-                                font-size: 1rem;
-                                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
-                                transition: all 0.3s ease;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 0.5rem;
-                                border: 2px solid rgba(255, 215, 0, 0.6);
-                                cursor: pointer;
-                                width: 100%;
-                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 215, 0, 0.5)'"
-                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.4)'"
-                               onclick="startQuiz()">
-                                🐝 Start Quiz (<span id="wordCountDisplay">0</span> words)
-                            </button>
                         </div>
                             </div>
                         </div>
@@ -5898,6 +5901,42 @@
                                 body: JSON.stringify({ id })
                             });
                             const data = await res.json();
+                            
+                            // Handle resume/restart prompt
+                            if (data.action_required === 'resume_or_restart') {
+                                console.log(`💡 Quiz in progress for this list - showing resume/restart modal`);
+                                const choice = await showBeeConfirm({
+                                    title: '📝 Quiz in Progress',
+                                    message: `${data.message}\n\n🎯 Progress: ${data.progress.current}/${data.progress.total} words\n\nWhat would you like to do?`,
+                                    confirmText: '▶️ Resume Quiz',
+                                    cancelText: '🔄 Restart from Beginning'
+                                });
+                                
+                                if (choice) {
+                                    // User chose Resume - go to quiz page
+                                    console.log('✅ User chose to resume quiz');
+                                    window.location.href = '/quiz';
+                                } else {
+                                    // User chose Restart - reload list with force flag
+                                    console.log('🔄 User chose to restart - reloading list from scratch');
+                                    const restartRes = await fetch('/api/saved-lists/load', {
+                                        method: 'POST', 
+                                        headers: {'Content-Type':'application/json'},
+                                        body: JSON.stringify({ id, force_restart: true })
+                                    });
+                                    const restartData = await restartRes.json();
+                                    if (restartData.ok) {
+                                        await WordBankManager.updateAllDisplays(true);
+                                        showSuccessMessage(`🔄 Restarted "${restartData.loaded.name}" (${restartData.loaded.word_count} words)`);
+                                        setTimeout(() => window.location.href = '/quiz', 800);
+                                    } else {
+                                        showErrorMessage(restartData.error || 'Failed to restart');
+                                    }
+                                }
+                                return;
+                            }
+                            
+                            // Normal load (no quiz in progress)
                             if (data.ok){
                                 console.log(`✅ Saved list loaded: ${data.loaded.word_count} words OVERRODE previous list`);
                                 // ✅ Update word count badge AND start quiz button using centralized manager
@@ -5912,7 +5951,10 @@
                             } else {
                                 showErrorMessage(data.error || 'Failed to load list');
                             }
-                        } catch(e){ showErrorMessage('Failed to load list'); }
+                        } catch(e){ 
+                            console.error('Error loading list:', e);
+                            showErrorMessage('Failed to load list'); 
+                        }
                     });
                 });
                 // Wire upload buttons for updating saved lists from files

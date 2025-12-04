@@ -4299,10 +4299,11 @@ def load_saved_wordlist():
 
         # ✅ RESUME/RESTART LOGIC
         # Check if a quiz is already in progress for this specific list
+        force_restart = payload.get("force_restart", False)
         quiz_state = session.get(QUIZ_STATE_KEY)
         active_list_id = session.get("source_list_id")
         
-        if quiz_state and active_list_id == list_id:
+        if quiz_state and active_list_id == list_id and not force_restart:
             is_complete = quiz_state.get("is_complete", False)
             current_index = quiz_state.get("current_word_index", 0)
             total_words = quiz_state.get("total_words", 0)
@@ -4320,6 +4321,10 @@ def load_saved_wordlist():
                         "total": total_words
                     }
                 })
+        
+        # User chose restart or no quiz in progress
+        if force_restart:
+            print(f"🔄 /api/saved-lists/load: User chose to restart quiz for list_id={list_id}")
 
         # --- End Resume/Restart Logic ---
 
