@@ -102,38 +102,34 @@ session.modified = True  # ✅ CRITICAL: Tell Flask to persist
 
 ---
 
-### 4. **Avatar Thumbnail 404 Errors** ✅ FIXED
-**Problem:** GLB format avatars had broken thumbnail paths
+### 4. **Avatar Thumbnail 404 Errors** ✅ FIXED (UPDATED)
+**Problem:** GLB format avatars had broken thumbnail paths - "404 Not Found" errors
 
 **Root Cause:**
-- GLB avatars stored in `glb_files/` directory
-- Thumbnails in `glb_files/AvatarThumbnails/`
-- Code used OBJ format path structure (`folder_path/` + filename)
+- Database `thumbnail_file` field contains outdated/incorrect paths
+- Example: `cool-bee` had `AvatarThumbnails/cool-bee-thumb.png` in database
+- Actual file is `CoolBee!.png` (all thumbnails have `!` suffix)
+- `get_avatar_data()` used database field instead of deriving from GLB filename
 
 **Fix Applied:** `models.py` lines 158-177
 ```python
 def get_avatar_data(self):
     """Get avatar data with correct paths for GLB vs OBJ format."""
-    # Detect format
-    is_glb = (self.glb_data is not None)
+    # ... previous code ...
     
     if is_glb:
-        # GLB format uses glb_files/ base path
         base_path = "/static/assets/avatars/glb_files"
-        thumbnail_path = f"{base_path}/AvatarThumbnails/{self.slug}.png"
-    else:
-        # OBJ format uses folder_path/
-        base_path = f"/static/assets/avatars/{self.folder_path}"
-        thumbnail_path = f"{base_path}/thumbnail.png"
-    
-    return {
-        "avatar_url": f"{base_path}/{self.slug}.glb" if is_glb else ...,
-        "thumbnail_url": thumbnail_path,
-        ...
-    }
+        model_path = f"{base_path}/{avatar.obj_file}"
+        
+        # CRITICAL FIX: Derive thumbnail from GLB filename, not database
+        # Pattern: glb_files/AvatarThumbnails/{GLB_BASENAME}!.png
+        import os
+        glb_basename = os.path.splitext(os.path.basename(avatar.obj_file))[0]
+        thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+        # Example: CoolBee.glb → CoolBee!.png
 ```
 
-**Impact:** All avatar thumbnails now load without 404 errors
+**Impact:** All avatar thumbnails now load without 404 errors in dashboards and pickers
 
 ---
 
@@ -210,7 +206,6 @@ Created comprehensive test suite: `test_quiz_smoke.py`
 **Commits:**
 1. `cdf52f0` - "Fix critical quiz progression and avatar display issues"
    - Avatar selection logic
-   - Avatar thumbnail paths
    - Session persistence
    - Next Word button handler
 
@@ -218,6 +213,14 @@ Created comprehensive test suite: `test_quiz_smoke.py`
    - Cleaned up 110 lines of dead code
    - Fixed wrong state field usage
    - **Critical fix for quiz advancement**
+
+3. `1b6a2a5` - "Add comprehensive documentation and smoke test suite"
+   - Complete fix summary documentation
+   - Automated test suite
+
+4. `a51e8c6` - "Fix avatar thumbnail 404 errors - derive from GLB filename"
+   - Fixed thumbnail path derivation
+   - **Critical fix for dashboard 404 errors**
 
 **Status:** ✅ All changes pushed to `origin/main`
 
