@@ -4,7 +4,15 @@
  */
 
 class SmartyBee3D {
+    static instances = new Map();
+
+    static getController(containerId) {
+        return SmartyBee3D.instances.get(containerId);
+    }
+
     constructor(containerId, options = {}) {
+        SmartyBee3D.instances.set(containerId, this);
+
         this.container = document.getElementById(containerId);
         if (!this.container) {
             console.warn(`Container ${containerId} not found`);
@@ -12,8 +20,8 @@ class SmartyBee3D {
         }
 
         this.options = {
-            width: options.width || 200,
-            height: options.height || 200,
+            width: options.width || 400,
+            height: options.height || 412,
             autoRotate: options.autoRotate !== false,
             enableInteraction: options.enableInteraction !== false,
             // Build paths from injected base to avoid root-relative 404s
@@ -354,6 +362,7 @@ class SmartyBee3D {
                 this.container.removeChild(this.renderer.domElement);
             }
         }
+        SmartyBee3D.instances.delete(this.container.id);
     }
 
     resize(width, height) {

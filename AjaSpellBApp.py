@@ -264,7 +264,7 @@ def _ensure_session_storage_id() -> str:
 #
 #     save_wordbank_atomic(sid, cleaned)
 #     # Reset quiz state whenever wordbank changes
-#     init_quiz_state(len(cleaned))
+#     init_quiz_state()
 #     return len(cleaned)
 
 def clear_wordbank() -> None:
@@ -288,21 +288,50 @@ def clear_wordbank() -> None:
     
     # Reset quiz state
     try:
-        init_quiz_state()
+        init_quiz_state(0)
     except Exception as e:
         print(f"⚠️ clear_wordbank: init_quiz_state failed: {e}")
 
-def init_quiz_state(total_words: int) -> None:
-    """Initialize quiz state: shuffled indices and counters."""
-    indices = list(range(max(0, int(total_words))))
-    random.shuffle(indices)
+def init_quiz_state(total_words: int):
+    """Initializes or resets the quiz state in the session."""
+    order = list(range(total_words))
+    random.shuffle(order)
+
+    db_session_id = None
+    user_obj = get_or_create_guest_user()
+
+    if user_obj:
+        try:
+            quiz_session = QuizSession(
+                user_id=user_obj.id,
+                total_words=total_words
+            )
+            link = TeacherStudent.query.filter_by(student_id=user_obj.id, is_active=True).first()
+            if link and not quiz_session.teacher_key:
+                quiz_session.teacher_key = link.teacher_key
+            db.session.add(quiz_session)
+            db.session.commit()
+            db_session_id = quiz_session.id
+            user_type = "guest" if session.get("is_guest") else "authenticated"
+            print(f"✅ Created database QuizSession ID: {db_session_id} for {user_type} user {user_obj.username}")
+        except Exception as e:
+            print(f"⚠️ Failed to create database session: {e}")
+            db.session.rollback()
+
     session[QUIZ_STATE_KEY] = {
-        'order': indices,
-        'current': 0,
-        'correct': 0,
-        'incorrect': 0,
-        'started_at': time.time()
+        "idx": 0,
+        "order": order,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "correct": 0,
+        "incorrect": 0,
+        "streak": 0,
+        "max_streak": 0,
+        "session_points": 0,
+        "hints_used_current_word": 0,
+        "history": [],
+        "db_session_id": db_session_id
     }
+    session.permanent = True
     session.modified = True
 
 # ------------------------------
@@ -338,6 +367,7 @@ def api_wordbank_set():
         # Treating POST to /api/wordbank as user upload (manual API call)
         stored_count = len(rows)
         set_wordbank(rows, is_user_upload=True)
+        init_quiz_state(stored_count)
         return jsonify({'status': 'success', 'stored': stored_count})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
@@ -379,7 +409,7 @@ def api_wordbank_import_text():
         set_wordbank(rows, is_user_upload=True)
         # Initialize quiz state immediately after import for a ready-to-play experience
         try:
-            init_quiz_state()
+            init_quiz_state(stored_count)
         except Exception as _e:
             # Non-fatal; quiz can still start later via next/answer endpoints
             print(f"⚠️ init_quiz_state after import failed: {_e}")
@@ -2891,7 +2921,7 @@ def api_upload_image():
             
             # Save to wordbank
             set_wordbank(enriched_records, is_user_upload=True)
-            init_quiz_state()
+            init_quiz_state(len(enriched_records))
             
             return jsonify({
                 'status': 'success',
@@ -3077,56 +3107,6 @@ def delete_wordbank(storage_id: str):
         db.session.rollback()
         return False
 
-def init_quiz_state():
-    wordbank = get_wordbank()
-    order = list(range(len(wordbank)))
-    random.shuffle(order)  # Randomize word order for each quiz session!
-    
-    # Create database session for ALL users (authenticated + guests)
-    db_session_id = None
-    user_obj = get_or_create_guest_user()  # Returns current_user or creates guest
-    
-    if user_obj:
-        try:
-            # Create new QuizSession in database
-            quiz_session = QuizSession(
-                user_id=user_obj.id,
-                total_words=len(wordbank)
-            )
-            # If this user is linked to a teacher/parent, stamp teacher_key for reporting
-            try:
-                link = TeacherStudent.query.filter_by(student_id=user_obj.id, is_active=True).first()
-                if link and not quiz_session.teacher_key:
-                    quiz_session.teacher_key = link.teacher_key
-            except Exception as _e:
-                # Non-fatal; proceed without teacher_key if lookup fails
-                print(f"⚠️ Could not associate teacher_key to QuizSession: {_e}")
-            db.session.add(quiz_session)
-            db.session.commit()
-            db_session_id = quiz_session.id
-            
-            user_type = "guest" if session.get("is_guest") else "authenticated"
-            print(f"✅ Created database QuizSession ID: {db_session_id} for {user_type} user {user_obj.username}")
-        except Exception as e:
-            print(f"⚠️ Failed to create database session: {e}")
-            db.session.rollback()
-    
-    session[QUIZ_STATE_KEY] = {
-        "idx": 0,
-        "order": order,
-        "started_at": datetime.now(timezone.utc).isoformat(),
-        "correct": 0,
-        "incorrect": 0,
-        "streak": 0,
-        "max_streak": 0,  # 🍯 Track best streak for badges
-        "session_points": 0,  # 🍯 Total honey points earned this session
-        "hints_used_current_word": 0,  # 🍯 Track hints for no-hints bonus
-        "history": [],  # list of {word, user_input, correct, method, elapsed_ms, ts}
-        "db_session_id": db_session_id  # Link to database session
-    }
-    session.permanent = True  # Critical for mobile session persistence
-    session.modified = True  # Force immediate session save
-
 def get_quiz_state():
     return session.get(QUIZ_STATE_KEY)
 
@@ -3147,20 +3127,47 @@ def api_quiz_state():
 
 @app.route('/api/quiz/resume', methods=['POST'])
 def api_quiz_resume():
-    """Resume or initialize a quiz session.
-
-    Behavior:
-    - If a quiz state exists in the session, keep it and return it.
-    - If missing, initialize a fresh quiz state based on the currently loaded wordbank.
-    - Does not merge word lists; relies on active WORD_STORAGE pointed by session.
-    """
+    """Check if a quiz is in progress and can be resumed."""
     try:
         qs = session.get(QUIZ_STATE_KEY)
-        if qs:
-            return jsonify({'status': 'success', 'resumed': True, 'state': qs})
+        if qs and qs.get("idx", 0) > 0:
+            # A quiz is in progress
+            return jsonify({
+                'status': 'success',
+                'in_progress': True,
+                'message': 'A quiz is currently in progress. Do you want to resume?',
+                'state': {
+                    'current_word_index': qs.get("idx", 0),
+                    'total_words': len(qs.get("order", [])),
+                    'correct': qs.get("correct", 0),
+                    'incorrect': qs.get("incorrect", 0),
+                }
+            })
+        else:
+            # No quiz in progress or it's at the very beginning
+            return jsonify({'status': 'success', 'in_progress': False})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-        # Initialize fresh state if absent
-        init_quiz_state()
+@app.route('/api/quiz/start', methods=['POST'])
+def api_quiz_start():
+    """Starts a new quiz or resumes an existing one based on user choice."""
+    try:
+        data = request.get_json(silent=True) or {}
+        action = data.get('action', 'start_new')  # 'start_new' or 'resume'
+
+        qs = session.get(QUIZ_STATE_KEY)
+
+        if action == 'resume' and qs and qs.get("idx", 0) > 0:
+            # Resume existing quiz
+            return jsonify({'status': 'success', 'resumed': True, 'state': qs})
+        
+        # Start a new quiz
+        wb = get_wordbank()
+        if not wb:
+            return jsonify({'status': 'error', 'message': 'No wordbank loaded to start a quiz.'}), 400
+            
+        init_quiz_state(len(wb))
         return jsonify({'status': 'success', 'resumed': False, 'state': session.get(QUIZ_STATE_KEY)})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500

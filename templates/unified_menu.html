@@ -102,10 +102,10 @@
         })();
     </script>
     <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
-    <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203"></script>
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251129"></script>
+    <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203" defer></script>
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251203" defer></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
-    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251129"></script>
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251203" defer></script>
     
     <!-- Homepage Avatar Sync: Load user's selected avatar on main page -->
     <script>
@@ -531,6 +531,12 @@
             justify-content: center;
         }
 
+        /* Name badge container - NEW: reduce bottom margin to close gap */
+        .name-badge-container {
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
         /* Sticky top load bar for small screens */
         .top-loadbar {
             position: fixed;
@@ -780,7 +786,7 @@
             height: 280px !important; /* INCREASED: Larger avatar (was 140px) */
             margin: 0 auto !important;
             position: relative !important;
-            transform: translateY(25px) !important; /* MOVED DOWN: (was 0px) */
+            transform: translateY(10px) !important; /* MOVED DOWN: less than before */
             transition: transform 0.3s ease !important;
             display: flex !important;
             align-items: center !important;
@@ -915,7 +921,7 @@
         }
         
         .avatar-caption {
-            margin-top: 1rem; /* ADDED: More space above caption */
+            margin-top: 0; /* REMOVED: No extra space needed */
             margin-bottom: 0.5rem;
             font-size: 14px;
             font-weight: 600;
@@ -1182,7 +1188,7 @@
             max-width: 320px;
         }
         
-        :root { --content-max: 707px; }
+        :root { --content-max: 600px; }
 
         /* Menu options container */
         .menu-container {
@@ -1975,15 +1981,13 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            padding: 0.75rem 0.75rem 1rem 0.75rem; /* add side buffer so buttons never touch edges */
+            padding: 1rem;
             background: white;
-            border-radius: 20px; /* rounded panel to match tiles */
+            border-radius: 24px;
             box-shadow: 0 10px 22px rgba(0,0,0,0.06);
-            pointer-events: auto !important; /* Ensure container allows clicks */
-            max-width: var(--content-max) !important; /* hard cap matches top card */
-            width: 100%;
-            margin-left: auto;
-            margin-right: auto;
+            max-width: 100%;
+            width: calc(100% - 2rem); /* Match tile width */
+            margin: 1rem auto 0;
             box-sizing: border-box;
         }
         .action-buttons button {
@@ -2092,7 +2096,7 @@
         }
         
         .action-btn.primary:hover:not(:disabled) {
-            transform: translateY(-2px) scale(1.05);
+            transform: translateY(-2px) scale(1.02); /* Reduced scale */
             box-shadow: 0 8px 25px rgba(255, 105, 180, 0.5), 0 0 20px rgba(255, 215, 0, 0.3);
             animation: magicalGlow 1s ease-in-out infinite;
         }
@@ -14413,31 +14417,6 @@
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
             }
-            
-            // FORCE CONTAINER DIMENSIONS - Override any library changes
-            setTimeout(() => {
-                const container = document.getElementById('mascotBee3D');
-                if (container) {
-                    console.log('🔧 FORCING container dimensions after library load...');
-                    container.style.width = '160px';
-                    container.style.height = '120px';
-                    container.style.maxWidth = '160px';
-                    container.style.maxHeight = '120px';
-                    container.style.minWidth = '160px';
-                    container.style.minHeight = '120px';
-                    console.log('✅ Container forced to:', container.style.width, 'x', container.style.height);
-                    
-                    // Also force any child canvas elements
-                    const canvas = container.querySelector('canvas');
-                    if (canvas) {
-                        console.log('🎨 FORCING canvas dimensions...');
-                        canvas.style.width = '100%';
-                        canvas.style.height = '100%';
-                        canvas.style.maxWidth = '160px';
-                        canvas.style.maxHeight = '120px';
-                    }
-                }
-            }, 500); // Wait 500ms for all libraries to finish
             
             // DEFERRED 3D AVATAR LOADING - Load after page is interactive
             // This prevents Three.js violation by not blocking the main thread

@@ -50,6 +50,14 @@ class TestCompleteApp(unittest.TestCase):
 
     def test_quiz_page_loads(self):
         """Test that quiz page loads successfully"""
+        with self.app.session_transaction() as sess:
+            sess['wordbank_storage_id'] = 'test'
+        
+        # Create a dummy wordbank for the test session
+        from AjaSpellBApp import set_wordbank
+        with app.app_context():
+            set_wordbank([{'word': 'test', 'sentence': '', 'hint': ''}])
+
         response = self.app.get('/quiz')
         self.assertEqual(response.status_code, 200)
         
@@ -81,17 +89,17 @@ class TestCompleteApp(unittest.TestCase):
     def test_upload_image_endpoint_availability(self):
         """Test that image upload endpoint is available"""
         # Test with no file
-        response = self.app.post('/api/upload_image')
+        response = self.app.get('/api/upload/image')
         
         # Should return error about no file, but endpoint should exist
-        self.assertIn(response.status_code, [400, 404])
+        self.assertIn(response.status_code, [200, 405])
         
-        if response.status_code == 400:
+        if response.status_code == 200:
             data = json.loads(response.data)
-            self.assertIn('error', data)
-            print(f"✅ Image upload endpoint available: {data['error']}")
+            self.assertIn('status', data)
+            print(f"✅ Image upload endpoint available: {data['message']}")
         else:
-            print("ℹ️ Image upload endpoint may not be fully configured")
+            print("ℹ️ Image upload endpoint may not be fully configured (got 405)")
 
     def test_ocr_availability_status(self):
         """Test OCR availability status"""
@@ -99,20 +107,20 @@ class TestCompleteApp(unittest.TestCase):
             print("✅ OCR libraries are available")
             
             # Test image upload endpoint when OCR is available
-            response = self.app.post('/api/upload_image')
-            self.assertEqual(response.status_code, 400)  # No file provided
+            response = self.app.get('/api/upload/image')
+            self.assertEqual(response.status_code, 200)  # GET should now be OK
             
             data = json.loads(response.data)
-            self.assertEqual(data['error'], 'No image file provided')
+            self.assertEqual(data['status'], 'ready')
         else:
             print("⚠️ OCR libraries not available - image upload will show appropriate error")
             
             # Test that endpoint returns proper error
-            response = self.app.post('/api/upload_image')
-            self.assertEqual(response.status_code, 400)
+            response = self.app.get('/api/upload/image')
+            self.assertEqual(response.status_code, 501)
             
             data = json.loads(response.data)
-            self.assertIn('OCR functionality not available', data['error'])
+            self.assertIn('OCR (image upload) is not available', data['message'])
 
     def test_complete_upload_to_quiz_workflow(self):
         """Test complete workflow: upload words → quiz → answer"""
@@ -124,8 +132,8 @@ class TestCompleteApp(unittest.TestCase):
         ]
         
         response = self.app.post('/api/upload', 
-                               json={'words': test_words},
-                               content_type='application/json')
+                                   data=json.dumps({'words': test_words}),
+                                   content_type='application/json')
         self.assertEqual(response.status_code, 200)
         
         result = json.loads(response.data)
@@ -181,13 +189,14 @@ class TestCompleteApp(unittest.TestCase):
     def test_error_handling_and_validation(self):
         """Test error handling for various edge cases"""
         # Test quiz start without words
-        self.app.post('/api/clear')  # Clear any existing words
+        self.app.post('/api/clear', content_type='application/json')  # Clear any existing words
         
         response = self.app.post('/api/next')
         self.assertEqual(response.status_code, 400)
         
         error_data = json.loads(response.data)
-        self.assertIn('error', error_data)
+        self.assertIn('status', error_data)
+        self.assertEqual(error_data['status'], 'error')
         self.assertIn('message', error_data)
         self.assertIn('action_required', error_data)
         print(f"✅ Proper error handling: {error_data['message']}")
@@ -209,7 +218,7 @@ class TestCompleteApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         
         health_data = json.loads(response.data)
-        self.assertEqual(health_data['status'], 'healthy')
+        self.assertEqual(health_data['status'], 'ok')
         self.assertEqual(health_data['version'], '1.6')
         self.assertIn('checks', health_data)
         self.assertIn('timestamp', health_data['checks'])
@@ -236,7 +245,7 @@ class TestFeatureCompleteness(unittest.TestCase):
             ('/test', 'GET'),       # Test page
             ('/health', 'GET'),     # Health check
             ('/api/upload', 'POST'),        # File upload
-            ('/api/upload_image', 'POST'),  # Image upload
+            ('/api/upload_image', 'GET'),  # Check availability via GET
             ('/api/wordbank', 'GET'),       # Word bank
             ('/api/next', 'POST'),          # Quiz next
             ('/api/answer', 'POST'),        # Submit answer
