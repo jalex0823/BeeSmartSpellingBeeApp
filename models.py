@@ -155,11 +155,21 @@ class User(UserMixin, db.Model):
             }
         
         # Build avatar info from database
-        base_path = f"/static/assets/avatars/{avatar.folder_path}"
-        
         # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
         # All avatars are GLB format now. Database schema uses obj_file for historical reasons.
         is_glb = avatar.obj_file and avatar.obj_file.lower().endswith('.glb')
+        
+        # GLB avatars use a flat file structure in glb_files/ directory
+        # Thumbnails are in glb_files/AvatarThumbnails/ subdirectory
+        if is_glb:
+            base_path = "/static/assets/avatars/glb_files"
+            thumbnail_path = f"{base_path}/AvatarThumbnails/{avatar.thumbnail_file}" if avatar.thumbnail_file else f"{base_path}/AvatarThumbnails/MascotBee!.png"
+            model_path = f"{base_path}/{avatar.obj_file}"
+        else:
+            # Legacy OBJ avatars (if any remain) use folder_path structure
+            base_path = f"/static/assets/avatars/{avatar.folder_path}"
+            thumbnail_path = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
+            model_path = f"{base_path}/{avatar.obj_file}"
         
         info = {
             'id': avatar.slug,
@@ -167,9 +177,9 @@ class User(UserMixin, db.Model):
             'description': avatar.description,
             'variant': self.avatar_variant,
             'category': avatar.category,
-            'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
-            'preview_url': f"{base_path}/{avatar.thumbnail_file}",
-            'model_file_url': f"{base_path}/{avatar.obj_file}",  # Contains GLB path despite name
+            'thumbnail_url': thumbnail_path,
+            'preview_url': thumbnail_path,
+            'model_file_url': model_path,
             'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
         }
         
@@ -197,12 +207,16 @@ class User(UserMixin, db.Model):
         """Return True if the user has explicitly selected an avatar (non-default profile state)."""
         try:
             prefs = self.preferences or {}
-            # Consider avatar selected if flag is True or a non-default avatar has been stored
+            # FIXED: Primarily check the explicit flag; only fallback to checking non-default
+            # This ensures that users who pick "Cool Bee Avatar" from picker are counted as having selected
             explicit = bool(prefs.get('avatar_selected'))
-            non_default = bool(self.avatar_id and self.avatar_id != 'cool-bee')
-            return explicit or non_default
+            if explicit:
+                return True
+            # Fallback: check if a specific avatar_id is set (any value means selected)
+            has_avatar = bool(self.avatar_id)
+            return has_avatar
         except Exception:
-            return bool(self.avatar_id and self.avatar_id != 'cool-bee')
+            return bool(self.avatar_id)
     
     # 🍯 Monetization Helper Methods
     

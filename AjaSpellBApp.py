@@ -797,9 +797,9 @@ def api_avatars():
 
             if mascot is not None:
                 thumb = _avatar_thumbnail_url_from_glb(mascot.get('obj_file'))
-                folder = mascot.get('folder') or 'glb_files'
                 obj_file = mascot.get('obj_file') or ''
-                glb_url = f"/static/assets/avatars/{folder}/{obj_file}" if obj_file else None
+                # GLB avatars are in glb_files folder, not individual avatar folders
+                glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
                 guest_list.append({
                     'id': mascot.get('id'),
                     'name': mascot.get('name'),
@@ -848,9 +848,9 @@ def api_avatars():
                 pass
 
         thumb = _avatar_thumbnail_url_from_glb(entry.get('obj_file'))
-        folder = entry.get('folder') or 'glb_files'
         obj_file = entry.get('obj_file') or ''
-        glb_url = f"/static/assets/avatars/{folder}/{obj_file}" if obj_file else None
+        # GLB avatars are in glb_files folder, not individual avatar folders
+        glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
         dto = {
             'id': entry.get('id'),
             'name': entry.get('name'),
@@ -8027,6 +8027,7 @@ def api_answer():
         "skipped": skip_requested
     })
     session[QUIZ_STATE_KEY] = state
+    session.modified = True  # CRITICAL: Tell Flask to persist session changes
 
     # Save to database for ALL users (authenticated + guests)
     user_obj = get_or_create_guest_user()
@@ -8126,6 +8127,7 @@ def api_answer():
     filtered_for_report = [b for b in badges_unlocked if b.get("type") in {"elite_buzz_dust", "buzz_dust", "buzz_dust_elite"}]
     state["badges_earned"] = filtered_for_report
     session[QUIZ_STATE_KEY] = state
+    session.modified = True  # CRITICAL: Ensure session persists
     
     # Finalize database session for logged-in users OR guest accounts
     if quiz_complete and state.get("db_session_id"):
@@ -8190,7 +8192,15 @@ def api_answer():
                     from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
                     old_honey_points = current_user.honey_points or 0
                     new_honey_points = old_honey_points + total_points
+                    
+                    # 🔍 DEBUG: Log honey points update
+                    print(f"🍯 HONEY POINTS UPDATE:")
+                    print(f"   Old: {old_honey_points}")
+                    print(f"   Earned: {total_points}")
+                    print(f"   New: {new_honey_points}")
+                    
                     current_user.honey_points = new_honey_points
+                    print(f"   ✅ Set current_user.honey_points = {current_user.honey_points}")
                     
                     # ✨ BUZZ DUST AWARDING - Award Buzz Dust for quiz completion with full calculations
                     from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust
@@ -8308,11 +8318,13 @@ def api_answer():
                 if level_up_data:
                     state["level_up"] = level_up_data
                     session[QUIZ_STATE_KEY] = state
+                    session.modified = True
                 
                 # Save newly unlocked avatars to session
                 if newly_unlocked_avatars:
                     state["newly_unlocked_avatars"] = newly_unlocked_avatars
                     session[QUIZ_STATE_KEY] = state
+                    session.modified = True
                 
                 # 🔥 CRITICAL: Commit all changes to database
                 db.session.commit()
@@ -14159,6 +14171,7 @@ def api_get_my_avatar():
         
         if not user:
             # No user found, return default mascot (GLB-only)
+            print("⚠️ No user found, returning default mascot")
             return jsonify({
                 'status': 'success',
                 'avatar': {
@@ -14176,8 +14189,16 @@ def api_get_my_avatar():
         # Check if user has explicitly selected an avatar
         use_mascot = not user.has_selected_avatar()
         
+        # Debug logging
+        print(f"🎭 Avatar API: User {user.id} ({user.username if hasattr(user, 'username') else 'guest'})")
+        print(f"   - avatar_id: {user.avatar_id}")
+        print(f"   - has_selected_avatar: {user.has_selected_avatar()}")
+        print(f"   - preferences: {user.preferences}")
+        print(f"   - use_mascot: {use_mascot}")
+        
         # If user hasn't selected an avatar, return MascotBee as default
         if use_mascot:
+            print("   → Returning MascotBee (no avatar selected)")
             return jsonify({
                 'status': 'success',
                 'avatar': {
@@ -14194,6 +14215,7 @@ def api_get_my_avatar():
         
         # User has selected an avatar, return their choice
         avatar_data = user.get_avatar_data()
+        print(f"   → Returning selected avatar: {avatar_data.get('avatar_id')} ({avatar_data.get('name')})")
         return jsonify({
             'status': 'success',
             'avatar': avatar_data,
@@ -14202,6 +14224,8 @@ def api_get_my_avatar():
     
     except Exception as e:
         print(f"❌ Error fetching user avatar: {e}")
+        import traceback
+        traceback.print_exc()
         # Return default mascot on error (GLB-only)
         return jsonify({
             'status': 'success',

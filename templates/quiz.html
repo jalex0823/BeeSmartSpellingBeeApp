@@ -4452,7 +4452,31 @@ class BeeDelightManager {
             const feedbackArea1 = document.getElementById('feedbackArea');
             if (feedbackArea1) feedbackArea1.style.display = 'none';
             this.soundboard?.play('button-primary');
-            // Call loadNextWord on the global quizManager instance
+            
+            // CRITICAL FIX: Advance quiz state by submitting skip action before loading next word
+            // This ensures /api/next returns the NEXT word instead of the same word
+            try {
+                console.log('🔄 Submitting skip to advance quiz state...');
+                const skipResponse = await fetch('/api/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        user_input: '[next-button-advance]',
+                        method: 'skip',
+                        skip: true,
+                        elapsed_ms: 0
+                    })
+                });
+                
+                if (!skipResponse.ok) {
+                    console.error('❌ Failed to advance quiz state:', skipResponse.status);
+                }
+            } catch (error) {
+                console.error('❌ Error advancing quiz state:', error);
+            }
+            
+            // Now call loadNextWord which will fetch the next word from /api/next
             if (window.quizManager && typeof window.quizManager.loadNextWord === 'function') {
                 await window.quizManager.loadNextWord();
             }
