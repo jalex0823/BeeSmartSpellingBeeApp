@@ -1211,7 +1211,7 @@
             transition: all 0.35s ease;
             cursor: pointer;
             text-align: center;
-            min-height: 120px;
+            min-height: 145px;
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
@@ -1957,6 +1957,8 @@
             border-radius: 14px;
             border: 2px dashed rgba(255, 255, 255, 0.4);
             animation: kidTipGlow 3s ease-in-out infinite;
+            display: inline-block;
+            max-width: 90%;
         }
         
         @keyframes kidTipGlow {
@@ -3807,7 +3809,7 @@
             </section>
 
             <!-- Student Name Input -->
-            <section class="menu-container" style="padding-top: 0; margin-top: 0.5rem;">
+            <section class="menu-container" style="padding-top: 0; margin-top: 0;">
                 <div class="menu-option" style="
                     background: linear-gradient(135deg, #FFF5D7 0%, #FFE1F2 100%);
                     border-color: rgba(255, 182, 193, 0.4);
@@ -3848,7 +3850,7 @@
             </section>
 
             <!-- Menu options -->
-            <section class="menu-container">
+            <section class="menu-container" style="margin-top: 0;">
                 <!-- Upload Text File -->
                 <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title="📄 Upload your word list from a text file, CSV, or paste words directly!">
                     <div class="option-icon">📄</div>
