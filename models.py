@@ -155,27 +155,20 @@ class User(UserMixin, db.Model):
             }
         
         # Build avatar info from database
-        # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
-        # All avatars are GLB format now. Database schema uses obj_file for historical reasons.
-        is_glb = avatar.obj_file and avatar.obj_file.lower().endswith('.glb')
+        # NOTE: ALL avatars are GLB format now. Database field 'obj_file' is legacy naming (contains GLB filename)
+        # Path structure: /static/assets/avatars/glb_files/{GLB_FILE}
+        # Thumbnail structure: /static/assets/avatars/glb_files/AvatarThumbnails/{GLB_BASENAME}!.png
         
-        # GLB avatars use a flat file structure in glb_files/ directory
-        # Thumbnails are in glb_files/AvatarThumbnails/ subdirectory
-        if is_glb:
-            base_path = "/static/assets/avatars/glb_files"
-            model_path = f"{base_path}/{avatar.obj_file}"
-            
-            # CRITICAL FIX: Derive thumbnail from GLB filename, not database thumbnail_file
-            # Database thumbnail_file is outdated/incorrect. Actual thumbnails follow pattern:
-            # /static/assets/avatars/glb_files/AvatarThumbnails/{GLB_BASENAME}!.png
-            import os
-            glb_basename = os.path.splitext(os.path.basename(avatar.obj_file))[0] if avatar.obj_file else "MascotBee"
-            thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
-        else:
-            # Legacy OBJ avatars (if any remain) use folder_path structure
-            base_path = f"/static/assets/avatars/{avatar.folder_path}"
-            thumbnail_path = f"{base_path}/{avatar.thumbnail_file}" if avatar.thumbnail_file else "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
-            model_path = f"{base_path}/{avatar.obj_file}"
+        base_path = "/static/assets/avatars/glb_files"
+        
+        # Get GLB filename from obj_file field (legacy naming)
+        glb_filename = avatar.obj_file if avatar.obj_file else "MascotBee.glb"
+        model_path = f"{base_path}/{glb_filename}"
+        
+        # Derive thumbnail from GLB filename (database thumbnail_file is outdated)
+        import os
+        glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+        thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
         
         info = {
             'id': avatar.slug,

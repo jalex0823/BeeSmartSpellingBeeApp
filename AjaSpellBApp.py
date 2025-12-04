@@ -13197,10 +13197,17 @@ def api_get_avatar(avatar_id):
                 'message': f'Avatar not found: {avatar_id}'
             }), 404
         
-        # Build avatar info dict with all URLs
-        base_path = f"/static/assets/avatars/{avatar.folder_path}"
-        # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
-        is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+        # Build avatar info dict with GLB-only URLs
+        # All avatars are GLB format, stored in glb_files/ directory
+        base_path = "/static/assets/avatars/glb_files"
+        
+        # Get GLB filename from obj_file field (legacy naming)
+        glb_filename = avatar.obj_file if avatar.obj_file else "MascotBee.glb"
+        
+        # Derive thumbnail from GLB filename
+        import os
+        glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+        thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
         
         avatar_info = {
             'id': avatar.slug,
@@ -13208,12 +13215,10 @@ def api_get_avatar(avatar_id):
             'description': avatar.description,
             'variant': 'default',
             'category': avatar.category,
-            'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
-            'preview_url': f"{base_path}/{avatar.thumbnail_file}",
-            'glb_url': f"{base_path}/{avatar.obj_file}" if is_glb else None,  # GLB files stored in obj_file field
-            'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-            'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-            'fallback_url': "/static/assets/avatars/fallback.png",
+            'thumbnail_url': thumbnail_path,
+            'preview_url': thumbnail_path,
+            'glb_url': f"{base_path}/{glb_filename}",
+            'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png",
             'unlock_level': avatar.unlock_level,
             'points_required': avatar.points_required,
             'is_premium': avatar.is_premium

@@ -33,14 +33,17 @@ def get_avatar_info_db(avatar_id, variant='default'):
     if not avatar:
         return None  # No avatars in database at all
     
-    # Build asset URLs
-    base_path = f"/static/assets/avatars/{avatar.folder_path}"
+    # Build GLB-only asset URLs
+    # All avatars are GLB format, stored in glb_files/ directory
+    base_path = "/static/assets/avatars/glb_files"
     
-    # Auto-validate MTL references (optional - can import from avatar_catalog if needed)
-    # Skipping for now to avoid circular imports
+    # Get GLB filename from obj_file field (legacy naming)
+    glb_filename = avatar.obj_file if avatar.obj_file else "MascotBee.glb"
     
-    # NOTE: avatar.obj_file is a LEGACY field name - it actually contains the GLB filename
-    is_glb = avatar.obj_file.lower().endswith('.glb') if avatar.obj_file else False
+    # Derive thumbnail from GLB filename
+    import os
+    glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+    thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
     
     return {
         'id': avatar.slug,  # Keep 'id' key for backward compatibility
@@ -48,12 +51,10 @@ def get_avatar_info_db(avatar_id, variant='default'):
         'description': avatar.description,
         'variant': variant,  # Always 'default'
         'category': avatar.category,
-        'thumbnail_url': f"{base_path}/{avatar.thumbnail_file}",
-        'preview_url': f"{base_path}/{avatar.thumbnail_file}",  # Use same as thumbnail
-        'glb_url': f"{base_path}/{avatar.obj_file}" if is_glb else None,  # GLB files stored in obj_file field
-        'model_mtl_url': f"{base_path}/{avatar.mtl_file}" if avatar.mtl_file else None,
-        'texture_url': f"{base_path}/{avatar.texture_file}" if avatar.texture_file else None,
-        'fallback_url': "/static/assets/avatars/fallback.png",
+        'thumbnail_url': thumbnail_path,
+        'preview_url': thumbnail_path,
+        'glb_url': f"{base_path}/{glb_filename}",
+        'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png",
         # Additional fields from database
         'unlock_level': avatar.unlock_level,
         'points_required': avatar.points_required,
