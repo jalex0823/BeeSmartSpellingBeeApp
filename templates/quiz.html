@@ -5629,11 +5629,21 @@ class QuizManager {
                 const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                 await this.speakAnnouncement(preface);
             }
+            
             // ⏱️ Announce word FIRST, then insert a short pause and auto‑pronounce before timer
-            const firstWordIntro = `Your first word is: ${data.word}`;
+            // Different announcement for first word vs subsequent words
+            let wordIntro;
+            if (questionNumber === 1) {
+                const namePart = (this.studentName || '').trim();
+                wordIntro = namePart 
+                    ? `${namePart}, your first word is: ${data.word}` 
+                    : `Your first word is: ${data.word}`;
+            } else {
+                wordIntro = `Your word is: ${data.word}`;
+            }
             
             // Wait for word announcement to complete
-            await this.speakAnnouncement(firstWordIntro);
+            await this.speakAnnouncement(wordIntro);
             
             // Brief visual pause between phases
             {
