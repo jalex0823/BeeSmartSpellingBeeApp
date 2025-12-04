@@ -7275,6 +7275,11 @@ def api_next():
     definition = sanitize_kid_friendly_text(_blank_word(definition or "", word))
     sentence = sanitize_kid_friendly_text(_blank_word(sentence or "", word))
 
+    # Reset hints counter for THIS word (do it here when loading new word, not after answer)
+    state["hints_used_current_word"] = 0
+    session[QUIZ_STATE_KEY] = state
+    session.modified = True
+    
     return jsonify({
         "done": False,
         "index": idx + 1,
@@ -7902,10 +7907,11 @@ def api_answer():
         state["incorrect"] += 1
         state["streak"] = 0
 
+    # Advance to next word after any answer
     state["idx"] += 1
     
-    # Reset hints counter for next word
-    state["hints_used_current_word"] = 0
+    # DON'T reset hints_used_current_word here - it should be reset in /api/next when loading new word
+    # This prevents hint penalty from incorrectly applying to the next word
 
     state["history"].append({
         "word": correct_spelling,

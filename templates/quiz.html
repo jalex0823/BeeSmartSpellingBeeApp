@@ -6545,6 +6545,15 @@ class QuizManager {
             // Update progress displays (both text and percentage)
             this.updateProgressDisplays(questionNumber, data.total ?? this.totalWords);
 
+            // CRITICAL: Store current word data for this question
+            this.currentWordData = {
+                word: data.word,
+                sentence: data.sentence,
+                hint: data.hint,
+                definition: data.definition
+            };
+            console.log('✅ Current word data stored:', this.currentWordData);
+            
             if (data.progress) {
                 this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
@@ -7082,14 +7091,21 @@ class QuizManager {
     showDefinition() {
         console.log('🔍 showDefinition called, currentWordData:', this.currentWordData);
         
-        if (!this.currentWordData || !this.currentWordData.definition) {
-            console.error('❌ No definition available. currentWordData:', this.currentWordData);
+        if (!this.currentWordData) {
+            console.error('❌ No currentWordData available');
             BeeSmart.showError('No definition available for this word.');
             return;
         }
 
-        const definition = this.currentWordData.definition;
+        // Try definition first, fallback to sentence if no definition
+        const definition = this.currentWordData.definition || this.currentWordData.sentence || '';
         const word = this.currentWordData.word;
+        
+        if (!definition) {
+            console.error('❌ No definition or sentence available');
+            BeeSmart.showError('No definition available for this word.');
+            return;
+        }
         
         console.log('📖 Showing definition:', { definition, word });
         
@@ -7098,33 +7114,36 @@ class QuizManager {
         
         console.log('📖 Masked definition:', maskedDefinition);
         
-        // If timer is showing, render below timer; otherwise use voice area
-        const isTimerMode = window.morphController?.getMode && window.morphController.getMode() === 'timer';
-        if (isTimerMode) {
-            const postDef = document.getElementById('postTimerDefinition');
-            if (postDef) {
-                postDef.innerHTML = `
-                    <div style="padding: 8px 0; margin: 8px 0;">
-                        <strong style="color: #000;">📖 Definition:</strong><br>
-                        <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedDefinition}</span>
-                    </div>
-                `;
-                postDef.style.display = 'block';
-                console.log('✅ Definition displayed below timer');
-                
-                // Auto-hide after 5 seconds (like Show Sentence)
-                setTimeout(() => {
-                    if (postDef) {
-                        postDef.style.opacity = '1';
-                        postDef.style.transition = 'opacity 0.5s ease';
-                        postDef.style.opacity = '0';
-                        setTimeout(() => {
-                            postDef.style.display = 'none';
-                            postDef.style.opacity = '1';
-                        }, 500);
-                    }
-                }, 5000);
-                return;
+        // Display definition in voice visualizer area (where sentence is shown)
+        const voiceDefBox = document.getElementById('voiceDefinition');
+        if (voiceDefBox) {
+            voiceDefBox.innerHTML = `
+                <div style="padding: 12px; margin: 8px 0; background: rgba(255, 255, 255, 0.95); border-radius: 12px; border: 2px solid #FFD700;">
+                    <strong style="color: #5A2C15; font-size: 1.1rem; display: block; margin-bottom: 8px;">📖 Definition:</strong>
+                    <span style="font-size: 1.1rem; color: #333; line-height: 1.7; font-weight: 500;">${maskedDefinition}</span>
+                </div>
+            `;
+            voiceDefBox.style.display = 'block';
+            console.log('✅ Definition displayed in voice visualizer area');
+            
+            // Auto-hide after 8 seconds to give time to read
+            setTimeout(() => {
+                if (voiceDefBox) {
+                    voiceDefBox.style.transition = 'opacity 0.5s ease';
+                    voiceDefBox.style.opacity = '0';
+                    setTimeout(() => {
+                        voiceDefBox.style.display = 'none';
+                        voiceDefBox.innerHTML = '';
+                        voiceDefBox.style.opacity = '1';
+                    }, 500);
+                }
+            }, 8000);
+        } else {
+            console.error('❌ voiceDefinition element not found in DOM');
+            // Fallback: show alert
+            BeeSmart.showError(`Definition: ${maskedDefinition}`);
+        }
+    }
             }
         }
         
@@ -7450,11 +7469,14 @@ class QuizManager {
         const floatingStreak = document.getElementById('floatingStreak');
         const sessionStatsBar = document.getElementById('sessionStatsBar');
         
+        // Calculate current question number (correct + incorrect + 1 for current)
+        const currentQuestion = Math.min(correct + incorrect + 1, total);
+        
         if (floatingWordCount) {
-            floatingWordCount.textContent = `${correct}/${total}`;
+            floatingWordCount.textContent = `${currentQuestion}/${total}`;
         }
         if (progressPillCount) {
-            progressPillCount.textContent = `${correct}/${total}`;
+            progressPillCount.textContent = `${currentQuestion}/${total}`;
         }
         if (floatingPoints) {
             const points = Number(this.sessionPoints) || 0;
