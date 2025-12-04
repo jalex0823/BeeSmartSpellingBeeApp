@@ -3261,6 +3261,96 @@
                 <div id="avatarFxHost" class="avatar-viewer-wrapper">
                     <div id="mascotBee3D" class="avatar-fx-container"></div>
                     
+                    <!-- Avatar Controls - Gear Icon & Panel -->
+                    <script>
+                    (function(){
+                        // Collapsible control panel under a gear icon
+                        const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
+                        if (!container) return;
+                        container.style.position = 'relative';
+                        if (!document.getElementById('avatarGearToggle')) {
+                            const gear = document.createElement('button');
+                            gear.id = 'avatarGearToggle';
+                            gear.setAttribute('aria-expanded', 'false');
+                            gear.setAttribute('aria-controls', 'avatarControlPanel');
+                            gear.title = 'Avatar controls';
+                            gear.style.cssText = `
+                                position: absolute; bottom: -10px; right: 5px; z-index: 120;
+                                width: 20px; height: 20px; border-radius: 10px;
+                                border: 1px solid rgba(255, 215, 0, 0.4);
+                                background: rgba(255, 255, 255, 0.8);
+                                color: #5A2C15; font-size: 10px; cursor: pointer;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                padding: 0; display: flex; align-items: center; justify-content: center;
+                            `;
+                            gear.innerText = '⚙️';
+                            container.appendChild(gear);
+
+                            const panel = document.createElement('div');
+                            panel.id = 'avatarControlPanel';
+                            panel.style.cssText = `
+                                position: absolute; bottom: -40px; right: 5px; z-index: 119;
+                                display: none; flex-direction: row; gap: 3px;
+                                padding: 4px; background: rgba(255,255,255,0.95);
+                                border: 1px solid rgba(255, 215, 0, 0.3);
+                                border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                            `;
+                            panel.innerHTML = `
+                                <button class="ctrl" title="Zoom In" aria-label="Zoom In">+</button>
+                                <button class="ctrl" title="Zoom Out" aria-label="Zoom Out">−</button>
+                                <button class="ctrl" title="Rotate Left" aria-label="Rotate Left">⟲</button>
+                                <button class="ctrl" title="Rotate Right" aria-label="Rotate Right">⟳</button>
+                                <button class="ctrl" title="Reset" aria-label="Reset">↺</button>
+                            `;
+                            container.appendChild(panel);
+
+                            // Style ctrl buttons - tiny and compact with transparent background
+                            Array.from(panel.querySelectorAll('.ctrl')).forEach(btn => {
+                                btn.style.cssText = `
+                                    width: 18px; height: 18px; border-radius: 4px;
+                                    border: 1px solid rgba(255, 215, 0, 0.3);
+                                    background: rgba(255, 255, 255, 0.2);
+                                    color: #5A2C15; font-size: 10px; cursor: pointer;
+                                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                                    padding: 0; display: flex; align-items: center; justify-content: center;
+                                    font-weight: 700;
+                                `;
+                            });
+
+                            // Toggle behavior
+                            gear.onclick = () => {
+                                const open = panel.style.display === 'block';
+                                panel.style.display = open ? 'none' : 'block';
+                                gear.setAttribute('aria-expanded', (!open).toString());
+                            };
+
+                            // Helper to get controller
+                            const getCtrl = () => {
+                                try {
+                                    if (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function') {
+                                        return window.SmartyBee3D.getController('mascotBee3D');
+                                    }
+                                } catch(e) {}
+                                return null;
+                            };
+
+                            // Controls wiring
+                            let scale = 1, rot = 0;
+                            const canvas = container.querySelector('canvas') || container;
+                            const applyFallback = () => {
+                                canvas.style.transformOrigin = 'center center';
+                                canvas.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
+                            };
+                            const [btnPlus, btnMinus, btnLeft, btnRight, btnReset] = panel.querySelectorAll('.ctrl');
+                            btnPlus.onclick = () => { const c = getCtrl(); if (c?.zoomIn) c.zoomIn(); else { scale = Math.min(1.8, scale + 0.08); applyFallback(); } };
+                            btnMinus.onclick = () => { const c = getCtrl(); if (c?.zoomOut) c.zoomOut(); else { scale = Math.max(0.6, scale - 0.08); applyFallback(); } };
+                            btnLeft.onclick = () => { const c = getCtrl(); if (c?.rotateLeft) c.rotateLeft(); else { rot -= 10; applyFallback(); } };
+                            btnRight.onclick = () => { const c = getCtrl(); if (c?.rotateRight) c.rotateRight(); else { rot += 10; applyFallback(); } };
+                            btnReset.onclick = () => { const c = getCtrl(); if (c?.resetView) c.resetView(); scale = 1; rot = 0; applyFallback(); };
+                        }
+                    })();
+                    </script>
+                    
                     <!-- Interactive Caption -->
                     <div id="mascotCaption" class="avatar-caption">
                         ✨ Click on me to see what I do! ✨
@@ -3454,7 +3544,7 @@
             </section>
 
             <!-- Authentication Section -->
-            <section class="menu-container" style="padding-top: 0; margin-top: 2rem;">
+            <section class="menu-container" style="padding-top: 0; margin-top: 0;">
                 <div style="text-align: center;">
                     {% if current_user.is_authenticated %}
                         <!-- Logged In View -->
@@ -3462,7 +3552,7 @@
                             background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
                             border: 3px solid rgba(255, 215, 0, 0.5);
                             border-radius: 25px;
-                            padding: 2rem 1.5rem;
+                            padding: 1.5rem 1.5rem 1rem 1.5rem;
                             box-shadow: 0 10px 30px rgba(210, 105, 30, 0.2);
                             max-width: var(--content-max);
                             width: 100%;
@@ -3583,6 +3673,7 @@
                                 gap: 1rem;
                                 justify-content: center;
                                 margin-top: 1.5rem;
+                                margin-bottom: 0;
                                 flex-wrap: wrap;
                             ">
                                 <a href="/auth/dashboard" style="
@@ -3619,94 +3710,6 @@
                                 </a>
                             </div>
                         </div>
-                                                        <script>
-                                                        (function(){
-                                                            // Collapsible control panel under a gear icon
-                                                            const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
-                                                            if (!container) return;
-                                                            container.style.position = 'relative';
-                                                            if (!document.getElementById('avatarGearToggle')) {
-                                                                const gear = document.createElement('button');
-                                                                gear.id = 'avatarGearToggle';
-                                                                gear.setAttribute('aria-expanded', 'false');
-                                                                gear.setAttribute('aria-controls', 'avatarControlPanel');
-                                                                gear.title = 'Avatar controls';
-                                                                gear.style.cssText = `
-                                                                    position: absolute; bottom: -10px; right: 5px; z-index: 120;
-                                                                    width: 20px; height: 20px; border-radius: 10px;
-                                                                    border: 1px solid rgba(255, 215, 0, 0.4);
-                                                                    background: rgba(255, 255, 255, 0.8);
-                                                                    color: #5A2C15; font-size: 10px; cursor: pointer;
-                                                                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                                                    padding: 0; display: flex; align-items: center; justify-content: center;
-                                                                `;
-                                                                gear.innerText = '⚙️';
-                                                                container.appendChild(gear);
-
-                                                                const panel = document.createElement('div');
-                                                                panel.id = 'avatarControlPanel';
-                                                                panel.style.cssText = `
-                                                                    position: absolute; bottom: -40px; right: 5px; z-index: 119;
-                                                                    display: none; flex-direction: row; gap: 3px;
-                                                                    padding: 4px; background: rgba(255,255,255,0.95);
-                                                                    border: 1px solid rgba(255, 215, 0, 0.3);
-                                                                    border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                                                                `;
-                                                                panel.innerHTML = `
-                                                                    <button class="ctrl" title="Zoom In" aria-label="Zoom In">+</button>
-                                                                    <button class="ctrl" title="Zoom Out" aria-label="Zoom Out">−</button>
-                                                                    <button class="ctrl" title="Rotate Left" aria-label="Rotate Left">⟲</button>
-                                                                    <button class="ctrl" title="Rotate Right" aria-label="Rotate Right">⟳</button>
-                                                                    <button class="ctrl" title="Reset" aria-label="Reset">↺</button>
-                                                                `;
-                                                                container.appendChild(panel);
-
-                                                                // Style ctrl buttons - tiny and compact with transparent background
-                                                                Array.from(panel.querySelectorAll('.ctrl')).forEach(btn => {
-                                                                    btn.style.cssText = `
-                                                                        width: 18px; height: 18px; border-radius: 4px;
-                                                                        border: 1px solid rgba(255, 215, 0, 0.3);
-                                                                        background: rgba(255, 255, 255, 0.2);
-                                                                        color: #5A2C15; font-size: 10px; cursor: pointer;
-                                                                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                                                                        padding: 0; display: flex; align-items: center; justify-content: center;
-                                                                        font-weight: 700;
-                                                                    `;
-                                                                });
-
-                                                                // Toggle behavior
-                                                                gear.onclick = () => {
-                                                                    const open = panel.style.display === 'block';
-                                                                    panel.style.display = open ? 'none' : 'block';
-                                                                    gear.setAttribute('aria-expanded', (!open).toString());
-                                                                };
-
-                                                                // Helper to get controller
-                                                                const getCtrl = () => {
-                                                                    try {
-                                                                        if (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function') {
-                                                                            return window.SmartyBee3D.getController('mascotBee3D');
-                                                                        }
-                                                                    } catch(e) {}
-                                                                    return null;
-                                                                };
-
-                                                                // Controls wiring
-                                                                let scale = 1, rot = 0;
-                                                                const canvas = container.querySelector('canvas') || container;
-                                                                const applyFallback = () => {
-                                                                    canvas.style.transformOrigin = 'center center';
-                                                                    canvas.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
-                                                                };
-                                                                const [btnPlus, btnMinus, btnLeft, btnRight, btnReset] = panel.querySelectorAll('.ctrl');
-                                                                btnPlus.onclick = () => { const c = getCtrl(); if (c?.zoomIn) c.zoomIn(); else { scale = Math.min(1.8, scale + 0.08); applyFallback(); } };
-                                                                btnMinus.onclick = () => { const c = getCtrl(); if (c?.zoomOut) c.zoomOut(); else { scale = Math.max(0.6, scale - 0.08); applyFallback(); } };
-                                                                btnLeft.onclick = () => { const c = getCtrl(); if (c?.rotateLeft) c.rotateLeft(); else { rot -= 10; applyFallback(); } };
-                                                                btnRight.onclick = () => { const c = getCtrl(); if (c?.rotateRight) c.rotateRight(); else { rot += 10; applyFallback(); } };
-                                                                btnReset.onclick = () => { const c = getCtrl(); if (c?.resetView) c.resetView(); scale = 1; rot = 0; applyFallback(); };
-                                                            }
-                                                        })();
-                                                        </script>
                             </div>
                         </div>
                     {% else %}
@@ -3809,7 +3812,7 @@
             </section>
 
             <!-- Student Name Input -->
-            <section class="menu-container" style="padding-top: 0; margin-top: 0;">
+            <section class="menu-container" style="padding-top: 0; margin-top: 0.5rem;">
                 <div class="menu-option" style="
                     background: linear-gradient(135deg, #FFF5D7 0%, #FFE1F2 100%);
                     border-color: rgba(255, 182, 193, 0.4);
