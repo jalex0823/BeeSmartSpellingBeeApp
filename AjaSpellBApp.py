@@ -3062,10 +3062,22 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     storage_id = session.get("wordbank_storage_id")
     if not storage_id:
         storage_id = str(uuid.uuid4())
-        session["wordbank_storage_id"] = storage_id
-        session.permanent = True
-        session.modified = True
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
+    else:
+        print(f"DEBUG set_wordbank: Reusing existing storage_id={storage_id}")
+    
+    # CRITICAL FIX: Ensure old data is completely deleted before writing new data
+    # This prevents race conditions where quiz reads old data during upload
+    try:
+        # If storage_id already exists, delete it first to ensure clean slate
+        existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
+        if existing_wordbank:
+            print(f"🗑️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+            db.session.delete(existing_wordbank)
+            db.session.flush()  # Ensure delete happens before insert
+    except Exception as e:
+        print(f"⚠️ set_wordbank: Error deleting old wordbank: {e}")
+        db.session.rollback()
     
     # Save to Railway database (ONLY storage location)
     try:
@@ -3077,7 +3089,8 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         db.session.rollback()
         raise
     
-    # Update session metadata (lightweight)
+    # Update session with storage_id (new or reused)
+    session["wordbank_storage_id"] = storage_id
     session["wordbank_count"] = len(rows)
     session.permanent = True
     session.modified = True
@@ -4322,23 +4335,17 @@ def load_saved_wordlist():
 
         # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
         # Treat saved list load EXACTLY like fresh upload - prevent duplicate words from appended lists
+        # set_wordbank() now handles deletion automatically with proper transaction handling
         
         # Step 1: Clear quiz state BEFORE touching wordbank
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("is_random_play", None)
         session.modified = True
         
-        # Step 2: Delete old wordbank completely from Railway database
-        old_storage_id = session.get("wordbank_storage_id")
-        if old_storage_id:
-            print(f"🗑️ /api/saved-lists/load: Deleting old wordbank storage_id={old_storage_id}")
-            delete_wordbank(old_storage_id)
-            session.pop("wordbank_storage_id", None)
-            session.modified = True
-        
-        print(f"✅ /api/saved-lists/load: Wiped old wordbank, loading {len(rows)} fresh words from saved list")
+        print(f"✅ /api/saved-lists/load: Loading {len(rows)} fresh words from saved list (old wordbank will be auto-deleted)")
 
-        # Step 3: Load saved list as brand new wordbank (creates new storage_id)
+        # Step 2: Load saved list as brand new wordbank
+        # This will automatically delete old wordbank if storage_id exists
         set_wordbank(rows, is_user_upload=True)
         
         # CRITICAL DEBUG: Verify wordbank was actually saved
@@ -6707,24 +6714,17 @@ def api_upload():
     session["skip_default_load"] = True
     
     # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
-    # Prevent duplicate words from appended/mixed lists
+    # set_wordbank() now handles deletion automatically with proper transaction handling
     
-    # Step 1: Clear quiz state
+    # Step 1: Clear quiz state before setting new wordbank
     session.pop(QUIZ_STATE_KEY, None)
     session.pop("is_random_play", None)
     session.modified = True
     
-    # Step 2: Delete old wordbank completely from Railway database
-    old_storage_id = session.get("wordbank_storage_id")
-    if old_storage_id:
-        print(f"🗑️ /api/upload: Deleting old wordbank storage_id={old_storage_id}")
-        delete_wordbank(old_storage_id)
-        session.pop("wordbank_storage_id", None)
-        session.modified = True
+    print(f"✅ /api/upload: Uploading {len(deduped)} fresh words (old wordbank will be auto-deleted)")
     
-    print(f"✅ /api/upload: Wiped old wordbank, uploading {len(deduped)} fresh words")
-    
-    # Step 3: Set new wordbank (USER UPLOAD - marks has_uploaded_once) - CREATES NEW STORAGE_ID
+    # Step 2: Set new wordbank (USER UPLOAD - marks has_uploaded_once)
+    # This will automatically delete old wordbank if storage_id exists
     set_wordbank(deduped, is_user_upload=True)
     init_quiz_state(len(deduped))
     
@@ -6924,24 +6924,17 @@ def api_upload_manual_words():
         session["skip_default_load"] = True
         
         # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
-        # Prevent duplicate words from appended/mixed lists
+        # set_wordbank() now handles deletion automatically with proper transaction handling
         
-        # Step 1: Clear quiz state
+        # Step 1: Clear quiz state before setting new wordbank
         session.pop(QUIZ_STATE_KEY, None)
         session.pop("is_random_play", None)
         session.modified = True
         
-        # Step 2: Delete old wordbank completely from Railway database
-        old_storage_id = session.get("wordbank_storage_id")
-        if old_storage_id:
-            print(f"🗑️ /api/upload-manual-words: Deleting old wordbank storage_id={old_storage_id}")
-            delete_wordbank(old_storage_id)
-            session.pop("wordbank_storage_id", None)
-            session.modified = True
+        print(f"✅ /api/upload-manual-words: Uploading {len(enriched)} fresh manual words (old wordbank will be auto-deleted)")
         
-        print(f"✅ /api/upload-manual-words: Wiped old wordbank, uploading {len(enriched)} fresh manual words")
-        
-        # Step 3: Store and initialize quiz (USER UPLOAD - manual words) - CREATES NEW STORAGE_ID
+        # Step 2: Store and initialize quiz (USER UPLOAD - manual words)
+        # This will automatically delete old wordbank if storage_id exists
         set_wordbank(enriched, is_user_upload=True)
         init_quiz_state(len(enriched))
         
@@ -7277,6 +7270,7 @@ def api_next():
 
     # Reset hints counter for THIS word (do it here when loading new word, not after answer)
     state["hints_used_current_word"] = 0
+    print(f"🔄 Reset hints_used_current_word to 0 for new word: {word}")
     session[QUIZ_STATE_KEY] = state
     session.modified = True
     
@@ -7831,6 +7825,7 @@ def api_answer():
         # No hints bonus: +25 points if no hints used this session
         # Track hints_used in state (updated when /api/hint, /api/pronounce called)
         hints_used_this_word = state.get("hints_used_current_word", 0)
+        print(f"💡 Checking hints for word '{correct_spelling}': hints_used_current_word = {hints_used_this_word}")
         
         # 💡 Apply hint penalty BEFORE adding no-hints bonus
         hint_penalty = 0

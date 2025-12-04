@@ -948,6 +948,9 @@
             background: rgba(255, 255, 255, 0.5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             margin: 12px auto 4px; /* center and give breathing room below avatar */
+            pointer-events: auto;
+            position: relative;
+            z-index: 100;
         }
         
         .avatar-controls button {
@@ -961,6 +964,7 @@
             background: rgba(255, 255, 255, 0.9);
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
             transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+            pointer-events: auto;
         }
         
         .avatar-controls button:hover {
@@ -1205,16 +1209,16 @@
             margin-top: 0; /* Pull up to remove gap */
             margin-bottom: 0.25rem;
             border: 3px solid var(--tile-border);
-            border-radius: 24px;
+            border-radius: 28px;
             background: var(--tile-bg);
             color: var(--tile-text);
             transition: all 0.35s ease;
             cursor: pointer;
             text-align: center;
-            min-height: 180px;
+            min-height: 280px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 10px 22px var(--tile-shadow);
+            box-shadow: 0 12px 32px var(--tile-shadow);
             max-width: var(--content-max);
             width: 100%;
             margin-left: auto;
@@ -1225,6 +1229,12 @@
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            /* Card-style flexbox layout */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 2rem 1.5rem 1.5rem;
         }
         
         /* Make all child elements pass clicks through to parent tile */
@@ -1294,9 +1304,9 @@
             /* Mac Dock-style lift and zoom effect */
             transform: translateY(-12px) scale(1.08);
             box-shadow: 
-                0 24px 48px var(--tile-hover-shadow),
-                0 12px 24px rgba(0, 0, 0, 0.2),
-                0 0 32px rgba(255, 215, 0, 0.3);
+                0 28px 56px var(--tile-hover-shadow),
+                0 14px 28px rgba(0, 0, 0, 0.25),
+                0 0 40px rgba(255, 215, 0, 0.35);
             animation: dockFloat 1.5s ease-in-out infinite;
             z-index: 10; /* Lift above neighboring tiles */
             transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy spring effect */
@@ -1941,52 +1951,61 @@
         }
         
         .option-icon {
-            font-size: 2.8rem;
-            margin-bottom: 0.65rem;
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            margin-top: 0.5rem;
             opacity: 1;
             color: inherit;
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.18));
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+            flex-shrink: 0;
         }
         
         .option-title {
-            font-size: 1.25rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--tile-text);
-            margin-bottom: 0.4rem;
-            text-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+            margin-bottom: 0.8rem;
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            line-height: 1.2;
+            flex-shrink: 0;
         }
         
         .option-description {
             color: rgba(255, 255, 255, 0.92);
-            font-size: 0.9rem;
-            margin: 0;
-            line-height: 1.45;
-            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+            font-size: 1.1rem;
+            margin: 0 0 auto;
+            line-height: 1.5;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .kid-tip {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.98);
+            font-size: 0.95rem;
             font-weight: 600;
-            margin-top: 0.6rem;
-            padding: 0.4rem 0.75rem;
-            background: rgba(255, 255, 255, 0.22);
-            border-radius: 14px;
-            border: 2px dashed rgba(255, 255, 255, 0.4);
-            animation: kidTipGlow 3s ease-in-out infinite;
-            display: inline-block;
-            max-width: 90%;
+            margin-top: 1.5rem;
+            padding: 0.7rem 1.5rem;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
         }
         
-        @keyframes kidTipGlow {
-            0%, 100% {
-                background: rgba(255, 255, 255, 0.22);
-                transform: scale(1);
-            }
-            50% {
-                background: rgba(255, 255, 255, 0.32);
-                transform: scale(1.05);
-            }
+        .menu-option:hover .kid-tip {
+            background: rgba(255, 255, 255, 0.28);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
         
         /* Action buttons */
@@ -3569,11 +3588,14 @@
                             background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
                             border: 3px solid rgba(255, 215, 0, 0.5);
                             border-radius: 25px;
-                            padding: 1.5rem 1.5rem 1rem 1.5rem;
+                            padding: 1.5rem 1.5rem 1.5rem 1.5rem;
                             box-shadow: 0 10px 30px rgba(210, 105, 30, 0.2);
                             max-width: var(--content-max);
                             width: 100%;
                             margin: 0 auto;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: flex-end;
                         ">
                             <!-- Welcome Message -->
                             <div style="
@@ -3684,48 +3706,71 @@
                                 </div>
                             </div>
 
-                            <!-- Dashboard and Sign Out Buttons -->
+                            <!-- Dashboard and Sign Out Buttons Row -->
                             <div style="
                                 display: flex;
-                                gap: 1rem;
+                                gap: 0.75rem;
                                 justify-content: center;
                                 margin-top: 1.5rem;
-                                margin-bottom: 0;
-                                flex-wrap: wrap;
+                                margin-bottom: 0.75rem;
+                                width: 100%;
                             ">
                                 <a href="/auth/dashboard" style="
-                                    padding: 0.8rem 2rem;
+                                    padding: 0.5rem 1.2rem;
                                     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
                                     color: white;
-                                    border-radius: 15px;
+                                    border-radius: 12px;
                                     text-decoration: none;
-                                    font-weight: 700;
-                                    font-size: 1.05rem;
-                                    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+                                    font-weight: 600;
+                                    font-size: 0.9rem;
+                                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
                                     transition: all 0.3s ease;
                                     display: inline-block;
-                                    border: 3px solid rgba(76, 175, 80, 0.6);
-                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(76, 175, 80, 0.5)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(76, 175, 80, 0.4)'">
-                                    📊 Student Dashboard
+                                    border: 2px solid rgba(76, 175, 80, 0.6);
+                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(76, 175, 80, 0.4)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.3)'">
+                                    📊 Dashboard
                                 </a>
                                 <a href="/auth/logout" style="
-                                    padding: 0.8rem 2rem;
+                                    padding: 0.5rem 1.2rem;
                                     background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
                                     color: white;
-                                    border-radius: 15px;
+                                    border-radius: 12px;
                                     text-decoration: none;
-                                    font-weight: 700;
-                                    font-size: 1.05rem;
-                                    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+                                    font-weight: 600;
+                                    font-size: 0.9rem;
+                                    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
                                     transition: all 0.3s ease;
                                     display: inline-block;
-                                    border: 3px solid rgba(255, 107, 107, 0.6);
-                                " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(255, 107, 107, 0.5)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 107, 0.4)'">
+                                    border: 2px solid rgba(255, 107, 107, 0.6);
+                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 107, 107, 0.4)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 107, 0.3)'">
                                     🚪 Sign Out
                                 </a>
                             </div>
+
+                            <!-- Start Quiz Button - Full Width -->
+                            <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
+                                padding: 0.8rem 1.5rem;
+                                background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+                                color: #5A2C15;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                font-size: 1rem;
+                                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+                                transition: all 0.3s ease;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 0.5rem;
+                                border: 2px solid rgba(255, 215, 0, 0.6);
+                                cursor: pointer;
+                                width: 100%;
+                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 215, 0, 0.5)'"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.4)'"
+                               onclick="startQuiz()">
+                                🐝 Start Quiz (<span id="wordCountDisplay">0</span> words)
+                            </button>
                         </div>
                             </div>
                         </div>
@@ -4190,6 +4235,27 @@
                         quizBtn.innerHTML = `🐝 Let's Get Buzzing Spelling Some Words!`;
                         quizBtn.classList.remove('ready-to-play');
                         quizBtn.classList.add('waiting-to-play');
+                    }
+                }
+                
+                // Update Quick Start button in welcome card
+                const quickStartBtn = document.getElementById('quickStartQuizBtn');
+                const wordCountDisplay = document.getElementById('wordCountDisplay');
+                if (quickStartBtn) {
+                    if (count > 0) {
+                        quickStartBtn.disabled = false;
+                        quickStartBtn.style.opacity = '1';
+                        quickStartBtn.style.cursor = 'pointer';
+                        if (wordCountDisplay) {
+                            wordCountDisplay.textContent = count;
+                        }
+                    } else {
+                        quickStartBtn.disabled = true;
+                        quickStartBtn.style.opacity = '0.6';
+                        quickStartBtn.style.cursor = 'not-allowed';
+                        if (wordCountDisplay) {
+                            wordCountDisplay.textContent = '0';
+                        }
                     }
                 }
                 
@@ -16857,8 +16923,12 @@
         }
 
         document.querySelectorAll('.avatar-controls [data-avatar-control]').forEach((btn) => {
-            btn.addEventListener('click', function () {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
                 const action = this.getAttribute('data-avatar-control');
+                console.log('🎮 Avatar control clicked:', action);
+                const controller = getAvatarController();
+                console.log('🎮 Controller available:', !!controller);
                 switch (action) {
                     case 'zoom-in': safeAvatarZoom(-0.15); break;
                     case 'zoom-out': safeAvatarZoom(0.15); break;

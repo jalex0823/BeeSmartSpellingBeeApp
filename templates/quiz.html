@@ -4435,8 +4435,11 @@ class BeeDelightManager {
         const stayButton = document.getElementById('stayButton');
         const confirmExitButton = document.getElementById('confirmExitButton');
 
+        console.log('🔧 setupExitQuiz called', { exitButton, exitModal, stayButton, confirmExitButton });
+
         // Show exit confirmation modal
         exitButton?.addEventListener('click', () => {
+            console.log('🚪 Exit button clicked!');
             this.showExitModal();
         });
 
@@ -4484,12 +4487,14 @@ class BeeDelightManager {
 
         // Stay and continue practicing
         stayButton?.addEventListener('click', () => {
+            console.log('🐝 Stay button clicked!');
             this.hideExitModal();
             this.soundboard.play('button-primary');
         });
 
         // Confirm exit and go to menu
         confirmExitButton?.addEventListener('click', () => {
+            console.log('✅ Confirm exit button clicked!');
             this.confirmExit();
         });
 
@@ -6897,12 +6902,15 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
+            console.log('🎤 pronounceWord called with:', { refresh, rate, currentWordData: this.currentWordData });
+            
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
             
             // Use stored word data instead of API call
             if (this.currentWordData && this.currentWordData.word) {
+                console.log('✅ Using currentWordData.word:', this.currentWordData.word);
                 const data = {
                     word: this.currentWordData.word,
                     definition: this.currentWordData.definition,
@@ -6945,7 +6953,7 @@ class QuizManager {
                     }
                 });
             } else {
-                console.warn('No word data available for pronunciation');
+                console.warn('⚠️ No word data available for pronunciation. currentWordData:', this.currentWordData);
             }
         } catch (error) {
             console.error('Unable to pronounce word:', error);
@@ -7142,30 +7150,6 @@ class QuizManager {
             console.error('❌ voiceDefinition element not found in DOM');
             // Fallback: show alert
             BeeSmart.showError(`Definition: ${maskedDefinition}`);
-        }
-    }
-            }
-        }
-        
-        // Fallback to voice area
-        const voiceDefElement = document.getElementById('voiceDefinition');
-        if (voiceDefElement) {
-            voiceDefElement.innerHTML = `
-                <div style="padding: 8px 0; margin: 8px 0;">
-                    <strong style="color: #000;">📖 Definition:</strong><br>
-                    <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedDefinition}</span>
-                </div>
-            `;
-            console.log('✅ Definition displayed in voiceDefinition element');
-            
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                if (voiceDefElement) {
-                    voiceDefElement.innerHTML = '🐝 Listen carefully and spell the word! 🐝';
-                }
-            }, 5000);
-        } else {
-            console.error('❌ voiceDefinition element not found!');
         }
     }
 
