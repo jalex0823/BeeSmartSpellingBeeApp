@@ -8,6 +8,201 @@
     .floating-bee {
         display: none !important;
     }
+
+    /* Kid-Friendly Modal Styles for Admin Dashboard */
+    .kid-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 9998;
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .kid-modal-content {
+        background: linear-gradient(145deg, #ffffff, #f3f4f6);
+        padding: 2rem;
+        border-radius: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 215, 0, 0.8);
+        border: 2px solid white;
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        text-align: center;
+        position: relative;
+        animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .kid-modal-content .modal-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: iconBounce 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+    }
+
+    .kid-modal-content h2 {
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+        font-size: 2rem;
+        color: #4a4a4a;
+        margin: 0 0 1rem 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .kid-modal-content p {
+        color: #555;
+        font-size: 1rem;
+        line-height: 1.5;
+        margin: 0 0 1.5rem 0;
+    }
+    
+    .kid-modal-content .timestamp {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #333;
+        background: #fffbe1;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        display: inline-block;
+        border: 2px dashed #ffd700;
+        margin-bottom: 1.5rem;
+    }
+
+    .kid-modal-close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #ff7b7b;
+        border: 2px solid white;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        line-height: 1;
+        box-shadow: 0 4px 10px rgba(255, 123, 123, 0.5);
+        transition: transform 0.2s, background 0.2s;
+    }
+
+    .kid-modal-close-btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        background: #ff5c5c;
+    }
+
+    .kid-modal-button {
+        background: linear-gradient(180deg, #86efac, #22c55e);
+        color: white;
+        padding: 0.875rem 2rem;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.125rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        border-bottom: 4px solid #15803d;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .kid-modal-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+    }
+    
+    .kid-modal-button.cancel {
+        background: linear-gradient(180deg, #fca5a5, #ef4444);
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        border-bottom: 4px solid #b91c1c;
+    }
+    
+    .kid-modal-button.cancel:hover {
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Form Styles */
+    .kid-modal-form-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        text-align: left;
+    }
+
+    .kid-modal-form-grid label {
+        font-weight: 700;
+        color: #6b4f2d;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+
+    .kid-modal-form-grid input,
+    .kid-modal-form-grid select {
+        width: 100%;
+        padding: 0.875rem;
+        border: 3px solid #fcd34d;
+        border-radius: 12px;
+        font-size: 1rem;
+        background: #fffbeb;
+        color: #78350f;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .kid-modal-form-grid input:focus,
+    .kid-modal-form-grid select:focus {
+        outline: none;
+        border-color: #fbbf24;
+        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.3);
+    }
+    
+    .kid-modal-form-grid .input-hint {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-top: 0.25rem;
+    }
+
+    .kid-modal-form-grid .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .kid-modal-form-grid .button-group .kid-modal-button {
+        flex: 1;
+    }
+    
+    #studentCreationStatus {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        font-weight: 600;
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes popIn {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes iconBounce {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-15px) scale(1.1); }
+    }
 </style>
 
 <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
@@ -44,14 +239,14 @@
     </div>
 
     <!-- Refresh Modal -->
-    <div id="refreshModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; text-align: center; margin: 0 auto;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
-            <h2 style="margin: 0 0 1rem 0; color: #4CAF50;">Data Refreshed!</h2>
-            <p style="margin: 0 0 1rem 0; color: #666;">Dashboard updated as of:</p>
-            <p style="margin: 0 0 1.5rem 0; font-size: 1.125rem; font-weight: 600; color: #333;" id="modal-timestamp"></p>
-            <button onclick="closeRefreshModal()" class="copy-btn" style="background: #667eea; padding: 0.75rem 2rem;">
-                Close
+    <div id="refreshModal" class="kid-modal-overlay">
+        <div class="kid-modal-content">
+            <div class="modal-icon">✅</div>
+            <h2>Data Refreshed!</h2>
+            <p>Dashboard updated as of:</p>
+            <p class="timestamp" id="modal-timestamp"></p>
+            <button onclick="closeRefreshModal()" class="kid-modal-button">
+                Awesome!
             </button>
         </div>
     </div>
@@ -881,80 +1076,71 @@ a:hover {
 </style>
 
 <!-- Add Student Modal -->
-<div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center; padding: 1rem;">
-    <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="margin: 0; font-size: 1.75rem; color: #667eea;">➕ Add New Student</h2>
-            <button onclick="closeAddStudentModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #718096; padding: 0.25rem; line-height: 1;">&times;</button>
-        </div>
+<div id="addStudentModal" class="kid-modal-overlay">
+    <div class="kid-modal-content">
+        <button onclick="closeAddStudentModal()" class="kid-modal-close-btn">&times;</button>
+        <h2 style="color: #8b5cf6;">➕ Add New Student</h2>
         
         <form id="addStudentForm" onsubmit="handleAddStudent(event)">
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Display Name *</label>
-                <input type="text" id="studentDisplayName" name="display_name" required 
-                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
-                    placeholder="e.g., Emily Johnson">
-            </div>
-            
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Username *</label>
-                <input type="text" id="studentUsername" name="username" required 
-                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
-                    placeholder="e.g., emily_j">
-                <div style="font-size: 0.875rem; color: #718096; margin-top: 0.25rem;">Lowercase letters, numbers, underscores only</div>
-            </div>
-            
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Password *</label>
-                <input type="password" id="studentPassword" name="password" required 
-                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
-                    placeholder="Minimum 4 characters">
-            </div>
-            
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Email (Optional)</label>
-                <input type="email" id="studentEmail" name="email" 
-                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;"
-                    placeholder="student@example.com">
-            </div>
-            
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #4a5568;">Grade Level</label>
-                <select id="studentGrade" name="grade_level" 
-                    style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;">
-                    <option value="">Select grade...</option>
-                    <option value="K">Kindergarten</option>
-                    <option value="1">1st Grade</option>
-                    <option value="2">2nd Grade</option>
-                    <option value="3">3rd Grade</option>
-                    <option value="4">4th Grade</option>
-                    <option value="5">5th Grade</option>
-                    <option value="6">6th Grade</option>
-                    <option value="7">7th Grade</option>
-                    <option value="8">8th Grade</option>
-                    <option value="9">9th Grade</option>
-                    <option value="10">10th Grade</option>
-                    <option value="11">11th Grade</option>
-                    <option value="12">12th Grade</option>
-                </select>
-            </div>
-            
-            <div style="background: #FFF9E6; padding: 1rem; border-radius: 8px; border: 2px solid #FFD700; margin-bottom: 1.5rem;">
-                <div style="font-size: 0.875rem; color: #8B6914; margin-bottom: 0.5rem;">Student will be linked to your Admin Key:</div>
-                <div style="font-size: 1.125rem; font-weight: 700; color: #FF6B00; font-family: monospace;">{{ admin_key }}</div>
-            </div>
-            
-            <div style="display: flex; gap: 1rem;">
-                <button type="button" onclick="closeAddStudentModal()" class="copy-btn" style="flex: 1; background: #718096; padding: 0.875rem; font-size: 1rem;">
-                    Cancel
-                </button>
-                <button type="submit" class="copy-btn" style="flex: 1; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding: 0.875rem; font-size: 1rem;">
-                    Create Student
-                </button>
+            <div class="kid-modal-form-grid">
+                <div>
+                    <label for="studentDisplayName">Display Name *</label>
+                    <input type="text" id="studentDisplayName" name="display_name" required placeholder="e.g., Emily Johnson">
+                </div>
+                
+                <div>
+                    <label for="studentUsername">Username *</label>
+                    <input type="text" id="studentUsername" name="username" required placeholder="e.g., emily_j">
+                    <div class="input-hint">Lowercase letters, numbers, underscores only</div>
+                </div>
+                
+                <div>
+                    <label for="studentPassword">Password *</label>
+                    <input type="password" id="studentPassword" name="password" required placeholder="Minimum 4 characters">
+                </div>
+                
+                <div>
+                    <label for="studentEmail">Email (Optional)</label>
+                    <input type="email" id="studentEmail" name="email" placeholder="student@example.com">
+                </div>
+                
+                <div>
+                    <label for="studentGrade">Grade Level</label>
+                    <select id="studentGrade" name="grade_level">
+                        <option value="">Select grade...</option>
+                        <option value="K">Kindergarten</option>
+                        <option value="1">1st Grade</option>
+                        <option value="2">2nd Grade</option>
+                        <option value="3">3rd Grade</option>
+                        <option value="4">4th Grade</option>
+                        <option value="5">5th Grade</option>
+                        <option value="6">6th Grade</option>
+                        <option value="7">7th Grade</option>
+                        <option value="8">8th Grade</option>
+                        <option value="9">9th Grade</option>
+                        <option value="10">10th Grade</option>
+                        <option value="11">11th Grade</option>
+                        <option value="12">12th Grade</option>
+                    </select>
+                </div>
+                
+                <div style="background: #f3e8ff; padding: 1rem; border-radius: 8px; border: 2px solid #c084fc; margin-top: 0.5rem; text-align: center;">
+                    <div style="font-size: 0.875rem; color: #6b21a8; margin-bottom: 0.5rem;">Student will be linked to your Admin Key:</div>
+                    <div style="font-size: 1.125rem; font-weight: 700; color: #8b5cf6; font-family: monospace;">{{ admin_key }}</div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" onclick="closeAddStudentModal()" class="kid-modal-button cancel">
+                        Cancel
+                    </button>
+                    <button type="submit" class="kid-modal-button">
+                        Create Student
+                    </button>
+                </div>
             </div>
         </form>
         
-        <div id="studentCreationStatus" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px;"></div>
+        <div id="studentCreationStatus" style="display: none;"></div>
     </div>
 </div>
 

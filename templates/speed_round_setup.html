@@ -220,9 +220,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: radial-gradient(circle, rgba(66, 165, 245, 0.7) 0%, rgba(25, 118, 210, 0.9) 100%);
             z-index: 10000;
             animation: fadeIn 0.3s ease;
+            backdrop-filter: blur(5px);
         }
         
         .speed-intro-content {
@@ -230,8 +231,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-            border: 5px solid #42A5F5;
+            background: linear-gradient(135deg, #ffffff 0%, #f2f8ff 100%);
             border-radius: 30px;
             padding: 2.5rem;
             max-width: 700px;
@@ -239,8 +239,16 @@
             max-height: 90vh;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(66, 165, 245, 0.3);
-            animation: slideInScale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4), 0 0 120px rgba(66, 165, 245, 0.5);
+            animation: slideInScale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), breathe 4s ease-in-out infinite;
+            border: 5px solid transparent;
+            background-clip: padding-box;
+            border-image: linear-gradient(45deg, #4CAF50, #2196F3, #FFC107, #F44336);
+            border-image-slice: 1;
+            animation: 
+                slideInScale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                breathe 4s ease-in-out infinite,
+                border-flow 6s ease-in-out infinite;
         }
         
         .speed-intro-header {
@@ -249,59 +257,69 @@
         }
         
         .speed-intro-header h2 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             color: #1976D2;
             margin: 0 0 0.5rem 0;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
-            animation: pulse 2s ease-in-out infinite;
+            animation: pulse 2s ease-in-out infinite, text-glow 2s ease-in-out infinite alternate;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
         }
         
         .speed-intro-header p {
-            font-size: 1.2rem;
-            color: #1976D2;
+            font-size: 1.3rem;
+            color: #1E88E5;
             font-weight: 700;
             margin: 0;
         }
         
         .speed-intro-rules {
-            background: white;
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 20px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
-            border: 3px solid rgba(33, 150, 243, 0.3);
+            border: 2px dashed #42A5F5;
         }
         
         .speed-intro-rules h3 {
-            font-size: 1.5rem;
-            color: #1976D2;
+            font-size: 1.7rem;
+            color: #1565C0;
             margin: 0 0 1rem 0;
             text-align: center;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
         }
         
         .speed-rule {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 0.75rem;
             padding: 0.75rem;
-            background: rgba(255, 215, 0, 0.1);
-            border-radius: 12px;
-            border-left: 4px solid #FFD700;
+            background: linear-gradient(135deg, rgba(255, 235, 59, 0.2), rgba(255, 193, 7, 0.2));
+            border-radius: 15px;
+            border-left: 5px solid #FFC107;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .speed-rule:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         
         .speed-rule-icon {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             margin-right: 1rem;
             flex-shrink: 0;
+            animation: icon-pop 3s ease-in-out infinite;
         }
         
         .speed-rule-text {
-            font-size: 1rem;
+            font-size: 1.05rem;
             color: #333;
-            line-height: 1.4;
+            line-height: 1.5;
         }
         
         .speed-rule-text strong {
             color: #1976D2;
+            font-weight: 900;
         }
         
         .speed-intro-warning {
@@ -311,53 +329,64 @@
             padding: 1rem;
             margin-bottom: 1.5rem;
             text-align: center;
+            animation: pulse-warning 2.5s infinite;
         }
         
         .speed-intro-warning p {
             margin: 0;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: #1976D2;
             font-weight: 700;
         }
         
         .speed-intro-buttons {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             justify-content: center;
             flex-wrap: wrap;
         }
         
         .btn-intro {
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
+            padding: 1.2rem 2.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             border: none;
-            border-radius: 15px;
+            border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             font-family: inherit;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-intro:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+
+        .btn-intro:active {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
         .btn-intro-start {
-            background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
+            background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
             color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         
         .btn-intro-start:hover {
-            background: linear-gradient(135deg, #45A049 0%, #3D8B40 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+            background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
         }
         
         .btn-intro-cancel {
-            background: linear-gradient(135deg, #E0E0E0 0%, #CCCCCC 100%);
-            color: #666;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            color: #777;
         }
         
         .btn-intro-cancel:hover {
-            background: linear-gradient(135deg, #CCCCCC 0%, #B8B8B8 100%);
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
         }
         
         @keyframes fadeIn {
@@ -367,7 +396,7 @@
         
         @keyframes slideInScale {
             from {
-                transform: translate(-50%, -60%) scale(0.8);
+                transform: translate(-50%, -60%) scale(0.7);
                 opacity: 0;
             }
             to {
@@ -377,8 +406,36 @@
         }
         
         @keyframes pulse {
+            0%, 100% { transform: scale(1); text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2); }
+            50% { transform: scale(1.05); text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3); }
+        }
+
+        @keyframes breathe {
+            0%, 100% { box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4), 0 0 120px rgba(66, 165, 245, 0.5); }
+            50% { box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 150px rgba(66, 165, 245, 0.7); }
+        }
+
+        @keyframes border-flow {
+            0% { border-image-source: linear-gradient(45deg, #4CAF50, #2196F3, #FFC107, #F44336); }
+            25% { border-image-source: linear-gradient(45deg, #F44336, #4CAF50, #2196F3, #FFC107); }
+            50% { border-image-source: linear-gradient(45deg, #FFC107, #F44336, #4CAF50, #2196F3); }
+            75% { border-image-source: linear-gradient(45deg, #2196F3, #FFC107, #F44336, #4CAF50); }
+            100% { border-image-source: linear-gradient(45deg, #4CAF50, #2196F3, #FFC107, #F44336); }
+        }
+
+        @keyframes text-glow {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #2196F3, 0 0 20px #2196F3; }
+            to { text-shadow: 0 0 10px #fff, 0 0 15px #42A5F5, 0 0 20px #42A5F5, 0 0 25px #42A5F5; }
+        }
+
+        @keyframes icon-pop {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.2) rotate(5deg); }
+        }
+
+        @keyframes pulse-warning {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(25, 118, 210, 0.2); }
+            50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(25, 118, 210, 0.4); }
         }
 
         @media (max-width: 768px) {
@@ -393,6 +450,23 @@
             .btn-start-speed-round {
                 font-size: 1.3rem;
                 padding: 1.25rem;
+            }
+
+            .speed-intro-header h2 {
+                font-size: 2rem;
+            }
+
+            .speed-intro-header p {
+                font-size: 1.1rem;
+            }
+
+            .speed-intro-rules h3 {
+                font-size: 1.5rem;
+            }
+
+            .btn-intro {
+                padding: 1rem 2rem;
+                font-size: 1.2rem;
             }
         }
     </style>

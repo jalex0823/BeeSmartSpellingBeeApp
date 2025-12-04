@@ -4284,6 +4284,32 @@ def load_saved_wordlist():
             print(f"❌ /api/saved-lists/load: List not found. list_id={list_id}, user_id={user.id}")
             return jsonify({"ok": False, "error": "List not found"}), 404
 
+        # ✅ RESUME/RESTART LOGIC
+        # Check if a quiz is already in progress for this specific list
+        quiz_state = session.get(QUIZ_STATE_KEY)
+        active_list_id = session.get("source_list_id")
+        
+        if quiz_state and active_list_id == list_id:
+            is_complete = quiz_state.get("is_complete", False)
+            current_index = quiz_state.get("current_word_index", 0)
+            total_words = quiz_state.get("total_words", 0)
+            
+            if not is_complete and current_index > 0 and current_index < total_words:
+                # This list is already in progress, ask user what to do
+                print(f"💡 /api/saved-lists/load: Found in-progress quiz for list_id={list_id}")
+                return jsonify({
+                    "ok": True,
+                    "action_required": "resume_or_restart",
+                    "message": f"You have a quiz in progress for '{wl.list_name}'.",
+                    "list_name": wl.list_name,
+                    "progress": {
+                        "current": current_index,
+                        "total": total_words
+                    }
+                })
+
+        # --- End Resume/Restart Logic ---
+
         items = WordListItem.query.filter_by(word_list_id=wl.id).order_by(WordListItem.position.asc()).all()
         rows = []
         for it in items:
@@ -4326,7 +4352,10 @@ def load_saved_wordlist():
             print(f"⚠️ WARNING: Mismatch! Saved {len(rows)} but got {len(verify_wb)} back")
         
         # Initialize fresh quiz state from new wordbank
-        init_quiz_state()
+        init_quiz_state(len(rows))
+        
+        # ✅ Store the source list ID to enable the resume feature
+        session["source_list_id"] = list_id
         
         print(f"✅ /api/saved-lists/load: Initialized quiz state for {len(rows)} words")
 

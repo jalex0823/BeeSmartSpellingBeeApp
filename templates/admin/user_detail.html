@@ -366,41 +366,201 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(127, 200, 164, 0.3);
 }
+
+/* Kid-Friendly Confirmation Modal */
+.kid-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9998;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.kid-modal-content {
+    background: linear-gradient(145deg, #ffffff, #f3f4f6);
+    padding: 2rem;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 123, 123, 0.8);
+    border: 2px solid white;
+    max-width: 450px;
+    width: 100%;
+    text-align: center;
+    animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.kid-modal-content .modal-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: iconBounce 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+}
+
+.kid-modal-content h2 {
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    font-size: 1.75rem;
+    color: #4a4a4a;
+    margin: 0 0 1rem 0;
+}
+
+.kid-modal-content p {
+    color: #555;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 1.5rem 0;
+}
+
+.kid-modal-button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.kid-modal-button {
+    background: linear-gradient(180deg, #86efac, #22c55e);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+    border-bottom: 4px solid #15803d;
+}
+
+.kid-modal-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+}
+
+.kid-modal-button.confirm {
+    background: linear-gradient(180deg, #fca5a5, #ef4444);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    border-bottom: 4px solid #b91c1c;
+}
+
+.kid-modal-button.confirm:hover {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.kid-modal-button.cancel {
+    background: linear-gradient(180deg, #e2e8f0, #cbd5e1);
+    color: #4a5568;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-bottom: 4px solid #94a3b8;
+}
+
+.kid-modal-button.cancel:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes iconBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+
 </style>
 
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="kid-modal-overlay">
+    <div class="kid-modal-content">
+        <div id="modalIcon" class="modal-icon"></div>
+        <h2 id="modalTitle"></h2>
+        <p id="modalMessage"></p>
+        <div class="kid-modal-button-group">
+            <button id="modalCancelBtn" class="kid-modal-button cancel">Cancel</button>
+            <button id="modalConfirmBtn" class="kid-modal-button confirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <script>
+function showConfirmationModal({ icon, title, message, onConfirm }) {
+    document.getElementById('modalIcon').textContent = icon;
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').innerHTML = message; // Use innerHTML to allow for styled messages
+    
+    const modal = document.getElementById('confirmationModal');
+    modal.style.display = 'flex';
+
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    const cancelBtn = document.getElementById('modalCancelBtn');
+
+    // Clone and replace to remove old event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    newConfirmBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        onConfirm();
+    });
+
+    newCancelBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+}
+
 function editUser() {
-    alert('Edit user functionality coming soon!');
+    showConfirmationModal({
+        icon: '✏️',
+        title: 'Edit User',
+        message: 'User editing will be available in a future update. Stay tuned!',
+        onConfirm: () => {} // No action on confirm
+    });
+    // Make the confirm button a simple "OK" button
+    document.getElementById('modalCancelBtn').style.display = 'none';
+    document.getElementById('modalConfirmBtn').textContent = 'OK';
+    document.getElementById('modalConfirmBtn').classList.remove('confirm');
 }
 
 function resetPassword() {
-    if (confirm('Send password reset email to {{ target_user.email or target_user.username }}?')) {
-        alert('Password reset email sent! (Feature coming soon)');
-    }
+    showConfirmationModal({
+        icon: '🔑',
+        title: 'Reset Password?',
+        message: `This will send a password reset email to <br><strong>{{ target_user.email or target_user.username }}</strong>.`,
+        onConfirm: () => {
+            // Placeholder for actual API call
+            alert('Password reset email sent! (Feature coming soon)');
+        }
+    });
 }
 
 function deleteUser() {
-    if (confirm('Are you sure you want to delete user "{{ target_user.display_name }}"? This action cannot be undone!')) {
-        fetch('/api/admin/users/{{ target_user.id }}', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.ok) {
-                alert('User deleted successfully');
-                window.location.href = '/admin/users';
-            } else {
-                alert('Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Failed to delete user');
-            console.error(error);
-        });
-    }
+    showConfirmationModal({
+        icon: '🗑️',
+        title: 'Delete User?',
+        message: `Are you sure you want to delete <strong>{{ target_user.display_name }}</strong>? <br><br><span style="color: #dc2626; font-weight: bold;">This action cannot be undone!</span>`,
+        onConfirm: () => {
+            fetch('/api/admin/users/{{ target_user.id }}', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    alert('User deleted successfully');
+                    window.location.href = '/admin/users';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Failed to delete user');
+                console.error(error);
+            });
+        }
+    });
 }
 </script>
 {% endblock %}

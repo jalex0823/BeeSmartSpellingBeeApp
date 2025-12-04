@@ -126,8 +126,15 @@ function renderHoneycombGrid(avatarsToRender) {
         hexContainer.appendChild(thumbDiv);
         hexContainer.appendChild(nameDiv);
         
-        // Click handler
+        // Click handler for mouse users
         hexContainer.addEventListener('click', () => {
+            selectAvatar(avatar);
+        });
+
+        // Touch handler for better responsiveness on mobile/touch devices
+        hexContainer.addEventListener('touchstart', (e) => {
+            // Prevent the browser from also firing a click event and causing a double-tap issue
+            e.preventDefault();
             selectAvatar(avatar);
         });
         
