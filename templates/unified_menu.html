@@ -1220,6 +1220,16 @@
             margin-left: auto;
             margin-right: auto;
             box-sizing: border-box;
+            /* Make entire tile clickable - remove touch delay */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        /* Make all child elements pass clicks through to parent tile */
+        .menu-option * {
+            pointer-events: none;
         }
 
         /* Locked (guest) state for tiles */
@@ -1270,6 +1280,13 @@
         
         .menu-option:last-child {
             margin-bottom: 0;
+        }
+        
+        /* Active/pressed state for immediate feedback */
+        .menu-option:active {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 16px var(--tile-shadow);
+            transition: all 0.1s ease;
         }
         
         .menu-option:hover {

@@ -5527,12 +5527,12 @@ class QuizManager {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
             this.hintUsedThisWord = false;
-            // Reset definition gating for the new word
-            this.definitionUnlocked = false;
+            // Definition button is always enabled - no gating
+            this.definitionUnlocked = true;
             const defBtnIntro = document.getElementById('showDefinitionButton');
             if (defBtnIntro) {
-                defBtnIntro.disabled = true;
-                defBtnIntro.setAttribute('title', 'Spell the word correctly to view the definition');
+                defBtnIntro.disabled = false;
+                defBtnIntro.setAttribute('title', '📖 Click to see the definition of the current word');
             }
             const postDefIntro = document.getElementById('postTimerDefinition');
             if (postDefIntro) postDefIntro.style.display = 'none';
@@ -6620,12 +6620,12 @@ class QuizManager {
                 definition: actualDefinition || chosen || ''
             };
 
-            // Reset definition unlock for the new word
-            this.definitionUnlocked = false;
+            // Definition button is always enabled - no gating
+            this.definitionUnlocked = true;
             const defBtnReset = document.getElementById('showDefinitionButton');
             if (defBtnReset) {
-                defBtnReset.disabled = true;
-                defBtnReset.setAttribute('title', 'Spell the word correctly to view the definition');
+                defBtnReset.disabled = false;
+                defBtnReset.setAttribute('title', '📖 Click to see the definition of the current word');
             }
             // Hide any previous post-timer definition/sentence
             const postDef = document.getElementById('postTimerDefinition');
@@ -7304,13 +7304,7 @@ class QuizManager {
     const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
 
         if (result.correct) {
-            // Unlock definition button after correct spelling
-            this.definitionUnlocked = true;
-            const defBtnOk = document.getElementById('showDefinitionButton');
-            if (defBtnOk) {
-                defBtnOk.disabled = false;
-                defBtnOk.setAttribute('title', 'Click to view the definition below the timer');
-            }
+            // Definition button is always enabled, no need to unlock
             // 🏆 Use points from backend response
             const pointsData = result.points || {};
             let earnedPoints = pointsData.earned || 0;
