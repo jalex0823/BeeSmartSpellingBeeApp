@@ -4889,18 +4889,23 @@
                 tile.classList.add('locked');
                 tile.setAttribute('data-locked', '1');
                 tile.setAttribute('title', message.replace(/<[^>]*>/g,'').trim());
-                // Remove inline onclick to prevent original action
-                tile.setAttribute('onclick', '');
-                // Replace with upsell modal
-                tile.addEventListener('click', (e) => {
+                // CRITICAL FIX: Remove ALL existing click handlers
+                tile.removeAttribute('onclick');
+                tile.onclick = null;
+                // Clone and replace to remove all attached event listeners
+                const newTile = tile.cloneNode(true);
+                tile.parentNode.replaceChild(newTile, tile);
+                // Now add the lock click handler with immediate preventDefault
+                newTile.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopImmediatePropagation();
                     if (typeof openFriendlyInfoModal === 'function') {
                         openFriendlyInfoModal({ title, message: message + '\n\n• Track progress\n• Save word lists\n• Unlock Speed Round & Battles', buttonText });
                     } else {
                         alert(title + '\n\n' + message);
                     }
-                }, { once: false });
+                    return false;
+                }, { capture: true });
             } catch (e) { console.warn('Lock tile failed', e); }
         }
 
@@ -15105,6 +15110,289 @@
                     container.appendChild(bubble);
                 }
                 addKeyframes(`@keyframes thought-rise { to { transform: translateY(-80px); opacity: 0; } }`);
+            }
+            
+            function createEnergyBurst(container) {
+                for (let i = 0; i < 12; i++) {
+                    const energy = document.createElement('div');
+                    energy.textContent = '⚡';
+                    energy.style.cssText = `
+                        position: absolute;
+                        left: 50%;
+                        top: 50%;
+                        font-size: ${16 + Math.random() * 12}px;
+                        color: #ffff00;
+                        animation: energy-burst-${i % 8} ${0.6 + Math.random() * 0.4}s ease-out;
+                    `;
+                    container.appendChild(energy);
+                }
+                addKeyframes(`
+                    @keyframes energy-burst-0 { to { transform: translate(-80px, -80px) rotate(45deg); opacity: 0; } }
+                    @keyframes energy-burst-1 { to { transform: translate(80px, -80px) rotate(-45deg); opacity: 0; } }
+                    @keyframes energy-burst-2 { to { transform: translate(-80px, 80px) rotate(-45deg); opacity: 0; } }
+                    @keyframes energy-burst-3 { to { transform: translate(80px, 80px) rotate(45deg); opacity: 0; } }
+                    @keyframes energy-burst-4 { to { transform: translate(-100px, 0) rotate(90deg); opacity: 0; } }
+                    @keyframes energy-burst-5 { to { transform: translate(100px, 0) rotate(-90deg); opacity: 0; } }
+                    @keyframes energy-burst-6 { to { transform: translate(0, -100px) rotate(180deg); opacity: 0; } }
+                    @keyframes energy-burst-7 { to { transform: translate(0, 100px); opacity: 0; } }
+                `);
+            }
+            
+            function createPowerBurst(container) {
+                const pow = document.createElement('div');
+                pow.textContent = '💥';
+                pow.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%) scale(0);
+                    font-size: 64px;
+                    animation: power-burst 0.6s ease-out;
+                `;
+                container.appendChild(pow);
+                addKeyframes(`@keyframes power-burst { to { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } }`);
+            }
+            
+            function createRegalGlow(container) {
+                const glow = document.createElement('div');
+                glow.style.cssText = `
+                    position: absolute;
+                    inset: -20%;
+                    background: radial-gradient(circle, rgba(255,215,0,0.3), transparent 70%);
+                    animation: regal-pulse 1.2s ease-out;
+                `;
+                container.appendChild(glow);
+                addKeyframes(`@keyframes regal-pulse { to { transform: scale(1.5); opacity: 0; } }`);
+            }
+            
+            function createMistEffect(container) {
+                for (let i = 0; i < 5; i++) {
+                    const mist = document.createElement('div');
+                    mist.style.cssText = `
+                        position: absolute;
+                        left: ${i * 20}%;
+                        bottom: 0;
+                        width: 30%;
+                        height: 60%;
+                        background: radial-gradient(ellipse at bottom, rgba(200,200,220,0.4), transparent);
+                        animation: mist-rise ${2 + Math.random()}s ease-out ${i * 0.2}s;
+                    `;
+                    container.appendChild(mist);
+                }
+                addKeyframes(`@keyframes mist-rise { to { transform: translateY(-120%); opacity: 0; } }`);
+            }
+            
+            function createHammerStrike(container) {
+                const hammer = document.createElement('div');
+                hammer.textContent = '🔨';
+                hammer.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: -20%;
+                    font-size: 48px;
+                    animation: hammer-strike 0.5s ease-in;
+                `;
+                container.appendChild(hammer);
+                addKeyframes(`@keyframes hammer-strike { to { top: 50%; transform: translateX(-50%) rotate(45deg); } }`);
+            }
+            
+            function createSearchBeam(container) {
+                const beam = document.createElement('div');
+                beam.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
+                    border: 3px solid #ffeb3b;
+                    transform: translate(-50%, -50%) scale(0.3);
+                    opacity: 0.8;
+                    animation: search-beam 1s ease-out;
+                `;
+                container.appendChild(beam);
+                addKeyframes(`@keyframes search-beam { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }`);
+            }
+            
+            function createHealingPulse(container) {
+                for (let i = 0; i < 3; i++) {
+                    const pulse = document.createElement('div');
+                    pulse.textContent = '💚';
+                    pulse.style.cssText = `
+                        position: absolute;
+                        left: 50%;
+                        top: 50%;
+                        transform: translate(-50%, -50%);
+                        font-size: 32px;
+                        animation: heal-pulse ${0.8}s ease-out ${i * 0.3}s;
+                    `;
+                    container.appendChild(pulse);
+                }
+                addKeyframes(`@keyframes heal-pulse { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }`);
+            }
+            
+            function createChopEffect(container) {
+                const chop = document.createElement('div');
+                chop.textContent = '🪓';
+                chop.style.cssText = `
+                    position: absolute;
+                    right: -50px;
+                    top: 20%;
+                    font-size: 48px;
+                    animation: chop-swing 0.6s ease-out;
+                `;
+                container.appendChild(chop);
+                addKeyframes(`@keyframes chop-swing { to { right: 60%; transform: rotate(-90deg); } }`);
+            }
+            
+            function createHeartBurst(container) {
+                for (let i = 0; i < 10; i++) {
+                    const heart = document.createElement('div');
+                    heart.textContent = ['💕', '💖', '💗', '💝'][i % 4];
+                    heart.style.cssText = `
+                        position: absolute;
+                        left: 50%;
+                        top: 50%;
+                        font-size: ${20 + Math.random() * 16}px;
+                        animation: heart-burst-${i % 8} ${0.8 + Math.random() * 0.4}s ease-out;
+                    `;
+                    container.appendChild(heart);
+                }
+                addKeyframes(`
+                    @keyframes heart-burst-0 { to { transform: translate(-60px, -70px) rotate(20deg); opacity: 0; } }
+                    @keyframes heart-burst-1 { to { transform: translate(60px, -70px) rotate(-20deg); opacity: 0; } }
+                    @keyframes heart-burst-2 { to { transform: translate(-70px, -30px) rotate(15deg); opacity: 0; } }
+                    @keyframes heart-burst-3 { to { transform: translate(70px, -30px) rotate(-15deg); opacity: 0; } }
+                    @keyframes heart-burst-4 { to { transform: translate(-80px, 10px) rotate(10deg); opacity: 0; } }
+                    @keyframes heart-burst-5 { to { transform: translate(80px, 10px) rotate(-10deg); opacity: 0; } }
+                    @keyframes heart-burst-6 { to { transform: translate(-50px, 50px) rotate(5deg); opacity: 0; } }
+                    @keyframes heart-burst-7 { to { transform: translate(50px, 50px) rotate(-5deg); opacity: 0; } }
+                `);
+            }
+            
+            function createHexagonPattern(container) {
+                const pattern = document.createElement('div');
+                pattern.innerHTML = '⬡⬡⬡<br>⬡⬡⬡<br>⬡⬡⬡';
+                pattern.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%) scale(0.5);
+                    font-size: 24px;
+                    color: #ffd700;
+                    text-align: center;
+                    line-height: 1.2;
+                    animation: hexagon-expand 1s ease-out;
+                `;
+                container.appendChild(pattern);
+                addKeyframes(`@keyframes hexagon-expand { to { transform: translate(-50%, -50%) scale(2); opacity: 0; } }`);
+            }
+            
+            function createZenRipple(container) {
+                for (let i = 0; i < 3; i++) {
+                    const ripple = document.createElement('div');
+                    ripple.style.cssText = `
+                        position: absolute;
+                        left: 50%;
+                        top: 50%;
+                        width: 40px;
+                        height: 40px;
+                        border: 2px solid #9370db;
+                        border-radius: 50%;
+                        transform: translate(-50%, -50%);
+                        animation: zen-ripple ${1.5}s ease-out ${i * 0.4}s;
+                    `;
+                    container.appendChild(ripple);
+                }
+                addKeyframes(`@keyframes zen-ripple { to { width: 200px; height: 200px; opacity: 0; } }`);
+            }
+            
+            function createDigitalGlitch(container) {
+                const glitch = document.createElement('div');
+                glitch.textContent = '01010101';
+                glitch.style.cssText = `
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    font-family: monospace;
+                    font-size: 12px;
+                    color: #00ff00;
+                    opacity: 0.6;
+                    animation: digital-glitch 0.5s steps(5);
+                `;
+                container.appendChild(glitch);
+                addKeyframes(`@keyframes digital-glitch { to { opacity: 0; transform: translateX(100%); } }`);
+            }
+            
+            function createMatrixRain(container) {
+                for (let i = 0; i < 8; i++) {
+                    const rain = document.createElement('div');
+                    rain.textContent = Math.random() > 0.5 ? '1' : '0';
+                    rain.style.cssText = `
+                        position: absolute;
+                        left: ${i * 12}%;
+                        top: -20px;
+                        font-family: monospace;
+                        color: #00ff00;
+                        font-size: 14px;
+                        animation: matrix-fall ${0.8 + Math.random() * 0.4}s linear ${i * 0.1}s;
+                    `;
+                    container.appendChild(rain);
+                }
+                addKeyframes(`@keyframes matrix-fall { to { top: 100%; } }`);
+            }
+            
+            function createLevelUpText(container) {
+                const text = document.createElement('div');
+                text.textContent = 'LEVEL UP!';
+                text.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%) scale(0.3);
+                    font-size: 32px;
+                    font-weight: bold;
+                    color: #00ff00;
+                    text-shadow: 0 0 10px #00ff00;
+                    animation: level-up 0.8s ease-out;
+                `;
+                container.appendChild(text);
+                addKeyframes(`@keyframes level-up { to { transform: translate(-50%, -150%) scale(1.5); opacity: 0; } }`);
+            }
+            
+            function createBubbles(container) {
+                for (let i = 0; i < 10; i++) {
+                    const bubble = document.createElement('div');
+                    bubble.textContent = '○';
+                    bubble.style.cssText = `
+                        position: absolute;
+                        left: ${Math.random() * 100}%;
+                        bottom: 0;
+                        font-size: ${12 + Math.random() * 12}px;
+                        color: #add8e6;
+                        animation: bubble-float ${2 + Math.random()}s ease-in-out ${Math.random() * 0.5}s;
+                    `;
+                    container.appendChild(bubble);
+                }
+                addKeyframes(`@keyframes bubble-float { to { transform: translateY(-300px) translateX(${Math.random() * 40 - 20}px); opacity: 0; } }`);
+            }
+            
+            function createSpotlight(container) {
+                const light = document.createElement('div');
+                light.style.cssText = `
+                    position: absolute;
+                    left: 50%;
+                    top: -50%;
+                    width: 100px;
+                    height: 200%;
+                    background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, transparent 80%);
+                    transform: translateX(-50%);
+                    animation: spotlight-sweep 1.2s ease-in-out;
+                `;
+                container.appendChild(light);
+                addKeyframes(`@keyframes spotlight-sweep { 50% { opacity: 1; } to { opacity: 0; } }`);
             }
             
             function addKeyframes(css) {

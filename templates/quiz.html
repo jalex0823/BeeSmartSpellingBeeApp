@@ -6217,9 +6217,7 @@ class QuizManager {
         }
 
         if (showDefinitionButton) {
-            // Start each word with definition disabled until spelled correctly
-            showDefinitionButton.disabled = true;
-            showDefinitionButton.setAttribute('title', 'Spell the word correctly to view the definition');
+            // Show Definition button now works during the quiz (like Show Sentence)
             showDefinitionButton.addEventListener('click', () => {
                 console.log('📖 Show Definition button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
@@ -6975,9 +6973,23 @@ class QuizManager {
                 `;
                 postDef.style.display = 'block';
                 console.log('✅ Sentence displayed below timer');
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    if (postDef) {
+                        postDef.style.opacity = '1';
+                        postDef.style.transition = 'opacity 0.5s ease';
+                        postDef.style.opacity = '0';
+                        setTimeout(() => {
+                            postDef.style.display = 'none';
+                            postDef.style.opacity = '1';
+                        }, 500);
+                    }
+                }, 5000);
                 return;
             }
         }
+        
         const voiceDefElement = document.getElementById('voiceDefinition');
         if (voiceDefElement) {
             voiceDefElement.innerHTML = `
@@ -6987,20 +6999,20 @@ class QuizManager {
                 </div>
             `;
             console.log('✅ Sentence displayed in voiceDefinition element');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (voiceDefElement) {
+                    voiceDefElement.innerHTML = '🐝 Listen carefully and spell the word! 🐝';
+                }
+            }, 5000);
         } else {
             console.error('❌ voiceDefinition element not found!');
         }
     }
 
-    // Show definition with the target word masked (only after correct spelling)
+    // Show definition with the target word masked (works during quiz like Show Sentence)
     showDefinition() {
-        const defBtn = document.getElementById('showDefinitionButton');
-        if (!this.definitionUnlocked) {
-            // Guard: not yet allowed
-            BeeSmart.showError('Spell the word correctly first to view the definition.');
-            if (defBtn) defBtn.disabled = true;
-            return;
-        }
         console.log('🔍 showDefinition called, currentWordData:', this.currentWordData);
         
         if (!this.currentWordData || !this.currentWordData.definition) {
@@ -7019,19 +7031,55 @@ class QuizManager {
         
         console.log('📖 Masked definition:', maskedDefinition);
         
-        // Always display below the timer area
-        const postDef = document.getElementById('postTimerDefinition');
-        if (postDef) {
-            postDef.innerHTML = `
+        // If timer is showing, render below timer; otherwise use voice area
+        const isTimerMode = window.morphController?.getMode && window.morphController.getMode() === 'timer';
+        if (isTimerMode) {
+            const postDef = document.getElementById('postTimerDefinition');
+            if (postDef) {
+                postDef.innerHTML = `
+                    <div style="padding: 8px 0; margin: 8px 0;">
+                        <strong style="color: #000;">📖 Definition:</strong><br>
+                        <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedDefinition}</span>
+                    </div>
+                `;
+                postDef.style.display = 'block';
+                console.log('✅ Definition displayed below timer');
+                
+                // Auto-hide after 5 seconds (like Show Sentence)
+                setTimeout(() => {
+                    if (postDef) {
+                        postDef.style.opacity = '1';
+                        postDef.style.transition = 'opacity 0.5s ease';
+                        postDef.style.opacity = '0';
+                        setTimeout(() => {
+                            postDef.style.display = 'none';
+                            postDef.style.opacity = '1';
+                        }, 500);
+                    }
+                }, 5000);
+                return;
+            }
+        }
+        
+        // Fallback to voice area
+        const voiceDefElement = document.getElementById('voiceDefinition');
+        if (voiceDefElement) {
+            voiceDefElement.innerHTML = `
                 <div style="padding: 8px 0; margin: 8px 0;">
                     <strong style="color: #000;">📖 Definition:</strong><br>
                     <span style=\"font-size: 1.05em; color: #000; line-height: 1.6;\">${maskedDefinition}</span>
                 </div>
             `;
-            postDef.style.display = 'block';
-            console.log('✅ Definition displayed below timer');
+            console.log('✅ Definition displayed in voiceDefinition element');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (voiceDefElement) {
+                    voiceDefElement.innerHTML = '🐝 Listen carefully and spell the word! 🐝';
+                }
+            }, 5000);
         } else {
-            console.error('❌ postTimerDefinition element not found!');
+            console.error('❌ voiceDefinition element not found!');
         }
     }
 

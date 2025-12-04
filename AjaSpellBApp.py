@@ -3946,7 +3946,7 @@ def create_saved_list():
             session.pop(QUIZ_STATE_KEY, None)
             session.pop("is_random_play", None)
             set_wordbank(rows, is_user_upload=True)
-            init_quiz_state()
+            init_quiz_state(len(rows))
             print(f"✅ Loaded newly created list into session wordbank (rows={len(rows)}) and initialized quiz state")
 
         return jsonify({"ok": True, "list": _serialize_word_list(wl)}), 201
@@ -4743,14 +4743,14 @@ def quiz_page():
         state = get_quiz_state()
         if state is None or len(state.get("order", [])) != len(wordbank):
             print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
-            init_quiz_state()
+            init_quiz_state(len(wordbank))
         else:
             # Check if quiz is completed - reset if so
             idx = state.get('idx', 0)
             order = state.get('order', [])
             if idx >= len(order):
                 print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
-                init_quiz_state()
+                init_quiz_state(len(wordbank))
             else:
                 print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
             
@@ -5430,7 +5430,7 @@ def api_random_words():
             
             # Store in session (same as file upload)
             set_wordbank(random_words)
-            init_quiz_state()
+            init_quiz_state(len(random_words))
             
             # Mark this as a Random Play session to suppress default words warning
             session['is_random_play'] = True
@@ -5691,7 +5691,7 @@ def api_join_battle_DEPRECATED():
         
         # Load word list into session (same as upload flow)
         set_wordbank(shuffled_list)
-        init_quiz_state()
+        init_quiz_state(len(shuffled_list))
         
         print(f"⚔️ {player_name} joined battle {battle_code}")
         
@@ -6122,7 +6122,7 @@ def api_wordbank_delete():
 
         # Persist updated list and refresh quiz order
         set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
-        init_quiz_state()
+        init_quiz_state(len(wb))
         return jsonify({"ok": True, "count": len(wb), "removed": removed.get("word")})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -6135,10 +6135,10 @@ def api_quiz_reset():
     """
     try:
         # Reset quiz state using the same initialization logic
-        init_quiz_state()
+        wordbank = get_wordbank()
+        init_quiz_state(len(wordbank))
         
         # Clear any accumulated quiz stats for fresh start
-        wordbank = get_wordbank()
         
         return jsonify({
             "ok": True,
@@ -6433,7 +6433,7 @@ def process_upload_with_progress(session_id, request_obj):
         
         # Store the wordbank and initialize quiz (USER UPLOAD)
         set_wordbank(filtered_enriched, is_user_upload=True)
-        init_quiz_state()
+        init_quiz_state(len(filtered_enriched))
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
         session.permanent = True
@@ -6444,7 +6444,7 @@ def process_upload_with_progress(session_id, request_obj):
         saved_state = get_quiz_state()
         if not saved_state:
             print("ERROR /process_upload_with_progress: Quiz state failed to persist! Retrying init...")
-            init_quiz_state()
+            init_quiz_state(len(filtered_enriched))
             session.modified = True
             time.sleep(0.2)
         
@@ -6456,9 +6456,6 @@ def process_upload_with_progress(session_id, request_obj):
 
 @app.route("/api/upload", methods=["POST"])
 def api_upload():
-    # This endpoint is handled by the enhanced upload logic.
-    # If you want to support both file and image uploads, use /api/upload/image for OCR.
-    return jsonify({'status': 'error', 'message': 'Please use /api/upload/image for image uploads.'}), 400
     """
     Accepts:
       - file upload (.csv, .txt, .docx, .pdf)
@@ -6467,6 +6464,14 @@ def api_upload():
     # CRITICAL: Set session persistence FIRST before any session operations
     session.permanent = True
     session.modified = True
+    
+    # Add error logging for debugging
+    try:
+        app.logger.info(f"Upload request - Content-Type: {request.content_type}")
+        app.logger.info(f"Upload request - Files: {list(request.files.keys())}")
+        app.logger.info(f"Upload request - Form: {list(request.form.keys())}")
+    except Exception as e:
+        app.logger.warning(f"Error logging upload request details: {e}")
     
     rows: List[Dict[str, str]] = []
 
@@ -6721,7 +6726,7 @@ def api_upload():
     
     # Step 3: Set new wordbank (USER UPLOAD - marks has_uploaded_once) - CREATES NEW STORAGE_ID
     set_wordbank(deduped, is_user_upload=True)
-    init_quiz_state()
+    init_quiz_state(len(deduped))
     
     # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
     session.permanent = True
@@ -6734,7 +6739,7 @@ def api_upload():
     saved_state = get_quiz_state()
     if not saved_state:
         print("⚠️ Quiz state failed to persist! Retrying init...")
-        init_quiz_state()
+        init_quiz_state(len(deduped))
         session.modified = True
         time.sleep(0.2)
     
@@ -6746,6 +6751,15 @@ def api_upload():
         print(f"✅ Successfully uploaded {len(deduped)} words")
     
     return jsonify({"ok": True, "count": len(deduped)})
+
+# Error handler for uncaught exceptions in upload endpoint
+@app.errorhandler(500)
+def handle_500_error(error):
+    """Log and return 500 errors with details"""
+    app.logger.error(f"Internal server error: {error}")
+    import traceback
+    app.logger.error(traceback.format_exc())
+    return jsonify({"error": "Internal server error", "details": str(error)}), 500
 
 @app.route("/api/import", methods=["POST"])
 def api_import():
@@ -6929,7 +6943,7 @@ def api_upload_manual_words():
         
         # Step 3: Store and initialize quiz (USER UPLOAD - manual words) - CREATES NEW STORAGE_ID
         set_wordbank(enriched, is_user_upload=True)
-        init_quiz_state()
+        init_quiz_state(len(enriched))
         
         # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
         session.permanent = True
@@ -6942,7 +6956,7 @@ def api_upload_manual_words():
         saved_state = get_quiz_state()
         if not saved_state:
             print("ERROR /api/upload-manual-words: Quiz state failed to persist! Retrying init...")
-            init_quiz_state()
+            init_quiz_state(len(enriched))
             session.modified = True
             time.sleep(0.2)
         
@@ -7128,7 +7142,7 @@ def api_next():
             set_wordbank(default_words, is_user_upload=False)
             wordbank = default_words
         
-        init_quiz_state()
+        init_quiz_state(len(wordbank))
         qs = get_quiz_state()
         if not qs: # Should not happen
              return jsonify({'status': 'error', 'message': 'Failed to initialize quiz state.'}), 500
@@ -7235,7 +7249,7 @@ def api_next():
     if state is None:
         print("WARNING /api/next: No quiz state found! This should have been initialized during upload.")
         print("WARNING /api/next: Attempting emergency quiz state initialization...")
-        init_quiz_state()
+        init_quiz_state(len(wb))
         session.modified = True
         session.permanent = True
         time.sleep(0.2)  # Give session time to persist
@@ -7258,7 +7272,7 @@ def api_next():
     # This happens when user uploads a new word list after completing a previous quiz
     if len(order) != len(wb):
         print(f"DEBUG /api/next: Quiz state mismatch - order={len(order)}, wordbank={len(wb)}, reinitializing")
-        init_quiz_state()
+        init_quiz_state(len(wb))
         state = get_quiz_state()
         idx = state["idx"]
         order = state["order"]
@@ -7268,7 +7282,7 @@ def api_next():
         if state["correct"] == 0 and state["incorrect"] == 0:
             print(f"WARNING /api/next: Quiz appears complete but no questions answered! Resetting.")
             print(f"WARNING /api/next: idx={idx}, len(order)={len(order)}, correct={state['correct']}, incorrect={state['incorrect']}")
-            init_quiz_state()
+            init_quiz_state(len(wb))
             state = get_quiz_state()
             idx = state["idx"]
             order = state["order"]
@@ -7840,7 +7854,7 @@ def api_answer():
     # Initialize quiz state if missing (same protection as /api/next)
     if state is None:
         print("WARNING /api/answer: No quiz state found! Attempting emergency initialization...")
-        init_quiz_state()
+        init_quiz_state(len(wb))
         session.modified = True
         session.permanent = True
         time.sleep(0.2)  # Give session time to persist
@@ -9064,7 +9078,7 @@ def api_reset():
     wb = get_wordbank()
     if not wb:
         return jsonify({"error": f"No wordbank loaded. Session keys: {list(session.keys())}"}), 400
-    init_quiz_state()
+    init_quiz_state(len(wb))
     return jsonify({"ok": True})
 
 @app.route("/api/build_dictionary", methods=["POST"])
