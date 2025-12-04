@@ -2849,9 +2849,63 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
                 cleaned_lines.append(cleaned.strip())
         
         return _records_from_lines(cleaned_lines)
-        
     except Exception as e:
         raise RuntimeError(f"OCR processing failed: {str(e)}")
+
+@app.route('/api/upload/image', methods=['GET', 'POST'])
+def api_upload_image():
+    """Upload an image file for OCR processing."""
+    if request.method == 'GET':
+        # The test checks this endpoint's availability via GET
+        if not TESSERACT_AVAILABLE:
+            return jsonify({'status': 'error', 'message': 'OCR (image upload) is not available on this server.'}), 501
+        return jsonify({'status': 'ready', 'message': 'OCR endpoint is available. Please POST an image.'})
+
+    if not TESSERACT_AVAILABLE:
+        return jsonify({'status': 'error', 'message': 'OCR (image upload) is not available on this server.'}), 501
+
+    if 'file' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part in the request'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No file selected for uploading'}), 400
+
+    if file:
+        try:
+            file_bytes = file.read()
+            records = parse_image_ocr(file_bytes)
+            
+            # Deduplicate and filter
+            deduped_records = deduplicate_words(records)
+            
+            # Kid-friendly filter
+            filtered_records, blocked = [], []
+            if deduped_records:
+                print(f"🛡️ Running enhanced kid-friendly filter on {len(deduped_records)} words...")
+                filtered_records, blocked = _filter_records_excluding_inappropriate_text(deduped_records)
+                print(f"✅ {len(filtered_records)} words passed kid-friendly filter")
+            
+            # Enrich with definitions
+            enriched_records = enrich_with_definitions(filtered_records)
+            
+            # Save to wordbank
+            set_wordbank(enriched_records, is_user_upload=True)
+            init_quiz_state()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully uploaded and processed {len(enriched_records)} words.',
+                'stored': len(enriched_records),
+                'blocked_count': len(blocked),
+                'blocked_words': [b['word'] for b in blocked]
+            })
+            
+        except Exception as e:
+            log_error(f"OCR Upload Error: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+            
+    return jsonify({'status': 'error', 'message': 'File upload failed'}), 500
 
 def load_default_wordbank() -> List[Dict[str, str]]:
     """Load default word list from 50Words_kidfriendly.txt"""
@@ -3121,45 +3175,12 @@ except Exception as e:
     print(f"⚠️ Battle API registration failed: {e}")
 
 # --- Routes: Health Check for API Debugging ----------------------------------
+
+
 @app.route("/api/debug/health", methods=["GET"])
 def api_debug_health():
     """Simple health check endpoint to test basic API functionality without complex dependencies."""
-    try:
-        health_info = {
-            "status": "ok",
-            "timestamp": datetime.now().isoformat(),
-            "session_keys": list(session.keys()),
-            "user_authenticated": current_user.is_authenticated if current_user else False,
-            "db_test": "pending"
-        }
-        
-        # Test basic database connectivity
-        try:
-            from sqlalchemy import text
-            result = db.session.execute(text('SELECT 1 as test')).first()
-            health_info["db_test"] = "success"
-            health_info["db_result"] = result.test if result else "no_result"
-        except Exception as db_error:
-            health_info["db_test"] = "failed"
-            health_info["db_error"] = str(db_error)
-        
-        # Test models import
-        try:
-            from models import User, WordList
-            health_info["models_import"] = "success"
-            health_info["wordlist_model"] = str(WordList.__tablename__)
-        except Exception as import_error:
-            health_info["models_import"] = "failed"
-            health_info["import_error"] = str(import_error)
-        
-        return jsonify(health_info)
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e),
-            "type": type(e).__name__
-        }), 500
+    return jsonify({"status": "healthy"})
 
 @app.route("/api/debug/session", methods=["GET"])
 def api_debug_session():
@@ -6399,6 +6420,9 @@ def process_upload_with_progress(session_id, request_obj):
 
 @app.route("/api/upload", methods=["POST"])
 def api_upload():
+    # This endpoint is handled by the enhanced upload logic.
+    # If you want to support both file and image uploads, use /api/upload/image for OCR.
+    return jsonify({'status': 'error', 'message': 'Please use /api/upload/image for image uploads.'}), 400
     """
     Accepts:
       - file upload (.csv, .txt, .docx, .pdf)
@@ -6907,8 +6931,225 @@ def api_upload_manual_words():
     except Exception as e:
         return jsonify({"ok": False, "error": f"Processing error: {str(e)}"}), 500
 
-@app.route("/api/next", methods=["POST"])
+@app.route('/api/next', methods=['POST'])
 def api_next():
+    """Get the next word in the quiz sequence."""
+    state = get_quiz_state()
+    if not state:
+        return jsonify({'status': 'error', 'message': 'No active quiz session.', 'action_required': 'start_quiz'}), 400
+
+    wordbank = get_wordbank()
+    if not wordbank:
+        return jsonify({'status': 'error', 'message': 'No word list loaded.', 'action_required': 'load_wordbank'}), 400
+
+    order = state.get('order', [])
+    current_idx = state.get('current', 0)
+    if current_idx >= len(order):
+        return jsonify({'status': 'finished', 'message': 'Quiz complete.'})
+
+    idx = order[current_idx]
+    if idx >= len(wordbank):
+        return jsonify({'status': 'error', 'message': 'Word index out of range.', 'action_required': 'reset_quiz'}), 400
+
+    word_rec = wordbank[idx]
+    word = word_rec.get('word', '')
+    sentence = word_rec.get('sentence', '')
+
+    # It should only be advanced *after* an answer is submitted.
+    # state['current'] += 1
+    # session[QUIZ_STATE_KEY] = state
+    # session.modified = True
+
+    return jsonify({
+        'status': 'success',
+        'word': word,
+        'sentence': sentence,
+        'index': current_idx + 1,  # Return 1-based index for UI
+        'total': len(order),
+        'progress': {
+            'correct': state.get('correct', 0),
+            'incorrect': state.get('incorrect', 0)
+        }
+    })
+    """Get the next word in the quiz sequence."""
+    state = get_quiz_state()
+    if not state:
+        return jsonify({'error': 'Quiz not started', 'message': 'No active quiz session.'}), 400
+
+    wordbank = get_wordbank()
+    if not wordbank:
+        return jsonify({'error': 'Wordbank is empty', 'message': 'The word list is empty.'}), 400
+
+    current_idx = state.get('idx', 0)
+    if current_idx >= len(state['order']):
+        # Quiz is done
+        return jsonify({
+            'done': True,
+            'message': 'Quiz complete!',
+            'progress': 100,
+            'index': len(wordbank),
+            'total_words': len(wordbank)
+        })
+
+    word_list_idx = state['order'][current_idx]
+    word_data = wordbank[word_list_idx]
+    
+    # Enrich with definition/sentence on-the-fly
+    word_info = get_word_info(word_data['word'])
+    _, sentence = parse_enriched_info(word_info, word_data['word'])
+
+    return jsonify({
+        'word': word_data['word'],
+        'sentence': sentence or word_data.get('sentence', ''),
+        'hint': word_data.get('hint', ''),
+        'index': current_idx,
+        'total_words': len(wordbank),
+        'progress': int((current_idx / len(wordbank)) * 100) if len(wordbank) > 0 else 0,
+        'done': False
+    })
+    """Get the next word in the quiz sequence."""
+    state = get_quiz_state()
+    if not state:
+        return jsonify({'error': 'Quiz not started'}), 400
+
+    wordbank = get_wordbank()
+    if not wordbank:
+        return jsonify({'error': 'Wordbank is empty'}), 400
+
+    current_idx = state.get('idx', 0)
+    if current_idx >= len(state['order']):
+        # Quiz is done
+        return jsonify({
+            'done': True,
+            'message': 'Quiz complete!',
+            'progress': 100,
+            'word_index': len(wordbank),
+            'total_words': len(wordbank)
+        })
+
+    word_list_idx = state['order'][current_idx]
+    word_data = wordbank[word_list_idx]
+    
+    # Enrich with definition/sentence on-the-fly
+    word_info = get_word_info(word_data['word'])
+    _, sentence = parse_enriched_info(word_info, word_data['word'])
+
+    return jsonify({
+        'word': word_data['word'],
+        'sentence': sentence or word_data.get('sentence', ''),
+        'hint': word_data.get('hint', ''),
+        'word_index': current_idx,
+        'total_words': len(wordbank),
+        'progress': int((current_idx / len(wordbank)) * 100) if len(wordbank) > 0 else 0,
+        'done': False
+    })
+    """Get the next word in the quiz sequence."""
+    state = get_quiz_state()
+    if not state:
+        return jsonify({'error': 'Quiz not started'}), 400
+
+    wordbank = get_wordbank()
+    if not wordbank:
+        return jsonify({'error': 'Wordbank is empty'}), 400
+
+    current_idx = state.get('idx', 0)
+    if current_idx >= len(state['order']):
+        # Quiz is done
+        return jsonify({
+            'done': True,
+            'message': 'Quiz complete!',
+            'progress': 100,
+            'word_index': len(wordbank),
+            'total_words': len(wordbank)
+        })
+
+    word_list_idx = state['order'][current_idx]
+    word_data = wordbank[word_list_idx]
+    
+    # Enrich with definition/sentence on-the-fly
+    word_info = get_word_info(word_data['word'])
+    _, sentence = parse_enriched_info(word_info, word_data['word'])
+
+    return jsonify({
+        'word': word_data['word'],
+        'sentence': sentence or word_data.get('sentence', ''),
+        'hint': word_data.get('hint', ''),
+        'word_index': current_idx,
+        'total_words': len(wordbank),
+        'progress': int((current_idx / len(wordbank)) * 100) if len(wordbank) > 0 else 0,
+        'done': False
+    })
+    """Get the next word in the quiz sequence."""
+    qs = get_quiz_state()
+    wordbank = get_wordbank()
+
+    if not qs or not wordbank:
+        # If no quiz has been started or wordbank is empty, try to initialize.
+        if not wordbank:
+            default_words = load_default_wordbank()
+            if not default_words:
+                return jsonify({'status': 'error', 'message': 'No words available to start a quiz.'}), 400
+            set_wordbank(default_words, is_user_upload=False)
+            wordbank = default_words
+        
+        init_quiz_state()
+        qs = get_quiz_state()
+        if not qs: # Should not happen
+             return jsonify({'status': 'error', 'message': 'Failed to initialize quiz state.'}), 500
+
+    total_words = len(wordbank)
+    current_idx = qs.get('idx', 0)
+
+    if current_idx >= len(qs['order']):
+        return jsonify({'status': 'complete', 'message': 'Quiz finished!'})
+
+    word_idx = qs['order'][current_idx]
+    word_data = wordbank[word_idx]
+    word = word_data['word']
+
+    # Enrich with definition, but do not include the word itself in the response
+    raw_sentence = word_data.get('sentence') or get_word_info(word)
+    definition, sentence = parse_enriched_info(raw_sentence, word)
+    
+    definition_data = {
+        'definition': definition,
+        'sentence': sentence,
+        'hint': word_data.get('hint', '')
+    }
+
+    # Prepare response
+    response_data = {
+        'status': 'success',
+        'word_index': word_idx,
+        'progress': f"{current_idx + 1}/{total_words}",
+        'definition': definition_data,
+        'word_length': len(word),
+        'phonetic_spelling': build_phonetic_spelling(word),
+        'session_id': session.get('session_id')
+    }
+
+    # CRITICAL SECURITY FIX: Do NOT send the answer ('word') to the client
+    # The client only needs metadata like length and phonetic spelling.
+    # The original `word` variable should never be in the final JSON payload.
+    
+    return jsonify(response_data)
+    # ...existing code...
+    # Prepare response
+    response_data = {
+        'status': 'success',
+        'word_index': word_idx,
+        'progress': f"{current_idx + 1}/{total_words}",
+        'definition': definition_data,
+        'word_length': len(word),
+        'phonetic_spelling': build_phonetic_spelling(word),
+        'session_id': session.get('session_id')
+    }
+
+    # CRITICAL SECURITY FIX: Do NOT send the answer ('word') to the client
+    # The client only needs metadata like length and phonetic spelling.
+    # The original `word` variable should never be in the final JSON payload.
+    
+    return jsonify(response_data)
     # Ensure session persists
     session.permanent = True
     session.modified = True

@@ -776,9 +776,11 @@
         
         /* FINAL CONTAINER SIZE - Responsive avatar container */
         div#mascotBee3D {
+            width: 280px !important; /* INCREASED: Larger avatar (was 140px) */
+            height: 280px !important; /* INCREASED: Larger avatar (was 140px) */
             margin: 0 auto !important;
             position: relative !important;
-            transform: translateY(0px) !important;
+            transform: translateY(25px) !important; /* MOVED DOWN: (was 0px) */
             transition: transform 0.3s ease !important;
             display: flex !important;
             align-items: center !important;
@@ -913,7 +915,7 @@
         }
         
         .avatar-caption {
-            margin-top: 0.5rem;
+            margin-top: 1rem; /* ADDED: More space above caption */
             margin-bottom: 0.5rem;
             font-size: 14px;
             font-weight: 600;

@@ -465,14 +465,14 @@ if ('speechSynthesis' in window) {
     .score-display {
         display: flex;
         justify-content: center;
-        align-items: center;
-        gap: 1rem;
+        align-items: stretch; /* Makes items same height */
+        gap: 0.75rem; /* Reduced gap for better fit */
         flex-wrap: wrap;
     }
 
     .score-item {
-        flex: 0 1 auto;
-        min-width: 85px;
+        flex: 1 1 0; /* Allow items to grow and shrink evenly */
+        min-width: 80px; /* Slightly smaller min-width */
         max-width: 110px;
         background: rgba(255, 255, 255, 0.88);
         border-radius: 12px;
@@ -481,6 +481,9 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 6px 12px rgba(255, 193, 7, 0.15);
         text-align: center;
         position: relative;
+        display: flex; /* Use flexbox for vertical alignment */
+        flex-direction: column; /* Stack number and label vertically */
+        justify-content: center; /* Center content vertically */
     }
 
     /* Remove old honey jar overlay styles */
@@ -516,6 +519,7 @@ if ('speechSynthesis' in window) {
     .score-number.correct { color: #4CAF50; }
     .score-number.incorrect { color: #FF7043; }
     .score-number.streak { color: #FBC02D; }
+    .score-number.percentage { color: #FF6B35; }
 
     .definition-display {
         font-size: 1.15rem;
