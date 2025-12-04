@@ -163,8 +163,14 @@ class User(UserMixin, db.Model):
         # Thumbnails are in glb_files/AvatarThumbnails/ subdirectory
         if is_glb:
             base_path = "/static/assets/avatars/glb_files"
-            thumbnail_path = f"{base_path}/AvatarThumbnails/{avatar.thumbnail_file}" if avatar.thumbnail_file else f"{base_path}/AvatarThumbnails/MascotBee!.png"
             model_path = f"{base_path}/{avatar.obj_file}"
+            
+            # CRITICAL FIX: Derive thumbnail from GLB filename, not database thumbnail_file
+            # Database thumbnail_file is outdated/incorrect. Actual thumbnails follow pattern:
+            # /static/assets/avatars/glb_files/AvatarThumbnails/{GLB_BASENAME}!.png
+            import os
+            glb_basename = os.path.splitext(os.path.basename(avatar.obj_file))[0] if avatar.obj_file else "MascotBee"
+            thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
         else:
             # Legacy OBJ avatars (if any remain) use folder_path structure
             base_path = f"/static/assets/avatars/{avatar.folder_path}"
