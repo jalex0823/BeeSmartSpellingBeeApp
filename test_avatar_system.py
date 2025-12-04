@@ -118,16 +118,30 @@ def test_avatar_loader_js():
         
         print(f"✅ Avatar loader file found: {len(content)} characters")
         
-        # Check for key components
-        required_components = [
-            'class UserAvatarLoader',
-            'avatarMap',
-            'loadUserAvatar',
-            'init()',
-            '.obj',
-            '.mtl', 
-            '.png'
-        ]
+        # Detect GLB-only loader vs legacy OBJ/MTL loader
+        is_glb_only = ('GLB-Only' in content) or ('glb' in content and '.obj' not in content and '.mtl' not in content)
+
+        if is_glb_only:
+            # Modern GLB-only loader requirements
+            required_components = [
+                'class UserAvatarLoader',
+                'avatarMap',
+                'loadUserAvatar',
+                'init()',
+                'glb',
+                'getAvatarPaths'
+            ]
+        else:
+            # Legacy loader requirements (OBJ/MTL/PNG pipeline)
+            required_components = [
+                'class UserAvatarLoader',
+                'avatarMap',
+                'loadUserAvatar',
+                'init()',
+                '.obj',
+                '.mtl',
+                '.png'
+            ]
         
         missing_components = []
         for component in required_components:
@@ -138,7 +152,7 @@ def test_avatar_loader_js():
             print(f"❌ Missing components: {missing_components}")
             return False
         else:
-            print(f"✅ All required components present")
+            print(f"✅ All required components present ({'GLB-only' if is_glb_only else 'Legacy'})")
             return True
             
     except Exception as e:

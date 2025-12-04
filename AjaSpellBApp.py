@@ -2276,6 +2276,17 @@ UPLOAD_PROGRESS_LOCK = threading.Lock()
 # Wordbank storage moved to Railway PostgreSQL database (WordBankStorage model)
 # No more in-memory WORD_STORAGE dictionary - database is single source of truth
 
+# Legacy debug hooks: provide empty in-memory structures so optional debug prints
+# that reference WORD_STORAGE/WORD_STORAGE_LOCK don't crash routes in local/dev.
+try:
+    WORD_STORAGE  # type: ignore[name-defined]
+except NameError:
+    WORD_STORAGE = {}
+try:
+    WORD_STORAGE_LOCK  # type: ignore[name-defined]
+except NameError:
+    WORD_STORAGE_LOCK = threading.Lock()
+
 # --- Database Helpers --------------------------------------------------------
 
 def get_or_create_guest_user():
@@ -3124,7 +3135,8 @@ def api_debug_health():
         
         # Test basic database connectivity
         try:
-            result = db.session.execute('SELECT 1 as test').first()
+            from sqlalchemy import text
+            result = db.session.execute(text('SELECT 1 as test')).first()
             health_info["db_test"] = "success"
             health_info["db_result"] = result.test if result else "no_result"
         except Exception as db_error:
@@ -3152,33 +3164,46 @@ def api_debug_health():
 @app.route("/api/debug/session", methods=["GET"])
 def api_debug_session():
     """Debug endpoint to check current session state and wordbank"""
-    session.permanent = True
-    
-    storage_id = session.get("wordbank_storage_id")
-    session_id = session.get("session_id")
-    
-    result = {
-        "session_id": session_id,
-        "storage_id": storage_id,
-        "session_keys": list(session.keys()),
-        "cookies_received": list(request.cookies.keys()),
-        "has_uploaded_once": session.get("has_uploaded_once", False),
-        "wordbank_count_session": session.get("wordbank_count", 0),
-    }
-    
-    # Check WORD_STORAGE
-    with WORD_STORAGE_LOCK:
-        result["word_storage_keys"] = list(WORD_STORAGE.keys())
-        if storage_id:
-            result["words_in_storage"] = len(WORD_STORAGE.get(storage_id, []))
-        else:
-            result["words_in_storage"] = 0
-    
-    # Check wordbank via get_wordbank()
-    wb = get_wordbank()
-    result["wordbank_via_get"] = len(wb)
-    
-    return jsonify(result)
+    try:
+        session.permanent = True
+        
+        storage_id = session.get("wordbank_storage_id")
+        session_id = session.get("session_id")
+        
+        result = {
+            "session_id": session_id,
+            "storage_id": storage_id,
+            "session_keys": list(session.keys()),
+            "cookies_received": list(request.cookies.keys()),
+            "has_uploaded_once": session.get("has_uploaded_once", False),
+            "wordbank_count_session": session.get("wordbank_count", 0),
+        }
+        
+        # Check WORD_STORAGE
+        try:
+            with WORD_STORAGE_LOCK:
+                result["word_storage_keys"] = list(WORD_STORAGE.keys())
+                if storage_id:
+                    result["words_in_storage"] = len(WORD_STORAGE.get(storage_id, []))
+                else:
+                    result["words_in_storage"] = 0
+        except Exception as _e:
+            result["word_storage_error"] = str(_e)
+        
+        # Check wordbank via get_wordbank()
+        wb = get_wordbank()
+        result["wordbank_via_get"] = len(wb)
+        
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        traceback_str = ''.join(traceback.format_exc())
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__,
+            "traceback": traceback_str
+        }), 500
 
 @app.route("/api/debug/avatar-picker", methods=["GET"])
 @login_required
@@ -4622,67 +4647,78 @@ def minimal_main():
     timestamp = str(int(time.time()))
     return render_template("unified_menu.html", timestamp=timestamp)
 
-@app.route("/quiz")
+@app.route("/quiz", strict_slashes=False)
 def quiz_page():
     """Interactive quiz page"""
-    # Ensure session persists across page navigation
-    session.permanent = True
-    
-    # Enhanced debugging for mobile session issues
-    session_id = session.get("session_id", "NONE")
-    storage_id = session.get("wordbank_storage_id", "NONE")
-    
-    print(f"\n{'='*60}")
-    print(f"🎯 /quiz ROUTE ACCESSED")
-    print(f"{'='*60}")
-    print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
-    print(f"DEBUG /quiz: session keys={list(session.keys())}")
-    print(f"DEBUG /quiz: cookies={list(request.cookies.keys())}")
-    print(f"DEBUG /quiz: cookie values={dict(request.cookies)}")
-    print(f"DEBUG /quiz: user-agent={request.headers.get('User-Agent', 'UNKNOWN')[:80]}")
-    
-    # Check WORD_STORAGE
-    with WORD_STORAGE_LOCK:
-        storage_keys = list(WORD_STORAGE.keys())
-        print(f"DEBUG /quiz: WORD_STORAGE has {len(storage_keys)} entries: {storage_keys}")
-        if storage_id and storage_id != "NONE":
-            words_in_storage = len(WORD_STORAGE.get(storage_id, []))
-            print(f"DEBUG /quiz: storage_id {storage_id} has {words_in_storage} words")
-    
-    # Ensure wordbank is loaded before showing quiz
-    wordbank = get_wordbank()
-    if not wordbank or len(wordbank) == 0:
-        print("WARNING /quiz: No wordbank found, redirecting to menu")
-        # Redirect back to menu with error message
-        return redirect("/?error=no_words")
-    
-    # Initialize quiz state for this wordbank (only if not already initialized)
-    state = get_quiz_state()
-    if state is None or len(state.get("order", [])) != len(wordbank):
-        print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
-        init_quiz_state()
-    else:
-        # Check if quiz is completed - reset if so
-        idx = state.get('idx', 0)
-        order = state.get('order', [])
-        if idx >= len(order):
-            print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
+    try:
+        # Ensure session persists across page navigation
+        session.permanent = True
+        
+        # Enhanced debugging for mobile session issues
+        session_id = session.get("session_id", "NONE")
+        storage_id = session.get("wordbank_storage_id", "NONE")
+        
+        print(f"\n{'='*60}")
+        print(f"🎯 /quiz ROUTE ACCESSED")
+        print(f"{'='*60}")
+        print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
+        print(f"DEBUG /quiz: session keys={list(session.keys())}")
+        print(f"DEBUG /quiz: cookies={list(request.cookies.keys())}")
+        print(f"DEBUG /quiz: cookie values={dict(request.cookies)}")
+        print(f"DEBUG /quiz: user-agent={request.headers.get('User-Agent', 'UNKNOWN')[:80]}")
+        
+        # Check WORD_STORAGE
+        with WORD_STORAGE_LOCK:
+            storage_keys = list(WORD_STORAGE.keys())
+            print(f"DEBUG /quiz: WORD_STORAGE has {len(storage_keys)} entries: {storage_keys}")
+            if storage_id and storage_id != "NONE":
+                words_in_storage = len(WORD_STORAGE.get(storage_id, []))
+                print(f"DEBUG /quiz: storage_id {storage_id} has {words_in_storage} words")
+        
+        # Ensure wordbank is loaded before showing quiz
+        wordbank = get_wordbank()
+        if not wordbank or len(wordbank) == 0:
+            print("WARNING /quiz: No wordbank found, redirecting to menu")
+            # Redirect back to menu with error message
+            return redirect("/?error=no_words")
+        
+        # Initialize quiz state for this wordbank (only if not already initialized)
+        state = get_quiz_state()
+        if state is None or len(state.get("order", [])) != len(wordbank):
+            print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
             init_quiz_state()
         else:
-            print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
+            # Check if quiz is completed - reset if so
+            idx = state.get('idx', 0)
+            order = state.get('order', [])
+            if idx >= len(order):
+                print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
+                init_quiz_state()
+            else:
+                print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
+            
+        print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
         
-    print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
-    
-    # Cache busting timestamp
-    timestamp = int(time.time() * 1000)
-    
-    # Pass user information if logged in
-    user_name = None
-    if current_user.is_authenticated:
-        user_name = current_user.display_name
-        print(f"DEBUG /quiz: User logged in as {user_name}")
-    
-    return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
+        # Cache busting timestamp
+        import time
+        timestamp = int(time.time() * 1000)
+        
+        # Pass user information if logged in
+        user_name = None
+        if current_user.is_authenticated:
+            user_name = current_user.display_name
+            print(f"DEBUG /quiz: User logged in as {user_name}")
+        
+        return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
+    except Exception as e:
+        import traceback
+        print(f"❌ ERROR in /quiz: {e}")
+        traceback.print_exc()
+        return (
+            f"<h1>Quiz Error</h1><p>{type(e).__name__}: {str(e)}</p>",
+            500,
+            {"Content-Type": "text/html"}
+        )
 
 @app.route("/battle/<battle_code>")
 @login_required
@@ -14294,7 +14330,8 @@ if __name__ == "__main__":
     port = _pick_port(env_port)
     # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI
     debug_env = os.environ.get("FLASK_DEBUG", "0").strip().lower()
-    debug = debug_env in ("1", "true", "yes", "on")
+    # Force debug on for local troubleshooting to get full tracebacks
+    debug = True if os.environ.get("FORCE_DEBUG", "1") == "1" else (debug_env in ("1", "true", "yes", "on"))
     if port != env_port:
         print(f"⚠️ Port {env_port} in use or unavailable; switching to {port}.")
     print(f"🚀 Starting development server on port {port} with Socket.IO support (debug={'on' if debug else 'off'})...")

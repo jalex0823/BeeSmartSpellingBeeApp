@@ -724,7 +724,7 @@
         
         /* 🎭 UNIVERSAL AVATAR CONTAINER STANDARDS - Compact size matching student dashboard */
         .bee-avatar-container,
-        #mascotBee3D,
+        /* Removed #mascotBee3D from legacy compact sizing to avoid constraining main mascot */
         .mascot-3d-container {
             /* Container sizing - compact like student dashboard */
             width: 140px;
@@ -885,9 +885,10 @@
         .avatar-viewer-wrapper {
             position: relative;
             width: 100%;
-            max-width: 460px;
+            max-width: var(--content-max);
             height: auto;
-            min-height: 360px;
+            /* Make the avatar area larger and consistent across devices */
+            min-height: clamp(420px, 58vw, 560px);
             margin: 0 auto;
             display: flex;
             flex-direction: column;
@@ -900,8 +901,9 @@
         #mascotBee3D {
             position: relative;
             width: 100%;
-            max-width: 460px;
-            height: 360px;
+            max-width: var(--content-max);
+            /* Fill the wrapper's height, which we increased above */
+            height: 100%;
             margin: 0 auto;
             cursor: pointer;
             touch-action: manipulation;
@@ -934,6 +936,7 @@
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin: 12px auto 4px; /* center and give breathing room below avatar */
         }
         
         .avatar-controls button {
@@ -1177,6 +1180,8 @@
             max-width: 320px;
         }
         
+        :root { --content-max: 707px; }
+
         /* Menu options container */
         .menu-container {
             padding: 0 2rem 2rem 2rem;
@@ -1208,7 +1213,7 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 22px var(--tile-shadow);
-            max-width: 707px;
+            max-width: var(--content-max);
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -1968,13 +1973,16 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            padding: 0.75rem 0 1rem 0;
+            padding: 0.75rem 0.75rem 1rem 0.75rem; /* add side buffer so buttons never touch edges */
             background: white;
+            border-radius: 20px; /* rounded panel to match tiles */
+            box-shadow: 0 10px 22px rgba(0,0,0,0.06);
             pointer-events: auto !important; /* Ensure container allows clicks */
-            max-width: 707px;
+            max-width: var(--content-max) !important; /* hard cap matches top card */
             width: 100%;
             margin-left: auto;
             margin-right: auto;
+            box-sizing: border-box;
         }
         .action-buttons button {
             pointer-events: auto !important; /* Ensure all buttons are clickable */
@@ -1982,7 +1990,7 @@
         
         .action-btn {
             width: 100%;
-            max-width: 707px;
+            max-width: var(--content-max);
             padding: 1.2rem 2rem;
             margin-left: auto;
             margin-right: auto;
@@ -2004,6 +2012,13 @@
             white-space: normal;
             line-height: 1.3;
             box-sizing: border-box;
+        }
+
+        /* Keep button effects inside the white panel */
+        .action-btn:hover,
+        .action-btn:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.08);
         }
         
         .action-btn::before {
@@ -2188,6 +2203,17 @@
             transform: translateY(-2px) scale(1.03);
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
         }
+        /* Color variants for info buttons */
+        .action-btn.info.info-blue {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: #ffffff;
+            border-color: rgba(33,150,243,0.35);
+        }
+        .action-btn.info.info-purple {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: #ffffff;
+            border-color: rgba(156,39,176,0.35);
+        }
         
         /* Responsive design */
         @media (max-width: 768px) {
@@ -2309,6 +2335,22 @@
     </style>
 </head>
 <body class="home-no-shimmer">
+    <!-- Safety shim: ensure kidSounds exists so inline onclick handlers never throw before the real class initializes -->
+    <script>
+        (function(){
+            if (!window.kidSounds) {
+                const noop = function(){};
+                window.kidSounds = {
+                    playRandomEffect: noop,
+                    playPop: noop,
+                    playBuzz: noop,
+                    playSoftClick: noop,
+                    playHappyDing: noop,
+                    toggleSound: noop
+                };
+            }
+        })();
+    </script>
     <!-- Content Filter Warning Modal (Similar to "Attention, spelling bee!" popup) -->
     <div id="contentFilterModal" class="modal-overlay" style="
         position: fixed;
@@ -2901,6 +2943,35 @@
             background: transparent !important;
             border: none !important;
         }
+
+        /* Ensure the action buttons themselves match the tile width,
+           but keep the surrounding white background at full card width */
+        section.action-buttons {
+            width: 100% !important;           /* background section spans the card */
+            max-width: none !important;       /* do NOT constrain the background */
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            box-sizing: border-box;
+        }
+
+        section.action-buttons .action-btn {
+            display: block !important;
+            width: 100% !important;                /* take all available width up to cap */
+            max-width: var(--content-max) !important; /* cap equal to tiles */
+            margin-left: auto !important;          /* center inside full-width background */
+            margin-right: auto !important;
+            box-sizing: border-box !important;
+        }
+        /* Help links container should stack items full-width */
+        section.action-buttons .help-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: var(--content-max);
+            margin-left: auto;
+            margin-right: auto;
+        }
     </style>
     
     <div class="magic-background"></div>
@@ -3191,20 +3262,31 @@
                     <div id="mascotCaption" class="avatar-caption">
                         ✨ Click on me to see what I do! ✨
                     </div>
-                    
-                    <!-- Compact avatar controls -->
-                    <div class="avatar-controls">
-                        <button type="button" data-avatar-control="zoom-in" title="Zoom In">＋</button>
-                        <button type="button" data-avatar-control="zoom-out" title="Zoom Out">－</button>
-                        <button type="button" data-avatar-control="rot-left" title="Rotate Left">⟲</button>
-                        <button type="button" data-avatar-control="rot-right" title="Rotate Right">⟳</button>
-                        <button type="button" data-avatar-control="reset" title="Reset View">⟲⟳</button>
-                    </div>
                 </div>
                 
-                <!-- Server-side avatar initialization -->
+                <!-- Defensive stub: ensure window.setCurrentAvatar exists before any early calls
+                     If the real API hasn't been defined yet, this safely captures the
+                     requested id and defers application until initialization completes. -->
                 <script>
-                    window.setCurrentAvatar("{{ current_user.avatar_id|default('mascot-bee') }}");
+                    if (typeof window.setCurrentAvatar !== 'function') {
+                        window.setCurrentAvatar = function(id){
+                            try { window.__initialAvatarId = id; } catch(_e) { /* noop */ }
+                        };
+                    }
+                </script>
+
+                <!-- Server-side avatar initialization (guarded for load order) -->
+                <script>
+                    (function(){
+                        const initialId = "{{ current_user.avatar_id|default('mascot-bee') }}";
+                        if (typeof window.setCurrentAvatar === 'function') {
+                            // If API already exists, apply immediately
+                            try { window.setCurrentAvatar(initialId); } catch(e) { console.warn('setCurrentAvatar early call failed:', e); }
+                        } else {
+                            // Defer until the avatar script defines the function
+                            window.__initialAvatarId = initialId;
+                        }
+                    })();
                 </script>
 
                 <!-- Avatar System Status Badge (shows preload results) -->
@@ -3257,6 +3339,15 @@
                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 8px rgba(255, 165, 0, 0.3)'">
                     🔄 Reload Avatar
                 </button>
+
+                <!-- Relocated avatar controls: placed lower, near the status badges -->
+                <div class="avatar-controls">
+                    <button type="button" data-avatar-control="zoom-in" title="Zoom In">＋</button>
+                    <button type="button" data-avatar-control="zoom-out" title="Zoom Out">－</button>
+                    <button type="button" data-avatar-control="rot-left" title="Rotate Left">⟲</button>
+                    <button type="button" data-avatar-control="rot-right" title="Rotate Right">⟳</button>
+                    <button type="button" data-avatar-control="reset" title="Reset View">⟲⟳</button>
+                </div>
                 {% endif %}
 
                 {% if not current_user.is_authenticated %}
@@ -3327,7 +3418,7 @@
             
             <!-- Safety Message - Centered Between Button and Title -->
             <section class="menu-container" style="padding: 0.5rem 2rem;">
-                <div style="font-size: 0.75rem; color: rgba(0,0,0,0.5); margin: 0 auto; text-align: center; max-width: 300px;">
+                <div style="font-size: 0.75rem; color: rgba(0,0,0,0.5); margin: 0 auto; text-align: center; max-width: var(--content-max); width: 100%;">
                     All words are automatically filtered for age-appropriate content
                 </div>
             </section>
@@ -3342,6 +3433,10 @@
                     text-align: center;
                     box-shadow: 0 8px 25px rgba(255, 140, 0, 0.3);
                     animation: quoteFadeIn 0.8s ease;
+                    max-width: var(--content-max);
+                    width: 100%;
+                    margin-left: auto;
+                    margin-right: auto;
                 ">
                     <div style="
                         font-size: 1.3rem;
@@ -3366,7 +3461,7 @@
                             border-radius: 25px;
                             padding: 2rem 1.5rem;
                             box-shadow: 0 10px 30px rgba(210, 105, 30, 0.2);
-                            max-width: 707px;
+                            max-width: var(--content-max);
                             width: 100%;
                             margin: 0 auto;
                         ">
@@ -3534,7 +3629,7 @@
                                                                 gear.setAttribute('aria-controls', 'avatarControlPanel');
                                                                 gear.title = 'Avatar controls';
                                                                 gear.style.cssText = `
-                                                                    position: absolute; top: 5px; right: 5px; z-index: 120;
+                                                                    position: absolute; bottom: -10px; right: 5px; z-index: 120;
                                                                     width: 20px; height: 20px; border-radius: 10px;
                                                                     border: 1px solid rgba(255, 215, 0, 0.4);
                                                                     background: rgba(255, 255, 255, 0.8);
@@ -3548,7 +3643,7 @@
                                                                 const panel = document.createElement('div');
                                                                 panel.id = 'avatarControlPanel';
                                                                 panel.style.cssText = `
-                                                                    position: absolute; top: 28px; right: 5px; z-index: 119;
+                                                                    position: absolute; bottom: -40px; right: 5px; z-index: 119;
                                                                     display: none; flex-direction: row; gap: 3px;
                                                                     padding: 4px; background: rgba(255,255,255,0.95);
                                                                     border: 1px solid rgba(255, 215, 0, 0.3);
@@ -3595,8 +3690,10 @@
 
                                                                 // Controls wiring
                                                                 let scale = 1, rot = 0;
+                                                                const canvas = container.querySelector('canvas') || container;
                                                                 const applyFallback = () => {
-                                                                    container.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
+                                                                    canvas.style.transformOrigin = 'center center';
+                                                                    canvas.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
                                                                 };
                                                                 const [btnPlus, btnMinus, btnLeft, btnRight, btnReset] = panel.querySelectorAll('.ctrl');
                                                                 btnPlus.onclick = () => { const c = getCtrl(); if (c?.zoomIn) c.zoomIn(); else { scale = Math.min(1.8, scale + 0.08); applyFallback(); } };
@@ -3617,7 +3714,7 @@
                             border-radius: 20px;
                             padding: 1.5rem;
                             box-shadow: 0 8px 25px rgba(210, 105, 30, 0.1);
-                            max-width: 707px;
+                            max-width: var(--content-max);
                             width: 100%;
                             margin: 0 auto;
                         ">
@@ -3832,15 +3929,15 @@
                     🧹 Start Fresh
                 </button>
                 
-                <!-- Help & Documentation Section -->
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0;">
-                    <a href="/help" class="action-btn info" title="❓ Quick help and tips" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px;">
+                <!-- Help & Documentation Section (full-width, consistent with tiles) -->
+                <div class="help-links">
+                    <a href="/help" class="action-btn info" title="❓ Quick help and tips" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
                         ❓ Quick Help
                     </a>
-                    <a href="/guide" class="action-btn info" title="📖 Complete user guide with detailed instructions" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); border-color: rgba(33, 150, 243, 0.3);">
+                    <a href="/guide" class="action-btn info info-blue" title="📖 Complete user guide with detailed instructions" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
                         📖 User Guide
                     </a>
-                    <a href="/admin-guide" class="action-btn info" title="🔧 Technical administrator guide" style="text-decoration: none; display: inline-block; font-size: 0.9rem; padding: 10px 16px; background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); border-color: rgba(156, 39, 176, 0.3);">
+                    <a href="/admin-guide" class="action-btn info info-purple" title="🔧 Technical administrator guide" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
                         🔧 Admin Guide
                     </a>
                 </div>
@@ -3947,7 +4044,9 @@
             _cachedCount: null,
             _cachedWords: null,
             _lastFetch: 0,
-            _cacheDuration: 1000, // 1 second cache
+            _cacheDuration: 5000, // Increase cache to 5 seconds to reduce repeated pulls
+            _inflight: null, // Promise for an in-flight fetch to de-duplicate concurrent requests
+            _debug: false, // quiet by default; can be enabled via localStorage or URL flag
             
             // Elements that display word count (registered automatically)
             _displays: new Set(),
@@ -3959,7 +4058,7 @@
              */
             registerDisplay(elementId, updateFn) {
                 this._displays.add({ elementId, updateFn });
-                console.log(`📊 Registered word count display: ${elementId}`);
+                if (this._debug) console.log(`📊 Registered word count display: ${elementId}`);
             },
             
             /**
@@ -3974,39 +4073,56 @@
                 if (!forceRefresh && 
                     this._cachedCount !== null && 
                     (now - this._lastFetch) < this._cacheDuration) {
-                    console.log(`📚 Using cached word count: ${this._cachedCount}`);
+                    if (this._debug) console.log(`📚 Using cached word count: ${this._cachedCount}`);
                     return this._cachedCount;
                 }
                 
-                try {
-                    const response = await fetch('/api/wordbank', {
-                        cache: 'no-store',
-                        credentials: 'same-origin',
-                        headers: {
-                            'Cache-Control': 'no-cache, no-store, must-revalidate',
-                            'Pragma': 'no-cache'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // If there is already an in-flight fetch and we're not forcing a refresh, reuse it
+                if (this._inflight && !forceRefresh) {
+                    if (this._debug) console.log('🔄 Reusing in-flight wordbank request');
+                    try {
+                        await this._inflight; // ensure in-flight completes
+                        return this._cachedCount || 0;
+                    } catch (_e) {
+                        // fall through to start a new request
                     }
-                    
-                    const data = await response.json();
-                    const count = data.words ? data.words.length : 0;
-                    
-                    // Update cache
-                    this._cachedCount = count;
-                    this._cachedWords = data.words || [];
-                    this._lastFetch = now;
-                    
-                    console.log(`📚 WordBank library count: ${count} words`);
-                    return count;
+                }
+
+                // Start a new fetch and de-duplicate concurrent callers
+                this._inflight = (async () => {
+                    try {
+                        const response = await fetch('/api/wordbank', {
+                            cache: 'no-store',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                'Pragma': 'no-cache'
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        const data = await response.json();
+                        const count = data.words ? data.words.length : 0;
+                        // Update cache
+                        this._cachedCount = count;
+                        this._cachedWords = data.words || [];
+                        this._lastFetch = Date.now();
+                        if (this._debug) console.log(`📚 WordBank library count: ${count} words`);
+                        return count;
+                    } finally {
+                        // Always clear in-flight marker, even on error
+                        setTimeout(() => { this._inflight = null; }, 0);
+                    }
+                })();
+
+                try {
+                    return await this._inflight;
                 } catch (error) {
                     // Silently return cached value or 0 if server not ready yet
                     // (This prevents console spam during page load)
                     if (this._cachedCount === null) {
-                        console.log(`⏳ WordBank server not ready yet, will retry...`);
+                        if (this._debug) console.log(`⏳ WordBank server not ready yet, will retry...`);
                     } else {
                         console.warn(`⚠️ WordBank fetch failed, using cached count: ${this._cachedCount}`);
                     }
@@ -4031,7 +4147,7 @@
             async updateAllDisplays(forceRefresh = false) {
                 const count = await this.getCount(forceRefresh);
                 
-                console.log(`🔄 Updating all displays with count: ${count}`);
+                if (this._debug) console.log(`🔄 Updating all displays with count: ${count}`);
                 
                 // Update Start Quiz button (primary word count display)
                 const quizBtn = document.getElementById('startQuizBtn');
@@ -4063,7 +4179,7 @@
                     }
                 });
                 
-                console.log(`✅ All displays synchronized to ${count} words`);
+                if (this._debug) console.log(`✅ All displays synchronized to ${count} words`);
                 return count;
             },
             
@@ -4074,12 +4190,22 @@
                 this._cachedCount = null;
                 this._cachedWords = null;
                 this._lastFetch = 0;
-                console.log('🔄 WordBank cache invalidated');
+                if (this._debug) console.log('🔄 WordBank cache invalidated');
             }
         };
         
         // Make it globally available
         window.WordBankManager = WordBankManager;
+
+        // Initialize debug mode from localStorage or URL query
+        try {
+            const dbgLS = (safeStorage && safeStorage.local && safeStorage.local.getItem('beesmart_debug_wordbank')) || null;
+            const dbgQS = (new URLSearchParams(location.search).get('debugWB'));
+            WordBankManager._debug = (dbgLS === '1') || (dbgQS === '1' || dbgQS === 'true');
+            if (WordBankManager._debug) {
+                console.log('🐛 WordBankManager debug mode ENABLED');
+            }
+        } catch(_e) { /* ignore */ }
         
         // ═══════════════════════════════════════════════════════════════════
         // 🗑️ Lightweight delete helper (frontend convenience)
@@ -5285,44 +5411,40 @@
             }
         }
         
-        function showManualWordEntry() {
-            // First check if there are existing words
-            fetch('/api/wordbank')
-                .then(response => response.json())
-                .then(data => {
-                    const existingWordCount = data.words ? data.words.length : 0;
-                    
-                    if (existingWordCount > 0) {
-                        // Show kid-friendly confirmation
-                        showBeeConfirm({
-                            title: '🐝 Attention, spelling bee! 🐝',
-                            message: 
-                                `You already have ${existingWordCount} word(s) in your collection!\n\n` +
-                                '✍️ If you type new words, they will replace your current list! 📝\n\n' +
-                                '❓ What would you like to do?\n' +
-                                '• Type new words (replaces current list)?\n' +
-                                '• Or stick with your current words?\n\n' +
-                                "🍯 It's your hive, you decide!",
-                            confirmText: 'Type New Words',
-                            cancelText: 'Keep Current Words'
-                        }).then(confirmed => {
-                            if (confirmed) {
-                                // User wants to replace, show the prompt
-                                showManualWordPrompt();
-                            } else {
-                                showNotification('✅ Keeping your current words safe! 🐝💛', 'info');
-                            }
-                        });
-                    } else {
-                        // No existing words, show prompt directly
-                        showManualWordPrompt();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking wordbank:', error);
-                    // If error checking, show prompt anyway
+        async function showManualWordEntry() {
+            try {
+                // Use centralized manager for consistency and to leverage cache/in-flight dedupe
+                const existingWordCount = await WordBankManager.getCount(true);
+                if (existingWordCount > 0) {
+                    // Show kid-friendly confirmation
+                    showBeeConfirm({
+                        title: '🐝 Attention, spelling bee! 🐝',
+                        message: 
+                            `You already have ${existingWordCount} word(s) in your collection!\n\n` +
+                            '✍️ If you type new words, they will replace your current list! 📝\n\n' +
+                            '❓ What would you like to do?\n' +
+                            '• Type new words (replaces current list)?\n' +
+                            '• Or stick with your current words?\n\n' +
+                            "🍯 It's your hive, you decide!",
+                        confirmText: 'Type New Words',
+                        cancelText: 'Keep Current Words'
+                    }).then(confirmed => {
+                        if (confirmed) {
+                            // User wants to replace, show the prompt
+                            showManualWordPrompt();
+                        } else {
+                            showNotification('✅ Keeping your current words safe! 🐝💛', 'info');
+                        }
+                    });
+                } else {
+                    // No existing words, show prompt directly
                     showManualWordPrompt();
-                });
+                }
+            } catch (error) {
+                console.error('Error checking wordbank:', error);
+                // If error checking, show prompt anyway
+                showManualWordPrompt();
+            }
         }
         
         function showManualWordPrompt() {
@@ -8278,8 +8400,12 @@
                             console.log('🔄 Quiz state present; resuming quiz');
                             if (window.magicalEffects) { window.magicalEffects.playChimeSounds(); }
                             showLoadingMessage('🌟 Resuming your spelling adventure...');
-                            const resumeUrl = `/quiz/resume?t=${Date.now()}`;
-                            setTimeout(() => { window.location.href = resumeUrl; }, 150);
+                            try {
+                                // Resume state server-side (correct API path is /api/quiz/resume)
+                                await fetch('/api/quiz/resume', { method: 'POST', credentials: 'same-origin' });
+                            } catch(e) { console.warn('Resume API failed (continuing to quiz):', e); }
+                            const quizUrl = `/quiz?t=${Date.now()}&resume=1`;
+                            setTimeout(() => { window.location.href = quizUrl; }, 150);
                             return; // Stop further processing
                         }
                         // Else fall through to normal start behavior below
@@ -13981,28 +14107,39 @@
             window.loadingSystem.updateProgress(5, '🚀 Starting up...');
             
             // EMERGENCY TIMEOUT - Force loading screen to complete after 5 seconds for debugging
-            const LOADING_EMERGENCY_TIMEOUT = 5000;
+            const LOADING_EMERGENCY_TIMEOUT = 3000; // Reduced to 3 seconds
             const emergencyTimeout = setTimeout(() => {
                 console.error('🚨 EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
                 console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
                 console.error('Loader element:', document.getElementById('honeyLoader') ? 'found' : 'missing');
                 console.error('Stack trace of where we are stuck:');
                 console.trace();
+                
+                // ALWAYS dismiss loader on timeout - don't wait for button click
+                const loader = document.getElementById('honeyLoader');
+                if (loader) {
+                    // Stop Matrix rain animation
+                    if (window.matrixRain) window.matrixRain.stop();
+                    
+                    // Show the body content
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = '1';
+                    document.body.style.pointerEvents = 'auto';
+                    document.body.style.overflow = 'auto';
+                    
+                    // Hide loader completely
+                    loader.style.pointerEvents = 'none';
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    loader.style.display = 'none';
+                    
+                    console.error('🚨 EMERGENCY: Loader force-hidden, page enabled');
+                }
+                
+                // Try to update progress if LoadingSystem exists
                 if (window.loadingSystem) {
                     window.loadingSystem.updateProgress(100, '⚠️ Loaded (timeout)');
-                    // Enable Tap to Start button on timeout - don't auto-dismiss
-                    window.loadingSystem.presentTapToStart();
-                } else {
-                    // Last resort: manually hide loader
-                    const loader = document.getElementById('honeyLoader');
-                    if (loader) {
-                        loader.style.display = 'none';
-                        console.error('🚨 Manually hid loader (LoadingSystem missing)');
-                    }
                 }
-                // Enable the page even if loading failed
-                document.body.style.pointerEvents = 'auto';
-                document.body.style.overflow = 'auto';
             }, LOADING_EMERGENCY_TIMEOUT);
             
             console.log('✅ Emergency timeout set for', LOADING_EMERGENCY_TIMEOUT, 'ms');
@@ -16519,7 +16656,9 @@
 
         if (!window.BeeSmartAvatarInitialized) {
             window.BeeSmartAvatarInitialized = true;
-            window.setCurrentAvatar(null);
+            // Apply any server-provided avatar id captured before the API was defined
+            const pending = (typeof window.__initialAvatarId === 'string' && window.__initialAvatarId.length) ? window.__initialAvatarId : null;
+            window.setCurrentAvatar(pending);
         }
     });
     </script>

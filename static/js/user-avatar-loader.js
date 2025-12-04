@@ -467,7 +467,7 @@ class UserAvatarLoader {
                     // Create 3D instance
                     // Make main-page avatar larger on screen and reduce animations
                     const isMainHero = containerId === 'mascotBee3D';
-                    new window.SmartyBee3D(containerId, {
+                    const instance = new window.SmartyBee3D(containerId, {
                         width,
                         height,
                         // Keep the hero static by default on the home screen
@@ -481,6 +481,64 @@ class UserAvatarLoader {
                         cameraDistanceFactor: isMainHero ? 1.6 : 1.8,
                         verticalOffset: 0.35
                     });
+                    // Store instance globally for controller access
+                    try {
+                        window.SmartyBee3DInstances = window.SmartyBee3DInstances || {};
+                        // Attach lightweight control methods for compatibility
+                        if (instance && typeof instance === 'object') {
+                            // Remember defaults for reset
+                            if (instance.camera) {
+                                instance.__defaultCamPos = instance.camera.position.clone();
+                            }
+                            if (instance.bee) {
+                                instance.__defaultBeeRot = instance.bee.rotation.clone();
+                            }
+                            // Rotate: pitch (x), yaw (y)
+                            if (typeof instance.rotate !== 'function') {
+                                instance.rotate = function(pitchRad = 0, yawRad = 0){
+                                    try {
+                                        if (this.bee) {
+                                            this.bee.rotation.x += (pitchRad || 0);
+                                            this.bee.rotation.y += (yawRad || 0);
+                                        }
+                                    } catch(e) { /* noop */ }
+                                };
+                            }
+                            // Zoom: move camera along Z axis
+                            if (typeof instance.zoom !== 'function') {
+                                instance.zoom = function(delta = 0){
+                                    try {
+                                        if (this.camera) {
+                                            const z = this.camera.position.z + (delta * 5);
+                                            this.camera.position.z = Math.max(2, Math.min(12, z));
+                                        }
+                                    } catch(e) { /* noop */ }
+                                };
+                            }
+                            // Reset view to defaults
+                            if (typeof instance.resetView !== 'function') {
+                                instance.resetView = function(){
+                                    try {
+                                        if (this.camera && this.__defaultCamPos) {
+                                            this.camera.position.copy(this.__defaultCamPos);
+                                        }
+                                        if (this.bee && this.__defaultBeeRot) {
+                                            this.bee.rotation.copy(this.__defaultBeeRot);
+                                        }
+                                    } catch(e) { /* noop */ }
+                                };
+                            }
+                        }
+                        window.SmartyBee3DInstances[containerId] = instance;
+                        // Ensure legacy accessor exists
+                        if (typeof window.SmartyBee3D === 'function' && typeof window.SmartyBee3D.getController !== 'function') {
+                            window.SmartyBee3D.getController = function(id){
+                                return (window.SmartyBee3DInstances && window.SmartyBee3DInstances[id]) || null;
+                            };
+                        }
+                    } catch (e) {
+                        console.warn('Controller registry setup failed:', e);
+                    }
                     
                     this.showLoadedState(containerId);
                 }
@@ -713,6 +771,21 @@ if (!window.userAvatarLoader) {
 if (typeof window.UserAvatarLoader !== 'function') {
     console.error('❌ UserAvatarLoader missing after initialization wrapper');
 }
+
+// Global controller registry and compatibility shim for legacy calls
+// Ensures window.SmartyBee3D.getController('mascotBee3D') works even when SmartyBee3D is a class.
+(function(){
+    // Initialize registry once
+    if (!window.SmartyBee3DInstances) {
+        window.SmartyBee3DInstances = {};
+    }
+    // Back-compat shim: add getController if missing
+    if (typeof window.SmartyBee3D === 'function' && typeof window.SmartyBee3D.getController !== 'function') {
+        window.SmartyBee3D.getController = function(containerId){
+            return (window.SmartyBee3DInstances && window.SmartyBee3DInstances[containerId]) || null;
+        };
+    }
+})();
 
 // Deferred initialization
 let avatarInitialized = false;
