@@ -524,7 +524,7 @@
         .main-container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 0; /* REMOVED horizontal padding */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -663,6 +663,9 @@
         
         /* Single unified card containing logo and menu */
         .content-card {
+            width: 100%;
+            max-width: var(--content-max);
+            box-sizing: border-box;
             background: linear-gradient(135deg, rgba(255, 250, 220, 0.75) 0%, rgba(255, 245, 200, 0.65) 100%);
             border-radius: 30px;
             overflow: visible;        /* Changed from hidden to visible for avatar visibility */
@@ -673,7 +676,7 @@
             animation: none;          /* Disabled cardFloat animation - doesn't work well on mobile */
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(4px);
-            padding-top: 5rem;       /* INCREASED: Even more buffer to push content down (was 3.5rem) */
+            padding-top: 1rem;       /* REDUCED: Less buffer to push content down */
         }
         
         @keyframes cardFloat {
@@ -1192,7 +1195,7 @@
 
         /* Menu options container */
         .menu-container {
-            padding: 0 2rem 2rem 2rem;
+            padding: 0 0 2rem 0; /* REMOVED horizontal padding */
             background: transparent;
             margin-top: 0.75rem;
         }
@@ -2989,7 +2992,7 @@
         <!-- Single unified card with logo and menu -->
     <div class="content-card menu-card">
             <!-- Logo at top of card -->
-            <section class="logo-section">
+            <section class="logo-section" data-testid="logo-section">
                 <!-- Dynamic Welcome Badge positioned ABOVE avatar -->
                 <div class="welcome-pill" style="
                     position: relative;
@@ -3783,7 +3786,7 @@
                             
                             <!-- Instructional Information -->
                             <div style="
-                                margin-top: 1.25rem;
+                                margin-top: 0.5rem;
                                 padding: 1rem;
                                 background: rgba(255, 249, 230, 0.6);
                                 border: 2px dashed #FFD700;
@@ -3812,7 +3815,7 @@
             </section>
 
             <!-- Student Name Input -->
-            <section class="menu-container" style="padding-top: 0;">
+            <section class="menu-container" style="padding-top: 0; margin-top: 0.5rem;">
                 <div class="menu-option" style="
                     background: linear-gradient(135deg, #FFF5D7 0%, #FFE1F2 100%);
                     border-color: rgba(255, 182, 193, 0.4);
