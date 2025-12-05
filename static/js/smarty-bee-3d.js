@@ -200,7 +200,8 @@ class SmartyBee3D {
             return;
         }
         
-        const glbPath = this.options.modelPath;
+        const correctedPath = this.options.modelPath.replace('/static/models/', '/static/assets/avatars/glb_files/');
+        const glbPath = correctedPath;
         
         // Cache-busting: add timestamp to force reload of updated files
         const cacheBuster = Date.now();
