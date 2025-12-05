@@ -10493,11 +10493,13 @@
         (function(){
             const container = document.getElementById('mascotBee3D');
             if (!container) return;
-            const btnZoomIn = document.getElementById('avatarZoomIn');
-            const btnZoomOut = document.getElementById('avatarZoomOut');
-            const btnRotateLeft = document.getElementById('avatarRotateLeft');
-            const btnRotateRight = document.getElementById('avatarRotateRight');
-            const btnReset = document.getElementById('avatarReset');
+            
+            // Get control buttons using data-avatar-control attribute (they're <span> elements, not buttons with IDs)
+            const btnZoomIn = document.querySelector('[data-avatar-control="zoom-in"]');
+            const btnZoomOut = document.querySelector('[data-avatar-control="zoom-out"]');
+            const btnRotateLeft = document.querySelector('[data-avatar-control="rot-left"]');
+            const btnRotateRight = document.querySelector('[data-avatar-control="rot-right"]');
+            const btnReset = document.querySelector('[data-avatar-control="reset"]');
 
             // Maintain lightweight UI state
             let scale = 1.0;
