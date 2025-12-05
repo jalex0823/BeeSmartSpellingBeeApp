@@ -7010,42 +7010,6 @@ def api_upload_manual_words():
 @app.route('/api/next', methods=['POST'])
 def api_next():
     """Get the next word in the quiz sequence."""
-    state = get_quiz_state()
-    if not state:
-        return jsonify({'error': 'Quiz not started'}), 400
-
-    wordbank = get_wordbank()
-    if not wordbank:
-        return jsonify({'error': 'Wordbank is empty'}), 400
-
-    current_idx = state.get('idx', 0)
-    if current_idx >= len(state['order']):
-        # Quiz is done
-        return jsonify({
-            'done': True,
-            'message': 'Quiz complete!',
-            'progress': 100,
-            'word_index': len(wordbank),
-            'total_words': len(wordbank)
-        })
-
-    word_list_idx = state['order'][current_idx]
-    word_data = wordbank[word_list_idx]
-    
-    # Enrich with definition/sentence on-the-fly
-    word_info = get_word_info(word_data['word'])
-    _, sentence = parse_enriched_info(word_info, word_data['word'])
-
-    return jsonify({
-        'word': word_data['word'],
-        'sentence': sentence or word_data.get('sentence', ''),
-        'hint': word_data.get('hint', ''),
-        'word_index': current_idx,
-        'total_words': len(wordbank),
-        'progress': int((current_idx / len(wordbank)) * 100) if len(wordbank) > 0 else 0,
-        'done': False
-    })
-    """Get the next word in the quiz sequence."""
     qs = get_quiz_state()
     wordbank = get_wordbank()
 
@@ -7067,7 +7031,8 @@ def api_next():
     current_idx = qs.get('idx', 0)
 
     if current_idx >= len(qs['order']):
-        return jsonify({'status': 'complete', 'message': 'Quiz finished!'})
+        # Completed state
+        return jsonify({'done': True, 'status': 'complete', 'message': 'Quiz finished!'})
 
     word_idx = qs['order'][current_idx]
     word_data = wordbank[word_idx]
@@ -7083,7 +7048,7 @@ def api_next():
         'hint': word_data.get('hint', '')
     }
 
-    # Prepare response
+    # Prepare response (do not include the actual word string for security; TTS word is added later)
     response_data = {
         'status': 'success',
         'word_index': word_idx,
@@ -7093,28 +7058,6 @@ def api_next():
         'phonetic_spelling': build_phonetic_spelling(word),
         'session_id': session.get('session_id')
     }
-
-    # CRITICAL SECURITY FIX: Do NOT send the answer ('word') to the client
-    # The client only needs metadata like length and phonetic spelling.
-    # The original `word` variable should never be in the final JSON payload.
-    
-    return jsonify(response_data)
-    # ...existing code...
-    # Prepare response
-    response_data = {
-        'status': 'success',
-        'word_index': word_idx,
-        'progress': f"{current_idx + 1}/{total_words}",
-        'definition': definition_data,
-        'word_length': len(word),
-        'phonetic_spelling': build_phonetic_spelling(word),
-        'session_id': session.get('session_id')
-    }
-
-    # CRITICAL SECURITY FIX: Do NOT send the answer ('word') to the client
-    # The client only needs metadata like length and phonetic spelling.
-    # The original `word` variable should never be in the final JSON payload.
-    
     return jsonify(response_data)
     # Ensure session persists
     session.permanent = True
@@ -7948,17 +7891,16 @@ def api_answer():
         state["incorrect"] += 1
         state["streak"] = 0
 
-    # 🔧 CRITICAL FIX: Only advance idx on CORRECT answers
-    # For incorrect answers, user will retry the same question (idx stays same)
-    # idx will advance when user clicks "Show Answer" or gets it correct
-    if is_correct or skip_requested:
+    # 🔧 Advance to next word after any completed attempt (correct, incorrect, or skip)
+    # This matches expected UX: each submission moves forward, while correctness is tracked in stats
+    if is_correct or skip_requested or not is_correct:
         state["idx"] += 1
         # Reset hints counter when moving to next word
         state["hints_used_current_word"] = 0
         print(f"🔄 Moving to next word, reset hints_used_current_word to 0")
     else:
-        # For incorrect answers, preserve hints counter for retry
-        print(f"❌ Incorrect answer - staying on same word (idx={state['idx']}), hints_used={state.get('hints_used_current_word', 0)}")
+        # Fallback (should not hit): preserve hints counter
+        print(f"❌ Incorrect answer - unexpected non-advance state (idx={state['idx']})")
 
     state["history"].append({
         "word": correct_spelling,
@@ -8038,7 +7980,8 @@ def api_answer():
         "Skipping this word. Let's try a new one!" if skip_requested else f"Try again! The word is spelled: {correct_spelling}"
     )
 
-    next_index_position = min(state["idx"] + 1, len(order))
+    # Next index position for UI progress (1-based); state["idx"] already points to next word
+    next_index_position = min(state["idx"], len(order))
     
     # 🏆 Check for badge achievements
     badges_unlocked = []

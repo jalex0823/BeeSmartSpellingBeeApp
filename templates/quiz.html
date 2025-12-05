@@ -8786,90 +8786,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
     }
 
-    // 🔄 Check for existing quiz state and show resume/restart modal if needed
-    fetch('/api/wordbank', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache'
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.words || data.words.length === 0) {
+    // 🔄 Check resumable progress using status endpoint first; fallback to wordbank
+    (async function(){
+        try {
+            const statusResp = await fetch('/api/quiz/status', { credentials: 'same-origin', cache: 'no-store' });
+            if (statusResp.ok) {
+                const status = await statusResp.json();
+                if (status && status.can_resume) {
+                    const modal = document.getElementById('quizResumeModal');
+                    const remaining = Math.max((status.total - status.index), 0);
+                    document.getElementById('modalRemainingWords').textContent = remaining;
+                    modal.style.display = 'flex';
+                    modal.style.alignItems = 'center';
+                    modal.style.justifyContent = 'center';
+
+                    document.getElementById('btnContinueQuiz').onclick = async () => {
+                        console.log('✅ Continue quiz from saved progress');
+                        modal.style.display = 'none';
+                        const wbResp = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store' });
+                        const wbData = await wbResp.json();
+                        const totalWords = (wbData.words || []).length;
+                        if (!totalWords) { BeeSmart.showError('No words loaded for the quiz!'); setTimeout(()=>window.location.href='/', 2800); return; }
+                        initializeQuiz(wbData, totalWords, delight, smartyBee, false);
+                    };
+
+                    document.getElementById('btnRestartQuiz').onclick = async () => {
+                        console.log('🔄 Restart quiz from beginning');
+                        modal.style.display = 'none';
+                        try { await fetch('/api/quiz/reset', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }); } catch(e) { console.warn('reset failed', e); }
+                        const wbResp = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store' });
+                        const wbData = await wbResp.json();
+                        const totalWords = (wbData.words || []).length;
+                        if (!totalWords) { BeeSmart.showError('No words loaded for the quiz!'); setTimeout(()=>window.location.href='/', 2800); return; }
+                        initializeQuiz(wbData, totalWords, delight, smartyBee, true);
+                    };
+                    return;
+                }
+            }
+
+            // Fallback to wordbank and start fresh
+            const wbResp = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
+            const wbData = await wbResp.json();
+            if (!wbData.words || wbData.words.length === 0) {
                 BeeSmart.showError('No words loaded for the quiz!');
                 setTimeout(() => window.location.href = '/', 2800);
                 return;
             }
-            
-            const totalWords = data.words.length;
-            
-            // Check if there's an existing quiz state with progress
-            const quizState = data.quiz_state || {};
-            const currentIndex = quizState.idx || 0;  // Use 'idx' not 'current_index'
-            const hasProgress = currentIndex > 0 && currentIndex < totalWords;
-            
-            console.log('🔍 Quiz state check:', {
-                totalWords,
-                quizState,
-                currentIndex,
-                hasProgress,
-                fullData: data
-            });
-            
-            if (hasProgress) {
-                // Show resume/restart modal
-                const modal = document.getElementById('quizResumeModal');
-                const remainingWords = totalWords - currentIndex;
-                document.getElementById('modalRemainingWords').textContent = remainingWords;
-                
-                modal.style.display = 'flex';
-                modal.style.alignItems = 'center';
-                modal.style.justifyContent = 'center';
-                
-                // Continue button - keeps existing progress
-                document.getElementById('btnContinueQuiz').onclick = () => {
-                    console.log('✅ User chose to continue quiz from question', currentIndex + 1);
-                    modal.style.display = 'none';
-                    initializeQuiz(data, totalWords, delight, smartyBee, false);
-                };
-                
-                // Restart button - resets quiz state
-                document.getElementById('btnRestartQuiz').onclick = async () => {
-                    console.log('🔄 User chose to restart quiz');
-                    modal.style.display = 'none';
-                    
-                    // Reset quiz state on server
-                    try {
-                        await fetch('/api/quiz/reset', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        console.log('✅ Quiz state reset on server');
-                    } catch (error) {
-                        console.warn('⚠️ Failed to reset quiz state on server:', error);
-                    }
-                    
-                    // Reload wordbank with fresh state
-                    const freshResponse = await fetch('/api/wordbank', {
-                        credentials: 'same-origin',
-                        cache: 'no-store'
-                    });
-                    const freshData = await freshResponse.json();
-                    initializeQuiz(freshData, totalWords, delight, smartyBee, true);
-                };
-            } else {
-                // No progress or completed - start fresh automatically
-                console.log('📝 Starting fresh quiz (no previous progress)');
-                initializeQuiz(data, totalWords, delight, smartyBee, true);
-            }
-        })
-        .catch(error => {
-            console.error('Failed to check word bank:', error);
-            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
+            const totalWords = wbData.words.length;
+            console.log('📝 Starting fresh quiz (no previous progress)');
+            initializeQuiz(wbData, totalWords, delight, smartyBee, true);
+        } catch(error){
+            console.error('Failed to check quiz status/wordbank:', error);
+            BeeSmart.showError('Failed to initialize quiz. Redirecting to main menu...');
             setTimeout(() => window.location.href = '/', 2800);
-        });
+        }
+    })();
     
     // Helper function to initialize quiz
     function initializeQuiz(data, totalWords, delight, smartyBee, isNewStart) {
