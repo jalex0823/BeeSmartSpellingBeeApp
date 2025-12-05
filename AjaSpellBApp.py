@@ -604,7 +604,35 @@ BADGE_METADATA = {
 @app.route('/')
 def home_root_direct():
     """Primary application landing page: shows loader then auto-redirects to app."""
-    return render_template('unified_menu.html')
+    print("="*80)
+    print("🏠 [HOME ROUTE] Starting home_root_direct()")
+    print(f"🏠 [HOME ROUTE] User authenticated: {current_user.is_authenticated}")
+    print("="*80)
+    
+    # Get current user's avatar data for immediate display (same as dashboard)
+    user_avatar_data = None
+    use_mascot = True
+    
+    if current_user.is_authenticated:
+        try:
+            user_avatar_data = current_user.get_avatar_data()
+            use_mascot = current_user.has_selected_avatar() == False
+            print(f"🎭 [HOME] User avatar data: {user_avatar_data}")
+            print(f"🎭 [HOME] Use mascot: {use_mascot}")
+            print(f"🎭 [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
+        except Exception as e:
+            print(f"⚠️ Could not load user avatar data: {e}")
+            import traceback
+            traceback.print_exc()
+            user_avatar_data = None
+            use_mascot = True
+    
+    print(f"🎭 [HOME] Passing to template: user_avatar={user_avatar_data is not None}, use_mascot={use_mascot}")
+    print("="*80)
+    
+    return render_template('unified_menu.html', 
+                         user_avatar=user_avatar_data,
+                         use_mascot=use_mascot)
 
 # Optional legacy preview alias retained (can be removed later)
 @app.route('/home_preview')

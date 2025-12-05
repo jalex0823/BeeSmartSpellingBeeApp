@@ -44,14 +44,14 @@
         // CDN timeout protection - allow page to load even if Three.js fails
         window.THREE_LOAD_TIMEOUT = setTimeout(function() {
             if (typeof THREE === 'undefined') {
-                console.warn('⚠️ Three.js CDN timed out (5s) - 3D features disabled, continuing page load');
+                console.warn('Three.js CDN timed out (5s) - 3D features disabled, continuing page load');
                 window.THREE_FAILED = true;
                 // Trigger DOMContentLoaded manually if still waiting
                 if (document.readyState === 'loading') {
                     console.log('📌 Force-triggering page load despite CDN timeout');
                 }
             } else {
-                console.log('✅ Three.js loaded successfully');
+                console.log('Three.js loaded successfully');
             }
         }, 5000); // 5 second timeout
         
@@ -103,47 +103,10 @@
     </script>
     <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
     <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203" defer></script>
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251203" defer></script>
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251204f" defer></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251203" defer></script>
     
-    <!-- Homepage Avatar Sync: Load user's selected avatar on main page -->
-    <script>
-    (function() {
-        function renderHomepageAvatar() {
-            if (!window.userAvatarLoader) {
-                console.warn('UserAvatarLoader not ready, retrying in 100ms...');
-                setTimeout(renderHomepageAvatar, 100);
-                return;
-            }
-            
-            const id = window.userAvatarLoader.getAvatarId();
-            if (id) {
-                console.log('Loading user avatar on homepage:', id);
-                window.userAvatarLoader.loadUserAvatar(id, 'mascotBee3D');
-                
-                // Update avatar name display
-                const registeredAvatarName = document.getElementById('registeredAvatarName');
-                if (registeredAvatarName) {
-                    const displayName = window.userAvatarLoader.getAvatarDisplayName(id);
-                    registeredAvatarName.textContent = displayName;
-                }
-            } else {
-                console.log('No registered user avatar, using default SmartyBee');
-            }
-
-            // FX button removed - was covering the avatar
-        }
-        
-        // Try when loader signals ready, or fallback to DOMContentLoaded
-        document.addEventListener('BeeSmart:loaderComplete', renderHomepageAvatar);
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', renderHomepageAvatar);
-        } else {
-            renderHomepageAvatar();
-        }
-    })();
-    </script>
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
     {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
@@ -162,14 +125,13 @@
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
-            const VERSION = 'unified_menu_v2.2-' + Date.now();
-            console.log('\u2728 BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
+            const VERSION = 'unified_menu_v2.3-' + Date.now();
+            console.log('BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
             // Disable distracting floating decorations on the home screen
             // This hides sparkles/fairies and prevents their initialization later.
             window.DISABLE_FLOATING_DECOR = true;
-            // Prevent the avatar loader from auto-rendering into mascotBee3D on this page;
-            // the template will explicitly render the avatar once.
-            window.DISABLE_AUTO_AVATAR_RENDER = true;
+            // Allow avatar loader to render - controls need the instance!
+            // window.DISABLE_AUTO_AVATAR_RENDER = true;  // REMOVED - was blocking instance creation
             if (!window._originalFetch){
                 window._originalFetch = window.fetch.bind(window);
                 window.fetch = function(resource, init){
@@ -939,43 +901,129 @@
             transform: scale(1.05);
         }
         
-        /* Avatar Controls */
+        /* Avatar Controls - Enhanced with smooth animations and touch support */
         .avatar-controls {
             display: inline-flex;
-            gap: 0.4rem;
-            padding: 0.3rem 0.6rem;
+            gap: 0.5rem;
+            padding: 0.5rem;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            margin: 12px auto 4px; /* center and give breathing room below avatar */
+            margin: 12px auto 4px;
             pointer-events: auto;
             position: relative;
             z-index: 100;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
         }
         
         .avatar-controls button {
-            border: none;
-            border-radius: 999px;
-            padding: 0.35rem 0.55rem;
-            min-width: 38px;
-            font-size: 0.9rem;
-            line-height: 1;
+            width: 44px;
+            height: 44px;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 249, 230, 0.95) 100%);
+            color: #5a4000;
+            font-size: 1.2rem;
+            font-weight: bold;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(255, 215, 0, 0.3);
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
             pointer-events: auto;
         }
         
-        .avatar-controls button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-            background: #fff7d1;
+        .avatar-controls button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #FFD700 0%, #FFEB3B 100%);
+            border-color: #FFA500;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4), 0 0 0 4px rgba(255, 215, 0, 0.2);
         }
         
-        .avatar-controls button:active {
-            transform: translateY(0);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        .avatar-controls button:active:not(:disabled) {
+            transform: translateY(0) scale(0.95);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        }
+        
+        .avatar-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+        
+        .avatar-controls button.active {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border-color: #FF8C00;
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.5), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+        }
+        
+        /* Auto-rotate active indicator */
+        .avatar-controls span[data-avatar-control="auto-rotate"].active::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            width: 8px;
+            height: 8px;
+            background: #00FF00;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 4px rgba(0, 255, 0, 0.8);
+        }
+        
+        /* Touch-friendly sizing for mobile */
+        @media (max-width: 768px) {
+            .avatar-controls button {
+                width: 48px;
+                height: 48px;
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Tooltip on hover */
+        .avatar-controls button[title]:hover::before {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-8px);
+            background: rgba(0, 0, 0, 0.9);
+            color: #FFD700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: normal;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            animation: tooltip-fade-in 0.2s ease-out 0.5s forwards;
+        }
+        
+        @keyframes tooltip-fade-in {
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(-4px);
+            }
         }
         
         /* FX Host Pseudo-Layers */
@@ -2821,7 +2869,7 @@
                     loader.style.visibility = 'hidden';
                     setTimeout(() => { loader.style.display = 'none'; }, 350);
                     document.dispatchEvent(new Event('honeyLoaderFinished'));
-                    console.warn('🚨 EMERGENCY BYPASS: User skipped loading screen');
+                    console.warn('EMERGENCY BYPASS: User skipped loading screen');
                 }
             }
         }
@@ -3293,105 +3341,39 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                <!-- Registered User Avatar Display with Personification System -->
-                <div id="avatarFxHost" class="avatar-viewer-wrapper">
-                    <div id="mascotBee3D" class="avatar-fx-container"></div>
-                    
-                    <!-- Avatar Controls - Gear Icon & Panel -->
-                    <script>
-                    (function(){
-                        // Collapsible control panel under a gear icon
-                        const container = document.getElementById('mascotBee3D') || document.querySelector('.mascot-3d-container') || document.querySelector('.bee-avatar-container');
-                        if (!container) return;
-                        container.style.position = 'relative';
-                        if (!document.getElementById('avatarGearToggle')) {
-                            const gear = document.createElement('button');
-                            gear.id = 'avatarGearToggle';
-                            gear.setAttribute('aria-expanded', 'false');
-                            gear.setAttribute('aria-controls', 'avatarControlPanel');
-                            gear.title = 'Avatar controls';
-                            gear.style.cssText = `
-                                position: absolute; bottom: -10px; right: 5px; z-index: 120;
-                                width: 20px; height: 20px; border-radius: 10px;
-                                border: 1px solid rgba(255, 215, 0, 0.4);
-                                background: rgba(255, 255, 255, 0.8);
-                                color: #5A2C15; font-size: 10px; cursor: pointer;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                padding: 0; display: flex; align-items: center; justify-content: center;
-                            `;
-                            gear.innerText = '⚙️';
-                            container.appendChild(gear);
-
-                            const panel = document.createElement('div');
-                            panel.id = 'avatarControlPanel';
-                            panel.style.cssText = `
-                                position: absolute; bottom: -40px; right: 5px; z-index: 119;
-                                display: none; flex-direction: row; gap: 3px;
-                                padding: 4px; background: rgba(255,255,255,0.95);
-                                border: 1px solid rgba(255, 215, 0, 0.3);
-                                border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                            `;
-                            panel.innerHTML = `
-                                <button class="ctrl" title="Zoom In" aria-label="Zoom In">+</button>
-                                <button class="ctrl" title="Zoom Out" aria-label="Zoom Out">−</button>
-                                <button class="ctrl" title="Rotate Left" aria-label="Rotate Left">⟲</button>
-                                <button class="ctrl" title="Rotate Right" aria-label="Rotate Right">⟳</button>
-                                <button class="ctrl" title="Reset" aria-label="Reset">↺</button>
-                            `;
-                            container.appendChild(panel);
-
-                            // Style ctrl buttons - tiny and compact with transparent background
-                            Array.from(panel.querySelectorAll('.ctrl')).forEach(btn => {
-                                btn.style.cssText = `
-                                    width: 18px; height: 18px; border-radius: 4px;
-                                    border: 1px solid rgba(255, 215, 0, 0.3);
-                                    background: rgba(255, 255, 255, 0.2);
-                                    color: #5A2C15; font-size: 10px; cursor: pointer;
-                                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                                    padding: 0; display: flex; align-items: center; justify-content: center;
-                                    font-weight: 700;
-                                `;
-                            });
-
-                            // Toggle behavior
-                            gear.onclick = () => {
-                                const open = panel.style.display === 'block';
-                                panel.style.display = open ? 'none' : 'block';
-                                gear.setAttribute('aria-expanded', (!open).toString());
-                            };
-
-                            // Helper to get controller
-                            const getCtrl = () => {
-                                try {
-                                    if (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function') {
-                                        return window.SmartyBee3D.getController('mascotBee3D');
-                                    }
-                                } catch(e) {}
-                                return null;
-                            };
-
-                            // Controls wiring
-                            let scale = 1, rot = 0;
-                            const canvas = container.querySelector('canvas') || container;
-                            const applyFallback = () => {
-                                canvas.style.transformOrigin = 'center center';
-                                canvas.style.transform = `translateY(0) scale(${scale}) rotate(${rot}deg)`;
-                            };
-                            const [btnPlus, btnMinus, btnLeft, btnRight, btnReset] = panel.querySelectorAll('.ctrl');
-                            btnPlus.onclick = () => { const c = getCtrl(); if (c?.zoomIn) c.zoomIn(); else { scale = Math.min(1.8, scale + 0.08); applyFallback(); } };
-                            btnMinus.onclick = () => { const c = getCtrl(); if (c?.zoomOut) c.zoomOut(); else { scale = Math.max(0.6, scale - 0.08); applyFallback(); } };
-                            btnLeft.onclick = () => { const c = getCtrl(); if (c?.rotateLeft) c.rotateLeft(); else { rot -= 10; applyFallback(); } };
-                            btnRight.onclick = () => { const c = getCtrl(); if (c?.rotateRight) c.rotateRight(); else { rot += 10; applyFallback(); } };
-                            btnReset.onclick = () => { const c = getCtrl(); if (c?.resetView) c.resetView(); scale = 1; rot = 0; applyFallback(); };
-                        }
-                    })();
-                    </script>
+                <!-- Avatar Display - NEW clean container for controls -->
+                <div style="position: relative; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px 0;">
+                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto;"></div>
                     
                     <!-- Interactive Caption -->
-                    <div id="mascotCaption" class="avatar-caption">
+                    <div style="
+                        text-align: center;
+                        margin-top: 12px;
+                        color: #FF8C00;
+                        font-weight: 600;
+                        font-size: 14px;
+                    ">
                         ✨ Click on me to see what I do! ✨
                     </div>
                 </div>
+                
+                <!-- Load user's avatar with SmartyBee3D into NEW clean container -->
+                <script>
+                window.addEventListener('load', function() {
+                    if (typeof window.SmartyBee3D === 'function') {
+                        // Create instance in NEW container
+                        window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
+                            width: 400,
+                            height: 400,
+                            fetchFromServer: true,  // Auto-fetch user's registered avatar
+                            autoRotate: false,
+                            enableInteraction: true,
+                            zoom: 1.8
+                        });
+                        console.log('Avatar Controls instance created in new container');
+                    }
+                });
+                </script>
                 
                 <!-- Defensive stub: ensure window.setCurrentAvatar exists before any early calls
                      If the real API hasn't been defined yet, this safely captures the
@@ -3418,14 +3400,32 @@
                     })();
                 </script>
 
-                <!-- Relocated avatar controls: placed above the status badges -->
-                <div class="avatar-controls">
-                    <button type="button" data-avatar-control="zoom-in" title="Zoom In">＋</button>
-                    <button type="button" data-avatar-control="zoom-out" title="Zoom Out">－</button>
-                    <button type="button" data-avatar-control="rot-left" title="Rotate Left">⟲</button>
-                    <button type="button" data-avatar-control="rot-right" title="Rotate Right">⟳</button>
-                    <button type="button" data-avatar-control="reset" title="Reset View">⟲⟳</button>
+                <!-- Avatar Controls - Horizontal Icons -->
+                <div class="avatar-controls" style="
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 16px;
+                    margin: 12px auto;
+                    font-size: 24px;
+                    user-select: none;
+                ">
+                    <span data-avatar-control="auto-rotate" title="Auto-Rotate (Spacebar)" aria-label="Toggle auto-rotate" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">🔄</span>
+                    <span data-avatar-control="zoom-in" title="Zoom In (+)" aria-label="Zoom in" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">🔍＋</span>
+                    <span data-avatar-control="zoom-out" title="Zoom Out (-)" aria-label="Zoom out" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">🔍－</span>
+                    <span data-avatar-control="rot-left" title="Rotate Left (←)" aria-label="Rotate left" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">⟲</span>
+                    <span data-avatar-control="rot-right" title="Rotate Right (→)" aria-label="Rotate right" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">⟳</span>
+                    <span data-avatar-control="reset" title="Reset View (R)" aria-label="Reset view" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">↺</span>
                 </div>
+                <style>
+                    .avatar-controls span:hover {
+                        opacity: 1;
+                        transform: scale(1.2);
+                    }
+                    .avatar-controls span:active {
+                        transform: scale(1.1);
+                    }
+                </style>
 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="
@@ -3715,13 +3715,13 @@
                                 width: 100%;
                             ">
                                 <a href="/auth/dashboard" style="
-                                    padding: 0.5rem 1.2rem;
+                                    padding: 0.75rem 1.2rem;
                                     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
                                     color: white;
                                     border-radius: 12px;
                                     text-decoration: none;
                                     font-weight: 600;
-                                    font-size: 0.9rem;
+                                    font-size: 1rem;
                                     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
                                     transition: all 0.3s ease;
                                     display: inline-flex;
@@ -3729,17 +3729,18 @@
                                     justify-content: center;
                                     border: 2px solid rgba(76, 175, 80, 0.6);
                                     flex: 1;
+                                    min-height: 48px;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(76, 175, 80, 0.4)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.3)'">
                                     📊 Dashboard
                                 </a>
                                 <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
-                                    padding: 0.5rem 1.2rem;
+                                    padding: 0.75rem 1.2rem;
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                                     color: #5A2C15;
                                     border-radius: 12px;
                                     font-weight: 600;
-                                    font-size: 0.9rem;
+                                    font-size: 1rem;
                                     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
                                     transition: all 0.3s ease;
                                     display: inline-flex;
@@ -3749,19 +3750,20 @@
                                     border: 2px solid rgba(255, 215, 0, 0.6);
                                     cursor: pointer;
                                     flex: 1;
+                                    min-height: 48px;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 215, 0, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 215, 0, 0.4)'"
                                    onclick="startQuiz()">
                                     📝 Quiz (<span id="wordCountDisplay">0</span>)
                                 </button>
                                 <a href="/auth/logout" style="
-                                    padding: 0.5rem 1.2rem;
+                                    padding: 0.75rem 1.2rem;
                                     background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
                                     color: white;
                                     border-radius: 12px;
                                     text-decoration: none;
                                     font-weight: 600;
-                                    font-size: 0.9rem;
+                                    font-size: 1rem;
                                     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
                                     transition: all 0.3s ease;
                                     display: inline-flex;
@@ -3769,6 +3771,7 @@
                                     justify-content: center;
                                     border: 2px solid rgba(255, 107, 107, 0.6);
                                     flex: 1;
+                                    min-height: 48px;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(255, 107, 107, 0.4)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 107, 0.3)'">
                                     🚪 Sign Out
@@ -4051,7 +4054,7 @@
                     try {
                         return localStorage.getItem(key);
                     } catch (e) {
-                        console.warn('⚠️ localStorage blocked:', e.message);
+                        console.warn('localStorage blocked:', e.message);
                         return null;
                     }
                 },
@@ -4060,7 +4063,7 @@
                         localStorage.setItem(key, value);
                         return true;
                     } catch (e) {
-                        console.warn('⚠️ localStorage blocked:', e.message);
+                        console.warn('localStorage blocked:', e.message);
                         return false;
                     }
                 },
@@ -4069,7 +4072,7 @@
                         localStorage.removeItem(key);
                         return true;
                     } catch (e) {
-                        console.warn('⚠️ localStorage blocked:', e.message);
+                        console.warn('localStorage blocked:', e.message);
                         return false;
                     }
                 }
@@ -4079,7 +4082,7 @@
                     try {
                         return sessionStorage.getItem(key);
                     } catch (e) {
-                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        console.warn('sessionStorage blocked:', e.message);
                         return null;
                     }
                 },
@@ -4088,7 +4091,7 @@
                         sessionStorage.setItem(key, value);
                         return true;
                     } catch (e) {
-                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        console.warn('sessionStorage blocked:', e.message);
                         return false;
                     }
                 },
@@ -4097,7 +4100,7 @@
                         sessionStorage.removeItem(key);
                         return true;
                     } catch (e) {
-                        console.warn('⚠️ sessionStorage blocked:', e.message);
+                        console.warn('sessionStorage blocked:', e.message);
                         return false;
                     }
                 }
@@ -4129,7 +4132,7 @@
              */
             registerDisplay(elementId, updateFn) {
                 this._displays.add({ elementId, updateFn });
-                if (this._debug) console.log(`📊 Registered word count display: ${elementId}`);
+                if (this._debug) console.log(`Registered word count display: ${elementId}`);
             },
             
             /**
@@ -4144,7 +4147,7 @@
                 if (!forceRefresh && 
                     this._cachedCount !== null && 
                     (now - this._lastFetch) < this._cacheDuration) {
-                    if (this._debug) console.log(`📚 Using cached word count: ${this._cachedCount}`);
+                    if (this._debug) console.log(`Using cached word count: ${this._cachedCount}`);
                     return this._cachedCount;
                 }
                 
@@ -4179,7 +4182,7 @@
                         this._cachedCount = count;
                         this._cachedWords = data.words || [];
                         this._lastFetch = Date.now();
-                        if (this._debug) console.log(`📚 WordBank library count: ${count} words`);
+                        if (this._debug) console.log(`WordBank library count: ${count} words`);
                         return count;
                     } finally {
                         // Always clear in-flight marker, even on error
@@ -4195,7 +4198,7 @@
                     if (this._cachedCount === null) {
                         if (this._debug) console.log(`⏳ WordBank server not ready yet, will retry...`);
                     } else {
-                        console.warn(`⚠️ WordBank fetch failed, using cached count: ${this._cachedCount}`);
+                        console.warn(`WordBank fetch failed, using cached count: ${this._cachedCount}`);
                     }
                     return this._cachedCount || 0;
                 }
@@ -4267,11 +4270,11 @@
                     try {
                         updateFn(count);
                     } catch (error) {
-                        console.error(`❌ Error updating display ${elementId}:`, error);
+                        console.error(`Error updating display ${elementId}:`, error);
                     }
                 });
                 
-                if (this._debug) console.log(`✅ All displays synchronized to ${count} words`);
+                if (this._debug) console.log(`All displays synchronized to ${count} words`);
                 return count;
             },
             
@@ -5096,7 +5099,7 @@
                             });
                             setBattleStatusBadge({ online: false, count: 0 });
                         } catch (e) {
-                            console.warn('⚠️ Battle check skipped:', e);
+                            console.warn('Battle check skipped:', e);
                         }
                     };
                     // Don't call immediately - will be called in finishLoading()
@@ -5161,7 +5164,7 @@
                 try {
                     // Quick kill switch: set localStorage 'beesmart_disable_restore' to '1' to skip rehydrate
                     if (safeStorage.local.getItem('beesmart_disable_restore') === '1') {
-                        console.log('⏹️ Wordbank rehydrate disabled by localStorage flag.');
+                        console.log('Wordbank rehydrate disabled by localStorage flag.');
                         return;
                     }
                     const cacheKey = 'beesmart_last_user_word_list_v1';
@@ -5188,7 +5191,7 @@
                     const restoreData = await restoreResp.json();
                     if(restoreData && restoreData.ok){
                         window.__wordbankRestored=true;
-                        console.log('✅ Mobile wordbank rehydrate success:', restoreData.count, 'words');
+                        console.log('Mobile wordbank rehydrate success:', restoreData.count, 'words');
                         
                         // Use WordBankManager for accurate count (same as system checks)
                         const actualCount = window.WordBankManager ? await window.WordBankManager.getCount(true) : 0;
@@ -5209,10 +5212,10 @@
                             showSuccessMessage(`Restored ${actualCount} saved word${actualCount !== 1 ? 's' : ''}! 🐝`);
                         }
                     } else {
-                        console.warn('⚠️ Wordbank rehydrate failed:', restoreData);
+                        console.warn('Wordbank rehydrate failed:', restoreData);
                     }
                 } catch(err){
-                    console.warn('⚠️ Wordbank rehydrate error:', err);
+                    console.warn('Wordbank rehydrate error:', err);
                 }
             }
             // Defer until window load to avoid blocking first paint; then wait a tick for cookies
@@ -5225,7 +5228,7 @@
                     const normalized = words.map(w => (typeof w==='string' ? w : (w && w.word ? w.word : ''))).filter(Boolean).slice(0, 500);
                     const payload = { words: normalized, savedAt: Date.now() };
                     safeStorage.local.setItem('beesmart_last_user_word_list_v1', JSON.stringify(payload));
-                    console.log('💾 Persisted word list locally for mobile restore:', payload.words.length);
+                    console.log('Persisted word list locally for mobile restore:', payload.words.length);
                 } catch(e){ console.warn('Persist save failed', e); }
             }
             window.persistUploadedWords = persistUploadedWords;
@@ -5257,7 +5260,7 @@
 
                 if (!res.ok) {
                     // 401 / 403 / 500 => just hide the badge, no error UI
-                    console.warn('⚠️ /api/saved-lists returned', res.status, '- hiding badge');
+                    console.warn('/api/saved-lists returned', res.status, '- hiding badge');
                     badge.style.display = 'none';
                     return;
                 }
@@ -5271,7 +5274,7 @@
                     }
                     data = JSON.parse(text);
                 } catch (jsonErr) {
-                    console.warn('⚠️ Could not parse /api/saved-lists JSON:', jsonErr);
+                    console.warn('Could not parse /api/saved-lists JSON:', jsonErr);
                     badge.style.display = 'none';
                     return;
                 }
@@ -5287,15 +5290,15 @@
                     }
                 } else {
                     // Invalid data structure - hide badge
-                    console.warn('⚠️ Invalid data structure from /api/saved-lists:', data);
+                    console.warn('Invalid data structure from /api/saved-lists:', data);
                     badge.style.display = 'none';
                 }
             } catch(e){
                 // ISSUE #6 FIX: Handle network errors, aborts, and other exceptions
                 if (e.name === 'AbortError') {
-                    console.warn('⚠️ Saved lists fetch timed out after 10s');
+                    console.warn('Saved lists fetch timed out after 10s');
                 } else {
-                    console.warn('⚠️ Saved lists badge fetch failed:', e.message || e);
+                    console.warn('Saved lists badge fetch failed:', e.message || e);
                 }
                 badge.style.display = 'none';
             }
@@ -5337,7 +5340,7 @@
         // ===== Kid-friendly Click FX =====
         function installClickFx(){
             const clickable = Array.from(document.querySelectorAll('.menu-option, .action-btn'));
-            console.log('🐝 installClickFx: Found ' + clickable.length + ' clickable elements');
+            console.log('installClickFx: Found ' + clickable.length + ' clickable elements');
             clickable.forEach(el => {
                 // ensure positioning context for ripple/burst
                 const computed = getComputedStyle(el);
@@ -5345,7 +5348,7 @@
 
                 // Make tiles keyboard accessible: Enter/Space triggers click
                 if (el.classList.contains('menu-option')) {
-                    console.log('🎯 Setting up tile:', el.className, 'onclick:', el.onclick ? 'present' : 'missing');
+                    console.log('Setting up tile:', el.className, 'onclick:', el.onclick ? 'present' : 'missing');
                     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
                     if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
                     el.addEventListener('keydown', (e) => {
@@ -5353,14 +5356,14 @@
                         const isSpace = e.key === ' ' || e.code === 'Space';
                         if (isEnter || isSpace) {
                             e.preventDefault();
-                            console.log('⌨️ Keyboard activated tile:', el.className);
+                            console.log('Keyboard activated tile:', el.className);
                             try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
                             el.click();
                         }
                     });
                 }
                 el.addEventListener('pointerdown', (ev) => {
-                    console.log('🖱️ pointerdown on element:', el.className);
+                    console.log('pointerdown on element:', el.className);
                     try {
                         // Quick pop to feel responsive
                         el.classList.add('press-pop');
@@ -5622,7 +5625,7 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 controller.abort();
-                console.error('⏱️ Manual word upload timeout after 30 seconds');
+                console.error('Manual word upload timeout after 30 seconds');
             }, 30000); // 30 second timeout
             
             // Send to backend with timeout protection
@@ -5668,7 +5671,7 @@
                         btn.style.cursor = 'pointer';
                         btn.style.pointerEvents = 'auto';
                         
-                        console.log('✅ Quiz button enabled after manual entry:', {
+                        console.log('Quiz button enabled after manual entry:', {
                             disabled: btn.disabled,
                             hasDisabledAttr: btn.hasAttribute('disabled'),
                             classes: btn.className,
@@ -5678,9 +5681,9 @@
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
                         
-                        // 🚀 Auto-navigate to quiz after successful manual entry
+                        // Auto-navigate to quiz after successful manual entry
                         setTimeout(() => {
-                            console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                            console.log('Auto-navigating to quiz with', data.count, 'words');
                             window.location.href = '/quiz';
                         }, 1200); // Short delay to show success message
                     } else {
@@ -5914,7 +5917,7 @@
                                 
                                 if (choice) {
                                     // User chose Resume - go to quiz page
-                                    console.log('✅ User chose to resume quiz');
+                                    console.log('User chose to resume quiz');
                                     window.location.href = '/quiz';
                                 } else {
                                     // User chose Restart - reload list with force flag
@@ -5938,7 +5941,7 @@
                             
                             // Normal load (no quiz in progress)
                             if (data.ok){
-                                console.log(`✅ Saved list loaded: ${data.loaded.word_count} words OVERRODE previous list`);
+                                console.log(`Saved list loaded: ${data.loaded.word_count} words OVERRODE previous list`);
                                 // ✅ Update word count badge AND start quiz button using centralized manager
                                 await WordBankManager.updateAllDisplays(true);
                                 
@@ -5977,7 +5980,7 @@
                         const id = btn.getAttribute('data-del');
                         const listName = btn.getAttribute('data-name') || 'this list';
                         const wordCount = btn.getAttribute('data-wordcount') || '?';
-                        console.log(`🗑️ Delete button clicked for list: "${listName}" (ID: ${id})`);
+                        console.log(`Delete button clicked for list: "${listName}" (ID: ${id})`);
                         
                         showBeeConfirm({ 
                             title:'🗑️ Delete Word List?', 
@@ -5986,7 +5989,7 @@
                             cancelText:'No, Keep It' 
                         }).then(confirmed => {
                             if (!confirmed) {
-                                console.log('❌ User cancelled delete');
+                                console.log('User cancelled delete');
                                 return;
                             }
                             
@@ -6003,17 +6006,17 @@
                             .then(data => {
                                 console.log('📥 Delete response data:', data);
                                 if (data.ok) {
-                                    console.log(`✅ List "${listName}" deleted successfully, refreshing list...`);
+                                    console.log(`List "${listName}" deleted successfully, refreshing list...`);
                                     showSuccessMessage(`✅ "${listName}" deleted successfully`);
                                     loadSaved(); 
                                     try { refreshSavedListsBadge(); } catch(e) {}
                                 } else { 
-                                    console.error('❌ Delete failed:', data.error);
+                                    console.error('Delete failed:', data.error);
                                     showErrorMessage(data.error || 'Delete failed'); 
                                 }
                             })
                             .catch(e => {
-                                console.error('❌ Delete request error:', e);
+                                console.error('Delete request error:', e);
                                 showErrorMessage('Delete failed - network error');
                             });
                         });
@@ -6045,7 +6048,7 @@
                         container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">⚠️ Could not load lists.</div>'; 
                     }
                 } catch(e){ 
-                    console.warn('⚠️ Error loading saved lists:', e);
+                    console.warn('Error loading saved lists:', e);
                     container.innerHTML = '<div style="opacity:0.8; text-align:center; padding:1rem;">⚠️ Error loading lists.</div>'; 
                 }
             }
@@ -6565,7 +6568,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    console.log('✅ Random words generated:', data);
+                    console.log('Random words generated:', data);
                     
                     if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
                         try {
@@ -6611,7 +6614,7 @@
                 }
             })
             .catch(error => {
-                console.error('❌ Error generating random words:', error);
+                console.error('Error generating random words:', error);
                 
                 if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
                     try {
@@ -7008,7 +7011,7 @@
         }
 
     function createBattle() {
-            console.log('🎯 createBattle() called');
+            console.log('createBattle() called');
             const battleName = document.getElementById('battleName')?.value?.trim();
             const creatorName = document.getElementById('creatorName')?.value?.trim();
             
@@ -8266,11 +8269,11 @@
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
-                        console.log('✅ Quiz button enabled after text upload, word count:', data.count);
+                        console.log('Quiz button enabled after text upload, word count:', data.count);
                         
-                        // 🚀 Auto-navigate to quiz after successful upload
+                        // Auto-navigate to quiz after successful upload
                         setTimeout(() => {
-                            console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                            console.log('Auto-navigating to quiz with', data.count, 'words');
                             window.location.href = '/quiz';
                         }, 1200); // Short delay to show success message
                         
@@ -8425,17 +8428,17 @@
                             .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
                     
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
-                        console.log('✅ Quiz button enabled after image upload, word count:', data.count);
+                        console.log('Quiz button enabled after image upload, word count:', data.count);
                         
-                        // 🚀 Auto-navigate to quiz after successful image upload
+                        // Auto-navigate to quiz after successful image upload
                         if (data.count > 0) {
                             setTimeout(() => {
-                                console.log('🎯 Auto-navigating to quiz with', data.count, 'words');
+                                console.log('Auto-navigating to quiz with', data.count, 'words');
                                 window.location.href = '/quiz';
                             }, 1200); // Short delay to show success message
                         }
                         
-                        console.log('✅ Image upload complete - navigating to quiz with', data.count, 'words');
+                        console.log('Image upload complete - navigating to quiz with', data.count, 'words');
                     }, 500); // Show completion message briefly
                 } else {
                     // Error occurred - hide progress immediately
@@ -8569,7 +8572,7 @@
                     return response.json();
                 })
                 .then(async data => {
-                    console.log('✅ Pre-quiz wordbank verification:', data);
+                    console.log('Pre-quiz wordbank verification:', data);
 
                     const wordCount = data.count || 0;
 
@@ -8590,9 +8593,9 @@
                                 return; // Stop navigation
                             }
                             finalWordCount = verifyData.count;
-                            console.log(`✅ Session re-verified before quiz: ${finalWordCount} words present.`);
+                            console.log(`Session re-verified before quiz: ${finalWordCount} words present.`);
                         } catch (err) {
-                            console.error('❌ Could not re-verify session before quiz. Attempting to proceed anyway.', err);
+                            console.error('Could not re-verify session before quiz. Attempting to proceed anyway.', err);
                             // Fallback to the count from the last successful check
                             finalWordCount = wordCount > 0 ? wordCount : await WordBankManager.getCount(true);
                             if (finalWordCount === 0) {
@@ -8636,7 +8639,7 @@
                                     }
                                 })
                                 .catch(error => {
-                                    console.error('❌ Failed to load random words:', error);
+                                    console.error('Failed to load random words:', error);
                                     showErrorMessage('Oops! Could not load random words. Please try uploading your own list! 📝');
                                 });
                             },
@@ -8649,7 +8652,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('❌ Pre-quiz wordbank verification completely failed:', error);
+                    console.error('Pre-quiz wordbank verification completely failed:', error);
                     showErrorMessage('Could not check your word list. Please refresh the page and try again.');
                 });
         }
@@ -13561,7 +13564,7 @@
         `;
         document.head.appendChild(style);
         
-        console.log('🔧 Loading screen script starting...');
+        console.log('Loading screen script starting...');
         
         // Loading System with Progress Tracking and System Checks
         class LoadingSystem {
@@ -13588,7 +13591,7 @@
                 } catch (error) {
                     clearTimeout(timeoutId);
                     if (error.name === 'AbortError') {
-                        console.error(`⏱️ Fetch timeout after ${timeout}ms:`, url);
+                        console.error(`Fetch timeout after ${timeout}ms:`, url);
                         throw new Error(`Request timeout: ${url}`);
                     }
                     throw error;
@@ -13622,7 +13625,7 @@
                 
                 if (statusElement) statusElement.textContent = status;
                 
-                console.log(`📊 Loading: ${Math.floor(this.progress)}% - ${status}`);
+                console.log(`Loading: ${Math.floor(this.progress)}% - ${status}`);
                 
                 // Show "Tap to Enter" button at 100% progress ONLY
                 if (this.progress >= 100 && !this.tapToEnterShown) {
@@ -13722,37 +13725,37 @@
             }
             
             async runSystemChecks() {
-                console.log('🚀 === STARTING SYSTEM CHECKS (10 checks total) ===');
+                console.log('=== STARTING SYSTEM CHECKS (10 checks total) ===');
                 
                 // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
                 try {
                 
                 // Check 1: Three.js Support
-                console.log('📍 Check 1/10: Three.js - START');
-                console.log('🔍 DEBUG: About to call addCheck...');
+                console.log('Check 1/10: Three.js - START');
+                console.log('DEBUG: About to call addCheck...');
                 const check1 = this.addCheck('3D Graphics (Three.js)', 'Checking...', '⏳');
-                console.log('🔍 DEBUG: addCheck returned:', check1);
-                console.log('🔍 DEBUG: About to delay 200ms...');
+                console.log('DEBUG: addCheck returned:', check1);
+                console.log('DEBUG: About to delay 200ms...');
                 await this.delay(200);
-                console.log('🔍 DEBUG: Delay complete, checking THREE...');
+                console.log('DEBUG: Delay complete, checking THREE...');
                 try {
                     if (typeof THREE !== 'undefined') {
-                        console.log('🔍 DEBUG: THREE is defined, updating check...');
+                        console.log('DEBUG: THREE is defined, updating check...');
                         this.updateCheck(check1, 'Ready', '✅', 15);
                         this.updateProgress(15, '✨ 3D graphics engine loaded');
-                        console.log('✅ Check 1/10: Three.js - COMPLETE');
+                        console.log('Check 1/10: Three.js - COMPLETE');
                     } else {
-                        console.log('🔍 DEBUG: THREE is undefined');
+                        console.log('DEBUG: THREE is undefined');
                         this.updateCheck(check1, 'Missing', '⚠️', 15);
                         this.updateProgress(15, '⚠️ 3D graphics unavailable');
-                        console.log('⚠️ Check 1/10: Three.js - MISSING');
+                        console.log('Check 1/10: Three.js - MISSING');
                     }
                 } catch (e) {
-                    console.error('❌ Check 1 error:', e);
+                    console.error('Check 1 error:', e);
                     this.updateCheck(check1, 'Error', '❌', 15);
                     this.updateProgress(15, '❌ Check failed');
                 }
-                console.log('🔍 DEBUG: Check 1 DONE, moving to Check 2...');
+                console.log('DEBUG: Check 1 DONE, moving to Check 2...');
                 
                 // Check 2: User Avatar Detection (determine which avatar to load)
                 const check2 = this.addCheck('User Avatar', 'Detecting...', '⏳');
@@ -13762,45 +13765,57 @@
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
                     
                     if (isAuthenticated) {
-                        // Authenticated user - fetch avatar from API
-                        try {
-                            const avatarResponse = await this.fetchWithTimeout('/api/users/me/avatar', {
-                                credentials: 'same-origin',
-                                headers: { 'Accept': 'application/json' }
-                            }, 5000); // 5 second timeout
+                        // Authenticated user - check for server-fed avatar data FIRST
+                        if (window._serverFedAvatar) {
+                            // Use server-fed avatar data (from template - fastest, most reliable)
+                            const avatarData = window._serverFedAvatar;
+                            const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
                             
-                            if (avatarResponse.ok) {
-                                const avatarData = await avatarResponse.json();
-                                console.log('🔍 Avatar API response:', avatarData);
+                            console.log('✅ Using server-fed avatar data:', avatarData);
+                            this.updateCheck(check2, `${avatarName} (GLB)`, '✅', 30);
+                            this.updateProgress(30, `🐝 Will load ${avatarName}`);
+                            console.log('✅ Avatar detected:', avatarName, '(GLB) from server feed');
+                        } else {
+                            // Fallback to API fetch if server data not available
+                            try {
+                                const avatarResponse = await this.fetchWithTimeout('/api/users/me/avatar', {
+                                    credentials: 'same-origin',
+                                    headers: { 'Accept': 'application/json' }
+                                }, 5000); // 5 second timeout
                                 
-                                // API returns 'status' not 'success'
-                                if (avatarData.status === 'success' && avatarData.avatar) {
-                                    // User has selected a custom avatar
-                                    const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Unknown Avatar';
-                                    const folderPath = (avatarData.avatar.folder_path || '').toLowerCase();
-                                    const useMascot = avatarData.use_mascot || false;
+                                if (avatarResponse.ok) {
+                                    const avatarData = await avatarResponse.json();
+                                    console.log('🔍 Avatar API response:', avatarData);
                                     
-                                    // Determine format
-                                    let format = '(GLB)'; // GLB-only
-                                    
-                                    this.updateCheck(check2, `${avatarName} ${format}`, '✅', 30);
-                                    this.updateProgress(30, `🐝 Will load ${avatarName}`);
-                                    console.log('✅ Avatar detected:', avatarName, format, 'useMascot:', useMascot);
+                                    // API returns 'status' not 'success'
+                                    if (avatarData.status === 'success' && avatarData.avatar) {
+                                        // User has selected a custom avatar
+                                        const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Unknown Avatar';
+                                        const folderPath = (avatarData.avatar.folder_path || '').toLowerCase();
+                                        const useMascot = avatarData.use_mascot || false;
+                                        
+                                        // Determine format
+                                        let format = '(GLB)'; // GLB-only
+                                        
+                                        this.updateCheck(check2, `${avatarName} ${format}`, '✅', 30);
+                                        this.updateProgress(30, `🐝 Will load ${avatarName}`);
+                                        console.log('✅ Avatar detected:', avatarName, format, 'useMascot:', useMascot);
+                                    } else {
+                                        // User hasn't selected an avatar yet
+                                        this.updateCheck(check2, 'Default Mascot (GLB)', '✅', 30);
+                                        this.updateProgress(30, '🐝 Default avatar ready');
+                                        console.log('ℹ️ Using default avatar - no avatar selected');
+                                    }
                                 } else {
-                                    // User hasn't selected an avatar yet
-                                    this.updateCheck(check2, 'Default Mascot (GLB)', '✅', 30);
-                                    this.updateProgress(30, '🐝 Default avatar ready');
-                                    console.log('ℹ️ Using default avatar - no avatar selected');
+                                    this.updateCheck(check2, 'Default Mascot', '✅', 30);
+                                    this.updateProgress(30, '🐝 Using default avatar');
+                                    console.warn('⚠️ Avatar API returned non-OK status:', avatarResponse.status);
                                 }
-                            } else {
-                                this.updateCheck(check2, 'Default Mascot', '✅', 30);
-                                this.updateProgress(30, '🐝 Using default avatar');
-                                console.warn('⚠️ Avatar API returned non-OK status:', avatarResponse.status);
+                            } catch (fetchError) {
+                                console.warn('Avatar fetch failed:', fetchError);
+                                this.updateCheck(check2, 'Default Mascot', '⚠️', 30);
+                                this.updateProgress(30, '🐝 Using fallback avatar');
                             }
-                        } catch (fetchError) {
-                            console.warn('Avatar fetch failed:', fetchError);
-                            this.updateCheck(check2, 'Default Mascot', '⚠️', 30);
-                            this.updateProgress(30, '🐝 Using fallback avatar');
                         }
                     } else {
                         // Guest user - always use default MascotBee
@@ -15751,6 +15766,9 @@
             }
             
             function setupAvatarAnimation(renderer, scene, camera, container, object, avatar) {
+                // Store global references for avatar controls
+                window.avatar3DScene = { renderer, scene, camera, object, avatar, container };
+                
                 // Static rendering with click animation
                 let isAnimating = false;
                 let animationStartTime = 0;
@@ -15831,8 +15849,15 @@
                 console.log('   GLTFLoader:', typeof THREE.GLTFLoader);
                 
                 try {
-                    // Always fetch the current user's avatar first
-                    await window.userAvatarLoader.init();
+                    // Check for server-fed avatar data FIRST (fastest, most reliable)
+                    if (window._serverFedAvatar) {
+                        console.log('✅ Using server-fed avatar data:', window._serverFedAvatar);
+                        await window.userAvatarLoader.init();
+                        window.userAvatarLoader.userAvatar = window._serverFedAvatar;
+                    } else {
+                        // Fallback: Always fetch the current user's avatar first
+                        await window.userAvatarLoader.init();
+                    }
 
                     // Clear any previous fallback/canvas to prevent double rendering
                     try { container.innerHTML = ''; } catch (e) {}
@@ -16664,18 +16689,18 @@
             }
             window.tickerFairyDustIntervals.push(burstInterval);
             
-            console.log('✨ Ticker fairy dust magic activated! Continuous sparkles enabled.');
+            console.log('Ticker fairy dust magic activated! Continuous sparkles enabled.');
         }
 
-        // ✨ SPARKLING FAIRY DUST MAGIC ✨ 
+        // SPARKLING FAIRY DUST MAGIC 
         function createFairyDustEffect() {
             const container = document.querySelector('.fairy-dust-container');
             if (!container) {
-                console.log('⚠️ Fairy dust container not found');
+                console.log('Fairy dust container not found');
                 return;
             }
             
-            console.log('✨ Creating magical fairy dust effect around logo...');
+            console.log('Creating magical fairy dust effect around logo...');
             
             // Create 12 magical particles
             const particleCount = 12;
@@ -16739,7 +16764,7 @@
                 }, i * 150 + 500); // Start after initial particles
             }
             
-            console.log('✨ Fairy dust magic complete! Particles will fade out naturally.');
+            console.log('Fairy dust magic complete! Particles will fade out naturally.');
         }
         
         // Trigger fairy dust when page loads
@@ -16757,7 +16782,7 @@
 
     <script>
     // =============================================================
-    // AVATAR PERSONIFICATION SYSTEM – ALL 40 AVATARS
+    // AVATAR PERSONIFICATION SYSTEM - ALL 40 AVATARS
     // =============================================================
 
     const AVATAR_PERSONAS = {
@@ -16822,38 +16847,127 @@
     // CONTROLLER HELPERS
     // =============================================================
 
+    // Avatar control state
+    const avatarControlState = {
+        autoRotate: false,
+        animationFrame: null,
+        targetCameraZ: null,
+        targetRotationY: null
+    };
+
     function getAvatarController() {
         try {
-            return window.SmartyBee3D && window.SmartyBee3D.getController('mascotBee3D');
+            console.log('getAvatarController called');
+            
+            // Try NEW clean container first
+            const cleanInstance = window.SmartyBee3DInstances?.['avatarControls3D'];
+            if (cleanInstance) {
+                console.log('Found avatar controller in NEW clean container (avatarControls3D)');
+                return cleanInstance;
+            }
+            
+            // Fallback to static method
+            const controller = window.SmartyBee3D?.getController?.('avatarControls3D');
+            if (controller) {
+                console.log('Found avatar controller via static method');
+                return controller;
+            }
+            
+            console.warn('No avatar controller found in avatarControls3D');
+            return null;
         } catch (e) {
             console.warn('Avatar controller not available:', e);
             return null;
         }
     }
+```
 
-    function safeAvatarRotate(deltaDegrees) {
+    function safeAvatarRotate(deltaDegrees, smooth = true) {
         const controller = getAvatarController();
+        console.log('🔄 safeAvatarRotate called. Controller:', controller);
+        console.log('  controller.bee:', controller?.bee);
+        console.log('  controller.camera:', controller?.camera);
         if (!controller) return;
-        if (typeof controller.rotate === 'function') {
+        
+        if (smooth && controller.bee) {
+            // Smooth rotation animation
+            console.log(`🎛️ Setting manualControl = true`);
+            controller.manualControl = true; // Disable automatic animations
+            const deltaRad = deltaDegrees * (Math.PI / 180);
+            if (avatarControlState.animationFrame) cancelAnimationFrame(avatarControlState.animationFrame);
+            avatarControlState.targetRotationY = controller.bee.rotation.y + deltaRad;
+            console.log(`🎯 Starting rotation animation: current=${controller.bee.rotation.y.toFixed(3)}, target=${avatarControlState.targetRotationY.toFixed(3)}, delta=${deltaRad.toFixed(3)}`);
+            
+            function animate() {
+                if (!controller.bee || avatarControlState.targetRotationY === null) return;
+                const diff = avatarControlState.targetRotationY - controller.bee.rotation.y;
+                if (Math.abs(diff) > 0.001) {
+                    controller.bee.rotation.y += diff * 0.2;
+                    console.log(`  🔄 Animating: rotation.y = ${controller.bee.rotation.y.toFixed(3)}, manualControl = ${controller.manualControl}`);
+                    avatarControlState.animationFrame = requestAnimationFrame(animate);
+                } else {
+                    controller.bee.rotation.y = avatarControlState.targetRotationY;
+                    console.log(`🎛️ Setting manualControl = false`);
+                    avatarControlState.targetRotationY = null;
+                    controller.manualControl = false;
+                    console.log(`  ✅ Animation complete at ${controller.bee.rotation.y.toFixed(3)}`);
+                }
+            }
+            animate();
+        } else if (typeof controller.rotate === 'function') {
+            console.log('  Using controller.rotate() fallback');
             controller.rotate(0, deltaDegrees * (Math.PI / 180));
-        } else if (typeof controller.orbit === 'function') {
-            controller.orbit(deltaDegrees * (Math.PI / 180), 0);
+        } else {
+            console.warn('  No rotation method available!');
         }
     }
 
-    function safeAvatarZoom(deltaAmount) {
+    function safeAvatarZoom(deltaAmount, smooth = true) {
         const controller = getAvatarController();
+        console.log('🔍 safeAvatarZoom called. Controller:', controller);
+        console.log('  controller.camera:', controller?.camera);
+        console.log('  deltaAmount:', deltaAmount);
         if (!controller) return;
-        if (typeof controller.zoom === 'function') {
+        
+        if (smooth && controller.camera) {
+            // Smooth zoom animation
+            controller.manualControl = true; // Disable automatic animations
+            if (avatarControlState.animationFrame) cancelAnimationFrame(avatarControlState.animationFrame);
+            const newZ = Math.max(1, Math.min(12, controller.camera.position.z + deltaAmount));
+            avatarControlState.targetCameraZ = newZ;
+            
+            function animate() {
+                if (!controller.camera || avatarControlState.targetCameraZ === null) return;
+                const diff = avatarControlState.targetCameraZ - controller.camera.position.z;
+                if (Math.abs(diff) > 0.01) {
+                    controller.camera.position.z += diff * 0.15;
+                    avatarControlState.animationFrame = requestAnimationFrame(animate);
+                } else {
+                    controller.camera.position.z = avatarControlState.targetCameraZ;
+                    avatarControlState.targetCameraZ = null;
+                    controller.manualControl = false; // Re-enable automatic animations
+                }
+            }
+            animate();
+        } else if (typeof controller.zoom === 'function') {
+            console.log('  Using controller.zoom() fallback');
             controller.zoom(deltaAmount);
-        } else if (typeof controller.dolly === 'function') {
-            controller.dolly(deltaAmount);
+        } else {
+            console.warn('  No zoom method available!');
         }
     }
 
     function safeAvatarReset() {
         const controller = getAvatarController();
         if (!controller) return;
+        
+        // Cancel any ongoing animations
+        if (avatarControlState.animationFrame) {
+            cancelAnimationFrame(avatarControlState.animationFrame);
+            avatarControlState.targetCameraZ = null;
+            avatarControlState.targetRotationY = null;
+        }
+        
         if (typeof controller.resetView === 'function') {
             controller.resetView();
         } else if (typeof controller.resetCamera === 'function') {
@@ -16862,6 +16976,197 @@
             controller.setDefaultPose();
         }
     }
+    
+    function toggleAutoRotate() {
+        avatarControlState.autoRotate = !avatarControlState.autoRotate;
+        const controller = getAvatarController();
+        
+        // Update button state
+        const btn = document.querySelector('[data-avatar-control="auto-rotate"]');
+        if (btn) {
+            btn.classList.toggle('active', avatarControlState.autoRotate);
+            btn.style.background = avatarControlState.autoRotate ? 
+                'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' : '';
+        }
+        
+        // If controller supports it, enable/disable auto-rotation
+        if (controller && controller.bee) {
+            if (avatarControlState.autoRotate) {
+                // Start auto-rotation animation
+                function autoRotateLoop() {
+                    if (!avatarControlState.autoRotate) return;
+                    if (controller.bee) {
+                        controller.bee.rotation.y += 0.003;
+                    }
+                    requestAnimationFrame(autoRotateLoop);
+                }
+                autoRotateLoop();
+            }
+        }
+        
+        return avatarControlState.autoRotate;
+    }
+    
+    // Setup touch gestures for main avatar
+    function setupMainAvatarTouchGestures() {
+        const container = document.getElementById('mascotBee3D');
+        const canvas = container?.querySelector('canvas');
+        if (!canvas) return;
+        
+        let touchStartDistance = 0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let wasTouching = false;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            wasTouching = true;
+            
+            if (e.touches.length === 1) {
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                
+                // Pause auto-rotate during touch
+                if (avatarControlState.autoRotate) {
+                    avatarControlState.wasAutoRotating = true;
+                    avatarControlState.autoRotate = false;
+                }
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            
+            if (e.touches.length === 1) {
+                const deltaX = e.touches[0].clientX - lastTouchX;
+                const controller = getAvatarController();
+                if (controller && controller.bee) {
+                    controller.bee.rotation.y += deltaX * 0.01;
+                }
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (touchStartDistance > 0) {
+                    const scale = distance / touchStartDistance;
+                    const zoomDelta = (1 - scale) * 2;
+                    safeAvatarZoom(zoomDelta, false);
+                    touchStartDistance = distance;
+                }
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                wasTouching = false;
+                touchStartDistance = 0;
+                
+                // Resume auto-rotate if it was on
+                if (avatarControlState.wasAutoRotating) {
+                    setTimeout(() => {
+                        avatarControlState.autoRotate = true;
+                        avatarControlState.wasAutoRotating = false;
+                        const btn = document.querySelector('[data-avatar-control="auto-rotate"]');
+                        if (btn) btn.classList.add('active');
+                    }, 1000);
+                }
+            } else if (e.touches.length === 1) {
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                touchStartDistance = 0;
+            }
+        }, { passive: false });
+    }
+
+    // Attach event listeners to avatar control icons
+    // Use 'load' instead of 'DOMContentLoaded' to ensure controls are fully rendered
+    window.addEventListener('load', () => {
+        // Small delay to ensure all dynamic content is ready
+        setTimeout(() => {
+            console.log('AVATAR CONTROLS: Attaching event listeners to control buttons');
+            const controls = document.querySelectorAll('[data-avatar-control]');
+            console.log('AVATAR CONTROLS: Found', controls.length, 'control buttons');
+            
+            if (controls.length === 0) {
+                console.warn('AVATAR CONTROLS: No control buttons found! DOM state:', {
+                    avatarControls3D: document.getElementById('avatarControls3D'),
+                    authenticated: document.querySelector('[data-avatar-control]')
+                });
+            }
+            
+            controls.forEach(control => {
+                const action = control.getAttribute('data-avatar-control');
+                console.log('AVATAR CONTROLS: Setting up listener for', action);
+                
+                control.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('AVATAR CONTROLS: CLICK DETECTED on', action);
+                    console.log('AVATAR CONTROLS: Event target:', e.target);
+                    console.log('AVATAR CONTROLS: window.SmartyBee3DInstances =', window.SmartyBee3DInstances);
+                
+                switch(action) {
+                    case 'auto-rotate':
+                        toggleAutoRotate();
+                        break;
+                    case 'zoom-in':
+                        safeAvatarZoom(-0.5);
+                        break;
+                    case 'zoom-out':
+                        safeAvatarZoom(0.5);
+                        break;
+                    case 'rot-left':
+                        safeAvatarRotate(-15);
+                        break;
+                    case 'rot-right':
+                        safeAvatarRotate(15);
+                        break;
+                    case 'reset':
+                        safeAvatarReset();
+                        break;
+                }
+            });
+        }, 500); // 500ms delay to ensure everything is loaded
+    });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    toggleAutoRotate();
+                    break;
+                case '+':
+                case '=':
+                    safeAvatarZoom(-0.5);
+                    break;
+                case '-':
+                case '_':
+                    safeAvatarZoom(0.5);
+                    break;
+                case 'ArrowLeft':
+                    safeAvatarRotate(-15);
+                    break;
+                case 'ArrowRight':
+                    safeAvatarRotate(15);
+                    break;
+                case 'r':
+                case 'R':
+                    safeAvatarReset();
+                    break;
+            }
+        });
+        
+        console.log('✅ Avatar control event listeners attached');
+    });
 
     // =============================================================
     // BACKGROUND FX HELPERS
@@ -16971,15 +17276,96 @@
                 console.log('🎮 Avatar control clicked:', action);
                 const controller = getAvatarController();
                 console.log('🎮 Controller available:', !!controller);
+                
+                // Visual feedback
+                this.style.transform = 'scale(0.9)';
+                setTimeout(() => { this.style.transform = ''; }, 100);
+                
                 switch (action) {
-                    case 'zoom-in': safeAvatarZoom(-0.15); break;
-                    case 'zoom-out': safeAvatarZoom(0.15); break;
-                    case 'rot-left': safeAvatarRotate(-15); break;
-                    case 'rot-right': safeAvatarRotate(15); break;
-                    case 'reset': safeAvatarReset(); break;
+                    case 'auto-rotate':
+                        toggleAutoRotate();
+                        break;
+                    case 'zoom-in':
+                        safeAvatarZoom(-0.3, true);
+                        break;
+                    case 'zoom-out':
+                        safeAvatarZoom(0.3, true);
+                        break;
+                    case 'rot-left':
+                        safeAvatarRotate(-15, true);
+                        break;
+                    case 'rot-right':
+                        safeAvatarRotate(15, true);
+                        break;
+                    case 'reset':
+                        safeAvatarReset();
+                        this.style.transform = 'rotate(360deg) scale(0.9)';
+                        setTimeout(() => { this.style.transform = ''; }, 300);
+                        break;
                 }
             });
         });
+        
+        // Keyboard shortcuts for avatar controls
+        document.addEventListener('keydown', (e) => {
+            // Don't interfere with typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            let handled = false;
+            switch(e.key) {
+                case '+':
+                case '=':
+                    e.preventDefault();
+                    document.querySelector('[data-avatar-control="zoom-in"]')?.click();
+                    handled = true;
+                    break;
+                case '-':
+                case '_':
+                    e.preventDefault();
+                    document.querySelector('[data-avatar-control="zoom-out"]')?.click();
+                    handled = true;
+                    break;
+                case 'ArrowLeft':
+                    if (!e.shiftKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        document.querySelector('[data-avatar-control="rot-left"]')?.click();
+                        handled = true;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (!e.shiftKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        document.querySelector('[data-avatar-control="rot-right"]')?.click();
+                        handled = true;
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        document.querySelector('[data-avatar-control="reset"]')?.click();
+                        handled = true;
+                    }
+                    break;
+                case ' ':
+                    // Only if not scrolling
+                    if (!e.shiftKey) {
+                        e.preventDefault();
+                        document.querySelector('[data-avatar-control="auto-rotate"]')?.click();
+                        handled = true;
+                    }
+                    break;
+            }
+            
+            if (handled) {
+                console.log('⌨️ Keyboard shortcut used:', e.key);
+            }
+        });
+        
+        // Setup touch gestures after a brief delay to ensure avatar is loaded
+        setTimeout(() => {
+            setupMainAvatarTouchGestures();
+        }, 2000);
 
         if (!window.BeeSmartAvatarInitialized) {
             window.BeeSmartAvatarInitialized = true;

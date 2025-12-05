@@ -5,6 +5,7 @@
 
 class SmartyBee3D {
     constructor(containerId, options = {}) {
+        this.containerId = containerId;
         this.container = document.getElementById(containerId);
         if (!this.container) {
             console.warn(`Container ${containerId} not found`);
@@ -41,9 +42,17 @@ class SmartyBee3D {
         this.animationId = null;
         this.isHovering = false;
         
+        // Default positions for reset
+        this.defaultCameraPos = null;
+        this.defaultBeeRotation = null;
+        
         // Animation states
         this.currentAnimation = 'idle';
         this.animationTime = 0;
+        
+        // Manual control state - pauses auto animations
+        this.manualControl = false;
+        this.manualControlResumeTimer = null;
         
         // Sound effects setup
         this.soundEffects = [
@@ -54,6 +63,10 @@ class SmartyBee3D {
         ];
         this.audioElements = [];
         this.preloadSounds();
+        
+        // Register this instance
+        SmartyBee3D.instances[containerId] = this;
+        console.log(`✅ SmartyBee3D instance registered: ${containerId}`);
         
         this.init();
     }
@@ -117,6 +130,9 @@ class SmartyBee3D {
             1000
         );
         this.camera.position.z = 5;
+        
+        // Save default camera position for reset
+        this.defaultCameraPos = this.camera.position.clone();
 
         // Create renderer with 4K quality settings for crisp GLB avatars
         this.renderer = new THREE.WebGLRenderer({ 
@@ -343,6 +359,11 @@ class SmartyBee3D {
                                 this.camera.position.y = maxScaledDim * 0.15;
                                 this.camera.lookAt(0, 0, 0);
                                 this.camera.updateProjectionMatrix();
+                                
+                                // Save default positions for reset functionality
+                                this.defaultCameraPos = this.camera.position.clone();
+                                this.defaultBeeRotation = this.bee.rotation.clone();
+                                console.log('💾 Default positions saved for reset');
 
                                 if (this.renderer && typeof this.renderer.setScissorTest === 'function') {
                                     this.renderer.setScissorTest(false);
@@ -433,27 +454,30 @@ class SmartyBee3D {
         if (this.bee) {
             this.animationTime += 0.016; // ~60fps
 
-            switch (this.currentAnimation) {
-                case 'idle':
-                    // Respect idleAnimation flag to allow static poses on certain pages
-                    if (this.options.idleAnimation !== false) {
-                        this.idleAnimation();
-                    }
-                    break;
-                case 'celebrate':
-                    this.celebrateAnimation();
-                    break;
-                case 'encourage':
-                    this.encourageAnimation();
-                    break;
-                case 'thinking':
-                    this.thinkingAnimation();
-                    break;
-            }
+            // Skip auto-animations during manual control
+            if (!this.manualControl) {
+                switch (this.currentAnimation) {
+                    case 'idle':
+                        // Respect idleAnimation flag to allow static poses on certain pages
+                        if (this.options.idleAnimation !== false) {
+                            this.idleAnimation();
+                        }
+                        break;
+                    case 'celebrate':
+                        this.celebrateAnimation();
+                        break;
+                    case 'encourage':
+                        this.encourageAnimation();
+                        break;
+                    case 'thinking':
+                        this.thinkingAnimation();
+                        break;
+                }
 
-            // Auto-rotate if enabled - rotate around Y-axis to show all sides
-            if (this.options.autoRotate && !this.isHovering) {
-                this.bee.rotation.y += 0.005;
+                // Auto-rotate if enabled - rotate around Y-axis to show all sides
+                if (this.options.autoRotate && !this.isHovering) {
+                    this.bee.rotation.y += 0.005;
+                }
             }
 
             // Hover effect
@@ -581,7 +605,68 @@ class SmartyBee3D {
             this.renderer.setSize(width, height);
         }
     }
+    
+    // Control methods for external access
+    rotate(pitchRad = 0, yawRad = 0) {
+        if (this.bee) {
+            this.bee.rotation.x += (pitchRad || 0);
+            this.bee.rotation.y += (yawRad || 0);
+            console.log(`🔄 Rotate: pitch=${this.bee.rotation.x.toFixed(2)}, yaw=${this.bee.rotation.y.toFixed(2)}`);
+            this.pauseAutoAnimations();
+        }
+    }
+    
+    zoom(delta = 0) {
+        if (this.camera) {
+            const newZ = this.camera.position.z + delta;
+            this.camera.position.z = Math.max(0.8, Math.min(10, newZ));
+            console.log(`🔍 Zoom: camera.z=${this.camera.position.z.toFixed(2)} (delta=${delta.toFixed(2)})`);
+            this.pauseAutoAnimations();
+        }
+    }
+    
+    resetView() {
+        if (this.camera && this.defaultCameraPos) {
+            this.camera.position.copy(this.defaultCameraPos);
+            console.log(`🔄 Reset camera to z=${this.defaultCameraPos.z.toFixed(2)}`);
+        }
+        if (this.bee && this.defaultBeeRotation) {
+            this.bee.rotation.copy(this.defaultBeeRotation);
+            console.log(`🔄 Reset bee rotation to y=${this.defaultBeeRotation.y.toFixed(2)}`);
+        }
+        this.resumeAutoAnimations();
+    }
+    
+    pauseAutoAnimations() {
+        this.manualControl = true;
+        console.log('⏸️ Auto-animations paused for manual control');
+        
+        // Resume after 2 seconds of no interaction
+        if (this.manualControlResumeTimer) {
+            clearTimeout(this.manualControlResumeTimer);
+        }
+        this.manualControlResumeTimer = setTimeout(() => {
+            this.resumeAutoAnimations();
+        }, 2000);
+    }
+    
+    resumeAutoAnimations() {
+        this.manualControl = false;
+        console.log('▶️ Auto-animations resumed');
+        if (this.manualControlResumeTimer) {
+            clearTimeout(this.manualControlResumeTimer);
+            this.manualControlResumeTimer = null;
+        }
+    }
 }
+
+// Static instance registry
+SmartyBee3D.instances = {};
+
+// Static method to get controller by container ID
+SmartyBee3D.getController = function(containerId) {
+    return SmartyBee3D.instances[containerId] || null;
+};
 
 // Make it globally available
 window.SmartyBee3D = SmartyBee3D;

@@ -683,3 +683,132 @@ p, h1, h2, h3, h4, h5, h6, span {
     background: linear-gradient(135deg, #777 0%, #555 100%);
 }
 
+/* ===== AVATAR CONTROL BUTTONS ===== */
+.preview-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.ctrl-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 215, 0, 0.6);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 249, 230, 0.95) 100%);
+    color: #5a4000;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(255, 215, 0, 0.3);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ctrl-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #FFD700 0%, #FFEB3B 100%);
+    border-color: #FFA500;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4), 0 0 0 4px rgba(255, 215, 0, 0.2);
+}
+
+.ctrl-btn:active:not(:disabled) {
+    transform: translateY(0) scale(0.95);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.ctrl-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+
+.ctrl-btn.active {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border-color: #FF8C00;
+    box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.5), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Touch-friendly sizing for mobile */
+@media (max-width: 768px) {
+    .ctrl-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 1.3rem;
+    }
+}
+
+/* Specific button styling enhancements */
+#ctrl-auto-rotate.active::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 8px;
+    height: 8px;
+    background: #00FF00;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 4px rgba(0, 255, 0, 0.8);
+}
+
+/* Visual feedback for keyboard shortcuts */
+.ctrl-btn[title]:hover::before {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(0, 0, 0, 0.9);
+    color: #FFD700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: normal;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    animation: tooltip-fade-in 0.2s ease-out 0.5s forwards;
+}
+
+@keyframes tooltip-fade-in {
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-4px);
+    }
+}
+
+/* iOS/Safari specific optimizations */
+@supports (-webkit-touch-callout: none) {
+    .ctrl-btn {
+        -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
+        -webkit-user-select: none;
+    }
+}
+
+

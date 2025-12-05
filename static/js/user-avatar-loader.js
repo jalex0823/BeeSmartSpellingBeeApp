@@ -400,12 +400,17 @@ class UserAvatarLoader {
      * Get avatar GLB paths
      */
     getAvatarPaths() {
+        console.log('🔍 getAvatarPaths: this.userAvatar =', this.userAvatar);
+        
         // Check user avatar URLs
         const urls = (this.userAvatar && this.userAvatar.urls !== undefined) ? this.userAvatar.urls : null;
+        console.log('🔍 getAvatarPaths: urls =', urls);
+        
         if (urls && urls.glb) {
             const modelUrl = urls.glb;
             const isGlb = /\.(glb|gltf)(\?.*)?$/i.test(modelUrl);
             
+            console.log('✅ Found GLB in userAvatar.urls:', modelUrl);
             if (isGlb) {
                 return {
                     glb: modelUrl,
@@ -418,7 +423,10 @@ class UserAvatarLoader {
         const id = this.getAvatarId();
         const mapped = this.avatarMap[id];
         
+        console.log('🔍 Checking avatarMap[' + id + ']:', mapped);
+        
         if (mapped && mapped.glb) {
+            console.log('✅ Found GLB in avatarMap:', mapped.glb);
             return {
                 glb: mapped.glb,
                 thumbnail: mapped.thumbnail
@@ -426,13 +434,14 @@ class UserAvatarLoader {
         }
         
         // Fallback to default
+        console.log('⚠️ Using default avatar:', this.defaultAvatar);
         return this.defaultAvatar;
     }
 
     /**
      * Load user avatar into container
      */
-    loadUserAvatar(avatarId = 'mascot-bee', containerId = 'mascotBee3D') {
+    loadUserAvatar(avatarId = null, containerId = 'mascotBee3D') {
         if (window.DISABLE_AUTO_AVATAR_RENDER) {
             console.log('🚫 Auto-render disabled');
             return Promise.resolve();
@@ -440,8 +449,17 @@ class UserAvatarLoader {
         
         return new Promise(async (resolve, reject) => {
             try {
-                const normalizedId = this._normalizeId(avatarId);
-                const data = this.avatarMap[normalizedId] || this.defaultAvatar;
+                // If avatarId is null, use the user's registered avatar
+                let data;
+                if (!avatarId) {
+                    console.log('🔍 Loading user\'s registered avatar...');
+                    data = this.getAvatarPaths();  // Gets from this.userAvatar or avatarMap
+                } else {
+                    const normalizedId = this._normalizeId(avatarId);
+                    data = this.avatarMap[normalizedId] || this.defaultAvatar;
+                }
+                
+                console.log('📦 Avatar data:', data);
                 
                 if (!data.glb) {
                     throw new Error('No GLB path found for avatar');
@@ -465,15 +483,15 @@ class UserAvatarLoader {
                     const height = Math.max(120, Math.floor(rect.height));
                     
                     // Create 3D instance
-                    // Make main-page avatar larger on screen and reduce animations
+                    // Make main-page avatar larger on screen but KEEP controls enabled
                     const isMainHero = containerId === 'mascotBee3D';
                     const instance = new window.SmartyBee3D(containerId, {
                         width,
                         height,
-                        // Keep the hero static by default on the home screen
-                        autoRotate: isMainHero ? false : true,
-                        enableInteraction: isMainHero ? false : true,
-                        idleAnimation: isMainHero ? false : true,
+                        // Enable controls even for main hero
+                        autoRotate: false,  // Don't auto-rotate so user can control it
+                        enableInteraction: true,  // CHANGED: Enable interaction for controls
+                        idleAnimation: false,  // Keep idle animation off for cleaner control
                         glbPath: data.glb,
                         modelPath: data.glb,
                         // Hero framing: bring camera closer for larger on-screen presence
@@ -481,10 +499,13 @@ class UserAvatarLoader {
                         cameraDistanceFactor: isMainHero ? 1.6 : 1.8,
                         verticalOffset: 0.35
                     });
+                    
                     // Store instance globally for controller access
+                    window.SmartyBee3DInstances = window.SmartyBee3DInstances || {};
+                    window.SmartyBee3DInstances[containerId] = instance;
+                    
+                    // Attach lightweight control methods for compatibility
                     try {
-                        window.SmartyBee3DInstances = window.SmartyBee3DInstances || {};
-                        // Attach lightweight control methods for compatibility
                         if (instance && typeof instance === 'object') {
                             // Remember defaults for reset
                             if (instance.camera) {
@@ -529,8 +550,7 @@ class UserAvatarLoader {
                                 };
                             }
                         }
-                        window.SmartyBee3DInstances[containerId] = instance;
-                        // Ensure legacy accessor exists
+                        // Instance already stored above - just ensure legacy accessor exists
                         if (typeof window.SmartyBee3D === 'function' && typeof window.SmartyBee3D.getController !== 'function') {
                             window.SmartyBee3D.getController = function(id){
                                 return (window.SmartyBee3DInstances && window.SmartyBee3DInstances[id]) || null;

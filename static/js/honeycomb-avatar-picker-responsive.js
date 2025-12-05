@@ -814,10 +814,16 @@ function load3DAvatarGLB(avatar, containerId) {
             // Enable controls UI now that model is ready
             enablePreviewControls(true);
             
-            // Animation loop with auto-rotation
+            // Add touch gesture support for mobile
+            setupTouchGestures(renderer.domElement, camera, model);
+            
+            // Animation loop with auto-rotation (only if enabled)
             function animate() {
                 requestAnimationFrame(animate);
-                model.rotation.y += 0.003; // Slow rotation to show all angles
+                // Only auto-rotate if state says so
+                if (avatarViewerState.autoRotate !== false) {
+                    model.rotation.y += 0.003; // Slow rotation to show all angles
+                }
                 renderer.render(scene, camera);
             }
             animate();
@@ -1034,13 +1040,17 @@ function ensureControlsToolbar(previewContent) {
     if (!toolbar) {
         toolbar = document.createElement('div');
         toolbar.className = 'preview-controls';
-        toolbar.style.cssText = 'display:flex; gap:0.5rem; align-items:center; justify-content:center; margin-top:0.5rem;';
+        toolbar.style.cssText = 'display:flex; gap:0.5rem; align-items:center; justify-content:center; margin-top:0.5rem; flex-wrap: wrap;';
         toolbar.innerHTML = `
-            <button class="ctrl-btn" id="ctrl-zoom-in" title="Zoom In">＋</button>
-            <button class="ctrl-btn" id="ctrl-zoom-out" title="Zoom Out">－</button>
-            <button class="ctrl-btn" id="ctrl-rotate-left" title="Rotate Left">⟲</button>
-            <button class="ctrl-btn" id="ctrl-rotate-right" title="Rotate Right">⟳</button>
-            <button class="ctrl-btn" id="ctrl-reset" title="Reset View">⟲⟳</button>
+            <button class="ctrl-btn" id="ctrl-auto-rotate" title="Auto-Rotate (Spacebar)" aria-label="Toggle auto-rotate">🔄</button>
+            <div style="width: 1px; height: 24px; background: rgba(255,215,0,0.3);"></div>
+            <button class="ctrl-btn" id="ctrl-zoom-in" title="Zoom In (+)" aria-label="Zoom in">🔍＋</button>
+            <button class="ctrl-btn" id="ctrl-zoom-out" title="Zoom Out (-)" aria-label="Zoom out">🔍－</button>
+            <div style="width: 1px; height: 24px; background: rgba(255,215,0,0.3);"></div>
+            <button class="ctrl-btn" id="ctrl-rotate-left" title="Rotate Left (←)" aria-label="Rotate left">⟲</button>
+            <button class="ctrl-btn" id="ctrl-rotate-right" title="Rotate Right (→)" aria-label="Rotate right">⟳</button>
+            <div style="width: 1px; height: 24px; background: rgba(255,215,0,0.3);"></div>
+            <button class="ctrl-btn" id="ctrl-reset" title="Reset View (R)" aria-label="Reset view">↺</button>
         `;
         const descEl = previewContent.querySelector('.preview-description');
         if (descEl && descEl.parentNode) {
@@ -1061,47 +1071,279 @@ function enablePreviewControls(enabled) {
     });
 }
 
-// Bind control handlers
+// Setup touch gestures for mobile interaction
+function setupTouchGestures(canvas, camera, model) {
+    if (!canvas || !camera || !model) return;
+    
+    let touchStartDistance = 0;
+    let touchStartRotation = 0;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    let isTouching = false;
+    
+    // Handle touch start
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isTouching = true;
+        
+        if (e.touches.length === 1) {
+            // Single touch - prepare for rotation
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            touchStartRotation = model.rotation.y;
+            
+            // Disable auto-rotate during manual interaction
+            if (avatarViewerState.autoRotate !== false) {
+                avatarViewerState.wasAutoRotating = true;
+                avatarViewerState.autoRotate = false;
+            }
+        } else if (e.touches.length === 2) {
+            // Two finger touch - prepare for pinch zoom
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+        }
+    }, { passive: false });
+    
+    // Handle touch move
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        
+        if (e.touches.length === 1) {
+            // Single touch - rotate model
+            const deltaX = e.touches[0].clientX - lastTouchX;
+            model.rotation.y += deltaX * 0.01;
+            
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+            // Two finger touch - pinch to zoom
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (touchStartDistance > 0) {
+                const scale = distance / touchStartDistance;
+                const newZ = camera.position.z / scale;
+                camera.position.z = Math.max(0.8, Math.min(10, newZ));
+                touchStartDistance = distance;
+            }
+        }
+    }, { passive: false });
+    
+    // Handle touch end
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            isTouching = false;
+            touchStartDistance = 0;
+            
+            // Re-enable auto-rotate if it was on before
+            if (avatarViewerState.wasAutoRotating) {
+                setTimeout(() => {
+                    avatarViewerState.autoRotate = true;
+                    avatarViewerState.wasAutoRotating = false;
+                }, 1000); // Resume after 1 second of no touch
+            }
+        } else if (e.touches.length === 1) {
+            // Switched from two fingers to one
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            touchStartDistance = 0;
+        }
+    }, { passive: false });
+    
+    // Prevent context menu on long press
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+}
+
+// Bind control handlers with smooth animations and keyboard support
 function bindControls(toolbar) {
     const zoomIn = toolbar.querySelector('#ctrl-zoom-in');
     const zoomOut = toolbar.querySelector('#ctrl-zoom-out');
     const rotLeft = toolbar.querySelector('#ctrl-rotate-left');
     const rotRight = toolbar.querySelector('#ctrl-rotate-right');
     const resetBtn = toolbar.querySelector('#ctrl-reset');
+    const autoRotateBtn = toolbar.querySelector('#ctrl-auto-rotate');
 
     const zoomStep = 0.3; // move camera closer/farther
     const rotStep = 0.15; // radians per click
-
-    if (zoomIn) zoomIn.addEventListener('click', () => {
-        const cam = avatarViewerState.camera;
-        if (!cam) return;
-        cam.position.z = Math.max(0.8, cam.position.z - zoomStep);
-    });
-    if (zoomOut) zoomOut.addEventListener('click', () => {
-        const cam = avatarViewerState.camera;
-        if (!cam) return;
-        cam.position.z = Math.min(10, cam.position.z + zoomStep);
-    });
-    if (rotLeft) rotLeft.addEventListener('click', () => {
-        const model = avatarViewerState.model;
-        if (!model) return;
-        model.rotation.y -= rotStep;
-    });
-    if (rotRight) rotRight.addEventListener('click', () => {
-        const model = avatarViewerState.model;
-        if (!model) return;
-        model.rotation.y += rotStep;
-    });
-    if (resetBtn) resetBtn.addEventListener('click', () => {
-        const cam = avatarViewerState.camera;
-        const model = avatarViewerState.model;
-        const d = avatarViewerState.default;
-        if (cam) cam.position.set(d.cameraPos.x, d.cameraPos.y, d.cameraPos.z);
-        if (model) {
-            model.rotation.y = d.modelRotationY;
-            model.scale.set(d.modelScale, d.modelScale, d.modelScale);
+    
+    // State for smooth animations
+    let animationFrame = null;
+    let targetCameraZ = null;
+    let targetRotationY = null;
+    let isAutoRotating = false;
+    
+    // Smooth camera zoom animation
+    function smoothZoom(targetZ) {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        targetCameraZ = targetZ;
+        
+        function animate() {
+            const cam = avatarViewerState.camera;
+            if (!cam || targetCameraZ === null) return;
+            
+            const diff = targetCameraZ - cam.position.z;
+            if (Math.abs(diff) > 0.01) {
+                cam.position.z += diff * 0.15; // Smooth easing
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                cam.position.z = targetCameraZ;
+                targetCameraZ = null;
+            }
         }
-    });
+        animate();
+    }
+    
+    // Smooth rotation animation
+    function smoothRotate(delta) {
+        const model = avatarViewerState.model;
+        if (!model) return;
+        
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        targetRotationY = model.rotation.y + delta;
+        
+        function animate() {
+            if (!model || targetRotationY === null) return;
+            
+            const diff = targetRotationY - model.rotation.y;
+            if (Math.abs(diff) > 0.001) {
+                model.rotation.y += diff * 0.2; // Smooth easing
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                model.rotation.y = targetRotationY;
+                targetRotationY = null;
+            }
+        }
+        animate();
+    }
+
+    // Zoom controls with smooth animation
+    if (zoomIn) {
+        zoomIn.addEventListener('click', () => {
+            const cam = avatarViewerState.camera;
+            if (!cam) return;
+            const newZ = Math.max(0.8, cam.position.z - zoomStep);
+            smoothZoom(newZ);
+            
+            // Visual feedback
+            zoomIn.style.transform = 'scale(0.9)';
+            setTimeout(() => { zoomIn.style.transform = ''; }, 100);
+        });
+    }
+    
+    if (zoomOut) {
+        zoomOut.addEventListener('click', () => {
+            const cam = avatarViewerState.camera;
+            if (!cam) return;
+            const newZ = Math.min(10, cam.position.z + zoomStep);
+            smoothZoom(newZ);
+            
+            // Visual feedback
+            zoomOut.style.transform = 'scale(0.9)';
+            setTimeout(() => { zoomOut.style.transform = ''; }, 100);
+        });
+    }
+    
+    // Rotation controls with smooth animation
+    if (rotLeft) {
+        rotLeft.addEventListener('click', () => {
+            smoothRotate(-rotStep);
+            
+            // Visual feedback
+            rotLeft.style.transform = 'rotate(-15deg) scale(0.9)';
+            setTimeout(() => { rotLeft.style.transform = ''; }, 100);
+        });
+    }
+    
+    if (rotRight) {
+        rotRight.addEventListener('click', () => {
+            smoothRotate(rotStep);
+            
+            // Visual feedback
+            rotRight.style.transform = 'rotate(15deg) scale(0.9)';
+            setTimeout(() => { rotRight.style.transform = ''; }, 100);
+        });
+    }
+    
+    // Reset with smooth animation
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const cam = avatarViewerState.camera;
+            const model = avatarViewerState.model;
+            const d = avatarViewerState.default;
+            
+            if (cam) smoothZoom(d.cameraPos.z);
+            if (model) {
+                targetRotationY = d.modelRotationY;
+                model.rotation.y = d.modelRotationY; // Instant reset for rotation
+                model.scale.set(d.modelScale, d.modelScale, d.modelScale);
+            }
+            
+            // Visual feedback
+            resetBtn.style.transform = 'rotate(360deg) scale(0.9)';
+            setTimeout(() => { resetBtn.style.transform = ''; }, 300);
+        });
+    }
+    
+    // Auto-rotate toggle
+    if (autoRotateBtn) {
+        autoRotateBtn.addEventListener('click', () => {
+            isAutoRotating = !isAutoRotating;
+            autoRotateBtn.classList.toggle('active', isAutoRotating);
+            autoRotateBtn.style.background = isAutoRotating ? '#FFD700' : '';
+            
+            // Store state
+            avatarViewerState.autoRotate = isAutoRotating;
+        });
+    }
+    
+    // Keyboard shortcuts (only when preview is visible)
+    const keyboardHandler = (e) => {
+        const previewPanel = document.querySelector('.preview-panel');
+        if (!previewPanel || previewPanel.classList.contains('hidden')) return;
+        
+        // Don't interfere with typing in inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        switch(e.key) {
+            case '+':
+            case '=':
+                e.preventDefault();
+                zoomIn?.click();
+                break;
+            case '-':
+            case '_':
+                e.preventDefault();
+                zoomOut?.click();
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                rotLeft?.click();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                rotRight?.click();
+                break;
+            case 'r':
+            case 'R':
+                e.preventDefault();
+                resetBtn?.click();
+                break;
+            case ' ':
+                e.preventDefault();
+                autoRotateBtn?.click();
+                break;
+        }
+    };
+    
+    // Add keyboard listener
+    document.addEventListener('keydown', keyboardHandler);
+    
+    // Store handler for cleanup if needed
+    toolbar.dataset.keyboardHandlerAttached = 'true';
 }
 
 // Choose avatar and save selection

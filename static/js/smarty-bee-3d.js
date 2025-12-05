@@ -12,6 +12,13 @@ class SmartyBee3D {
 
     constructor(containerId, options = {}) {
         SmartyBee3D.instances.set(containerId, this);
+        
+        // ALSO register in global window object for getAvatarController()
+        if (!window.SmartyBee3DInstances) {
+            window.SmartyBee3DInstances = {};
+        }
+        window.SmartyBee3DInstances[containerId] = this;
+        console.log(`✅ Registered ${containerId} in window.SmartyBee3DInstances. Total instances:`, Object.keys(window.SmartyBee3DInstances));
 
         this.container = document.getElementById(containerId);
         if (!this.container) {
@@ -24,12 +31,8 @@ class SmartyBee3D {
             height: options.height || 412,
             autoRotate: options.autoRotate !== false,
             enableInteraction: options.enableInteraction !== false,
-            // Build paths from injected base to avoid root-relative 404s
-            modelBase: (typeof window !== 'undefined' && window.BEE_MODEL_BASE) ? window.BEE_MODEL_BASE : '/static/models/',
-            modelName: options.modelName || 'MascotBee_1019174653_texture',
-            modelPath: options.modelPath, // optional absolute override
-            texturePath: options.texturePath, // optional absolute override
-            mtlPath: options.mtlPath, // optional absolute override
+            modelPath: options.modelPath, // Direct GLB path (required if not fetching from server)
+            fetchFromServer: options.fetchFromServer !== false, // Default: fetch user avatar from server
             ...options
         };
 
@@ -39,6 +42,8 @@ class SmartyBee3D {
         this.bee = null;
         this.animationId = null;
         this.isHovering = false;
+        this.avatarData = null; // Store fetched avatar data
+        this.manualControl = false; // Flag to disable animations during manual control
         
         // Animation states
         this.currentAnimation = 'idle';
@@ -88,7 +93,7 @@ class SmartyBee3D {
         console.log('🎵 Playing sound:', this.soundEffects[randomIndex]);
     }
 
-    init() {
+    async init() {
         // Check if Three.js is loaded
         if (typeof THREE === 'undefined') {
             console.error('Three.js not loaded. Please include Three.js library.');
@@ -98,9 +103,49 @@ class SmartyBee3D {
 
         this.setupScene();
         this.setupLighting();
-        this.loadModel();
+        
+        // Fetch avatar from server if needed (MUST complete before loading model)
+        if (this.options.fetchFromServer && !this.options.modelPath) {
+            await this.fetchUserAvatar();
+        }
+        
+        // Only load model if we have a path
+        if (this.options.modelPath) {
+            this.loadModel();
+        } else {
+            console.error('❌ No modelPath available after fetch');
+            this.addFallbackBee();
+        }
+        
         this.setupControls();
         this.animate();
+    }
+    
+    async fetchUserAvatar() {
+        try {
+            console.log('🔍 Fetching user avatar from server...');
+            const response = await fetch('/api/users/me/avatar', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data.status === 'success' && data.avatar && data.avatar.urls && data.avatar.urls.glb) {
+                this.avatarData = data.avatar;
+                this.options.modelPath = data.avatar.urls.glb;
+                console.log('✅ User avatar fetched:', data.avatar.name || data.avatar.avatar_id);
+            } else {
+                throw new Error('No GLB URL in response');
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch user avatar:', error.message);
+            // DO NOT set a fallback path - let init() validation handle it
+            // Server should tell us which avatar to use (could be any of 40 avatars)
+        }
     }
 
     setupScene() {
@@ -124,6 +169,7 @@ class SmartyBee3D {
         });
         this.renderer.setSize(this.options.width, this.options.height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        
         this.container.appendChild(this.renderer.domElement);
     }
 
@@ -147,16 +193,21 @@ class SmartyBee3D {
         // GLB-only loader - all avatars are GLB format
         const loader = new THREE.GLTFLoader();
         
-        // Resolve GLB path
-        const base = this.options.modelBase.endsWith('/') ? this.options.modelBase : this.options.modelBase + '/';
-        const modelName = this.options.modelName;
-        const glbPath = this.options.modelPath || `${base}${modelName}.glb`;
+        // Use modelPath directly (already set from server or options)
+        if (!this.options.modelPath) {
+            console.error('❌ No modelPath specified');
+            this.addFallbackBee();
+            return;
+        }
+        
+        const glbPath = this.options.modelPath;
         
         // Cache-busting: add timestamp to force reload of updated files
         const cacheBuster = Date.now();
         const glbPathWithCache = `${glbPath}?v=${cacheBuster}`;
 
-        console.log('🐝 Loading GLB model:', glbPathWithCache);
+        const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
+        console.log(`🐝 Loading GLB model: ${avatarName}`, glbPathWithCache);
 
         // Load GLB model with materials and textures embedded
         loader.load(
@@ -178,7 +229,8 @@ class SmartyBee3D {
                 this.bee = object;
                 this.scene.add(object);
                 
-                console.log('✅ Mascot Bee GLB model loaded successfully!');
+                const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
+                console.log(`✅ ${avatarName} GLB model loaded successfully!`);
             },
             (xhr) => {
                 const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
@@ -248,13 +300,13 @@ class SmartyBee3D {
                     break;
             }
 
-            // Auto-rotate if enabled
-            if (this.options.autoRotate && !this.isHovering) {
+            // Auto-rotate if enabled (but not during manual control)
+            if (this.options.autoRotate && !this.isHovering && !this.manualControl) {
                 this.bee.rotation.y += 0.005;
             }
 
-            // Hover effect
-            if (this.isHovering) {
+            // Hover effect (but not during manual control)
+            if (this.isHovering && !this.manualControl) {
                 this.bee.position.y = Math.sin(this.animationTime * 3) * 0.1;
             }
         }
@@ -263,13 +315,13 @@ class SmartyBee3D {
     }
 
     idleAnimation() {
-        if (!this.bee) return;
+        if (!this.bee || this.manualControl) return; // Skip if manual control active
         
-        // Gentle floating motion
-        this.bee.position.y = Math.sin(this.animationTime * 2) * 0.05;
+        // Disabled floating motion to keep avatar still
+        // this.bee.position.y = Math.sin(this.animationTime * 2) * 0.05;
         
-        // Slight wing flutter (rotation)
-        this.bee.rotation.z = Math.sin(this.animationTime * 8) * 0.02;
+        // Disabled wing flutter
+        // this.bee.rotation.z = Math.sin(this.animationTime * 8) * 0.02;
     }
 
     celebrateAnimation() {
