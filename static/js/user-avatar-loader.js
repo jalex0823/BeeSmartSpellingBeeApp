@@ -88,7 +88,7 @@ class UserAvatarLoader {
      * @param {number} retries - Number of retry attempts
      * @returns {Promise} Fetch promise with timeout
      */
-    async _safeFetch(url, opts = {}, timeoutMs = 1200, retries = 1) {
+    async _safeFetch(url, opts = {}, timeoutMs = 8000, retries = 2) {
         let lastError;
         
         for (let attempt = 0; attempt <= retries; attempt++) {
@@ -106,7 +106,7 @@ class UserAvatarLoader {
                 
                 if (!response.ok && attempt < retries) {
                     console.warn(`⚠️ Fetch attempt ${attempt + 1} failed: ${url} (${response.status})`);
-                    await new Promise(resolve => setTimeout(resolve, 200)); // 200ms between retries
+                    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms between retries
                     continue;
                 }
                 
@@ -116,7 +116,7 @@ class UserAvatarLoader {
                 
                 if (attempt < retries) {
                     console.warn(`⚠️ Fetch attempt ${attempt + 1} error: ${url} (${error.message})`);
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 } else {
                     console.error(`❌ All fetch attempts failed for: ${url}`);
                     throw error;
@@ -829,5 +829,5 @@ document.addEventListener('DOMContentLoaded', () => {
             avatarInitialized = true;
             window.userAvatarLoader.init();
         }
-    }, 5000);
+    }, 10000);
 });
