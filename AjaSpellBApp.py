@@ -7213,16 +7213,26 @@ def api_next():
                         "user_answer": entry.get("user_input", "")
                     })
             
+            # Build comprehensive summary for report card
+            quiz_summary = {
+                "total": len(order),
+                "correct": state.get("correct", 0),
+                "incorrect": state.get("incorrect", 0),
+                "streak": state.get("streak", 0),
+                "max_streak": state.get("max_streak", 0),
+                "history": state.get("history", []),
+                "incorrect_words": incorrect_words,
+                "session_points": state.get("session_points", 0),
+                "badges_earned": state.get("badges_earned", []),
+                "buzz_dust_earned": state.get("buzz_dust_earned", 0),
+                "buzz_dust_breakdown": state.get("buzz_dust_breakdown", {}),
+                "level_up": state.get("level_up"),
+                "newly_unlocked_avatars": state.get("newly_unlocked_avatars", [])
+            }
+            print(f"📊 Quiz complete summary: {quiz_summary['correct']}/{quiz_summary['total']} correct, {quiz_summary['session_points']} points")
             return jsonify({
                 "done": True,
-                "summary": {
-                    "total": len(order),
-                    "correct": state["correct"],
-                    "incorrect": state["incorrect"],
-                    "streak": state["streak"],
-                    "history": state["history"],
-                    "incorrect_words": incorrect_words
-                }
+                "summary": quiz_summary
             })
 
     word_rec = wb[order[idx]]
@@ -7301,9 +7311,12 @@ def api_next():
     definition = sanitize_kid_friendly_text(_blank_word(definition or "", word))
     sentence = sanitize_kid_friendly_text(_blank_word(sentence or "", word))
 
-    # Reset hints counter for THIS word (do it here when loading new word, not after answer)
-    state["hints_used_current_word"] = 0
-    print(f"🔄 Reset hints_used_current_word to 0 for new word: {word}")
+    # 💡 Initialize hints counter if not present (for first word or after reset)
+    if "hints_used_current_word" not in state:
+        state["hints_used_current_word"] = 0
+        print(f"🔄 Initialized hints_used_current_word to 0 for word: {word}")
+    else:
+        print(f"💡 Current word '{word}' - hints_used_current_word = {state.get('hints_used_current_word', 0)}")
     session[QUIZ_STATE_KEY] = state
     session.modified = True
     
@@ -7935,11 +7948,17 @@ def api_answer():
         state["incorrect"] += 1
         state["streak"] = 0
 
-    # Advance to next word after any answer
-    state["idx"] += 1
-    
-    # DON'T reset hints_used_current_word here - it should be reset in /api/next when loading new word
-    # This prevents hint penalty from incorrectly applying to the next word
+    # 🔧 CRITICAL FIX: Only advance idx on CORRECT answers
+    # For incorrect answers, user will retry the same question (idx stays same)
+    # idx will advance when user clicks "Show Answer" or gets it correct
+    if is_correct or skip_requested:
+        state["idx"] += 1
+        # Reset hints counter when moving to next word
+        state["hints_used_current_word"] = 0
+        print(f"🔄 Moving to next word, reset hints_used_current_word to 0")
+    else:
+        # For incorrect answers, preserve hints counter for retry
+        print(f"❌ Incorrect answer - staying on same word (idx={state['idx']}), hints_used={state.get('hints_used_current_word', 0)}")
 
     state["history"].append({
         "word": correct_spelling,
