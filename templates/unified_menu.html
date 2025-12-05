@@ -10518,9 +10518,9 @@
                 applyTransform();
             }
 
-            // Prefer SmartyBee3D controller if available
+            // Prefer SmartyBee3D controller if available - use avatarControls3D (main page avatar)
             const sb3d = (window.SmartyBee3D && typeof window.SmartyBee3D.getController === 'function')
-                ? window.SmartyBee3D.getController('mascotBee3D')
+                ? window.SmartyBee3D.getController('avatarControls3D')
                 : null;
 
             function animatePress(btn){
@@ -10531,19 +10531,19 @@
 
             btnZoomIn && btnZoomIn.addEventListener('click', function(){
                 animatePress(btnZoomIn);
-                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(0.1); } else { zoom(0.1); }
+                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(0.5); } else { zoom(0.1); }
             });
             btnZoomOut && btnZoomOut.addEventListener('click', function(){
                 animatePress(btnZoomOut);
-                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(-0.1); } else { zoom(-0.1); }
+                if (sb3d && typeof sb3d.zoom === 'function') { sb3d.zoom(-0.5); } else { zoom(-0.1); }
             });
             btnRotateLeft && btnRotateLeft.addEventListener('click', function(){
                 animatePress(btnRotateLeft);
-                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(-10); } else { rotate(-10); }
+                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(-15); } else { rotate(-10); }
             });
             btnRotateRight && btnRotateRight.addEventListener('click', function(){
                 animatePress(btnRotateRight);
-                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(10); } else { rotate(10); }
+                if (sb3d && typeof sb3d.rotateY === 'function') { sb3d.rotateY(15); } else { rotate(10); }
             });
             btnReset && btnReset.addEventListener('click', function(){
                 animatePress(btnReset);
