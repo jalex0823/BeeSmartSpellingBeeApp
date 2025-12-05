@@ -4225,6 +4225,29 @@
                 const count = await this.getCount(forceRefresh);
                 
                 if (this._debug) console.log(`🔄 Updating all displays with count: ${count}`);
+
+                // Update all elements showing the word count
+                document.querySelectorAll('.word-count-display').forEach(el => {
+                    el.textContent = count;
+                });
+
+                // Update the detailed list view for mobile/small screens
+                const wordListEl = document.getElementById('wordBankMobileList');
+                if (wordListEl) {
+                    try {
+                        const words = await this.getWords(forceRefresh);
+                        if (Array.isArray(words)) {
+                            // CORRECTED: Map array of objects to HTML list items
+                            wordListEl.innerHTML = words.map(w => `<li>${w.word || w}</li>`).join('');
+                        } else {
+                            // Handle cases where the data is not an array
+                            wordListEl.innerHTML = '<li>Word list is not in the expected format.</li>';
+                        }
+                    } catch (e) {
+                        wordListEl.innerHTML = '<li>Error loading words.</li>';
+                        console.error("Failed to render word list:", e);
+                    }
+                }
                 
                 // Update Start Quiz button (primary word count display)
                 const quizBtn = document.getElementById('startQuizBtn');
