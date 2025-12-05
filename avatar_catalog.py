@@ -25,9 +25,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
-# Avatar Catalog: All 24 Bee Types
-# Each entry includes folder name, specific file names, and monetization data
-# Inline catalog (legacy). Can be externalized to data/avatar_catalog.json.
+# Avatar Catalog: All 39 Bee Types (GLB Format Only)
+# Each entry includes folder name, GLB file, and monetization data
+# ALL avatars use GLB format exclusively - the 'obj_file' field name is legacy but contains GLB filenames
 # To avoid disruption, we keep this as the fallback unless USE_EXTERNAL_AVATAR_CATALOG=1.
 AVATAR_CATALOG: List[Dict] = [
     {
@@ -35,7 +35,7 @@ AVATAR_CATALOG: List[Dict] = [
         "product_id": "beesmart.avatar.al_bee",
         "name": "Al Bee Avatar",
         "folder": "al-bee",
-        "obj_file": "AlBee.glb",  # GLB format (legacy field name)
+        "obj_file": "AlBee.glb",  # GLB format (field name is legacy - all files are GLB)
         "description": "A genius bee with big ideas! Al Bee loves science, puzzles, and helping learners \"bee\" brilliant.",
         "variants": ["default"],
         "category": "classic",
@@ -1019,10 +1019,9 @@ def get_avatar_info(avatar_id, variant='default'):
     # All our avatars use 'default' variant (no male/female)
     variant = 'default'
     
-    # Get specific filenames from catalog (with fallback to generic names for backward compatibility)
-    obj_file = avatar.get('obj_file', 'model.obj')
-    mtl_file = avatar.get('mtl_file', 'model.mtl')
-    texture_file = avatar.get('texture_file', 'texture.png')
+    # Get GLB filename from catalog (ALL avatars are GLB format now)
+    glb_file = avatar.get('obj_file', 'MascotBee.glb')  # Legacy field name contains GLB filename
+    # Legacy fields kept for backward compatibility (deprecated)
     
     # Get thumbnail filename from catalog folder name (e.g., al-bee -> AlBee!.png)
     # Convert folder name to proper case for thumbnail
@@ -1153,15 +1152,16 @@ def get_avatar_info(avatar_id, variant='default'):
     else:
         thumbnail_file = 'thumbnail.png'  # fallback
     
-    # Build asset URLs
-    base_path = f"/static/assets/avatars/{avatar_id}"
+    # Build asset URLs (GLB format only)
+    base_path = "/static/assets/avatars/glb_files"
     
-    # Auto-validate MTL references (with error handling to not break the app)
+    # Auto-validate MTL references (deprecated, kept for legacy compatibility)
     try:
-        validate_avatar_mtl_references(avatar_id)
+        # validate_avatar_mtl_references(avatar_id)  # No longer needed for GLB
+        pass
     except Exception as e:
         # Log error but don't break avatar loading
-        print(f"⚠️  MTL validation warning for {avatar_id}: {e}")
+        print(f"⚠️  Legacy validation warning for {avatar_id}: {e}")
     
     return {
         'id': avatar_id,
@@ -1169,12 +1169,13 @@ def get_avatar_info(avatar_id, variant='default'):
         'description': avatar['description'],
         'variant': variant,
         'category': avatar['category'],
-        'thumbnail_url': f"{base_path}/{thumbnail_file}",
-        'preview_url': f"{base_path}/{thumbnail_file}",  # Use same as thumbnail
-        'model_obj_url': f"{base_path}/{obj_file}",  # Now uses specific filename (e.g., ProfessorBee.obj)
-        'model_mtl_url': f"{base_path}/{mtl_file}",  # Now uses specific filename (e.g., ProfessorBee.mtl)
-        'texture_url': f"{base_path}/{texture_file}",  # Now uses specific filename (e.g., ProfessorBee.png)
-        'fallback_url': "/static/assets/avatars/fallback.png"
+        'thumbnail_url': f"{base_path}/AvatarThumbnails/{os.path.splitext(glb_file)[0]}!.png",
+        'preview_url': f"{base_path}/AvatarThumbnails/{os.path.splitext(glb_file)[0]}!.png",
+        'model_glb_url': f"{base_path}/{glb_file}",  # PRIMARY: GLB model file
+        'model_obj_url': f"{base_path}/{glb_file}",  # DEPRECATED: For backward compatibility
+        'model_mtl_url': None,  # DEPRECATED: Not used with GLB
+        'texture_url': None,  # DEPRECATED: Embedded in GLB
+        'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png"
     }
 
 

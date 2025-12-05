@@ -89,8 +89,8 @@
 
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLBLoader.js"></script>
+    <!-- Note: All avatars now use GLB format exclusively. OBJLoader/MTLLoader removed. -->
 
     <script>
         // Test file accessibility
@@ -133,8 +133,8 @@
             const loaderTests = document.getElementById('loaderTests');
             const tests = [
                 { name: 'THREE.js Library', test: () => typeof THREE !== 'undefined' },
-                { name: 'OBJLoader', test: () => typeof THREE.OBJLoader !== 'undefined' },
-                { name: 'MTLLoader', test: () => typeof THREE.MTLLoader !== 'undefined' }
+                { name: 'GLBLoader', test: () => typeof THREE.GLBLoader !== 'undefined' }
+                // Note: OBJLoader and MTLLoader removed - GLB format only
             ];
             
             tests.forEach(test => {
@@ -193,61 +193,42 @@
                 currentModel = null;
             }
             
-            const basePath = `/static/assets/avatars/${avatarId}`;
-            const mtlLoader = new THREE.MTLLoader();
-            const objLoader = new THREE.OBJLoader();
-            
-            // Set paths
-            mtlLoader.setPath(basePath + '/');
-            mtlLoader.setResourcePath(basePath + '/');
+            const basePath = `/static/assets/avatars/glb_files`;
+            const glbLoader = new THREE.GLBLoader();
             
             console.log('🐝 Loading from:', basePath);
             
             try {
-                mtlLoader.load(
-                    'model.mtl',
-                    (materials) => {
-                        console.log('✅ MTL loaded');
-                        materials.preload();
-                        objLoader.setMaterials(materials);
-                        objLoader.setPath(basePath + '/');
+                glbLoader.load(
+                    `${basePath}/${avatarId}.glb`,
+                    (gltf) => {
+                        console.log('✅ GLB loaded');
+                        const object = gltf.scene;
                         
-                        objLoader.load(
-                            'model.obj',
-                            (object) => {
-                                console.log('✅ OBJ loaded');
-                                
-                                // Center and scale
-                                const box = new THREE.Box3().setFromObject(object);
-                                const center = box.getCenter(new THREE.Vector3());
-                                const size = box.getSize(new THREE.Vector3());
-                                
-                                const maxDim = Math.max(size.x, size.y, size.z);
-                                const scale = 3 / maxDim;
-                                object.scale.set(scale, scale, scale);
-                                object.position.sub(center.multiplyScalar(scale));
-                                
-                                currentModel = object;
-                                scene.add(object);
-                                
-                                statusDiv.innerHTML = `<div class="status success">✅ ${avatarId} loaded successfully!</div>`;
-                            },
-                            (xhr) => {
-                                const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-                                console.log(`Loading OBJ: ${percent}%`);
-                            },
-                            (error) => {
-                                console.error('❌ OBJ Error:', error);
-                                statusDiv.innerHTML = `<div class="status error">❌ Error loading OBJ: ${error}</div>`;
-                            }
-                        );
+                        // Center and scale
+                        const box = new THREE.Box3().setFromObject(object);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 3 / maxDim;
+                        object.scale.set(scale, scale, scale);
+                        object.position.sub(center.multiplyScalar(scale));
+                        
+                        currentModel = object;
+                        scene.add(object);
+                        
+                        statusDiv.innerHTML = `<div class="status success">✅ ${avatarId} loaded successfully!</div>`;
                     },
                     (xhr) => {
                         const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-                        console.log(`Loading MTL: ${percent}%`);
+                        console.log(`Loading GLB: ${percent}%`);
                     },
                     (error) => {
-                        console.error('❌ MTL Error:', error);
+                        console.error('❌ GLB Error:', error);
+                        statusDiv.innerHTML = `<div class="status error">❌ Error loading GLB: ${error}</div>`;
+                    }
+                );
                         statusDiv.innerHTML = `<div class="status error">❌ Error loading MTL: ${error}</div>`;
                     }
                 );

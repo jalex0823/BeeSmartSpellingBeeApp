@@ -32,7 +32,8 @@ This repo is a Flask app for kids’ spelling practice with uploads, an interact
 - **Sync Scripts:** Use `cleanup_railway_database.py` to sync database with catalog changes
 - **Reference:** 39 avatars total verified via `count_avatars.py` - catalog is the definitive source
 - Static assets live under `static/assets/avatars/`.
-    - OBJ avatars: one folder per avatar; GLB avatars live in `glb_files/` with thumbnails in `glb_files/AvatarThumbnails/`.
+    - **GLB FORMAT ONLY:** All avatars use GLB format exclusively - stored in `glb_files/` with thumbnails in `glb_files/AvatarThumbnails/`.
+    - **Legacy OBJ removed:** The database field `obj_file` is kept for backward compatibility but now contains GLB filenames (e.g., `CoolBee.glb`).
 - Use the JSON provided by avatar APIs/templates; don't hardcode paths—prefer the `urls` fields when available.
 - Quick local asset sanity: run the VS Code task "Avatar: Asset Consistency (localhost)" which calls `test_avatar_assets.py`.
 

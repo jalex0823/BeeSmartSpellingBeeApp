@@ -84,8 +84,8 @@
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="{{ url_for('static', filename='js/OBJLoader.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/MTLLoader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/GLBLoader.js') }}"></script>
+    <!-- Note: All avatars now use GLB format exclusively. OBJLoader/MTLLoader removed. -->
     
     <script>
         async function checkUser() {
@@ -207,47 +207,41 @@
                 directional.position.set(5, 5, 5);
                 scene.add(directional);
                 
-                // Load model
-                const mtlLoader = new THREE.MTLLoader();
-                const objLoader = new THREE.OBJLoader();
+                // Load GLB model
+                const glbLoader = new THREE.GLBLoader();
                 
-                statusDiv.innerHTML = '<div class="info">Loading MTL material...</div>';
+                statusDiv.innerHTML = '<div class="info">Loading GLB model...</div>';
                 
-                mtlLoader.load(
-                    urls.model_mtl,
-                    (materials) => {
-                        statusDiv.innerHTML = '<div class="info">Loading OBJ model...</div>';
-                        materials.preload();
-                        objLoader.setMaterials(materials);
+                glbLoader.load(
+                    urls.model_glb,
+                    (gltf) => {
+                        const object = gltf.scene;
                         
-                        objLoader.load(
-                            urls.model_obj,
-                            (object) => {
-                                // Center and scale
-                                const box = new THREE.Box3().setFromObject(object);
-                                const center = box.getCenter(new THREE.Vector3());
-                                const size = box.getSize(new THREE.Vector3());
-                                const maxDim = Math.max(size.x, size.y, size.z);
-                                const scale = 3 / maxDim;
-                                
-                                object.scale.set(scale, scale, scale);
-                                object.position.sub(center.multiplyScalar(scale));
-                                
-                                scene.add(object);
-                                
-                                statusDiv.innerHTML = '<div class="success">✅ 3D Model Loaded Successfully!</div>';
-                                
-                                // Animate
-                                function animate() {
-                                    requestAnimationFrame(animate);
-                                    object.rotation.y += 0.01;
-                                    renderer.render(scene, camera);
-                                }
-                                animate();
-                            },
-                            undefined,
-                            (error) => {
-                                statusDiv.innerHTML = `<div class="error">❌ OBJ Load Error: ${error.message || error}</div>`;
+                        // Center and scale
+                        const box = new THREE.Box3().setFromObject(object);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 3 / maxDim;
+                        
+                        object.scale.set(scale, scale, scale);
+                        object.position.sub(center.multiplyScalar(scale));
+                        
+                        scene.add(object);
+                        
+                        statusDiv.innerHTML = '<div class="success">✅ 3D Model Loaded Successfully!</div>';
+                        
+                        // Animate
+                        function animate() {
+                            requestAnimationFrame(animate);
+                            object.rotation.y += 0.01;
+                            renderer.render(scene, camera);
+                        }
+                        animate();
+                    },
+                    undefined,
+                    (error) => {
+                        statusDiv.innerHTML = `<div class="error">❌ GLB Load Error: ${error.message || error}</div>`;
                                 console.error('OBJ Error:', error);
                             }
                         );

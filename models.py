@@ -1212,18 +1212,18 @@ class Avatar(db.Model):
     category = db.Column(db.String(50), default='classic', index=True)  # classic, adventure, sports, etc.
     
     # File paths (relative to static/assets/avatars/)
-    folder_path = db.Column(db.String(200), nullable=False)  # e.g., 'cool-bee'
-    obj_file = db.Column(db.String(200), nullable=False)  # e.g., 'cool-bee.obj'
-    mtl_file = db.Column(db.String(200))  # e.g., 'cool-bee.mtl'
-    texture_file = db.Column(db.String(200))  # e.g., 'cool-bee-texture.png'
-    thumbnail_file = db.Column(db.String(200))  # e.g., 'cool-bee-thumb.png'
+    folder_path = db.Column(db.String(200), nullable=False)  # e.g., 'glb_files'
+    obj_file = db.Column(db.String(200), nullable=False)  # LEGACY FIELD NAME - Contains GLB filename e.g., 'CoolBee.glb' (NOT .obj)
+    mtl_file = db.Column(db.String(200))  # Deprecated - kept for backward compatibility
+    texture_file = db.Column(db.String(200))  # Deprecated - kept for backward compatibility
+    thumbnail_file = db.Column(db.String(200))  # Deprecated - now auto-derived from GLB filename
     
     # Binary file data (stored directly in database for cloud deployment)
-    obj_data = db.Column(db.LargeBinary)  # 3D model OBJ file content
-    mtl_data = db.Column(db.LargeBinary)  # Material MTL file content
-    texture_data = db.Column(db.LargeBinary)  # Texture PNG file content
+    obj_data = db.Column(db.LargeBinary)  # Deprecated - GLB files only now
+    mtl_data = db.Column(db.LargeBinary)  # Deprecated - GLB files only now
+    texture_data = db.Column(db.LargeBinary)  # Deprecated - GLB files only now
     thumbnail_data = db.Column(db.LargeBinary)  # Thumbnail PNG file content
-    glb_data = db.Column(db.LargeBinary)  # GLB file binary data (modern format)
+    glb_data = db.Column(db.LargeBinary)  # PRIMARY - GLB file binary data (only format used)
     glb_file_size = db.Column(db.Integer)  # Size in bytes for monitoring
     
     # Metadata

@@ -24,9 +24,8 @@
     <!-- Three.js and Loaders -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLBLoader.js"></script>
+    <!-- Note: All avatars now use GLB format exclusively. OBJLoader/MTLLoader removed. -->
     
     <!-- Avatar Theme System (must load before picker) -->
     <script src="{{ url_for('static', filename='js/avatar-theme-system.js') }}?v={{ timestamp }}"></script>

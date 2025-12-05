@@ -238,53 +238,22 @@ async function render3DThumbnail(container, avatar) {
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Load model
-    const basePath = avatar.urls.model_obj.substring(0, avatar.urls.model_obj.lastIndexOf('/') + 1);
-    const mtlFilename = avatar.urls.model_mtl.substring(avatar.urls.model_mtl.lastIndexOf('/') + 1);
-    const objFilename = avatar.urls.model_obj.substring(avatar.urls.model_obj.lastIndexOf('/') + 1);
+    // Load GLB model (PRIMARY format - all avatars are GLB now)
+    const glbUrl = avatar.urls.glb || avatar.urls.model_obj; // Fallback to model_obj for backward compat
+    
+    if (!glbUrl) {
+        reject(new Error('No GLB URL available'));
+        return;
+    }
 
     return new Promise((resolve, reject) => {
-        const mtlLoader = new THREE.MTLLoader();
-        mtlLoader.setPath(basePath);
-        if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
-
-        mtlLoader.load(mtlFilename, (materials) => {
-            materials.preload();
-
-            // Apply texture settings
-            Object.values(materials.materials).forEach(mat => {
-                if (mat.map) {
-                    mat.map.colorSpace = THREE.SRGBColorSpace;
-                    mat.map.needsUpdate = true;
-                }
-                mat.transparent = true;
-                mat.alphaTest = 0.1;
-            });
-
-            const objLoader = new THREE.OBJLoader();
-            objLoader.setMaterials(materials);
-            objLoader.setPath(basePath);
-            
-            objLoader.load(objFilename, (object) => {
-                // Self-heal: apply texture to any mesh without map
-                if (avatar.urls.texture) {
-                    const textureLoader = new THREE.TextureLoader();
-                    textureLoader.load(avatar.urls.texture, (texture) => {
-                        texture.colorSpace = THREE.SRGBColorSpace;
-                        object.traverse(node => {
-                            if (node.isMesh) {
-                                const mats = Array.isArray(node.material) ? node.material : [node.material];
-                                mats.forEach(mat => {
-                                    if (!mat.map) {
-                                        mat.map = texture;
-                                        mat.needsUpdate = true;
-                                    }
-                                });
-                            }
-                        });
-                    });
-                }
-
+        const loader = new THREE.GLTFLoader();
+        
+        loader.load(
+            glbUrl,
+            (gltf) => {
+                const object = gltf.scene;
+                
                 // Center and scale uniformly so all thumbnails appear same visual size
                 const box = new THREE.Box3().setFromObject(object);
                 const sizeVec = box.getSize(new THREE.Vector3());
@@ -351,14 +320,11 @@ function updatePreview() {
     if (nameEl) nameEl.textContent = selectedAvatar.name;
     if (descEl) descEl.textContent = selectedAvatar.description;
     
-    // Detect if GLB or OBJ format
-    const isGLB = selectedAvatar.(urls && urls.model_obj !== undefined) ? urls.model_obj : null && selectedAvatar.urls.model_obj.toLowerCase().endsWith('.glb');
+    // Detect if GLB format available (ALL avatars are GLB now)
+    const isGLB = selectedAvatar.urls && selectedAvatar.urls.glb;
     
-    // Try to render a lightweight 3D preview if THREE loaders are available
-    // Fallback to placeholder if not
-    const loaderCheck = isGLB ? 
-        (window.THREE && THREE.GLTFLoader) : 
-        (window.THREE && THREE.MTLLoader && THREE.OBJLoader);
+    // Try to render 3D preview if GLTFLoader is available
+    const loaderCheck = window.THREE && THREE.GLTFLoader;
     
     if (loaderCheck && selectedAvatar.urls) {
         try {
@@ -566,129 +532,8 @@ function updatePreview() {
                     }
                 );
             }
-            // ========== OBJ LOADING ==========
-            else {
-                const mtlUrl = selectedAvatar.urls.model_mtl;
-                const objUrl = selectedAvatar.urls.model_obj;
-                const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
-                const mtlFilename = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
-                const objFilename = objUrl.substring(objUrl.lastIndexOf('/') + 1);
-                
-                const mtlFilenameWithCache = `${mtlFilename}?v=${cacheBuster}`;
-                const objFilenameWithCache = `${objFilename}?v=${cacheBuster}`;
-
-                const mtlLoader = new THREE.MTLLoader();
-                mtlLoader.setPath(basePath);
-                if (mtlLoader.setTexturePath) mtlLoader.setTexturePath(basePath);
-                if (mtlLoader.setResourcePath) mtlLoader.setResourcePath(basePath);
-
-                mtlLoader.load(
-                    mtlFilenameWithCache,
-                    (materials) => {
-                        materials.preload();
-                        
-                        // Ensure all materials use proper color space and texture settings
-                        Object.values(materials.materials).forEach(mat => {
-                            if (mat.map) {
-                                mat.map.colorSpace = THREE.SRGBColorSpace;
-                                mat.map.needsUpdate = true;
-                            }
-                            mat.transparent = true;
-                            mat.depthWrite = true;
-                            mat.alphaTest = 0.1;
-                        mat.side = THREE.FrontSide;
-                    });
-                    
-                    loadProgress.mtl = 100;
-                    updateProgress();
-                    
-                    const objLoader = new THREE.OBJLoader();
-                    objLoader.setMaterials(materials);
-                    objLoader.setPath(basePath);
-                    objLoader.load(
-                        objFilenameWithCache,
-                        (object) => {
-                            loadProgress.obj = 100;
-                            updateProgress();
-                    
-                    // Self-healing: Load texture and force-apply to any mesh without a map
-                    const textureUrl = selectedAvatar.urls.texture;
-                    const textureLoader = new THREE.TextureLoader();
-                    textureLoader.load(textureUrl, (texture) => {
-                        texture.colorSpace = THREE.SRGBColorSpace;
-                        texture.needsUpdate = true;
-                        
-                        // Traverse all meshes and ensure they have the texture
-                        object.traverse((node) => {
-                            if (node.isMesh) {
-                                const materials = Array.isArray(node.material) ? node.material : [node.material];
-                                materials.forEach(mat => {
-                                    if (!mat.map) {
-                                        // Mesh has no texture - apply it now (self-heal)
-                                        console.log('Self-healing: Applying texture to mesh without map');
-                                        mat.map = texture;
-                                        mat.needsUpdate = true;
-                                    } else if (mat.map && !mat.map.colorSpace) {
-                                        // Mesh has texture but wrong color space
-                                        mat.map.colorSpace = THREE.SRGBColorSpace;
-                                        mat.map.needsUpdate = true;
-                                    }
-                                    mat.transparent = true;
-                                    mat.alphaTest = 0.1;
-                                });
-                                node.castShadow = false;
-                                node.receiveShadow = false;
-                            }
-                        });
-                    }, undefined, (err) => {
-                        console.warn('Texture load failed, continuing without self-heal:', err);
-                    });
-                    
-                    // Clear loading indicator and show 3D model
-                    preview.innerHTML = '';
-                    
-                    // Set z-index on canvas to ensure it's above placeholder
-                    renderer.domElement.style.position = 'relative';
-                    renderer.domElement.style.zIndex = '10';
-                    
-                    preview.appendChild(renderer.domElement);
-                    
-                    // Center/scale for preview
-                    object.traverse((c) => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; }});
-                    const box = new THREE.Box3().setFromObject(object);
-                    const size = box.getSize(new THREE.Vector3()).length();
-                    const center = box.getCenter(new THREE.Vector3());
-                    object.position.sub(center);
-                    const targetSize = 2.2;
-                    object.scale.setScalar(targetSize / size);
-                    scene.add(object);
-                    
-                    // Animation loop with mouse controls
-                    const animate = () => { 
-                        requestAnimationFrame(animate); 
-                        controls.update(); // Required for damping and auto-rotation
-                        renderer.render(scene, camera); 
-                    };
-                    animate();
-                }, (xhr) => {
-                    // OBJ loading progress
-                    if (xhr.lengthComputable) {
-                        loadProgress.obj = Math.round((xhr.loaded / xhr.total) * 100);
-                        updateProgress();
-                    }
-                }, (err) => {
-                    console.warn('3D preview OBJ load failed:', err); showPreviewPlaceholder(preview);
-                });
-            }, (xhr) => {
-                // MTL loading progress
-                if (xhr.lengthComputable) {
-                    loadProgress.mtl = Math.round((xhr.loaded / xhr.total) * 100);
-                    updateProgress();
-                }
-            }, (err) => {
-                console.warn('3D preview MTL load failed:', err); showPreviewPlaceholder(preview);
-            });
-            }
+            // Note: All avatars now use GLB format exclusively
+            // Legacy OBJ/MTL loading code has been removed
         } catch (e) {
             console.warn('3D preview error:', e);
             showPreviewPlaceholder(preview);
