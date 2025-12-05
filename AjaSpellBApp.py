@@ -57,21 +57,21 @@ from word_generator import generate_words_by_difficulty, get_difficulty_multipli
 try:
     import pytesseract
     TESSERACT_AVAILABLE = True
-    print("✅ Tesseract OCR available")
+    print(" Tesseract OCR available")
 except ImportError:
     TESSERACT_AVAILABLE = False
     pytesseract = None
-    print("⚠️ Tesseract OCR not available - image upload will show error message")
+    print("️ Tesseract OCR not available - image upload will show error message")
 
 # Backwards-compatibility alias for test suites
 OCR_AVAILABLE = TESSERACT_AVAILABLE
 
 print("="*70)
-print("🐝 BeeSmart Spelling Bee App - Starting Up")
+print(" BeeSmart Spelling Bee App - Starting Up")
 print("="*70)
-print(f"📍 Python version: {sys.version}")
-print(f"📍 Platform: {sys.platform}")
-print(f"📍 Working directory: {os.getcwd()}")
+print(f" Python version: {sys.version}")
+print(f" Platform: {sys.platform}")
+print(f" Working directory: {os.getcwd()}")
 print("="*70)
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
@@ -81,13 +81,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Default is OFF to run full system checks prior to entering the home page.
 FAST_BOOT = os.getenv('FAST_BOOT', '0').strip().lower() in ('1', 'true', 'yes', 'on')
 if FAST_BOOT:
-    print("⚡ FAST_BOOT=on → Skipping heavy startup checks to unblock app load")
+    print(" FAST_BOOT=on → Skipping heavy startup checks to unblock app load")
 else:
-    print("⚙️ FAST_BOOT=off → Running full startup checks")
+    print("️ FAST_BOOT=off → Running full startup checks")
 
-# ✅ BUILT-IN DICTIONARY ONLY - External API removed for performance
+#  BUILT-IN DICTIONARY ONLY - External API removed for performance
 # No external dictionary_api imports - we use Simple Wiktionary (50K+ words)
-print("📚 Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
+print(" Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
 
 # ------------------------------
 # Ensure Flask app exists BEFORE any route decorators
@@ -114,10 +114,10 @@ try:
         violation_tracker,
         ContentViolationTracker
     )
-    print("✅ Content Filter with Guardian Reporting loaded successfully")
+    print(" Content Filter with Guardian Reporting loaded successfully")
     CONTENT_FILTER_AVAILABLE = True
 except Exception as e:
-    print(f"⚠️ Content Filter not available: {e}")
+    print(f"️ Content Filter not available: {e}")
     # Fallback functions if content filter isn't available
     def filter_content_with_tracking(words, session_context):
         # Simple fallback - just return words as-is when content filter unavailable
@@ -163,7 +163,7 @@ def load_simple_wiktionary():
     words = {}
     try:
         if os.path.exists(SIMPLE_WIKTIONARY_FILE):
-            print(f"📚 Loading Simple English Wiktionary...")
+            print(f" Loading Simple English Wiktionary...")
             with open(SIMPLE_WIKTIONARY_FILE, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f, 1):
                     try:
@@ -190,12 +190,12 @@ def load_simple_wiktionary():
                         continue  # Skip malformed lines
                     except Exception:
                         continue  # Skip problematic entries
-            print(f"✅ Loaded {len(words):,} words from Simple English Wiktionary")
+            print(f" Loaded {len(words):,} words from Simple English Wiktionary")
             return words
         else:
-            print(f"⚠️ Simple Wiktionary not found: {SIMPLE_WIKTIONARY_FILE}")
+            print(f"️ Simple Wiktionary not found: {SIMPLE_WIKTIONARY_FILE}")
     except Exception as e:
-        print(f"❌ Failed to load Simple Wiktionary: {e}")
+        print(f" Failed to load Simple Wiktionary: {e}")
     return {}
 
 # ------------------------------
@@ -277,9 +277,9 @@ def clear_wordbank() -> None:
     if storage_id:
         try:
             delete_wordbank(storage_id)
-            print(f"✅ clear_wordbank: Deleted storage_id={storage_id} from database")
+            print(f" clear_wordbank: Deleted storage_id={storage_id} from database")
         except Exception as e:
-            print(f"⚠️ clear_wordbank: Database error: {e}")
+            print(f"️ clear_wordbank: Database error: {e}")
     
     # Clear session
     session.pop("wordbank_storage_id", None)
@@ -290,7 +290,7 @@ def clear_wordbank() -> None:
     try:
         init_quiz_state(0)
     except Exception as e:
-        print(f"⚠️ clear_wordbank: init_quiz_state failed: {e}")
+        print(f"️ clear_wordbank: init_quiz_state failed: {e}")
 
 def init_quiz_state(total_words: int):
     """Initializes or resets the quiz state in the session."""
@@ -313,9 +313,9 @@ def init_quiz_state(total_words: int):
             db.session.commit()
             db_session_id = quiz_session.id
             user_type = "guest" if session.get("is_guest") else "authenticated"
-            print(f"✅ Created database QuizSession ID: {db_session_id} for {user_type} user {user_obj.username}")
+            print(f" Created database QuizSession ID: {db_session_id} for {user_type} user {user_obj.username}")
         except Exception as e:
-            print(f"⚠️ Failed to create database session: {e}")
+            print(f"️ Failed to create database session: {e}")
             db.session.rollback()
 
     session[QUIZ_STATE_KEY] = {
@@ -379,7 +379,7 @@ def api_wordbank_clear():
     try:
         clear_wordbank()
     except Exception as e:
-        print(f"⚠️ api_wordbank_clear: non-fatal error: {e}")
+        print(f"️ api_wordbank_clear: non-fatal error: {e}")
     return jsonify({'status': 'success'})
 
 @app.route('/api/wordbank/import-text', methods=['POST'])
@@ -412,7 +412,7 @@ def api_wordbank_import_text():
             init_quiz_state(stored_count)
         except Exception as _e:
             # Non-fatal; quiz can still start later via next/answer endpoints
-            print(f"⚠️ init_quiz_state after import failed: {_e}")
+            print(f"️ init_quiz_state after import failed: {_e}")
         return jsonify({'status': 'success', 'stored': stored_count})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
@@ -477,10 +477,10 @@ def api_wordbank_live_summary():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# 🏆 Badge metadata for display
+#  Badge metadata for display
 BADGE_METADATA = {
     'perfect_game': {
-        'icon': '🌟',  # emoji fallback
+        'icon': '',  # emoji fallback
         'image': 'badges/perfect_game.png',
         'name': 'Perfect Game',
         'description': '100% accuracy, no hints, no mistakes',
@@ -488,7 +488,7 @@ BADGE_METADATA = {
         'points': 500
     },
     'speed_demon': {
-        'icon': '⚡',
+        'icon': '',
         'image': 'badges/speed_demon.png',
         'name': 'Speed Demon',
         'description': 'Average answer time < 10 seconds',
@@ -496,7 +496,7 @@ BADGE_METADATA = {
         'points': 200
     },
     'persistent_learner': {
-        'icon': '📚',
+        'icon': '',
         'image': 'badges/persistent_learner.png',
         'name': 'Persistent Learner',
         'description': 'Complete 50+ words in one session',
@@ -504,7 +504,7 @@ BADGE_METADATA = {
         'points': 150
     },
     'hot_streak': {
-        'icon': '🔥',
+        'icon': '',
         'image': 'badges/hot_streak.png',
         'name': 'Hot Streak',
         'description': '10+ correct answers in a row',
@@ -512,7 +512,7 @@ BADGE_METADATA = {
         'points': 100
     },
     'comeback_kid': {
-        'icon': '🎯',
+        'icon': '',
         'image': 'badges/comeback_kid.png',
         'name': 'Comeback Kid',
         'description': 'Succeed after multiple wrong attempts',
@@ -520,7 +520,7 @@ BADGE_METADATA = {
         'points': 100
     },
     'honey_hunter': {
-        'icon': '🍯',
+        'icon': '',
         'image': 'badges/honey_hunter.png',
         'name': 'Honey Hunter',
         'description': 'Use hints wisely (< 20% of words)',
@@ -528,7 +528,7 @@ BADGE_METADATA = {
         'points': 75
     },
     'early_bird': {
-        'icon': '🐝',
+        'icon': '',
         'image': 'badges/early_bird.png',
         'name': 'Early Bird',
         'description': 'Complete quiz in under 5 minutes',
@@ -536,7 +536,7 @@ BADGE_METADATA = {
         'points': 50
     },
     'elite_buzz_dust': {
-        'icon': '🏆',  # fallback emoji
+        'icon': '',  # fallback emoji
         'image': 'badges/elite_buzz_dust.png',  # PNG expected in static/images/badges/
         'name': 'Elite Buzz Dust',
         'description': 'Reach elite Buzz Dust threshold',
@@ -545,7 +545,7 @@ BADGE_METADATA = {
     },
     # Rank advancement badges
     'novice_rank': {
-        'icon': '🐝',
+        'icon': '',
         'image': 'badges/Novice.png',
         'name': 'Novice Bee',
         'description': 'Welcome to BeeSmart!',
@@ -553,7 +553,7 @@ BADGE_METADATA = {
         'points': 0
     },
     'apprentice_rank': {
-        'icon': '📚',
+        'icon': '',
         'image': 'badges/Apprentice.png',
         'name': 'Apprentice Bee',
         'description': 'Reached Apprentice Bee rank',
@@ -561,7 +561,7 @@ BADGE_METADATA = {
         'points': 0
     },
     'scholar_rank': {
-        'icon': '🎓',
+        'icon': '',
         'image': 'badges/Scholar.png',
         'name': 'Scholar Bee',
         'description': 'Reached Scholar Bee rank',
@@ -569,7 +569,7 @@ BADGE_METADATA = {
         'points': 0
     },
     'elite_rank': {
-        'icon': '👑',
+        'icon': '',
         'image': 'badges/Elete.png',  # Note: typo in file system 'Elete' instead of 'Elite'
         'name': 'Elite Bee',
         'description': 'Reached Elite Bee rank',
@@ -577,7 +577,7 @@ BADGE_METADATA = {
         'points': 0
     },
     'magistrate_rank': {
-        'icon': '⚖️',
+        'icon': '️',
         'image': 'badges/Magistrate.png',
         'name': 'Magistrate Bee',
         'description': 'Reached Magistrate Bee rank',
@@ -585,7 +585,7 @@ BADGE_METADATA = {
         'points': 0
     },
     'master_rank': {
-        'icon': '✨',
+        'icon': '',
         'image': 'badges/BuzzDustMaster.png',
         'name': 'Buzz Dust Master',
         'description': 'Reached the highest rank!',
@@ -605,8 +605,8 @@ BADGE_METADATA = {
 def home_root_direct():
     """Primary application landing page: shows loader then auto-redirects to app."""
     print("="*80)
-    print("🏠 [HOME ROUTE] Starting home_root_direct()")
-    print(f"🏠 [HOME ROUTE] User authenticated: {current_user.is_authenticated}")
+    print(" [HOME ROUTE] Starting home_root_direct()")
+    print(f" [HOME ROUTE] User authenticated: {current_user.is_authenticated}")
     print("="*80)
     
     # Get current user's avatar data for immediate display (same as dashboard)
@@ -617,17 +617,17 @@ def home_root_direct():
         try:
             user_avatar_data = current_user.get_avatar_data()
             use_mascot = current_user.has_selected_avatar() == False
-            print(f"🎭 [HOME] User avatar data: {user_avatar_data}")
-            print(f"🎭 [HOME] Use mascot: {use_mascot}")
-            print(f"🎭 [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
+            print(f" [HOME] User avatar data: {user_avatar_data}")
+            print(f" [HOME] Use mascot: {use_mascot}")
+            print(f" [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
         except Exception as e:
-            print(f"⚠️ Could not load user avatar data: {e}")
+            print(f"️ Could not load user avatar data: {e}")
             import traceback
             traceback.print_exc()
             user_avatar_data = None
             use_mascot = True
     
-    print(f"🎭 [HOME] Passing to template: user_avatar={user_avatar_data is not None}, use_mascot={use_mascot}")
+    print(f" [HOME] Passing to template: user_avatar={user_avatar_data is not None}, use_mascot={use_mascot}")
     print("="*80)
     
     return render_template('unified_menu.html', 
@@ -752,12 +752,12 @@ def load_dictionary_cache():
             with open(DICTIONARY_CACHE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 words = data.get('words', {})
-                print(f"✅ Loaded dictionary cache with {len(words)} words from {DICTIONARY_CACHE_FILE}")
+                print(f" Loaded dictionary cache with {len(words)} words from {DICTIONARY_CACHE_FILE}")
                 return words
         else:
-            print(f"⚠️ Dictionary cache file not found: {DICTIONARY_CACHE_FILE}")
+            print(f"️ Dictionary cache file not found: {DICTIONARY_CACHE_FILE}")
     except Exception as e:
-        print(f"❌ Failed to load dictionary cache: {e}")
+        print(f" Failed to load dictionary cache: {e}")
     return {}
 
 # ------------------------------
@@ -775,7 +775,7 @@ def api_avatars():
         # Lazy import to avoid circulars at module import time
         from avatar_catalog import AVATAR_CATALOG
     except Exception as e:
-        print(f"❌ Failed to import AVATAR_CATALOG: {e}")
+        print(f" Failed to import AVATAR_CATALOG: {e}")
         return jsonify({"status": "error", "message": "Catalog unavailable"}), 500
 
     # Identify user and role
@@ -843,7 +843,7 @@ def api_avatars():
                     }
                 })
         except Exception as _e:
-            print(f"⚠️ Guest avatar list build error: {_e}")
+            print(f"️ Guest avatar list build error: {_e}")
 
         # Cache and return minimal guest payload (no other avatars exposed)
         AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_list }
@@ -871,7 +871,7 @@ def api_avatars():
         # Special admin debug log per item
         if role == 'admin' and is_unlocked:
             try:
-                print(f"✅ ADMIN UNLOCK: {entry.get('id')} - {entry.get('name')}")
+                print(f" ADMIN UNLOCK: {entry.get('id')} - {entry.get('name')}")
             except Exception:
                 pass
 
@@ -903,11 +903,11 @@ def api_avatars():
 
     # Verification logging
     try:
-        print(f"🔎 Avatar availability for role={role}: unlocked={unlocked_count}, locked={locked_count}, total={len(result)}")
+        print(f" Avatar availability for role={role}: unlocked={unlocked_count}, locked={locked_count}, total={len(result)}")
         if role == 'admin' and locked_count > 0:
-            print("⚠️ WARNING: Admin user has locked avatars in response — investigate caching or gating logic.")
+            print("️ WARNING: Admin user has locked avatars in response — investigate caching or gating logic.")
         if role == 'admin' and unlocked_count == len(result):
-            print("✅ Admin verification: all avatars unlocked.")
+            print(" Admin verification: all avatars unlocked.")
     except Exception:
         pass
 
@@ -991,19 +991,19 @@ def ensure_simple_wiktionary_loaded():
     if SIMPLE_WIKTIONARY_LOADED:
         return SIMPLE_WIKTIONARY
     
-    print("📚 Loading Simple English Wiktionary on-demand (first use)...")
+    print(" Loading Simple English Wiktionary on-demand (first use)...")
     SIMPLE_WIKTIONARY = load_simple_wiktionary()
     SIMPLE_WIKTIONARY_LOADED = True
     # Build fast index (lowercase keys already) for O(1) membership checks
     try:
         SIMPLE_WIKTIONARY_INDEX = set(SIMPLE_WIKTIONARY.keys())
-        print(f"✅ Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready (index built)")
+        print(f" Simple Wiktionary loaded: {len(SIMPLE_WIKTIONARY):,} words ready (index built)")
     except Exception as _idx_err:
         SIMPLE_WIKTIONARY_INDEX = None
-        print(f"⚠️ Failed building wiktionary index: {_idx_err}")
+        print(f"️ Failed building wiktionary index: {_idx_err}")
     return SIMPLE_WIKTIONARY
 
-print("✅ Dictionary resources initialized (on-demand loading enabled)")
+print(" Dictionary resources initialized (on-demand loading enabled)")
 
 # Speed Round logging configuration for Railway
 speed_logger = logging.getLogger('SpeedRound_Railway')
@@ -1109,7 +1109,7 @@ try:
                     'avatars': list(_cfg.get('avatars', []) or [])
                 }
         try:
-            print(f"✅ Bundle catalog loaded: {len(BUNDLE_CATALOG)} bundles; keys available: {len(REDEEMABLE_KEYS) if isinstance(REDEEMABLE_KEYS, dict) else 0}")
+            print(f" Bundle catalog loaded: {len(BUNDLE_CATALOG)} bundles; keys available: {len(REDEEMABLE_KEYS) if isinstance(REDEEMABLE_KEYS, dict) else 0}")
         except Exception:
             pass
 except Exception as _e:
@@ -1537,11 +1537,11 @@ def get_word_info(word):
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 example = sanitize_kid_friendly_text(_blank_word(example, word))
                 formatted = f"{definition}. Fill in the blank: {example}"
-                print(f"📖 (indexed) '{word}' → wiktionary+example")
+                print(f" (indexed) '{word}' → wiktionary+example")
             else:
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
-                print(f"📖 (indexed) '{word}' → wiktionary (no example)")
+                print(f" (indexed) '{word}' → wiktionary (no example)")
             _cache_word_info(word_lower, formatted)
             return formatted
 
@@ -1558,7 +1558,7 @@ def get_word_info(word):
             else:
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
-            print(f"✅ Cache hit '{word}'")
+            print(f" Cache hit '{word}'")
             _cache_word_info(word_lower, formatted)
             return formatted
     
@@ -1568,13 +1568,13 @@ def get_word_info(word):
         definition = sanitize_kid_friendly_text(fb.get("definition", "A word to spell"))
         example = sanitize_kid_friendly_text(_blank_word(fb.get("example", "Can you spell _____ correctly?"), word))
         formatted = f"{definition}. Fill in the blank: {example}"
-        print(f"🟨 Fallback '{word}' ({fb.get('source','fallback')})")
+        print(f" Fallback '{word}' ({fb.get('source','fallback')})")
         _cache_word_info(word_lower, formatted)
         return formatted
     except Exception as _e:
         formatted = "Definition not available for this word. Listen carefully and spell _____ correctly"
         _cache_word_info(word_lower, formatted)
-        print(f"⚠️ Fallback failed for '{word}': {_e}")
+        print(f"️ Fallback failed for '{word}': {_e}")
         return formatted
 
 
@@ -1696,7 +1696,7 @@ def bulk_word_info(words: List[str]) -> Dict[str, str]:
         try:
             formatted = get_word_info(w)
         except Exception as ex:
-            print(f"⚠️ bulk_word_info failed for '{w}': {ex}")
+            print(f"️ bulk_word_info failed for '{w}': {ex}")
             formatted = "Listen carefully and spell _____ correctly."
         results[wl] = formatted
     return results
@@ -1742,7 +1742,7 @@ except Exception:  # pragma: no cover
 # FLASK APP INITIALIZATION WITH DATABASE & AUTHENTICATION
 # ============================================================================
 
-print("🔧 Creating Flask app (main init)...")
+print(" Creating Flask app (main init)...")
 # Preserve existing app if earlier created; do NOT overwrite to keep early routes.
 if 'app' not in globals():
     app = Flask(__name__)
@@ -1780,9 +1780,9 @@ else:
     print("⏭️ Skipping GLB avatar sync at startup (FAST_BOOT)")
 
 # Load configuration from config.py (includes database settings)
-print("🔧 Loading configuration...")
+print(" Loading configuration...")
 app.config.from_object(get_config())
-print(f"✅ Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+print(f" Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
 
 # Backwards compatibility: keep old secret key if not in config
 if not app.config.get('SECRET_KEY'):
@@ -1807,7 +1807,7 @@ if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
 # Enhanced session configuration for mobile compatibility
 # Detect if running on HTTPS (production) or HTTP (local dev)
 is_production = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("PORT")
-print(f"🔧 Environment: {'PRODUCTION (Railway)' if is_production else 'DEVELOPMENT (Local)'}")
+print(f" Environment: {'PRODUCTION (Railway)' if is_production else 'DEVELOPMENT (Local)'}")
 
 app.config.update(
     SESSION_COOKIE_SECURE=bool(is_production),  # True in production (HTTPS), False locally
@@ -1823,18 +1823,18 @@ app.config.update(
 )
 
 # Initialize database
-print("🔧 Initializing database...")
+print(" Initializing database...")
 db.init_app(app)
-print("✅ Database initialized")
+print(" Database initialized")
 
 # Initialize Socket.IO for Battle of the Bees
 try:
     from app_socketio import socketio
     socketio.init_app(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
-    print("✅ Socket.IO initialized for Battle of the Bees")
+    print(" Socket.IO initialized for Battle of the Bees")
 except Exception as e:
-    print(f"⚠️ Socket.IO initialization failed: {e}")
-    print("⚠️ Battles will work without real-time updates")
+    print(f"️ Socket.IO initialization failed: {e}")
+    print("️ Battles will work without real-time updates")
 
 # --- Safety net: ensure DB tables exist in deployed environments (e.g., Railway) ---
 def _ensure_db_initialized() -> None:
@@ -1849,26 +1849,26 @@ def _ensure_db_initialized() -> None:
             # Use one canonical table to check overall schema readiness
             has_users = inspector.has_table('users')
             if not has_users:
-                print("🐝 Initializing database schema (create_all)")
+                print(" Initializing database schema (create_all)")
                 db.create_all()
-                print("✅ Database tables created")
+                print(" Database tables created")
             
             # Migration: Add is_favorite column if missing
             try:
                 columns = [col['name'] for col in inspector.get_columns('word_lists')]
                 if 'is_favorite' not in columns:
-                    print("🔧 Adding is_favorite column to word_lists table...")
+                    print(" Adding is_favorite column to word_lists table...")
                     db.session.execute(text(
                         "ALTER TABLE word_lists ADD COLUMN is_favorite BOOLEAN DEFAULT FALSE"
                     ))
                     db.session.commit()
-                    print("✅ Added is_favorite column")
+                    print(" Added is_favorite column")
             except Exception as e:
-                print(f"⚠️ is_favorite migration: {e}")
+                print(f"️ is_favorite migration: {e}")
                 db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
-        print(f"⚠️ DB initialization check failed: {e}")
+        print(f"️ DB initialization check failed: {e}")
 
 # Run DB initialization in a background thread to avoid blocking app startup/healthcheck
 def _schedule_db_init_background():
@@ -1883,9 +1883,9 @@ def _schedule_db_init_background():
     try:
         t = threading.Thread(target=_runner, daemon=True)
         t.start()
-        print("🔧 DB initialization scheduled in background")
+        print(" DB initialization scheduled in background")
     except Exception as e:
-        print(f"⚠️ Failed to schedule DB initialization: {e}")
+        print(f"️ Failed to schedule DB initialization: {e}")
 
 _schedule_db_init_background()
 
@@ -1893,7 +1893,7 @@ _schedule_db_init_background()
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # Redirect to login page if not authenticated
-login_manager.login_message = '🐝 Please log in to save your progress!'
+login_manager.login_message = ' Please log in to save your progress!'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1903,8 +1903,8 @@ def load_user(user_id):
 # TEMPORARY: Disable database sessions to fix Railway deployment
 # Using default Flask sessions until we can diagnose the hanging issue
 SESSION_INIT_SUCCESS = False
-print("⚠️ Database sessions temporarily disabled for Railway deployment")
-print("⚠️ Using default Flask sessions (data may be lost on redeploy)")
+print("️ Database sessions temporarily disabled for Railway deployment")
+print("️ Using default Flask sessions (data may be lost on redeploy)")
 
 # TODO: Re-enable once Railway database connection is stable
 # try:
@@ -1919,21 +1919,21 @@ print("⚠️ Using default Flask sessions (data may be lost on redeploy)")
 #     )
 #     sess = Session(app)
 #     SESSION_INIT_SUCCESS = True
-#     print("✅ Flask-Session configured (database sessions enabled)")
+#     print(" Flask-Session configured (database sessions enabled)")
 # except Exception as _e:
-#     print(f"⚠️ Flask-Session failed: {_e}")
+#     print(f"️ Flask-Session failed: {_e}")
 #     SESSION_INIT_SUCCESS = False
 
-print(f"🔧 Session config: SECURE={app.config['SESSION_COOKIE_SECURE']}, SAMESITE={app.config['SESSION_COOKIE_SAMESITE']}, PRODUCTION={is_production}")
+print(f" Session config: SECURE={app.config['SESSION_COOKIE_SECURE']}, SAMESITE={app.config['SESSION_COOKIE_SAMESITE']}, PRODUCTION={is_production}")
 
 # Dev/test toggle for exposing reset token peek endpoint
 ALLOW_DEV_RESET_PEEK = os.getenv('ALLOW_DEV_RESET_PEEK') == '1'
 
-# 🏆 Template filters for badge display
+#  Template filters for badge display
 @app.template_filter('badge_icon')
 def get_badge_icon_filter(badge_type):
     """Get emoji icon for badge type"""
-    return BADGE_METADATA.get(badge_type, {}).get('icon', '🏆')
+    return BADGE_METADATA.get(badge_type, {}).get('icon', '')
 
 @app.template_filter('badge_name')
 def get_badge_name_filter(badge_type):
@@ -2029,9 +2029,9 @@ def format_honey_points_filter(points):
     """Format honey points with commas and bee emoji"""
     try:
         formatted = format_number_filter(points)
-        return f"🍯 {formatted}"
+        return f" {formatted}"
     except Exception:
-        return f"🍯 {points or 0}"
+        return f" {points or 0}"
 
 @app.template_filter('format_percentage')
 def format_percentage_filter(value):
@@ -2132,7 +2132,7 @@ def send_reset_email(recipient_email: str, reset_url: str) -> bool:
 
     if not server or not username or not password:
         preview = text_body or (html_body or '').replace('\n', ' ')
-        print(f"📧 [DEV] Would send reset email to {recipient_email}:\nSubject: {subject}\n{preview}")
+        print(f" [DEV] Would send reset email to {recipient_email}:\nSubject: {subject}\n{preview}")
         return True
 
     try:
@@ -2166,10 +2166,10 @@ def send_reset_email(recipient_email: str, reset_url: str) -> bool:
         envelope_from = default_sender or username
         smtp.sendmail(envelope_from, [recipient_email], msg.as_string())
         smtp.quit()
-        print(f"📧 Reset email sent to {recipient_email}")
+        print(f" Reset email sent to {recipient_email}")
         return True
     except Exception as e:
-        print(f"⚠️ Failed to send reset email: {e}")
+        print(f"️ Failed to send reset email: {e}")
         return False
 
 
@@ -2186,7 +2186,7 @@ def send_welcome_email(recipient_email: str, account_username: str, role: str, t
     use_tls = app.config.get('MAIL_USE_TLS', True)
     use_ssl = app.config.get('MAIL_USE_SSL', False)
 
-    subject = "Welcome to BeeSmart 🐝"
+    subject = "Welcome to BeeSmart "
 
     # Render templates inside app context
     try:
@@ -2220,7 +2220,7 @@ def send_welcome_email(recipient_email: str, account_username: str, role: str, t
     # Dev fallback: log to console without SMTP
     if not server or not smtp_username or not smtp_password:
         preview = text_body or (html_body or '').replace('\n', ' ')
-        print(f"📧 [DEV] Would send welcome email to {recipient_email}:\nSubject: {subject}\n{preview}")
+        print(f" [DEV] Would send welcome email to {recipient_email}:\nSubject: {subject}\n{preview}")
         return True
 
     try:
@@ -2254,10 +2254,10 @@ def send_welcome_email(recipient_email: str, account_username: str, role: str, t
         envelope_from = default_sender or smtp_username
         smtp.sendmail(envelope_from, [recipient_email], msg.as_string())
         smtp.quit()
-        print(f"📧 Welcome email sent to {recipient_email}")
+        print(f" Welcome email sent to {recipient_email}")
         return True
     except Exception as e:
-        print(f"⚠️ Failed to send welcome email: {e}")
+        print(f"️ Failed to send welcome email: {e}")
         return False
 
 
@@ -2407,13 +2407,13 @@ def get_or_create_guest_user():
         print(f"DEBUG get_or_create_guest_user: Stored guest_user_id in session: {guest_user.id}")
         
         db.session.commit()
-        print(f"✅ Created guest user: {guest_username} (ID: {guest_user.id})")
+        print(f" Created guest user: {guest_username} (ID: {guest_user.id})")
         return guest_user
         
     except Exception as e:
-        print(f"⚠️ Failed to create guest user: {type(e).__name__}: {e}")
+        print(f"️ Failed to create guest user: {type(e).__name__}: {e}")
         import traceback
-        print(f"⚠️ Guest user creation traceback: {traceback.format_exc()}")
+        print(f"️ Guest user creation traceback: {traceback.format_exc()}")
         db.session.rollback()
         
         # Last resort: Try to create a minimal session without database
@@ -2711,9 +2711,9 @@ def create_upload_session(session_id: str, total_words: int):
             "errors": [],
             "start_time": time.time(),
             "bee_messages": [
-                "🐝 Bees are getting ready to collect words...",
-                "🐝 Preparing the hive for new spelling words...",
-                "🐝 Worker bees are warming up their wings..."
+                " Bees are getting ready to collect words...",
+                " Preparing the hive for new spelling words...",
+                " Worker bees are warming up their wings..."
             ]
         }
 
@@ -2739,13 +2739,13 @@ def update_upload_progress(session_id: str, status: str, message: str, bee_actio
             # Add bee-themed messages based on progress
             if progress is not None:
                 if progress < 25:
-                    bee_msg = f"🐝 Bees are flying to collect '{current_word}'..."
+                    bee_msg = f" Bees are flying to collect '{current_word}'..."
                 elif progress < 50:
-                    bee_msg = f"🐝 Worker bees are gathering definitions for '{current_word}'..."
+                    bee_msg = f" Worker bees are gathering definitions for '{current_word}'..."
                 elif progress < 75:
-                    bee_msg = f"🐝 Bees are creating quiz sentences for '{current_word}'..."
+                    bee_msg = f" Bees are creating quiz sentences for '{current_word}'..."
                 else:
-                    bee_msg = f"🐝 Almost done! Bees are organizing '{current_word}' in the hive..."
+                    bee_msg = f" Almost done! Bees are organizing '{current_word}' in the hive..."
                 
                 UPLOAD_PROGRESS[session_id]["bee_messages"].append(bee_msg)
                 # Keep only last 5 messages
@@ -2768,9 +2768,9 @@ def complete_upload_session(session_id: str, success: bool, final_message: str):
             UPLOAD_PROGRESS[session_id]["end_time"] = time.time()
             
             if success:
-                UPLOAD_PROGRESS[session_id]["bee_messages"].append("🐝 Success! All bees have returned to the hive with spelling words!")
+                UPLOAD_PROGRESS[session_id]["bee_messages"].append(" Success! All bees have returned to the hive with spelling words!")
             else:
-                UPLOAD_PROGRESS[session_id]["bee_messages"].append("🐝 Oh no! Some bees got confused... Let's try again!")
+                UPLOAD_PROGRESS[session_id]["bee_messages"].append(" Oh no! Some bees got confused... Let's try again!")
 
 def _records_from_lines(lines: List[str]) -> List[Dict[str, str]]:
     """
@@ -2940,9 +2940,9 @@ def api_upload_image():
             # Kid-friendly filter
             filtered_records, blocked = [], []
             if deduped_records:
-                print(f"🛡️ Running enhanced kid-friendly filter on {len(deduped_records)} words...")
+                print(f"️ Running enhanced kid-friendly filter on {len(deduped_records)} words...")
                 filtered_records, blocked = _filter_records_excluding_inappropriate_text(deduped_records)
-                print(f"✅ {len(filtered_records)} words passed kid-friendly filter")
+                print(f" {len(filtered_records)} words passed kid-friendly filter")
             
             # Enrich with definitions
             enriched_records = enrich_with_definitions(filtered_records)
@@ -3066,22 +3066,22 @@ def get_wordbank() -> List[Dict[str, str]]:
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
-            print(f"✅ get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
+            print(f" get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
             session["wordbank_count"] = len(words)
             return list(words)  # Return copy to prevent modification
         else:
-            print(f"⚠️ get_wordbank: storage_id={storage_id} not found in Railway database")
+            print(f"️ get_wordbank: storage_id={storage_id} not found in Railway database")
             session["wordbank_count"] = 0
             return []
     except Exception as e:
-        print(f"❌ get_wordbank: Database error: {e}")
+        print(f" get_wordbank: Database error: {e}")
         session["wordbank_count"] = 0
         return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     """Save wordbank to Railway database (ONLY storage location).
     
-    ⚡ CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
+     CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
     Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
     """
     import uuid
@@ -3100,20 +3100,20 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         # If storage_id already exists, delete it first to ensure clean slate
         existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
         if existing_wordbank:
-            print(f"🗑️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+            print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
             db.session.delete(existing_wordbank)
             db.session.flush()  # Ensure delete happens before insert
     except Exception as e:
-        print(f"⚠️ set_wordbank: Error deleting old wordbank: {e}")
+        print(f"️ set_wordbank: Error deleting old wordbank: {e}")
         db.session.rollback()
     
     # Save to Railway database (ONLY storage location)
     try:
         user_id = current_user.id if current_user.is_authenticated else None
         WordBankStorage.save_wordbank(storage_id, rows, user_id)
-        print(f"✅ set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
+        print(f" set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
     except Exception as e:
-        print(f"❌ set_wordbank: Database error: {e}")
+        print(f" set_wordbank: Database error: {e}")
         db.session.rollback()
         raise
     
@@ -3139,12 +3139,12 @@ def delete_wordbank(storage_id: str):
     try:
         success = WordBankStorage.delete_wordbank(storage_id)
         if success:
-            print(f"✅ delete_wordbank: Removed storage_id={storage_id} from Railway database")
+            print(f" delete_wordbank: Removed storage_id={storage_id} from Railway database")
         else:
-            print(f"⚠️ delete_wordbank: storage_id={storage_id} not found in Railway database")
+            print(f"️ delete_wordbank: storage_id={storage_id} not found in Railway database")
         return success
     except Exception as e:
-        print(f"❌ delete_wordbank: Database error: {e}")
+        print(f" delete_wordbank: Database error: {e}")
         db.session.rollback()
         return False
 
@@ -3214,13 +3214,13 @@ def api_quiz_start():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # Register Battle of the Bees API Blueprint
-print("🔧 Registering Battle API...")
+print(" Registering Battle API...")
 try:
     from battles_api import battles_bp
     app.register_blueprint(battles_bp, url_prefix='/api')
-    print("✅ Battle API registered successfully - Routes at /api/battles/*")
+    print(" Battle API registered successfully - Routes at /api/battles/*")
 except Exception as e:
-    print(f"⚠️ Battle API registration failed: {e}")
+    print(f"️ Battle API registration failed: {e}")
 
 # --- Routes: Health Check for API Debugging ----------------------------------
 
@@ -3318,15 +3318,15 @@ def api_debug_avatar_picker():
             if "BrotherBee.glb" in [f for f in os.listdir(glb_path)]:
                 result["brother_bee_glb_exists"] = True
         
-        result["status"] = "✅ Ready"
+        result["status"] = " Ready"
         return jsonify(result)
         
     except Exception as e:
-        print(f"❌ Avatar picker debug error: {e}")
+        print(f" Avatar picker debug error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
-            "status": "❌ Error",
+            "status": " Error",
             "error": str(e)
         }), 500
 
@@ -3342,7 +3342,7 @@ def systems_diagnostic():
     failed_tests = []
     
     try:
-        # 🔍 Test 1: Database Connection and Core Tables
+        #  Test 1: Database Connection and Core Tables
         diagnostic["tests"]["database"] = {"status": "testing"}
         try:
             # Test basic connection
@@ -3374,7 +3374,7 @@ def systems_diagnostic():
             diagnostic["tests"]["database"] = {"status": "failed", "error": str(e)}
             failed_tests.append("database")
 
-        # 🔍 Test 2: User Authentication System
+        #  Test 2: User Authentication System
         diagnostic["tests"]["authentication"] = {"status": "testing"}
         try:
             # Test guest user creation
@@ -3391,7 +3391,7 @@ def systems_diagnostic():
             diagnostic["tests"]["authentication"] = {"status": "failed", "error": str(e)}
             failed_tests.append("authentication")
 
-        # 🔍 Test 3: Word List System
+        #  Test 3: Word List System
         diagnostic["tests"]["wordlists"] = {"status": "testing"}
         try:
             # Test saved lists functionality
@@ -3412,7 +3412,7 @@ def systems_diagnostic():
             diagnostic["tests"]["wordlists"] = {"status": "failed", "error": str(e)}
             failed_tests.append("wordlists")
 
-        # 🔍 Test 4: Avatar System
+        #  Test 4: Avatar System
         diagnostic["tests"]["avatars"] = {"status": "testing"}
         try:
             # Test avatar catalog
@@ -3432,7 +3432,7 @@ def systems_diagnostic():
             diagnostic["tests"]["avatars"] = {"status": "failed", "error": str(e)}
             failed_tests.append("avatars")
 
-        # 🔍 Test 5: Quiz System
+        #  Test 5: Quiz System
         diagnostic["tests"]["quiz_system"] = {"status": "testing"}
         try:
             # Test quiz-related endpoints
@@ -3453,7 +3453,7 @@ def systems_diagnostic():
             diagnostic["tests"]["quiz_system"] = {"status": "failed", "error": str(e)}
             failed_tests.append("quiz_system")
 
-        # 🔍 Test 6: Speed Round System  
+        #  Test 6: Speed Round System  
         diagnostic["tests"]["speed_round"] = {"status": "testing"}
         try:
             # Test speed round configuration
@@ -3470,7 +3470,7 @@ def systems_diagnostic():
             diagnostic["tests"]["speed_round"] = {"status": "failed", "error": str(e)}
             failed_tests.append("speed_round")
 
-        # 🔍 Test 7: Dictionary System
+        #  Test 7: Dictionary System
         diagnostic["tests"]["dictionary"] = {"status": "testing"}
         try:
             # Test dictionary API functionality
@@ -3490,7 +3490,7 @@ def systems_diagnostic():
             diagnostic["tests"]["dictionary"] = {"status": "failed", "error": str(e)}
             failed_tests.append("dictionary")
 
-        # 🔍 Test 8: File Upload System
+        #  Test 8: File Upload System
         diagnostic["tests"]["file_upload"] = {"status": "testing"}
         try:
             # Test upload directory
@@ -3507,7 +3507,7 @@ def systems_diagnostic():
             diagnostic["tests"]["file_upload"] = {"status": "failed", "error": str(e)}
             failed_tests.append("file_upload")
 
-        # 🔍 Test 9: Session Management
+        #  Test 9: Session Management
         diagnostic["tests"]["session_management"] = {"status": "testing"}
         try:
             # Test session functionality
@@ -3525,7 +3525,7 @@ def systems_diagnostic():
             diagnostic["tests"]["session_management"] = {"status": "failed", "error": str(e)}
             failed_tests.append("session_management")
 
-        # 🔍 Test 10: Static Assets (Bee Swarm, Avatars, etc.)
+        #  Test 10: Static Assets (Bee Swarm, Avatars, etc.)
         diagnostic["tests"]["static_assets"] = {"status": "testing"}
         try:
             # Test critical static file paths
@@ -3546,7 +3546,7 @@ def systems_diagnostic():
             diagnostic["tests"]["static_assets"] = {"status": "failed", "error": str(e)}
             failed_tests.append("static_assets")
 
-        # 🎯 Final Status Assessment
+        #  Final Status Assessment
         total_tests = len(diagnostic["tests"])
         failed_count = len(failed_tests)
         success_count = total_tests - failed_count
@@ -3587,7 +3587,7 @@ def debug_tiles_test():
     }
     
     try:
-        # 🎯 Test Main Menu Tiles
+        #  Test Main Menu Tiles
         tiles_test["tests"]["main_menu_tiles"] = {
             "status": "testing",
             "tiles": {}
@@ -3633,7 +3633,7 @@ def debug_tiles_test():
         
         tiles_test["tests"]["main_menu_tiles"]["status"] = "completed"
         
-        # 🎯 Test Quiz Functionality 
+        #  Test Quiz Functionality 
         tiles_test["tests"]["quiz_functionality"] = {"status": "testing"}
         try:
             # Test quiz-related endpoints
@@ -3661,7 +3661,7 @@ def debug_tiles_test():
         except Exception as e:
             tiles_test["tests"]["quiz_functionality"] = {"status": "failed", "error": str(e)}
 
-        # 🎯 Test Speed Round
+        #  Test Speed Round
         tiles_test["tests"]["speed_round_functionality"] = {"status": "testing"}
         try:
             speed_config = SpeedRoundConfig.query.first()
@@ -3678,7 +3678,7 @@ def debug_tiles_test():
         except Exception as e:
             tiles_test["tests"]["speed_round_functionality"] = {"status": "failed", "error": str(e)}
 
-        # 🎯 Test File Upload System
+        #  Test File Upload System
         tiles_test["tests"]["upload_functionality"] = {"status": "testing"}  
         try:
             upload_dir = os.path.join(app.root_path, 'uploads')
@@ -3692,7 +3692,7 @@ def debug_tiles_test():
         except Exception as e:
             tiles_test["tests"]["upload_functionality"] = {"status": "failed", "error": str(e)}
 
-        # 🎯 Test Progress/Achievement System
+        #  Test Progress/Achievement System
         tiles_test["tests"]["progress_system"] = {"status": "testing"}
         try:
             # Test buzz dust system
@@ -3712,7 +3712,7 @@ def debug_tiles_test():
         except Exception as e:
             tiles_test["tests"]["progress_system"] = {"status": "failed", "error": str(e)}
 
-        # 🎯 Summary
+        #  Summary
         total_tile_tests = len([t for test_group in tiles_test["tests"].values() 
                                for t in (test_group.get("tiles", {}) if "tiles" in test_group else [test_group])])
         failed_tile_tests = len([t for test_group in tiles_test["tests"].values() 
@@ -3799,7 +3799,7 @@ def debug_saved_lists_test():
         }), 500
 
 # =============================================================================
-# 📚 WORD LIST API SUITE - Complete CRUD for Saved Lists
+#  WORD LIST API SUITE - Complete CRUD for Saved Lists
 # =============================================================================
 
 def _serialize_word_list(wl):
@@ -3831,7 +3831,7 @@ def _serialize_word_list(wl):
             if len(list_words) > 0:
                 percent_used = (len(attempted_words) / len(list_words)) * 100
         except Exception as e:
-            print(f"⚠️ Could not calculate percent_used for list {wl.id}: {e}")
+            print(f"️ Could not calculate percent_used for list {wl.id}: {e}")
             percent_used = None
 
     return {
@@ -3922,7 +3922,7 @@ def list_saved_wordlists():
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists GET: {e}")
+        print(f" ERROR /api/saved-lists GET: {e}")
         return jsonify({"ok": True, "lists": [], "error": str(e)}), 200
 
 
@@ -3969,7 +3969,7 @@ def create_saved_list():
             ))
 
         db.session.commit()
-        print(f"✅ Created word list '{name}' with {len(words)} words for user {user.id}")
+        print(f" Created word list '{name}' with {len(words)} words for user {user.id}")
 
         # Optionally load this newly created list into the active session wordbank
         if load_into_session and words:
@@ -3988,13 +3988,13 @@ def create_saved_list():
             session.pop("is_random_play", None)
             set_wordbank(rows, is_user_upload=True)
             init_quiz_state(len(rows))
-            print(f"✅ Loaded newly created list into session wordbank (rows={len(rows)}) and initialized quiz state")
+            print(f" Loaded newly created list into session wordbank (rows={len(rows)}) and initialized quiz state")
 
         return jsonify({"ok": True, "list": _serialize_word_list(wl)}), 201
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists POST: {e}")
+        print(f" ERROR /api/saved-lists POST: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -4014,7 +4014,7 @@ def get_saved_wordlist(list_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists/{list_id} GET: {e}")
+        print(f" ERROR /api/saved-lists/{list_id} GET: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -4078,17 +4078,17 @@ def update_saved_wordlist(list_id):
                 ))
 
             wl.word_count = len(words)
-            print(f"✅ Updated {wl.list_name}: replaced {len(words)} words")
+            print(f" Updated {wl.list_name}: replaced {len(words)} words")
 
         wl.updated_at = datetime.utcnow()
         db.session.commit()
 
-        print(f"✅ Updated word list id={list_id} '{wl.list_name}'")
+        print(f" Updated word list id={list_id} '{wl.list_name}'")
         return jsonify({"ok": True, "list": _serialize_word_list(wl)}), 200
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists/{list_id} PUT: {e}")
+        print(f" ERROR /api/saved-lists/{list_id} PUT: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -4125,12 +4125,12 @@ def delete_saved_wordlist(list_id=None):
         db.session.delete(wl)
         db.session.commit()
 
-        print(f"✅ Deleted word list id={wl.id} '{wl.list_name}'")
+        print(f" Deleted word list id={wl.id} '{wl.list_name}'")
         return jsonify({"ok": True, "deleted_id": list_id}), 200
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists DELETE: {e}")
+        print(f" ERROR /api/saved-lists DELETE: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -4170,7 +4170,7 @@ def toggle_saved_list_favorite(list_id=None):
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists/favorite: {e}")
+        print(f" ERROR /api/saved-lists/favorite: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -4220,12 +4220,12 @@ def clone_saved_list(list_id):
         new_wl.word_count = len(items)
         db.session.commit()
 
-        print(f"✅ Cloned word list '{wl.list_name}' to '{new_name}'")
+        print(f" Cloned word list '{wl.list_name}' to '{new_name}'")
         return jsonify({"ok": True, "list": _serialize_word_list(new_wl)}), 201
 
     except Exception as e:
         db.session.rollback()
-        print(f"❌ ERROR /api/saved-lists/clone: {e}")
+        print(f" ERROR /api/saved-lists/clone: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -4282,7 +4282,7 @@ def save_current_wordlist():
             }
         })
     except Exception as e:
-        print(f"❌ ERROR /api/saved-lists/save: {e}")
+        print(f" ERROR /api/saved-lists/save: {e}")
         db.session.rollback()
         return jsonify({"ok": False, "error": "Failed to save list"}), 500
 
@@ -4295,7 +4295,7 @@ def load_saved_wordlist():
         incoming_session_id = session.get("session_id", "NEW")
         incoming_storage_id = session.get("wordbank_storage_id", "NONE")
         print(f"\n{'='*80}")
-        print(f"📥 /api/saved-lists/load REQUEST RECEIVED")
+        print(f" /api/saved-lists/load REQUEST RECEIVED")
         print(f"{'='*80}")
         print(f"   Incoming session_id: {incoming_session_id}")
         print(f"   Incoming storage_id: {incoming_storage_id}")
@@ -4304,13 +4304,13 @@ def load_saved_wordlist():
         
         user = get_or_create_guest_user()
         if not user:
-            print("❌ /api/saved-lists/load: Unable to resolve user")
+            print(" /api/saved-lists/load: Unable to resolve user")
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
         
         payload = request.get_json(silent=True) or {}
         list_id = payload.get("id") or payload.get("uuid") or payload.get("list_id")
         if not list_id:
-            print(f"❌ /api/saved-lists/load: Missing list id. Payload: {payload}")
+            print(f" /api/saved-lists/load: Missing list id. Payload: {payload}")
             return jsonify({"ok": False, "error": "Missing list id"}), 400
 
         # Lookup by uuid if non-numeric, else by id
@@ -4322,10 +4322,10 @@ def load_saved_wordlist():
             wl = WordList.query.filter_by(uuid=str(list_id), created_by_user_id=user.id).first()
 
         if not wl:
-            print(f"❌ /api/saved-lists/load: List not found. list_id={list_id}, user_id={user.id}")
+            print(f" /api/saved-lists/load: List not found. list_id={list_id}, user_id={user.id}")
             return jsonify({"ok": False, "error": "List not found"}), 404
 
-        # ✅ RESUME/RESTART LOGIC
+        #  RESUME/RESTART LOGIC
         # Check if a quiz is already in progress for this specific list
         force_restart = payload.get("force_restart", False)
         quiz_state = session.get(QUIZ_STATE_KEY)
@@ -4338,7 +4338,7 @@ def load_saved_wordlist():
             
             if not is_complete and current_index > 0 and current_index < total_words:
                 # This list is already in progress, ask user what to do
-                print(f"💡 /api/saved-lists/load: Found in-progress quiz for list_id={list_id}")
+                print(f" /api/saved-lists/load: Found in-progress quiz for list_id={list_id}")
                 return jsonify({
                     "ok": True,
                     "action_required": "resume_or_restart",
@@ -4352,7 +4352,7 @@ def load_saved_wordlist():
         
         # User chose restart or no quiz in progress
         if force_restart:
-            print(f"🔄 /api/saved-lists/load: User chose to restart quiz for list_id={list_id}")
+            print(f" /api/saved-lists/load: User chose to restart quiz for list_id={list_id}")
 
         # --- End Resume/Restart Logic ---
 
@@ -4363,10 +4363,10 @@ def load_saved_wordlist():
                 rows.append({"word": it.word, "sentence": it.sentence or "", "hint": it.hint or ""})
 
         if not rows:
-            print(f"❌ /api/saved-lists/load: List has no items. list_id={wl.id}")
+            print(f" /api/saved-lists/load: List has no items. list_id={wl.id}")
             return jsonify({"ok": False, "error": "This list is empty. Please upload words to this list first."}), 400
 
-        # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+        #  CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
         # Treat saved list load EXACTLY like fresh upload - prevent duplicate words from appended lists
         # set_wordbank() now handles deletion automatically with proper transaction handling
         
@@ -4375,7 +4375,7 @@ def load_saved_wordlist():
         session.pop("is_random_play", None)
         session.modified = True
         
-        print(f"✅ /api/saved-lists/load: Loading {len(rows)} fresh words from saved list (old wordbank will be auto-deleted)")
+        print(f" /api/saved-lists/load: Loading {len(rows)} fresh words from saved list (old wordbank will be auto-deleted)")
 
         # Step 2: Load saved list as brand new wordbank
         # This will automatically delete old wordbank if storage_id exists
@@ -4384,25 +4384,25 @@ def load_saved_wordlist():
         # CRITICAL DEBUG: Verify wordbank was actually saved
         verify_wb = get_wordbank()
         verify_storage_id = session.get("wordbank_storage_id")
-        print(f"🔍 /api/saved-lists/load: VERIFICATION after set_wordbank:")
+        print(f" /api/saved-lists/load: VERIFICATION after set_wordbank:")
         print(f"   storage_id in session: {verify_storage_id}")
         print(f"   get_wordbank() returned: {len(verify_wb)} words")
         print(f"   Session keys: {list(session.keys())}")
         if len(verify_wb) != len(rows):
-            print(f"⚠️ WARNING: Mismatch! Saved {len(rows)} but got {len(verify_wb)} back")
+            print(f"️ WARNING: Mismatch! Saved {len(rows)} but got {len(verify_wb)} back")
         
         # Initialize fresh quiz state from new wordbank
         init_quiz_state(len(rows))
         
-        # ✅ Store the source list ID to enable the resume feature
+        #  Store the source list ID to enable the resume feature
         session["source_list_id"] = list_id
         
-        print(f"✅ /api/saved-lists/load: Initialized quiz state for {len(rows)} words")
+        print(f" /api/saved-lists/load: Initialized quiz state for {len(rows)} words")
 
         # FINAL VERIFICATION
         final_session_id = session.get("session_id", "MISSING")
         final_storage_id = session.get("wordbank_storage_id", "MISSING")
-        print(f"📤 /api/saved-lists/load RESPONSE:")
+        print(f" /api/saved-lists/load RESPONSE:")
         print(f"   Final session_id: {final_session_id}")
         print(f"   Final storage_id: {final_storage_id}")
         print(f"   Wordbank count: {len(verify_wb)}")
@@ -4419,7 +4419,7 @@ def load_saved_wordlist():
             }
         })
     except Exception as e:
-        print(f"❌ ERROR /api/saved-lists/load: {e}")
+        print(f" ERROR /api/saved-lists/load: {e}")
         db.session.rollback()
         return jsonify({"ok": False, "error": "Failed to load list"}), 500
 
@@ -4457,7 +4457,7 @@ def rename_saved_wordlist():
         return jsonify({"ok": True, "id": wl.id, "name": wl.list_name})
 
     except Exception as e:
-        print(f"❌ ERROR /api/saved-lists/rename: {e}")
+        print(f" ERROR /api/saved-lists/rename: {e}")
         db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -4676,7 +4676,7 @@ def __test_home():
         from flask import make_response
         body = """<!doctype html><html><head><title>BeeSmart Test Home</title></head>
         <body style='font-family:Arial,sans-serif;padding:2rem;'>
-        <h1>BeeSmart Test Home ✅</h1>
+        <h1>BeeSmart Test Home </h1>
         <p>If you can see this, Flask routing works. Root path blockage likely external.</p>
         <p>Timestamp: %s</p>
     <img src='/static/BeeSmartCrestLogo1.png' alt='Logo' style='max-width:300px;'>
@@ -4756,7 +4756,7 @@ def quiz_page():
         storage_id = session.get("wordbank_storage_id", "NONE")
         
         print(f"\n{'='*60}")
-        print(f"🎯 /quiz ROUTE ACCESSED")
+        print(f" /quiz ROUTE ACCESSED")
         print(f"{'='*60}")
         print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
         print(f"DEBUG /quiz: session keys={list(session.keys())}")
@@ -4809,7 +4809,7 @@ def quiz_page():
         return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
     except Exception as e:
         import traceback
-        print(f"❌ ERROR in /quiz: {e}")
+        print(f" ERROR in /quiz: {e}")
         traceback.print_exc()
         return (
             f"<h1>Quiz Error</h1><p>{type(e).__name__}: {str(e)}</p>",
@@ -4932,7 +4932,7 @@ def debug_word_lists_version():
             has_bounce_animation = b'@keyframes bounce' in content
             
             return jsonify({
-                'status': 'NEW VERSION ✅' if (has_hive_stats and has_floating_bee) else 'OLD VERSION ❌',
+                'status': 'NEW VERSION ' if (has_hive_stats and has_floating_bee) else 'OLD VERSION ',
                 'file_hash': file_hash,
                 'file_size_bytes': file_size,
                 'line_count': line_count,
@@ -5090,9 +5090,9 @@ def migrate_avatar_columns():
                         conn.execute(text(sql))
                         conn.commit()
                         migrations_run.append(col_name)
-                        print(f"✅ Added column: {col_name}")
+                        print(f" Added column: {col_name}")
                     except Exception as e:
-                        print(f"❌ Failed to add column {col_name}: {e}")
+                        print(f" Failed to add column {col_name}: {e}")
                         return jsonify({
                             "status": "error",
                             "message": f"Failed to add column {col_name}",
@@ -5113,14 +5113,14 @@ def migrate_avatar_columns():
             }), 200
             
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
+        print(f" Migration failed: {e}")
         return jsonify({
             "status": "error",
             "message": "Migration failed",
             "error": str(e)
         }), 500
 
-# ✅ TEST ENDPOINT REMOVED - No external dictionary API
+#  TEST ENDPOINT REMOVED - No external dictionary API
 # The app now uses only Simple English Wiktionary (50K+ words built-in)
 # For testing definitions, use /api/wordbank or Random Words feature
 
@@ -5288,7 +5288,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     Returns:
         List of word dictionaries with word, sentence, and hint fields
     """
-    # ✅ Lazy-load Simple Wiktionary on first use (improves Railway startup time)
+    #  Lazy-load Simple Wiktionary on first use (improves Railway startup time)
     wiktionary = ensure_simple_wiktionary_loaded()
     
     if not wiktionary:
@@ -5308,7 +5308,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     # Filter words by difficulty with quality checks
     words_at_difficulty = []
     
-    print(f"🎲 Searching for {count} words at difficulty level {difficulty}...")
+    print(f" Searching for {count} words at difficulty level {difficulty}...")
     
     for word, data in wiktionary.items():
         word_lower = word.lower()
@@ -5379,7 +5379,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     exact_matches.sort(key=lambda x: x["uniqueness"], reverse=True)
     close_matches.sort(key=lambda x: x["uniqueness"], reverse=True)
     
-    print(f"📊 Found {len(exact_matches)} exact matches, {len(close_matches)} close matches")
+    print(f" Found {len(exact_matches)} exact matches, {len(close_matches)} close matches")
     
     # Randomly select words (prefer exact matches, but add randomness to top candidates)
     selected = []
@@ -5429,7 +5429,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
             "hint": " - ".join(hint_parts) + "."
         })
     
-    print(f"✅ Selected {len(result)} quality words at difficulty {difficulty}")
+    print(f" Selected {len(result)} quality words at difficulty {difficulty}")
     return result
 
 # --- Routes: API -------------------------------------------------------------
@@ -5475,13 +5475,13 @@ def api_random_words():
             # Mark this as a Random Play session to suppress default words warning
             session['is_random_play'] = True
             
-            print(f"✅ Generated {len(random_words)} random words at difficulty {difficulty}")
+            print(f" Generated {len(random_words)} random words at difficulty {difficulty}")
             
             return jsonify({
                 "status": "success",
                 "count": len(random_words),
                 "difficulty": difficulty,
-                "message": f"🎲 Generated {len(random_words)} random words at difficulty level {difficulty}!",
+                "message": f" Generated {len(random_words)} random words at difficulty level {difficulty}!",
                 "words": random_words  # For preview
             })
             
@@ -5492,7 +5492,7 @@ def api_random_words():
             }), 500
             
     except Exception as e:
-        print(f"❌ Error generating random words: {e}")
+        print(f" Error generating random words: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -5521,7 +5521,7 @@ def save_battle(battle_data: Dict) -> bool:
     try:
         code = battle_data.get("battle_code")
         if not code:
-            print("❌ No battle code provided")
+            print(" No battle code provided")
             return False
         
         # Ensure directory exists
@@ -5532,10 +5532,10 @@ def save_battle(battle_data: Dict) -> bool:
         with open(battle_file, 'w', encoding='utf-8') as f:
             json.dump(battle_data, f, indent=2, ensure_ascii=False)
         
-        print(f"✅ Battle saved: {code}")
+        print(f" Battle saved: {code}")
         return True
     except Exception as e:
-        print(f"❌ Failed to save battle: {e}")
+        print(f" Failed to save battle: {e}")
         return False
 
 def load_battle(battle_code: str) -> Optional[Dict]:
@@ -5543,16 +5543,16 @@ def load_battle(battle_code: str) -> Optional[Dict]:
     try:
         battle_file = os.path.join(BATTLES_DIR, f"{battle_code}.json")
         if not os.path.exists(battle_file):
-            print(f"⚠️ Battle not found: {battle_code}")
+            print(f"️ Battle not found: {battle_code}")
             return None
         
         with open(battle_file, 'r', encoding='utf-8') as f:
             battle_data = json.load(f)
         
-        print(f"✅ Battle loaded: {battle_code}")
+        print(f" Battle loaded: {battle_code}")
         return battle_data
     except Exception as e:
-        print(f"❌ Failed to load battle {battle_code}: {e}")
+        print(f" Failed to load battle {battle_code}: {e}")
         return None
 
 def get_all_active_battles() -> List[Dict]:
@@ -5578,17 +5578,17 @@ def get_all_active_battles() -> List[Dict]:
                     if now < expires_at:
                         battles.append(battle_data)
                     else:
-                        print(f"🗑️ Battle expired: {filename}")
+                        print(f"️ Battle expired: {filename}")
                         # Optional: delete expired battle
                         # os.remove(battle_file)
                 except Exception as e:
-                    print(f"⚠️ Error reading battle file {filename}: {e}")
+                    print(f"️ Error reading battle file {filename}: {e}")
                     continue
         
-        print(f"✅ Found {len(battles)} active battles")
+        print(f" Found {len(battles)} active battles")
         return battles
     except Exception as e:
-        print(f"❌ Failed to get active battles: {e}")
+        print(f" Failed to get active battles: {e}")
         return []
 
 def cleanup_expired_battles() -> int:
@@ -5612,16 +5612,16 @@ def cleanup_expired_battles() -> int:
                     if now >= expires_at:
                         os.remove(battle_file)
                         deleted_count += 1
-                        print(f"🗑️ Deleted expired battle: {filename}")
+                        print(f"️ Deleted expired battle: {filename}")
                 except Exception as e:
-                    print(f"⚠️ Error cleaning battle file {filename}: {e}")
+                    print(f"️ Error cleaning battle file {filename}: {e}")
                     continue
         
         if deleted_count > 0:
-            print(f"✅ Cleaned up {deleted_count} expired battles")
+            print(f" Cleaned up {deleted_count} expired battles")
         return deleted_count
     except Exception as e:
-        print(f"❌ Failed to cleanup battles: {e}")
+        print(f" Failed to cleanup battles: {e}")
         return 0
 
 # --- Battle of the Bees: API Routes -------------------------------------------
@@ -5733,7 +5733,7 @@ def api_join_battle_DEPRECATED():
         set_wordbank(shuffled_list)
         init_quiz_state(len(shuffled_list))
         
-        print(f"⚔️ {player_name} joined battle {battle_code}")
+        print(f"️ {player_name} joined battle {battle_code}")
         
         return jsonify({
             "status": "success",
@@ -5744,11 +5744,11 @@ def api_join_battle_DEPRECATED():
             "word_count": len(word_list),
             "player_count": len(players),
             "expires_at": battle_data.get("expires_at"),
-            "message": f"⚔️ Welcome to the Battle, {player_name}!"
+            "message": f"️ Welcome to the Battle, {player_name}!"
         })
     
     except Exception as e:
-        print(f"❌ Error joining battle: {e}")
+        print(f" Error joining battle: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -5815,7 +5815,7 @@ def api_battle_leaderboard_DEPRECATED(battle_code):
         })
     
     except Exception as e:
-        print(f"❌ Error getting leaderboard: {e}")
+        print(f" Error getting leaderboard: {e}")
         return jsonify({
             "status": "error",
             "message": f"Failed to get leaderboard: {str(e)}"
@@ -5866,7 +5866,7 @@ def api_battles_live_DEPRECATED():
 
         return jsonify({"ok": True, "battles": mapped, "stats": stats})
     except Exception as e:
-        print(f"❌ Failed to list live battles: {e}")
+        print(f" Failed to list live battles: {e}")
         return jsonify({"ok": False, "error": "Failed to load battles"}), 500
 
 # DEPRECATED ROUTE - Moved to battles_api.py blueprint
@@ -5984,7 +5984,7 @@ def api_battle_progress_DEPRECATED(battle_code):
         })
     
     except Exception as e:
-        print(f"❌ Error updating battle progress: {e}")
+        print(f" Error updating battle progress: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -6063,7 +6063,7 @@ def api_battle_export_DEPRECATED(battle_code):
         
         # Write data rows
         for i, player in enumerate(leaderboard, 1):
-            status = "✅ Completed" if player["completed"] else f"🏃 In Progress ({player['progress']})"
+            status = " Completed" if player["completed"] else f" In Progress ({player['progress']})"
             
             csv_writer.writerow([
                 i,  # Rank
@@ -6085,11 +6085,11 @@ def api_battle_export_DEPRECATED(battle_code):
         response.headers["Content-Type"] = "text/csv"
         response.headers["Content-Disposition"] = f"attachment; filename=battle_{battle_code}_results.csv"
         
-        print(f"📊 Exported results for battle {battle_code}")
+        print(f" Exported results for battle {battle_code}")
         return response
     
     except Exception as e:
-        print(f"❌ Error exporting battle results: {e}")
+        print(f" Error exporting battle results: {e}")
         return jsonify({
             "status": "error",
             "message": f"Failed to export results: {str(e)}"
@@ -6187,7 +6187,7 @@ def api_quiz_reset():
             "quiz_state": session.get(QUIZ_STATE_KEY, {})
         })
     except Exception as e:
-        print(f"❌ Error resetting quiz: {e}")
+        print(f" Error resetting quiz: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/api/content-filter-status", methods=["GET"])
@@ -6201,16 +6201,16 @@ def api_content_filter_status():
             "ok": True,
             "status": status,
             "messages": {
-                "green": "🐝 Welcome to BeeSmart! Our bees keep the hive safe and educational.",
-                "yellow": "⚠️ Please remember to use appropriate, educational words only.",
-                "red": "🚫 Multiple inappropriate attempts detected. A report may be sent to your guardian."
+                "green": " Welcome to BeeSmart! Our bees keep the hive safe and educational.",
+                "yellow": "️ Please remember to use appropriate, educational words only.",
+                "red": " Multiple inappropriate attempts detected. A report may be sent to your guardian."
             }
         }
         
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"⚠️ Content filter status error: {e}")
+        print(f"️ Content filter status error: {e}")
         # Provide safe fallback
         return jsonify({
             "ok": True,
@@ -6221,7 +6221,7 @@ def api_content_filter_status():
                 'guardian_notification_triggered': False
             },
             "messages": {
-                "green": "🐝 Welcome to BeeSmart! Our bees keep the hive safe and educational."
+                "green": " Welcome to BeeSmart! Our bees keep the hive safe and educational."
             }
         })
 
@@ -6351,7 +6351,7 @@ def process_upload_with_progress(session_id, request_obj):
         
         # ENHANCED KID-FRIENDLY FILTER: Block inappropriate words with guardian tracking
         update_upload_progress(session_id, "filtering", "Bees are checking words for kid-friendliness...", "bees_checking", 50)
-        print(f"🛡️ Running enhanced kid-friendly filter on {len(deduped)} words...")
+        print(f"️ Running enhanced kid-friendly filter on {len(deduped)} words...")
         
         # Extract just the words for filtering
         word_list = [r["word"] for r in deduped]
@@ -6372,15 +6372,15 @@ def process_upload_with_progress(session_id, request_obj):
             
             # Log violation details
             if violation_messages:
-                print(f"🚨 Content violations detected: {len(violation_messages)}")
+                print(f" Content violations detected: {len(violation_messages)}")
                 for vm in violation_messages:
                     print(f"   - {vm['word']}: violation #{vm['violation_count']}")
                     if vm['should_report']:
-                        print(f"   📧 Guardian report triggered for repeated violations")
+                        print(f"    Guardian report triggered for repeated violations")
             
         except Exception as e:
             # Fallback to original filtering if enhanced system fails
-            print(f"⚠️ Enhanced filter failed, using fallback: {e}")
+            print(f"️ Enhanced filter failed, using fallback: {e}")
             filtered = []
             blocked = []
             for r in deduped:
@@ -6392,7 +6392,7 @@ def process_upload_with_progress(session_id, request_obj):
                     blocked.append({"word": word, "reason": reason})
         
         if blocked:
-            print(f"⚠️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
+            print(f"️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
         
         if not filtered:
             blocked_words = ", ".join([b["word"] for b in blocked[:5]])
@@ -6403,7 +6403,7 @@ def process_upload_with_progress(session_id, request_obj):
             return
         
         deduped = filtered
-        print(f"✅ {len(deduped)} words passed kid-friendly filter")
+        print(f" {len(deduped)} words passed kid-friendly filter")
         
         update_upload_progress(session_id, "enriching", "Bees are pre-loading definitions from internal dictionary...", "bees_fetching_definitions", 55)
         
@@ -6417,9 +6417,9 @@ def process_upload_with_progress(session_id, request_obj):
             hint = r.get("hint", "").strip()
             
             progress = 55 + int((i + 1) / len(deduped) * 35)  # 55-90%
-            update_upload_progress(session_id, "enriching", f"📖 Pre-loading definition: {word}", "bees_fetching_definitions", progress, word)
+            update_upload_progress(session_id, "enriching", f" Pre-loading definition: {word}", "bees_fetching_definitions", progress, word)
             
-            # ✅ ALWAYS enrich with internal dictionary for consistency
+            #  ALWAYS enrich with internal dictionary for consistency
             # This ensures all words have complete definitions BEFORE quiz starts
             auto_definition = get_word_info(word)
             
@@ -6455,7 +6455,7 @@ def process_upload_with_progress(session_id, request_obj):
         # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
         filtered_enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
         if blocked_defs:
-            print(f"⚠️ Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+            print(f"️ Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
 
         # CRITICAL VALIDATION: Check all definitions before quiz can start
         print("DEBUG: Validating wordbank definitions before storing...")
@@ -6488,8 +6488,8 @@ def process_upload_with_progress(session_id, request_obj):
             session.modified = True
             time.sleep(0.2)
         
-        update_upload_progress(session_id, "completed", f"✅ {len(filtered_enriched)} words with pre-loaded definitions ready!", "bees_celebrating", 100)
-        complete_upload_session(session_id, True, f"🐝 Amazing! {len(filtered_enriched)} words enriched with definitions - quiz starts instantly!")
+        update_upload_progress(session_id, "completed", f" {len(filtered_enriched)} words with pre-loaded definitions ready!", "bees_celebrating", 100)
+        complete_upload_session(session_id, True, f" Amazing! {len(filtered_enriched)} words enriched with definitions - quiz starts instantly!")
         
     except Exception as e:
         complete_upload_session(session_id, False, f"Oops! The bees encountered an error: {str(e)}")
@@ -6605,7 +6605,7 @@ def api_upload():
         return jsonify({"error": "No valid 'word' entries found"}), 400
 
     # ENHANCED KID-FRIENDLY FILTER: Block inappropriate words with guardian tracking
-    print(f"🛡️ Running enhanced kid-friendly filter on {len(deduped)} words...")
+    print(f"️ Running enhanced kid-friendly filter on {len(deduped)} words...")
     
     # Extract just the words for filtering
     word_list = [r["word"] for r in deduped]
@@ -6627,11 +6627,11 @@ def api_upload():
         # Log violation details and show user-friendly messages
         violation_response_message = None
         if violation_messages:
-            print(f"🚨 Content violations detected: {len(violation_messages)}")
+            print(f" Content violations detected: {len(violation_messages)}")
             for vm in violation_messages:
                 print(f"   - {vm['word']}: violation #{vm['violation_count']}")
                 if vm['should_report']:
-                    print(f"   📧 Guardian report triggered for repeated violations")
+                    print(f"    Guardian report triggered for repeated violations")
             
             # Use the kid-friendly message from the most severe violation
             most_severe = max(violation_messages, key=lambda x: x['violation_count'])
@@ -6639,7 +6639,7 @@ def api_upload():
         
     except Exception as e:
         # Fallback to original filtering if enhanced system fails
-        print(f"⚠️ Enhanced filter failed, using fallback: {e}")
+        print(f"️ Enhanced filter failed, using fallback: {e}")
         filtered = []
         blocked = []
         violation_response_message = None
@@ -6653,7 +6653,7 @@ def api_upload():
     
     # Log results
     if blocked:
-        print(f"⚠️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
+        print(f"️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
     
     if not filtered:
         if violation_response_message:
@@ -6669,11 +6669,11 @@ def api_upload():
     
     # Use filtered list for enrichment
     deduped = filtered
-    print(f"✅ {len(deduped)} words passed kid-friendly filter")
+    print(f" {len(deduped)} words passed kid-friendly filter")
 
     # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
     # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
-    print(f"📚 Enriching {len(deduped)} words using built-in dictionary...")
+    print(f" Enriching {len(deduped)} words using built-in dictionary...")
     import time
     enrichment_start = time.time()
     
@@ -6724,12 +6724,12 @@ def api_upload():
             })
     
     enrichment_time = time.time() - enrichment_start
-    print(f"✅ Enrichment completed in {enrichment_time:.2f}s for {len(enriched)} words")
+    print(f" Enrichment completed in {enrichment_time:.2f}s for {len(enriched)} words")
     
     # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
     enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
     if blocked_defs:
-        print(f"⚠️ /api/upload: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+        print(f"️ /api/upload: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
 
     deduped = enriched
 
@@ -6740,13 +6740,13 @@ def api_upload():
     is_valid, validation_error = validate_wordbank_definitions(deduped)
     
     if not is_valid:
-        print(f"❌ Wordbank validation failed: {validation_error}")
+        print(f" Wordbank validation failed: {validation_error}")
         return jsonify({"error": validation_error}), 400
     
     # CRITICAL: Set flag to prevent default word loading (same as manual upload)
     session["skip_default_load"] = True
     
-    # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+    #  CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
     # set_wordbank() now handles deletion automatically with proper transaction handling
     
     # Step 1: Clear quiz state before setting new wordbank
@@ -6754,7 +6754,7 @@ def api_upload():
     session.pop("is_random_play", None)
     session.modified = True
     
-    print(f"✅ /api/upload: Uploading {len(deduped)} fresh words (old wordbank will be auto-deleted)")
+    print(f" /api/upload: Uploading {len(deduped)} fresh words (old wordbank will be auto-deleted)")
     
     # Step 2: Set new wordbank (USER UPLOAD - marks has_uploaded_once)
     # This will automatically delete old wordbank if storage_id exists
@@ -6771,7 +6771,7 @@ def api_upload():
     # Double-check quiz state was saved (Railway can drop session between requests)
     saved_state = get_quiz_state()
     if not saved_state:
-        print("⚠️ Quiz state failed to persist! Retrying init...")
+        print("️ Quiz state failed to persist! Retrying init...")
         init_quiz_state(len(deduped))
         session.modified = True
         time.sleep(0.2)
@@ -6779,9 +6779,9 @@ def api_upload():
     # Verify wordbank was set correctly
     verify_wb = get_wordbank()
     if len(verify_wb) != len(deduped):
-        print(f"⚠️ Wordbank size mismatch! Set {len(deduped)}, got {len(verify_wb)}")
+        print(f"️ Wordbank size mismatch! Set {len(deduped)}, got {len(verify_wb)}")
     else:
-        print(f"✅ Successfully uploaded {len(deduped)} words")
+        print(f" Successfully uploaded {len(deduped)} words")
     
     return jsonify({"ok": True, "count": len(deduped)})
 
@@ -6850,7 +6850,7 @@ def api_upload_manual_words():
             return jsonify({"ok": False, "error": "No valid words after deduplication"}), 400
         
         # ENHANCED KID-FRIENDLY FILTER: Block inappropriate words with guardian tracking  
-        print(f"🛡️ Running enhanced kid-friendly filter on {len(deduped)} manually entered words...")
+        print(f"️ Running enhanced kid-friendly filter on {len(deduped)} manually entered words...")
         
         # Extract just the words for filtering
         word_list = [r["word"] for r in deduped]
@@ -6872,11 +6872,11 @@ def api_upload_manual_words():
             # Handle violation messages for manual entry (this is most likely paste abuse)
             violation_response_message = None
             if violation_messages:
-                print(f"🚨 Manual entry violations detected: {len(violation_messages)}")
+                print(f" Manual entry violations detected: {len(violation_messages)}")
                 for vm in violation_messages:
                     print(f"   - {vm['word']}: violation #{vm['violation_count']}")
                     if vm['should_report']:
-                        print(f"   📧 Guardian report triggered for repeated manual entry violations")
+                        print(f"    Guardian report triggered for repeated manual entry violations")
                 
                 # For manual entry, always show the warning message from the most severe violation
                 most_severe = max(violation_messages, key=lambda x: x['violation_count'])
@@ -6884,7 +6884,7 @@ def api_upload_manual_words():
         
         except Exception as e:
             # Fallback to original filtering if enhanced system fails
-            print(f"⚠️ Enhanced filter failed, using fallback: {e}")
+            print(f"️ Enhanced filter failed, using fallback: {e}")
             filtered = []
             blocked = []
             violation_response_message = None
@@ -6897,7 +6897,7 @@ def api_upload_manual_words():
                     blocked.append({"word": word, "reason": reason})
         
         if blocked:
-            print(f"⚠️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
+            print(f"️ Blocked {len(blocked)} inappropriate words: {[b['word'] for b in blocked]}")
         
         if not filtered:
             if violation_response_message:
@@ -6917,7 +6917,7 @@ def api_upload_manual_words():
                 }), 400
         
         deduped = filtered
-        print(f"✅ {len(deduped)} words passed kid-friendly filter")
+        print(f" {len(deduped)} words passed kid-friendly filter")
         
         # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
         # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
@@ -6946,7 +6946,7 @@ def api_upload_manual_words():
         # EXTRA FILTER: Remove any items whose definition/hint contains inappropriate content
         enriched, blocked_defs = _filter_records_excluding_inappropriate_text(enriched)
         if blocked_defs:
-            print(f"⚠️ /api/upload-manual-words: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
+            print(f"️ /api/upload-manual-words: Definition filter blocked {len(blocked_defs)} item(s) due to inappropriate content in text: {[b['word'] for b in blocked_defs]}")
 
         if len(enriched) > MAX_RECORDS:
             enriched = enriched[:MAX_RECORDS]
@@ -6956,7 +6956,7 @@ def api_upload_manual_words():
         # CRITICAL: Set flag to prevent default word loading
         session["skip_default_load"] = True
         
-        # 🔧 CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
+        #  CRITICAL: COMPLETE WORDBANK WIPE AND REPLACEMENT
         # set_wordbank() now handles deletion automatically with proper transaction handling
         
         # Step 1: Clear quiz state before setting new wordbank
@@ -6964,7 +6964,7 @@ def api_upload_manual_words():
         session.pop("is_random_play", None)
         session.modified = True
         
-        print(f"✅ /api/upload-manual-words: Uploading {len(enriched)} fresh manual words (old wordbank will be auto-deleted)")
+        print(f" /api/upload-manual-words: Uploading {len(enriched)} fresh manual words (old wordbank will be auto-deleted)")
         
         # Step 2: Store and initialize quiz (USER UPLOAD - manual words)
         # This will automatically delete old wordbank if storage_id exists
@@ -7010,55 +7010,6 @@ def api_upload_manual_words():
 @app.route('/api/next', methods=['POST'])
 def api_next():
     """Get the next word in the quiz sequence."""
-    qs = get_quiz_state()
-    wordbank = get_wordbank()
-
-    if not qs or not wordbank:
-        # If no quiz has been started or wordbank is empty, try to initialize.
-        if not wordbank:
-            default_words = load_default_wordbank()
-            if not default_words:
-                return jsonify({'status': 'error', 'message': 'No words available to start a quiz.'}), 400
-            set_wordbank(default_words, is_user_upload=False)
-            wordbank = default_words
-        
-        init_quiz_state(len(wordbank))
-        qs = get_quiz_state()
-        if not qs: # Should not happen
-             return jsonify({'status': 'error', 'message': 'Failed to initialize quiz state.'}), 500
-
-    total_words = len(wordbank)
-    current_idx = qs.get('idx', 0)
-
-    if current_idx >= len(qs['order']):
-        # Completed state
-        return jsonify({'done': True, 'status': 'complete', 'message': 'Quiz finished!'})
-
-    word_idx = qs['order'][current_idx]
-    word_data = wordbank[word_idx]
-    word = word_data['word']
-
-    # Enrich with definition, but do not include the word itself in the response
-    raw_sentence = word_data.get('sentence') or get_word_info(word)
-    definition, sentence = parse_enriched_info(raw_sentence, word)
-    
-    definition_data = {
-        'definition': definition,
-        'sentence': sentence,
-        'hint': word_data.get('hint', '')
-    }
-
-    # Prepare response (do not include the actual word string for security; TTS word is added later)
-    response_data = {
-        'status': 'success',
-        'word_index': word_idx,
-        'progress': f"{current_idx + 1}/{total_words}",
-        'definition': definition_data,
-        'word_length': len(word),
-        'phonetic_spelling': build_phonetic_spelling(word),
-        'session_id': session.get('session_id')
-    }
-    return jsonify(response_data)
     # Ensure session persists
     session.permanent = True
     session.modified = True
@@ -7075,11 +7026,11 @@ def api_next():
           f"wordbank_len={len(wb)}, quiz_idx={state['idx'] if state else 'NO_STATE'}, "
           f"has_uploaded_once={has_uploaded}, using_default_words={using_defaults}")
     
-    # 🔧 CRITICAL CHECK: Warn if using default words when user has uploaded before
+    #  CRITICAL CHECK: Warn if using default words when user has uploaded before
     if using_defaults and has_uploaded:
-        print("⚠️⚠️⚠️ CRITICAL WARNING /api/next: Using DEFAULT words but has_uploaded_once=True!")
-        print("⚠️⚠️⚠️ This indicates session loss - user's uploaded words were lost!")
-        print(f"⚠️⚠️⚠️ Session keys: {list(session.keys())}")
+        print("️️️ CRITICAL WARNING /api/next: Using DEFAULT words but has_uploaded_once=True!")
+        print("️️️ This indicates session loss - user's uploaded words were lost!")
+        print(f"️️️ Session keys: {list(session.keys())}")
     
     # Enhanced validation with detailed error messages
     if not wb:
@@ -7172,7 +7123,7 @@ def api_next():
                 "level_up": state.get("level_up"),
                 "newly_unlocked_avatars": state.get("newly_unlocked_avatars", [])
             }
-            print(f"📊 Quiz complete summary: {quiz_summary['correct']}/{quiz_summary['total']} correct, {quiz_summary['session_points']} points")
+            print(f" Quiz complete summary: {quiz_summary['correct']}/{quiz_summary['total']} correct, {quiz_summary['session_points']} points")
             return jsonify({
                 "done": True,
                 "summary": quiz_summary
@@ -7180,6 +7131,11 @@ def api_next():
 
     word_rec = wb[order[idx]]
     word = word_rec.get("word", "")
+    
+    # DEBUG: Log the actual word record structure
+    print(f" DEBUG /api/next: word_rec structure = {word_rec}")
+    print(f" DEBUG /api/next: word_rec keys = {list(word_rec.keys())}")
+    print(f" DEBUG /api/next: word_rec['sentence'] type = {type(word_rec.get('sentence'))}")
     
     # ---------------- Quiz content assembly & enrichment ----------------
     # Separate definition vs. sample sentence; never substitute sentence for definition.
@@ -7236,9 +7192,9 @@ def api_next():
                 try:
                     set_wordbank(wb, is_user_upload=session.get("has_uploaded_once", False))
                 except Exception as _persist_err:
-                    print(f"⚠️ Failed to persist enrichment for '{word}': {_persist_err}")
+                    print(f"️ Failed to persist enrichment for '{word}': {_persist_err}")
         except Exception as ex:
-            print(f"⚠️ Dictionary enrichment failed for '{word}': {ex}")
+            print(f"️ Dictionary enrichment failed for '{word}': {ex}")
             if not definition:
                 definition = "Listen carefully and spell the word you hear."
                 definition_source = "fallback"
@@ -7253,13 +7209,37 @@ def api_next():
     # Final blanking + sanitization pass (idempotent)
     definition = sanitize_kid_friendly_text(_blank_word(definition or "", word))
     sentence = sanitize_kid_friendly_text(_blank_word(sentence or "", word))
+    
+    # CRITICAL: Ensure all fields are strings, not dicts (defensive coding)
+    if isinstance(definition, dict):
+        print(f"️ WARNING: definition is a dict for word '{word}', extracting string value")
+        definition = definition.get("definition", definition.get("sentence", "Listen carefully."))
+    if isinstance(sentence, dict):
+        print(f"️ WARNING: sentence is a dict for word '{word}', extracting string value")
+        sentence = sentence.get("sentence", sentence.get("definition", ""))
+    if isinstance(hint, dict):
+        print(f"️ WARNING: hint is a dict for word '{word}', extracting string value")
+        hint = hint.get("hint", "")
+    
+    # Ensure they are strings
+    definition = str(definition or "")
+    sentence = str(sentence or "")
+    hint = str(hint or "")
+    word = str(word or "")
 
-    # 💡 Initialize hints counter if not present (for first word or after reset)
+    #  Initialize hints counter if not present (for first word or after reset)
     if "hints_used_current_word" not in state:
         state["hints_used_current_word"] = 0
-        print(f"🔄 Initialized hints_used_current_word to 0 for word: {word}")
+        print(f" Initialized hints_used_current_word to 0 for word: {word}")
     else:
-        print(f"💡 Current word '{word}' - hints_used_current_word = {state.get('hints_used_current_word', 0)}")
+        print(f" Current word '{word}' - hints_used_current_word = {state.get('hints_used_current_word', 0)}")
+    
+    #  ADVANCE INDEX for next call after answer is submitted
+    # This ensures proper sequence: show word → answer → feedback → next word
+    # /api/answer does NOT advance, only records the answer
+    state["idx"] += 1
+    print(f" Advanced idx from {idx} to {state['idx']} (next /api/next will get word at position {state['idx']})")
+    
     session[QUIZ_STATE_KEY] = state
     session.modified = True
     
@@ -7271,7 +7251,7 @@ def api_next():
         # Back-compat (UI already uses this)
         "definition": definition,
 
-        # ✅ New explicit fields (use these in UI going forward)
+        #  New explicit fields (use these in UI going forward)
         "sentence": sentence,
         "hint": hint,
         "definitionSource": definition_source,
@@ -7341,7 +7321,7 @@ def api_pronounce():
     word_rec = wb[order[idx]]
     current_word = word_rec.get("word", "")
 
-    # ✅ OPTIMIZED: Use pre-enriched definitions from word_rec (enriched during upload)
+    #  OPTIMIZED: Use pre-enriched definitions from word_rec (enriched during upload)
     # Only call get_word_info() if sentence is completely missing (rare edge case)
     definition = word_rec.get("sentence", "").strip()
     
@@ -7437,7 +7417,7 @@ def api_hint():
         "sentence": sanitize_kid_friendly_text(_blank_word(word_rec.get("sentence", ""), current_word))
     })
 
-# --- 🎯 LEVEL PROGRESSION SYSTEM ------------------------------------------
+# ---  LEVEL PROGRESSION SYSTEM ------------------------------------------
 
 def get_user_level(total_lifetime_points):
     """
@@ -7457,7 +7437,7 @@ def get_user_level(total_lifetime_points):
     if points >= 10000:
         return {
             "tier": "Queen Bee",
-            "icon": "👑",
+            "icon": "",
             "level": 6,
             "points_current": points,
             "points_required": 10000,
@@ -7468,7 +7448,7 @@ def get_user_level(total_lifetime_points):
     elif points >= 5000:
         return {
             "tier": "Word Wizard",
-            "icon": "🧙",
+            "icon": "",
             "level": 5,
             "points_current": points,
             "points_required": 5000,
@@ -7490,7 +7470,7 @@ def get_user_level(total_lifetime_points):
     elif points >= 1500:
         return {
             "tier": "Honey Collector",
-            "icon": "🍯",
+            "icon": "",
             "level": 3,
             "points_current": points,
             "points_required": 1500,
@@ -7501,7 +7481,7 @@ def get_user_level(total_lifetime_points):
     elif points >= 500:
         return {
             "tier": "Flower Flyer",
-            "icon": "🌸",
+            "icon": "",
             "level": 2,
             "points_current": points,
             "points_required": 500,
@@ -7512,7 +7492,7 @@ def get_user_level(total_lifetime_points):
     else:  # 0-499 points
         return {
             "tier": "Busy Bee",
-            "icon": "🐝",
+            "icon": "",
             "level": 1,
             "points_current": points,
             "points_required": 0,
@@ -7534,14 +7514,14 @@ def check_level_up(old_points, new_points):
             "leveled_up": True,
             "old_level": old_level,
             "new_level": new_level,
-            "message": f"🎉 Level Up! You're now a {new_level['tier']}!"
+            "message": f" Level Up! You're now a {new_level['tier']}!"
         }
     
     return None
 
-# --- 🏆 BADGE ACHIEVEMENT SYSTEM ------------------------------------------
+# ---  BADGE ACHIEVEMENT SYSTEM ------------------------------------------
 
-# 🏆 BADGE ACHIEVEMENT SYSTEM
+#  BADGE ACHIEVEMENT SYSTEM
 def check_badges(state, wb):
     """
     Check if any badges should be awarded based on quiz session performance.
@@ -7562,51 +7542,51 @@ def check_badges(state, wb):
     correct_answers = [h for h in history if h.get("correct")]
     avg_time_ms = (total_time_ms / len(correct_answers)) if correct_answers else 0
     
-    # 🌟 Perfect Game (+500 points)
+    #  Perfect Game (+500 points)
     # Complete quiz with 100% accuracy, no hints, no wrong attempts
     if total >= 10 and incorrect == 0 and hints_used_total == 0:
         badges_earned.append({
             "type": "perfect_game",
             "name": "Perfect Game",
-            "icon": "🌟",
+            "icon": "",
             "points": 500,
             "message": "PERFECT GAME! You're a spelling champion!"
         })
     
-    # ⚡ Speed Demon (+200 points)
+    #  Speed Demon (+200 points)
     # Average answer time < 10 seconds per word (minimum 10 words)
     if correct >= 10 and avg_time_ms > 0 and (avg_time_ms / 1000) < 10:
         badges_earned.append({
             "type": "speed_demon",
             "name": "Speed Demon",
-            "icon": "⚡",
+            "icon": "",
             "points": 200,
             "message": "SPEED DEMON! Lightning-fast spelling!"
         })
     
-    # 📚 Persistent Learner (+150 points)
+    #  Persistent Learner (+150 points)
     # Complete 50+ words in a single session
     if total >= 50:
         badges_earned.append({
             "type": "persistent_learner",
             "name": "Persistent Learner",
-            "icon": "📚",
+            "icon": "",
             "points": 150,
             "message": "PERSISTENT LEARNER! You love to learn!"
         })
     
-    # 🔥 Hot Streak (+100 points)
+    #  Hot Streak (+100 points)
     # Achieve 10+ correct answers in a row
     if max_streak >= 10:
         badges_earned.append({
             "type": "hot_streak",
             "name": "Hot Streak",
-            "icon": "🔥",
+            "icon": "",
             "points": 100,
             "message": "HOT STREAK! You're on fire!"
         })
     
-    # 🎯 Comeback Kid (+100 points)
+    #  Comeback Kid (+100 points)
     # Get correct answer after 2+ wrong attempts on same word
     word_attempts = {}
     for h in history:
@@ -7624,12 +7604,12 @@ def check_badges(state, wb):
         badges_earned.append({
             "type": "comeback_kid",
             "name": "Comeback Kid",
-            "icon": "🎯",
+            "icon": "",
             "points": 100,
             "message": "COMEBACK KID! Never give up!"
         })
     
-    # 🍯 Honey Hunter (+75 points)
+    #  Honey Hunter (+75 points)
     # Use hints wisely (< 20% of words, minimum 10 words)
     if total >= 10 and hints_used_total > 0:
         hint_percentage = (hints_used_total / total) * 100
@@ -7637,18 +7617,18 @@ def check_badges(state, wb):
             badges_earned.append({
                 "type": "honey_hunter",
                 "name": "Honey Hunter",
-                "icon": "🍯",
+                "icon": "",
                 "points": 75,
                 "message": "HONEY HUNTER! Smart use of help!"
             })
     
-    # 🐝 Early Bird (+50 points)
+    #  Early Bird (+50 points)
     # Complete quiz quickly (within 5 minutes for 10+ words)
     if total >= 10 and total_time_ms > 0 and (total_time_ms / 1000 / 60) < 5:
         badges_earned.append({
             "type": "early_bird",
             "name": "Early Bird",
-            "icon": "🐝",
+            "icon": "",
             "points": 50,
             "message": "EARLY BIRD! Quick learner!"
         })
@@ -7699,7 +7679,7 @@ def check_newly_unlocked_avatars(old_honey_points, new_honey_points):
         return newly_unlocked
 
     except Exception as e:
-        print(f"⚠️ Error checking newly unlocked avatars: {e}")
+        print(f"️ Error checking newly unlocked avatars: {e}")
         return []
 
 @app.route("/api/answer", methods=["POST"])
@@ -7756,25 +7736,25 @@ def api_answer():
     if skip_requested:
         user_input = user_input or "[skipped]"
 
-    # 🐛 DEBUG: Log exact comparison details
+    #  DEBUG: Log exact comparison details
     normalized_input = normalize(user_input)
     normalized_correct = normalize(correct_spelling)
     print(f"")
     print(f"{'='*70}")
-    print(f"🔍 ANSWER COMPARISON DEBUG:")
+    print(f" ANSWER COMPARISON DEBUG:")
     print(f"   User input (raw): '{user_input}' (len={len(user_input)})")
     print(f"   User input (normalized): '{normalized_input}' (len={len(normalized_input)})")
     print(f"   Correct word (raw): '{correct_spelling}' (len={len(correct_spelling)})")
     print(f"   Correct word (normalized): '{normalized_correct}' (len={len(normalized_correct)})")
     print(f"   Comparison: '{normalized_input}' == '{normalized_correct}'")
     print(f"   Match: {normalized_input == normalized_correct}")
-    print(f"   Result: {'✅ CORRECT' if normalized_input == normalized_correct else '❌ INCORRECT'}")
+    print(f"   Result: {' CORRECT' if normalized_input == normalized_correct else ' INCORRECT'}")
     print(f"{'='*70}")
     print(f"")
 
     is_correct = False if skip_requested else normalized_input == normalized_correct
 
-    # 🍯 HONEY POINTS CALCULATION
+    #  HONEY POINTS CALCULATION
     points_earned = 0
     points_breakdown = {}
     
@@ -7814,22 +7794,22 @@ def api_answer():
         # No hints bonus: +25 points if no hints used this session
         # Track hints_used in state (updated when /api/hint, /api/pronounce called)
         hints_used_this_word = state.get("hints_used_current_word", 0)
-        print(f"💡 Checking hints for word '{correct_spelling}': hints_used_current_word = {hints_used_this_word}")
+        print(f" Checking hints for word '{correct_spelling}': hints_used_current_word = {hints_used_this_word}")
         
-        # 💡 Apply hint penalty BEFORE adding no-hints bonus
+        #  Apply hint penalty BEFORE adding no-hints bonus
         hint_penalty = 0
         if hints_used_this_word > 0:
             # 30% penalty for using hints
             hint_penalty = int(points_earned * 0.30)
             points_earned -= hint_penalty
             points_breakdown["hint_penalty"] = hint_penalty
-            print(f"💡 Hint penalty applied: -{hint_penalty} points (30% reduction)")
+            print(f" Hint penalty applied: -{hint_penalty} points (30% reduction)")
         else:
             # No hints bonus
             points_breakdown["no_hints"] = 25
             points_earned += 25
         
-        print(f"🍯 Points earned: {points_earned} (breakdown: {points_breakdown})")
+        print(f" Points earned: {points_earned} (breakdown: {points_breakdown})")
 
     # Update stats and advance index for any completed attempt
     if is_correct:
@@ -7840,7 +7820,7 @@ def api_answer():
         if state["streak"] > state.get("max_streak", 0):
             state["max_streak"] = state["streak"]
         
-        # ✨ BUZZ DUST AWARDING - Award Buzz Dust immediately for correct answers (authenticated users)
+        #  BUZZ DUST AWARDING - Award Buzz Dust immediately for correct answers (authenticated users)
         if current_user.is_authenticated and points_earned > 0:
             old_buzz_dust = current_user.total_buzz_dust or 0
             current_user.total_buzz_dust = old_buzz_dust + points_earned
@@ -7857,7 +7837,7 @@ def api_answer():
                 session['new_class_id'] = new_class_id
                 current_user.bee_class = new_class_id
                 current_user.last_rank_up_at = datetime.now(timezone.utc)
-                print(f"🎊 MID-QUIZ RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+                print(f" MID-QUIZ RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
                 
                 # Award rank-up badge immediately
                 badge_type = f"{new_class_id}_rank"
@@ -7876,31 +7856,29 @@ def api_answer():
                             earned_date=datetime.now(timezone.utc)
                         )
                         db.session.add(rank_badge)
-                        print(f"🏆 RANK BADGE AWARDED: {badge_type}")
+                        print(f" RANK BADGE AWARDED: {badge_type}")
                 except Exception as badge_error:
-                    print(f"⚠️ Failed to award rank badge: {badge_error}")
+                    print(f"️ Failed to award rank badge: {badge_error}")
             
             # Commit the Buzz Dust update immediately
             try:
                 db.session.commit()
-                print(f"✨ BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
+                print(f" BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
             except Exception as e:
-                print(f"⚠️ Failed to commit Buzz Dust award: {e}")
+                print(f"️ Failed to commit Buzz Dust award: {e}")
                 db.session.rollback()
     else:
         state["incorrect"] += 1
         state["streak"] = 0
 
-    # 🔧 Advance to next word after any completed attempt (correct, incorrect, or skip)
-    # This matches expected UX: each submission moves forward, while correctness is tracked in stats
-    if is_correct or skip_requested or not is_correct:
-        state["idx"] += 1
-        # Reset hints counter when moving to next word
-        state["hints_used_current_word"] = 0
-        print(f"🔄 Moving to next word, reset hints_used_current_word to 0")
-    else:
-        # Fallback (should not hit): preserve hints counter
-        print(f"❌ Incorrect answer - unexpected non-advance state (idx={state['idx']})")
+    #  DO NOT ADVANCE INDEX HERE - let /api/next handle advancement
+    # /api/answer only records the answer and updates stats
+    # The UI will call /api/next to get the next word, which will advance idx
+    # This prevents the double-advance bug that was skipping words
+    
+    # Reset hints counter for next word (will be used when /api/next is called)
+    state["hints_used_current_word"] = 0
+    print(f" Answer recorded, hints reset for next word")
 
     state["history"].append({
         "word": correct_spelling,
@@ -7960,9 +7938,9 @@ def api_answer():
                 db.session.add(word_mastery)
             
             db.session.commit()
-            print(f"✅ Saved QuizResult for word '{correct_spelling}' (correct={is_correct}) to session {state['db_session_id']}")
+            print(f" Saved QuizResult for word '{correct_spelling}' (correct={is_correct}) to session {state['db_session_id']}")
         except Exception as e:
-            print(f"⚠️ Failed to save quiz result: {e}")
+            print(f"️ Failed to save quiz result: {e}")
             db.session.rollback()
 
     # Get phonetic information for incorrect answers
@@ -7983,11 +7961,11 @@ def api_answer():
     # Next index position for UI progress (1-based); state["idx"] already points to next word
     next_index_position = min(state["idx"], len(order))
     
-    # 🏆 Check for badge achievements
+    #  Check for badge achievements
     badges_unlocked = []
     quiz_complete = state["idx"] >= len(order)
     
-    # 🔍 DEBUG: Log quiz completion status
+    #  DEBUG: Log quiz completion status
     print(f"� QUIZ STATUS DEBUG:")
     print(f"   Current index: {state['idx']}")
     print(f"   Total words: {len(order)}")
@@ -8007,7 +7985,7 @@ def api_answer():
         badge_points = sum(b["points"] for b in badges_unlocked)
         if badge_points > 0:
             state["session_points"] = state.get("session_points", 0) + badge_points
-            print(f"🏆 Badges earned: {len(badges_unlocked)}, bonus points: {badge_points}")
+            print(f" Badges earned: {len(badges_unlocked)}, bonus points: {badge_points}")
         
     # Save ONLY buzz dust related badge(s) for report card display; filter others out.
     filtered_for_report = [b for b in badges_unlocked if b.get("type") in {"elite_buzz_dust", "buzz_dust", "buzz_dust_elite"}]
@@ -8017,18 +7995,18 @@ def api_answer():
     
     # Finalize database session for logged-in users OR guest accounts
     if quiz_complete and state.get("db_session_id"):
-        print(f"🔍 Finalizing quiz session ID: {state.get('db_session_id')}")
+        print(f" Finalizing quiz session ID: {state.get('db_session_id')}")
         try:
             # Finalize the quiz session
             quiz_session = QuizSession.query.get(state["db_session_id"])
             if not quiz_session:
-                print(f"⚠️ WARNING: QuizSession ID {state.get('db_session_id')} not found in database!")
+                print(f"️ WARNING: QuizSession ID {state.get('db_session_id')} not found in database!")
             if quiz_session:
                 quiz_session.correct_count = state["correct"]
                 quiz_session.incorrect_count = state["incorrect"]
                 quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
                 
-                # 🍯 Calculate total points from all sources
+                #  Calculate total points from all sources
                 word_points = state.get("session_points", 0)  # Points from answering words correctly
                 badge_points = sum(b["points"] for b in badges_unlocked)  # Badge bonus points
                 extra_bonus = state.get("extra_points", 0)  # Any additional bonus points
@@ -8042,11 +8020,11 @@ def api_answer():
                 total_points = word_points + badge_points + extra_bonus
                 quiz_session.total_points = total_points  # Store cumulative total
                 
-                print(f"📊 POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
+                print(f" POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
                 
                 quiz_session.complete_session()
                 
-                # 🏆 Save badges to Achievement table
+                #  Save badges to Achievement table
                 # Persist all badges to Achievement table (full history), but report card later filters display.
                 if badges_unlocked and current_user.is_authenticated:
                     for badge in badges_unlocked:
@@ -8063,32 +8041,32 @@ def api_answer():
                             }
                         )
                         db.session.add(achievement)
-                    print(f"🏆 Saved {len(badges_unlocked)} badge(s) to Achievement table")
+                    print(f" Saved {len(badges_unlocked)} badge(s) to Achievement table")
                 
                 # Update user stats (if authenticated)
                 level_up_data = None
                 newly_unlocked_avatars = []
                 if current_user.is_authenticated:
-                    # 🎯 Check for level up BEFORE updating points
+                    #  Check for level up BEFORE updating points
                     old_lifetime_points = current_user.total_lifetime_points or 0
                     new_lifetime_points = old_lifetime_points + total_points
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
                     
-                    # 🐝 Check for newly unlocked avatars based on honey points
+                    #  Check for newly unlocked avatars based on honey points
                     from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
                     old_honey_points = current_user.honey_points or 0
                     new_honey_points = old_honey_points + total_points
                     
-                    # 🔍 DEBUG: Log honey points update
-                    print(f"🍯 HONEY POINTS UPDATE:")
+                    #  DEBUG: Log honey points update
+                    print(f" HONEY POINTS UPDATE:")
                     print(f"   Old: {old_honey_points}")
                     print(f"   Earned: {total_points}")
                     print(f"   New: {new_honey_points}")
                     
                     current_user.honey_points = new_honey_points
-                    print(f"   ✅ Set current_user.honey_points = {current_user.honey_points}")
+                    print(f"    Set current_user.honey_points = {current_user.honey_points}")
                     
-                    # ✨ BUZZ DUST AWARDING - Award Buzz Dust for quiz completion with full calculations
+                    #  BUZZ DUST AWARDING - Award Buzz Dust for quiz completion with full calculations
                     from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust
                     
                     old_buzz_dust = current_user.total_buzz_dust or 0
@@ -8119,7 +8097,7 @@ def api_answer():
                     if badge_points:
                         state["buzz_dust_breakdown"]["badges"] = badge_points
                     
-                    print(f"✨ BUZZ DUST AWARDED: Base={buzz_dust_earned} + Badges={badge_points} = {total_buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    print(f" BUZZ DUST AWARDED: Base={buzz_dust_earned} + Badges={badge_points} = {total_buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
                     print(f"   Breakdown: {state['buzz_dust_breakdown']}")
                     
                     # Check for rank advancement
@@ -8133,7 +8111,7 @@ def api_answer():
                         session['new_class_id'] = new_class_id
                         current_user.bee_class = new_class_id
                         current_user.last_rank_up_at = datetime.now(timezone.utc)
-                        print(f"🎊 RANK UP! {old_class_id} → {new_class_id}")
+                        print(f" RANK UP! {old_class_id} → {new_class_id}")
                         
                         # Award rank-up badge
                         badge_type = f"{new_class_id}_rank"
@@ -8152,9 +8130,9 @@ def api_answer():
                                     earned_date=datetime.now(timezone.utc)
                                 )
                                 db.session.add(rank_badge)
-                                print(f"🏆 RANK BADGE AWARDED: {badge_type}")
+                                print(f" RANK BADGE AWARDED: {badge_type}")
                         except Exception as badge_error:
-                            print(f"⚠️ Failed to award rank badge: {badge_error}")
+                            print(f"️ Failed to award rank badge: {badge_error}")
                     
                     purchased_avatars = current_user.purchased_avatars or []
                     
@@ -8176,11 +8154,11 @@ def api_answer():
                                 'thumbnail': avatar_data.get('thumbnail', ''),
                                 'unlock_points': avatar_data.get('unlock_points', 0),
                                 'backstory': avatar_data.get('backstory', ''),
-                                'message': f"Congratulations! You've unlocked {avatar_data.get('name')}! 🎉"
+                                'message': f"Congratulations! You've unlocked {avatar_data.get('name')}! "
                             })
                     
                     if newly_unlocked_avatars:
-                        print(f"🐝 User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
+                        print(f" User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
                     
                     # Update stats
                     current_user.total_quizzes_completed = (current_user.total_quizzes_completed or 0) + 1
@@ -8188,17 +8166,17 @@ def api_answer():
                     if quiz_session.best_streak > (current_user.best_streak or 0):
                         current_user.best_streak = quiz_session.best_streak
                     
-                    # 📊 Update GPA and average accuracy
+                    #  Update GPA and average accuracy
                     current_user.update_gpa_and_accuracy()
                     
-                    print(f"📈 STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
+                    print(f" STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
                     
                     if level_up_data:
-                        print(f"🎉 LEVEL UP! {level_up_data['old_level']['tier']} → {level_up_data['new_level']['tier']}")
+                        print(f" LEVEL UP! {level_up_data['old_level']['tier']} → {level_up_data['new_level']['tier']}")
                     
-                    print(f"✅ Quiz completed! Grade: {quiz_session.grade}, Session Points: {quiz_session.points_earned}, Total Points: {total_points}, User Lifetime: {current_user.total_lifetime_points}")
+                    print(f" Quiz completed! Grade: {quiz_session.grade}, Session Points: {quiz_session.points_earned}, Total Points: {total_points}, User Lifetime: {current_user.total_lifetime_points}")
                 else:
-                    print(f"✅ Guest quiz completed! Grade: {quiz_session.grade}, Points: {total_points}")
+                    print(f" Guest quiz completed! Grade: {quiz_session.grade}, Points: {total_points}")
                 
                 # Save level up data to session for frontend
                 if level_up_data:
@@ -8212,17 +8190,17 @@ def api_answer():
                     session[QUIZ_STATE_KEY] = state
                     session.modified = True
                 
-                # 🔥 CRITICAL: Commit all changes to database
+                #  CRITICAL: Commit all changes to database
                 db.session.commit()
-                print(f"💾 DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}")
+                print(f" DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}")
                 
         except Exception as e:
-            print(f"⚠️ Failed to finalize quiz session: {e}")
+            print(f"️ Failed to finalize quiz session: {e}")
             import traceback
             traceback.print_exc()
             db.session.rollback()
     elif quiz_complete and not state.get("db_session_id"):
-        print(f"⚠️ WARNING: Quiz complete but no db_session_id in state! Cannot save to database.")
+        print(f"️ WARNING: Quiz complete but no db_session_id in state! Cannot save to database.")
 
     return jsonify({
         "correct": is_correct,
@@ -8336,7 +8314,7 @@ def api_save_partial_progress():
         # Commit to database
         db.session.commit()
         
-        print(f"💾 Saved partial progress: Session {quiz_session.id}, Correct: {quiz_session.correct_count}, "
+        print(f" Saved partial progress: Session {quiz_session.id}, Correct: {quiz_session.correct_count}, "
               f"Incorrect: {quiz_session.incorrect_count}, Points: {quiz_session.points_earned}, "
               f"Completed: {quiz_session.completed}")
         
@@ -8353,7 +8331,7 @@ def api_save_partial_progress():
         })
         
     except Exception as e:
-        print(f"❌ Error saving partial progress: {e}")
+        print(f" Error saving partial progress: {e}")
         import traceback
         traceback.print_exc()
         db.session.rollback()
@@ -8371,18 +8349,25 @@ def api_quiz_status():
             return jsonify({"can_resume": False, "message": "No quiz session found"})
         
         # Check if there's meaningful progress to resume
-        index = state.get("index", 0)
+        idx = state.get("idx", 0)
         correct = state.get("correct", 0)
         incorrect = state.get("incorrect", 0)
-        total = state.get("total", 0)
+        order = state.get("order", [])
+        total = len(order)
         
-        # Can resume if: has answered at least one question and hasn't finished all words
-        can_resume = (correct > 0 or incorrect > 0) and index < total
+        print(f"DEBUG /api/quiz/status: idx={idx}, correct={correct}, incorrect={incorrect}, total={total}")
+        print(f"DEBUG /api/quiz/status: condition check: total > 0 = {total > 0}, idx < total = {idx < total}, (correct > 0 or incorrect > 0) = {correct > 0 or incorrect > 0}")
+        
+        #  FIX: Can resume only if quiz has actual progress (at least one answer submitted)
+        # Prevents modal on fresh uploads where idx=0, correct=0, incorrect=0
+        can_resume = total > 0 and idx < total and (correct > 0 or incorrect > 0)
+        
+        print(f"DEBUG /api/quiz/status: can_resume = {can_resume}")
         
         if can_resume:
             return jsonify({
                 "can_resume": True,
-                "index": index,
+                "index": idx,
                 "total": total,
                 "correct": correct,
                 "incorrect": incorrect,
@@ -8473,7 +8458,7 @@ def api_add_bonus_points():
         session[QUIZ_STATE_KEY] = state
         session.modified = True
         
-        print(f"🎁 BONUS POINTS AWARDED: +{bonus_points} points for '{reason}' (category: {category})")
+        print(f" BONUS POINTS AWARDED: +{bonus_points} points for '{reason}' (category: {category})")
         print(f"   New session total: {state['session_points']} points (extra_points: {state['extra_points']})")
         
         return jsonify({
@@ -8486,7 +8471,7 @@ def api_add_bonus_points():
         })
         
     except Exception as e:
-        print(f"❌ Error adding bonus points: {e}")
+        print(f" Error adding bonus points: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -8517,7 +8502,7 @@ def api_user_level():
             "error": str(e),
             "level": {
                 "tier": "Busy Bee",
-                "icon": "🐝",
+                "icon": "",
                 "level": 1,
                 "points_current": 0,
                 "points_next": 500,
@@ -8531,7 +8516,7 @@ def api_user_level():
 def api_dictionary_lookup():
     """
     Look up a word using INTERNAL DICTIONARY ONLY (Simple English Wiktionary → Cache → Smart Fallback).
-    ✅ NO EXTERNAL API CALLS - All definitions from built-in resources.
+     NO EXTERNAL API CALLS - All definitions from built-in resources.
     
     Body JSON: { "word": "example" }
     Returns: { "word": "example", "definition": "...", "phonetic": "E X A M P L E", "found": true/false }
@@ -8570,7 +8555,7 @@ def api_dictionary_lookup():
         # Non-fatal if quota logic fails
         pass
     
-    # ✅ All lookups use INTERNAL DICTIONARY ONLY (get_word_info uses Simple Wiktionary → Cache → Smart Fallback)
+    #  All lookups use INTERNAL DICTIONARY ONLY (get_word_info uses Simple Wiktionary → Cache → Smart Fallback)
     definition = get_word_info(word)
     phonetic_spelling = build_phonetic_spelling(word)
     word_lower = word.lower()
@@ -8593,7 +8578,7 @@ def api_dictionary_lookup():
         "definition": definition,
         "phonetic": phonetic_spelling,
         "found": found_in_wiktionary or found_in_cache,
-        "source": source  # ✅ All sources are internal (simple_wiktionary, internal_cache, or smart_fallback)
+        "source": source  #  All sources are internal (simple_wiktionary, internal_cache, or smart_fallback)
     })
 
 @app.route("/api/word-info/preload", methods=["POST"])
@@ -8619,10 +8604,10 @@ def api_word_info_preload():
                 if definition:
                     preloaded_count += 1
             except Exception as e:
-                print(f"⚠️ Failed to preload '{word}': {e}")
+                print(f"️ Failed to preload '{word}': {e}")
                 continue
         
-        print(f"✅ Dictionary preloaded: {preloaded_count}/{len(words)} words cached")
+        print(f" Dictionary preloaded: {preloaded_count}/{len(words)} words cached")
         
         return jsonify({
             "success": True,
@@ -8633,7 +8618,7 @@ def api_word_info_preload():
         })
         
     except Exception as e:
-        print(f"❌ Dictionary preload failed: {e}")
+        print(f" Dictionary preload failed: {e}")
         return jsonify({
             "success": False,
             "error": str(e),
@@ -8654,7 +8639,7 @@ def api_dictionary_stats():
                     with lock_obj:
                         prefetch_snapshot = dict(metrics_obj)
         except Exception as ex:
-            print(f"⚠️ Failed snapshotting prefetch metrics: {ex}")
+            print(f"️ Failed snapshotting prefetch metrics: {ex}")
         return jsonify({
             "ok": True,
             "wiktionary_loaded": SIMPLE_WIKTIONARY_LOADED,
@@ -8745,9 +8730,9 @@ def _start_prefetch_job(words, mode='both', storage_id: Optional[str] = None):
                                                         rec['sentence'] = s
                                     # no session writes here; safe in background
                             except Exception as _persist_ex:
-                                print(f"⚠️ Prefetch persist failed for '{w}': {_persist_ex}")
+                                print(f"️ Prefetch persist failed for '{w}': {_persist_ex}")
                     except Exception as ex:
-                        print(f"⚠️ Prefetch error for '{w}': {ex}")
+                        print(f"️ Prefetch error for '{w}': {ex}")
                         with PREFETCH_JOBS_LOCK:
                             job['errors'] += 1
                     finally:
@@ -8770,7 +8755,7 @@ def _start_prefetch_job(words, mode='both', storage_id: Optional[str] = None):
             with PREFETCH_METRICS_LOCK:
                 PREFETCH_METRICS['last_prefetch_total_ms'] = total_ms
         except Exception as e:
-            print(f"❌ Prefetch job crashed: {e}")
+            print(f" Prefetch job crashed: {e}")
             with PREFETCH_JOBS_LOCK:
                 job['errors'] += 1
                 job['done'] = True
@@ -8983,7 +8968,7 @@ def api_reset():
 def api_build_dictionary():
     """
     Build dictionary cache for all words in current wordbank using built-in Simple Wiktionary
-    ✅ NO EXTERNAL API - Uses only 50K+ word built-in dictionary
+     NO EXTERNAL API - Uses only 50K+ word built-in dictionary
     """
     wordbank = get_wordbank()
     if not wordbank:
@@ -9036,7 +9021,7 @@ def api_build_dictionary():
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
                 results["api_lookups"] += 1
-                print(f"📖 Wiktionary lookup successful for '{word}'")
+                print(f" Wiktionary lookup successful for '{word}'")
             else:
                 # Generate fallback for words not in Wiktionary
                 fallback_data = generate_smart_fallback(word)
@@ -9052,7 +9037,7 @@ def api_build_dictionary():
                 save_dictionary_cache(cache_entry)
                 DICTIONARY_CACHE.update(cache_entry)
                 results["fallbacks"] += 1
-                print(f"🟨 Using fallback for '{word}'")
+                print(f" Using fallback for '{word}'")
                 
         except Exception as e:
             error_msg = f"Error processing '{word}': {str(e)}"
@@ -9490,19 +9475,19 @@ def api_buzz_dust_info():
     Guests always get Novice Bee rank with 0 Buzz Dust.
     """
     try:
-        print(f"🔍 DEBUG /api/buzz-dust/info: Starting request")
-        print(f"🔍 DEBUG /api/buzz-dust/info: current_user.is_authenticated = {current_user.is_authenticated}")
+        print(f" DEBUG /api/buzz-dust/info: Starting request")
+        print(f" DEBUG /api/buzz-dust/info: current_user.is_authenticated = {current_user.is_authenticated}")
         
         from buzz_dust_helpers import get_rank_progress, get_all_bee_classes
         
         # Handle both authenticated and guest users
         if current_user.is_authenticated:
             buzz_dust = current_user.total_buzz_dust or 0
-            print(f"✅ DEBUG /api/buzz-dust/info: Authenticated user, buzz_dust={buzz_dust}")
+            print(f" DEBUG /api/buzz-dust/info: Authenticated user, buzz_dust={buzz_dust}")
         else:
             # Guest users always start at 0
             buzz_dust = 0
-            print(f"👤 DEBUG /api/buzz-dust/info: Guest user, defaulting to 0 Buzz Dust")
+            print(f" DEBUG /api/buzz-dust/info: Guest user, defaulting to 0 Buzz Dust")
         
         rank_progress = get_rank_progress(buzz_dust)
         
@@ -9518,7 +9503,7 @@ def api_buzz_dust_info():
             'is_authenticated': current_user.is_authenticated  # Help frontend debug
         }
         
-        print(f"✅ DEBUG /api/buzz-dust/info: Returning success response")
+        print(f" DEBUG /api/buzz-dust/info: Returning success response")
         print(f"   - current_class: {rank_progress['current_class'].get('label', 'Unknown')}")
         print(f"   - next_class: {rank_progress['next_class'].get('label', 'Max') if rank_progress['next_class'] else 'None'}")
         print(f"   - at_max_rank: {rank_progress['at_max_rank']}")
@@ -9526,9 +9511,9 @@ def api_buzz_dust_info():
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"❌ ERROR /api/buzz-dust/info: {type(e).__name__}: {e}")
+        print(f" ERROR /api/buzz-dust/info: {type(e).__name__}: {e}")
         import traceback
-        print(f"❌ ERROR /api/buzz-dust/info: Traceback: {traceback.format_exc()}")
+        print(f" ERROR /api/buzz-dust/info: Traceback: {traceback.format_exc()}")
         
         # Return safe fallback data instead of 500 error
         return jsonify({
@@ -9925,16 +9910,16 @@ def register():
                         db.session.commit()
                         linked_to_admin = True
                         admin_name = teacher.display_name
-                        print(f"✅ Linked {new_user.username} to {teacher.username}'s dashboard")
+                        print(f" Linked {new_user.username} to {teacher.username}'s dashboard")
                     else:
                         linked_to_admin = True
                         admin_name = teacher.display_name
                         print(f"ℹ️ Link already exists for {new_user.username} → {teacher.username}")
                 except Exception as link_error:
-                    print(f"⚠️ Failed to create TeacherStudent link: {link_error}")
+                    print(f"️ Failed to create TeacherStudent link: {link_error}")
                     # Non-fatal - user registration still succeeds
             else:
-                print(f"⚠️ Teacher key '{teacher_key}' not found - student not linked")
+                print(f"️ Teacher key '{teacher_key}' not found - student not linked")
         
         # Auto-login after registration
         login_user(new_user, remember=True)
@@ -9945,15 +9930,15 @@ def register():
                 try:
                     send_welcome_email(new_user.email, new_user.username, new_user.role, new_user.teacher_key if new_user.role in ['teacher', 'parent'] else None)
                 except Exception as _e:
-                    print(f"⚠️ Welcome email async failed: {_e}")
+                    print(f"️ Welcome email async failed: {_e}")
             threading.Thread(target=_send_async, daemon=True).start()
         
         # Build response message
-        message = f"🎉 Welcome to the hive, {display_name}! Your account has been created successfully! 🐝✨"
+        message = f" Welcome to the hive, {display_name}! Your account has been created successfully! "
         
         # Add confirmation message if student was linked to admin
         if linked_to_admin and admin_name:
-            message += f"\n\n✅ You've been linked to {admin_name}'s dashboard for progress tracking!"
+            message += f"\n\n You've been linked to {admin_name}'s dashboard for progress tracking!"
         
         # Determine redirect based on role
         if role == 'teacher':
@@ -10038,7 +10023,7 @@ def login():
 
         return jsonify({
             "success": True,
-            "message": f"Welcome back, {user.display_name}! 🐝",
+            "message": f"Welcome back, {user.display_name}! ",
             "redirect": redirect_url
         })
     except sa_exc.ProgrammingError as e:
@@ -10222,7 +10207,7 @@ def dev_peek_reset_token():
 def logout():
     """Log out current user"""
     logout_user()
-    flash('You have been logged out. See you next time! 🐝', 'success')
+    flash('You have been logged out. See you next time! ', 'success')
     return redirect(url_for('home'))
 
 
@@ -10360,18 +10345,18 @@ def dev_migrate_database():
                     sql = f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"
                     db.session.execute(text(sql))
                     db.session.commit()
-                    results.append(f"✅ {col_name} - added")
+                    results.append(f" {col_name} - added")
                 except Exception as e:
                     db.session.rollback()
-                    results.append(f"❌ {col_name} - failed: {str(e)}")
+                    results.append(f" {col_name} - failed: {str(e)}")
         
         # Create index
         try:
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_users_avatar_id ON users(avatar_id)"))
             db.session.commit()
-            results.append("✅ Avatar index created")
+            results.append(" Avatar index created")
         except Exception as e:
-            results.append(f"⚠️  Index: {str(e)}")
+            results.append(f"️  Index: {str(e)}")
         
         return jsonify({
             "success": True,
@@ -10473,7 +10458,7 @@ def student_dashboard():
         user_id=current_user.id
     ).filter(WordMastery.success_rate < 70).order_by(WordMastery.success_rate).limit(12).all()
     
-    # 🏆 NEW: Get badge collection
+    #  NEW: Get badge collection
     achievements = Achievement.query.filter_by(
         user_id=current_user.id
     ).order_by(Achievement.earned_date.desc()).all()
@@ -10494,7 +10479,7 @@ def student_dashboard():
                 'first_earned': achievement.earned_date,
                 'latest_earned': achievement.earned_date,
                 'rarity': BADGE_METADATA.get(badge_type, {}).get('rarity', 'common'),
-                'icon': BADGE_METADATA.get(badge_type, {}).get('icon', '🏆'),
+                'icon': BADGE_METADATA.get(badge_type, {}).get('icon', ''),
                 'image': BADGE_METADATA.get(badge_type, {}).get('image'),
                 'name': BADGE_METADATA.get(badge_type, {}).get('name', badge_type.replace('_', ' ').title()),
                 'description': BADGE_METADATA.get(badge_type, {}).get('description', '')
@@ -10514,7 +10499,7 @@ def student_dashboard():
         meta = BADGE_METADATA.get(badge_type, {})
         recent_badges.append({
             'type': badge_type,
-            'icon': meta.get('icon', '🏆'),
+            'icon': meta.get('icon', ''),
             'image': meta.get('image'),
             'name': meta.get('name', badge_type.replace('_', ' ').title()),
             'points': achievement.points_bonus or 0,
@@ -10558,7 +10543,7 @@ def student_dashboard():
         user_avatar_data = current_user.get_avatar_data()
         use_mascot = current_user.has_selected_avatar() == False
     except Exception as e:
-        print(f"⚠️ Could not load user avatar data: {e}")
+        print(f"️ Could not load user avatar data: {e}")
         user_avatar_data = None
         use_mascot = True
 
@@ -10581,7 +10566,7 @@ def student_dashboard():
 def api_update_user_avatar_legacy():
     """API endpoint for a user to update their own avatar. (Legacy)
     
-    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+     SECURITY: Validates avatar unlock status before allowing selection.
     - Admins bypass all unlock checks
     - Regular users must have earned/purchased the avatar
     - Guest users cannot select avatars (fallback to mascot)
@@ -10593,7 +10578,7 @@ def api_update_user_avatar_legacy():
 
         avatar_id = data['avatar_id']
         
-        # ✅ SECURITY CHECK 1: Verify user can select avatars
+        #  SECURITY CHECK 1: Verify user can select avatars
         # Guest users (no password) cannot select avatars
         if not current_user.password_hash:
             return jsonify({
@@ -10601,7 +10586,7 @@ def api_update_user_avatar_legacy():
                 'message': 'Guest users cannot select avatars. Please register to customize your bee!'
             }), 403
         
-        # ✅ SECURITY CHECK 2: Avatar unlock validation (unless admin)
+        #  SECURITY CHECK 2: Avatar unlock validation (unless admin)
         if current_user.role != 'admin':
             try:
                 from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
@@ -10643,12 +10628,12 @@ def api_update_user_avatar_legacy():
                         
             except ImportError:
                 # Fallback if avatar_catalog unavailable
-                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
+                print(f"️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
             except Exception as e:
-                print(f"⚠️ Error checking avatar unlock status: {e}")
+                print(f"️ Error checking avatar unlock status: {e}")
                 # Continue with selection on catalog errors (fail-open for existing data)
         
-        # ✅ SECURITY CHECK 3: Avatar parental lock (if parent locked their child's avatars)
+        #  SECURITY CHECK 3: Avatar parental lock (if parent locked their child's avatars)
         if getattr(current_user, 'avatar_locked', False):
             return jsonify({
                 'status': 'error',
@@ -10656,7 +10641,7 @@ def api_update_user_avatar_legacy():
                 'reason': 'parental_lock'
             }), 403
         
-        # ✅ UPDATE: The update_avatar method on the User model handles saving.
+        #  UPDATE: The update_avatar method on the User model handles saving.
         success, message = current_user.update_avatar(avatar_id)
         
         if success:
@@ -10669,8 +10654,8 @@ def api_update_user_avatar_legacy():
                 
                 db.session.commit()
                 
-                # 📊 AUDIT: Log avatar selection
-                print(f"✅ User {current_user.id} ({current_user.username}) selected avatar: {avatar_id}")
+                #  AUDIT: Log avatar selection
+                print(f" User {current_user.id} ({current_user.username}) selected avatar: {avatar_id}")
                 
                 return jsonify({
                     'status': 'success', 
@@ -10686,7 +10671,7 @@ def api_update_user_avatar_legacy():
             return jsonify({'status': 'error', 'message': message}), 400
             
     except Exception as e:
-        print(f"❌ Unexpected error in avatar selection: {e}")
+        print(f" Unexpected error in avatar selection: {e}")
         return jsonify({
             'status': 'error', 
             'message': 'An unexpected error occurred. Please try again.',
@@ -10776,7 +10761,7 @@ def api_user_session():
                 'message': 'No active session'
             })
     except Exception as e:
-        print(f"❌ Error in /api/user/session: {e}")
+        print(f" Error in /api/user/session: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -10883,7 +10868,7 @@ def debug_my_permissions():
         </style>
     </head>
     <body>
-        <h1>🔍 Permission Debug: {current_user.username}</h1>
+        <h1> Permission Debug: {current_user.username}</h1>
         
         <div class="section">
             <h2>User Information</h2>
@@ -10896,15 +10881,15 @@ def debug_my_permissions():
             <ul>
                 <li class="{'success' if user_info['role'] == 'admin' else 'value'}">
                     Role 'admin' = All avatars unlocked
-                    <strong>{'✅ YES' if user_info['role'] == 'admin' else '❌ NO'}</strong>
+                    <strong>{' YES' if user_info['role'] == 'admin' else ' NO'}</strong>
                 </li>
                 <li class="{'success' if user_info['admin_all_access'] else 'value'}">
                     admin_all_access = All avatars unlocked
-                    <strong>{'✅ YES' if user_info['admin_all_access'] else '❌ NO'}</strong>
+                    <strong>{' YES' if user_info['admin_all_access'] else ' NO'}</strong>
                 </li>
                 <li class="{'success' if user_info['premium_member'] else 'value'}">
                     premium_member = All avatars unlocked
-                    <strong>{'✅ YES' if user_info['premium_member'] else '❌ NO'}</strong>
+                    <strong>{' YES' if user_info['premium_member'] else ' NO'}</strong>
                 </li>
             </ul>
             
@@ -10913,8 +10898,8 @@ def debug_my_permissions():
                 is_admin_or_premium() = <strong>{user_info['is_admin_or_premium()']}</strong>
             </p>
             
-            {'<p class="error">⚠️ BUG DETECTED: Regular user has admin/premium access!</p>' if user_info['is_admin_or_premium()'] and user_info['role'] != 'admin' and not user_info['admin_all_access'] and not user_info['premium_member'] else ''}
-            {'<p class="success">✅ Permissions look correct - avatars should be locked based on honey points/purchases</p>' if not user_info['is_admin_or_premium()'] else ''}
+            {'<p class="error">️ BUG DETECTED: Regular user has admin/premium access!</p>' if user_info['is_admin_or_premium()'] and user_info['role'] != 'admin' and not user_info['admin_all_access'] and not user_info['premium_member'] else ''}
+            {'<p class="success"> Permissions look correct - avatars should be locked based on honey points/purchases</p>' if not user_info['is_admin_or_premium()'] else ''}
         </div>
         
         <div class="section">
@@ -11122,7 +11107,7 @@ def parent_dashboard():
         user_avatar_data = current_user.get_avatar_data()
         use_mascot = current_user.has_selected_avatar() == False
     except Exception as e:
-        print(f"⚠️ Could not load user avatar data: {e}")
+        print(f"️ Could not load user avatar data: {e}")
         user_avatar_data = None
         use_mascot = True
     
@@ -11731,7 +11716,7 @@ def admin_dashboard():
             user_avatar_data = current_user.get_avatar_data()
             use_mascot = current_user.has_selected_avatar() == False
         except Exception as e:
-            print(f"⚠️ Could not load user avatar data: {e}")
+            print(f"️ Could not load user avatar data: {e}")
             user_avatar_data = None
             use_mascot = True
         
@@ -11749,7 +11734,7 @@ def admin_dashboard():
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print(f"❌ ADMIN DASHBOARD ERROR: {str(e)}")
+        print(f" ADMIN DASHBOARD ERROR: {str(e)}")
         print(error_details)
         flash(f'Error loading admin dashboard: {str(e)}', 'error')
         return render_template('error.html', 
@@ -11966,7 +11951,7 @@ def api_admin_get_users():
         })
     
     except Exception as e:
-        print(f"❌ Error fetching users: {e}")
+        print(f" Error fetching users: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12012,7 +11997,7 @@ def api_admin_update_user(user_id):
     
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error updating user: {e}")
+        print(f" Error updating user: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12044,7 +12029,7 @@ def api_admin_delete_user(user_id):
         db.session.delete(user)
         db.session.commit()
         
-        print(f"🗑️ Admin {current_user.username} deleted user: {username} (ID: {user_id})")
+        print(f"️ Admin {current_user.username} deleted user: {username} (ID: {user_id})")
         
         return jsonify({
             "status": "success",
@@ -12053,7 +12038,7 @@ def api_admin_delete_user(user_id):
     
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error deleting user: {e}")
+        print(f" Error deleting user: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12084,7 +12069,7 @@ def api_admin_bulk_delete():
         deleted = User.query.filter(User.id.in_(user_ids)).delete(synchronize_session=False)
         db.session.commit()
         
-        print(f"🗑️ Admin {current_user.username} bulk deleted {deleted} users")
+        print(f"️ Admin {current_user.username} bulk deleted {deleted} users")
         
         return jsonify({
             "status": "success",
@@ -12094,7 +12079,7 @@ def api_admin_bulk_delete():
     
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error bulk deleting users: {e}")
+        print(f" Error bulk deleting users: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12126,7 +12111,7 @@ def api_admin_bulk_update_role():
         )
         db.session.commit()
         
-        print(f"✏️ Admin {current_user.username} updated {updated} users to role: {new_role}")
+        print(f"️ Admin {current_user.username} updated {updated} users to role: {new_role}")
         
         return jsonify({
             "status": "success",
@@ -12136,7 +12121,7 @@ def api_admin_bulk_update_role():
     
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error bulk updating roles: {e}")
+        print(f" Error bulk updating roles: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12189,7 +12174,7 @@ def api_admin_export_users():
         )
     
     except Exception as e:
-        print(f"❌ Error exporting users: {e}")
+        print(f" Error exporting users: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -12498,23 +12483,23 @@ def api_speed_round_start():
         
         # Generate or fetch words
         if word_source == 'auto':
-            # ✅ Use internal dictionary (50K+ Simple Wiktionary) with enhanced difficulty system
+            #  Use internal dictionary (50K+ Simple Wiktionary) with enhanced difficulty system
             difficulty_level = difficulty_map.get(difficulty, 2)  # Default to grade 3-4
-            print(f"🎯 Speed Round: Generating {word_count} words at difficulty level {difficulty_level} from internal dictionary")
+            print(f" Speed Round: Generating {word_count} words at difficulty level {difficulty_level} from internal dictionary")
             
             word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
             
             # Extract just word strings for speed round
             words = [record['word'] for record in word_records]
             
-            print(f"✅ Generated {len(words)} kid-friendly words from internal dictionary")
+            print(f" Generated {len(words)} kid-friendly words from internal dictionary")
             
         elif word_source == 'uploaded':
             # Get user's uploaded word list
             wordbank = get_wordbank()
             if not wordbank or len(wordbank) == 0:
-                # ✅ FALLBACK: If no uploaded words, use internal dictionary instead of erroring
-                print("⚠️ No uploaded words found, falling back to internal dictionary")
+                #  FALLBACK: If no uploaded words, use internal dictionary instead of erroring
+                print("️ No uploaded words found, falling back to internal dictionary")
                 difficulty_level = difficulty_map.get(difficulty, 2)
                 word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
                 words = [record['word'] for record in word_records]
@@ -12526,7 +12511,7 @@ def api_speed_round_start():
                 
         elif word_source == 'mixed':
             # Use internal dictionary with mixed difficulty levels
-            print("🎲 Speed Round: Generating mixed difficulty words from internal dictionary")
+            print(" Speed Round: Generating mixed difficulty words from internal dictionary")
             mixed_words = []
             words_per_level = max(1, word_count // 5)  # Distribute across all 5 levels
             
@@ -12537,11 +12522,11 @@ def api_speed_round_start():
             # Shuffle and trim to exact count
             random.shuffle(mixed_words)
             words = mixed_words[:word_count]
-            print(f"✅ Generated {len(words)} mixed difficulty words")
+            print(f" Generated {len(words)} mixed difficulty words")
             
         else:
             # Default: Use internal dictionary at medium difficulty
-            print("⚠️ Unknown word source, using internal dictionary at medium difficulty")
+            print("️ Unknown word source, using internal dictionary at medium difficulty")
             word_records = get_random_words_by_difficulty(3, count=word_count)
             words = [record['word'] for record in word_records]
         
@@ -12570,7 +12555,7 @@ def api_speed_round_start():
         session.permanent = True
         session.modified = True
         
-        print(f"🎯 Speed Round started: {len(words)} words, {difficulty}, {time_per_word}s/word")
+        print(f" Speed Round started: {len(words)} words, {difficulty}, {time_per_word}s/word")
         
         return jsonify({
             'status': 'success',
@@ -12579,7 +12564,7 @@ def api_speed_round_start():
         })
         
     except Exception as e:
-        print(f"❌ Error starting speed round: {e}")
+        print(f" Error starting speed round: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -12626,7 +12611,7 @@ def api_speed_round_answer():
             base_points = 10
             multiplier = speed_round['config']['multiplier']
             
-            # 🚀 PROGRESSIVE TIME BONUS: Faster answers earn MORE points
+            #  PROGRESSIVE TIME BONUS: Faster answers earn MORE points
             # Calculate percentage of time used (0-100%)
             time_percentage = (time_taken / time_limit) * 100
             
@@ -12657,7 +12642,7 @@ def api_speed_round_answer():
                     time_bonus_points = 2
                 
                 base_points += time_bonus_points
-                speed_logger.info(f"⚡ Time bonus: {time_bonus_points} pts ({time_percentage:.1f}% time used, {time_taken:.2f}s/{time_limit}s)")
+                speed_logger.info(f" Time bonus: {time_bonus_points} pts ({time_percentage:.1f}% time used, {time_taken:.2f}s/{time_limit}s)")
             
             # Streak bonus
             speed_round['current_streak'] += 1
@@ -12695,20 +12680,20 @@ def api_speed_round_answer():
                         session['ranked_up_speed'] = True
                         session['old_class_id_speed'] = old_class_id
                         current_user.bee_class = new_class_id
-                        speed_logger.info(f"🎊 MID-SPEED-ROUND RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+                        speed_logger.info(f" MID-SPEED-ROUND RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
                     
                     # Commit the Buzz Dust update immediately
                     db.session.commit()
-                    speed_logger.info(f"✨ SPEED ROUND BUZZ DUST: +{buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    speed_logger.info(f" SPEED ROUND BUZZ DUST: +{buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
                 except Exception as e:
                     speed_logger.error(f"Failed real-time Buzz Dust award: {e}")
                     db.session.rollback()
             
-            print(f"✅ Correct! '{correct_spelling}' - {points_earned} pts (streak: {speed_round['current_streak']})")
+            print(f" Correct! '{correct_spelling}' - {points_earned} pts (streak: {speed_round['current_streak']})")
         else:
             # Reset streak on wrong answer
             speed_round['current_streak'] = 0
-            print(f"❌ Wrong! '{user_input}' != '{correct_spelling}'")
+            print(f" Wrong! '{user_input}' != '{correct_spelling}'")
         
         # Record this word's performance
         word_record = {
@@ -12753,7 +12738,7 @@ def api_speed_round_answer():
         })
         
     except Exception as e:
-        print(f"❌ Error processing answer: {e}")
+        print(f" Error processing answer: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -12807,7 +12792,7 @@ def api_speed_round_complete():
         # Use Railway-safe database operations
         score_id = save_speed_round_score_railway(current_user.id, score_data)
         
-        # 🏆 Check for badge achievements in speed round
+        #  Check for badge achievements in speed round
         badges_unlocked = []
         
         # Build state object compatible with check_badges function
@@ -12841,7 +12826,7 @@ def api_speed_round_complete():
                 words_attempted
             )
             
-            # 🏆 Save badges to Achievement table
+            #  Save badges to Achievement table
             if badges_unlocked and current_user.is_authenticated:
                 try:
                     for badge in badges_unlocked:
@@ -12859,7 +12844,7 @@ def api_speed_round_complete():
                         )
                         db.session.add(achievement)
                     db.session.commit()
-                    speed_logger.info(f"🏆 Saved {len(badges_unlocked)} badge(s) to Achievement table")
+                    speed_logger.info(f" Saved {len(badges_unlocked)} badge(s) to Achievement table")
                 except Exception as e:
                     speed_logger.error(f"Failed to save badges: {e}")
                     db.session.rollback()
@@ -12894,7 +12879,7 @@ def api_speed_round_complete():
             'difficulty': speed_round['config']['difficulty'],
             'config': speed_round['config'],
             'incorrect_words': incorrect_words,
-            'badges_earned': badges_unlocked  # 🏆 Include badges for display
+            'badges_earned': badges_unlocked  #  Include badges for display
         }
         
         # Clear speed round from session
@@ -13051,7 +13036,7 @@ def api_get_subscriptions():
         
     except Exception as e:
         import traceback
-        print(f"❌ Error fetching subscriptions: {e}")
+        print(f" Error fetching subscriptions: {e}")
         print(traceback.format_exc())
         return jsonify({
             'status': 'error',
@@ -13082,7 +13067,7 @@ def subscription_page():
         )
     
     except Exception as e:
-        print(f"❌ Error loading subscription page: {e}")
+        print(f" Error loading subscription page: {e}")
         import traceback
         traceback.print_exc()
         return render_template(
@@ -13226,7 +13211,7 @@ def api_get_avatar(avatar_id):
         })
     
     except Exception as e:
-        print(f"❌ Error fetching avatar {avatar_id}: {e}")
+        print(f" Error fetching avatar {avatar_id}: {e}")
         return jsonify({
             'status': 'error',
             'message': str(e)
@@ -13268,7 +13253,7 @@ def api_get_avatar_categories():
         })
     
     except Exception as e:
-        print(f"❌ Error fetching avatar categories: {e}")
+        print(f" Error fetching avatar categories: {e}")
         return jsonify({
             'status': 'error',
             'message': str(e)
@@ -13305,7 +13290,7 @@ def api_get_user_avatar(user_id):
         })
     
     except Exception as e:
-        print(f"❌ Error fetching user avatar: {e}")
+        print(f" Error fetching user avatar: {e}")
         return jsonify({
             'status': 'error',
             'message': str(e)
@@ -13317,7 +13302,7 @@ def api_get_user_avatar(user_id):
 def api_admin_or_user_update_avatar(user_id):
     """Update a user's avatar
     
-    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+     SECURITY: Validates avatar unlock status before allowing selection.
     - Users can only update their own avatar (unless admin updating for others)
     - Unlock validation applied for non-admins
     - Respects parental locks
@@ -13337,14 +13322,14 @@ def api_admin_or_user_update_avatar(user_id):
                 'message': 'User not found'
             }), 404
         
-        # ✅ SECURITY CHECK 1: Guest users cannot select avatars
+        #  SECURITY CHECK 1: Guest users cannot select avatars
         if not user.password_hash:
             return jsonify({
                 'status': 'error',
                 'message': 'Guest users cannot select avatars. Please register to customize your bee!'
             }), 403
         
-        # ✅ SECURITY CHECK 2: Parental lock
+        #  SECURITY CHECK 2: Parental lock
         if getattr(user, 'avatar_locked', False):
             return jsonify({
                 'status': 'error',
@@ -13361,7 +13346,7 @@ def api_admin_or_user_update_avatar(user_id):
                 'message': 'avatar_id is required'
             }), 400
         
-        # ✅ SECURITY CHECK 3: Unlock validation (unless admin)
+        #  SECURITY CHECK 3: Unlock validation (unless admin)
         if user.role != 'admin':
             try:
                 from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
@@ -13402,9 +13387,9 @@ def api_admin_or_user_update_avatar(user_id):
                         }), 403
                         
             except ImportError:
-                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
+                print(f"️ Avatar catalog unavailable, skipping unlock check for {avatar_id}")
             except Exception as e:
-                print(f"⚠️ Error checking avatar unlock status: {e}")
+                print(f"️ Error checking avatar unlock status: {e}")
         
         # Update avatar
         success, message = user.update_avatar(avatar_id, variant)
@@ -13430,8 +13415,8 @@ def api_admin_or_user_update_avatar(user_id):
         avatar_data = user.get_avatar_data()
         use_mascot = not user.has_selected_avatar()
 
-        # 📊 AUDIT: Log avatar selection
-        print(f"✅ User {user.id} ({user.username}) updated avatar to {avatar_id} ({variant})")
+        #  AUDIT: Log avatar selection
+        print(f" User {user.id} ({user.username}) updated avatar to {avatar_id} ({variant})")
 
         return jsonify({
             'status': 'success',
@@ -13441,7 +13426,7 @@ def api_admin_or_user_update_avatar(user_id):
         })
     
     except Exception as e:
-        print(f"❌ Error updating user avatar: {e}")
+        print(f" Error updating user avatar: {e}")
         db.session.rollback()
         return jsonify({
             'status': 'error',
@@ -13455,7 +13440,7 @@ def api_select_avatar():
     """
     Simple avatar selection endpoint for the avatar picker
     
-    ✅ SECURITY: Validates avatar unlock status before allowing selection.
+     SECURITY: Validates avatar unlock status before allowing selection.
     - Admins bypass all unlock checks
     - Regular users must have earned/purchased the avatar
     - Respects parental locks on account
@@ -13464,11 +13449,11 @@ def api_select_avatar():
         from models import Avatar
         
         # Debug: Log current user info
-        print(f"🔍 Avatar select endpoint - User: {current_user.id} ({current_user.username}), Role: {current_user.role}")
+        print(f" Avatar select endpoint - User: {current_user.id} ({current_user.username}), Role: {current_user.role}")
         
         # SAFETY CHECK: Ensure current_user is valid
         if not current_user or not current_user.is_authenticated:
-            print(f"❌ Current user is not authenticated")
+            print(f" Current user is not authenticated")
             return jsonify({
                 'success': False,
                 'error': 'You must be logged in to change your avatar.'
@@ -13489,10 +13474,10 @@ def api_select_avatar():
                 'error': 'avatar_slug is required'
             }), 400
         
-        # 🚫 Guest logic removed: guests do not have access to avatar picker UI.
+        #  Guest logic removed: guests do not have access to avatar picker UI.
         # Any access to this endpoint assumes authenticated non-guest users.
         
-        # ✅ SECURITY CHECK 2: Parental lock
+        #  SECURITY CHECK 2: Parental lock
         if getattr(current_user, 'avatar_locked', False):
             return jsonify({
                 'success': False,
@@ -13514,7 +13499,7 @@ def api_select_avatar():
                     from avatar_catalog import NAME_MAP_CAMELCASE
                     if base in NAME_MAP_CAMELCASE:
                         canonical_slug = NAME_MAP_CAMELCASE[base]
-                        print(f"✅ Found canonical slug via NAME_MAP_CAMELCASE: {base} -> {canonical_slug}")
+                        print(f" Found canonical slug via NAME_MAP_CAMELCASE: {base} -> {canonical_slug}")
                         return canonical_slug, base
                 except ImportError:
                     pass
@@ -13545,7 +13530,7 @@ def api_select_avatar():
                         avatar = Avatar(
                             slug=avatar_slug,
                             name=name_with_spaces,
-                            description=f"{name_with_spaces} is ready to spell! 🐝",
+                            description=f"{name_with_spaces} is ready to spell! ",
                             category='classic',
                             folder_path='glb_files',
                             obj_file=fname,
@@ -13561,7 +13546,7 @@ def api_select_avatar():
                         break
                     except Exception as _e:
                         db.session.rollback()
-                        print(f"❌ Failed to auto-install avatar '{avatar_slug}': {_e}")
+                        print(f" Failed to auto-install avatar '{avatar_slug}': {_e}")
                         break
             if not installed or not avatar:
                 return jsonify({
@@ -13569,7 +13554,7 @@ def api_select_avatar():
                     'error': f'Avatar not found: {avatar_slug}'
                 }), 404
         
-        # ✅ SECURITY CHECK 3: Unlock validation (unless admin)
+        #  SECURITY CHECK 3: Unlock validation (unless admin)
         if current_user.role != 'admin':
             try:
                 from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
@@ -13614,9 +13599,9 @@ def api_select_avatar():
                         }), 403
                         
             except ImportError:
-                print(f"⚠️ Avatar catalog unavailable, skipping unlock check for {avatar_slug}")
+                print(f"️ Avatar catalog unavailable, skipping unlock check for {avatar_slug}")
             except Exception as e:
-                print(f"⚠️ Error checking avatar unlock status: {e}")
+                print(f"️ Error checking avatar unlock status: {e}")
         
         # Update current user's avatar
         success, message = current_user.update_avatar(avatar.slug, variant='default')
@@ -13634,12 +13619,12 @@ def api_select_avatar():
             prefs['avatar_selected_at'] = datetime.now(timezone.utc).isoformat()
             current_user.preferences = prefs
         except Exception as e:
-            print(f"⚠️ Could not update preferences: {e}")
+            print(f"️ Could not update preferences: {e}")
         
         db.session.commit()
         
-        # 📊 AUDIT: Log avatar selection
-        print(f"✅ User {current_user.id} ({current_user.username}) selected avatar via picker: {avatar_slug}")
+        #  AUDIT: Log avatar selection
+        print(f" User {current_user.id} ({current_user.username}) selected avatar via picker: {avatar_slug}")
         
         return jsonify({
             'success': True,
@@ -13652,7 +13637,7 @@ def api_select_avatar():
         })
     
     except Exception as e:
-        print(f"❌ Error selecting avatar: {e}")
+        print(f" Error selecting avatar: {e}")
         import traceback
         traceback.print_exc()
         db.session.rollback()
@@ -13721,7 +13706,7 @@ def serve_avatar_file_from_db(slug, filename):
             return send_from_directory(f'static/assets/avatars/{slug}', filename)
     
     except Exception as e:
-        print(f"❌ Error serving avatar file {slug}/{filename}: {e}")
+        print(f" Error serving avatar file {slug}/{filename}: {e}")
         # Fallback to filesystem
         try:
             return send_from_directory(f'static/assets/avatars/{slug}', filename)
@@ -13768,7 +13753,7 @@ def serve_badge_file_from_db(filename):
         )
     
     except Exception as e:
-        print(f"❌ Error serving badge file {filename}: {e}")
+        print(f" Error serving badge file {filename}: {e}")
         # Fallback to filesystem
         try:
             return send_from_directory('static/assets/badges/glb_files', filename)
@@ -13791,7 +13776,7 @@ def api_list_badges():
         })
     
     except Exception as e:
-        print(f"❌ Error listing badges: {e}")
+        print(f" Error listing badges: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -13819,7 +13804,7 @@ def api_get_current_user():
                     'display_name': getattr(current_user, 'display_name', current_user.username),
                     'email': getattr(current_user, 'email', None),
                     'role': getattr(current_user, 'role', 'student'),
-                    # ✅ Extended real-time progress fields
+                    #  Extended real-time progress fields
                     'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
                     'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
                     'honey_points': getattr(current_user, 'honey_points', 0),
@@ -13858,7 +13843,7 @@ def api_get_current_user():
                 pass
             return resp
     except Exception as e:
-        print(f"❌ Error fetching current user: {e}")
+        print(f" Error fetching current user: {e}")
         return jsonify({
             'status': 'error',
             'message': 'Failed to get user information',
@@ -13911,7 +13896,7 @@ def api_get_user_stats():
                 'best_streak': int(getattr(current_user, 'best_streak', 0) or 0),
                 'best_grade': getattr(current_user, 'best_grade', None),
                 'current_speed_round_streak': int(current_sr_streak or 0),
-                # 🐝 Buzz Dust Gamification Fields
+                #  Buzz Dust Gamification Fields
                 'total_buzz_dust': int(getattr(current_user, 'total_buzz_dust', 0) or 0),
                 'bee_class': getattr(current_user, 'bee_class', 'Novice Bee'),
                 'current_streak': int(getattr(current_user, 'current_streak', 0) or 0),
@@ -13924,7 +13909,7 @@ def api_get_user_stats():
             pass
         return resp
     except Exception as e:
-        print(f"❌ Error /api/users/stats: {e}")
+        print(f" Error /api/users/stats: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
@@ -13947,7 +13932,7 @@ def _build_stats_payload_for_user(u: User) -> Dict[str, object]:
         'total_quizzes_completed': int(getattr(u, 'total_quizzes_completed', 0) or 0),
         'best_streak': int(getattr(u, 'best_streak', 0) or 0),
         'best_grade': getattr(u, 'best_grade', None),
-        # 🐝 Buzz Dust Gamification Fields
+        #  Buzz Dust Gamification Fields
         'total_buzz_dust': int(getattr(u, 'total_buzz_dust', 0) or 0),
         'bee_class': getattr(u, 'bee_class', 'Novice Bee'),
         'current_streak': int(getattr(u, 'current_streak', 0) or 0),
@@ -13997,7 +13982,7 @@ def api_get_specific_user_stats(user_id: int):
             pass
         return resp
     except Exception as e:
-        print(f"❌ Error /api/users/<id>/stats: {e}")
+        print(f" Error /api/users/<id>/stats: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to build stats'}), 500
 
 @app.route("/api/users/stats/batch", methods=["GET"])
@@ -14040,7 +14025,7 @@ def api_get_batch_user_stats():
             pass
         return resp
     except Exception as e:
-        print(f"❌ Error /api/users/stats/batch: {e}")
+        print(f" Error /api/users/stats/batch: {e}")
         return jsonify({'status': 'error', 'message': 'Batch stats failed'}), 500
 
 
@@ -14062,7 +14047,7 @@ def api_get_my_avatar():
         
         if not user:
             # No user found, return default mascot (GLB-only)
-            print("⚠️ No user found, returning default mascot")
+            print("️ No user found, returning default mascot")
             return jsonify({
                 'status': 'success',
                 'avatar': {
@@ -14081,7 +14066,7 @@ def api_get_my_avatar():
         use_mascot = not user.has_selected_avatar()
         
         # Debug logging
-        print(f"🎭 Avatar API: User {user.id} ({user.username if hasattr(user, 'username') else 'guest'})")
+        print(f" Avatar API: User {user.id} ({user.username if hasattr(user, 'username') else 'guest'})")
         print(f"   - avatar_id: {user.avatar_id}")
         print(f"   - has_selected_avatar: {user.has_selected_avatar()}")
         print(f"   - preferences: {user.preferences}")
@@ -14114,7 +14099,7 @@ def api_get_my_avatar():
         })
     
     except Exception as e:
-        print(f"❌ Error fetching user avatar: {e}")
+        print(f" Error fetching user avatar: {e}")
         import traceback
         traceback.print_exc()
         # Return default mascot on error (GLB-only)
@@ -14175,7 +14160,7 @@ def api_lock_avatar(user_id):
         user.avatar_locked = True
         db.session.commit()
         
-        print(f"🔒 Avatar locked for user {user.username} by {current_user.username}")
+        print(f" Avatar locked for user {user.username} by {current_user.username}")
         
         return jsonify({
             'status': 'success',
@@ -14183,7 +14168,7 @@ def api_lock_avatar(user_id):
         })
     
     except Exception as e:
-        print(f"❌ Error locking avatar: {e}")
+        print(f" Error locking avatar: {e}")
         db.session.rollback()
         return jsonify({
             'status': 'error',
@@ -14226,7 +14211,7 @@ def api_unlock_avatar(user_id):
         user.avatar_locked = False
         db.session.commit()
         
-        print(f"🔓 Avatar unlocked for user {user.username} by {current_user.username}")
+        print(f" Avatar unlocked for user {user.username} by {current_user.username}")
         
         return jsonify({
             'status': 'success',
@@ -14234,7 +14219,7 @@ def api_unlock_avatar(user_id):
         })
     
     except Exception as e:
-        print(f"❌ Error unlocking avatar: {e}")
+        print(f" Error unlocking avatar: {e}")
         db.session.rollback()
         return jsonify({
             'status': 'error',
@@ -14244,15 +14229,15 @@ def api_unlock_avatar(user_id):
 
 # Startup confirmation logging
 print("=" * 60)
-print("🐝 BeeSmart Spelling Bee App - Initialization Complete")
+print(" BeeSmart Spelling Bee App - Initialization Complete")
 print("=" * 60)
-print(f"✅ App version: 1.6")
-print(f"✅ Environment: {os.environ.get('FLASK_ENV', 'development')}")
-print(f"✅ Database: {app.config['SQLALCHEMY_DATABASE_URI'][:30]}...")
-print(f"✅ Sessions: {'Database (persistent)' if SESSION_INIT_SUCCESS else 'Filesystem (temporary)'}")
-print(f"✅ Dictionary cache: {len(DICTIONARY_CACHE.get('words', {}))} words loaded")
-print(f"✅ Health check endpoint: /health")
-print(f"✅ Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
+print(f" App version: 1.6")
+print(f" Environment: {os.environ.get('FLASK_ENV', 'development')}")
+print(f" Database: {app.config['SQLALCHEMY_DATABASE_URI'][:30]}...")
+print(f" Sessions: {'Database (persistent)' if SESSION_INIT_SUCCESS else 'Filesystem (temporary)'}")
+print(f" Dictionary cache: {len(DICTIONARY_CACHE.get('words', {}))} words loaded")
+print(f" Health check endpoint: /health")
+print(f" Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
 
 # Initialize GLB avatars on startup (idempotent)
@@ -14261,7 +14246,7 @@ if not FAST_BOOT:
         from init_glb_avatars import init_glb_avatars
         init_glb_avatars()
     except Exception as e:
-        print(f"⚠️ GLB avatar initialization warning: {e}")
+        print(f"️ GLB avatar initialization warning: {e}")
 else:
     print("⏭️ Skipping init_glb_avatars() at startup (FAST_BOOT)")
 
@@ -14310,9 +14295,9 @@ if not FAST_BOOT:
                 added += 1
             if added > 0:
                 db.session.commit()
-                print(f"✅ Avatar catalog sync: {added} missing avatars inserted (total expected: {catalog_total})")
+                print(f" Avatar catalog sync: {added} missing avatars inserted (total expected: {catalog_total})")
             else:
-                print(f"✅ Avatar catalog sync: no missing entries (total: {catalog_total})")
+                print(f" Avatar catalog sync: no missing entries (total: {catalog_total})")
 
             # Enforcement pass: ensure ALL avatar names end with required suffix
             suffix_fixes = 0
@@ -14323,7 +14308,7 @@ if not FAST_BOOT:
                     suffix_fixes += 1
             if suffix_fixes > 0:
                 db.session.commit()
-                print(f"🔧 Avatar name compliance: appended suffix to {suffix_fixes} avatars")
+                print(f" Avatar name compliance: appended suffix to {suffix_fixes} avatars")
 
             # Deduplicate legacy O Bee slugs: prefer catalog slug 'o-bee'
             obee_legacy = Avatar.query.filter_by(slug='obee').first()
@@ -14333,13 +14318,13 @@ if not FAST_BOOT:
                 if obee_legacy.is_active:
                     obee_legacy.is_active = False
                     db.session.commit()
-                    print("🧹 Deactivated legacy 'obee' avatar (duplicate of 'o-bee')")
+                    print(" Deactivated legacy 'obee' avatar (duplicate of 'o-bee')")
     except Exception as e:
         try:
             db.session.rollback()
         except Exception:
             pass
-        print(f"⚠️ Avatar catalog sync warning: {e}")
+        print(f"️ Avatar catalog sync warning: {e}")
 
 # Validate and fix avatar thumbnail paths on EVERY startup (skipped in FAST_BOOT)
 if not FAST_BOOT:
@@ -14372,12 +14357,12 @@ if not FAST_BOOT:
             
             if fixed_count > 0:
                 db.session.commit()
-                print(f"✅ [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
+                print(f" [STARTUP] Fixed {fixed_count} avatar thumbnail paths")
             else:
-                print(f"✅ [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
+                print(f" [STARTUP] All {len(all_avatars)} avatar thumbnails validated - no fixes needed")
                 
     except Exception as e:
-        print(f"⚠️ [STARTUP] Avatar thumbnail validation warning: {e}")
+        print(f"️ [STARTUP] Avatar thumbnail validation warning: {e}")
         try:
             db.session.rollback()
         except:
@@ -14408,12 +14393,12 @@ if __name__ == "__main__":
     # PRE-LOAD dictionary in background to avoid blocking Railway health check
     import threading
     def preload_dictionary():
-        print("📚 Pre-loading Simple Wiktionary dictionary (background)...")
+        print(" Pre-loading Simple Wiktionary dictionary (background)...")
         ensure_simple_wiktionary_loaded()
         global DICTIONARY_CACHE
         if not DICTIONARY_CACHE:
             DICTIONARY_CACHE = load_dictionary_cache()
-        print(f"✅ Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
+        print(f" Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
     
     dict_thread = threading.Thread(target=preload_dictionary, daemon=True)
     dict_thread.start()
@@ -14425,22 +14410,22 @@ if __name__ == "__main__":
     # Force debug on for local troubleshooting to get full tracebacks
     debug = True if os.environ.get("FORCE_DEBUG", "1") == "1" else (debug_env in ("1", "true", "yes", "on"))
     if port != env_port:
-        print(f"⚠️ Port {env_port} in use or unavailable; switching to {port}.")
-    print(f"🚀 Starting development server on port {port} with Socket.IO support (debug={'on' if debug else 'off'})...")
+        print(f"️ Port {env_port} in use or unavailable; switching to {port}.")
+    print(f" Starting development server on port {port} with Socket.IO support (debug={'on' if debug else 'off'})...")
     try:
         from app_socketio import socketio
         # Disable reloader to avoid parent-process exit that can confuse task runners
         socketio.run(app, host="0.0.0.0", port=port, debug=debug, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:
-        print(f"⚠️ Failed to start with Socket.IO: {e}")
-        print("🔄 Falling back to standard Flask server...")
+        print(f"️ Failed to start with Socket.IO: {e}")
+        print(" Falling back to standard Flask server...")
         try:
             app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
         except OSError as oe:
             if getattr(oe, 'errno', None) == 48 or 'Address already in use' in str(oe):
                 # Try another port automatically
                 new_port = _pick_port(port + 1)
-                print(f"⚠️ Port {port} busy; retrying on {new_port}...")
+                print(f"️ Port {port} busy; retrying on {new_port}...")
                 app.run(host="0.0.0.0", port=new_port, debug=debug, use_reloader=False)
             else:
                 raise
