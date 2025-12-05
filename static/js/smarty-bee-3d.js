@@ -162,6 +162,9 @@ class SmartyBee3D {
         );
         this.camera.position.z = 5;
 
+        // Save default camera position for resetView()
+        this.defaultCameraPosition = this.camera.position.clone();
+
         // Create renderer
         this.renderer = new THREE.WebGLRenderer({ 
             alpha: true, 
@@ -228,6 +231,10 @@ class SmartyBee3D {
                 object.position.sub(center.multiplyScalar(scale));
 
                 this.bee = object;
+                
+                // Save default bee rotation for resetView()
+                this.defaultBeeRotation = this.bee.rotation.clone();
+                
                 this.scene.add(object);
                 
                 const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
@@ -403,6 +410,47 @@ class SmartyBee3D {
                 <div style="font-size: 4rem; animation: bounce 1s infinite;">🐝</div>
             </div>
         `;
+    }
+
+    // Avatar Control Methods
+    zoom(delta) {
+        // Zoom by adjusting camera position
+        if (this.camera) {
+            const currentZ = this.camera.position.z;
+            const newZ = Math.max(2, Math.min(10, currentZ - (delta * 5))); // Invert delta for intuitive zoom
+            this.camera.position.z = newZ;
+            console.log(`🔍 Zoom: ${delta > 0 ? 'in' : 'out'} (camera.z: ${newZ.toFixed(2)})`);
+        }
+    }
+
+    rotateY(degrees) {
+        // Rotate the bee model around Y axis
+        if (this.bee) {
+            const radians = (degrees * Math.PI) / 180;
+            this.bee.rotation.y += radians;
+            console.log(`🔄 Rotate Y: ${degrees}° (total: ${((this.bee.rotation.y * 180 / Math.PI) % 360).toFixed(1)}°)`);
+        }
+    }
+
+    rotate(pitchRad = 0, yawRad = 0) {
+        // Rotate bee with pitch (X) and yaw (Y)
+        if (this.bee) {
+            this.bee.rotation.x += pitchRad;
+            this.bee.rotation.y += yawRad;
+            console.log(`🔄 Rotate: pitch=${(pitchRad * 180 / Math.PI).toFixed(1)}° yaw=${(yawRad * 180 / Math.PI).toFixed(1)}°`);
+        }
+    }
+
+    resetView() {
+        // Reset camera and bee rotation to defaults
+        if (this.camera && this.defaultCameraPosition) {
+            this.camera.position.copy(this.defaultCameraPosition);
+            this.camera.lookAt(0, 0.1, 0);
+        }
+        if (this.bee && this.defaultBeeRotation) {
+            this.bee.rotation.copy(this.defaultBeeRotation);
+        }
+        console.log('🔄 View reset to defaults');
     }
 
     destroy() {
