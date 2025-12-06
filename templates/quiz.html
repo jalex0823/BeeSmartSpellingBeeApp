@@ -3453,6 +3453,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                    style="font-size: 16px;">
         </div>
 
+        <script>
+        // Ensure desktop intro voice plays reliably by triggering on first user interaction
+        (function(){
+            const inputEl = document.getElementById('spellingInput');
+            let introAttempted = false;
+
+            function attemptIntro() {
+                if (introAttempted) return;
+                introAttempted = true;
+                try {
+                    // Initialize global voice cache if not already
+                    if (typeof window.initializeGlobalVoice === 'function') {
+                        window.initializeGlobalVoice();
+                    }
+                    // If announcer not started yet, show intro immediately
+                    if (window.quizController && !window.quizController.quizStarted) {
+                        if (typeof window.quizController.showIntroAnnouncer === 'function') {
+                            window.quizController.showIntroAnnouncer();
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Intro attempt failed:', e);
+                }
+            }
+
+            if (inputEl) {
+                // Trigger on focus or first keydown (desktop autoplay policies often require gesture)
+                inputEl.addEventListener('focus', attemptIntro, { once: true });
+                inputEl.addEventListener('keydown', attemptIntro, { once: true });
+                // Also trigger on first click anywhere in the quiz container
+                const container = document.querySelector('.quiz-container');
+                if (container) {
+                    container.addEventListener('click', attemptIntro, { once: true });
+                }
+            }
+        })();
+        </script>
+
         <!-- Letter Hint Display -->
         <div class="letter-hint hidden" id="letterHint" aria-live="polite">
             <span class="hint-label">💡 Hint:</span>

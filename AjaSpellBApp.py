@@ -404,16 +404,37 @@ def api_wordbank_import_text():
             parts = [p.strip() for p in temp]
         # Convert to rows
         rows = [{'word': p, 'sentence': '', 'hint': ''} for p in parts if p]
-        stored_count = len(rows)
+
+        # Deduplicate and kid-friendly filter
+        deduped = deduplicate_words(rows)
+        filtered_rows, blocked = [], []
+        if deduped:
+            try:
+                print(f"️ Running enhanced kid-friendly filter on {len(deduped)} words...")
+                filtered_rows, blocked = _filter_records_excluding_inappropriate_text(deduped)
+                print(f" {len(filtered_rows)} words passed kid-friendly filter")
+            except Exception as fe:
+                print(f" Kid-friendly filter failed, proceeding without filter: {fe}")
+                filtered_rows = deduped
+        else:
+            filtered_rows = []
+
+        # Optional enrichment with definitions (non-blocking)
+        try:
+            filtered_rows = enrich_with_definitions(filtered_rows)
+        except Exception as ee:
+            print(f" Definition enrichment skipped due to error: {ee}")
+
+        stored_count = len(filtered_rows)
         # Treat import-text as a user upload so small lists persist in session fallback
-        set_wordbank(rows, is_user_upload=True)
+        set_wordbank(filtered_rows, is_user_upload=True)
         # Initialize quiz state immediately after import for a ready-to-play experience
         try:
             init_quiz_state(stored_count)
         except Exception as _e:
             # Non-fatal; quiz can still start later via next/answer endpoints
             print(f"️ init_quiz_state after import failed: {_e}")
-        return jsonify({'status': 'success', 'stored': stored_count})
+        return jsonify({'status': 'success', 'stored': stored_count, 'blocked_count': len(blocked), 'blocked_words': [b.get('word') for b in (blocked or [])]})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
