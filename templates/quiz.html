@@ -5560,16 +5560,7 @@ class QuizManager {
                 const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                 await this.speakAnnouncement(preface);
             }
-            // 🎙️ Announcer introduction BEFORE the first word
-            {
-                const namePart = (this.studentName || '').trim();
-                const announcerIntro = `Hello! I am your announcer for today's spelling bee.`;
-                const greetStudent = namePart ? `${namePart}, welcome!` : `Welcome!`;
-                await this.speakAnnouncement(announcerIntro);
-                await this.speakAnnouncement(greetStudent);
-            }
-
-            // ⏱️ Announce word FIRST, then insert a short pause and auto‑pronounce before timer
+            // ⏱️ Announce first word (intros happen BEFORE quiz start in platform-specific preflight)
             const firstWordIntro = `Your first word is: ${data.word}. Please spell it.`;
             
             // Wait for word announcement to complete
