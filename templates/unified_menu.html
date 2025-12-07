@@ -14450,7 +14450,7 @@
                                 if (typeof showBeeNotification === 'function') {
                                     showBeeNotification('Your custom avatar couldn\'t load. Using default bee. Check your avatar settings.', 'warning');
                                 }
-                            }, 2000)
+                            }, 2000);
                         }
                     } else {
                         // No avatar returned by API; use MascotBee as default
@@ -17196,37 +17196,34 @@
 
     // Legacy duplicate listener removed - using DOMContentLoaded listener below instead
         
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    toggleAutoRotate();
-                    break;
-                case '+':
-                case '=':
-                    safeAvatarZoom(-0.5);
-                    break;
-                case '-':
-                case '_':
-                    safeAvatarZoom(0.5);
-                    break;
-                case 'ArrowLeft':
-                    safeAvatarRotate(-15);
-                    break;
-                case 'ArrowRight':
-                    safeAvatarRotate(15);
-                    break;
-                case 'r':
-                case 'R':
-                    safeAvatarReset();
-                    break;
-            }
-        });
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         
-        console.log(' Avatar control event listeners attached');
+        switch(e.key) {
+            case ' ':
+                e.preventDefault();
+                toggleAutoRotate();
+                break;
+            case '+':
+            case '=':
+                safeAvatarZoom(-0.5);
+                break;
+            case '-':
+            case '_':
+                safeAvatarZoom(0.5);
+                break;
+            case 'ArrowLeft':
+                safeAvatarRotate(-15);
+                break;
+            case 'ArrowRight':
+                safeAvatarRotate(15);
+                break;
+            case 'r':
+            case 'R':
+                safeAvatarReset();
+                break;
+        }
     });
 
     // =============================================================
