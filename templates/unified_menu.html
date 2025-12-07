@@ -14284,6 +14284,32 @@
             
             console.log(' Emergency timeout set for', LOADING_EMERGENCY_TIMEOUT, 'ms');
             
+            // FAILSAFE: Ensure pointer events are always enabled after page fully loads
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    document.body.style.pointerEvents = 'auto';
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = '1';
+                    document.body.style.overflow = 'auto';
+                    console.log('✅ FAILSAFE: Pointer events and visibility restored to body');
+                    
+                    // Also check for any lingering overlays
+                    const loader = document.getElementById('honeyLoader');
+                    if (loader && loader.style.display !== 'none') {
+                        console.log('⚠️ FAILSAFE: Loader still visible, checking state...');
+                        // If loader is still showing after 2 seconds of page load, force hide it
+                        setTimeout(() => {
+                            if (loader.style.display !== 'none') {
+                                console.warn('🚨 FAILSAFE: Force hiding stuck loader');
+                                loader.style.display = 'none';
+                                loader.style.pointerEvents = 'none';
+                                if (window.matrixRain) window.matrixRain.stop();
+                            }
+                        }, 2000);
+                    }
+                }, 1000);
+            });
+            
             console.log(' STEP 1: About to run system checks...');
             try {
             
