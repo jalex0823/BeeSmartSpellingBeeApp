@@ -6528,9 +6528,11 @@ class QuizManager {
             this.hideLetterHint();  // Hide letter hint for new word
             this.delight?.clearFeedbackState();
             
-            // ⏱️ Announce and start timer AFTER word announcement completes
-            // Input will be enabled when timer starts
+            // ⏱️ Announce and start timer AFTER word pronunciation completes
+            // Give user a moment to process the word before timer starts
             if (this.timerEnabled && this.quizStarted) {
+                // Wait 800ms after pronunciation for mental processing
+                await new Promise(resolve => setTimeout(resolve, 800));
                 await this.announceAndStartTimer();
             } else {
                 // If timer is disabled, enable input immediately
@@ -6779,20 +6781,21 @@ class QuizManager {
                         resolve();
                     };
                     // Prefer delight handler when available, otherwise speak directly
+                    // Just say the word once - it was already introduced in the announcement
                     if (this.delight && typeof this.delight.handlePronounce === 'function') {
                         try {
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                            const phrase = data.word; // Just the word, no repetition
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = data.word; // Just the word, no repetition
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
+                        const phrase = data.word; // Just the word, no repetition
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
