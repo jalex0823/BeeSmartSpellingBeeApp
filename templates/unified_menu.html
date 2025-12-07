@@ -3350,7 +3350,7 @@
                 
                 {% if current_user.is_authenticated %}
                 <!-- Avatar Display - NEW clean container for controls -->
-                <div style="position: relative; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px 0;">
+                <div id="avatarFxHost" style="position: relative; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px 0;">
                     <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto;"></div>
                     
                     <!-- Interactive Caption -->
@@ -4054,9 +4054,23 @@
                 
                 <!-- My Word Lists button removed - use tile instead -->
                 
-                <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" disabled title=" Begin your spelling adventure!">
-                     Let's Get Buzzing Spelling Some Words!
-                </button>
+                <!-- Start Quiz Button Container with white semi-translucent background -->
+                <div style="
+                    background: rgba(255, 255, 255, 0.25);
+                    border-radius: 24px;
+                    padding: 20px;
+                    margin-bottom: 15px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+                ">
+                    <button type="button" class="action-btn primary waiting-to-play" id="startQuizBtn" disabled title=" Begin your spelling adventure!" style="margin: 0;">
+                         Let's Get Buzzing Spelling Some Words!
+                    </button>
+                </div>
             </section>
             
             <!-- Hidden file input for import -->
@@ -16928,6 +16942,35 @@
     }
 ```
 
+    function safeAvatarSpin360() {
+        const controller = getAvatarController();
+        if (!controller || !controller.bee) return;
+        
+        const startRotation = controller.bee.rotation.y;
+        const targetRotation = startRotation + (Math.PI * 2); // Full 360°
+        const duration = 1000; // 1 second
+        const startTime = Date.now();
+        
+        function animate() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Ease-out animation
+            const eased = 1 - Math.pow(1 - progress, 3);
+            controller.bee.rotation.y = startRotation + (Math.PI * 2 * eased);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Normalize to front-facing (0 or nearest multiple of 2π)
+                controller.bee.rotation.y = Math.round(controller.bee.rotation.y / (Math.PI * 2)) * (Math.PI * 2);
+                console.log('✅ 360° spin complete, avatar facing front');
+            }
+        }
+        
+        animate();
+    }
+
     function safeAvatarRotate(deltaDegrees, smooth = true) {
         const controller = getAvatarController();
         console.log('safeAvatarRotate called. Controller:', controller);
@@ -17233,17 +17276,19 @@
             case 'builder_hammer':
             case 'lumberjack_chop':
                 safeAvatarZoom(-0.2);
+                safeAvatarSpin360();
                 break;
             case 'fairy_twirl':
             case 'techno_glitch':
-                safeAvatarRotate(15);
+                safeAvatarSpin360();
                 break;
             case 'super_hero':
             case 'queen_wave':
                 safeAvatarZoom(-0.1);
+                safeAvatarSpin360();
                 break;
             default:
-                safeAvatarRotate(8);
+                safeAvatarSpin360();
         }
 
         playAvatarBackgroundBurst(persona);
@@ -17254,9 +17299,18 @@
     // =============================================================
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Attach click FX to guest mascot avatar
         const mascotEl = document.getElementById('mascotBee3D');
         if (mascotEl) {
             mascotEl.addEventListener('click', function () {
+                playAvatarClickFx(CURRENT_AVATAR_KEY);
+            });
+        }
+
+        // Attach click FX to registered user's avatar
+        const avatarControlsEl = document.getElementById('avatarControls3D');
+        if (avatarControlsEl) {
+            avatarControlsEl.addEventListener('click', function () {
                 playAvatarClickFx(CURRENT_AVATAR_KEY);
             });
         }
