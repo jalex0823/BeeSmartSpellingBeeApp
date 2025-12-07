@@ -7008,7 +7008,7 @@ class QuizManager {
             if (result.quiz_complete) {
                 console.log(`🏆 Quiz complete!`);
                 
-                // Small delay, then show all achievements
+                // Small delay, then show all achievements and completion
                 setTimeout(async () => {
                     // Show badges first (if any)
                     if (result.badges && result.badges.length > 0) {
@@ -7024,12 +7024,33 @@ class QuizManager {
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
                     
-                    // After all modals shown, load next word (which will show completion if quiz is done)
-                    setTimeout(() => this.loadNextWord(), 800);
+                    // 🏁 Now get the final quiz summary and show completion
+                    console.log('🏁 Fetching final quiz summary for report card...');
+                    try {
+                        const summaryResponse = await fetch('/api/next', { 
+                            method: 'POST',
+                            credentials: 'same-origin'
+                        });
+                        const summaryData = await summaryResponse.json();
+                        
+                        if (summaryData.done && summaryData.summary) {
+                            this.showQuizComplete(summaryData.summary);
+                        } else {
+                            console.error('Expected quiz summary but got:', summaryData);
+                            BeeSmart.showError('Could not load quiz results. Please try refreshing.');
+                        }
+                    } catch (error) {
+                        console.error('Failed to fetch quiz summary:', error);
+                        BeeSmart.showError('Could not load quiz results. Please try refreshing.');
+                    }
                 }, 1500);
             } else {
-                // Normal flow (CORRECT answer): Add a small delay after speech finishes, then load next word
-                setTimeout(() => this.loadNextWord(), 800);
+                // Normal flow (CORRECT answer): Only load next word if quiz not complete
+                if (!result.quiz_complete) {
+                    setTimeout(() => this.loadNextWord(), 800);
+                } else {
+                    console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
+                }
             }
             
         } catch (error) {
@@ -7234,13 +7255,16 @@ class QuizManager {
             sessionStatsBar.style.display = 'flex';
         }
 
-        // Update honey jar fill level based on progress
+        // Update honey jar fill level based on QUIZ PROGRESSION (not correctness ratio)
+        // This ensures consistency with progress percentage display
         const honeyLevel = document.getElementById('honeyLevel');
         if (honeyLevel && this.totalWords > 0) {
-            const percentage = Math.min(100, Math.max(0, (correct / this.totalWords) * 100));
+            // Get current question number from progress text or calculate from correct+incorrect
+            const currentQuestion = (correct + incorrect);
+            const percentage = Math.min(100, Math.max(0, (currentQuestion / this.totalWords) * 100));
             if (Number.isFinite(percentage)) {
                 honeyLevel.style.height = percentage + '%';
-                console.log(`🍯 Honey jar filled to ${percentage.toFixed(1)}% (${correct}/${this.totalWords})`);
+                console.log(`🍯 Honey jar filled to ${percentage.toFixed(1)}% (${currentQuestion}/${this.totalWords} questions answered)`);
             }
         }
 
@@ -7259,12 +7283,14 @@ class QuizManager {
             progressText.textContent = `Question ${current} of ${total}`;
         }
         
-        // Update new percentage display
+        // Update percentage display to match honey jar logic (answered vs total)
+        // This ensures consistency between progress percentage and honey jar fill
         const progressPercentage = document.getElementById('progressPercentage');
         if (progressPercentage && total > 0) {
-            const percentage = Math.round(((current - 1) / total) * 100);
-            const completed = current - 1;
-            progressPercentage.textContent = `Progress: ${percentage}% (${completed} of ${total} words)`;
+            // Use same calculation as honey jar: answered questions / total
+            const answered = current - 1; // Current is 1-based, so current-1 = answered
+            const percentage = Math.round((answered / total) * 100);
+            progressPercentage.textContent = `Progress: ${percentage}% (${answered} of ${total} words completed)`;
         }
     }
     
@@ -7918,12 +7944,12 @@ class QuizManager {
                     </div>
                     <div class="fancy-stat-card gold">
                         <div class="stat-icon">🏆</div>
-                        <h3>${(Number(this.sessionPoints) || 0).toLocaleString()}</h3>
+                        <h3>${(Number(summary.session_points) || 0).toLocaleString()}</h3>
                         <p>Total Points</p>
                     </div>
                     <div class="fancy-stat-card purple">
                         <div class="stat-icon">🔥</div>
-                        <h3>${Number(this.maxStreak) || 0}</h3>
+                        <h3>${Number(summary.max_streak) || 0}</h3>
                         <p>Best Streak</p>
                     </div>
                 </div>

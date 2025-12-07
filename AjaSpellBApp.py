@@ -7099,15 +7099,7 @@ def api_next():
     original_question_index = idx  # preserve before we advance
     order = state["order"]
     
-    # CRITICAL FIX: If quiz state order doesn't match current wordbank length, reset it
-    # This happens when user uploads a new word list after completing a previous quiz
-    if len(order) != len(wb):
-        print(f"DEBUG /api/next: Quiz state mismatch - order={len(order)}, wordbank={len(wb)}, reinitializing")
-        init_quiz_state(len(wb))
-        state = get_quiz_state()
-        idx = state["idx"]
-        order = state["order"]
-
+    # CHECK FOR QUIZ COMPLETION FIRST - before showing any word
     if idx >= len(order):
         # SAFETY CHECK: Don't show completion if no questions were answered
         if state["correct"] == 0 and state["incorrect"] == 0:
@@ -7149,7 +7141,17 @@ def api_next():
                 "done": True,
                 "summary": quiz_summary
             })
+    
+    # CRITICAL FIX: If quiz state order doesn't match current wordbank length, reset it
+    # This happens when user uploads a new word list after completing a previous quiz
+    if len(order) != len(wb):
+        print(f"DEBUG /api/next: Quiz state mismatch - order={len(order)}, wordbank={len(wb)}, reinitializing")
+        init_quiz_state(len(wb))
+        state = get_quiz_state()
+        idx = state["idx"]
+        order = state["order"]
 
+    # Get the current word to display
     word_rec = wb[order[idx]]
     word = word_rec.get("word", "")
     
@@ -7257,9 +7259,9 @@ def api_next():
     
     #  ADVANCE INDEX for next call after answer is submitted
     # This ensures proper sequence: show word → answer → feedback → next word
-    # /api/answer does NOT advance, only records the answer
-    state["idx"] += 1
-    print(f" Advanced idx from {idx} to {state['idx']} (next /api/next will get word at position {state['idx']})")
+    # /api/answer WILL advance after recording the answer
+    # state["idx"] += 1  # REMOVED: Don't advance here, let /api/answer handle it
+    print(f" ️ Showing word at idx={idx}, will advance after answer is submitted")
     
     session[QUIZ_STATE_KEY] = state
     session.modified = True
@@ -7746,6 +7748,8 @@ def api_answer():
 
     idx = state["idx"]
     order = state["order"]
+    
+    # Check if quiz is already complete
     if idx >= len(order):
         return jsonify({"error": "Quiz finished"}), 400
 
@@ -7892,10 +7896,11 @@ def api_answer():
         state["incorrect"] += 1
         state["streak"] = 0
 
-    #  DO NOT ADVANCE INDEX HERE - let /api/next handle advancement
-    # /api/answer only records the answer and updates stats
-    # The UI will call /api/next to get the next word, which will advance idx
+    #  ADVANCE INDEX AFTER RECORDING ANSWER - This is the correct place for advancement
+    # /api/next shows current word, /api/answer records result and advances to next
     # This prevents the double-advance bug that was skipping words
+    state["idx"] += 1
+    print(f" ️ Answer recorded for word '{correct_spelling}', advanced to next index: {state['idx']}")
     
     # Reset hints counter for next word (will be used when /api/next is called)
     state["hints_used_current_word"] = 0
