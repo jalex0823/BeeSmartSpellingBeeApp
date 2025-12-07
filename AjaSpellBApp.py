@@ -20,7 +20,7 @@ import threading
 import uuid
 import logging
 from tempfile import NamedTemporaryFile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import socket
 import secrets
 import hashlib
@@ -43,6 +43,7 @@ from models import SessionLog
 from models import SpeedRoundConfig, SpeedRoundScore
 from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
 from models import WordBankStorage  # Single source of truth for all word operations
+from datetime import date
 from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
 try:
     from avatar_bundles import BUNDLE_CATALOG, REDEEMABLE_KEYS  # Optional: bundle catalog + redeemable keys
@@ -1598,6 +1599,103 @@ def get_word_info(word):
         print(f"️ Fallback failed for '{word}': {_e}")
         return formatted
 
+def get_word_of_the_day():
+    """
+    Get today's featured word with definition and bonus info.
+    """
+    try:
+        # Use date as seed for consistent daily word
+        today = date.today()
+        seed_value = today.year * 10000 + today.month * 100 + today.day
+        
+        # Load word list for selection
+        ensure_simple_wiktionary_loaded()
+        if not SIMPLE_WIKTIONARY:
+            return None
+            
+        # Select word based on date seed
+        word_list = list(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else []
+        if not word_list:
+            return None
+            
+        import random
+        random.seed(seed_value)
+        featured_word = random.choice(word_list)
+        
+        # Get definition
+        definition = get_word_info(featured_word)
+        
+        return {
+            'word': featured_word,
+            'definition': definition,
+            'bonus_points': 50,
+            'date': today.strftime('%Y-%m-%d'),
+            'message': f'Word of the Day: {featured_word.title()}! Spell it correctly for +50 bonus points!'
+        }
+        
+    except Exception as e:
+        print(f"Error getting word of the day: {e}")
+        return None
+
+def check_daily_login_reward(user_id):
+    """
+    Check and award daily login rewards for authenticated users.
+    Returns reward data if earned, None otherwise.
+    """
+    try:
+        if not user_id:
+            return None
+            
+        from models import User
+        user = User.query.get(user_id)
+        if not user:
+            return None
+            
+        today = date.today()
+        last_login_date = user.last_login.date() if user.last_login else None
+        
+        # Check if user already got reward today
+        if last_login_date == today:
+            return None  # Already got today's reward
+        
+        # Calculate streak
+        if last_login_date and (today - last_login_date).days == 1:
+            # Consecutive day - increment streak
+            streak_days = getattr(user, 'daily_login_streak', 0) + 1
+        elif last_login_date and (today - last_login_date).days > 1:
+            # Broke streak - reset to 1
+            streak_days = 1
+        else:
+            # First login or same day
+            streak_days = 1
+            
+        # Calculate reward amount (base 50 + 10 per day in streak)
+        base_reward = 50
+        streak_bonus = min((streak_days - 1) * 10, 200)  # Max 200 bonus
+        total_reward = base_reward + streak_bonus
+        
+        # Award honey points
+        user.honey_points = (user.honey_points or 0) + total_reward
+        user.last_login = datetime.now(timezone.utc)
+        
+        # Store streak (we'll add this field if needed)
+        if hasattr(user, 'daily_login_streak'):
+            user.daily_login_streak = streak_days
+            
+        db.session.commit()
+        
+        return {
+            'reward': total_reward,
+            'base': base_reward,
+            'streak_bonus': streak_bonus,
+            'streak_days': streak_days,
+            'message': f'Welcome back! {total_reward} honey points earned!'
+        }
+        
+    except Exception as e:
+        print(f"Error checking daily login reward: {e}")
+        db.session.rollback()
+        return None
 
 def validate_wordbank_definitions(wordbank: List[Dict]) -> tuple[bool, str]:
     """
@@ -1633,10 +1731,11 @@ def validate_wordbank_definitions(wordbank: List[Dict]) -> tuple[bool, str]:
 # Upload helpers used by saved-list
 # ---------------------------------
 def _normalize_for_compare(word: str) -> str:
-    """Normalize a word for deduplication: lowercase and remove non-alphanumerics."""
+    """Normalize a word for deduplication using the same rules as answer comparison."""
     if not word:
         return ""
-    return re.sub(r"[^0-9a-z]+", "", word.lower())
+    # Use the same normalization as answer comparison for consistency
+    return normalize(word)
 
 
 from typing import Union, Set  # ensure Union and Set available for Python <3.10 compatibility
@@ -6211,6 +6310,32 @@ def api_quiz_reset():
         print(f" Error resetting quiz: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
+@app.route("/api/daily-reward", methods=["POST"])
+def api_daily_reward():
+    """Check and award daily login rewards to authenticated users"""
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    try:
+        reward_data = check_daily_login_reward(current_user.id)
+        return jsonify({
+            "success": True,
+            "reward": reward_data if reward_data else None
+        })
+    except Exception as e:
+        print(f"Daily reward error: {e}")
+        return jsonify({"success": False, "error": "Failed to check daily reward"}), 500
+
+@app.route("/api/word-of-day", methods=["GET"])
+def api_word_of_day():
+    """Get the word of the day with bonus points information"""
+    try:
+        word_data = get_word_of_the_day()
+        return jsonify(word_data)
+    except Exception as e:
+        print(f"Word of the day error: {e}")
+        return jsonify({"error": "Failed to get word of the day"}), 500
+
 @app.route("/api/content-filter-status", methods=["GET"])
 def api_content_filter_status():
     """Get content filter status for current session with violation tracking"""
@@ -7807,9 +7932,9 @@ def api_answer():
             points_earned += streak_bonus
         
         # First attempt bonus: +50 points if no previous incorrect attempts on this word
-        # Check if this word already in history with incorrect answer
+        # Check if this word already in history with incorrect answer (case-insensitive)
         word_already_attempted_wrong = any(
-            h.get("word") == correct_spelling and not h.get("correct") 
+            normalize(h.get("word", "")) == normalize(correct_spelling) and not h.get("correct") 
             for h in state.get("history", [])
         )
         if not word_already_attempted_wrong:
@@ -7949,16 +8074,17 @@ def api_answer():
                 pass
             db.session.add(quiz_result)
             
-            # Update or create WordMastery record
+            # Update or create WordMastery record (use normalized word for consistency)
+            normalized_word = normalize(correct_spelling)
             word_mastery = WordMastery.query.filter_by(
                 user_id=user_obj.id,
-                word=correct_spelling
+                word=normalized_word
             ).first()
             
             if word_mastery:
                 word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
             else:
-                word_mastery = WordMastery(user_id=user_obj.id, word=correct_spelling)
+                word_mastery = WordMastery(user_id=user_obj.id, word=normalized_word)
                 # Initialize stats via helper
                 word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
                 db.session.add(word_mastery)
@@ -8228,13 +8354,43 @@ def api_answer():
     elif quiz_complete and not state.get("db_session_id"):
         print(f"️ WARNING: Quiz complete but no db_session_id in state! Cannot save to database.")
 
+    # 📚 Enhanced Educational Features: Get word definition for educational purposes
+    word_definition = ""
+    if correct_spelling:
+        try:
+            from dictionary_api import get_word_info
+            word_info = get_word_info(correct_spelling)
+            if word_info and word_info.get('definitions'):
+                # Use the first definition for display
+                word_definition = word_info['definitions'][0]
+        except Exception as e:
+            print(f"Failed to get definition for '{correct_spelling}': {e}")
+    
+    # 🎉 Check for streak milestones to celebrate
+    streak_milestone = None
+    current_streak = state.get("streak", 0)
+    if is_correct and current_streak > 1:  # Only show for streak >= 2
+        milestones = {
+            5: {"title": "🔥 Hot Streak!", "message": "5 words in a row! You're on fire!"},
+            10: {"title": "🌟 Amazing Streak!", "message": "10 correct! You're a spelling superstar!"},
+            15: {"title": "💫 Incredible Run!", "message": "15 in a row! You're unstoppable!"},
+            20: {"title": "🏆 Legendary Streak!", "message": "20 perfect! You're a spelling legend!"},
+            25: {"title": "👑 Master Speller!", "message": "25 straight! You've achieved spelling mastery!"}
+        }
+        
+        if current_streak in milestones:
+            streak_milestone = milestones[current_streak]
+
     return jsonify({
         "correct": is_correct,
+        "word": correct_spelling,  # Add word for frontend reference
         "expected": correct_spelling,
         "skipped": skip_requested,
         "phonetic": phonetic_help if (phonetic_help and (not is_correct or skip_requested)) else "",
         "phonetic_spelling": phonetic_spelling if (not is_correct or skip_requested) else "",
         "feedback_message": feedback_message,
+        "definition": word_definition if word_definition else None,  # 📚 Educational definition
+        "streak_milestone": streak_milestone,  # 🎉 Celebration data
         "progress": {
             "index": next_index_position,
             "total": len(order),

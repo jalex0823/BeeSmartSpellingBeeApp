@@ -7045,8 +7045,21 @@ class QuizManager {
                     }
                 }, 1500);
             } else {
-                // Normal flow (CORRECT answer): Only load next word if quiz not complete
+                // Normal flow (CORRECT answer): Show definition and celebrations
                 if (!result.quiz_complete) {
+                    // Show word definition popup for educational value
+                    if (result.word_definition) {
+                        showWordDefinitionPopup(result.correct_spelling, result.word_definition);
+                    }
+                    
+                    // Show streak milestone celebration
+                    if (result.streak_milestone) {
+                        this.showStreakCelebration(result.streak_milestone);
+                    }
+                    
+                    // Play success sound
+                    this.playSound('correct');
+                    
                     setTimeout(() => this.loadNextWord(), 800);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
@@ -7109,8 +7122,8 @@ class QuizManager {
                 this.smartyBee.onCorrectAnswer();
             }
             
-            // Play honey collection sound on correct answer
-            this.soundboard?.play('honey-collect');
+            // Enhanced correct answer celebration
+            playThemedSound('correct');
             
             // Audio announcement - may include a separate name utterance after a short pause
             if (typeof audioAnnouncement === 'string') {
@@ -7124,6 +7137,20 @@ class QuizManager {
             // 🍯 Display animated points popup if points earned
             if (earnedPoints > 0) {
                 this.showPointsPopup(earnedPoints, breakdown);
+            }
+            
+            // 📚 Show educational word definition after a short delay
+            if (result.definition) {
+                setTimeout(() => {
+                    showWordDefinitionPopup(result.word || this.currentWordData?.word || '', result.definition);
+                }, 2000);
+            }
+            
+            // 🎉 Check for streak milestones and celebrate
+            if (result.streak_milestone) {
+                setTimeout(() => {
+                    showStreakCelebration(result.streak_milestone);
+                }, 2500);
             }
             
             // Visual explosion effect!
@@ -7165,9 +7192,19 @@ class QuizManager {
                     this.smartyBee.onIncorrectAnswer();
                 }
                 
+                // Enhanced incorrect answer feedback
+                playThemedSound('incorrect');
+                
                 // 🔊 ONLY speak the choice question, nothing else
                 console.log('🔊 Speaking: Would you like to retry?');
                 await this.speakAnnouncement('Would you like to retry this word? You have 10 seconds to choose.');
+                
+                // 📚 Show encouraging definition to help with retry
+                if (result.definition) {
+                    setTimeout(() => {
+                        showWordDefinitionPopup(correctWord, result.definition + " 💡 Don't worry - learning is all about trying!");
+                    }, 1500);
+                }
                 
                 // Start 10-second choice countdown
                 console.log('⏱️ Starting 10-second choice countdown...');
@@ -9132,6 +9169,495 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
+
+// 📚 Enhanced Word Definition Popup System
+function showWordDefinitionPopup(word, definition) {
+    const modal = document.createElement('div');
+    modal.className = 'definition-modal';
+    modal.innerHTML = `
+        <div class="definition-overlay" onclick="this.parentElement.remove()">
+            <div class="definition-popup" onclick="event.stopPropagation()">
+                <div class="definition-header">
+                    <h3>📖 ${word.toUpperCase()}</h3>
+                    <button class="definition-close" onclick="this.closest('.definition-modal').remove()">×</button>
+                </div>
+                <div class="definition-content">
+                    <p>${definition}</p>
+                    <div class="definition-actions">
+                        <button class="btn btn-primary" onclick="this.closest('.definition-modal').remove()">
+                            Got it! 👍
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (modal.parentElement) {
+            modal.remove();
+        }
+    }, 10000);
+}
+
+// 🎉 Enhanced Streak Celebration System
+function showStreakCelebration(milestone) {
+    const celebration = document.createElement('div');
+    celebration.className = 'streak-celebration';
+    celebration.innerHTML = `
+        <div class="streak-overlay">
+            <div class="streak-popup">
+                <div class="streak-icon">🔥</div>
+                <h2>${milestone.title}</h2>
+                <p>${milestone.message}</p>
+                <div class="streak-sparkles">✨✨✨</div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(celebration);
+    
+    // Play celebration sound
+    playThemedSound('streak_milestone');
+    
+    // Add particle effects
+    createStreakParticles(celebration.querySelector('.streak-popup'));
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (celebration.parentElement) {
+            celebration.remove();
+        }
+    }, 4000);
+}
+
+// ✨ Particle Effects for Celebrations
+function createStreakParticles(container) {
+    for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.style.cssText = `
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFloat 2s ease-out forwards;
+            left: ${Math.random() * 100}%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: ${Math.random() * 0.5}s;
+        `;
+        container.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => particle.remove(), 2500);
+    }
+}
+
+// 📱 Daily Login Reward System
+async function checkDailyLoginReward() {
+    try {
+        const response = await fetch('/api/daily-reward', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.reward) {
+            showDailyReward(data.reward);
+        }
+    } catch (error) {
+        console.log('Daily reward check failed:', error);
+    }
+}
+
+function showDailyReward(reward) {
+    const modal = document.createElement('div');
+    modal.className = 'daily-reward-modal';
+    modal.innerHTML = `
+        <div class="daily-overlay">
+            <div class="daily-popup">
+                <div class="daily-icon">🎁</div>
+                <h2>Daily Login Bonus!</h2>
+                <p>Welcome back! You earned:</p>
+                <div class="reward-amount">+${reward.reward} 🍯</div>
+                <p class="streak-info">${reward.streak_days} day streak!</p>
+                <button class="btn btn-primary" onclick="this.closest('.daily-reward-modal').remove()">
+                    Awesome! 🎉
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    playThemedSound('daily_reward');
+    
+    setTimeout(() => {
+        if (modal.parentElement) {
+            modal.remove();
+        }
+    }, 8000);
+}
+
+// 🌟 Word of the Day Feature
+async function loadWordOfTheDay() {
+    try {
+        const response = await fetch('/api/word-of-day');
+        const data = await response.json();
+        
+        if (data.word) {
+            showWordOfTheDay(data);
+        }
+    } catch (error) {
+        console.log('Word of the day unavailable:', error);
+    }
+}
+
+function showWordOfTheDay(wordData) {
+    const banner = document.createElement('div');
+    banner.className = 'word-of-day-banner';
+    banner.innerHTML = `
+        <div class="word-banner-content">
+            <span class="word-icon">⭐</span>
+            <span class="word-text">Word of the Day: <strong>${wordData.word}</strong></span>
+            <span class="word-bonus">+${wordData.bonus_points} bonus!</span>
+            <button class="banner-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+        if (banner.parentElement) {
+            banner.remove();
+        }
+    }, 10000);
+}
+</script>
+
+<style>
+/* 📚 Definition Modal Styles */
+.definition-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+}
+
+.definition-overlay {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.definition-popup {
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+    border-radius: 20px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: popupSlideIn 0.3s ease-out;
+}
+
+.definition-header {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #333;
+    padding: 15px 20px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.definition-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.definition-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.definition-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.definition-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.definition-content p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.definition-actions button {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.definition-actions button:hover {
+    transform: scale(1.05);
+}
+
+/* 🎉 Streak Celebration Styles */
+.streak-celebration {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10001;
+    pointer-events: none;
+}
+
+.streak-overlay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.streak-popup {
+    background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 25px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(255, 107, 53, 0.4);
+    animation: streakBounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    position: relative;
+    overflow: hidden;
+}
+
+.streak-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    animation: fireFlicker 1s infinite alternate;
+}
+
+.streak-popup h2 {
+    font-size: 1.8rem;
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+.streak-popup p {
+    font-size: 1.1rem;
+    margin: 10px 0;
+}
+
+.streak-sparkles {
+    font-size: 1.5rem;
+    margin-top: 15px;
+    animation: sparkle 1.5s infinite;
+}
+
+/* 🎁 Daily Reward Styles */
+.daily-reward-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+}
+
+.daily-overlay {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.daily-popup {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 25px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+    animation: dailySlideUp 0.5s ease-out;
+}
+
+.daily-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: giftBounce 2s infinite;
+}
+
+.reward-amount {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 20px 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.streak-info {
+    color: #FFD700;
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+/* 🌟 Word of the Day Banner */
+.word-of-day-banner {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: bannerSlideIn 0.5s ease-out;
+}
+
+.word-banner-content {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #333;
+    padding: 12px 20px;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+    font-weight: bold;
+}
+
+.word-icon {
+    font-size: 1.2rem;
+}
+
+.word-bonus {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+}
+
+.banner-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #333;
+    margin-left: 10px;
+}
+
+/* Animations */
+@keyframes popupSlideIn {
+    from {
+        transform: scale(0.7) translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes streakBounceIn {
+    from {
+        transform: scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes fireFlicker {
+    0% { transform: scale(1) rotate(-1deg); }
+    100% { transform: scale(1.1) rotate(1deg); }
+}
+
+@keyframes sparkle {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes particleFloat {
+    to {
+        transform: translate(-50%, -150px) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes dailySlideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes giftBounce {
+    0%, 20%, 60%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    80% { transform: translateY(-5px); }
+}
+
+@keyframes bannerSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+
+<script>
+// Initialize new features on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Check for daily login reward
+    if (typeof current_user !== 'undefined' && current_user && current_user.id) {
+        checkDailyLoginReward();
+    }
+    
+    // Load word of the day
+    loadWordOfTheDay();
+});
 </script>
 <!-- Removed duplicate quizAvatarContainer and legacy render script.
      The quiz now relies solely on the primary mascot container #mascotBee3D
