@@ -323,7 +323,7 @@ class SmartyBee3D {
     }
 
     idleAnimation() {
-        if (!this.bee || this.manualControl) return; // Skip if manual control active
+        if (!this.bee) return;
         
         // Disabled floating motion to keep avatar still
         // this.bee.position.y = Math.sin(this.animationTime * 2) * 0.05;

@@ -16936,9 +16936,7 @@
         if (!controller) return;
         
         if (smooth && controller.bee && controller.bee.rotation) {
-            // Smooth rotation animation
-            console.log('Setting manualControl = true');
-            controller.manualControl = true; // Disable automatic animations
+            // Smooth rotation animation - no manualControl flag interference
             const deltaRad = deltaDegrees * (Math.PI / 180);
             if (avatarControlState.animationFrame) cancelAnimationFrame(avatarControlState.animationFrame);
             avatarControlState.targetRotationY = controller.bee.rotation.y + deltaRad;
@@ -16949,13 +16947,11 @@
                 const diff = avatarControlState.targetRotationY - controller.bee.rotation.y;
                 if (Math.abs(diff) > 0.001) {
                     controller.bee.rotation.y += diff * 0.2;
-                    console.log('  Animating: rotation.y = ' + controller.bee.rotation.y.toFixed(3) + ', manualControl = ' + controller.manualControl);
+                    console.log('  Animating: rotation.y = ' + controller.bee.rotation.y.toFixed(3));
                     avatarControlState.animationFrame = requestAnimationFrame(animate);
                 } else {
                     controller.bee.rotation.y = avatarControlState.targetRotationY;
-                    console.log('Setting manualControl = false');
                     avatarControlState.targetRotationY = null;
-                    controller.manualControl = false;
                     console.log('  Animation complete at ' + controller.bee.rotation.y.toFixed(3));
                 }
             }
@@ -16976,8 +16972,7 @@
         if (!controller) return;
         
         if (smooth && controller.camera) {
-            // Smooth zoom animation
-            controller.manualControl = true; // Disable automatic animations
+            // Smooth zoom animation - no manualControl flag interference
             if (avatarControlState.animationFrame) cancelAnimationFrame(avatarControlState.animationFrame);
             const newZ = Math.max(1, Math.min(12, controller.camera.position.z + deltaAmount));
             avatarControlState.targetCameraZ = newZ;
@@ -16991,7 +16986,6 @@
                 } else {
                     controller.camera.position.z = avatarControlState.targetCameraZ;
                     avatarControlState.targetCameraZ = null;
-                    controller.manualControl = false; // Re-enable automatic animations
                 }
             }
             animate();
@@ -17131,55 +17125,7 @@
         }, { passive: false });
     }
 
-    // Attach event listeners to avatar control icons
-    // Use 'load' instead of 'DOMContentLoaded' to ensure controls are fully rendered
-    window.addEventListener('load', () => {
-        // Small delay to ensure all dynamic content is ready
-        setTimeout(() => {
-            console.log('AVATAR CONTROLS: Attaching event listeners to control buttons');
-            const controls = document.querySelectorAll('[data-avatar-control]');
-            console.log('AVATAR CONTROLS: Found', controls.length, 'control buttons');
-            
-            if (controls.length === 0) {
-                console.warn('AVATAR CONTROLS: No control buttons found! DOM state:', {
-                    avatarControls3D: document.getElementById('avatarControls3D'),
-                    authenticated: document.querySelector('[data-avatar-control]')
-                });
-            }
-            
-            controls.forEach(control => {
-                const action = control.getAttribute('data-avatar-control');
-                console.log('AVATAR CONTROLS: Setting up listener for', action);
-                
-                control.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('AVATAR CONTROLS: CLICK DETECTED on', action);
-                    console.log('AVATAR CONTROLS: Event target:', e.target);
-                    console.log('AVATAR CONTROLS: window.SmartyBee3DInstances =', window.SmartyBee3DInstances);
-                
-                switch(action) {
-                    case 'auto-rotate':
-                        toggleAutoRotate();
-                        break;
-                    case 'zoom-in':
-                        safeAvatarZoom(-0.5);
-                        break;
-                    case 'zoom-out':
-                        safeAvatarZoom(0.5);
-                        break;
-                    case 'rot-left':
-                        safeAvatarRotate(-15);
-                        break;
-                    case 'rot-right':
-                        safeAvatarRotate(15);
-                        break;
-                    case 'reset':
-                        safeAvatarReset();
-                        break;
-                }
-            });
-        }, 500); // 500ms delay to ensure everything is loaded
-    });
+    // Legacy duplicate listener removed - using DOMContentLoaded listener below instead
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
