@@ -16885,6 +16885,33 @@
 
     <script>
     // =============================================================
+    // INTRO SOUND SYSTEM - Plays welcoming sound on page load
+    // =============================================================
+    function playIntroSound() {
+        try {
+            const introAudio = new Audio('/static/sounds/intro-sound_1.mp3');
+            introAudio.volume = 0.4;
+            introAudio.play().catch(err => {
+                console.log('🔇 Intro sound autoplay blocked (user interaction required):', err.message);
+            });
+        } catch (e) {
+            console.log('🔇 Intro sound error (non-critical):', e.message);
+        }
+    }
+
+    // Play intro sound when menu loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(playIntroSound, 500);
+        });
+    } else {
+        setTimeout(playIntroSound, 500);
+    }
+
+    </script>
+
+    <script>
+    // =============================================================
     // AVATAR PERSONIFICATION SYSTEM - ALL 40 AVATARS
     // =============================================================
 
