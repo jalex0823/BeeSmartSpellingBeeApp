@@ -22,8 +22,46 @@ __pycache__/
 .vscode/
 .env
 *.log
+
 # Exclude heavy 3D model binaries from upload; keep thumbnails
 **/*.glb
 static/assets/avatars/**/*.glb
 # Do NOT ignore thumbnails; they are small and required by UI
 # static/assets/avatars/glb_files/AvatarThumbnails/*.png
+
+# Exclude design files and source assets (not needed for runtime)
+**/*.psd
+**/*.ai
+**/*.sketch
+Banner*.psd
+banner*.psd
+
+# Exclude legacy OBJ files (GLB files are used instead)
+**/*.obj
+**/*.mtl
+static/assets/avatars/**/*.obj
+static/models/*.obj
+3DFiles/**/*.obj
+
+# Exclude development data files
+simple-wiktionary.jsonl
+data/simple-wiktionary.jsonl
+
+# Exclude duplicate 3D files and legacy folders
+3DFiles/
+static/3DFiles/
+static/models/
+Badges/
+
+# Exclude documentation and markdown files (not needed for runtime)
+*.md
+**/*.md
+AGENTS.md
+README.md
+
+# Exclude workspace configuration files
+*.txt
+10WordList.txt
+20Wordlist.txt
+50Words_kidfriendly.txt
+wordlists/
