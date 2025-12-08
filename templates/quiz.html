@@ -6791,6 +6791,7 @@ class QuizManager {
             // Show letter hint when user clicks "Honey Hint" button
             if (options.refresh) {
                 this.showLetterHint();
+                playThemedSound('hint-reveal');
                 
                 // Add bounce animation to definition
                 definitionElement.classList.remove('hint-bounce');
@@ -6875,6 +6876,9 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
+            // Play gentle tone before pronunciation
+            playThemedSound('pronounce-word');
+            
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
@@ -7087,6 +7091,7 @@ class QuizManager {
                     // 🎯 Show level up modal (if leveled up)
                     if (result.level_up && result.level_up.leveled_up) {
                         console.log(`🎯 Level up detected!`);
+                        playThemedSound('level-up');
                         await this.showLevelUp(result.level_up);
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
@@ -7854,6 +7859,12 @@ class QuizManager {
         document.getElementById('quizCard').style.display = 'none';
         const completeDiv = document.getElementById('quizComplete');
         completeDiv.style.display = 'block';
+        
+        // Play completion sound
+        playThemedSound('word-complete');
+        
+        // Play completion sound
+        playThemedSound('word-complete');
 
         // Ensure no NaN values in summary
         const total = Number(summary.total) || 1; // Avoid division by zero
@@ -7874,6 +7885,10 @@ class QuizManager {
             gradeColor = '#2ecc71'; // Green
             gradeEmoji = '🌟';
             gradeMessage = 'Outstanding! You\'re a spelling superstar!';
+            // Extra celebration for perfect score
+            if (safePercentage === 100) {
+                setTimeout(() => playThemedSound('perfect-score'), 300);
+            }
         } else if (safePercentage >= 80) {
             letterGrade = 'B';
             gradeColor = '#3498db'; // Blue
@@ -9230,7 +9245,33 @@ function addThemedKeyframes(css) {
 }
 
 function playThemedSound(soundType) {
-    // Sound playback for themed effects
+    // ============================================================================
+    // SOUND EFFECTS SYSTEM - All 15 integrated sounds
+    // ============================================================================
+    // Quiz Feedback:
+    //   - correct.mp3: Played when answer is correct
+    //   - incorrect.mp3: Played when answer is incorrect  
+    //   - word-complete.mp3: Played when entire quiz finishes
+    //   - perfect-score.mp3: Extra celebration for 100% completion
+    //   - hint-reveal.mp3: Played when showing letter hints
+    //   - pronounce-word.mp3: Gentle tone before word pronunciation
+    //   - daily-streak.mp3: Celebration for streak milestones
+    //   - level-up.mp3: Played when player achieves new rank
+    //
+    // Menu & Interactions:
+    //   - intro-sound_1.mp3: Welcoming sound on menu page load
+    //   - button-click.mp3: Feedback for button/avatar clicks
+    //   - upload-success.mp3: Confirmation when word list uploads
+    //   - avatar-unlock.mp3: Special sound when unlocking new avatar
+    //
+    // Speed Round:
+    //   - speed-round-start.mp3: Energetic sound to start speed quiz
+    //   - timer-warning.mp3: Alert at 10 seconds remaining
+    //
+    // Optional (not yet used):
+    //   - bee-buzz.mp3: Ambient bee sound for transitions/hover effects
+    // ============================================================================
+    
     try {
         const audio = new Audio(`/static/sounds/${soundType}.mp3`);
         audio.volume = 0.3;
@@ -9293,7 +9334,7 @@ function showStreakCelebration(milestone) {
     document.body.appendChild(celebration);
     
     // Play celebration sound
-    playThemedSound('streak_milestone');
+    playThemedSound('daily-streak');
     
     // Add particle effects
     createStreakParticles(celebration.querySelector('.streak-popup'));

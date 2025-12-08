@@ -8318,6 +8318,9 @@
                 // Complete animation at 100%
                 updateFileUploadProgress(100, ' Upload complete!', `Successfully loaded ${data.count || 0} words`);
                 
+                // Play success sound
+                playMenuSound('upload-success');
+                
                 setTimeout(async () => {
                     hideFileUploadProgress();
                     
@@ -16912,6 +16915,22 @@
 
     <script>
     // =============================================================
+    // GLOBAL SOUND EFFECTS HELPER
+    // =============================================================
+    function playMenuSound(soundType) {
+        try {
+            const audio = new Audio(`/static/sounds/${soundType}.mp3`);
+            audio.volume = 0.3;
+            audio.play().catch(() => {
+                // Ignore sound errors - effects work without sound
+            });
+        } catch (e) {
+            // Ignore sound errors
+        }
+    }
+
+    <script>
+    // =============================================================
     // AVATAR PERSONIFICATION SYSTEM - ALL 40 AVATARS
     // =============================================================
 
@@ -17337,6 +17356,9 @@
         const persona = AVATAR_PERSONAS[avatarKey];
         const controller = getAvatarController();
         if (!persona || !controller) return;
+        
+        // Play button click sound
+        playMenuSound('button-click');
 
         const animationName = persona.defaultAnimation || 'cheer';
         if (typeof controller.play === 'function') {

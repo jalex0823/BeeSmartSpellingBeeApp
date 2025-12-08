@@ -1191,6 +1191,13 @@ function announceSpeedRoundIntro() {
     const visualizer = document.getElementById('voiceVisualizer');
     const status = document.getElementById('voiceStatus');
     
+    // Play energetic start sound
+    try {
+        const startSound = new Audio('/static/sounds/speed-round-start.mp3');
+        startSound.volume = 0.4;
+        startSound.play().catch(() => {});
+    } catch(e) {}
+    
     if (!('speechSynthesis' in window)) {
         // If no speech support, just start the round
         // Note: Event listeners already set up on DOMContentLoaded
@@ -1585,9 +1592,19 @@ function startTimer() {
             if (progress <= 0.3) {
                 if (circle) circle.classList.add('warning');
                 if (timerText) timerText.classList.add('warning');
+                // Play warning sound only once at 10 seconds
+                if (timeRemaining === 10 && !window.timerWarningSounded) {
+                    window.timerWarningSounded = true;
+                    try {
+                        const warnSound = new Audio('/static/sounds/timer-warning.mp3');
+                        warnSound.volume = 0.35;
+                        warnSound.play().catch(() => {});
+                    } catch(e) {}
+                }
             } else {
                 if (circle) circle.classList.remove('warning');
                 if (timerText) timerText.classList.remove('warning');
+                window.timerWarningSounded = false;
             }
 
         }, 100);
