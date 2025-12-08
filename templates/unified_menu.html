@@ -1284,19 +1284,19 @@
         /* Individual menu options */
         .menu-option {
             margin-top: 0; /* Pull up to remove gap */
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
             border: 3px solid var(--tile-border);
-            border-radius: 28px;
+            border-radius: 24px;
             background: var(--tile-bg);
             color: var(--tile-text);
             transition: all 0.35s ease;
             cursor: pointer;
             text-align: center;
-            min-height: 180px;
+            min-height: 140px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 12px 32px var(--tile-shadow);
-            max-width: 600px;
+            box-shadow: 0 8px 20px var(--tile-shadow);
+            max-width: var(--content-max);
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -1311,7 +1311,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem 1.5rem;
+            padding: 1.25rem 1.5rem;
         }
         
         /* Make all child elements pass clicks through to parent tile */
@@ -3352,7 +3352,7 @@
                     margin: 0 auto;
                 ">
                 <!-- Avatar Display - NEW clean container for controls -->
-                <div id="avatarFxHost" style="position: relative; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px 0;">
+                <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0;">
                     <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto;"></div>
                     
                     <!-- Interactive Caption -->
@@ -5470,7 +5470,56 @@
                             el.click();
                         }
                     });
+                    
+                    // FAST TOUCH: Eliminate 300ms delay by handling touchend directly
+                    let touchStartTime = 0;
+                    let touchMoved = false;
+                    
+                    el.addEventListener('touchstart', (e) => {
+                        touchStartTime = Date.now();
+                        touchMoved = false;
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchmove', () => {
+                        touchMoved = true;
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchend', (e) => {
+                        const touchDuration = Date.now() - touchStartTime;
+                        // Only trigger if it was a quick tap (not a long press) and no scroll
+                        if (!touchMoved && touchDuration < 500) {
+                            e.preventDefault(); // Prevent the 300ms delay click
+                            console.log('Fast touch activated tile:', el.className);
+                            try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
+                            el.click();
+                        }
+                    }, { passive: false }); // Need passive: false to call preventDefault
                 }
+                
+                // FAST TOUCH for action buttons too
+                if (el.classList.contains('action-btn')) {
+                    let touchStartTime = 0;
+                    let touchMoved = false;
+                    
+                    el.addEventListener('touchstart', (e) => {
+                        touchStartTime = Date.now();
+                        touchMoved = false;
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchmove', () => {
+                        touchMoved = true;
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchend', (e) => {
+                        const touchDuration = Date.now() - touchStartTime;
+                        if (!touchMoved && touchDuration < 500 && !el.disabled) {
+                            e.preventDefault();
+                            console.log('Fast touch activated button:', el.className);
+                            el.click();
+                        }
+                    }, { passive: false });
+                }
+                
                 el.addEventListener('pointerdown', (ev) => {
                     console.log('pointerdown on element:', el.className);
                     try {
