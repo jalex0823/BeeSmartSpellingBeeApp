@@ -16499,14 +16499,16 @@
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
+    </script>
 
+    <script>
         //  Load student's Buzz Dust rank (authenticated users only)
         {% if current_user.is_authenticated %}
         async function loadStudentBuzzDust() {
             try {
                 console.log(' [TICKER] Starting Buzz Dust load...');
-                console.log(' [TICKER] Authentication state:', {% if current_user.is_authenticated %}true{% else %}false{% endif %});
-                console.log(' [TICKER] Current user:', '{{ current_user.username if current_user.is_authenticated else "Guest" }}');
+                console.log(' [TICKER] Authentication state:', true);
+                console.log(' [TICKER] Current user:', '{{ current_user.username }}');
                 
                 const res = await fetch('/api/buzz-dust/info', {
                     credentials: 'same-origin',
@@ -16698,7 +16700,9 @@
             loadStudentBuzzDust();
         }
         {% endif %}
+    </script>
 
+    <script>
         //  TICKER FAIRY DUST MAGIC 
         function createTickerFairyDust() {
             const container = document.querySelector('.ticker-fairy-dust-container');
