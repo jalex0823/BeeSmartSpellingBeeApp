@@ -178,34 +178,17 @@ class SmartyBee3D {
     }
 
     setupLighting() {
-        // Configurable lighting: brighter for registered users, dimmer for carousel
-        const isRegisteredUser = this.options.brighterLighting;
-        
-        if (isRegisteredUser) {
-            // BRIGHTER lighting for registered user's avatar
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-            this.scene.add(ambientLight);
+        // Consistent lighting for all avatars
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        this.scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.4);
-            directionalLight.position.set(5, 5, 5);
-            this.scene.add(directionalLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        directionalLight.position.set(5, 5, 5);
+        this.scene.add(directionalLight);
 
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            fillLight.position.set(-5, 0, 5);
-            this.scene.add(fillLight);
-        } else {
-            // DIMMER lighting for carousel avatars
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            this.scene.add(ambientLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
-            directionalLight.position.set(5, 5, 5);
-            this.scene.add(directionalLight);
-
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            fillLight.position.set(-5, 0, 5);
-            this.scene.add(fillLight);
-        }
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        fillLight.position.set(-5, 0, 5);
+        this.scene.add(fillLight);
     }
 
     loadModel() {
