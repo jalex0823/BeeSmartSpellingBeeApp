@@ -176,12 +176,15 @@ async function render3DThumb(container, avatar) {
         }
         container.appendChild(renderer.domElement);
         
-        // Lighting
-        const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+        // Consistent lighting for all avatars - matches dashboard vivid colors
+        const ambient = new THREE.AmbientLight(0xffffff, 1.0);
         scene.add(ambient);
-        const dir = new THREE.DirectionalLight(0xffffff, 1);
-        dir.position.set(5, 10, 7.5);
+        const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+        dir.position.set(5, 5, 5);
         scene.add(dir);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.7);
+        fill.position.set(-5, 0, 5);
+        scene.add(fill);
         
         // Detect GLB (all avatars are now GLB-only)
         const isGLB = avatar.(urls && urls.glb !== undefined) ? urls.glb : null && avatar.urls.glb.toLowerCase().endsWith('.glb');

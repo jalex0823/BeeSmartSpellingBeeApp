@@ -15830,17 +15830,17 @@
                         
                         container.appendChild(canvas);
                         
-                        // Lighting - BRIGHTENED for maximum color visibility
-                        const ambientLight = new THREE.AmbientLight(0xffffff, 1.6);
+                        // Consistent lighting for all avatars - matches dashboard vivid colors
+                        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
                         scene.add(ambientLight);
                         
-                        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.3);
+                        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
                         directionalLight.position.set(5, 5, 5);
                         scene.add(directionalLight);
                         
                         // Add fill light for better color showcase
-                        const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                        fillLight.position.set(-3, 3, -3);
+                        const fillLight = new THREE.DirectionalLight(0xffffff, 0.7);
+                        fillLight.position.set(-5, 0, 5);
                         scene.add(fillLight);
                         
                         // GLB-only model URL - Use .glb property ONLY (no .obj fallback)

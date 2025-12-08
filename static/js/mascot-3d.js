@@ -190,17 +190,17 @@ class SmartyBee3D {
     }
 
     setupLighting() {
-        // Ambient light for overall illumination
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Consistent lighting for all avatars - matches dashboard vivid colors
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
         this.scene.add(ambientLight);
 
         // Directional light for shadows and definition
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         directionalLight.position.set(5, 5, 5);
         this.scene.add(directionalLight);
 
         // Fill light from the side
-        const fillLight = new THREE.DirectionalLight(0xffd700, 0.4);
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.7);
         fillLight.position.set(-5, 0, 5);
         this.scene.add(fillLight);
     }
