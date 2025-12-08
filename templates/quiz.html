@@ -2546,6 +2546,42 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
         z-index: 100;
         border: 2px solid rgba(255, 255, 255, 0.3);
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .session-stats.collapsed {
+        transform: translateX(-50%) translateY(-70px);
+        opacity: 0.3;
+    }
+    
+    .stats-toggle-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.3);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: #5A2C15;
+        transition: all 0.3s ease;
+        padding: 0;
+        line-height: 1;
+    }
+    
+    .stats-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.5);
+        transform: translateY(-50%) scale(1.1);
+    }
+    
+    .session-stats.collapsed .stats-toggle-btn {
+        transform: translateY(-50%) rotate(180deg);
     }
     
     .session-stat {
@@ -3032,6 +3068,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         <span>🔥</span>
         <span class="session-stat-value" id="floatingStreak">0</span>
     </div>
+    <button class="stats-toggle-btn" id="statsToggleBtn" onclick="toggleStatsBar()" title="Hide stats bar">
+        ▲
+    </button>
 </div>
 
 <div class="quiz-container quiz-shell">
@@ -8314,6 +8353,28 @@ function pronounceWordFromReport(word) {
         utterance.volume = 1.0;
         
         speechSynthesis.speak(utterance);
+    }
+}
+
+// Toggle stats bar visibility
+function toggleStatsBar() {
+    const statsBar = document.getElementById('sessionStatsBar');
+    const toggleBtn = document.getElementById('statsToggleBtn');
+    
+    if (statsBar && toggleBtn) {
+        statsBar.classList.toggle('collapsed');
+        
+        // Update button title
+        if (statsBar.classList.contains('collapsed')) {
+            toggleBtn.title = 'Show stats bar';
+        } else {
+            toggleBtn.title = 'Hide stats bar';
+        }
+        
+        // Play button click sound if available
+        if (typeof playThemedSound === 'function') {
+            playThemedSound('button-click');
+        }
     }
 }
 
