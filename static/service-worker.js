@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.3.2-2025-11-24-no-syntax-errors';
+const CACHE_VERSION = 'beesmart-v1.4.0-2025-12-07-glb-cache-optimized';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -38,13 +38,24 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip service worker completely for avatar assets - always fetch fresh
-  if (url.pathname.endsWith('.glb') || 
-      url.pathname.endsWith('.png') || 
+  // Cache GLB files with network-first strategy (they're large but static)
+  if (url.pathname.endsWith('.glb')) {
+    event.respondWith(
+      fetch(request).then((response) => {
+        const copy = response.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        return response;
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Skip service worker for other avatar assets (thumbnails, etc.)
+  if (url.pathname.endsWith('.png') || 
       url.pathname.includes('/avatars/') ||
       url.pathname.includes('/glb_files/') ||
       url.pathname.includes('/AvatarThumbnails/')) {
-    return; // Let browser handle avatar requests directly without SW interference
+    return; // Let browser handle these requests directly
   }
 
   // Network-first for navigation requests to keep content fresh
