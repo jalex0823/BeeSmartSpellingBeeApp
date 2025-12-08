@@ -3408,32 +3408,16 @@
                     })();
                 </script>
 
-                <!-- Avatar Controls - Horizontal Icons -->
-                <div class="avatar-controls" style="
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 16px;
-                    margin: 12px auto;
-                    font-size: 24px;
-                    user-select: none;
-                ">
-                    <span data-avatar-control="auto-rotate" title="Auto-Rotate (Spacebar)" aria-label="Toggle auto-rotate" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;"></span>
-                    <span data-avatar-control="zoom-in" title="Zoom In (+)" aria-label="Zoom in" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">＋</span>
-                    <span data-avatar-control="zoom-out" title="Zoom Out (-)" aria-label="Zoom out" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">－</span>
-                    <span data-avatar-control="rot-left" title="Rotate Left ()" aria-label="Rotate left" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">⟲</span>
-                    <span data-avatar-control="rot-right" title="Rotate Right ()" aria-label="Rotate right" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;">⟳</span>
-                    <span data-avatar-control="reset" title="Reset View (R)" aria-label="Reset view" style="cursor: pointer; opacity: 0.7; transition: all 0.2s ease;"></span>
+                <!-- Avatar Controls - Enhanced Button Design -->
+                <div class="avatar-controls">
+                    <button data-avatar-control="auto-rotate" title="Auto-Rotate (Spacebar)" aria-label="Toggle auto-rotate">🔄</button>
+                    <button data-avatar-control="zoom-in" title="Zoom In (+)" aria-label="Zoom in">+</button>
+                    <button data-avatar-control="zoom-out" title="Zoom Out (-)" aria-label="Zoom out">-</button>
+                    <button data-avatar-control="rot-left" title="Rotate Left (←)" aria-label="Rotate left">↺</button>
+                    <button data-avatar-control="rot-right" title="Rotate Right (→)" aria-label="Rotate right">↻</button>
+                    <button data-avatar-control="reset" title="Reset View (R)" aria-label="Reset view">🏠</button>
                 </div>
-                <style>
-                    .avatar-controls span:hover {
-                        opacity: 1;
-                        transform: scale(1.2);
-                    }
-                    .avatar-controls span:active {
-                        transform: scale(1.1);
-                    }
-                </style>
+
 
                 <!-- Avatar System Status Badge (shows preload results) -->
                 <div id="avatarSystemStatus" style="

@@ -155,6 +155,11 @@ if ('speechSynthesis' in window) {
         backdrop-filter: blur(8px);
     }
     
+    /* Mobile exit button - hidden by default, shown on mobile */
+    .mobile-exit-button {
+        display: none;
+    }
+    
     /* New header layout with progress on left, exit on right */
     .quiz-header-top {
         display: flex;
@@ -730,7 +735,80 @@ if ('speechSynthesis' in window) {
     
     /* Mobile responsiveness */
     @media (max-width: 768px) {
-        /* Mobile header layout adjustments */
+        /* HIDE entire quiz header on mobile for better visibility */
+        .quiz-header {
+            display: none !important;
+        }
+        
+        /* Adjust quiz card margin since header is hidden */
+        .quiz-card {
+            margin-top: 0.5rem !important;
+        }
+        
+        /* Ensure progress tracker pill stays visible and accessible */
+        .progress-tracker {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 10px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 1000 !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-radius: 25px !important;
+            padding: 0.5rem 1rem !important;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+            border: 2px solid rgba(255, 193, 7, 0.4) !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        
+        .progress-tracker .honey-jar {
+            width: 60px !important;
+            height: 40px !important;
+        }
+        
+        .progress-tracker .progress-description {
+            font-size: 0.75rem !important;
+            color: #5A2C15 !important;
+            font-weight: 600 !important;
+            margin-left: 0.5rem !important;
+        }
+        
+        /* Mobile-only floating exit button (top-right corner) */
+        .mobile-exit-button {
+            display: flex !important;
+            position: fixed !important;
+            top: 10px !important;
+            right: 10px !important;
+            z-index: 1001 !important;
+            background: rgba(255, 107, 107, 0.95) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 44px !important;
+            height: 44px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4) !important;
+            cursor: pointer !important;
+            backdrop-filter: blur(8px) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .mobile-exit-button:hover,
+        .mobile-exit-button:active {
+            transform: scale(0.95) !important;
+            background: rgba(255, 82, 82, 0.98) !important;
+        }
+        
+        /* Hide desktop exit button on mobile since header is hidden */
+        .quiz-header .exit-button {
+            display: none !important;
+        }
+        
+        /* Mobile header layout adjustments - KEEP FOR DESKTOP */
         .quiz-header-top {
             flex-direction: column;
             gap: 0.5rem;
@@ -753,16 +831,58 @@ if ('speechSynthesis' in window) {
         }
         
         .jar-svg {
-            width: 150px; /* Wider on mobile too */
-            height: 180px;
+            width: 160px; /* Larger jar for mobile */
+            height: 190px;
         }
         
+        /* Enhanced mobile timer visibility */
         .timer-number {
-            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
+            font-size: 3.2rem; /* Larger font for mobile */
+            font-weight: 900;
+            color: #3E2723; /* Darker brown for better contrast */
+            text-shadow: 
+                0 3px 12px rgba(255, 255, 255, 0.9), /* Strong white glow */
+                0 0 25px rgba(255, 255, 255, 0.8),
+                0 1px 3px rgba(0, 0, 0, 0.3); /* Dark outline for definition */
+            background: rgba(255, 255, 255, 0.15); /* Subtle background circle */
+            border-radius: 50%;
+            padding: 0.2em; /* Padding based on font size */
+            min-width: 1.8em;
+            min-height: 1.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Enhanced mobile warning states */
+        .honey-jar-timer.warning .timer-number {
+            color: #E65100; /* Darker orange for mobile contrast */
+            background: rgba(255, 193, 7, 0.2);
+            border-color: rgba(255, 193, 7, 0.5);
+            text-shadow: 
+                0 3px 12px rgba(255, 255, 255, 0.95),
+                0 0 25px rgba(255, 255, 255, 0.8),
+                0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+        
+        .honey-jar-timer.critical .timer-number {
+            color: #B71C1C; /* Darker red for mobile contrast */
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.6);
+            text-shadow: 
+                0 3px 12px rgba(255, 255, 255, 0.95),
+                0 0 25px rgba(255, 255, 255, 0.8),
+                0 1px 3px rgba(0, 0, 0, 0.5);
+            transform: scale(1.15); /* Slightly bigger when critical */
         }
         
         .timer-label {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #4A4A4A;
+            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
         }
     }
 
@@ -2888,6 +3008,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 {% endblock %}
 
 {% block content %}
+<!-- Mobile-only floating exit button (hidden on desktop) -->
+<button class="mobile-exit-button" onclick="confirmBackToMenu(event)" style="display: none;" 
+        aria-label="Exit Quiz - Back to Main Menu" title="Exit Quiz">
+    ×
+</button>
+
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -4093,10 +4219,8 @@ class CountdownTimer {
             this.container.classList.add('active');
         }, 50);
         
-        // 🎭 Morph to timer mode when countdown starts
-        if (window.morphController) {
-            window.morphController.morphToTimer();
-        }
+        // 🎭 NOTE: Do NOT auto-morph here - let announceAndStartTimer() handle timing
+        // The morph should happen AFTER "spell the word now" announcement
         
         // Reset jar appearance
         this.jarTimer.classList.remove('warning', 'critical', 'expired');
