@@ -7127,7 +7127,12 @@ class QuizManager {
                     // Play success sound
                     this.playSound('correct');
                     
-                    setTimeout(() => this.loadNextWord(), 800);
+                    // Wait longer to ensure feedback and audio complete before advancing
+                    console.log('✅ Correct answer - auto-advancing to next word in 2000ms');
+                    setTimeout(() => {
+                        console.log('🔄 Loading next word now...');
+                        this.loadNextWord();
+                    }, 2000);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
                 }
