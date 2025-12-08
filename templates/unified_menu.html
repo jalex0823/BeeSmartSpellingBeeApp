@@ -3876,9 +3876,65 @@
                                 {% endif %}
                             </div>
                             {% endif %}
-                            <div style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
-                                Or continue as guest (progress won't be saved)
+                            <div style="margin-top: 1rem; font-size: 0.85rem; color: #999; text-align: center;">
+                                Or continue as guest
                             </div>
+                            
+                            <!-- Guest Name Input -->
+                            <div style="margin-top: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                <input type="text" id="guestNameInput" placeholder="Enter your name (optional)" 
+                                    maxlength="20"
+                                    style="
+                                        padding: 0.6rem 1rem;
+                                        border: 2px solid #FFD700;
+                                        border-radius: 10px;
+                                        font-size: 0.95rem;
+                                        text-align: center;
+                                        background: white;
+                                        color: #5A2C15;
+                                        max-width: 250px;
+                                        width: 100%;
+                                        font-weight: 600;
+                                        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+                                    "
+                                    onkeypress="if(event.key==='Enter') saveGuestName()"
+                                />
+                                <small style="color: #8B4513; font-size: 0.75rem;">
+                                    💡 Your name will appear in the quiz!
+                                </small>
+                            </div>
+                            
+                            <script>
+                            function saveGuestName() {
+                                const input = document.getElementById('guestNameInput');
+                                const name = input.value.trim();
+                                
+                                if (name) {
+                                    // Save to sessionStorage for guest users
+                                    sessionStorage.setItem('guestName', name);
+                                    
+                                    // Visual feedback
+                                    input.style.borderColor = '#4CAF50';
+                                    input.style.background = '#E8F5E9';
+                                    
+                                    setTimeout(() => {
+                                        input.style.borderColor = '#FFD700';
+                                        input.style.background = 'white';
+                                    }, 1000);
+                                    
+                                    console.log('✅ Guest name saved:', name);
+                                }
+                            }
+                            
+                            // Load saved guest name if exists
+                            window.addEventListener('DOMContentLoaded', () => {
+                                const savedName = sessionStorage.getItem('guestName');
+                                const input = document.getElementById('guestNameInput');
+                                if (savedName && input) {
+                                    input.value = savedName;
+                                }
+                            });
+                            </script>
                             
                             <!-- Instructional Information -->
                             <div style="
@@ -16926,6 +16982,8 @@
             // Ignore sound errors
         }
     }
+
+    </script>
 
     <script>
     // =============================================================

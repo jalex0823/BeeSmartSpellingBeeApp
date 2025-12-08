@@ -4819,8 +4819,9 @@ class QuizManager {
         localStorage.setItem('studentName', this.studentName);
         console.log('👤 Using logged-in user name:', this.studentName);
         {% else %}
-        this.studentName = localStorage.getItem('studentName') || '';
-        console.log('👤 Using localStorage name:', this.studentName);
+        // Check sessionStorage for guest name, then localStorage
+        this.studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+        console.log('👤 Using guest/localStorage name:', this.studentName);
         {% endif %}
         
         // Reset honey jar to 0% at start
