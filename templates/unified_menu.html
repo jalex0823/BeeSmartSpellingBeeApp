@@ -904,14 +904,14 @@
         /* Avatar Controls - Enhanced with smooth animations and touch support */
         .avatar-controls {
             display: inline-flex;
-            gap: 0.5rem;
-            padding: 0.5rem;
+            gap: 0.35rem;
+            padding: 0.35rem;
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            margin: 12px auto 4px;
+            margin: 8px auto 4px;
             pointer-events: auto;
             position: relative;
             z-index: 100;
@@ -921,13 +921,13 @@
         }
         
         .avatar-controls button {
-            width: 44px;
-            height: 44px;
-            border: 2px solid rgba(255, 215, 0, 0.6);
+            width: 32px;
+            height: 32px;
+            border: 1.5px solid rgba(255, 215, 0, 0.6);
             border-radius: 50%;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 249, 230, 0.95) 100%);
             color: #5a4000;
-            font-size: 1.2rem;
+            font-size: 0.95rem;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -993,9 +993,9 @@
         /* Touch-friendly sizing for mobile */
         @media (max-width: 768px) {
             .avatar-controls button {
-                width: 48px;
-                height: 48px;
-                font-size: 1.3rem;
+                width: 36px;
+                height: 36px;
+                font-size: 1.05rem;
             }
         }
         
@@ -16978,8 +16978,12 @@
         const controller = getAvatarController();
         if (!controller || !controller.bee) return;
         
-        const startRotation = controller.bee.rotation.y;
-        const targetRotation = startRotation + (Math.PI * 2); // Full 360°
+        // Calculate the nearest front-facing position (0, 2π, 4π, etc.)
+        const currentRotation = controller.bee.rotation.y;
+        const currentCycles = currentRotation / (Math.PI * 2);
+        const targetCycles = Math.round(currentCycles) + 1; // Complete one more full rotation
+        const targetRotation = targetCycles * (Math.PI * 2); // Always ends at exact multiple of 2π
+        
         const duration = 1000; // 1 second
         const startTime = Date.now();
         
@@ -16989,14 +16993,14 @@
             
             // Ease-out animation
             const eased = 1 - Math.pow(1 - progress, 3);
-            controller.bee.rotation.y = startRotation + (Math.PI * 2 * eased);
+            controller.bee.rotation.y = currentRotation + ((targetRotation - currentRotation) * eased);
             
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                // Normalize to front-facing (0 or nearest multiple of 2π)
-                controller.bee.rotation.y = Math.round(controller.bee.rotation.y / (Math.PI * 2)) * (Math.PI * 2);
-                console.log('✅ 360° spin complete, avatar facing front');
+                // Ensure exact front-facing position
+                controller.bee.rotation.y = targetRotation;
+                console.log('✅ 360° spin complete, avatar locked to front:', controller.bee.rotation.y);
             }
         }
         
@@ -17346,19 +17350,20 @@
                     const action = this.getAttribute('data-avatar-control');
                     console.log('🎮 Avatar control clicked:', action);
                     
-                    // Check if avatar is ready
-                    if (!window.avatarControlsReady) {
-                        console.warn('Avatar not ready yet - ignoring control');
-                        return;
-                    }
-                    
                     const controller = getAvatarController();
                     console.log('🎮 Controller available:', !!controller);
                     
                     if (!controller) {
-                        console.warn('No avatar controller available');
+                        console.warn('No avatar controller available - attempting to enable after short delay');
+                        // Set a flag so controls will work once avatar loads
+                        setTimeout(() => {
+                            window.avatarControlsReady = true;
+                        }, 2000);
                         return;
                     }
+                    
+                    // Enable controls now that we have a controller
+                    window.avatarControlsReady = true;
                     
                     // Visual feedback
                     this.style.transform = 'scale(0.9)';
