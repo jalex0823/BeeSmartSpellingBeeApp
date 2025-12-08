@@ -1190,9 +1190,38 @@
             animation: avatarPulse 0.7s ease-out;
         }
         
+        /* Spilling Letters Animation */
+        .spilling-letter {
+            position: absolute;
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            pointer-events: none;
+            z-index: 1000;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: letterFall 2s ease-in forwards;
+        }
+        
+        @keyframes letterFall {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--drift-x, 0), 400px) rotate(var(--rotation-deg, 360deg)) scale(0.5);
+                opacity: 0;
+            }
+        }
+        
         @media (max-width: 480px) {
             .avatar-viewer-wrapper {
                 transform: scale(0.9);
+            }
+            .spilling-letter {
+                font-size: 18px;
             }
         }
 
@@ -17091,6 +17120,9 @@
         const controller = getAvatarController();
         if (!controller || !controller.bee) return;
         
+        // Trigger alphabet spill effect
+        createAlphabetSpill();
+        
         // Calculate the nearest front-facing position (0, 2π, 4π, etc.)
         const currentRotation = controller.bee.rotation.y;
         const currentCycles = currentRotation / (Math.PI * 2);
@@ -17363,6 +17395,50 @@
         });
         if (persona.bgFxClass) {
             host.classList.add(persona.bgFxClass);
+        }
+    }
+
+    // =============================================================
+    // ALPHABET SPILL EFFECT - Letters fall from avatar pockets
+    // =============================================================
+    function createAlphabetSpill() {
+        const avatarContainer = document.querySelector('.avatar-container') || document.getElementById('avatarFxHost');
+        if (!avatarContainer) return;
+        
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+        
+        // Create 15-20 random letters spilling out
+        const letterCount = 15 + Math.floor(Math.random() * 6);
+        
+        for (let i = 0; i < letterCount; i++) {
+            setTimeout(() => {
+                const letter = document.createElement('div');
+                letter.textContent = letters[Math.floor(Math.random() * letters.length)];
+                letter.className = 'spilling-letter';
+                
+                // Random color
+                letter.style.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Start from avatar center area (pockets)
+                const startX = 40 + Math.random() * 20; // 40-60% from left (center area)
+                const startY = 50 + Math.random() * 20; // 50-70% from top (pocket area)
+                
+                // Random horizontal spread
+                const horizontalDrift = (Math.random() - 0.5) * 200; // -100px to +100px drift
+                
+                letter.style.left = `${startX}%`;
+                letter.style.top = `${startY}%`;
+                letter.style.setProperty('--drift-x', `${horizontalDrift}px`);
+                letter.style.setProperty('--rotation-deg', `${Math.random() * 720 - 360}deg`);
+                
+                avatarContainer.appendChild(letter);
+                
+                // Remove after animation completes
+                setTimeout(() => {
+                    letter.remove();
+                }, 2000);
+            }, i * 50); // Stagger the letter releases
         }
     }
 
