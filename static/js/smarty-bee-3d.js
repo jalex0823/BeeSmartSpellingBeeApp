@@ -239,6 +239,12 @@ class SmartyBee3D {
                 
                 const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
                 console.log(`✅ ${avatarName} GLB model loaded successfully!`);
+                
+                // Call onReady callback if provided
+                if (this.options.onReady && typeof this.options.onReady === 'function') {
+                    console.log('🚀 Calling onReady callback');
+                    this.options.onReady();
+                }
             },
             (xhr) => {
                 const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);

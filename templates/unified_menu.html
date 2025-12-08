@@ -3367,6 +3367,8 @@
                 
                 <!-- Load user's avatar with SmartyBee3D into NEW clean container -->
                 <script>
+                window.avatarControlsReady = false;
+                
                 window.addEventListener('load', function() {
                     if (typeof window.SmartyBee3D === 'function') {
                         // Create instance in NEW container
@@ -3376,9 +3378,26 @@
                             fetchFromServer: true,  // Auto-fetch user's registered avatar
                             autoRotate: false,
                             enableInteraction: true,
-                            zoom: 1.8
+                            zoom: 1.8,
+                            onReady: function() {
+                                console.log('✅ Avatar Controls instance ready');
+                                window.avatarControlsReady = true;
+                                // Enable controls after avatar is loaded
+                                document.querySelectorAll('.avatar-controls button').forEach(btn => {
+                                    btn.disabled = false;
+                                    btn.style.opacity = '1';
+                                });
+                                // Trigger ready event for any listeners
+                                window.dispatchEvent(new CustomEvent('avatarControlsReady'));
+                            }
                         });
                         console.log('Avatar Controls instance created in new container');
+                        
+                        // Initially disable controls until avatar loads
+                        document.querySelectorAll('.avatar-controls button').forEach(btn => {
+                            btn.disabled = true;
+                            btn.style.opacity = '0.5';
+                        });
                     }
                 });
                 </script>
@@ -17317,6 +17336,72 @@
             });
         }
 
+        // Initialize avatar controls - wait for avatar to be ready
+        function initializeAvatarControls() {
+            console.log('🎮 Initializing avatar controls...');
+            
+            document.querySelectorAll('.avatar-controls [data-avatar-control]').forEach((btn) => {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const action = this.getAttribute('data-avatar-control');
+                    console.log('🎮 Avatar control clicked:', action);
+                    
+                    // Check if avatar is ready
+                    if (!window.avatarControlsReady) {
+                        console.warn('Avatar not ready yet - ignoring control');
+                        return;
+                    }
+                    
+                    const controller = getAvatarController();
+                    console.log('🎮 Controller available:', !!controller);
+                    
+                    if (!controller) {
+                        console.warn('No avatar controller available');
+                        return;
+                    }
+                    
+                    // Visual feedback
+                    this.style.transform = 'scale(0.9)';
+                    setTimeout(() => { this.style.transform = ''; }, 100);
+                    
+                    switch (action) {
+                        case 'auto-rotate':
+                            toggleAutoRotate();
+                            break;
+                        case 'zoom-in':
+                            safeAvatarZoom(-0.3, true);
+                            break;
+                        case 'zoom-out':
+                            safeAvatarZoom(0.3, true);
+                            break;
+                        case 'rot-left':
+                            safeAvatarRotate(-15, true);
+                            break;
+                        case 'rot-right':
+                            safeAvatarRotate(15, true);
+                            break;
+                        case 'reset':
+                            safeAvatarReset();
+                            this.style.transform = 'rotate(360deg) scale(0.9)';
+                            setTimeout(() => { this.style.transform = ''; }, 300);
+                            break;
+                    }
+                });
+            });
+        }
+        
+        // Initialize controls when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAvatarControls);
+        } else {
+            initializeAvatarControls();
+        }
+        
+        // Also listen for the avatar ready event
+        window.addEventListener('avatarControlsReady', function() {
+            console.log('🚀 Avatar controls are now active!');
+        });
+
         // Attach click FX to registered user's avatar
         const avatarControlsEl = document.getElementById('avatarControls3D');
         if (avatarControlsEl) {
@@ -17325,43 +17410,6 @@
             });
         }
 
-        document.querySelectorAll('.avatar-controls [data-avatar-control]').forEach((btn) => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                const action = this.getAttribute('data-avatar-control');
-                console.log(' Avatar control clicked:', action);
-                const controller = getAvatarController();
-                console.log(' Controller available:', !!controller);
-                
-                // Visual feedback
-                this.style.transform = 'scale(0.9)';
-                setTimeout(() => { this.style.transform = ''; }, 100);
-                
-                switch (action) {
-                    case 'auto-rotate':
-                        toggleAutoRotate();
-                        break;
-                    case 'zoom-in':
-                        safeAvatarZoom(-0.3, true);
-                        break;
-                    case 'zoom-out':
-                        safeAvatarZoom(0.3, true);
-                        break;
-                    case 'rot-left':
-                        safeAvatarRotate(-15, true);
-                        break;
-                    case 'rot-right':
-                        safeAvatarRotate(15, true);
-                        break;
-                    case 'reset':
-                        safeAvatarReset();
-                        this.style.transform = 'rotate(360deg) scale(0.9)';
-                        setTimeout(() => { this.style.transform = ''; }, 300);
-                        break;
-                }
-            });
-        });
-        
         // Keyboard shortcuts for avatar controls
         document.addEventListener('keydown', (e) => {
             // Don't interfere with typing in inputs
