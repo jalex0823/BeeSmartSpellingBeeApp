@@ -48,6 +48,10 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# Utility scripts
+check_syntax.py
+find_brackets.py
 .env.*.local
 
 # Database files
