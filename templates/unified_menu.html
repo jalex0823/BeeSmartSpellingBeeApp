@@ -1284,7 +1284,7 @@
         /* Individual menu options */
         .menu-option {
             margin-top: 0; /* Pull up to remove gap */
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
             border: 3px solid var(--tile-border);
             border-radius: 28px;
             background: var(--tile-bg);
@@ -1292,11 +1292,11 @@
             transition: all 0.35s ease;
             cursor: pointer;
             text-align: center;
-            min-height: 320px;
+            min-height: 180px;
             position: relative;
             overflow: hidden;
             box-shadow: 0 12px 32px var(--tile-shadow);
-            max-width: var(--content-max);
+            max-width: 600px;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -1310,8 +1310,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            padding: 2.5rem 2rem 2rem;
+            justify-content: center;
+            padding: 1.5rem 1.5rem;
         }
         
         /* Make all child elements pass clicks through to parent tile */
@@ -3787,8 +3787,6 @@
                         </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- End Unified Card Background -->
                     {% else %}
                         <!-- Guest View -->
                         <div style="
@@ -4121,6 +4119,10 @@
                     </button>
                 </div>
             </section>
+            {% if current_user.is_authenticated %}
+            </div>
+            <!-- End Unified Card Background -->
+            {% endif %}
             
             <!-- Hidden file input for import -->
             <input type="file" id="importFileInput" accept=".json,.csv,.txt,.docx,.pdf,text/*" style="display: none;" onchange="handleImportFile(this)">
