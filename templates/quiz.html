@@ -5662,10 +5662,16 @@ class QuizManager {
             }
             
             // Auto-advance after 7 seconds on desktop
-            setTimeout(() => {
+            setTimeout(async () => {
                 feedbackArea.style.display = 'none';
                 this.quizStarted = true;
-                this.loadNextWordWithIntro();
+                console.log('🎤 Intro complete - loading first word...');
+                try {
+                    await this.loadNextWordWithIntro();
+                } catch (err) {
+                    console.error('Failed to load first word:', err);
+                    BeeSmart.showError('Failed to start quiz. Please refresh.');
+                }
             }, 7000);
         }
     }
@@ -7276,6 +7282,9 @@ class QuizManager {
                     // Play success sound
                     this.playSound('correct');
                     
+                    // CRITICAL: Reset isAnswering BEFORE setTimeout to allow new submissions
+                    this.isAnswering = false;
+                    
                     // Wait longer to ensure feedback and audio complete before advancing
                     console.log('✅ Correct answer - auto-advancing to next word in 2500ms');
                     console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
@@ -7299,6 +7308,7 @@ class QuizManager {
             
         } catch (error) {
             console.error('❌ submitAnswer error:', error);
+            console.error('Error details:', error.message, error.stack);
             BeeSmart.showError('Network error. Please try again.');
             this.enableInput();
             this.isAnswering = false;
