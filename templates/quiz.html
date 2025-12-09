@@ -6540,6 +6540,7 @@ class QuizManager {
     }
 
     async loadNextWord() {
+        console.log('🔄 loadNextWord() called - starting to load next word...');
         try {
             // 🎭 ENSURE WE'RE IN VOICE MODE before loading the next word
             if (window.morphController) {
@@ -6566,24 +6567,30 @@ class QuizManager {
             const nextWordBtn = document.getElementById('nextWordButton');
             if (nextWordBtn) nextWordBtn.style.display = 'none';
             
+            console.log('🔄 Fetching /api/next...');
             const response = await fetch('/api/next', { 
                 method: 'POST',
                 credentials: 'same-origin'
             });
+            console.log('🔄 /api/next response received, status:', response.status);
             const data = await response.json();
+            console.log('🔄 /api/next data:', data);
 
             if (response.status !== 200 || data.error) {
-                console.error('API Error:', data);
+                console.error('❌ API Error from /api/next:', data);
                 BeeSmart.showError(data.message || data.error || 'Failed to load the next word');
                 return;
             }
 
             if (data.done) {
+                console.log('🏁 Quiz complete - showing summary');
                 // Announce quiz ending before showing report card
                 await this.announceQuizEnding();
                 this.showQuizComplete(data.summary);
                 return;
             }
+            
+            console.log('✅ Got next word data, processing...');
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
@@ -7174,9 +7181,14 @@ class QuizManager {
                     
                     // Wait longer to ensure feedback and audio complete before advancing
                     console.log('✅ Correct answer - auto-advancing to next word in 2000ms');
+                    console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
                     setTimeout(() => {
                         console.log('🔄 Loading next word now...');
-                        this.loadNextWord();
+                        console.log('DEBUG: About to call loadNextWord(), quizStarted =', this.quizStarted);
+                        this.loadNextWord().catch(err => {
+                            console.error('❌ ERROR in loadNextWord():', err);
+                            BeeSmart.showError('Failed to load next word. Please refresh the page.');
+                        });
                     }, 2000);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
