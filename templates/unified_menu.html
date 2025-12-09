@@ -3174,9 +3174,8 @@
                     margin: 2rem auto 0.5rem auto; /* INCREASED: More space above welcome (was 0) */
                     white-space: nowrap;
                     z-index: 35;
-                    {% if current_user.is_authenticated %}display: none;{% endif %}
                 ">
-                     Welcome {% if not current_user.is_authenticated %}NewBee{% endif %}
+                     Welcome {% if current_user.is_authenticated %}{{ current_user.username or current_user.email.split('@')[0] }}{% else %}NewBee{% endif %}
                 </div>
                 
                 {% if current_user.is_authenticated %}
