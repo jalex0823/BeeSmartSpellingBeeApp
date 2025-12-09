@@ -6131,7 +6131,7 @@
                                 console.log(` Quiz in progress for this list - showing resume/restart modal`);
                                 const choice = await showBeeConfirm({
                                     title: ' Quiz in Progress',
-                                    message: `${data.message}\n\n Progress: ${data.progress.current}/${data.progress.total} words\n\nWhat would you like to do?`,
+                                    message: data.message + '\n\n Progress: ' + data.progress.current + '/' + data.progress.total + ' words\n\nWhat would you like to do?',
                                     confirmText: ' Resume Quiz',
                                     cancelText: ' Restart from Beginning'
                                 });
@@ -8388,8 +8388,8 @@
             const detailEl = container.querySelector('.progress-detail');
             
             const p = Math.max(0, Math.min(100, percent || 0));
-            if (honeyFill) honeyFill.style.height = `${p}%`;
-            if (percentageEl) percentageEl.textContent = `${Math.round(p)}%`;
+            if (honeyFill) honeyFill.style.height = p + '%';
+            if (percentageEl) percentageEl.textContent = Math.round(p) + '%';
             if (messageEl && message) messageEl.textContent = message;
             if (detailEl && detail) detailEl.textContent = detail;
         }
@@ -10369,15 +10369,15 @@
                 const flight = 14 + Math.random() * 6;
                 const buzzDelay = (Math.random() * 0.6).toFixed(2);
 
-                bee.style.top = `${top}vh`;
-                bee.style.left = `${left}vw`;
-                bee.style.animationDuration = `${flight}s, 1.6s`;
-                bee.style.animationDelay = `${-Math.random() * flight}s, ${buzzDelay}s`;
+                bee.style.top = top + 'vh';
+                bee.style.left = left + 'vw';
+                bee.style.animationDuration = flight + 's, 1.6s';
+                bee.style.animationDelay = (-Math.random() * flight) + 's, ' + buzzDelay + 's';
 
                 bee.addEventListener('animationiteration', event => {
                     if (event.animationName === 'beeFlight') {
                         const newTop = 10 + Math.random() * 70;
-                        bee.style.top = `${newTop}vh`;
+                        bee.style.top = newTop + 'vh';
                     }
                 });
 
@@ -11556,7 +11556,7 @@
                     wrap.style.display = 'block';
 
                     loader.load(
-                        `${base}/${item.file}`,
+                        base + '/' + item.file,
                         (gltf) => {
                             // Hand off previous as outgoing
                             if (currentGroup) {
@@ -11795,7 +11795,7 @@
             // Preload candidates and collect ones that resolve
             candidates.forEach(c => {
                 const testImg = new Image();
-                const url = `${base}/${c.file}`;
+                const url = base + '/' + c.file;
                 testImg.onload = () => { loaded.push({ name: c.name, url }); if (--remaining === 0) onDone(); };
                 testImg.onerror = () => { if (--remaining === 0) onDone(); };
                 testImg.src = url;
@@ -13948,7 +13948,7 @@
                     this.showBuzzOnFX(percentElement.parentElement);
                 } else if (!this.liftOffShown && percentElement) {
                     // Show normal percentage (0% to 89%)
-                    percentElement.textContent = `${Math.floor(this.progress)}%`;
+                    percentElement.textContent = Math.floor(this.progress) + '%';
                     percentElement.style.opacity = '1';
                 }
                 
@@ -14035,14 +14035,14 @@
             
             updateCheck(checkId, status, icon, percentage = null) {
                 const checkEl = document.getElementById(checkId);
-                const statusEl = document.getElementById(`${checkId}-status`);
-                const pctEl = document.getElementById(`${checkId}-pct`);
+                const statusEl = document.getElementById(checkId + '-status');
+                const pctEl = document.getElementById(checkId + '-pct');
                 if (!checkEl || !statusEl) return;
                 
                 checkEl.querySelector('span:first-child').textContent = icon;
                 statusEl.textContent = status;
                 // Use provided percentage or current progress
-                if (pctEl) pctEl.textContent = `${Math.floor(percentage !== null ? percentage : this.progress)}%`;
+                if (pctEl) pctEl.textContent = Math.floor(percentage !== null ? percentage : this.progress) + '%';
                 
                 if (icon === '') {
                     checkEl.style.background = 'rgba(0, 255, 136, 0.15)';
@@ -14101,7 +14101,7 @@
                             const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
                             
                             console.log(' Using server-fed avatar data:', avatarData);
-                            this.updateCheck(check2, `${avatarName} (GLB)`, '', 30);
+                            this.updateCheck(check2, avatarName + ' (GLB)', '', 30);
                             this.updateProgress(30, ` Will load ${avatarName}`);
                             console.log(' Avatar detected:', avatarName, '(GLB) from server feed');
                         } else {
@@ -14126,7 +14126,7 @@
                                         // Determine format
                                         let format = '(GLB)'; // GLB-only
                                         
-                                        this.updateCheck(check2, `${avatarName} ${format}`, '', 30);
+                                        this.updateCheck(check2, avatarName + ' ' + format, '', 30);
                                         this.updateProgress(30, ` Will load ${avatarName}`);
                                         console.log(' Avatar detected:', avatarName, format, 'useMascot:', useMascot);
                                     } else {
@@ -14246,7 +14246,7 @@
                     
                     //  WordBankManager ensures consistency across all displays
                     if (wordCount > 0) {
-                        this.updateCheck(check8, `${wordCount} words in session`, '', 60);
+                        this.updateCheck(check8, wordCount + ' words in session', '', 60);
                         this.updateProgress(60, ` ${wordCount} words ready`);
                         console.log(` Word list validated: ${wordCount} words (from WordBankManager)`);
                     } else {
@@ -16615,7 +16615,7 @@
                 // Add mode hint to badge text (guest carousel vs registered avatar)
                 try {
                     const mode = (window.IS_AUTH === true) ? 'Registered' : 'Guest';
-                    statusText.textContent = `${health.text} · ${mode}`;
+                    statusText.textContent = health.text + ' · ' + mode;
                 } catch(_) {
                     statusText.textContent = health.text;
                 }
@@ -17601,10 +17601,10 @@
                 // Random horizontal spread
                 const horizontalDrift = (Math.random() - 0.5) * 200; // -100px to +100px drift
                 
-                letter.style.left = `${startX}%`;
-                letter.style.top = `${startY}%`;
-                letter.style.setProperty('--drift-x', `${horizontalDrift}px`);
-                letter.style.setProperty('--rotation-deg', `${Math.random() * 720 - 360}deg`);
+                letter.style.left = startX + '%';
+                letter.style.top = startY + '%';
+                letter.style.setProperty('--drift-x', horizontalDrift + 'px');
+                letter.style.setProperty('--rotation-deg', (Math.random() * 720 - 360) + 'deg');
                 
                 avatarContainer.appendChild(letter);
                 
