@@ -2135,7 +2135,7 @@
         .action-buttons {
             display: flex;
             flex-direction: row; /* Changed from column to row for horizontal layout */
-            flex-wrap: nowrap; /* Prevent wrapping to keep on one line */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
             gap: 0.75rem; /* Add gap between buttons */
             padding: 0; /* REMOVED padding */
             background: transparent; /* REMOVED white background */
@@ -2151,8 +2151,8 @@
         }
         
         .action-btn {
-            flex: 1; /* Equal width for all buttons in row layout */
-            min-width: 0; /* Allow flex shrinking */
+            flex: 1 1 auto; /* Allow grow and shrink */
+            min-width: 150px; /* Minimum width before wrapping */
             max-width: none; /* Remove max-width constraint for row layout */
             padding: 1.5rem 1rem; /* Reduced horizontal padding for better fit */
             margin-left: 0; /* Remove auto margins for row layout */
@@ -3126,16 +3126,38 @@
             padding-right: 0.5rem;
             box-sizing: border-box;
             flex-direction: row !important;   /* Ensure row layout */
-            flex-wrap: nowrap !important;     /* Keep on one line */
+            flex-wrap: wrap !important;       /* Allow wrapping on smaller screens */
         }
 
         section.action-buttons .action-btn {
-            flex: 1 !important;                    /* Equal width distribution */
-            min-width: 0 !important;               /* Allow shrinking */
+            flex: 1 1 auto !important;             /* Allow grow and shrink */
+            min-width: 150px !important;           /* Minimum width before wrapping */
             max-width: none !important;            /* Remove max-width cap for row layout */
             margin-left: 0 !important;             /* Remove centering for row layout */
             margin-right: 0 !important;
             box-sizing: border-box !important;
+        }
+        
+        /* Responsive button sizes */
+        @media (max-width: 768px) {
+            .action-btn {
+                padding: 1.2rem 0.8rem;
+                font-size: 0.95rem;
+                min-width: 120px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            .action-btn {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                padding: 1.5rem 1rem;
+                font-size: 1rem;
+            }
         }
         /* Help links container should stack items full-width */
         section.action-buttons .help-links {
