@@ -143,15 +143,16 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        background: transparent;
+        background: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
         padding: 1.5rem;
-        box-shadow: none;
-        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 2px solid rgba(255, 193, 7, 0.2);
         margin-bottom: 1.5rem;
         position: sticky;
         top: 0;
         z-index: 100;
+        backdrop-filter: blur(10px);
     }
     
     /* Mobile exit button - hidden by default, shown on mobile */
@@ -365,11 +366,11 @@ if ('speechSynthesis' in window) {
         flex: 0 1 auto;
         min-width: 85px;
         max-width: 110px;
-        background: rgba(255, 223, 0, 0.15);
+        background: rgba(255, 255, 255, 0.9);
         border-radius: 12px;
         padding: 0.6rem 0.8rem;
-        border: 1px solid rgba(255, 213, 79, 0.3);
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.1);
+        border: 2px solid rgba(255, 193, 7, 0.4);
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
         text-align: center;
         position: relative;
     }
@@ -1935,6 +1936,21 @@ if ('speechSynthesis' in window) {
         min-width: 0;
         text-align: center;
         position: relative;
+    }
+    
+    /* Responsive button sizing */
+    @media (max-width: 768px) {
+        .action-btn {
+            padding: 0.8rem 1.2rem;
+            font-size: 0.9rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .action-btn {
+            padding: 0.7rem 1rem;
+            font-size: 0.85rem;
+        }
     }
     
     .action-btn:hover {
@@ -7285,8 +7301,8 @@ class QuizManager {
                     // CRITICAL: Reset isAnswering BEFORE setTimeout to allow new submissions
                     this.isAnswering = false;
                     
-                    // Wait longer to ensure feedback and audio complete before advancing
-                    console.log('✅ Correct answer - auto-advancing to next word in 2500ms');
+                    // Auto-advance to next word after brief delay
+                    console.log('✅ Correct answer - auto-advancing to next word in 1500ms');
                     console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
                     setTimeout(async () => {
                         console.log('🔄 Loading next word now...');
@@ -7300,7 +7316,7 @@ class QuizManager {
                             // Show Next Word button as fallback
                             this.showNextWordButton();
                         }
-                    }, 2500);
+                    }, 1500);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
                 }
