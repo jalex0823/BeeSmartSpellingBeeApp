@@ -4977,9 +4977,25 @@ class QuizManager {
             "💫 Keep buzzing! You'll get it!"
         ];
         
+        // 📣 Word introduction announcements - multiple variations for variety
+        this.wordIntroAnnouncements = [
+            "Your word is",
+            "Here's your word:",
+            "Next word coming up:",
+            "Ready? Your word is:",
+            "Let's try this word:",
+            "Your spelling challenge is:",
+            "This word for you:",
+            "Can you spell this word:",
+            "Focus on this word:",
+            "Pay attention! Your word is:",
+            "Listen carefully! Word is:",
+            "Spell this one:"
+        ];
+        
         // ⏱️ Randomized timer start announcements
         this.timerStartAnnouncements = [
-            "Your 60 seconds to spell the word begins now!",
+            "Your 60 seconds to spell the word begins now!"
             "Ready? Your timer starts now!",
             "The clock is ticking! 60 seconds begins now!",
             "Let's see how fast you can spell this! Timer starting!",
@@ -5809,14 +5825,44 @@ class QuizManager {
             // If this first question is also the last, announce that explicitly
             if (data.total && questionNumber === data.total) {
                 const namePart = (this.studentName || '').trim();
-                const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
+                const preface = namePart ? namePart + ', this is your last word.' : 'This is your last word.';
                 await this.speakAnnouncement(preface);
             }
-            // ⏱️ Announce first word (intros happen BEFORE quiz start in platform-specific preflight)
-            const firstWordIntro = `Your first word is: ${data.word}. Please spell it.`;
             
-            // Wait for word announcement to complete
-            await this.speakAnnouncement(firstWordIntro);
+            // 📣 Build rich word intro with variety
+            let wordIntro;
+            if (questionNumber === 1) {
+                const firstWordPhrases = [
+                    'Your first word is:',
+                    'Let\\'s start! Your first word is:',
+                    'Here we go! First word is:',
+                    'Ready? Your first word is:',
+                    'Beginning now! Your word is:'
+                ];
+                wordIntro = firstWordPhrases[Math.floor(Math.random() * firstWordPhrases.length)];
+            } else if (data.total && questionNumber === data.total) {
+                wordIntro = 'This is your final word:';
+            } else {
+                const nextWordPhrases = [
+                    'Next word:',
+                    'Here\\'s the next one:',
+                    'Moving on! Your word is:',
+                    'Next up:',
+                    'Ready for another? Word is:',
+                    'Let\\'s keep going! Next word:'
+                ];
+                wordIntro = nextWordPhrases[Math.floor(Math.random() * nextWordPhrases.length)];
+            }
+            
+            // Add student name for personalization (randomly)
+            if (this.studentName && Math.random() < 0.4) {
+                wordIntro = this.studentName + ', ' + wordIntro.toLowerCase();
+            }
+            
+            wordIntro += ' ' + data.word + '.';
+            
+            // 📣 Wait for word intro announcement to complete
+            await this.speakAnnouncement(wordIntro);
             
             // Brief visual pause between phases
             {
