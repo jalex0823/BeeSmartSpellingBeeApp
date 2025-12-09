@@ -3685,6 +3685,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         <!-- Stat Toggle Controls -->
         <div class="stat-toggle-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap;">
+            <button type="button" class="action-btn toggle-stat master-toggle" id="toggleAllStatsBtn" data-stat="all" title="Hide/Show All Stats" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); color: #E65100; border-color: rgba(255, 152, 0, 0.3); font-weight: bold;">
+                <span class="bee-icon" aria-hidden="true">📊</span>
+                <span class="toggle-text">Hide All Stats</span>
+            </button>
+            
             <button type="button" class="action-btn toggle-stat" id="toggleCorrectBtn" data-stat="correct" title="Hide/Show Correct Count">
                 <span class="bee-icon" aria-hidden="true">✅</span>
                 <span class="toggle-text">Hide Correct</span>
@@ -7995,15 +8000,27 @@ class QuizManager {
     }
     
     showDefinition() {
-        if (!this.currentWord || !this.currentWord.definition) {
+        console.log('📖 Show Definition button clicked');
+        console.log('Current word:', this.currentWord);
+        
+        if (!this.currentWord) {
+            this.showFeedback('📖 No word loaded yet.', 'error');
+            console.warn('No currentWord available');
+            return;
+        }
+        
+        // Check both definition and hint fields
+        const definition = this.currentWord.definition || this.currentWord.hint;
+        if (!definition) {
             this.showFeedback('📖 No definition available for this word.', 'error');
+            console.warn('No definition found for word:', this.currentWord.word);
             return;
         }
         
         const defDisplay = document.getElementById('definitionDisplay');
         if (defDisplay) {
             // Hide the target word from the definition to avoid giving away the answer
-            const safeDefinition = hideTargetWord(this.currentWord.definition, this.currentWord.word);
+            const safeDefinition = hideTargetWord(definition, this.currentWord.word);
             
             defDisplay.innerHTML = `
                 <div class="definition-content">
@@ -8024,12 +8041,25 @@ class QuizManager {
             }, 10);
             
             this.soundboard?.play('button-click');
+            console.log('✅ Definition displayed successfully');
+        } else {
+            console.error('definitionDisplay element not found');
         }
     }
     
     showSentence() {
-        if (!this.currentWord || !this.currentWord.sentence) {
+        console.log('📝 Show Sentence button clicked');
+        console.log('Current word:', this.currentWord);
+        
+        if (!this.currentWord) {
+            this.showFeedback('📝 No word loaded yet.', 'error');
+            console.warn('No currentWord available');
+            return;
+        }
+        
+        if (!this.currentWord.sentence) {
             this.showFeedback('📝 No sentence available for this word.', 'error');
+            console.warn('No sentence found for word:', this.currentWord.word);
             return;
         }
         
@@ -8057,10 +8087,39 @@ class QuizManager {
             }, 10);
             
             this.soundboard?.play('button-click');
+            console.log('✅ Sentence displayed successfully');
+        } else {
+            console.error('definitionDisplay element not found');
         }
     }
     
     toggleStat(statType, buttonElement) {
+        // Special case: 'all' hides the entire score display
+        if (statType === 'all') {
+            const scoreDisplay = document.querySelector('.score-display');
+            const toggleText = buttonElement.querySelector('.toggle-text');
+            
+            if (scoreDisplay && toggleText) {
+                const isHidden = scoreDisplay.style.display === 'none';
+                
+                if (isHidden) {
+                    // Show the entire stats section
+                    scoreDisplay.style.display = '';
+                    toggleText.textContent = 'Hide All Stats';
+                    buttonElement.classList.remove('stat-hidden');
+                } else {
+                    // Hide the entire stats section
+                    scoreDisplay.style.display = 'none';
+                    toggleText.textContent = 'Show All Stats';
+                    buttonElement.classList.add('stat-hidden');
+                }
+                
+                this.soundboard?.play('button-click');
+            }
+            return;
+        }
+        
+        // Individual stat toggles
         const statElements = {
             'correct': document.querySelector('.score-item .score-number.correct')?.parentElement,
             'incorrect': document.querySelector('.score-item .score-number.incorrect')?.parentElement,
