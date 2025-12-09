@@ -14577,8 +14577,10 @@
                 if (fc) fc.style.display = 'none';
             }
             
-            // Update Saved Lists badge in the menu
-            refreshSavedListsBadge();
+            // Update Saved Lists badge in the menu (don't await - let it run in background)
+            refreshSavedListsBadge().catch(err => {
+                console.warn(' refreshSavedListsBadge failed (non-critical):', err);
+            });
             
             // 70% - UI components ready
             window.loadingSystem.updateProgress(70, ' Loading effects...');
