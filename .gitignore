@@ -49,6 +49,10 @@ Thumbs.db
 .env
 .env.local
 
+# 3D Model files (app uses GLB format exclusively)
+*.obj
+*.mtl
+
 # Utility scripts
 check_syntax.py
 find_brackets.py
