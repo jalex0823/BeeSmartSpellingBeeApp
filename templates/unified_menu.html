@@ -2151,7 +2151,7 @@
         }
         
         .action-btn {
-            flex: 1 1 auto; /* Allow grow and shrink */
+            flex: 1 1 0; /* Equal width - all buttons same size */
             min-width: 150px; /* Minimum width before wrapping */
             max-width: none; /* Remove max-width constraint for row layout */
             padding: 1.5rem 1rem; /* Reduced horizontal padding for better fit */
@@ -3130,7 +3130,7 @@
         }
 
         section.action-buttons .action-btn {
-            flex: 1 1 auto !important;             /* Allow grow and shrink */
+            flex: 1 1 0 !important;                /* Equal width - all buttons same size */
             min-width: 150px !important;           /* Minimum width before wrapping */
             max-width: none !important;            /* Remove max-width cap for row layout */
             margin-left: 0 !important;             /* Remove centering for row layout */
