@@ -2043,6 +2043,39 @@ if ('speechSynthesis' in window) {
         transition: all 0.1s ease;
     }
 
+    /* Stat Toggle Button Styling */
+    .action-btn.toggle-stat {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        min-width: 100px;
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        color: #1565C0;
+        border: 1px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .action-btn.toggle-stat:hover {
+        background: linear-gradient(135deg, #BBDEFB 0%, #90CAF9 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+    }
+
+    .action-btn.toggle-stat.stat-hidden {
+        background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+        color: #C62828;
+        border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    .action-btn.toggle-stat.stat-hidden:hover {
+        background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
+    }
+
+    /* Stat Toggle Controls Container */
+    .stat-toggle-controls {
+        border-top: 2px solid rgba(255, 193, 7, 0.2);
+        padding-top: 1rem;
+        margin-top: 1rem;
+    }
+
     /* Enhanced Magical Sparkles */
     .sparkle {
         position: fixed;
@@ -3177,10 +3210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <small>JS v3-cache-{{ timestamp }}</small>
         </div>
 
-        <!-- Hidden definition storage for JavaScript (shown in visualizer instead) -->
-        <div class="definition-display" id="definitionDisplay" style="display: none;">
-            Loading your first word...
-        </div>
+
         
         <!-- Voice Toggle Button - Centered -->
         <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
@@ -3546,6 +3576,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
+
+
+        <!-- Letter Hint Display -->
+        <div class="letter-hint hidden" id="letterHint" aria-live="polite">
+            <span class="hint-label">💡 Hint:</span>
+            <span class="hint-letters" id="hintLetters"></span>
+        </div>
+
+        <!-- Answer Input Field - Moved Higher -->
         <div class="bee-input" id="beeInputWrapper">
             <input type="text"
                    id="spellingInput"
@@ -3596,15 +3635,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         })();
         </script>
 
-        <!-- Letter Hint Display -->
-        <div class="letter-hint hidden" id="letterHint" aria-live="polite">
-            <span class="hint-label">💡 Hint:</span>
-            <span class="hint-letters" id="hintLetters"></span>
-        </div>
-
         <div class="phonetic-reveal hidden" id="phoneticHint" aria-live="polite"></div>
 
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
+
+        <!-- Definition/Sentence Display Panel -->
+        <div class="definition-display" id="definitionDisplay" style="display: none; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
+            Ready to show definition or sentence...
+        </div>
 
         <div class="quiz-buttons">
             <!-- Voice Control Buttons -->
@@ -3616,6 +3654,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="action-btn secondary" id="repeatButton">
                 <span class="bee-icon" aria-hidden="true">🔁</span>
                 Repeat
+            </button>
+            
+            <!-- Definition/Sentence Helper Buttons -->
+            <button type="button" class="action-btn secondary" id="showDefinitionButton">
+                <span class="bee-icon" aria-hidden="true">📖</span>
+                Show Definition
+            </button>
+            
+            <button type="button" class="action-btn secondary" id="showSentenceButton">
+                <span class="bee-icon" aria-hidden="true">📝</span>
+                Show Sentence
             </button>
             
             <!-- Quiz Action Buttons -->
@@ -3631,6 +3680,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="action-btn retry" id="retryButton" disabled>
                 <span class="bee-icon" aria-hidden="true">🔄</span>
                 Retry (33% points)
+            </button>
+        </div>
+        
+        <!-- Stat Toggle Controls -->
+        <div class="stat-toggle-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap;">
+            <button type="button" class="action-btn toggle-stat" id="toggleCorrectBtn" data-stat="correct" title="Hide/Show Correct Count">
+                <span class="bee-icon" aria-hidden="true">✅</span>
+                <span class="toggle-text">Hide Correct</span>
+            </button>
+            
+            <button type="button" class="action-btn toggle-stat" id="toggleIncorrectBtn" data-stat="incorrect" title="Hide/Show Incorrect Count">
+                <span class="bee-icon" aria-hidden="true">❌</span>
+                <span class="toggle-text">Hide Incorrect</span>
+            </button>
+            
+            <button type="button" class="action-btn toggle-stat" id="toggleStreakBtn" data-stat="streak" title="Hide/Show Streak Count">
+                <span class="bee-icon" aria-hidden="true">🔥</span>
+                <span class="toggle-text">Hide Streak</span>
+            </button>
+            
+            <button type="button" class="action-btn toggle-stat" id="togglePointsBtn" data-stat="points" title="Hide/Show Points">
+                <span class="bee-icon" aria-hidden="true">🍯</span>
+                <span class="toggle-text">Hide Points</span>
             </button>
         </div>
         
@@ -6348,6 +6420,34 @@ class QuizManager {
             this.skipWord();
         });
         
+        // Definition and Sentence Helper Buttons
+        const showDefinitionButton = document.getElementById('showDefinitionButton');
+        const showSentenceButton = document.getElementById('showSentenceButton');
+        
+        if (showDefinitionButton) {
+            showDefinitionButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+                this.showDefinition();
+            });
+        }
+        
+        if (showSentenceButton) {
+            showSentenceButton.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+                this.showSentence();
+            });
+        }
+        
+        // Stat Toggle Controls
+        const toggleButtons = document.querySelectorAll('.toggle-stat');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                const stat = button.getAttribute('data-stat');
+                this.toggleStat(stat, button);
+            });
+        });
+        
         // Retry button
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
@@ -7891,6 +7991,102 @@ class QuizManager {
             this.loadNextWord();
         } catch (error) {
             console.error('Error skipping word:', error);
+        }
+    }
+    
+    showDefinition() {
+        if (!this.currentWord || !this.currentWord.definition) {
+            this.showFeedback('📖 No definition available for this word.', 'error');
+            return;
+        }
+        
+        const defDisplay = document.getElementById('definitionDisplay');
+        if (defDisplay) {
+            // Hide the target word from the definition to avoid giving away the answer
+            const safeDefinition = hideTargetWord(this.currentWord.definition, this.currentWord.word);
+            
+            defDisplay.innerHTML = `
+                <div class="definition-content">
+                    <h4 style="color: #5A2C15; margin: 0 0 0.5rem 0; font-size: 1.1rem;">📖 Definition</h4>
+                    <p style="margin: 0; color: #3E2723; line-height: 1.4;">${safeDefinition}</p>
+                </div>
+            `;
+            defDisplay.style.display = 'block';
+            
+            // Optional: Add slight animation
+            defDisplay.style.opacity = '0';
+            defDisplay.style.transform = 'translateY(10px)';
+            defDisplay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
+            setTimeout(() => {
+                defDisplay.style.opacity = '1';
+                defDisplay.style.transform = 'translateY(0)';
+            }, 10);
+            
+            this.soundboard?.play('button-click');
+        }
+    }
+    
+    showSentence() {
+        if (!this.currentWord || !this.currentWord.sentence) {
+            this.showFeedback('📝 No sentence available for this word.', 'error');
+            return;
+        }
+        
+        const defDisplay = document.getElementById('definitionDisplay');
+        if (defDisplay) {
+            // Hide the target word from the sentence to avoid giving away the answer
+            const safeSentence = hideTargetWord(this.currentWord.sentence, this.currentWord.word);
+            
+            defDisplay.innerHTML = `
+                <div class="sentence-content">
+                    <h4 style="color: #5A2C15; margin: 0 0 0.5rem 0; font-size: 1.1rem;">📝 Example Sentence</h4>
+                    <p style="margin: 0; color: #3E2723; line-height: 1.4; font-style: italic;">${safeSentence}</p>
+                </div>
+            `;
+            defDisplay.style.display = 'block';
+            
+            // Optional: Add slight animation
+            defDisplay.style.opacity = '0';
+            defDisplay.style.transform = 'translateY(10px)';
+            defDisplay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
+            setTimeout(() => {
+                defDisplay.style.opacity = '1';
+                defDisplay.style.transform = 'translateY(0)';
+            }, 10);
+            
+            this.soundboard?.play('button-click');
+        }
+    }
+    
+    toggleStat(statType, buttonElement) {
+        const statElements = {
+            'correct': document.querySelector('.score-item .score-number.correct')?.parentElement,
+            'incorrect': document.querySelector('.score-item .score-number.incorrect')?.parentElement,
+            'streak': document.querySelector('.score-item .score-number.streak')?.parentElement,
+            'points': document.querySelector('.score-item .score-number.points')?.parentElement
+        };
+        
+        const statElement = statElements[statType];
+        const toggleText = buttonElement.querySelector('.toggle-text');
+        
+        if (statElement && toggleText) {
+            const isHidden = statElement.style.display === 'none';
+            
+            if (isHidden) {
+                // Show the stat
+                statElement.style.display = '';
+                toggleText.textContent = `Hide ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
+                buttonElement.classList.remove('stat-hidden');
+            } else {
+                // Hide the stat
+                statElement.style.display = 'none';
+                toggleText.textContent = `Show ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
+                buttonElement.classList.add('stat-hidden');
+            }
+            
+            this.soundboard?.play('button-click');
         }
     }
 
