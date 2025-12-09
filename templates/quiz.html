@@ -5759,20 +5759,30 @@ class QuizManager {
             document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
 
             if (data.progress) {
-                this.updateScoreDisplay({ ...data.progress, total: data.total });
+                // Use Object.assign for better compatibility
+                const progressUpdate = Object.assign({}, data.progress, { total: data.total });
+                this.updateScoreDisplay(progressUpdate);
             }
 
-            this.delight?.setTotalQuestions(data.total);
+            if (this.delight && typeof this.delight.setTotalQuestions === 'function') {
+                this.delight.setTotalQuestions(data.total);
+            }
 
             // Set the definition with fallback - prefer explicit sentence/hint fields
             const defBox = document.getElementById('definitionDisplay');
-            console.log('DEBUG loadNextWordWithIntro: /api/next response:', {
-                sentence: data.sentence,
-                hint: data.hint,
-                definition: data.definition,
-                word: data.word,
-                fullData: data
-            });
+            
+            // Safe logging
+            try {
+                console.log('DEBUG loadNextWordWithIntro: /api/next response:', {
+                    sentence: data.sentence,
+                    hint: data.hint,
+                    definition: data.definition,
+                    word: data.word,
+                    fullData: data
+                });
+            } catch (e) {
+                console.log('DEBUG loadNextWordWithIntro: response received');
+            }
             
             let chosen = '';
             if (data.sentence) {
@@ -9265,6 +9275,7 @@ window.addEventListener('pagehide', () => {
 
 // Themed avatar effects system for quiz
 function playThemedAvatarEffect(avatarId, container) {
+    if (!container) return;
     console.log('🎭 Playing themed effect for:', avatarId);
     
     // 🌟 ALWAYS apply 360-degree rotation first for all avatars!
