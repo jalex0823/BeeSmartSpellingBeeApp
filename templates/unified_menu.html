@@ -2134,16 +2134,15 @@
         /* Action buttons */
         .action-buttons {
             display: flex;
-            flex-direction: row; /* Changed from column to row for horizontal layout */
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
-            gap: 0.75rem; /* Add gap between buttons */
-            padding: 0; /* REMOVED padding */
-            background: transparent; /* REMOVED white background */
+            flex-direction: column; /* stack buttons vertically */
+            gap: clamp(0.6rem, 1vw, 1rem);
+            padding: 0;
+            background: transparent;
             border-radius: 0;
             box-shadow: none;
             max-width: 100%;
-            width: 100%; /* Use full width */
-            margin: 0 auto; /* REMOVED top margin */
+            width: 100%;
+            margin: 0 auto;
             box-sizing: border-box;
         }
         .action-buttons button {
@@ -2151,16 +2150,17 @@
         }
         
         .action-btn {
-            flex: 1 1 0; /* Equal width - all buttons same size */
-            min-width: 150px; /* Minimum width before wrapping */
-            max-width: none; /* Remove max-width constraint for row layout */
-            padding: 1.5rem 1rem; /* Reduced horizontal padding for better fit */
-            margin-left: 0; /* Remove auto margins for row layout */
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            padding: clamp(1.1rem, 1vw + 0.8rem, 1.6rem) clamp(1rem, 1vw + 0.4rem, 1.5rem);
+            margin-left: 0;
             margin-right: 0;
             border: none;
-            border-radius: 24px; /* Match tile radius */
+            border-radius: clamp(20px, 1vw + 18px, 26px); /* Match tile radius responsively */
             font-weight: 600;
-            font-size: 1.05rem;
+            font-size: clamp(1rem, 1vw + 0.85rem, 1.15rem);
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -2169,13 +2169,13 @@
             gap: 0.75rem;
             position: relative;
             overflow: hidden;
-            min-height: 68px;
+            min-height: clamp(60px, 4vw + 48px, 78px);
             text-align: center;
             word-wrap: break-word;
             white-space: normal;
             line-height: 1.4;
             box-sizing: border-box;
-            margin-bottom: 0; /* Remove bottom margin for row layout */
+            margin-bottom: 0;
         }
 
         /* Keep button effects inside the white panel */
@@ -3125,15 +3125,16 @@
             padding-left: 0.5rem;
             padding-right: 0.5rem;
             box-sizing: border-box;
-            flex-direction: row !important;   /* Ensure row layout */
-            flex-wrap: wrap !important;       /* Allow wrapping on smaller screens */
+            flex-direction: column !important;   /* stack buttons vertically */
+            flex-wrap: nowrap !important;
         }
 
         section.action-buttons .action-btn {
-            flex: 1 1 0 !important;                /* Equal width - all buttons same size */
-            min-width: 150px !important;           /* Minimum width before wrapping */
-            max-width: none !important;            /* Remove max-width cap for row layout */
-            margin-left: 0 !important;             /* Remove centering for row layout */
+            flex: 0 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            margin-left: 0 !important;
             margin-right: 0 !important;
             box-sizing: border-box !important;
         }

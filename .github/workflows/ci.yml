@@ -120,14 +120,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Set up Node (cache npm)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: package-lock.json
+      continue-on-error: true
+      
     - name: Install Railway CLI
-      run: npm install -g @railway/cli
+      run: npm install -g @railway/cli@3
       
     - name: Deploy to Railway
       env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
+        RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || '' }}
+        RAILWAY_ENV: ${{ vars.RAILWAY_ENV || '' }}
       run: |
-        railway up --detach || echo "⚠️ Railway deployment requires RAILWAY_TOKEN secret"
+        SERVICE_ARG=""
+        ENV_ARG=""
+        if [ -n "${RAILWAY_SERVICE}" ]; then SERVICE_ARG="--service ${RAILWAY_SERVICE}"; fi
+        if [ -n "${RAILWAY_ENV}" ]; then ENV_ARG="--environment ${RAILWAY_ENV}"; fi
+        railway up --ci --verbose ${SERVICE_ARG} ${ENV_ARG} --detach || echo "⚠️ Railway deployment requires RAILWAY_TOKEN secret"
         
     - name: Deployment notification
       run: |
