@@ -3623,18 +3623,14 @@
                     {% if current_user.is_authenticated %}
                         <!-- Logged In View -->
                         <div style="
-                            background: linear-gradient(135deg, #FFE5B4 0%, #FFDAB9 100%);
-                            border: 3px solid rgba(255, 215, 0, 0.5);
-                            border-radius: 25px;
-                            padding: 1.5rem 1.5rem 1.5rem 1.5rem;
-                            box-shadow: 0 10px 30px rgba(210, 105, 30, 0.2);
+                            background: linear-gradient(135deg, #FFF9E6 0%, #FFF0CC 100%);
+                            border: 3px solid rgba(255, 215, 0, 0.3);
+                            border-radius: 20px;
+                            padding: 1.5rem;
+                            box-shadow: 0 8px 25px rgba(210, 105, 30, 0.1);
                             max-width: var(--content-max);
                             width: 100%;
                             margin: 0 auto;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                            min-height: 400px;
                         ">
                             <!-- Welcome Message -->
                             <div style="
@@ -3829,8 +3825,6 @@
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 107, 0.3)'">
                                      Sign Out
                                 </a>
-                            </div>
-                        </div>
                             </div>
                         </div>
                     {% else %}
