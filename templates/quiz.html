@@ -9014,7 +9014,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
         // Render into mascot container using userAvatarLoader
-        await window.userAvatarLoader.loadUserAvatar('mascotBee3D');
+        // CRITICAL FIX: Pass null as avatarId (first param) to use user's registered avatar
+        // Second param is the containerId
+        await window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
         
         debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
