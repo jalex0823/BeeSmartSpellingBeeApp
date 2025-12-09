@@ -1131,6 +1131,15 @@ if ('speechSynthesis' in window) {
         animation: pauseAnimation 0.4s ease-in-out;
         opacity: 0.4;
     }
+    
+    /* Preparing effect - gentle pulse before timer announcement */
+    .voice-visualizer.preparing .voice-wave,
+    .voice-visualizer.preparing .wave-bar {
+        animation: preparingPulse 1s ease-in-out infinite;
+        opacity: 0.6;
+        background: linear-gradient(to top, #FFB347, #FFD700) !important;
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+    }
 
     /* Staggered delays for wave effect */
     .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
@@ -1255,6 +1264,20 @@ if ('speechSynthesis' in window) {
             height: 28px;
             opacity: 0.85;
             transform: scaleY(1.1);
+        }
+    }
+    
+    /* Preparing animation - gentle anticipatory pulse before timer */
+    @keyframes preparingPulse {
+        0%, 100% { 
+            height: 20px;
+            opacity: 0.6;
+            transform: scaleY(1);
+        }
+        50% { 
+            height: 35px;
+            opacity: 0.8;
+            transform: scaleY(1.15);
         }
     }
 
@@ -5812,8 +5835,10 @@ class QuizManager {
             // Auto‑pronounce the word (so kids hear it clearly before timing)
             await this.pronounceWord({ refresh: true });
             
-            // Then announce timer start and actually start the timer
+            // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
             if (this.timerEnabled && this.quizStarted) {
+                console.log('⏸️ Pausing 800ms for mental processing before timer...');
+                await new Promise(resolve => setTimeout(resolve, 800));
                 await this.announceAndStartTimer();
             }
             
@@ -5835,8 +5860,21 @@ class QuizManager {
         
         console.log('⏱️ Announcing timer start:', announcement);
         
+        // Show visual preparation cue
+        const visualizer = document.getElementById('voiceVisualizer');
+        const status = document.getElementById('voiceStatus');
+        if (visualizer && status) {
+            visualizer.classList.add('preparing');
+            status.textContent = '⏳ Get ready...';
+        }
+        
         // Announce the timer start
         await this.speakAnnouncement(announcement);
+        
+        // Clear preparation cue
+        if (visualizer && status) {
+            visualizer.classList.remove('preparing');
+        }
         
         // 🎭 NOW morph to honey jar timer (ONLY after "timer starts now" announcement)
         if (window.morphController) {
@@ -6817,10 +6855,9 @@ class QuizManager {
             this.hideLetterHint();  // Hide letter hint for new word
             this.delight?.clearFeedbackState();
             
-            // ⏱️ Announce and start timer AFTER word pronunciation completes
-            // Give user a moment to process the word before timer starts
+            // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
             if (this.timerEnabled && this.quizStarted) {
-                // Wait 800ms after pronunciation for mental processing
+                console.log('⏸️ Pausing 800ms for mental processing before timer...');
                 await new Promise(resolve => setTimeout(resolve, 800));
                 await this.announceAndStartTimer();
             } else {
@@ -7303,8 +7340,8 @@ class QuizManager {
                     // CRITICAL: Reset isAnswering BEFORE setTimeout to allow new submissions
                     this.isAnswering = false;
                     
-                    // Auto-advance to next word after brief delay
-                    console.log('✅ Correct answer - auto-advancing to next word in 1500ms');
+                    // Auto-advance to next word after brief delay (1200ms for tighter response)
+                    console.log('✅ Correct answer - auto-advancing to next word in 1200ms');
                     console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
                     setTimeout(async () => {
                         console.log('🔄 Loading next word now...');
@@ -7318,7 +7355,7 @@ class QuizManager {
                             // Show Next Word button as fallback
                             this.showNextWordButton();
                         }
-                    }, 1500);
+                    }, 1200);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
                 }
