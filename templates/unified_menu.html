@@ -16890,8 +16890,10 @@
                     //  Add magical fairy dust to ticker!
                     setTimeout(() => createTickerFairyDust(), 300);
                 } else {
-                    if (!tickerEl) console.error(' [TICKER] Element #buzz-dust-ticker not found in DOM!');
-                    if (!tickerTextEl) console.error(' [TICKER] Element #ticker-text not found in DOM!');
+                    // Ticker elements not present on this page (unified_menu) - this is expected
+                    // They exist on student dashboard pages
+                    if (!tickerEl) console.debug(' [TICKER] Element #buzz-dust-ticker not found (expected on main menu)');
+                    if (!tickerTextEl) console.debug(' [TICKER] Element #ticker-text not found (expected on main menu)');
                 }
                 
                 console.log(' [TICKER] loadStudentBuzzDust completed successfully');
