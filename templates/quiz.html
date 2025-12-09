@@ -6796,6 +6796,8 @@ class QuizManager {
             spellingInput.disabled = false;
             spellingInput.value = '';
             spellingInput.placeholder = 'Type your answer...';
+            this.isAnswering = false; // Reset flag for new word
+            console.log('✅ Input enabled and ready for answer');
             // Do not force focus here to avoid interrupting TTS; users can start typing anytime
 
             // Hide feedback area
@@ -7224,6 +7226,7 @@ class QuizManager {
                 console.log('❌ INCORRECT - Halting auto-advance. Waiting for user to click Retry or Show Answer...');
                 // DON'T load next word - wait for user to make a choice via retry buttons
                 this.isAnswering = false;
+                // Note: Next Word button will be shown by showRetryUI if retry window closes
                 return;  // ⬅️ STOP HERE - DON'T CONTINUE
             }
             
@@ -7285,25 +7288,30 @@ class QuizManager {
                     this.playSound('correct');
                     
                     // Wait longer to ensure feedback and audio complete before advancing
-                    console.log('✅ Correct answer - auto-advancing to next word in 2000ms');
+                    console.log('✅ Correct answer - auto-advancing to next word in 2500ms');
                     console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         console.log('🔄 Loading next word now...');
                         console.log('DEBUG: About to call loadNextWord(), quizStarted =', this.quizStarted);
-                        this.loadNextWord().catch(err => {
+                        try {
+                            await this.loadNextWord();
+                            console.log('✅ Next word loaded successfully');
+                        } catch (err) {
                             console.error('❌ ERROR in loadNextWord():', err);
                             BeeSmart.showError('Failed to load next word. Please refresh the page.');
-                        });
-                    }, 2000);
+                            // Show Next Word button as fallback
+                            this.showNextWordButton();
+                        }
+                    }, 2500);
                 } else {
                     console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
                 }
             }
             
         } catch (error) {
+            console.error('❌ submitAnswer error:', error);
             BeeSmart.showError('Network error. Please try again.');
             this.enableInput();
-        } finally {
             this.isAnswering = false;
         }
     }
