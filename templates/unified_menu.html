@@ -3819,10 +3819,10 @@
                             </div>
 
                             <!-- Buttons (all on one line with consistent sizing) -->
-                            <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap;">
+                            <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">
                                 <a href="/auth/dashboard" style="
                                     height: 54px;
-                                    padding: 0 1.25rem;
+                                    padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
                                     color: white;
                                     border-radius: 14px;
@@ -3835,16 +3835,16 @@
                                     align-items: center;
                                     justify-content: center;
                                     border: 2px solid rgba(76, 175, 80, 0.6);
-                                    min-width: 160px;
-                                    max-width: 180px;
+                                    flex: 1;
                                     text-align: center;
+                                    white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(76, 175, 80, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(76, 175, 80, 0.4)'">
                                      Dashboard
                                 </a>
                                 <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
                                     height: 54px;
-                                    padding: 0 1.25rem;
+                                    padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                                     color: #5A2C15;
                                     border-radius: 14px;
@@ -3857,9 +3857,9 @@
                                     justify-content: center;
                                     border: 2px solid rgba(255, 215, 0, 0.6);
                                     cursor: pointer;
-                                    min-width: 160px;
-                                    max-width: 180px;
+                                    flex: 1;
                                     text-align: center;
+                                    white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 215, 0, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255, 215, 0, 0.4)'"
                                    onclick="startQuiz()">
@@ -3867,7 +3867,7 @@
                                 </button>
                                 <a href="/auth/logout" style="
                                     height: 54px;
-                                    padding: 0 1.25rem;
+                                    padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
                                     color: white;
                                     border-radius: 14px;
@@ -3880,9 +3880,9 @@
                                     align-items: center;
                                     justify-content: center;
                                     border: 2px solid rgba(255, 107, 107, 0.6);
-                                    min-width: 160px;
-                                    max-width: 180px;
+                                    flex: 1;
                                     text-align: center;
+                                    white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 107, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'">
                                      Sign Out
