@@ -7296,7 +7296,9 @@ class QuizManager {
                     }
                     
                     // Play success sound
-                    this.playSound('correct');
+                    if (this.soundboard && typeof this.soundboard.play === 'function') {
+                        this.soundboard.play('correct');
+                    }
                     
                     // CRITICAL: Reset isAnswering BEFORE setTimeout to allow new submissions
                     this.isAnswering = false;
