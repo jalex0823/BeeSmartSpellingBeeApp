@@ -9003,6 +9003,13 @@ window.addEventListener('error', (event) => {
 // Call immediately on page load
 unlockiOSAudio();
 
+// ✅ Verify critical classes are defined
+console.log('📚 Class definitions check:', {
+    MorphController: typeof MorphController !== 'undefined' ? '✓' : '✗ MISSING',
+    CountdownTimer: typeof CountdownTimer !== 'undefined' ? '✓' : '✗ MISSING',
+    QuizManager: typeof QuizManager !== 'undefined' ? '✓' : '✗ MISSING'
+});
+
 // Real-time live status polling (ensures header stays in sync even on tab focus changes)
 </script>
 <script>
@@ -9065,6 +9072,11 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
     // 🎭 Initialize morphing controller
+    if (typeof MorphController === 'undefined') {
+        console.error('🚨 CRITICAL: MorphController class not found - script load failed');
+        console.error('🔍 Diagnostic: Check for script errors above this line');
+        return;
+    }
     window.morphController = new MorphController('morphContainer');
     // DEBUG gated logging helper
     window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
