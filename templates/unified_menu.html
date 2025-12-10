@@ -3199,6 +3199,69 @@
             animation: crestMorphPulse 12s ease-in-out infinite;
             z-index: 1;
         }
+        
+        /* Badge/Logo Morphing Container */
+        #morph-badge-logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            opacity: 1;
+        }
+        #morph-badge-logo.is-morphing-out {
+            opacity: 0;
+        }
+        #morph-badge-logo.is-morphing-in {
+            opacity: 1;
+        }
+        
+        /* Random Morphing Transition Effects */
+        @keyframes morphSpin {
+            0% { opacity: 1; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0; transform: scale(0.7) rotate(180deg); }
+            100% { opacity: 0; transform: scale(1) rotate(360deg); }
+        }
+        
+        @keyframes morphFlip {
+            0% { opacity: 1; transform: scale(1) rotateY(0deg); }
+            50% { opacity: 0; transform: scale(0.8) rotateY(90deg); }
+            100% { opacity: 0; transform: scale(1) rotateY(180deg); }
+        }
+        
+        @keyframes morphBounce {
+            0% { opacity: 1; transform: scale(1) translateY(0); }
+            40% { transform: scale(1.1) translateY(-12px); }
+            50% { opacity: 0; transform: scale(0.9) translateY(0); }
+            100% { opacity: 0; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes morphSwish {
+            0% { opacity: 1; transform: translateX(0) rotate(0deg); }
+            50% { opacity: 0; transform: translateX(-50px) rotate(-20deg); }
+            100% { opacity: 0; transform: translateX(0) rotate(0deg); }
+        }
+        
+        @keyframes morphSparkle {
+            0% { opacity: 1; transform: scale(1); filter: brightness(1); }
+            40% { opacity: 0.7; filter: brightness(1.4); }
+            50% { opacity: 0; transform: scale(1.3); filter: brightness(0.8); }
+            100% { opacity: 0; transform: scale(1); filter: brightness(1); }
+        }
+        
+        @keyframes morphPulse {
+            0% { opacity: 1; transform: scale(1); }
+            25% { transform: scale(1.15); }
+            50% { opacity: 0; transform: scale(0.85); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+        
+        /* Apply random animation on morph-out */
+        #morph-badge-logo.morph-spin { animation: morphSpin 640ms ease-in-out; }
+        #morph-badge-logo.morph-flip { animation: morphFlip 640ms ease-in-out; }
+        #morph-badge-logo.morph-bounce { animation: morphBounce 640ms ease-in-out; }
+        #morph-badge-logo.morph-swish { animation: morphSwish 640ms ease-in-out; }
+        #morph-badge-logo.morph-sparkle { animation: morphSparkle 640ms ease-in-out; }
+        #morph-badge-logo.morph-pulse { animation: morphPulse 640ms ease-in-out; }
+        
         @keyframes rankSlowPulse {
             0% { box-shadow: 0 6px 16px rgba(138, 43, 226, 0.18), 0 0 0 0 rgba(138, 43, 226, 0.12); }
             50% { box-shadow: 0 10px 22px rgba(138, 43, 226, 0.24), 0 0 0 10px rgba(138, 43, 226, 0.08); }
@@ -3284,7 +3347,8 @@
                         position: relative;
                     ">
                         <div class="rank-logo-pulse-glow"></div>
-                        <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest" style="max-width: 100%; max-height: 100%; position: relative; z-index: 2;" loading="lazy">
+                        <!-- Single morphing image element (swaps between badge and crest) -->
+                        <img id="morph-badge-logo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2;" loading="lazy">
                     </div>
                 </div>
                 
@@ -11857,6 +11921,48 @@
                 } catch(_) {}
             };
 
+            // Badge/Logo morphing for authenticated users (similar to guest carousel)
+            function initBadgeLogoMorphing() {
+                const imgEl = document.getElementById('morph-badge-logo');
+                if (!imgEl || !window._badgeUrl || !window._crestUrl) return;
+
+                const urls = [window._badgeUrl, window._crestUrl];
+                const morphEffects = ['morph-spin', 'morph-flip', 'morph-bounce', 'morph-swish', 'morph-sparkle', 'morph-pulse'];
+                let idx = 0;
+
+                const morph = () => {
+                    const nextUrl = urls[idx % urls.length];
+                    const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
+                    
+                    // Remove all animation classes
+                    morphEffects.forEach(effect => imgEl.classList.remove(effect));
+                    imgEl.classList.remove('is-morphing-in');
+                    imgEl.classList.add('is-morphing-out');
+                    
+                    // Add random effect class for 640ms transition
+                    imgEl.classList.add(randomEffect);
+                    
+                    // Swap image after transition completes (640ms)
+                    setTimeout(() => {
+                        imgEl.src = nextUrl;
+                        imgEl.classList.remove('is-morphing-out');
+                        imgEl.classList.add('is-morphing-in');
+                        // Remove animation class after it completes
+                        setTimeout(() => {
+                            morphEffects.forEach(effect => imgEl.classList.remove(effect));
+                        }, 50);
+                    }, 640);
+                    
+                    idx++;
+                    console.log(' [MORPH] Random transition:', randomEffect);
+                };
+
+                // Start morphing: 3.2s per cycle (640ms transition + 2.56s display)
+                morph();
+                window._badgeLogoMorphTimer = setInterval(morph, 3200);
+                console.log(' [MORPH] Badge/Logo morphing started with random transitions - cycle every 3.2s');
+            }
+
             // Preload candidates and collect ones that resolve
             candidates.forEach(c => {
                 const testImg = new Image();
@@ -16930,6 +17036,19 @@
                     badgeEl.appendChild(img);
                     
                     console.log(' [TICKER] PNG Badge loaded:', pngFile);
+                    
+                    // Update morphing badge/logo container with same badge
+                    const morphImg = document.getElementById('morph-badge-logo');
+                    if (morphImg && !window._morphingInitialized) {
+                        // Store badge and crest URLs for morphing
+                        window._badgeUrl = `/static/assets/badges/${pngFile}`;
+                        window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
+                        
+                        // Start morphing animation
+                        initBadgeLogoMorphing();
+                        window._morphingInitialized = true;
+                        console.log(' [TICKER] Badge/Logo morphing initialized');
+                    }
                 } else if (!badgeEl) {
                     console.warn(' [TICKER] Element #student-rank-badge not found in DOM');
                 } else if (!data.current_class) {
