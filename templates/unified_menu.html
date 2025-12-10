@@ -11920,49 +11920,6 @@
                     });
                 } catch(_) {}
             };
-
-            // Badge/Logo morphing for authenticated users (similar to guest carousel)
-            function initBadgeLogoMorphing() {
-                const imgEl = document.getElementById('morph-badge-logo');
-                if (!imgEl || !window._badgeUrl || !window._crestUrl) return;
-
-                const urls = [window._badgeUrl, window._crestUrl];
-                const morphEffects = ['morph-spin', 'morph-flip', 'morph-bounce', 'morph-swish', 'morph-sparkle', 'morph-pulse'];
-                let idx = 0;
-
-                const morph = () => {
-                    const nextUrl = urls[idx % urls.length];
-                    const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
-                    
-                    // Remove all animation classes
-                    morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                    imgEl.classList.remove('is-morphing-in');
-                    imgEl.classList.add('is-morphing-out');
-                    
-                    // Add random effect class for 640ms transition
-                    imgEl.classList.add(randomEffect);
-                    
-                    // Swap image after transition completes (640ms)
-                    setTimeout(() => {
-                        imgEl.src = nextUrl;
-                        imgEl.classList.remove('is-morphing-out');
-                        imgEl.classList.add('is-morphing-in');
-                        // Remove animation class after it completes
-                        setTimeout(() => {
-                            morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                        }, 50);
-                    }, 640);
-                    
-                    idx++;
-                    console.log(' [MORPH] Random transition:', randomEffect);
-                };
-
-                // Start morphing: 3.2s per cycle (640ms transition + 2.56s display)
-                morph();
-                window._badgeLogoMorphTimer = setInterval(morph, 3200);
-                console.log(' [MORPH] Badge/Logo morphing started with random transitions - cycle every 3.2s');
-            }
-
             // Preload candidates and collect ones that resolve
             candidates.forEach(c => {
                 const testImg = new Image();
@@ -11971,6 +11928,56 @@
                 testImg.onerror = () => { if (--remaining === 0) onDone(); };
                 testImg.src = url;
             });
+        }
+
+        // Badge/Logo morphing for authenticated users (global, used by ticker and badge loader)
+        function initBadgeLogoMorphing() {
+            if (typeof window === 'undefined') return;
+
+            const imgEl = document.getElementById('morph-badge-logo');
+            if (!imgEl || !window._badgeUrl || !window._crestUrl) return;
+
+            const urls = [window._badgeUrl, window._crestUrl];
+            const morphEffects = ['morph-spin', 'morph-flip', 'morph-bounce', 'morph-swish', 'morph-sparkle', 'morph-pulse'];
+            let idx = 0;
+
+            // Prevent duplicate timers if re-initialized
+            if (window._badgeLogoMorphTimer) {
+                try { clearInterval(window._badgeLogoMorphTimer); } catch(_) {}
+                window._badgeLogoMorphTimer = null;
+            }
+
+            const morph = () => {
+                const nextUrl = urls[idx % urls.length];
+                const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
+                
+                // Remove all animation classes
+                morphEffects.forEach(effect => imgEl.classList.remove(effect));
+                imgEl.classList.remove('is-morphing-in');
+                imgEl.classList.add('is-morphing-out');
+                
+                // Add random effect class for 640ms transition
+                imgEl.classList.add(randomEffect);
+                
+                // Swap image after transition completes (640ms)
+                setTimeout(() => {
+                    imgEl.src = nextUrl;
+                    imgEl.classList.remove('is-morphing-out');
+                    imgEl.classList.add('is-morphing-in');
+                    // Remove animation class after it completes
+                    setTimeout(() => {
+                        morphEffects.forEach(effect => imgEl.classList.remove(effect));
+                    }, 50);
+                }, 640);
+                
+                idx++;
+                console.log(' [MORPH] Random transition:', randomEffect);
+            };
+
+            // Start morphing: 3.2s per cycle (640ms transition + 2.56s display)
+            morph();
+            window._badgeLogoMorphTimer = setInterval(morph, 3200);
+            console.log(' [MORPH] Badge/Logo morphing started with random transitions - cycle every 3.2s');
         }
 
         // Play character-specific audio effects
@@ -17044,10 +17051,14 @@
                         window._badgeUrl = `/static/assets/badges/${pngFile}`;
                         window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
                         
-                        // Start morphing animation
-                        initBadgeLogoMorphing();
-                        window._morphingInitialized = true;
-                        console.log(' [TICKER] Badge/Logo morphing initialized');
+                        // Start morphing animation (guard if function missing)
+                        if (typeof initBadgeLogoMorphing === 'function') {
+                            initBadgeLogoMorphing();
+                            window._morphingInitialized = true;
+                            console.log(' [TICKER] Badge/Logo morphing initialized');
+                        } else {
+                            console.warn(' [TICKER] initBadgeLogoMorphing not available');
+                        }
                     }
                 } else if (!badgeEl) {
                     console.warn(' [TICKER] Element #student-rank-badge not found in DOM');
