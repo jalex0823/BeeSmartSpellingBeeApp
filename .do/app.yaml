@@ -10,8 +10,8 @@ services:
     # Build configuration
     build_command: pip install --upgrade pip && pip install -r requirements.txt
     
-    # Run configuration
-    run_command: gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 --graceful-timeout 30 --workers 1 --threads 4 --worker-class gthread --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app
+    # Run configuration - Using eventlet worker for Socket.IO compatibility
+    run_command: gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 --graceful-timeout 30 --workers 1 --worker-class eventlet --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app
     
     # Health check
     health_check:
