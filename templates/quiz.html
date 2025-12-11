@@ -3834,6 +3834,201 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 {% block extra_js %}
 <script>
+// ⚠️ CRITICAL: Define core classes FIRST before any other code
+// This ensures they're available even if other code fails
+
+// 🎭 Morphing Controller - Smooth transitions between voice visualizer and honey jar timer
+class MorphController {
+    constructor(containerId = 'morphContainer') {
+        this.container = document.getElementById(containerId);
+        this.currentMode = 'voice'; // 'voice' or 'timer'
+        this.morphing = false;
+        
+        if (!this.container) {
+            console.warn('⚠️ MorphController: Container not found:', containerId);
+        }
+    }
+    
+    /**
+     * Morph to voice visualizer (speaking mode)
+     * @param {number} duration - Animation duration in ms (default 1200)
+     */
+    morphToVoice(duration = 1200) {
+        if (this.currentMode === 'voice' || this.morphing) return;
+        
+        console.log('🎭 Morphing to VOICE visualizer...');
+        this.morphing = true;
+        
+        // 🔊 Play morphing sound effect
+        if (window.soundboard) {
+            window.soundboard.play('morph-to-visualization');
+        }
+        
+        // Add morphing animation class
+        this.container.classList.add('morphing-to-voice');
+        this.container.classList.remove('mode-timer');
+        
+        // Transition to voice mode
+        setTimeout(() => {
+            this.container.classList.add('mode-voice');
+            this.container.classList.remove('morphing-to-voice');
+            this.currentMode = 'voice';
+            this.morphing = false;
+            console.log('✅ Morphed to VOICE mode');
+        }, duration);
+    }
+    
+    /**
+     * Morph to honey jar timer (countdown mode)
+     * @param {number} duration - Animation duration in ms (default 1200)
+     */
+    morphToTimer(duration = 1200) {
+        if (this.currentMode === 'timer' || this.morphing) return;
+        
+        console.log('🎭 Morphing to HONEY JAR timer...');
+        this.morphing = true;
+        
+        // 🔊 Play morphing sound effect
+        if (window.soundboard) {
+            window.soundboard.play('morph-to-timer');
+        }
+        
+        // 🍯 ALWAYS show FULL honey jar at 60 seconds when morphing to timer
+        const honeyFillRect = document.getElementById('honeyFillRect');
+        const timerNumber = document.getElementById('timerNumber');
+        if (honeyFillRect) {
+            // Set to 100% fill (60 seconds)
+            const jarHeight = 110;
+            honeyFillRect.setAttribute('height', jarHeight);
+            honeyFillRect.setAttribute('y', 35); // Top of jar body
+        }
+        if (timerNumber) {
+            timerNumber.textContent = '60';
+        }
+        
+        // Add morphing animation class
+        this.container.classList.add('morphing-to-timer');
+        this.container.classList.remove('mode-voice');
+        
+        // Transition to timer mode
+        setTimeout(() => {
+            this.container.classList.add('mode-timer');
+            this.container.classList.remove('morphing-to-timer');
+            this.currentMode = 'timer';
+            this.morphing = false;
+            console.log('✅ Morphed to TIMER mode (jar filled to 60s)');
+        }, duration);
+    }
+    
+    /**
+     * Reset to voice mode instantly (no animation)
+     */
+    resetToVoice() {
+        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-timer');
+        this.container.classList.add('mode-voice');
+        this.currentMode = 'voice';
+        this.morphing = false;
+        console.log('🔄 Reset to VOICE mode');
+    }
+    
+    /**
+     * Reset to timer mode instantly (no animation)
+     */
+    resetToTimer() {
+        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-voice');
+        this.container.classList.add('mode-timer');
+        this.currentMode = 'timer';
+        this.morphing = false;
+        console.log('🔄 Reset to TIMER mode');
+    }
+    
+    /**
+     * Get current mode
+     * @returns {string} 'voice' or 'timer'
+     */
+    getMode() {
+        return this.currentMode;
+    }
+}
+
+// ⏱️ Countdown Timer Class (formerly HoneyJarTimer)
+class CountdownTimer {
+    constructor(config = {}) {
+        this.duration = config.duration || 30000; // Default 30 seconds
+        this.onTick = config.onTick || (() => {});
+        this.onComplete = config.onComplete || (() => {});
+        this.onWarning = config.onWarning || (() => {}); // Callback when < 10s left
+        
+        this.startTime = null;
+        this.remaining = this.duration;
+        this.running = false;
+        this.intervalId = null;
+        this.warningTriggered = false;
+    }
+    
+    start() {
+        if (this.running) return;
+        
+        this.startTime = Date.now();
+        this.running = true;
+        this.warningTriggered = false;
+        
+        this.intervalId = setInterval(() => {
+            const elapsed = Date.now() - this.startTime;
+            this.remaining = Math.max(0, this.duration - elapsed);
+            
+            // Trigger warning callback when < 10 seconds
+            if (!this.warningTriggered && this.remaining < 10000) {
+                this.warningTriggered = true;
+                this.onWarning(this.remaining);
+            }
+            
+            this.onTick(this.remaining);
+            
+            if (this.remaining === 0) {
+                this.stop();
+                this.onComplete();
+            }
+        }, 100); // Update every 100ms for smooth countdown
+    }
+    
+    stop() {
+        this.running = false;
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+    }
+    
+    reset(newDuration) {
+        this.stop();
+        if (newDuration !== undefined) {
+            this.duration = newDuration;
+        }
+        this.remaining = this.duration;
+        this.warningTriggered = false;
+    }
+    
+    getRemaining() {
+        return this.remaining;
+    }
+    
+    isRunning() {
+        return this.running;
+    }
+}
+
+// ✅ Register classes on window for global access (ensures they're available across script blocks)
+window.MorphController = MorphController;
+window.CountdownTimer = CountdownTimer;
+
+console.log('✅ Core classes registered at script top:', {
+    MorphController: typeof window.MorphController !== 'undefined',
+    CountdownTimer: typeof window.CountdownTimer !== 'undefined'
+});
+
+// Note: QuizManager will be registered later in this script after its definition
+
 // Frontend safety blanker - hide target word if it appears in definitions/sentences
 function hideTargetWord(text, word) {
     if (!text || !word) return text || '';
@@ -4200,7 +4395,9 @@ class BeeSoundboard {
     }
 }
 
-// 🎭 Morphing Controller - Smooth transitions between voice visualizer and honey jar timer
+// ⚠️ DUPLICATE CLASS REMOVED - MorphController is now defined at the top of this script
+// (This was causing "class not found" errors due to script execution order)
+/* ORIGINAL LOCATION OF MorphController CLASS - NOW MOVED TO TOP
 class MorphController {
     constructor(containerId = 'morphContainer') {
         this.container = document.getElementById(containerId);
@@ -4313,8 +4510,9 @@ class MorphController {
         return this.currentMode;
     }
 }
+END OF MorphController DUPLICATE */
 
-// ⏱️ Countdown Timer Class - Honey Jar Animation
+/* DUPLICATE CountdownTimer CLASS - NOW DEFINED AT TOP
 class CountdownTimer {
     constructor(duration = 15, options = {}) {
         this.duration = duration;
@@ -4532,6 +4730,7 @@ class CountdownTimer {
         this.hide();
     }
 }
+END OF DUPLICATE CLASS DEFINITIONS */
 
 class BeeDelightManager {
     constructor() {
@@ -8741,6 +8940,10 @@ function pronounceWordFromReport(word) {
         speechSynthesis.speak(utterance);
     }
 }
+
+// ✅ Register QuizManager on window for global access
+window.QuizManager = QuizManager;
+console.log('✅ QuizManager registered on window');
 
 // Toggle stats bar visibility
 function toggleStatsBar() {
