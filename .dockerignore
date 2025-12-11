@@ -1,0 +1,68 @@
+# Docker build ignore file
+# These files/directories are not copied into the Docker image
+
+# Virtual environments (recreated in Docker)
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+
+# Git metadata
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (set via platform env vars)
+.env
+.env.local
+.env.*.local
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+beesmart.db
+instance/
+
+# Logs
+*.log
+logs/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Backup files
+*.backup_*
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Development tools
+Makefile
+docker-compose*.yml

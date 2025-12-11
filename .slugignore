@@ -1,0 +1,45 @@
+# Heroku/DigitalOcean build ignore file
+# These files/directories are excluded from the deployed slug
+
+# Virtual environments (local dev only)
+.venv/
+.venv*/
+venv/
+env/
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Documentation
+*.md
+!README.md
+
+# Git metadata
+.git/
+.gitignore
+
+# Local environment files
+.env.local
+.env.*.local
+
+# Database files (use remote DB in production)
+*.db
+*.sqlite
+*.sqlite3
+beesmart.db
+instance/
+
+# Backup files
+*.backup_*
+
+# OS files
+.DS_Store
+Thumbs.db
