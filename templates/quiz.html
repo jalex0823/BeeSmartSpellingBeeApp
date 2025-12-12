@@ -3204,7 +3204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 z-index: 10;
                 border: 1px solid rgba(255, 0, 0, 0.5);
             " title="Your chosen avatar name">
-                <span>🔴 {{ user_name }} 🔴</span>
+                <span>🔴 {{ user_name if (user_name is defined and user_name) else 'User' }} 🔴</span>
             </div>
             {% else %}
             <div style="
@@ -5117,7 +5117,7 @@ class QuizManager {
         this.retryTimeoutId = null; // Timeout for auto-advance after retry
         
         // Get student name - prioritize server-provided name for logged-in users
-        {% if user_name %}
+        {% if user_name is defined and user_name %}
         this.studentName = {{ user_name|tojson }};
         // Save to localStorage for consistency
         localStorage.setItem('studentName', this.studentName);
