@@ -22,25 +22,14 @@ services:
       success_threshold: 1
       failure_threshold: 5
     
-    # Environment variables
+    # Environment variables - Set via DigitalOcean Dashboard (Settings → Environment Variables)
+    # Do NOT use ${variable} syntax here - it references non-existent database components
     envs:
-      - key: DATABASE_URL
-        value: ${DATABASE_URL}
-        type: SECRET
-      
       - key: FLASK_APP
         value: AjaSpellBApp.py
       
       - key: FLASK_ENV
         value: production
-      
-      - key: SECRET_KEY
-        value: ${SECRET_KEY}
-        type: SECRET
-      
-      - key: BEESMART_ADMIN_KEY
-        value: ${BEESMART_ADMIN_KEY}
-        type: SECRET
       
       - key: PORT
         value: "8080"
