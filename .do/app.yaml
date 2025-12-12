@@ -1,5 +1,13 @@
 name: beesmart-spelling-bee
 region: nyc
+
+# Link to existing DigitalOcean Managed Database
+databases:
+  - name: beesmart-db
+    engine: PG
+    production: true
+    cluster_name: beesmart-db-do-user-30350296-0
+
 services:
   - name: web
     github:
@@ -22,9 +30,12 @@ services:
       success_threshold: 1
       failure_threshold: 5
     
-    # Environment variables - Set via DigitalOcean Dashboard (Settings → Environment Variables)
-    # Do NOT use ${variable} syntax here - it references non-existent database components
+    # Environment variables - DATABASE_URL auto-injected from database component
     envs:
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${beesmart-db.DATABASE_URL}
+      
       - key: FLASK_APP
         value: AjaSpellBApp.py
       
