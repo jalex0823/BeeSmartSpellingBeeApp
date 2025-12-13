@@ -9275,49 +9275,90 @@ document.addEventListener('visibilitychange', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-    // 🎭 Initialize morphing controller
-    if (typeof window.MorphController === 'undefined') {
-        console.error('🚨 CRITICAL: MorphController class not found - script load failed');
-        console.error('🔍 Diagnostic: Confirm MorphController is defined earlier in this file');
-        return;
-    }
     // DEBUG gated logging helper
     window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
-    
-    window.morphController = new window.MorphController('morphContainer');
-    debugLog('🎭 Morph controller initialized');
 
-    // Helper: Load and display Buzz Dust badge once
-    const loadBuzzDustBadge = async () => {
-        try {
-            const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
-            if (!rankResponse.ok) return;
-            const rankData = await rankResponse.json();
-            const badgeImg = document.getElementById('quizHeaderBadge');
-            if (badgeImg && rankData.current_class) {
-                const beeClass = rankData.current_class;
-                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
-                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
-                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
-                badgeImg.alt = beeClass.label;
-                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
-                debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
-            }
-        } catch (rankError) {
-            console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+    try {
+        // 🎭 Initialize morphing controller
+        if (typeof window.MorphController === 'undefined') {
+            console.error('🚨 CRITICAL: MorphController class not found - script load failed');
+            console.error('🔍 Diagnostic: Check for script errors above this line');
+            return;
         }
-    };
-    
-    // Only instantiate BeeDelightManager if it exists
-    let delight = null;
-    if (typeof BeeDelightManager !== 'undefined') {
-        delight = new BeeDelightManager();
-        debugLog('✨ BeeDelightManager initialized');
-    } else {
-        console.warn('⚠️ BeeDelightManager not found (skipping).');
-    }
+
+        const containerId = 'morphContainer';
+        const containerEl = document.getElementById(containerId);
+        if (!containerEl) {
+            console.error(`🚨 CRITICAL: #${containerId} not found in DOM`);
+            return;
+        }
+
+        window.morphController = new window.MorphController(containerId);
+        debugLog('🎭 Morph controller initialized');
+
+        // Helper: Load and display Buzz Dust badge once
+        const loadBuzzDustBadge = async () => {
+            try {
+                const rankResponse = await fetch('/api/buzz-dust/info', {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!rankResponse.ok) {
+                    debugLog('ℹ️ Buzz Dust badge not loaded (non-OK response)', rankResponse.status);
+                    return;
+                }
+
+                const contentType = rankResponse.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    debugLog('ℹ️ Buzz Dust badge not loaded (non-JSON response)', contentType);
+                    return;
+                }
+
+                const rankData = await rankResponse.json();
+
+                const badgeImg = document.getElementById('quizHeaderBadge');
+                if (!badgeImg) {
+                    debugLog('ℹ️ quizHeaderBadge not found; skipping badge render');
+                    return;
+                }
+
+                const beeClass = rankData?.current_class;
+                if (!beeClass) {
+                    debugLog('ℹ️ No current_class returned; skipping badge render');
+                    return;
+                }
+
+                // Prefer the api-provided badge image; fall back to a sensible default
+                const raw = beeClass.badge_image || 'Novice.glb';
+                const badgeFileName = String(raw).replace(/\.glb$/i, '.png');
+
+                // Keep special-case correction (Elite -> Elete)
+                const correctedFileName =
+                    badgeFileName.toLowerCase() === 'elite.png' ? 'Elete.png' : badgeFileName;
+
+                badgeImg.src = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
+                badgeImg.alt = beeClass.label || 'Buzz Dust Badge';
+                badgeImg.title = `${beeClass.label || 'Badge'} - ${rankData?.total_buzz_dust ?? 0} Buzz Dust`;
+
+                debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
+            } catch (rankError) {
+                console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
+            }
+        };
+
+        // IMPORTANT: actually call it
+        await loadBuzzDustBadge();
+        
+        // Only instantiate BeeDelightManager if it exists
+        let delight = null;
+        if (typeof BeeDelightManager !== 'undefined') {
+            delight = new BeeDelightManager();
+            debugLog('✨ BeeDelightManager initialized');
+        } else {
+            console.warn('⚠️ BeeDelightManager not found (skipping).');
+        }
     
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
@@ -9378,9 +9419,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('❌ Fallback avatar also failed:', fallbackError);
         }
     }
-    
-    // 🐝 Load and display Buzz Dust badge (deduplicated)
-    await loadBuzzDustBadge();
 
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
@@ -9417,8 +9455,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
             setTimeout(() => window.location.href = '/', 2800);
         });
-    } catch (error) {
-        console.error('🚨 Critical initialization error:', error);
+    } catch (initError) {
+        console.error('🚨 CRITICAL: initialization error in DOMContentLoaded handler:', initError);
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
             BeeSmart.showError('Quiz initialization failed. Redirecting to main menu...');
         } else {
