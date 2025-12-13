@@ -91,6 +91,15 @@ flask_session/
 
 # Test files
 test_speed_round.py
+check_admin_users.py
+check_bigdaddy_password.py
+check_do_database.py
+make_bigdaddy_admin.py
+quick_smoke_test.py
+reset_bigdaddy_password.py
+set_bigdaddy_password.py
+smoke_test_digitalocean.py
+smoke_test_quiz_speed.py
 
 # Large 3D asset files (EXCEPT avatars - they're needed!)
 # *.obj  - COMMENTED OUT - We need avatar OBJ files!
