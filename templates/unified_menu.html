@@ -3254,13 +3254,13 @@
             100% { opacity: 0; transform: scale(1); }
         }
         
-        /* Apply random animation on morph-out */
-        #morph-badge-logo.morph-spin { animation: morphSpin 640ms ease-in-out; }
-        #morph-badge-logo.morph-flip { animation: morphFlip 640ms ease-in-out; }
-        #morph-badge-logo.morph-bounce { animation: morphBounce 640ms ease-in-out; }
-        #morph-badge-logo.morph-swish { animation: morphSwish 640ms ease-in-out; }
-        #morph-badge-logo.morph-sparkle { animation: morphSparkle 640ms ease-in-out; }
-        #morph-badge-logo.morph-pulse { animation: morphPulse 640ms ease-in-out; }
+        /* Apply random slow animation on morph-out (2 seconds) */
+        #morph-badge-logo.morph-spin { animation: morphSpin 2000ms ease-in-out; }
+        #morph-badge-logo.morph-flip { animation: morphFlip 2000ms ease-in-out; }
+        #morph-badge-logo.morph-bounce { animation: morphBounce 2000ms ease-in-out; }
+        #morph-badge-logo.morph-swish { animation: morphSwish 2000ms ease-in-out; }
+        #morph-badge-logo.morph-sparkle { animation: morphSparkle 2000ms ease-in-out; }
+        #morph-badge-logo.morph-pulse { animation: morphPulse 2000ms ease-in-out; }
         
         @keyframes rankSlowPulse {
             0% { box-shadow: 0 6px 16px rgba(138, 43, 226, 0.18), 0 0 0 0 rgba(138, 43, 226, 0.12); }
@@ -3319,27 +3319,10 @@
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
                     max-width: 650px;
                 ">
-                    <!-- 3D GLB Badge (dynamic, matches Buzz Dust rank) -->
-                    <div id="student-rank-badge" class="rank-badge-3d" style="
-                        width: 200px; 
-                        height: 200px; 
-                        flex-shrink: 0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border-radius: 50%;
-                        overflow: visible;
-                    "></div>
-                    
-                    <div style="text-align: left; flex: 1;">
-                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
-                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
-                        </div>
-                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 </div>
-                    </div>
+                    <!-- MORPHING LOGO (LEFT) - Slowly morphs between badge and crest -->
                     <div class="rank-logo-pulse" style="
-                        width: 120px;
-                        height: 120px;
+                        width: 180px;
+                        height: 180px;
                         flex-shrink: 0;
                         display: flex;
                         align-items: center;
@@ -3350,6 +3333,20 @@
                         <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
                         <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
                     </div>
+                    
+                    <div style="text-align: left; flex: 1;">
+                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
+                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
+                        </div>
+                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 </div>
+                    </div>
+                    
+                    <!-- Hidden 3D GLB Badge (will be hidden by JS) -->
+                    <div id="student-rank-badge" class="rank-badge-3d" style="
+                        width: 0px; 
+                        height: 0px; 
+                        display: none;
+                    "></div>
                 </div>
                 
                 <style>
@@ -11955,10 +11952,10 @@
                 imgEl.classList.remove('is-morphing-in');
                 imgEl.classList.add('is-morphing-out');
                 
-                // Add random effect class for 640ms transition
+                // Add random effect class for 2s slow transition
                 imgEl.classList.add(randomEffect);
                 
-                // Swap image after transition completes (640ms)
+                // Swap image after slow transition completes (2000ms = 2s)
                 setTimeout(() => {
                     imgEl.src = nextUrl;
                     imgEl.classList.remove('is-morphing-out');
@@ -11966,17 +11963,17 @@
                     // Remove animation class after it completes
                     setTimeout(() => {
                         morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                    }, 50);
-                }, 640);
+                    }, 100);
+                }, 2000);
                 
                 idx++;
-                console.log(' [MORPH] Random transition:', randomEffect);
+                console.log('🔄 [MORPH] Slow transition:', randomEffect, '(8s cycle)');
             };
 
-            // Start morphing: 3.2s per cycle (640ms transition + 2.56s display)
+            // Start morphing: 8s per cycle (2s slow transition + 6s display)
             morph();
-            window._badgeLogoMorphTimer = setInterval(morph, 3200);
-            console.log(' [MORPH] Badge/Logo morphing started with random transitions - cycle every 3.2s');
+            window._badgeLogoMorphTimer = setInterval(morph, 8000);
+            console.log('🔄 [MORPH] Badge/Logo slow morphing started - cycle every 8 seconds');
         }
 
         // Play character-specific audio effects
