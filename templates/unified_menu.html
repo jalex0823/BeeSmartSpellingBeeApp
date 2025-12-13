@@ -3209,9 +3209,33 @@
         }
         #morph-badge-logo.is-morphing-out {
             opacity: 0;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
         }
         #morph-badge-logo.is-morphing-in {
             opacity: 1;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
+        }
+        
+        /* Bee Particle Transition Effects */
+        .morph-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            animation: particleFloat 2s ease-out forwards;
+        }
+        
+        @keyframes particleFloat {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+            }
         }
         
         /* Random Morphing Transition Effects */
@@ -11943,9 +11967,54 @@
                 window._badgeLogoMorphTimer = null;
             }
 
+            // Helper: Create bee-colored particles during morph
+            const createMorphParticles = () => {
+                const container = imgEl.parentElement;
+                if (!container) return;
+                
+                const rect = imgEl.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const colors = ['#FFD700', '#FFC107', '#FF9800', '#8B4513', '#000000']; // Gold, amber, orange, brown, black
+                const particleCount = 20;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'morph-particle';
+                    
+                    // Random bee color
+                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    // Start from center of badge
+                    const centerX = (rect.left - containerRect.left) + (rect.width / 2);
+                    const centerY = (rect.top - containerRect.top) + (rect.height / 2);
+                    particle.style.left = centerX + 'px';
+                    particle.style.top = centerY + 'px';
+                    
+                    // Random direction and distance
+                    const angle = (Math.PI * 2 * i) / particleCount;
+                    const distance = 60 + Math.random() * 40;
+                    const tx = Math.cos(angle) * distance;
+                    const ty = Math.sin(angle) * distance;
+                    
+                    particle.style.setProperty('--tx', tx + 'px');
+                    particle.style.setProperty('--ty', ty + 'px');
+                    
+                    // Add slight delay for staggered effect
+                    particle.style.animationDelay = (i * 30) + 'ms';
+                    
+                    container.appendChild(particle);
+                    
+                    // Remove after animation
+                    setTimeout(() => particle.remove(), 2100);
+                }
+            };
+
             const morph = () => {
                 const nextUrl = urls[idx % urls.length];
                 const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
+                
+                // Create particle burst at start of morph
+                createMorphParticles();
                 
                 // Remove all animation classes
                 morphEffects.forEach(effect => imgEl.classList.remove(effect));
@@ -11967,7 +12036,7 @@
                 }, 2000);
                 
                 idx++;
-                console.log('🔄 [MORPH] Slow transition:', randomEffect, '(8s cycle)');
+                console.log('🔄 [MORPH] Slow transition with particles:', randomEffect, '(8s cycle)');
             };
 
             // Start morphing: 8s per cycle (2s slow transition + 6s display)
