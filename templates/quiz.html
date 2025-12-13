@@ -1,11 +1,14 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-CACHE-FIX -->
+<!-- QUIZ VERSION: 2025-12-13-17:45-FINAL-FIX -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-1745">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-1745">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
