@@ -9471,7 +9471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
-window.addEventListener('beforeunload', async (event) => {
+window.addEventListener('beforeunload', (event) => {
     // 🛑 CRITICAL: Stop all quiz activities before leaving
     console.log('🛑 Page unloading - stopping all quiz activities...');
     
@@ -9491,26 +9491,14 @@ window.addEventListener('beforeunload', async (event) => {
         }
     }
     
-    // Save progress
-    try {
-        // Use sendBeacon for reliable delivery even during page unload
-        const response = await fetch('/api/save-partial-progress', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            keepalive: true  // Ensures request completes even if page is closing
-        });
-        
-        if (response.ok) {
-            console.log('✅ Partial quiz progress saved');
-        }
-    } catch (error) {
-        // Use sendBeacon as fallback (more reliable during unload)
-        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
-        navigator.sendBeacon('/api/save-partial-progress', blob);
-        console.log('💾 Progress save sent via beacon');
-    }
+    // Save progress using sendBeacon (most reliable during unload)
+    const progressData = {
+        quizId: window.currentQuizId || null,
+        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
+    };
+    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+    const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
+    console.log(sent ? '💾 Progress save sent via beacon' : '❌ Beacon send failed');
 });
 
 // Also save when navigating away programmatically
@@ -9534,7 +9522,11 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+    const progressData = {
+        quizId: window.currentQuizId || null,
+        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
+    };
+    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
     navigator.sendBeacon('/api/save-partial-progress', blob);
     console.log('✅ Final cleanup complete');
 });
