@@ -3347,8 +3347,8 @@
                         position: relative;
                     ">
                         <div class="rank-logo-pulse-glow"></div>
-                        <!-- Single morphing image element (swaps between badge and crest) -->
-                        <img id="morph-badge-logo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2;" loading="lazy">
+                        <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
+                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
                     </div>
                 </div>
                 
@@ -17045,16 +17045,21 @@
                     
                     // Update morphing badge/logo container with same badge
                     const morphImg = document.getElementById('morph-badge-logo');
-                    if (morphImg && !window._morphingInitialized) {
+                    if (morphImg) {
                         // Store badge and crest URLs for morphing
                         window._badgeUrl = `/static/assets/badges/${pngFile}`;
                         window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
                         
+                        // Set initial image to badge (not crest)
+                        morphImg.src = window._badgeUrl;
+                        
                         // Start morphing animation (guard if function missing)
-                        if (typeof initBadgeLogoMorphing === 'function') {
+                        if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
                             initBadgeLogoMorphing();
                             window._morphingInitialized = true;
-                            console.log(' [TICKER] Badge/Logo morphing initialized');
+                            console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
+                        } else if (window._morphingInitialized) {
+                            console.log(' [TICKER] Morphing already initialized, badge URL updated');
                         } else {
                             console.warn(' [TICKER] initBadgeLogoMorphing not available');
                         }
