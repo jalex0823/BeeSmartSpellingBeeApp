@@ -9277,15 +9277,16 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
     // 🎭 Initialize morphing controller
-    if (typeof MorphController === 'undefined') {
+    if (typeof window.MorphController === 'undefined') {
         console.error('🚨 CRITICAL: MorphController class not found - script load failed');
-        console.error('🔍 Diagnostic: Check for script errors above this line');
+        console.error('🔍 Diagnostic: Confirm MorphController is defined earlier in this file');
         return;
     }
-    window.morphController = new MorphController('morphContainer');
     // DEBUG gated logging helper
     window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
+    
+    window.morphController = new window.MorphController('morphContainer');
     debugLog('🎭 Morph controller initialized');
 
     // Helper: Load and display Buzz Dust badge once
@@ -9309,7 +9310,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    const delight = new BeeDelightManager();
+    // Only instantiate BeeDelightManager if it exists
+    let delight = null;
+    if (typeof BeeDelightManager !== 'undefined') {
+        delight = new BeeDelightManager();
+        debugLog('✨ BeeDelightManager initialized');
+    } else {
+        console.warn('⚠️ BeeDelightManager not found (skipping).');
+    }
     
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
