@@ -17041,6 +17041,9 @@
                     };
                     badgeEl.appendChild(img);
                     
+                    // Hide the left badge since we're using the morphing one on the right
+                    badgeEl.style.display = 'none';
+                    
                     console.log(' [TICKER] PNG Badge loaded:', pngFile);
                     
                     // Update morphing badge/logo container with same badge
