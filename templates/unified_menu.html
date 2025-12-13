@@ -17925,12 +17925,8 @@
             });
         }
         
-        // Initialize controls when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeAvatarControls);
-        } else {
-            initializeAvatarControls();
-        }
+        // Initialize controls immediately since we're already in DOMContentLoaded
+        initializeAvatarControls();
         
         // Also listen for the avatar ready event
         window.addEventListener('avatarControlsReady', function() {
