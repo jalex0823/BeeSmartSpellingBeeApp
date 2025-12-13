@@ -8979,14 +8979,13 @@
                         const hasWords = !!ls && typeof ls.count === 'number' && ls.count > 0;
                         const hasQuiz = !!ls && !!ls.quiz_state_present;
                         if (!hasWords) {
-                            // Recommend import flow
-                            console.log(' No words found; recommending import');
-                            const importBtn = document.getElementById('open-import-modal');
-                            if (importBtn) {
-                                importBtn.click();
-                            } else {
-                                window.location.href = '/import';
-                            }
+                            // Show friendly message instead of trying to navigate to non-existent /import
+                            console.log(' No words found; showing friendly modal');
+                            openFriendlyInfoModal({
+                                title: ' No Words Yet!',
+                                message: 'Please load some words first before starting the quiz! You can upload a word list, type words manually, or use our Random Words option. ',
+                                buttonText: 'Got it!'
+                            });
                             return; // Stop further processing
                         }
                         if (hasQuiz) {
