@@ -33,10 +33,10 @@
     <!-- Avatar Intro FX System -->
     <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
+    <script defer src="/static/js/vendor/three.min.js"></script>
     
     <!-- Three.js Loaders - Must load after Three.js core -->
-    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
+    <script defer src="/static/js/vendor/GLTFLoader.js"></script>
     <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
