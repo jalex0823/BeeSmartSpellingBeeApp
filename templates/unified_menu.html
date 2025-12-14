@@ -11498,11 +11498,7 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
-                // Revert to original non-3D guest carousel for this page
-                if (typeof initGuestAvatarCarousel === 'function') {
-                    initGuestAvatarCarousel();
-                    return false;
-                }
+                // Enforce 3D-only: do not fall back to PNG/2D carousel
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
@@ -11627,9 +11623,9 @@
 
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
-                    console.warn('GLTFLoader not available - using fallback');
-                    createCarouselFallback(canvasWrap);
-                    return;
+                    console.warn('GLTFLoader not available - skipping 3D guest carousel');
+                    // Do not render PNG/2D fallback
+                    return false;
                 }
 
                 const loader = new THREE.GLTFLoader();
