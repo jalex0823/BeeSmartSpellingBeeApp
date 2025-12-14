@@ -3243,11 +3243,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         
-        <!-- Voice Toggle Button - Centered -->
-        <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
+        <!-- Voice and Music Toggle Buttons - Centered -->
+        <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; gap: 1rem; margin: 1rem 0; width: 100%;">
             <button type="button" class="action-btn secondary" id="voiceToggleBtn" title="Toggle announcer voice">
                 <span class="bee-icon" aria-hidden="true" id="voiceToggleIcon">🔊</span>
                 <span id="voiceToggleText">Mute Buzzy</span>
+            </button>
+            <button type="button" class="action-btn secondary" id="musicToggleBtn" title="Toggle background music">
+                <span class="bee-icon" aria-hidden="true" id="musicToggleIcon">🎵</span>
+                <span id="musicToggleText">Music On</span>
             </button>
         </div>
 
@@ -5023,12 +5027,18 @@ class QuizManager {
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
+        // Background music settings
+        this.musicEnabled = localStorage.getItem('musicEnabled') !== 'false'; // Default ON
+        this.backgroundMusic = null;
+        
         console.log('🎤 Voice System Initialization:');
         console.log('   - announcerEnabled:', this.announcerEnabled);
         console.log('   - voiceUnlocked:', this.voiceUnlocked);
         console.log('   - isIOS:', this.isIOS);
         console.log('   - isSafari:', this.isSafari);
         console.log('   - localStorage announcerEnabled:', localStorage.getItem('announcerEnabled'));
+        console.log('🎵 Music System Initialization:');
+        console.log('   - musicEnabled:', this.musicEnabled);
         
         this.initializeEventListeners();
         
@@ -5041,12 +5051,20 @@ class QuizManager {
         if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
             console.log('📱 Showing iOS/Safari voice intro modal');
             this.updateVoiceToggleUI(); // Initialize UI to match state
+            this.updateMusicToggleUI(); // Initialize music UI to match state
             this.showVoiceIntroModal();
         } else {
             console.log('💻 Desktop/Non-iOS browser detected - voice unlocked immediately');
             this.voiceUnlocked = true; // Non-iOS can use voice immediately
             this.updateVoiceToggleUI(); // Initialize UI to match state
+            this.updateMusicToggleUI(); // Initialize music UI to match state
             this.showIntroAnnouncer();
+        }
+        
+        // Start background music if enabled
+        if (this.musicEnabled) {
+            // Delay music start slightly to avoid autoplay blocking
+            setTimeout(() => this.playBackgroundMusic(), 500);
         }
     }
     
@@ -6552,6 +6570,12 @@ class QuizManager {
             voiceToggleBtn.addEventListener('click', () => this.toggleAnnouncer());
         }
 
+        // Music toggle button
+        const musicToggleBtn = document.getElementById('musicToggleBtn');
+        if (musicToggleBtn) {
+            musicToggleBtn.addEventListener('click', () => this.toggleMusic());
+        }
+
         spellingInput.focus();
     }
 
@@ -6624,6 +6648,63 @@ class QuizManager {
                 icon.textContent = '🔇';
                 text.textContent = 'Unmute Buzzy';
             }
+        }
+    }
+
+    // Toggle background music on/off
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+        localStorage.setItem('musicEnabled', this.musicEnabled ? 'true' : 'false');
+        
+        if (this.musicEnabled) {
+            this.playBackgroundMusic();
+        } else {
+            this.stopBackgroundMusic();
+        }
+        
+        this.updateMusicToggleUI();
+        
+        // Show feedback
+        const message = this.musicEnabled ? 
+            "🎵 Background music is ON!" : 
+            "🔇 Background music is OFF.";
+        BeeSmart.showSuccess(message);
+    }
+
+    // Update music toggle button UI
+    updateMusicToggleUI() {
+        const icon = document.getElementById('musicToggleIcon');
+        const text = document.getElementById('musicToggleText');
+        
+        if (icon && text) {
+            if (this.musicEnabled) {
+                icon.textContent = '🎵';
+                text.textContent = 'Music On';
+            } else {
+                icon.textContent = '🔇';
+                text.textContent = 'Music Off';
+            }
+        }
+    }
+
+    // Play background music
+    playBackgroundMusic() {
+        if (!this.backgroundMusic) {
+            this.backgroundMusic = new Audio('/static/sounds/we-can-be-bees.mp3');
+            this.backgroundMusic.loop = true;
+            this.backgroundMusic.volume = 0.3; // Quiet background music
+        }
+        
+        this.backgroundMusic.play().catch(err => {
+            console.log('🎵 Background music play prevented:', err);
+        });
+    }
+
+    // Stop background music
+    stopBackgroundMusic() {
+        if (this.backgroundMusic) {
+            this.backgroundMusic.pause();
+            this.backgroundMusic.currentTime = 0;
         }
     }
 
