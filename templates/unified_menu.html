@@ -11498,6 +11498,11 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
+                // Revert to original non-3D guest carousel for this page
+                if (typeof initGuestAvatarCarousel === 'function') {
+                    initGuestAvatarCarousel();
+                    return false;
+                }
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
@@ -11588,8 +11593,7 @@
                 camera.position.set(0, 0.5, 3.0);
                 camera.lookAt(new THREE.Vector3(0, 0.1, 0));
 
-                const renderer = window.createThreeRenderer({ antialias: true, alpha: true });
-                if (!renderer) { console.warn('Renderer unavailable; skipping 3D section'); return false; }
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // Premium resolution
                 renderer.setSize(240, 180);
                 renderer.setClearColor(0x000000, 0);

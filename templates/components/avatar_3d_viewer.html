@@ -136,15 +136,11 @@ class Avatar3DViewer {
         this.camera.position.set(0, 0, 10);
         
         // Renderer setup
-        this.renderer = window.createThreeRenderer({
+        this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
             antialias: true,
             alpha: true
         });
-        if (!this.renderer) {
-            console.warn('3D viewer: Renderer unavailable; aborting init');
-            return;
-        }
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         
