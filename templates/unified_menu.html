@@ -15177,15 +15177,12 @@
                     window._guestCarouselTimer = null;
                 }
                 
-                // Restore original behavior: attempt 3D first, then fallback to 2D carousel
-                let used3D = false;
+                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
                 if (typeof initGuestAvatar3DCarousel === 'function') {
-                    used3D = !!initGuestAvatar3DCarousel();
-                    console.log('[Avatar] 3D carousel initialized:', used3D);
-                }
-                if (!used3D && typeof initGuestAvatarCarousel === 'function') {
-                    initGuestAvatarCarousel();
-                    console.log('[Avatar] 2D carousel initialized as fallback');
+                    const ok = !!initGuestAvatar3DCarousel();
+                    console.log('[Avatar] 3D carousel initialized:', ok);
+                } else {
+                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
