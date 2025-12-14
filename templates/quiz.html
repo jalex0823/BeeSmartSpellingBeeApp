@@ -5368,10 +5368,7 @@ class QuizManager {
                         status.textContent = '🐝 Ready';
                     }
                     
-                    // 🎭 Morph back to timer on error
-                    if (window.morphController) {
-                        window.morphController.morphToTimer();
-                    }
+                    // 🎭 MorphController removed - using CSS transitions instead
                     
                     resolve(); // Resolve even on error to prevent blocking
                 };
@@ -5927,11 +5924,7 @@ class QuizManager {
             visualizer.classList.remove('preparing');
         }
         
-        // 🎭 NOW morph to honey jar timer (ONLY after "timer starts now" announcement)
-        if (window.morphController) {
-            console.log('🎭 Morphing to honey jar after timer announcement');
-            window.morphController.morphToTimer();
-        }
+        // 🎭 MorphController removed - using CSS transitions instead
         
         // Small pause for clarity (0.3 seconds)
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -6810,16 +6803,7 @@ class QuizManager {
     async loadNextWord() {
         console.log('🔄 loadNextWord() called - starting to load next word...');
         try {
-            // 🎭 ENSURE WE'RE IN VOICE MODE before loading the next word
-            if (window.morphController) {
-                // If we were in timer mode, morph back to voice visualization
-                if (window.morphController.currentMode === 'timer') {
-                    console.log('🎭 Ensuring VOICE mode before loading next word...');
-                    window.morphController.morphToVoice(800);
-                    // Give morphing animation time to start
-                    await new Promise(r => setTimeout(r, 100));
-                }
-            }
+            // 🎭 MorphController removed - using CSS transitions instead
             
             this.lastPronounceData = null;
             // Reset hint tracking for new word
@@ -7485,11 +7469,7 @@ class QuizManager {
     }
 
     async showFeedback(result) {
-        // 🎭 MORPH BACK: Transition from honey jar timer to voice visualizer
-        if (window.morphController) {
-            console.log('🎭 Morphing back to VOICE visualizer for feedback...');
-            window.morphController.morphToVoice(1000); // 1 second morph
-        }
+        // 🎭 MorphController removed - using CSS transitions instead
         
         try { window.BeeVoiceViz?.react(result?.correct ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
@@ -9332,13 +9312,18 @@ window.addEventListener('beforeunload', (event) => {
     }
     
     // Save progress using sendBeacon (most reliable during unload)
-    const progressData = {
-        quizId: window.currentQuizId || null,
-        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
-    };
-    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
-    const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
-    console.log(sent ? '💾 Progress save sent via beacon' : '❌ Beacon send failed');
+    if (window.spellingQuiz) {
+        const progress = window.spellingQuiz.getProgress();
+        const progressData = {
+            quiz_id: window.currentQuizId || 'session_' + Date.now(),
+            word_index: progress?.currentIndex || 0,
+            answers: progress?.answers || [],
+            elapsed_time: progress?.elapsedTime || 0
+        };
+        const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+        const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log(sent ? '💾 Progress save sent via beacon' : '❌ Beacon send failed');
+    }
 });
 
 // Also save when navigating away programmatically
@@ -9362,12 +9347,17 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    const progressData = {
-        quizId: window.currentQuizId || null,
-        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
-    };
-    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
-    navigator.sendBeacon('/api/save-partial-progress', blob);
+    if (window.spellingQuiz) {
+        const progress = window.spellingQuiz.getProgress();
+        const progressData = {
+            quiz_id: window.currentQuizId || 'session_' + Date.now(),
+            word_index: progress?.currentIndex || 0,
+            answers: progress?.answers || [],
+            elapsed_time: progress?.elapsedTime || 0
+        };
+        const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+    }
     console.log('✅ Final cleanup complete');
 });
 
