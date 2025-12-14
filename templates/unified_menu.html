@@ -759,6 +759,10 @@
             z-index: 100 !important;
             overflow: visible !important;
             pointer-events: auto !important; /* enable clicks for interaction */
+            /* Match guest carousel vibrant background */
+            background: rgba(255,255,255,0.5) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.12) !important;
         }
 
         /* Avatar container: fully transparent with no backdrop */
@@ -778,7 +782,6 @@
             transform: translate(-50%, -50%) !important; /* CENTERED: Avatar in middle of container (was -40%) */
             pointer-events: none;     /* Allow clicks through to UI */
             z-index: 100 !important;   /* Ensure visibility above all cards */
-            background: transparent !important;
         }
         
         #mascotBee3D:hover {
@@ -2687,8 +2690,8 @@
         transition: all 0.3s ease;
         border: 3px solid rgba(255, 255, 255, 0.8);
     " onclick="toggleMusic()" title="Toggle Background Music">
-        <div id="musicIcon" style="font-size: 1.8rem; display: flex; align-items: center; justify-content: center;">
-            
+        <div id="musicIcon" style="font-size: 1.8rem; display: flex; align-items: center; justify-content: center; color: #5A2C15; font-weight: bold;">
+            ♪
         </div>
     </div>
     
@@ -3209,9 +3212,92 @@
         }
         #morph-badge-logo.is-morphing-out {
             opacity: 0;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
         }
         #morph-badge-logo.is-morphing-in {
             opacity: 1;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
+        }
+        
+        /* Bee Swarm Particle Transition Effects */
+        .morph-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00);
+            box-shadow: 0 0 4px rgba(255, 193, 7, 0.8);
+        }
+        
+        /* Individual bee flight patterns */
+        .morph-particle:nth-child(odd) {
+            animation: beeSwarmFloat1 1.8s ease-out forwards;
+        }
+        
+        .morph-particle:nth-child(even) {
+            animation: beeSwarmFloat2 2s ease-in-out forwards;
+        }
+        
+        .morph-particle:nth-child(3n) {
+            animation: beeSwarmZigzag 1.9s ease-out forwards;
+        }
+        
+        @keyframes beeSwarmFloat1 {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            50% {
+                opacity: 0.8;
+                transform: translate(calc(var(--tx) * 0.5), calc(var(--ty) * 0.3)) scale(1.2) rotate(180deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.4) rotate(360deg);
+            }
+        }
+        
+        @keyframes beeSwarmFloat2 {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            30% {
+                opacity: 1;
+                transform: translate(calc(var(--tx) * 0.3), calc(var(--ty) * 0.5)) scale(1.1);
+            }
+            70% {
+                opacity: 0.6;
+                transform: translate(calc(var(--tx) * 0.7), calc(var(--ty) * 0.8)) scale(0.9);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+            }
+        }
+        
+        @keyframes beeSwarmZigzag {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(calc(var(--tx) * 0.25), calc(var(--ty) * 0.15)) scale(1.15);
+            }
+            50% {
+                opacity: 0.9;
+                transform: translate(calc(var(--tx) * 0.5), calc(var(--ty) * 0.6)) scale(1.0);
+            }
+            75% {
+                opacity: 0.5;
+                transform: translate(calc(var(--tx) * 0.75), calc(var(--ty) * 0.85)) scale(0.7);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+            }
         }
         
         /* Random Morphing Transition Effects */
@@ -3254,13 +3340,13 @@
             100% { opacity: 0; transform: scale(1); }
         }
         
-        /* Apply random animation on morph-out */
-        #morph-badge-logo.morph-spin { animation: morphSpin 640ms ease-in-out; }
-        #morph-badge-logo.morph-flip { animation: morphFlip 640ms ease-in-out; }
-        #morph-badge-logo.morph-bounce { animation: morphBounce 640ms ease-in-out; }
-        #morph-badge-logo.morph-swish { animation: morphSwish 640ms ease-in-out; }
-        #morph-badge-logo.morph-sparkle { animation: morphSparkle 640ms ease-in-out; }
-        #morph-badge-logo.morph-pulse { animation: morphPulse 640ms ease-in-out; }
+        /* Apply random slow animation on morph-out (2 seconds) */
+        #morph-badge-logo.morph-spin { animation: morphSpin 2000ms ease-in-out; }
+        #morph-badge-logo.morph-flip { animation: morphFlip 2000ms ease-in-out; }
+        #morph-badge-logo.morph-bounce { animation: morphBounce 2000ms ease-in-out; }
+        #morph-badge-logo.morph-swish { animation: morphSwish 2000ms ease-in-out; }
+        #morph-badge-logo.morph-sparkle { animation: morphSparkle 2000ms ease-in-out; }
+        #morph-badge-logo.morph-pulse { animation: morphPulse 2000ms ease-in-out; }
         
         @keyframes rankSlowPulse {
             0% { box-shadow: 0 6px 16px rgba(138, 43, 226, 0.18), 0 0 0 0 rgba(138, 43, 226, 0.12); }
@@ -3319,27 +3405,10 @@
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
                     max-width: 650px;
                 ">
-                    <!-- 3D GLB Badge (dynamic, matches Buzz Dust rank) -->
-                    <div id="student-rank-badge" class="rank-badge-3d" style="
-                        width: 200px; 
-                        height: 200px; 
-                        flex-shrink: 0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border-radius: 50%;
-                        overflow: visible;
-                    "></div>
-                    
-                    <div style="text-align: left; flex: 1;">
-                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
-                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
-                        </div>
-                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 </div>
-                    </div>
+                    <!-- MORPHING LOGO (LEFT) - Slowly morphs between badge and crest -->
                     <div class="rank-logo-pulse" style="
-                        width: 120px;
-                        height: 120px;
+                        width: 180px;
+                        height: 180px;
                         flex-shrink: 0;
                         display: flex;
                         align-items: center;
@@ -3347,9 +3416,23 @@
                         position: relative;
                     ">
                         <div class="rank-logo-pulse-glow"></div>
-                        <!-- Single morphing image element (swaps between badge and crest) -->
-                        <img id="morph-badge-logo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2;" loading="lazy">
+                        <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
+                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
                     </div>
+                    
+                    <div style="text-align: left; flex: 1;">
+                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
+                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
+                        </div>
+                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 </div>
+                    </div>
+                    
+                    <!-- Hidden 3D GLB Badge (will be hidden by JS) -->
+                    <div id="student-rank-badge" class="rank-badge-3d" style="
+                        width: 0px; 
+                        height: 0px; 
+                        display: none;
+                    "></div>
                 </div>
                 
                 <style>
@@ -5001,14 +5084,20 @@
             addParticleExplosion(element) {
                 if (!this.isEnabled) return;
 
-                // Add temporary bee particles to the element
-                for (let i = 0; i < 6; i++) {
+                // Add temporary bee particles to the element - realistic swarm scatter
+                for (let i = 0; i < 8; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'bee-particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.top = Math.random() * 100 + '%';
-                    particle.style.setProperty('--particle-x', (Math.random() - 0.5) * 80 + 'px');
-                    particle.style.setProperty('--particle-y', (Math.random() - 0.5) * 80 + 'px');
+                    // Start from more central position (30-70% range)
+                    particle.style.left = (30 + Math.random() * 40) + '%';
+                    particle.style.top = (30 + Math.random() * 40) + '%';
+                    // Highly varied distances (100px to 400px) for scattered swarm effect
+                    const distance = 100 + Math.random() * 300;
+                    const angle = Math.random() * Math.PI * 2; // Random direction
+                    particle.style.setProperty('--particle-x', Math.cos(angle) * distance + 'px');
+                    particle.style.setProperty('--particle-y', Math.sin(angle) * distance + 'px');
+                    // Vary animation duration for more organic movement
+                    particle.style.animationDuration = (0.6 + Math.random() * 0.4) + 's';
                     
                     element.style.position = 'relative';
                     element.appendChild(particle);
@@ -5018,7 +5107,7 @@
                         if (particle.parentNode) {
                             particle.parentNode.removeChild(particle);
                         }
-                    }, 800);
+                    }, 1000);
                 }
             }
 
@@ -8979,14 +9068,13 @@
                         const hasWords = !!ls && typeof ls.count === 'number' && ls.count > 0;
                         const hasQuiz = !!ls && !!ls.quiz_state_present;
                         if (!hasWords) {
-                            // Recommend import flow
-                            console.log(' No words found; recommending import');
-                            const importBtn = document.getElementById('open-import-modal');
-                            if (importBtn) {
-                                importBtn.click();
-                            } else {
-                                window.location.href = '/import';
-                            }
+                            // Show friendly message instead of trying to navigate to non-existent /import
+                            console.log(' No words found; showing friendly modal');
+                            openFriendlyInfoModal({
+                                title: ' No Words Yet!',
+                                message: 'Please load some words first before starting the quiz! You can upload a word list, type words manually, or use our Random Words option. ',
+                                buttonText: 'Got it!'
+                            });
                             return; // Stop further processing
                         }
                         if (hasQuiz) {
@@ -11410,6 +11498,7 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
+                // Guest 3D carousel initialization
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
@@ -11947,19 +12036,85 @@
                 window._badgeLogoMorphTimer = null;
             }
 
+            // Helper: Create realistic bee swarm particles during morph
+            const createMorphParticles = () => {
+                const container = imgEl.parentElement;
+                if (!container) return;
+                
+                const rect = imgEl.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                // Bee-inspired colors: gold, amber, brown, black with golden glow
+                const colors = [
+                    'radial-gradient(circle at 30% 30%, #FFD700, #FF8C00)',
+                    'radial-gradient(circle at 30% 30%, #FFC107, #FF6F00)',
+                    'radial-gradient(circle at 30% 30%, #FFEB3B, #FFA726)',
+                    'radial-gradient(circle at 30% 30%, #8B4513, #5D4037)',
+                    'radial-gradient(circle at 30% 30%, #212121, #424242)'
+                ];
+                
+                const particleCount = 30; // Increased for denser swarm
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'morph-particle';
+                    
+                    // Varied bee sizes for depth
+                    const size = 8 + Math.random() * 6;
+                    particle.style.width = size + 'px';
+                    particle.style.height = size + 'px';
+                    
+                    // Random bee coloring with golden glow
+                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.boxShadow = `0 0 ${size}px rgba(255, 193, 7, ${0.5 + Math.random() * 0.5})`;
+                    
+                    // Start from center of badge with slight random offset (swarm forming)
+                    const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 20;
+                    const centerY = (rect.top - containerRect.top) + (rect.height / 2) + (Math.random() - 0.5) * 20;
+                    particle.style.left = centerX + 'px';
+                    particle.style.top = centerY + 'px';
+                    
+                    // Bee swarm flight pattern: spiraling outward with natural variation
+                    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+                    const distance = 50 + Math.random() * 60; // Varied distances
+                    
+                    // Add sine wave for natural bee flight wobble
+                    const wobble = Math.sin(angle * 3) * 15;
+                    const tx = Math.cos(angle) * distance + wobble;
+                    const ty = Math.sin(angle) * distance + (Math.random() - 0.5) * 20;
+                    
+                    particle.style.setProperty('--tx', tx + 'px');
+                    particle.style.setProperty('--ty', ty + 'px');
+                    
+                    // Staggered departure for natural swarm effect
+                    particle.style.animationDelay = (i * 20) + 'ms';
+                    
+                    // Random animation duration for varied flight speeds
+                    particle.style.animationDuration = (1.6 + Math.random() * 0.6) + 's';
+                    
+                    container.appendChild(particle);
+                    
+                    // Remove after animation completes
+                    setTimeout(() => particle.remove(), 2200 + (i * 20));
+                }
+            };
+
             const morph = () => {
                 const nextUrl = urls[idx % urls.length];
                 const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
+                
+                // Create particle burst at start of morph
+                createMorphParticles();
                 
                 // Remove all animation classes
                 morphEffects.forEach(effect => imgEl.classList.remove(effect));
                 imgEl.classList.remove('is-morphing-in');
                 imgEl.classList.add('is-morphing-out');
                 
-                // Add random effect class for 640ms transition
+                // Add random effect class for 2s slow transition
                 imgEl.classList.add(randomEffect);
                 
-                // Swap image after transition completes (640ms)
+                // Swap image after slow transition completes (2000ms = 2s)
                 setTimeout(() => {
                     imgEl.src = nextUrl;
                     imgEl.classList.remove('is-morphing-out');
@@ -11967,17 +12122,17 @@
                     // Remove animation class after it completes
                     setTimeout(() => {
                         morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                    }, 50);
-                }, 640);
+                    }, 100);
+                }, 2000);
                 
                 idx++;
-                console.log(' [MORPH] Random transition:', randomEffect);
+                console.log('🔄 [MORPH] Slow transition with particles:', randomEffect, '(8s cycle)');
             };
 
-            // Start morphing: 3.2s per cycle (640ms transition + 2.56s display)
+            // Start morphing: 8s per cycle (2s slow transition + 6s display)
             morph();
-            window._badgeLogoMorphTimer = setInterval(morph, 3200);
-            console.log(' [MORPH] Badge/Logo morphing started with random transitions - cycle every 3.2s');
+            window._badgeLogoMorphTimer = setInterval(morph, 8000);
+            console.log('🔄 [MORPH] Badge/Logo slow morphing started - cycle every 8 seconds');
         }
 
         // Play character-specific audio effects
@@ -15014,14 +15169,12 @@
                     window._guestCarouselTimer = null;
                 }
                 
-                let used3D = false;
+                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
                 if (typeof initGuestAvatar3DCarousel === 'function') {
-                    used3D = !!initGuestAvatar3DCarousel();
-                    console.log('[Avatar] 3D carousel initialized:', used3D);
-                }
-                if (!used3D && typeof initGuestAvatarCarousel === 'function') {
-                    initGuestAvatarCarousel();
-                    console.log('[Avatar] 2D carousel initialized as fallback');
+                    const ok = !!initGuestAvatar3DCarousel();
+                    console.log('[Avatar] 3D carousel initialized:', ok);
+                } else {
+                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
@@ -17042,20 +17195,28 @@
                     };
                     badgeEl.appendChild(img);
                     
+                    // Hide the left badge since we're using the morphing one on the right
+                    badgeEl.style.display = 'none';
+                    
                     console.log(' [TICKER] PNG Badge loaded:', pngFile);
                     
                     // Update morphing badge/logo container with same badge
                     const morphImg = document.getElementById('morph-badge-logo');
-                    if (morphImg && !window._morphingInitialized) {
+                    if (morphImg) {
                         // Store badge and crest URLs for morphing
                         window._badgeUrl = `/static/assets/badges/${pngFile}`;
                         window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
                         
+                        // Set initial image to badge (not crest)
+                        morphImg.src = window._badgeUrl;
+                        
                         // Start morphing animation (guard if function missing)
-                        if (typeof initBadgeLogoMorphing === 'function') {
+                        if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
                             initBadgeLogoMorphing();
                             window._morphingInitialized = true;
-                            console.log(' [TICKER] Badge/Logo morphing initialized');
+                            console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
+                        } else if (window._morphingInitialized) {
+                            console.log(' [TICKER] Morphing already initialized, badge URL updated');
                         } else {
                             console.warn(' [TICKER] initBadgeLogoMorphing not available');
                         }
@@ -17926,12 +18087,8 @@
             });
         }
         
-        // Initialize controls when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeAvatarControls);
-        } else {
-            initializeAvatarControls();
-        }
+        // Initialize controls immediately since we're already in DOMContentLoaded
+        initializeAvatarControls();
         
         // Also listen for the avatar ready event
         window.addEventListener('avatarControlsReady', function() {
@@ -18013,6 +18170,8 @@
             const pending = (typeof window.__initialAvatarId === 'string' && window.__initialAvatarId.length) ? window.__initialAvatarId : null;
             window.setCurrentAvatar(pending);
         }
+        
+        console.log('✅ Avatar script loaded successfully - Dec 13, 2025 @ 5:15pm');
     });
     </script>
     <!-- iOS Audio Context Resume Fix -->
