@@ -5084,15 +5084,20 @@
             addParticleExplosion(element) {
                 if (!this.isEnabled) return;
 
-                // Add temporary bee particles to the element
-                for (let i = 0; i < 6; i++) {
+                // Add temporary bee particles to the element - realistic swarm scatter
+                for (let i = 0; i < 8; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'bee-particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.top = Math.random() * 100 + '%';
-                    // Increased spread from 80px to 200px for wider swarm effect
-                    particle.style.setProperty('--particle-x', (Math.random() - 0.5) * 200 + 'px');
-                    particle.style.setProperty('--particle-y', (Math.random() - 0.5) * 200 + 'px');
+                    // Start from more central position (30-70% range)
+                    particle.style.left = (30 + Math.random() * 40) + '%';
+                    particle.style.top = (30 + Math.random() * 40) + '%';
+                    // Highly varied distances (100px to 400px) for scattered swarm effect
+                    const distance = 100 + Math.random() * 300;
+                    const angle = Math.random() * Math.PI * 2; // Random direction
+                    particle.style.setProperty('--particle-x', Math.cos(angle) * distance + 'px');
+                    particle.style.setProperty('--particle-y', Math.sin(angle) * distance + 'px');
+                    // Vary animation duration for more organic movement
+                    particle.style.animationDuration = (0.6 + Math.random() * 0.4) + 's';
                     
                     element.style.position = 'relative';
                     element.appendChild(particle);
@@ -5102,7 +5107,7 @@
                         if (particle.parentNode) {
                             particle.parentNode.removeChild(particle);
                         }
-                    }, 800);
+                    }, 1000);
                 }
             }
 
