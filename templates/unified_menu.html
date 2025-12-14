@@ -11858,13 +11858,28 @@
                 }
 
                 // Gentle rotation
-                function tick() {
-                    if (disposed) return;
-                    requestAnimationFrame(tick);
-                    if (currentGroup) currentGroup.rotation.y += 0.004;
-                    if (outgoingGroup) outgoingGroup.rotation.y += 0.004;
-                    renderer.render(scene, camera);
-                }
+                // Slow, continuous rotation + lightweight heartbeat for debugging
+                (function(){
+                    let lastBeat = performance.now();
+                    let beatCount = 0;
+                    function tick(){
+                        if (disposed) return;
+                        requestAnimationFrame(tick);
+                        // Slow continuous rotation
+                        const delta = 0.006; // radians per frame at ~60fps ≈ 0.36 rad/sec
+                        if (currentGroup) currentGroup.rotation.y += delta;
+                        if (outgoingGroup) outgoingGroup.rotation.y += delta;
+                        renderer.render(scene, camera);
+                        // Heartbeat every ~2 seconds
+                        const now = performance.now();
+                        if (now - lastBeat > 2000) {
+                            lastBeat = now;
+                            beatCount++;
+                            try { console.debug(`Carousel heartbeat #${beatCount}`); } catch(_) {}
+                        }
+                    }
+                    tick();
+                })();
                 tick();
 
                 // Start and rotate every ~4.5s (gives headroom for crossfade)
