@@ -3216,21 +3216,80 @@
             transition: opacity 2s ease-in-out, transform 2s ease-in-out;
         }
         
-        /* Bee Particle Transition Effects */
+        /* Bee Swarm Particle Transition Effects */
         .morph-particle {
             position: absolute;
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             pointer-events: none;
             z-index: 10;
-            animation: particleFloat 2s ease-out forwards;
+            background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00);
+            box-shadow: 0 0 4px rgba(255, 193, 7, 0.8);
         }
         
-        @keyframes particleFloat {
+        /* Individual bee flight patterns */
+        .morph-particle:nth-child(odd) {
+            animation: beeSwarmFloat1 1.8s ease-out forwards;
+        }
+        
+        .morph-particle:nth-child(even) {
+            animation: beeSwarmFloat2 2s ease-in-out forwards;
+        }
+        
+        .morph-particle:nth-child(3n) {
+            animation: beeSwarmZigzag 1.9s ease-out forwards;
+        }
+        
+        @keyframes beeSwarmFloat1 {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            50% {
+                opacity: 0.8;
+                transform: translate(calc(var(--tx) * 0.5), calc(var(--ty) * 0.3)) scale(1.2) rotate(180deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.4) rotate(360deg);
+            }
+        }
+        
+        @keyframes beeSwarmFloat2 {
             0% {
                 opacity: 1;
                 transform: translate(0, 0) scale(1);
+            }
+            30% {
+                opacity: 1;
+                transform: translate(calc(var(--tx) * 0.3), calc(var(--ty) * 0.5)) scale(1.1);
+            }
+            70% {
+                opacity: 0.6;
+                transform: translate(calc(var(--tx) * 0.7), calc(var(--ty) * 0.8)) scale(0.9);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3);
+            }
+        }
+        
+        @keyframes beeSwarmZigzag {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(calc(var(--tx) * 0.25), calc(var(--ty) * 0.15)) scale(1.15);
+            }
+            50% {
+                opacity: 0.9;
+                transform: translate(calc(var(--tx) * 0.5), calc(var(--ty) * 0.6)) scale(1.0);
+            }
+            75% {
+                opacity: 0.5;
+                transform: translate(calc(var(--tx) * 0.75), calc(var(--ty) * 0.85)) scale(0.7);
             }
             100% {
                 opacity: 0;
@@ -11967,45 +12026,66 @@
                 window._badgeLogoMorphTimer = null;
             }
 
-            // Helper: Create bee-colored particles during morph
+            // Helper: Create realistic bee swarm particles during morph
             const createMorphParticles = () => {
                 const container = imgEl.parentElement;
                 if (!container) return;
                 
                 const rect = imgEl.getBoundingClientRect();
                 const containerRect = container.getBoundingClientRect();
-                const colors = ['#FFD700', '#FFC107', '#FF9800', '#8B4513', '#000000']; // Gold, amber, orange, brown, black
-                const particleCount = 20;
+                
+                // Bee-inspired colors: gold, amber, brown, black with golden glow
+                const colors = [
+                    'radial-gradient(circle at 30% 30%, #FFD700, #FF8C00)',
+                    'radial-gradient(circle at 30% 30%, #FFC107, #FF6F00)',
+                    'radial-gradient(circle at 30% 30%, #FFEB3B, #FFA726)',
+                    'radial-gradient(circle at 30% 30%, #8B4513, #5D4037)',
+                    'radial-gradient(circle at 30% 30%, #212121, #424242)'
+                ];
+                
+                const particleCount = 30; // Increased for denser swarm
                 
                 for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'morph-particle';
                     
-                    // Random bee color
-                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    // Varied bee sizes for depth
+                    const size = 8 + Math.random() * 6;
+                    particle.style.width = size + 'px';
+                    particle.style.height = size + 'px';
                     
-                    // Start from center of badge
-                    const centerX = (rect.left - containerRect.left) + (rect.width / 2);
-                    const centerY = (rect.top - containerRect.top) + (rect.height / 2);
+                    // Random bee coloring with golden glow
+                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.boxShadow = `0 0 ${size}px rgba(255, 193, 7, ${0.5 + Math.random() * 0.5})`;
+                    
+                    // Start from center of badge with slight random offset (swarm forming)
+                    const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 20;
+                    const centerY = (rect.top - containerRect.top) + (rect.height / 2) + (Math.random() - 0.5) * 20;
                     particle.style.left = centerX + 'px';
                     particle.style.top = centerY + 'px';
                     
-                    // Random direction and distance
-                    const angle = (Math.PI * 2 * i) / particleCount;
-                    const distance = 60 + Math.random() * 40;
-                    const tx = Math.cos(angle) * distance;
-                    const ty = Math.sin(angle) * distance;
+                    // Bee swarm flight pattern: spiraling outward with natural variation
+                    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+                    const distance = 50 + Math.random() * 60; // Varied distances
+                    
+                    // Add sine wave for natural bee flight wobble
+                    const wobble = Math.sin(angle * 3) * 15;
+                    const tx = Math.cos(angle) * distance + wobble;
+                    const ty = Math.sin(angle) * distance + (Math.random() - 0.5) * 20;
                     
                     particle.style.setProperty('--tx', tx + 'px');
                     particle.style.setProperty('--ty', ty + 'px');
                     
-                    // Add slight delay for staggered effect
-                    particle.style.animationDelay = (i * 30) + 'ms';
+                    // Staggered departure for natural swarm effect
+                    particle.style.animationDelay = (i * 20) + 'ms';
+                    
+                    // Random animation duration for varied flight speeds
+                    particle.style.animationDuration = (1.6 + Math.random() * 0.6) + 's';
                     
                     container.appendChild(particle);
                     
-                    // Remove after animation
-                    setTimeout(() => particle.remove(), 2100);
+                    // Remove after animation completes
+                    setTimeout(() => particle.remove(), 2200 + (i * 20));
                 }
             };
 
