@@ -11498,7 +11498,7 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
-                // Enforce 3D-only: do not fall back to PNG/2D carousel
+                // Guest 3D carousel initialization
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
