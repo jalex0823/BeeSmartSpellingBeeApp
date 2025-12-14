@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-17:45-FINAL-FIX -->
+<!-- QUIZ VERSION: 2025-12-13-MORPHCONTROLLER-CLEANUP -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -4287,122 +4287,8 @@ class BeeSoundboard {
     }
 }
 
-// ⚠️ DUPLICATE CLASS REMOVED - MorphController is now defined at the top of this script
-// (This was causing "class not found" errors due to script execution order)
-/* ORIGINAL LOCATION OF MorphController CLASS - NOW MOVED TO TOP
-class MorphController {
-    constructor(containerId = 'morphContainer') {
-        this.container = document.getElementById(containerId);
-        this.currentMode = 'voice'; // 'voice' or 'timer'
-        this.morphing = false;
-        
-        if (!this.container) {
-            console.warn('⚠️ MorphController: Container not found:', containerId);
-        }
-    }
-    
-    /**
-     * Morph to voice visualizer (speaking mode)
-     * @param {number} duration - Animation duration in ms (default 1200)
-     */
-    morphToVoice(duration = 1200) {
-        if (this.currentMode === 'voice' || this.morphing) return;
-        
-        console.log('🎭 Morphing to VOICE visualizer...');
-        this.morphing = true;
-        
-        // 🔊 Play morphing sound effect
-        if (window.soundboard) {
-            window.soundboard.play('morph-to-visualization');
-        }
-        
-        // Add morphing animation class
-        this.container.classList.add('morphing-to-voice');
-        this.container.classList.remove('mode-timer');
-        
-        // Transition to voice mode
-        setTimeout(() => {
-            this.container.classList.add('mode-voice');
-            this.container.classList.remove('morphing-to-voice');
-            this.currentMode = 'voice';
-            this.morphing = false;
-            console.log('✅ Morphed to VOICE mode');
-        }, duration);
-    }
-    
-    /**
-     * Morph to honey jar timer (countdown mode)
-     * @param {number} duration - Animation duration in ms (default 1200)
-     */
-    morphToTimer(duration = 1200) {
-        if (this.currentMode === 'timer' || this.morphing) return;
-        
-        console.log('🎭 Morphing to HONEY JAR timer...');
-        this.morphing = true;
-        
-        // 🔊 Play morphing sound effect
-        if (window.soundboard) {
-            window.soundboard.play('morph-to-timer');
-        }
-        
-        // 🍯 ALWAYS show FULL honey jar at 60 seconds when morphing to timer
-        const honeyFillRect = document.getElementById('honeyFillRect');
-        const timerNumber = document.getElementById('timerNumber');
-        if (honeyFillRect) {
-            // Set to 100% fill (60 seconds)
-            const jarHeight = 110;
-            honeyFillRect.setAttribute('height', jarHeight);
-            honeyFillRect.setAttribute('y', 35); // Top of jar body
-        }
-        if (timerNumber) {
-            timerNumber.textContent = '60';
-        }
-        
-        // Add morphing animation class
-        this.container.classList.add('morphing-to-timer');
-        this.container.classList.remove('mode-voice');
-        
-        // Transition to timer mode
-        setTimeout(() => {
-            this.container.classList.add('mode-timer');
-            this.container.classList.remove('morphing-to-timer');
-            this.currentMode = 'timer';
-            this.morphing = false;
-            console.log('✅ Morphed to TIMER mode (jar filled to 60s)');
-        }, duration);
-    }
-    
-    /**
-     * Reset to voice mode instantly (no animation)
-     */
-    resetToVoice() {
-        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-timer');
-        this.container.classList.add('mode-voice');
-        this.currentMode = 'voice';
-        this.morphing = false;
-        console.log('🔄 Reset to VOICE mode');
-    }
-    
-    /**
-     * Reset to timer mode instantly (no animation)
-     */
-    resetToTimer() {
-        this.container.classList.remove('morphing-to-timer', 'morphing-to-voice', 'mode-voice');
-        this.container.classList.add('mode-timer');
-        this.currentMode = 'timer';
-        this.morphing = false;
-        console.log('🔄 Reset to TIMER mode');
-    }
-    
-    /**
-     * Get current mode
-     * @returns {string} 'voice' or 'timer'
-     */
-    getMode() {
-        return this.currentMode;
-    }
-}
-END OF MorphController DUPLICATE */
+// ⚠️ DUPLICATE CLASS REMOVED - MorphController was intentionally removed
+// All MorphController references have been disabled throughout the quiz
 
 /* DUPLICATE CountdownTimer CLASS - NOW DEFINED AT TOP
 class CountdownTimer {
@@ -9100,7 +8986,6 @@ unlockiOSAudio();
 
 // ✅ Verify critical classes are defined
 console.log('📚 Class definitions check:', {
-    MorphController: typeof MorphController !== 'undefined' ? 'OK' : 'MISSING',
     CountdownTimer: typeof CountdownTimer !== 'undefined' ? 'OK' : 'MISSING',
     QuizManager: typeof QuizManager !== 'undefined' ? 'OK' : 'MISSING'
 });
@@ -9170,22 +9055,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
 
     try {
-        // 🎭 Initialize morphing controller
-        if (typeof window.MorphController === 'undefined') {
-            console.error('🚨 CRITICAL: MorphController class not found - script load failed');
-            console.error('🔍 Diagnostic: Check for script errors above this line');
-            return;
-        }
-
-        // DISABLED: MorphController visualization (causing errors)
-        // const containerId = 'morphContainer';
-        // const containerEl = document.getElementById(containerId);
-        // if (!containerEl) {
-        //     console.error(`🚨 CRITICAL: #${containerId} not found in DOM`);
-        //     return;
-        // }
-
-        // window.morphController = new window.MorphController(containerId);
+        // 🎭 MorphController INTENTIONALLY REMOVED (was causing errors)
+        // All morph functionality has been disabled throughout the quiz
         debugLog('🎭 Morph controller DISABLED (visualization removed)');
 
         // Helper: Load and display Buzz Dust badge once
