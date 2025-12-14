@@ -8574,14 +8574,14 @@ class QuizManager {
                                     <div style="background: white; padding: 1rem; border-radius: 12px; border: 2px solid #FFB74D; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                         <div style="flex: 1; min-width: 150px;">
                                             <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">
-                                                ✓ ${item.word}
+                                                ${item.word}
                                             </div>
                                             <div style="font-size: 0.85rem; color: #757575; margin-top: 0.25rem;">
                                                 ${item.user_answer ? `Your answer: <span style="color: #D32F2F; font-weight: 600;">${item.user_answer}</span>` : '(Skipped or no answer)'}
                                             </div>
                                         </div>
-                        <button onclick="pronounceWordFromReport('${item.word}')" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
-                                            🔊 Hear It
+                        <button onclick="pronounceWordFromReport(&quot;${item.word.replace(/"/g, '&quot;')}&quot;)" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                                            Hear It
                                         </button>
                                     </div>
                                 `).join('')}
