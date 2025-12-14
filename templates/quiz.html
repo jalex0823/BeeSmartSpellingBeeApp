@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-MORPHCONTROLLER-CLEANUP -->
+<!-- QUIZ VERSION: 2025-12-13-VOICE-VIZ-DEBUG -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
 
 {% block extra_css %}
@@ -903,14 +903,14 @@ if ('speechSynthesis' in window) {
 
     /* Voice Visualizer with Bee Theme */
     .voice-visualizer {
-        background: rgba(255, 179, 0, 0.08); /* Amber background - kept during transitions */
-        border-radius: 0; /* no border radius */
+        background: rgba(255, 179, 0, 0.15); /* More visible amber background for debugging */
+        border-radius: 16px; /* Soft rounded corners to match card style */
         padding: 1rem 1.5rem; /* tighter padding to reduce vertical space */
-        margin-bottom: 0; /* remove extra gap below visualizer */
+        margin-bottom: 1rem; /* Add space below visualizer */
         position: relative;
         overflow: visible; /* Allow full wave pattern visibility - no clipping */
-        box-shadow: none; /* no shadow */
-        border: none; /* remove border */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Subtle shadow to make it stand out */
+        border: 1px solid rgba(255, 179, 0, 0.2); /* Subtle border for definition */
         min-height: 180px; /* taller for fuller waves */
         width: 100%; /* full width */
     }
