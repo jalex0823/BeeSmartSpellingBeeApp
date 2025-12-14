@@ -8489,10 +8489,7 @@ class QuizManager {
                     <h2>📚 ${(() => {
                         const n = (this.studentName || '').trim();
                         if (!n) return 'Your Report Card!';
-                        const lower = n.toLowerCase();
-                        const endsWithS = lower.endsWith('s');
-                        const possessive = endsWithS ? `${n}'` : `${n}'s`;
-                        return `${possessive} Report Card!`;
+                        return n + ' Report Card!';
                     })()}</h2>
                     <p class="sub">Great job practicing your spelling!</p>
                 </div>
