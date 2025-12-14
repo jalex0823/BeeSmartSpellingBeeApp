@@ -136,11 +136,15 @@ class Avatar3DViewer {
         this.camera.position.set(0, 0, 10);
         
         // Renderer setup
-        this.renderer = new THREE.WebGLRenderer({
+        this.renderer = window.createThreeRenderer({
             canvas: this.canvas,
             antialias: true,
             alpha: true
         });
+        if (!this.renderer) {
+            console.warn('3D viewer: Renderer unavailable; aborting init');
+            return;
+        }
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         
@@ -177,11 +181,15 @@ class Avatar3DViewer {
         document.getElementById('rotateBtn').addEventListener('click', () => {
             this.autoRotate = !this.autoRotate;
             this.controls.autoRotate = this.autoRotate;
-            document.getElementById('rotateBtn').classList.toggle('active', this.autoRotate);
+            this.renderer = window.createThreeRenderer({
         });
         
         document.getElementById('zoomInBtn').addEventListener('click', () => {
             this.camera.position.multiplyScalar(0.9);
+            if (!this.renderer) {
+                console.warn('3D viewer: Renderer unavailable; aborting init');
+                return;
+            }
         });
         
         document.getElementById('zoomOutBtn').addEventListener('click', () => {

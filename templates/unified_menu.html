@@ -11588,7 +11588,8 @@
                 camera.position.set(0, 0.5, 3.0);
                 camera.lookAt(new THREE.Vector3(0, 0.1, 0));
 
-                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                const renderer = window.createThreeRenderer({ antialias: true, alpha: true });
+                if (!renderer) { console.warn('Renderer unavailable; skipping 3D section'); return false; }
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // Premium resolution
                 renderer.setSize(240, 180);
                 renderer.setClearColor(0x000000, 0);
