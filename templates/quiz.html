@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-17:45-FINAL-FIX -->
-{% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
-
-{% block extra_css %}
+<!-- QUIZ VERSION: 2025-12-13-RESTORED-WORKING -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-1745">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-1745">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
+{% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-restore">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-restore">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-restore">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
@@ -146,21 +146,16 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.88);
         border-radius: 20px;
         padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 2px solid rgba(255, 193, 7, 0.2);
+        box-shadow: 0 12px 25px rgba(255, 193, 7, 0.25);
+        border: 2px solid rgba(255, 193, 7, 0.35);
         margin-bottom: 1.5rem;
         position: sticky;
         top: 0;
         z-index: 100;
-        backdrop-filter: blur(10px);
-    }
-    
-    /* Mobile exit button - hidden by default, shown on mobile */
-    .mobile-exit-button {
-        display: none;
+        backdrop-filter: blur(8px);
     }
     
     /* New header layout with progress on left, exit on right */
@@ -369,11 +364,11 @@ if ('speechSynthesis' in window) {
         flex: 0 1 auto;
         min-width: 85px;
         max-width: 110px;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.88);
         border-radius: 12px;
         padding: 0.6rem 0.8rem;
-        border: 2px solid rgba(255, 193, 7, 0.4);
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 213, 79, 0.6);
+        box-shadow: 0 6px 12px rgba(255, 193, 7, 0.15);
         text-align: center;
         position: relative;
     }
@@ -738,80 +733,7 @@ if ('speechSynthesis' in window) {
     
     /* Mobile responsiveness */
     @media (max-width: 768px) {
-        /* HIDE entire quiz header on mobile for better visibility */
-        .quiz-header {
-            display: none !important;
-        }
-        
-        /* Adjust quiz card margin since header is hidden */
-        .quiz-card {
-            margin-top: 0.5rem !important;
-        }
-        
-        /* Ensure progress tracker pill stays visible and accessible */
-        .progress-tracker {
-            display: flex !important;
-            position: fixed !important;
-            bottom: 10px !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            z-index: 1000 !important;
-            background: transparent !important;
-            border-radius: 25px !important;
-            padding: 0.5rem 1rem !important;
-            box-shadow: none !important;
-            border: none !important;
-            backdrop-filter: none !important;
-        }
-        
-        .progress-tracker .honey-jar {
-            width: 60px !important;
-            height: 40px !important;
-        }
-        
-        .progress-tracker .progress-description {
-            font-size: 0.75rem !important;
-            color: #5A2C15 !important;
-            font-weight: 600 !important;
-            margin-left: 0.5rem !important;
-        }
-        
-        /* Mobile-only floating exit button (top-right corner) */
-        .mobile-exit-button {
-            display: flex !important;
-            position: fixed !important;
-            top: 10px !important;
-            right: 10px !important;
-            z-index: 1001 !important;
-            background: rgba(255, 107, 107, 0.95) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 44px !important;
-            height: 44px !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4) !important;
-            cursor: pointer !important;
-            backdrop-filter: blur(8px) !important;
-            border: 2px solid rgba(255, 255, 255, 0.3) !important;
-            transition: all 0.2s ease !important;
-        }
-        
-        .mobile-exit-button:hover,
-        .mobile-exit-button:active {
-            transform: scale(0.95) !important;
-            background: rgba(255, 82, 82, 0.98) !important;
-        }
-        
-        /* Hide desktop exit button on mobile since header is hidden */
-        .quiz-header .exit-button {
-            display: none !important;
-        }
-        
-        /* Mobile header layout adjustments - KEEP FOR DESKTOP */
+        /* Mobile header layout adjustments */
         .quiz-header-top {
             flex-direction: column;
             gap: 0.5rem;
@@ -834,58 +756,16 @@ if ('speechSynthesis' in window) {
         }
         
         .jar-svg {
-            width: 160px; /* Larger jar for mobile */
-            height: 190px;
+            width: 150px; /* Wider on mobile too */
+            height: 180px;
         }
         
-        /* Enhanced mobile timer visibility */
         .timer-number {
-            font-size: 3.2rem; /* Larger font for mobile */
-            font-weight: 900;
-            color: #3E2723; /* Darker brown for better contrast */
-            text-shadow: 
-                0 3px 12px rgba(255, 255, 255, 0.9), /* Strong white glow */
-                0 0 25px rgba(255, 255, 255, 0.8),
-                0 1px 3px rgba(0, 0, 0, 0.3); /* Dark outline for definition */
-            background: rgba(255, 255, 255, 0.15); /* Subtle background circle */
-            border-radius: 50%;
-            padding: 0.2em; /* Padding based on font size */
-            min-width: 1.8em;
-            min-height: 1.8em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(2px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Enhanced mobile warning states */
-        .honey-jar-timer.warning .timer-number {
-            color: #E65100; /* Darker orange for mobile contrast */
-            background: rgba(255, 193, 7, 0.2);
-            border-color: rgba(255, 193, 7, 0.5);
-            text-shadow: 
-                0 3px 12px rgba(255, 255, 255, 0.95),
-                0 0 25px rgba(255, 255, 255, 0.8),
-                0 1px 3px rgba(0, 0, 0, 0.4);
-        }
-        
-        .honey-jar-timer.critical .timer-number {
-            color: #B71C1C; /* Darker red for mobile contrast */
-            background: rgba(244, 67, 54, 0.2);
-            border-color: rgba(244, 67, 54, 0.6);
-            text-shadow: 
-                0 3px 12px rgba(255, 255, 255, 0.95),
-                0 0 25px rgba(255, 255, 255, 0.8),
-                0 1px 3px rgba(0, 0, 0, 0.5);
-            transform: scale(1.15); /* Slightly bigger when critical */
+            font-size: 2.5rem; /* Slightly smaller on mobile but still visible */
         }
         
         .timer-label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #4A4A4A;
-            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+            font-size: 0.7rem;
         }
     }
 
@@ -1134,15 +1014,6 @@ if ('speechSynthesis' in window) {
         animation: pauseAnimation 0.4s ease-in-out;
         opacity: 0.4;
     }
-    
-    /* Preparing effect - gentle pulse before timer announcement */
-    .voice-visualizer.preparing .voice-wave,
-    .voice-visualizer.preparing .wave-bar {
-        animation: preparingPulse 1s ease-in-out infinite;
-        opacity: 0.6;
-        background: linear-gradient(to top, #FFB347, #FFD700) !important;
-        box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-    }
 
     /* Staggered delays for wave effect */
     .voice-visualizer.speaking .voice-wave:nth-child(1) { animation-delay: 0.3s; }
@@ -1267,20 +1138,6 @@ if ('speechSynthesis' in window) {
             height: 28px;
             opacity: 0.85;
             transform: scaleY(1.1);
-        }
-    }
-    
-    /* Preparing animation - gentle anticipatory pulse before timer */
-    @keyframes preparingPulse {
-        0%, 100% { 
-            height: 20px;
-            opacity: 0.6;
-            transform: scaleY(1);
-        }
-        50% { 
-            height: 35px;
-            opacity: 0.8;
-            transform: scaleY(1.15);
         }
     }
 
@@ -1631,15 +1488,6 @@ if ('speechSynthesis' in window) {
     }
     
     @media (max-width: 768px) {
-        /* Hide the scoreboard and kid-safe badge on mobile for cleaner UI */
-        .score-display {
-            display: none !important;
-        }
-        
-        .kid-safe-badge-quiz {
-            display: none !important;
-        }
-        
         .quiz-container {
             max-width: 100%;
             padding: 1rem 0.5rem 3rem;
@@ -1689,6 +1537,75 @@ if ('speechSynthesis' in window) {
         .honey-jar-inline .honey-jar-label {
             font-size: 0.6rem;
             padding: 0.1rem 0.3rem;
+        }
+        
+        .score-display {
+            position: fixed;
+            top: 120px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 0.5rem;
+            gap: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .score-item {
+            min-width: 65px;
+            max-width: 80px;
+            padding: 0.4rem 0.5rem;
+            pointer-events: auto;
+        }
+        
+        /* Left column - CORRECT and INCORRECT stacked */
+        .score-item:nth-child(1),
+        .score-item:nth-child(2) {
+            position: fixed;
+            left: 0.5rem;
+        }
+        
+        .score-item:nth-child(1) {
+            top: 120px;
+        }
+        
+        .score-item:nth-child(2) {
+            top: 200px;
+        }
+        
+        /* Right column - STREAK, POINTS, and BADGE stacked */
+        .score-item:nth-child(3),
+        .score-item:nth-child(4),
+        .score-item:nth-child(5) {
+            position: fixed;
+            right: 0.5rem;
+        }
+        
+        .score-item:nth-child(3) {
+            top: 120px;
+        }
+        
+        .score-item:nth-child(4) {
+            top: 200px;
+        }
+        
+        .score-item:nth-child(5) {
+            top: 280px;
+        }
+        
+        .score-number {
+            font-size: 1.2rem;
+        }
+        
+        .score-label {
+            font-size: 0.65rem;
+        }
+        
+        /* Make badge smaller on mobile */
+        .score-item:nth-child(5) img {
+            width: 60px !important;
+            height: 60px !important;
         }
         
         .quiz-logo .mascot-3d-container {
@@ -1964,21 +1881,6 @@ if ('speechSynthesis' in window) {
         position: relative;
     }
     
-    /* Responsive button sizing */
-    @media (max-width: 768px) {
-        .action-btn {
-            padding: 0.8rem 1.2rem;
-            font-size: 0.9rem;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .action-btn {
-            padding: 0.7rem 1rem;
-            font-size: 0.85rem;
-        }
-    }
-    
     .action-btn:hover {
         transform: translateY(-3px) scale(1.03);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
@@ -2082,39 +1984,6 @@ if ('speechSynthesis' in window) {
         transform: translateY(0px);
         box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
         transition: all 0.1s ease;
-    }
-
-    /* Stat Toggle Button Styling */
-    .action-btn.toggle-stat {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-        min-width: 100px;
-        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-        color: #1565C0;
-        border: 1px solid rgba(33, 150, 243, 0.3);
-    }
-
-    .action-btn.toggle-stat:hover {
-        background: linear-gradient(135deg, #BBDEFB 0%, #90CAF9 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
-    }
-
-    .action-btn.toggle-stat.stat-hidden {
-        background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
-        color: #C62828;
-        border-color: rgba(244, 67, 54, 0.3);
-    }
-
-    .action-btn.toggle-stat.stat-hidden:hover {
-        background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
-    }
-
-    /* Stat Toggle Controls Container */
-    .stat-toggle-controls {
-        border-top: 2px solid rgba(255, 193, 7, 0.2);
-        padding-top: 1rem;
-        margin-top: 1rem;
     }
 
     /* Enhanced Magical Sparkles */
@@ -2620,42 +2489,6 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
         z-index: 100;
         border: 2px solid rgba(255, 255, 255, 0.3);
-        transition: transform 0.3s ease, opacity 0.3s ease;
-    }
-    
-    .session-stats.collapsed {
-        transform: translateX(-50%) translateY(-70px);
-        opacity: 0.3;
-    }
-    
-    .stats-toggle-btn {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(255, 255, 255, 0.3);
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        color: #5A2C15;
-        transition: all 0.3s ease;
-        padding: 0;
-        line-height: 1;
-    }
-    
-    .stats-toggle-btn:hover {
-        background: rgba(255, 255, 255, 0.5);
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    .session-stats.collapsed .stats-toggle-btn {
-        transform: translateY(-50%) rotate(180deg);
     }
     
     .session-stat {
@@ -3018,102 +2851,9 @@ if ('speechSynthesis' in window) {
         }
     }
 </style>
-
-<!-- Session/wordbank status banner and sample loader -->
-<div id="quiz-status-banner" class="hidden" style="
-        margin: 0.5rem auto 1rem; max-width: 700px; text-align: center;
-        background: #fff9e6; color: #5d4100; border: 2px solid #ffd54f; border-radius: 12px;
-        padding: 0.6rem 0.8rem; box-shadow: 0 6px 14px rgba(255,193,7,0.25);
-"></div>
-<div style="text-align:center; margin-bottom: 1rem;">
-    <button id="load-sample-btn" class="hidden" onclick="loadSampleWords()" style="
-            background: linear-gradient(135deg,#FF6B35 0%, #F7931E 100%); color: white; border: none;
-            border-radius: 14px; padding: 10px 16px; font-weight: 700; box-shadow: 0 4px 12px rgba(255,107,53,0.25);
-    ">Load Sample Words</button>
-    <a href="/" class="exit-button" style="margin-left:8px;">Upload My List</a>
-  
-</div>
-
-<script>
-// Preflight: check wordbank and quiz state before starting
-async function preflightQuiz() {
-    try {
-        const wbResp = await fetch('/api/wordbank');
-        const wbData = await wbResp.json();
-        const words = wbData?.words || [];
-        if (!Array.isArray(words) || words.length === 0) {
-            console.warn('[QUIZ] No wordbank loaded. Offering sample loader.');
-            const banner = document.getElementById('quiz-status-banner');
-            if (banner) {
-                banner.textContent = 'No word list loaded. Click "Load Sample" or upload your own list.';
-                banner.classList.remove('hidden');
-            }
-            const sampleBtn = document.getElementById('load-sample-btn');
-            if (sampleBtn) sampleBtn.classList.remove('hidden');
-            return false;
-        }
-        // Ensure quiz state exists
-        const stateResp = await fetch('/api/quiz/state');
-        const state = await stateResp.json();
-        if (!state || state.error) {
-            await fetch('/api/quiz/start', { method: 'POST' });
-        }
-        return true;
-    } catch (e) {
-        console.error('[QUIZ] Preflight failed:', e);
-        return false;
-    }
-}
-
-// Load a tiny sample word list to recover from empty session
-async function loadSampleWords() {
-    try {
-        const body = { words: ['apple','bee','cat','honey','buzz'] };
-        const resp = await fetch('/api/upload-manual-words', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const data = await resp.json();
-        if (data?.ok) {
-            const banner = document.getElementById('quiz-status-banner');
-            if (banner) {
-                banner.textContent = `Loaded ${data.count} sample words. Starting quiz...`;
-                banner.classList.remove('hidden');
-            }
-            // Initialize quiz state
-            await fetch('/api/quiz/start', { method: 'POST' });
-            // Proceed to next word
-            if (window.quizManager && typeof window.quizManager.loadNextWord === 'function') {
-                await window.quizManager.loadNextWord();
-            }
-        } else {
-            throw new Error(data?.error || 'Upload failed');
-        }
-    } catch (e) {
-        console.error('[QUIZ] Sample load failed:', e);
-        alert('Unable to load sample words. Please try uploading your own list.');
-    }
-}
-
-// Kick off preflight on DOM ready
-document.addEventListener('DOMContentLoaded', async () => {
-    const ok = await preflightQuiz();
-    if (!ok) return;
-    // IMPORTANT: Don't call loadNextWord() here - QuizManager constructor shows intro first
-    // The intro will call loadNextWordWithIntro() after user interaction
-    console.log('✅ Quiz preflight completed - QuizManager will handle intro and first word');
-});
-</script>
 {% endblock %}
 
 {% block content %}
-<!-- Mobile-only floating exit button (hidden on desktop) -->
-<button class="mobile-exit-button" onclick="confirmBackToMenu(event)" style="display: none;" 
-        aria-label="Exit Quiz - Back to Main Menu" title="Exit Quiz">
-    ×
-</button>
-
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
@@ -3132,9 +2872,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         <span>🔥</span>
         <span class="session-stat-value" id="floatingStreak">0</span>
     </div>
-    <button class="stats-toggle-btn" id="statsToggleBtn" onclick="toggleStatsBar()" title="Hide stats bar">
-        ▲
-    </button>
 </div>
 
 <div class="quiz-container quiz-shell">
@@ -3207,7 +2944,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 z-index: 10;
                 border: 1px solid rgba(255, 0, 0, 0.5);
             " title="Your chosen avatar name">
-                <span>🔴 {{ user_name if (user_name is defined and user_name) else 'User' }} 🔴</span>
+                <span>🔴 {{ user_name }} 🔴</span>
             </div>
             {% else %}
             <div style="
@@ -3241,7 +2978,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <small>JS v3-cache-{{ timestamp }}</small>
         </div>
 
-
+        <!-- Hidden definition storage for JavaScript (shown in visualizer instead) -->
+        <div class="definition-display" id="definitionDisplay" style="display: none;">
+            Loading your first word...
+        </div>
         
         <!-- Voice Toggle Button - Centered -->
         <div class="voice-toggle-container" style="display:flex; justify-content:center; align-items:center; margin: 1rem 0; width: 100%;">
@@ -3607,15 +3347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
 
-
-
-        <!-- Letter Hint Display -->
-        <div class="letter-hint hidden" id="letterHint" aria-live="polite">
-            <span class="hint-label">💡 Hint:</span>
-            <span class="hint-letters" id="hintLetters"></span>
-        </div>
-
-        <!-- Answer Input Field - Moved Higher -->
         <div class="bee-input" id="beeInputWrapper">
             <input type="text"
                    id="spellingInput"
@@ -3628,52 +3359,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                    style="font-size: 16px;">
         </div>
 
-        <script>
-        // Ensure desktop intro voice plays reliably by triggering on first user interaction
-        (function(){
-            const inputEl = document.getElementById('spellingInput');
-            let introAttempted = false;
-
-            function attemptIntro() {
-                if (introAttempted) return;
-                introAttempted = true;
-                try {
-                    // Initialize global voice cache if not already
-                    if (typeof window.initializeGlobalVoice === 'function') {
-                        window.initializeGlobalVoice();
-                    }
-                    // If announcer not started yet, show intro immediately
-                    if (window.quizController && !window.quizController.quizStarted) {
-                        if (typeof window.quizController.showIntroAnnouncer === 'function') {
-                            window.quizController.showIntroAnnouncer();
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Intro attempt failed:', e);
-                }
-            }
-
-            if (inputEl) {
-                // Trigger on focus or first keydown (desktop autoplay policies often require gesture)
-                inputEl.addEventListener('focus', attemptIntro, { once: true });
-                inputEl.addEventListener('keydown', attemptIntro, { once: true });
-                // Also trigger on first click anywhere in the quiz container
-                const container = document.querySelector('.quiz-container');
-                if (container) {
-                    container.addEventListener('click', attemptIntro, { once: true });
-                }
-            }
-        })();
-        </script>
+        <!-- Letter Hint Display -->
+        <div class="letter-hint hidden" id="letterHint" aria-live="polite">
+            <span class="hint-label">💡 Hint:</span>
+            <span class="hint-letters" id="hintLetters"></span>
+        </div>
 
         <div class="phonetic-reveal hidden" id="phoneticHint" aria-live="polite"></div>
 
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
-
-        <!-- Definition/Sentence Display Panel -->
-        <div class="definition-display" id="definitionDisplay" style="display: none; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
-            Ready to show definition or sentence...
-        </div>
 
         <div class="quiz-buttons">
             <!-- Voice Control Buttons -->
@@ -3685,17 +3379,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="action-btn secondary" id="repeatButton">
                 <span class="bee-icon" aria-hidden="true">🔁</span>
                 Repeat
-            </button>
-            
-            <!-- Definition/Sentence Helper Buttons -->
-            <button type="button" class="action-btn secondary" id="showDefinitionButton">
-                <span class="bee-icon" aria-hidden="true">📖</span>
-                Show Definition
-            </button>
-            
-            <button type="button" class="action-btn secondary" id="showSentenceButton">
-                <span class="bee-icon" aria-hidden="true">📝</span>
-                Show Sentence
             </button>
             
             <!-- Quiz Action Buttons -->
@@ -3711,34 +3394,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="action-btn retry" id="retryButton" disabled>
                 <span class="bee-icon" aria-hidden="true">🔄</span>
                 Retry (33% points)
-            </button>
-        </div>
-        
-        <!-- Stat Toggle Controls -->
-        <div class="stat-toggle-controls" style="display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap;">
-            <button type="button" class="action-btn toggle-stat master-toggle" id="toggleAllStatsBtn" data-stat="all" title="Hide/Show All Stats" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); color: #E65100; border-color: rgba(255, 152, 0, 0.3); font-weight: bold;">
-                <span class="bee-icon" aria-hidden="true">📊</span>
-                <span class="toggle-text">Hide All Stats</span>
-            </button>
-            
-            <button type="button" class="action-btn toggle-stat" id="toggleCorrectBtn" data-stat="correct" title="Hide/Show Correct Count">
-                <span class="bee-icon" aria-hidden="true">✅</span>
-                <span class="toggle-text">Hide Correct</span>
-            </button>
-            
-            <button type="button" class="action-btn toggle-stat" id="toggleIncorrectBtn" data-stat="incorrect" title="Hide/Show Incorrect Count">
-                <span class="bee-icon" aria-hidden="true">❌</span>
-                <span class="toggle-text">Hide Incorrect</span>
-            </button>
-            
-            <button type="button" class="action-btn toggle-stat" id="toggleStreakBtn" data-stat="streak" title="Hide/Show Streak Count">
-                <span class="bee-icon" aria-hidden="true">🔥</span>
-                <span class="toggle-text">Hide Streak</span>
-            </button>
-            
-            <button type="button" class="action-btn toggle-stat" id="togglePointsBtn" data-stat="points" title="Hide/Show Points">
-                <span class="bee-icon" aria-hidden="true">🍯</span>
-                <span class="toggle-text">Hide Points</span>
             </button>
         </div>
         
@@ -3837,90 +3492,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 {% block extra_js %}
 <script>
-console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
-
-// ⚠️ CRITICAL: Define core classes FIRST before any other code
-// This ensures they're available even if other code fails
-
-// 🎭 MorphController class REMOVED (was causing JavaScript errors)
-// Using simplified CountdownTimer only
-
-// ⏱️ Countdown Timer Class (formerly HoneyJarTimer)
-class CountdownTimer {
-    constructor(config = {}) {
-        this.duration = config.duration || 30000; // Default 30 seconds
-        this.onTick = config.onTick || (() => {});
-        this.onComplete = config.onComplete || (() => {});
-        this.onWarning = config.onWarning || (() => {}); // Callback when < 10s left
-        
-        this.startTime = null;
-        this.remaining = this.duration;
-        this.running = false;
-        this.intervalId = null;
-        this.warningTriggered = false;
-    }
-    
-    start() {
-        if (this.running) return;
-        
-        this.startTime = Date.now();
-        this.running = true;
-        this.warningTriggered = false;
-        
-        this.intervalId = setInterval(() => {
-            const elapsed = Date.now() - this.startTime;
-            this.remaining = Math.max(0, this.duration - elapsed);
-            
-            // Trigger warning callback when < 10 seconds
-            if (!this.warningTriggered && this.remaining < 10000) {
-                this.warningTriggered = true;
-                this.onWarning(this.remaining);
-            }
-            
-            this.onTick(this.remaining);
-            
-            if (this.remaining === 0) {
-                this.stop();
-                this.onComplete();
-            }
-        }, 100); // Update every 100ms for smooth countdown
-    }
-    
-    stop() {
-        this.running = false;
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-            this.intervalId = null;
-        }
-    }
-    
-    reset(newDuration) {
-        this.stop();
-        if (newDuration !== undefined) {
-            this.duration = newDuration;
-        }
-        this.remaining = this.duration;
-        this.warningTriggered = false;
-    }
-    
-    getRemaining() {
-        return this.remaining;
-    }
-    
-    isRunning() {
-        return this.running;
-    }
-}
-
-// ✅ Register classes on window for global access
-window.CountdownTimer = CountdownTimer;
-
-console.log('✅ Core classes registered:', {
-    CountdownTimer: typeof window.CountdownTimer !== 'undefined'
-});
-
-// Note: QuizManager will be registered later in this script after its definition
-
 // Frontend safety blanker - hide target word if it appears in definitions/sentences
 function hideTargetWord(text, word) {
     if (!text || !word) return text || '';
@@ -4287,9 +3858,7 @@ class BeeSoundboard {
     }
 }
 
-// ⚠️ DUPLICATE CLASS REMOVED - MorphController is now defined at the top of this script
-// (This was causing "class not found" errors due to script execution order)
-/* ORIGINAL LOCATION OF MorphController CLASS - NOW MOVED TO TOP
+// 🎭 Morphing Controller - Smooth transitions between voice visualizer and honey jar timer
 class MorphController {
     constructor(containerId = 'morphContainer') {
         this.container = document.getElementById(containerId);
@@ -4402,9 +3971,8 @@ class MorphController {
         return this.currentMode;
     }
 }
-END OF MorphController DUPLICATE */
 
-/* DUPLICATE CountdownTimer CLASS - NOW DEFINED AT TOP
+// ⏱️ Countdown Timer Class - Honey Jar Animation
 class CountdownTimer {
     constructor(duration = 15, options = {}) {
         this.duration = duration;
@@ -4453,8 +4021,10 @@ class CountdownTimer {
             this.container.classList.add('active');
         }, 50);
         
-        // 🎭 NOTE: Do NOT auto-morph here - let announceAndStartTimer() handle timing
-        // The morph should happen AFTER "spell the word now" announcement
+        // 🎭 Morph to timer mode when countdown starts
+        if (window.morphController) {
+            window.morphController.morphToTimer();
+        }
         
         // Reset jar appearance
         this.jarTimer.classList.remove('warning', 'critical', 'expired');
@@ -4622,7 +4192,6 @@ class CountdownTimer {
         this.hide();
     }
 }
-END OF DUPLICATE CLASS DEFINITIONS */
 
 class BeeDelightManager {
     constructor() {
@@ -5009,15 +4578,14 @@ class QuizManager {
         this.retryTimeoutId = null; // Timeout for auto-advance after retry
         
         // Get student name - prioritize server-provided name for logged-in users
-        {% if user_name is defined and user_name %}
+        {% if user_name %}
         this.studentName = {{ user_name|tojson }};
         // Save to localStorage for consistency
         localStorage.setItem('studentName', this.studentName);
         console.log('👤 Using logged-in user name:', this.studentName);
         {% else %}
-        // Check sessionStorage for guest name, then localStorage
-        this.studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
-        console.log('👤 Using guest/localStorage name:', this.studentName);
+        this.studentName = localStorage.getItem('studentName') || '';
+        console.log('👤 Using localStorage name:', this.studentName);
         {% endif %}
         
         // Reset honey jar to 0% at start
@@ -5066,22 +4634,6 @@ class QuizManager {
             "🍯 Nice try! Let's practice more!",
             "🐝 That's okay! Learning is a journey!",
             "💫 Keep buzzing! You'll get it!"
-        ];
-        
-        // 📣 Word introduction announcements - multiple variations for variety
-        this.wordIntroAnnouncements = [
-            "Your word is",
-            "Here's your word:",
-            "Next word coming up:",
-            "Ready? Your word is:",
-            "Let's try this word:",
-            "Your spelling challenge is:",
-            "This word for you:",
-            "Can you spell this word:",
-            "Focus on this word:",
-            "Pay attention! Your word is:",
-            "Listen carefully! Word is:",
-            "Spell this one:"
         ];
         
         // ⏱️ Randomized timer start announcements
@@ -5808,16 +5360,10 @@ class QuizManager {
             }
             
             // Auto-advance after 7 seconds on desktop
-            setTimeout(async () => {
+            setTimeout(() => {
                 feedbackArea.style.display = 'none';
                 this.quizStarted = true;
-                console.log('🎤 Intro complete - loading first word...');
-                try {
-                    await this.loadNextWordWithIntro();
-                } catch (err) {
-                    console.error('Failed to load first word:', err);
-                    BeeSmart.showError('Failed to start quiz. Please refresh.');
-                }
+                this.loadNextWordWithIntro();
             }, 7000);
         }
     }
@@ -5850,30 +5396,20 @@ class QuizManager {
             document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
 
             if (data.progress) {
-                // Use Object.assign for better compatibility
-                const progressUpdate = Object.assign({}, data.progress, { total: data.total });
-                this.updateScoreDisplay(progressUpdate);
+                this.updateScoreDisplay({ ...data.progress, total: data.total });
             }
 
-            if (this.delight && typeof this.delight.setTotalQuestions === 'function') {
-                this.delight.setTotalQuestions(data.total);
-            }
+            this.delight?.setTotalQuestions(data.total);
 
             // Set the definition with fallback - prefer explicit sentence/hint fields
             const defBox = document.getElementById('definitionDisplay');
-            
-            // Safe logging
-            try {
-                console.log('DEBUG loadNextWordWithIntro: /api/next response:', {
-                    sentence: data.sentence,
-                    hint: data.hint,
-                    definition: data.definition,
-                    word: data.word,
-                    fullData: data
-                });
-            } catch (e) {
-                console.log('DEBUG loadNextWordWithIntro: response received');
-            }
+            console.log('DEBUG loadNextWordWithIntro: /api/next response:', {
+                sentence: data.sentence,
+                hint: data.hint,
+                definition: data.definition,
+                word: data.word,
+                fullData: data
+            });
             
             let chosen = '';
             if (data.sentence) {
@@ -5913,57 +5449,22 @@ class QuizManager {
                 definition: data.definition || ''
             };
 
-            // ✅ Allow early typing — enable input immediately (no need to wait for timer)
-            {
-                const spellingInput = document.getElementById('spellingInput');
-                if (spellingInput) {
-                    spellingInput.disabled = false;
-                    spellingInput.value = '';
-                    spellingInput.placeholder = 'Type your answer...';
-                }
-            }
+            // DISABLE input until timer starts
+            document.getElementById('spellingInput').disabled = true;
+            document.getElementById('spellingInput').value = '';
+            document.getElementById('spellingInput').placeholder = 'Wait for timer...';
 
             // If this first question is also the last, announce that explicitly
             if (data.total && questionNumber === data.total) {
                 const namePart = (this.studentName || '').trim();
-                const preface = namePart ? namePart + ', this is your last word.' : 'This is your last word.';
+                const preface = namePart ? `${namePart}, this is your last word.` : `This is your last word.`;
                 await this.speakAnnouncement(preface);
             }
+            // ⏱️ Announce word FIRST, then insert a short pause and auto‑pronounce before timer
+            const firstWordIntro = `Your first word is: ${data.word}`;
             
-            // 📣 Build rich word intro with variety
-            let wordIntro;
-            if (questionNumber === 1) {
-                const firstWordPhrases = [
-                    'Your first word is:',
-                    'Let\\'s start! Your first word is:',
-                    'Here we go! First word is:',
-                    'Ready? Your first word is:',
-                    'Beginning now! Your word is:'
-                ];
-                wordIntro = firstWordPhrases[Math.floor(Math.random() * firstWordPhrases.length)];
-            } else if (data.total && questionNumber === data.total) {
-                wordIntro = 'This is your final word:';
-            } else {
-                const nextWordPhrases = [
-                    'Next word:',
-                    'Here\\'s the next one:',
-                    'Moving on! Your word is:',
-                    'Next up:',
-                    'Ready for another? Word is:',
-                    'Let\\'s keep going! Next word:'
-                ];
-                wordIntro = nextWordPhrases[Math.floor(Math.random() * nextWordPhrases.length)];
-            }
-            
-            // Add student name for personalization (randomly)
-            if (this.studentName && Math.random() < 0.4) {
-                wordIntro = this.studentName + ', ' + wordIntro.toLowerCase();
-            }
-            
-            wordIntro += ' ' + data.word + '.';
-            
-            // 📣 Wait for word intro announcement to complete
-            await this.speakAnnouncement(wordIntro);
+            // Wait for word announcement to complete
+            await this.speakAnnouncement(firstWordIntro);
             
             // Brief visual pause between phases
             {
@@ -5982,10 +5483,8 @@ class QuizManager {
             // Auto‑pronounce the word (so kids hear it clearly before timing)
             await this.pronounceWord({ refresh: true });
             
-            // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
+            // Then announce timer start and actually start the timer
             if (this.timerEnabled && this.quizStarted) {
-                console.log('⏸️ Pausing 800ms for mental processing before timer...');
-                await new Promise(resolve => setTimeout(resolve, 800));
                 await this.announceAndStartTimer();
             }
             
@@ -6007,21 +5506,8 @@ class QuizManager {
         
         console.log('⏱️ Announcing timer start:', announcement);
         
-        // Show visual preparation cue
-        const visualizer = document.getElementById('voiceVisualizer');
-        const status = document.getElementById('voiceStatus');
-        if (visualizer && status) {
-            visualizer.classList.add('preparing');
-            status.textContent = '⏳ Get ready...';
-        }
-        
         // Announce the timer start
         await this.speakAnnouncement(announcement);
-        
-        // Clear preparation cue
-        if (visualizer && status) {
-            visualizer.classList.remove('preparing');
-        }
         
         // 🎭 NOW morph to honey jar timer (ONLY after "timer starts now" announcement)
         if (window.morphController) {
@@ -6621,34 +6107,6 @@ class QuizManager {
             this.skipWord();
         });
         
-        // Definition and Sentence Helper Buttons
-        const showDefinitionButton = document.getElementById('showDefinitionButton');
-        const showSentenceButton = document.getElementById('showSentenceButton');
-        
-        if (showDefinitionButton) {
-            showDefinitionButton.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
-                this.showDefinition();
-            });
-        }
-        
-        if (showSentenceButton) {
-            showSentenceButton.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
-                this.showSentence();
-            });
-        }
-        
-        // Stat Toggle Controls
-        const toggleButtons = document.querySelectorAll('.toggle-stat');
-        toggleButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                const stat = button.getAttribute('data-stat');
-                this.toggleStat(stat, button);
-            });
-        });
-        
         // Retry button
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
@@ -6841,7 +6299,6 @@ class QuizManager {
     }
 
     async loadNextWord() {
-        console.log('🔄 loadNextWord() called - starting to load next word...');
         try {
             // 🎭 ENSURE WE'RE IN VOICE MODE before loading the next word
             if (window.morphController) {
@@ -6868,30 +6325,24 @@ class QuizManager {
             const nextWordBtn = document.getElementById('nextWordButton');
             if (nextWordBtn) nextWordBtn.style.display = 'none';
             
-            console.log('🔄 Fetching /api/next...');
             const response = await fetch('/api/next', { 
                 method: 'POST',
                 credentials: 'same-origin'
             });
-            console.log('🔄 /api/next response received, status:', response.status);
             const data = await response.json();
-            console.log('🔄 /api/next data:', data);
 
             if (response.status !== 200 || data.error) {
-                console.error('❌ API Error from /api/next:', data);
+                console.error('API Error:', data);
                 BeeSmart.showError(data.message || data.error || 'Failed to load the next word');
                 return;
             }
 
             if (data.done) {
-                console.log('🏁 Quiz complete - showing summary');
                 // Announce quiz ending before showing report card
                 await this.announceQuizEnding();
                 this.showQuizComplete(data.summary);
                 return;
             }
-            
-            console.log('✅ Got next word data, processing...');
 
             const questionNumber = data.index ?? data.number ?? 1;
             this.totalWords = data.total ?? this.totalWords;
@@ -6987,14 +6438,11 @@ class QuizManager {
                 await this.pronounceWord();
             }
 
-            // ✅ Allow early typing — enable input immediately (no need to wait for timer)
+            // DISABLE input until timer starts
             const spellingInput = document.getElementById('spellingInput');
-            spellingInput.disabled = false;
+            spellingInput.disabled = true;
             spellingInput.value = '';
-            spellingInput.placeholder = 'Type your answer...';
-            this.isAnswering = false; // Reset flag for new word
-            console.log('✅ Input enabled and ready for answer');
-            // Do not force focus here to avoid interrupting TTS; users can start typing anytime
+            spellingInput.placeholder = 'Wait for timer...';
 
             // Hide feedback area
             const feedbackArea2 = document.getElementById('feedbackArea');
@@ -7002,10 +6450,9 @@ class QuizManager {
             this.hideLetterHint();  // Hide letter hint for new word
             this.delight?.clearFeedbackState();
             
-            // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
+            // ⏱️ Announce and start timer AFTER word announcement completes
+            // Input will be enabled when timer starts
             if (this.timerEnabled && this.quizStarted) {
-                console.log('⏸️ Pausing 800ms for mental processing before timer...');
-                await new Promise(resolve => setTimeout(resolve, 800));
                 await this.announceAndStartTimer();
             } else {
                 // If timer is disabled, enable input immediately
@@ -7140,7 +6587,6 @@ class QuizManager {
             // Show letter hint when user clicks "Honey Hint" button
             if (options.refresh) {
                 this.showLetterHint();
-                playThemedSound('hint-reveal');
                 
                 // Add bounce animation to definition
                 definitionElement.classList.remove('hint-bounce');
@@ -7225,9 +6671,6 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
-            // Play gentle tone before pronunciation
-            playThemedSound('pronounce-word');
-            
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
@@ -7258,21 +6701,20 @@ class QuizManager {
                         resolve();
                     };
                     // Prefer delight handler when available, otherwise speak directly
-                    // Just say the word once - it was already introduced in the announcement
                     if (this.delight && typeof this.delight.handlePronounce === 'function') {
                         try {
                             this.delight.handlePronounce(data, onDone);
                         } catch (e) {
                             console.warn('handlePronounce failed, falling back to direct TTS:', e);
-                            const phrase = data.word; // Just the word, no repetition
+                            const phrase = `Spell the word ${data.word}. ${data.word}.`;
                             this.soundboard && this.soundboard.speakWord ? this.soundboard.speakWord(phrase, onDone, rate) : this.speakDirectly(phrase, onDone, rate);
                         }
                     } else if (this.soundboard && typeof this.soundboard.speakWord === 'function') {
-                        const phrase = data.word; // Just the word, no repetition
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
                         this.soundboard.speakWord(phrase, onDone, rate);
                     } else {
                         // Direct speech synthesis fallback
-                        const phrase = data.word; // Just the word, no repetition
+                        const phrase = `Spell the word ${data.word}. ${data.word}.`;
                         this.speakDirectly(phrase, onDone, rate);
                     }
                 });
@@ -7421,7 +6863,6 @@ class QuizManager {
                 console.log('❌ INCORRECT - Halting auto-advance. Waiting for user to click Retry or Show Answer...');
                 // DON'T load next word - wait for user to make a choice via retry buttons
                 this.isAnswering = false;
-                // Note: Next Word button will be shown by showRetryUI if retry window closes
                 return;  // ⬅️ STOP HERE - DON'T CONTINUE
             }
             
@@ -7429,7 +6870,7 @@ class QuizManager {
             if (result.quiz_complete) {
                 console.log(`🏆 Quiz complete!`);
                 
-                // Small delay, then show all achievements and completion
+                // Small delay, then show all achievements
                 setTimeout(async () => {
                     // Show badges first (if any)
                     if (result.badges && result.badges.length > 0) {
@@ -7441,78 +6882,22 @@ class QuizManager {
                     // 🎯 Show level up modal (if leveled up)
                     if (result.level_up && result.level_up.leveled_up) {
                         console.log(`🎯 Level up detected!`);
-                        playThemedSound('level-up');
                         await this.showLevelUp(result.level_up);
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
                     
-                    // 🏁 Now get the final quiz summary and show completion
-                    console.log('🏁 Fetching final quiz summary for report card...');
-                    try {
-                        const summaryResponse = await fetch('/api/next', { 
-                            method: 'POST',
-                            credentials: 'same-origin'
-                        });
-                        const summaryData = await summaryResponse.json();
-                        
-                        if (summaryData.done && summaryData.summary) {
-                            this.showQuizComplete(summaryData.summary);
-                        } else {
-                            console.error('Expected quiz summary but got:', summaryData);
-                            BeeSmart.showError('Could not load quiz results. Please try refreshing.');
-                        }
-                    } catch (error) {
-                        console.error('Failed to fetch quiz summary:', error);
-                        BeeSmart.showError('Could not load quiz results. Please try refreshing.');
-                    }
+                    // After all modals shown, load next word (which will show completion if quiz is done)
+                    setTimeout(() => this.loadNextWord(), 800);
                 }, 1500);
             } else {
-                // Normal flow (CORRECT answer): Show definition and celebrations
-                if (!result.quiz_complete) {
-                    // Show word definition popup for educational value
-                    if (result.word_definition) {
-                        showWordDefinitionPopup(result.correct_spelling, result.word_definition);
-                    }
-                    
-                    // Show streak milestone celebration
-                    if (result.streak_milestone) {
-                        this.showStreakCelebration(result.streak_milestone);
-                    }
-                    
-                    // Play success sound
-                    if (this.soundboard && typeof this.soundboard.play === 'function') {
-                        this.soundboard.play('correct');
-                    }
-                    
-                    // CRITICAL: Reset isAnswering BEFORE setTimeout to allow new submissions
-                    this.isAnswering = false;
-                    
-                    // Auto-advance to next word after brief delay (1200ms for tighter response)
-                    console.log('✅ Correct answer - auto-advancing to next word in 1200ms');
-                    console.log('DEBUG: quizStarted =', this.quizStarted, ', timerEnabled =', this.timerEnabled);
-                    setTimeout(async () => {
-                        console.log('🔄 Loading next word now...');
-                        console.log('DEBUG: About to call loadNextWord(), quizStarted =', this.quizStarted);
-                        try {
-                            await this.loadNextWord();
-                            console.log('✅ Next word loaded successfully');
-                        } catch (err) {
-                            console.error('❌ ERROR in loadNextWord():', err);
-                            BeeSmart.showError('Failed to load next word. Please refresh the page.');
-                            // Show Next Word button as fallback
-                            this.showNextWordButton();
-                        }
-                    }, 1200);
-                } else {
-                    console.log('🏆 Quiz complete - skipping loadNextWord in normal flow');
-                }
+                // Normal flow (CORRECT answer): Add a small delay after speech finishes, then load next word
+                setTimeout(() => this.loadNextWord(), 800);
             }
             
         } catch (error) {
-            console.error('❌ submitAnswer error:', error);
-            console.error('Error details:', error.message, error.stack);
             BeeSmart.showError('Network error. Please try again.');
             this.enableInput();
+        } finally {
             this.isAnswering = false;
         }
     }
@@ -7565,8 +6950,8 @@ class QuizManager {
                 this.smartyBee.onCorrectAnswer();
             }
             
-            // Enhanced correct answer celebration
-            playThemedSound('correct');
+            // Play honey collection sound on correct answer
+            this.soundboard?.play('honey-collect');
             
             // Audio announcement - may include a separate name utterance after a short pause
             if (typeof audioAnnouncement === 'string') {
@@ -7580,20 +6965,6 @@ class QuizManager {
             // 🍯 Display animated points popup if points earned
             if (earnedPoints > 0) {
                 this.showPointsPopup(earnedPoints, breakdown);
-            }
-            
-            // 📚 Show educational word definition after a short delay
-            if (result.definition) {
-                setTimeout(() => {
-                    showWordDefinitionPopup(result.word || this.currentWordData?.word || '', result.definition);
-                }, 2000);
-            }
-            
-            // 🎉 Check for streak milestones and celebrate
-            if (result.streak_milestone) {
-                setTimeout(() => {
-                    showStreakCelebration(result.streak_milestone);
-                }, 2500);
             }
             
             // Visual explosion effect!
@@ -7635,19 +7006,9 @@ class QuizManager {
                     this.smartyBee.onIncorrectAnswer();
                 }
                 
-                // Enhanced incorrect answer feedback
-                playThemedSound('incorrect');
-                
                 // 🔊 ONLY speak the choice question, nothing else
                 console.log('🔊 Speaking: Would you like to retry?');
                 await this.speakAnnouncement('Would you like to retry this word? You have 10 seconds to choose.');
-                
-                // 📚 Show encouraging definition to help with retry
-                if (result.definition) {
-                    setTimeout(() => {
-                        showWordDefinitionPopup(correctWord, result.definition + " 💡 Don't worry - learning is all about trying!");
-                    }, 1500);
-                }
                 
                 // Start 10-second choice countdown
                 console.log('⏱️ Starting 10-second choice countdown...');
@@ -7735,16 +7096,13 @@ class QuizManager {
             sessionStatsBar.style.display = 'flex';
         }
 
-        // Update honey jar fill level based on QUIZ PROGRESSION (not correctness ratio)
-        // This ensures consistency with progress percentage display
+        // Update honey jar fill level based on progress
         const honeyLevel = document.getElementById('honeyLevel');
         if (honeyLevel && this.totalWords > 0) {
-            // Get current question number from progress text or calculate from correct+incorrect
-            const currentQuestion = (correct + incorrect);
-            const percentage = Math.min(100, Math.max(0, (currentQuestion / this.totalWords) * 100));
+            const percentage = Math.min(100, Math.max(0, (correct / this.totalWords) * 100));
             if (Number.isFinite(percentage)) {
                 honeyLevel.style.height = percentage + '%';
-                console.log(`🍯 Honey jar filled to ${percentage.toFixed(1)}% (${currentQuestion}/${this.totalWords} questions answered)`);
+                console.log(`🍯 Honey jar filled to ${percentage.toFixed(1)}% (${correct}/${this.totalWords})`);
             }
         }
 
@@ -7763,14 +7121,12 @@ class QuizManager {
             progressText.textContent = `Question ${current} of ${total}`;
         }
         
-        // Update percentage display to match honey jar logic (answered vs total)
-        // This ensures consistency between progress percentage and honey jar fill
+        // Update new percentage display
         const progressPercentage = document.getElementById('progressPercentage');
         if (progressPercentage && total > 0) {
-            // Use same calculation as honey jar: answered questions / total
-            const answered = current - 1; // Current is 1-based, so current-1 = answered
-            const percentage = Math.round((answered / total) * 100);
-            progressPercentage.textContent = `Progress: ${percentage}% (${answered} of ${total} words completed)`;
+            const percentage = Math.round(((current - 1) / total) * 100);
+            const completed = current - 1;
+            progressPercentage.textContent = `Progress: ${percentage}% (${completed} of ${total} words)`;
         }
     }
     
@@ -8207,156 +7563,6 @@ class QuizManager {
             console.error('Error skipping word:', error);
         }
     }
-    
-    showDefinition() {
-        console.log('📖 Show Definition button clicked');
-        console.log('Current word:', this.currentWord);
-        
-        if (!this.currentWord) {
-            this.showFeedback('📖 No word loaded yet.', 'error');
-            console.warn('No currentWord available');
-            return;
-        }
-        
-        // Check both definition and hint fields
-        const definition = this.currentWord.definition || this.currentWord.hint;
-        if (!definition) {
-            this.showFeedback('📖 No definition available for this word.', 'error');
-            console.warn('No definition found for word:', this.currentWord.word);
-            return;
-        }
-        
-        const defDisplay = document.getElementById('definitionDisplay');
-        if (defDisplay) {
-            // Hide the target word from the definition to avoid giving away the answer
-            const safeDefinition = hideTargetWord(definition, this.currentWord.word);
-            
-            defDisplay.innerHTML = `
-                <div class="definition-content">
-                    <h4 style="color: #5A2C15; margin: 0 0 0.5rem 0; font-size: 1.1rem;">📖 Definition</h4>
-                    <p style="margin: 0; color: #3E2723; line-height: 1.4;">${safeDefinition}</p>
-                </div>
-            `;
-            defDisplay.style.display = 'block';
-            
-            // Optional: Add slight animation
-            defDisplay.style.opacity = '0';
-            defDisplay.style.transform = 'translateY(10px)';
-            defDisplay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            
-            setTimeout(() => {
-                defDisplay.style.opacity = '1';
-                defDisplay.style.transform = 'translateY(0)';
-            }, 10);
-            
-            this.soundboard?.play('button-click');
-            console.log('✅ Definition displayed successfully');
-        } else {
-            console.error('definitionDisplay element not found');
-        }
-    }
-    
-    showSentence() {
-        console.log('📝 Show Sentence button clicked');
-        console.log('Current word:', this.currentWord);
-        
-        if (!this.currentWord) {
-            this.showFeedback('📝 No word loaded yet.', 'error');
-            console.warn('No currentWord available');
-            return;
-        }
-        
-        if (!this.currentWord.sentence) {
-            this.showFeedback('📝 No sentence available for this word.', 'error');
-            console.warn('No sentence found for word:', this.currentWord.word);
-            return;
-        }
-        
-        const defDisplay = document.getElementById('definitionDisplay');
-        if (defDisplay) {
-            // Hide the target word from the sentence to avoid giving away the answer
-            const safeSentence = hideTargetWord(this.currentWord.sentence, this.currentWord.word);
-            
-            defDisplay.innerHTML = `
-                <div class="sentence-content">
-                    <h4 style="color: #5A2C15; margin: 0 0 0.5rem 0; font-size: 1.1rem;">📝 Example Sentence</h4>
-                    <p style="margin: 0; color: #3E2723; line-height: 1.4; font-style: italic;">${safeSentence}</p>
-                </div>
-            `;
-            defDisplay.style.display = 'block';
-            
-            // Optional: Add slight animation
-            defDisplay.style.opacity = '0';
-            defDisplay.style.transform = 'translateY(10px)';
-            defDisplay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            
-            setTimeout(() => {
-                defDisplay.style.opacity = '1';
-                defDisplay.style.transform = 'translateY(0)';
-            }, 10);
-            
-            this.soundboard?.play('button-click');
-            console.log('✅ Sentence displayed successfully');
-        } else {
-            console.error('definitionDisplay element not found');
-        }
-    }
-    
-    toggleStat(statType, buttonElement) {
-        // Special case: 'all' hides the entire score display
-        if (statType === 'all') {
-            const scoreDisplay = document.querySelector('.score-display');
-            const toggleText = buttonElement.querySelector('.toggle-text');
-            
-            if (scoreDisplay && toggleText) {
-                const isHidden = scoreDisplay.style.display === 'none';
-                
-                if (isHidden) {
-                    // Show the entire stats section
-                    scoreDisplay.style.display = '';
-                    toggleText.textContent = 'Hide All Stats';
-                    buttonElement.classList.remove('stat-hidden');
-                } else {
-                    // Hide the entire stats section
-                    scoreDisplay.style.display = 'none';
-                    toggleText.textContent = 'Show All Stats';
-                    buttonElement.classList.add('stat-hidden');
-                }
-                
-                this.soundboard?.play('button-click');
-            }
-            return;
-        }
-        
-        // Individual stat toggles
-        const statElements = {
-            'correct': document.querySelector('.score-item .score-number.correct')?.parentElement,
-            'incorrect': document.querySelector('.score-item .score-number.incorrect')?.parentElement,
-            'streak': document.querySelector('.score-item .score-number.streak')?.parentElement,
-            'points': document.querySelector('.score-item .score-number.points')?.parentElement
-        };
-        
-        const statElement = statElements[statType];
-        const toggleText = buttonElement.querySelector('.toggle-text');
-        
-        if (statElement && toggleText) {
-            const isHidden = statElement.style.display === 'none';
-            
-            if (isHidden) {
-                // Show the stat
-                statElement.style.display = '';
-                toggleText.textContent = `Hide ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
-                buttonElement.classList.remove('stat-hidden');
-            } else {
-                // Hide the stat
-                statElement.style.display = 'none';
-                toggleText.textContent = `Show ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
-                buttonElement.classList.add('stat-hidden');
-            }
-            
-            this.soundboard?.play('button-click');
-        }
-    }
 
     async announceQuizEnding() {
         // Announce that the quiz has ended and report card is coming
@@ -8375,12 +7581,6 @@ class QuizManager {
         document.getElementById('quizCard').style.display = 'none';
         const completeDiv = document.getElementById('quizComplete');
         completeDiv.style.display = 'block';
-        
-        // Play completion sound
-        playThemedSound('word-complete');
-        
-        // Play completion sound
-        playThemedSound('word-complete');
 
         // Ensure no NaN values in summary
         const total = Number(summary.total) || 1; // Avoid division by zero
@@ -8401,10 +7601,6 @@ class QuizManager {
             gradeColor = '#2ecc71'; // Green
             gradeEmoji = '🌟';
             gradeMessage = 'Outstanding! You\'re a spelling superstar!';
-            // Extra celebration for perfect score
-            if (safePercentage === 100) {
-                setTimeout(() => playThemedSound('perfect-score'), 300);
-            }
         } else if (safePercentage >= 80) {
             letterGrade = 'B';
             gradeColor = '#3498db'; // Blue
@@ -8584,12 +7780,12 @@ class QuizManager {
                     </div>
                     <div class="fancy-stat-card gold">
                         <div class="stat-icon">🏆</div>
-                        <h3>${(Number(summary.session_points) || 0).toLocaleString()}</h3>
+                        <h3>${(Number(this.sessionPoints) || 0).toLocaleString()}</h3>
                         <p>Total Points</p>
                     </div>
                     <div class="fancy-stat-card purple">
                         <div class="stat-icon">🔥</div>
-                        <h3>${Number(summary.max_streak) || 0}</h3>
+                        <h3>${Number(this.maxStreak) || 0}</h3>
                         <p>Best Streak</p>
                     </div>
                 </div>
@@ -8833,32 +8029,6 @@ function pronounceWordFromReport(word) {
     }
 }
 
-// ✅ Register QuizManager on window for global access
-window.QuizManager = QuizManager;
-console.log('✅ QuizManager registered on window');
-
-// Toggle stats bar visibility
-function toggleStatsBar() {
-    const statsBar = document.getElementById('sessionStatsBar');
-    const toggleBtn = document.getElementById('statsToggleBtn');
-    
-    if (statsBar && toggleBtn) {
-        statsBar.classList.toggle('collapsed');
-        
-        // Update button title
-        if (statsBar.classList.contains('collapsed')) {
-            toggleBtn.title = 'Show stats bar';
-        } else {
-            toggleBtn.title = 'Hide stats bar';
-        }
-        
-        // Play button click sound if available
-        if (typeof playThemedSound === 'function') {
-            playThemedSound('button-click');
-        }
-    }
-}
-
 // Kid-friendly confirmation for back to menu
 function confirmBackToMenu(event) {
     event.preventDefault();
@@ -9098,13 +8268,6 @@ window.addEventListener('error', (event) => {
 // Call immediately on page load
 unlockiOSAudio();
 
-// ✅ Verify critical classes are defined
-console.log('📚 Class definitions check:', {
-    MorphController: typeof MorphController !== 'undefined' ? 'OK' : 'MISSING',
-    CountdownTimer: typeof CountdownTimer !== 'undefined' ? 'OK' : 'MISSING',
-    QuizManager: typeof QuizManager !== 'undefined' ? 'OK' : 'MISSING'
-});
-
 // Real-time live status polling (ensures header stays in sync even on tab focus changes)
 </script>
 <script>
@@ -9165,91 +8328,36 @@ document.addEventListener('visibilitychange', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+    try {
+    // 🎭 Initialize morphing controller
+    window.morphController = new MorphController('morphContainer');
     // DEBUG gated logging helper
     window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
+    debugLog('🎭 Morph controller initialized');
 
-    try {
-        // 🎭 Initialize morphing controller
-        if (typeof window.MorphController === 'undefined') {
-            console.error('🚨 CRITICAL: MorphController class not found - script load failed');
-            console.error('🔍 Diagnostic: Check for script errors above this line');
-            return;
-        }
-
-        // DISABLED: MorphController visualization (causing errors)
-        // const containerId = 'morphContainer';
-        // const containerEl = document.getElementById(containerId);
-        // if (!containerEl) {
-        //     console.error(`🚨 CRITICAL: #${containerId} not found in DOM`);
-        //     return;
-        // }
-
-        // window.morphController = new window.MorphController(containerId);
-        debugLog('🎭 Morph controller DISABLED (visualization removed)');
-
-        // Helper: Load and display Buzz Dust badge once
-        const loadBuzzDustBadge = async () => {
-            try {
-                const rankResponse = await fetch('/api/buzz-dust/info', {
-                    credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json' }
-                });
-
-                if (!rankResponse.ok) {
-                    debugLog('ℹ️ Buzz Dust badge not loaded (non-OK response)', rankResponse.status);
-                    return;
-                }
-
-                const contentType = rankResponse.headers.get('content-type') || '';
-                if (!contentType.includes('application/json')) {
-                    debugLog('ℹ️ Buzz Dust badge not loaded (non-JSON response)', contentType);
-                    return;
-                }
-
-                const rankData = await rankResponse.json();
-
-                const badgeImg = document.getElementById('quizHeaderBadge');
-                if (!badgeImg) {
-                    debugLog('ℹ️ quizHeaderBadge not found; skipping badge render');
-                    return;
-                }
-
-                const beeClass = rankData?.current_class;
-                if (!beeClass) {
-                    debugLog('ℹ️ No current_class returned; skipping badge render');
-                    return;
-                }
-
-                // Prefer the api-provided badge image; fall back to a sensible default
-                const raw = beeClass.badge_image || 'Novice.glb';
-                const badgeFileName = String(raw).replace(/\.glb$/i, '.png');
-
-                // Keep special-case correction (Elite -> Elete)
-                const correctedFileName =
-                    badgeFileName.toLowerCase() === 'elite.png' ? 'Elete.png' : badgeFileName;
-
-                badgeImg.src = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
-                badgeImg.alt = beeClass.label || 'Buzz Dust Badge';
-                badgeImg.title = `${beeClass.label || 'Badge'} - ${rankData?.total_buzz_dust ?? 0} Buzz Dust`;
-
+    // Helper: Load and display Buzz Dust badge once
+    const loadBuzzDustBadge = async () => {
+        try {
+            const rankResponse = await fetch('/api/buzz-dust/info', { credentials: 'same-origin' });
+            if (!rankResponse.ok) return;
+            const rankData = await rankResponse.json();
+            const badgeImg = document.getElementById('quizHeaderBadge');
+            if (badgeImg && rankData.current_class) {
+                const beeClass = rankData.current_class;
+                const badgeFileName = (beeClass.badge_image || 'Novice.glb').replace('.glb', '.png');
+                const correctedFileName = badgeFileName === 'Elite.png' ? 'Elete.png' : badgeFileName;
+                badgeImg.src = `/static/assets/badges/${correctedFileName}`;
+                badgeImg.alt = beeClass.label;
+                badgeImg.title = `${beeClass.label} - ${rankData.total_buzz_dust || 0} Buzz Dust`;
                 debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
-            } catch (rankError) {
-                console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
             }
-        };
-
-        // IMPORTANT: actually call it
-        await loadBuzzDustBadge();
-        
-        // Only instantiate BeeDelightManager if it exists
-        let delight = null;
-        if (typeof BeeDelightManager !== 'undefined') {
-            delight = new BeeDelightManager();
-            debugLog('✨ BeeDelightManager initialized');
-        } else {
-            console.warn('⚠️ BeeDelightManager not found (skipping).');
+        } catch (rankError) {
+            console.warn('⚠️ Failed to load Buzz Dust badge:', rankError);
         }
+    };
+    
+    const delight = new BeeDelightManager();
     
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
@@ -9281,9 +8389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
         // Render into mascot container using userAvatarLoader
-        // CRITICAL FIX: Pass null as avatarId (first param) to use user's registered avatar
-        // Second param is the containerId
-        await window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
+        await window.userAvatarLoader.loadUserAvatar('mascotBee3D');
         
         debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
         
@@ -9310,6 +8416,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('❌ Fallback avatar also failed:', fallbackError);
         }
     }
+    
+    // 🐝 Load and display Buzz Dust badge (deduplicated)
+    await loadBuzzDustBadge();
 
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
@@ -9346,8 +8455,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
             setTimeout(() => window.location.href = '/', 2800);
         });
-    } catch (initError) {
-        console.error('🚨 CRITICAL: initialization error in DOMContentLoaded handler:', initError);
+    } catch (error) {
+        console.error('🚨 Critical initialization error:', error);
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
             BeeSmart.showError('Quiz initialization failed. Redirecting to main menu...');
         } else {
@@ -9359,7 +8468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
-window.addEventListener('beforeunload', (event) => {
+window.addEventListener('beforeunload', async (event) => {
     // 🛑 CRITICAL: Stop all quiz activities before leaving
     console.log('🛑 Page unloading - stopping all quiz activities...');
     
@@ -9379,14 +8488,26 @@ window.addEventListener('beforeunload', (event) => {
         }
     }
     
-    // Save progress using sendBeacon (most reliable during unload)
-    const progressData = {
-        quizId: window.currentQuizId || null,
-        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
-    };
-    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
-    const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
-    console.log(sent ? '💾 Progress save sent via beacon' : '❌ Beacon send failed');
+    // Save progress
+    try {
+        // Use sendBeacon for reliable delivery even during page unload
+        const response = await fetch('/api/save-partial-progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            keepalive: true  // Ensures request completes even if page is closing
+        });
+        
+        if (response.ok) {
+            console.log('✅ Partial quiz progress saved');
+        }
+    } catch (error) {
+        // Use sendBeacon as fallback (more reliable during unload)
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon('/api/save-partial-progress', blob);
+        console.log('💾 Progress save sent via beacon');
+    }
 });
 
 // Also save when navigating away programmatically
@@ -9410,18 +8531,13 @@ window.addEventListener('pagehide', () => {
     }
     
     // Save progress via beacon
-    const progressData = {
-        quizId: window.currentQuizId || null,
-        progress: window.spellingQuiz ? window.spellingQuiz.getProgress() : null
-    };
-    const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
     navigator.sendBeacon('/api/save-partial-progress', blob);
     console.log('✅ Final cleanup complete');
 });
 
 // Themed avatar effects system for quiz
 function playThemedAvatarEffect(avatarId, container) {
-    if (!container) return;
     console.log('🎭 Playing themed effect for:', avatarId);
     
     // 🌟 ALWAYS apply 360-degree rotation first for all avatars!
@@ -9841,33 +8957,7 @@ function addThemedKeyframes(css) {
 }
 
 function playThemedSound(soundType) {
-    // ============================================================================
-    // SOUND EFFECTS SYSTEM - All 15 integrated sounds
-    // ============================================================================
-    // Quiz Feedback:
-    //   - correct.mp3: Played when answer is correct
-    //   - incorrect.mp3: Played when answer is incorrect  
-    //   - word-complete.mp3: Played when entire quiz finishes
-    //   - perfect-score.mp3: Extra celebration for 100% completion
-    //   - hint-reveal.mp3: Played when showing letter hints
-    //   - pronounce-word.mp3: Gentle tone before word pronunciation
-    //   - daily-streak.mp3: Celebration for streak milestones
-    //   - level-up.mp3: Played when player achieves new rank
-    //
-    // Menu & Interactions:
-    //   - intro-sound_1.mp3: Welcoming sound on menu page load
-    //   - button-click.mp3: Feedback for button/avatar clicks
-    //   - upload-success.mp3: Confirmation when word list uploads
-    //   - avatar-unlock.mp3: Special sound when unlocking new avatar
-    //
-    // Speed Round:
-    //   - speed-round-start.mp3: Energetic sound to start speed quiz
-    //   - timer-warning.mp3: Alert at 10 seconds remaining
-    //
-    // Optional (not yet used):
-    //   - bee-buzz.mp3: Ambient bee sound for transitions/hover effects
-    // ============================================================================
-    
+    // Sound playback for themed effects
     try {
         const audio = new Audio(`/static/sounds/${soundType}.mp3`);
         audio.volume = 0.3;
@@ -9878,495 +8968,6 @@ function playThemedSound(soundType) {
         // Ignore sound errors - effects work without sound
     }
 }
-
-// 📚 Enhanced Word Definition Popup System
-function showWordDefinitionPopup(word, definition) {
-    const modal = document.createElement('div');
-    modal.className = 'definition-modal';
-    modal.innerHTML = `
-        <div class="definition-overlay" onclick="this.parentElement.remove()">
-            <div class="definition-popup" onclick="event.stopPropagation()">
-                <div class="definition-header">
-                    <h3>📖 ${word.toUpperCase()}</h3>
-                    <button class="definition-close" onclick="this.closest('.definition-modal').remove()">×</button>
-                </div>
-                <div class="definition-content">
-                    <p>${definition}</p>
-                    <div class="definition-actions">
-                        <button class="btn btn-primary" onclick="this.closest('.definition-modal').remove()">
-                            Got it! 👍
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (modal.parentElement) {
-            modal.remove();
-        }
-    }, 10000);
-}
-
-// 🎉 Enhanced Streak Celebration System
-function showStreakCelebration(milestone) {
-    const celebration = document.createElement('div');
-    celebration.className = 'streak-celebration';
-    celebration.innerHTML = `
-        <div class="streak-overlay">
-            <div class="streak-popup">
-                <div class="streak-icon">🔥</div>
-                <h2>${milestone.title}</h2>
-                <p>${milestone.message}</p>
-                <div class="streak-sparkles">✨✨✨</div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(celebration);
-    
-    // Play celebration sound
-    playThemedSound('daily-streak');
-    
-    // Add particle effects
-    createStreakParticles(celebration.querySelector('.streak-popup'));
-    
-    // Auto-remove after 4 seconds
-    setTimeout(() => {
-        if (celebration.parentElement) {
-            celebration.remove();
-        }
-    }, 4000);
-}
-
-// ✨ Particle Effects for Celebrations
-function createStreakParticles(container) {
-    for (let i = 0; i < 20; i++) {
-        const particle = document.createElement('div');
-        particle.style.cssText = `
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #FFD700;
-            border-radius: 50%;
-            pointer-events: none;
-            animation: particleFloat 2s ease-out forwards;
-            left: ${Math.random() * 100}%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            animation-delay: ${Math.random() * 0.5}s;
-        `;
-        container.appendChild(particle);
-        
-        // Remove particle after animation
-        setTimeout(() => particle.remove(), 2500);
-    }
-}
-
-// 📱 Daily Login Reward System
-async function checkDailyLoginReward() {
-    try {
-        const response = await fetch('/api/daily-reward', {
-            method: 'POST',
-            credentials: 'same-origin'
-        });
-        const data = await response.json();
-        
-        if (data.success && data.reward) {
-            showDailyReward(data.reward);
-        }
-    } catch (error) {
-        console.log('Daily reward check failed:', error);
-    }
-}
-
-function showDailyReward(reward) {
-    const modal = document.createElement('div');
-    modal.className = 'daily-reward-modal';
-    modal.innerHTML = `
-        <div class="daily-overlay">
-            <div class="daily-popup">
-                <div class="daily-icon">🎁</div>
-                <h2>Daily Login Bonus!</h2>
-                <p>Welcome back! You earned:</p>
-                <div class="reward-amount">+${reward.reward} 🍯</div>
-                <p class="streak-info">${reward.streak_days} day streak!</p>
-                <button class="btn btn-primary" onclick="this.closest('.daily-reward-modal').remove()">
-                    Awesome! 🎉
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    playThemedSound('daily_reward');
-    
-    setTimeout(() => {
-        if (modal.parentElement) {
-            modal.remove();
-        }
-    }, 8000);
-}
-
-// 🌟 Word of the Day Feature
-async function loadWordOfTheDay() {
-    try {
-        const response = await fetch('/api/word-of-day');
-        const data = await response.json();
-        
-        if (data.word) {
-            showWordOfTheDay(data);
-        }
-    } catch (error) {
-        console.log('Word of the day unavailable:', error);
-    }
-}
-
-function showWordOfTheDay(wordData) {
-    const banner = document.createElement('div');
-    banner.className = 'word-of-day-banner';
-    banner.innerHTML = `
-        <div class="word-banner-content">
-            <span class="word-icon">⭐</span>
-            <span class="word-text">Word of the Day: <strong>${wordData.word}</strong></span>
-            <span class="word-bonus">+${wordData.bonus_points} bonus!</span>
-            <button class="banner-close" onclick="this.parentElement.remove()">×</button>
-        </div>
-    `;
-    
-    document.body.appendChild(banner);
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-        if (banner.parentElement) {
-            banner.remove();
-        }
-    }, 10000);
-}
-</script>
-
-<style>
-/* 📚 Definition Modal Styles */
-.definition-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10000;
-}
-
-.definition-overlay {
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.definition-popup {
-    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-    border-radius: 20px;
-    max-width: 500px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: popupSlideIn 0.3s ease-out;
-}
-
-.definition-header {
-    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    color: #333;
-    padding: 15px 20px;
-    border-radius: 20px 20px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.definition-header h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: bold;
-}
-
-.definition-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #333;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-.definition-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.definition-content {
-    padding: 20px;
-    text-align: center;
-}
-
-.definition-content p {
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin-bottom: 20px;
-    color: #333;
-}
-
-.definition-actions button {
-    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.definition-actions button:hover {
-    transform: scale(1.05);
-}
-
-/* 🎉 Streak Celebration Styles */
-.streak-celebration {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10001;
-    pointer-events: none;
-}
-
-.streak-overlay {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.streak-popup {
-    background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-    color: white;
-    padding: 30px;
-    border-radius: 25px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(255, 107, 53, 0.4);
-    animation: streakBounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
-    overflow: hidden;
-}
-
-.streak-icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
-    animation: fireFlicker 1s infinite alternate;
-}
-
-.streak-popup h2 {
-    font-size: 1.8rem;
-    margin: 10px 0;
-    font-weight: bold;
-}
-
-.streak-popup p {
-    font-size: 1.1rem;
-    margin: 10px 0;
-}
-
-.streak-sparkles {
-    font-size: 1.5rem;
-    margin-top: 15px;
-    animation: sparkle 1.5s infinite;
-}
-
-/* 🎁 Daily Reward Styles */
-.daily-reward-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10000;
-}
-
-.daily-overlay {
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.daily-popup {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 40px;
-    border-radius: 25px;
-    text-align: center;
-    max-width: 400px;
-    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
-    animation: dailySlideUp 0.5s ease-out;
-}
-
-.daily-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    animation: giftBounce 2s infinite;
-}
-
-.reward-amount {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin: 20px 0;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.streak-info {
-    color: #FFD700;
-    font-weight: bold;
-    margin-bottom: 25px;
-}
-
-/* 🌟 Word of the Day Banner */
-.word-of-day-banner {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    animation: bannerSlideIn 0.5s ease-out;
-}
-
-.word-banner-content {
-    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-    color: #333;
-    padding: 12px 20px;
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
-    font-weight: bold;
-}
-
-.word-icon {
-    font-size: 1.2rem;
-}
-
-.word-bonus {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-}
-
-.banner-close {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    color: #333;
-    margin-left: 10px;
-}
-
-/* Animations */
-@keyframes popupSlideIn {
-    from {
-        transform: scale(0.7) translateY(-50px);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes streakBounceIn {
-    from {
-        transform: scale(0) rotate(-180deg);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1) rotate(0deg);
-        opacity: 1;
-    }
-}
-
-@keyframes fireFlicker {
-    0% { transform: scale(1) rotate(-1deg); }
-    100% { transform: scale(1.1) rotate(1deg); }
-}
-
-@keyframes sparkle {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-@keyframes particleFloat {
-    to {
-        transform: translate(-50%, -150px) scale(0);
-        opacity: 0;
-    }
-}
-
-@keyframes dailySlideUp {
-    from {
-        transform: translateY(100px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes giftBounce {
-    0%, 20%, 60%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    80% { transform: translateY(-5px); }
-}
-
-@keyframes bannerSlideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-</style>
-
-<script>
-// Initialize new features on page load
-document.addEventListener('DOMContentLoaded', () => {
-    // Check for daily login reward
-    if (typeof current_user !== 'undefined' && current_user && current_user.id) {
-        checkDailyLoginReward();
-    }
-    
-    // Load word of the day
-    loadWordOfTheDay();
-});
 </script>
 <!-- Removed duplicate quizAvatarContainer and legacy render script.
      The quiz now relies solely on the primary mascot container #mascotBee3D
