@@ -11498,7 +11498,15 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
+<<<<<<< HEAD
                 // Guest 3D carousel initialization
+=======
+                // Revert to original non-3D guest carousel for this page
+                if (typeof initGuestAvatarCarousel === 'function') {
+                    initGuestAvatarCarousel();
+                    return false;
+                }
+>>>>>>> parent of 627fd5f (Carousel: enforce 3D-only (no PNG/2D fallback); remove initGuestAvatarCarousel call and PNG fallback)
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
@@ -11623,9 +11631,9 @@
 
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
-                    console.warn('GLTFLoader not available - skipping 3D guest carousel');
-                    // Do not render PNG/2D fallback
-                    return false;
+                    console.warn('GLTFLoader not available - using fallback');
+                    createCarouselFallback(canvasWrap);
+                    return;
                 }
 
                 const loader = new THREE.GLTFLoader();
@@ -15184,6 +15192,7 @@
                     window._guestCarouselTimer = null;
                 }
                 
+                // Restore original behavior: attempt 3D first, then fallback to 2D carousel
                 let used3D = false;
                 if (typeof initGuestAvatar3DCarousel === 'function') {
                     used3D = !!initGuestAvatar3DCarousel();
