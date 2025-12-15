@@ -4336,7 +4336,43 @@
                 // Ensure Quiz button works reliably
                 document.addEventListener('DOMContentLoaded', function() {
                     const quickBtn = document.getElementById('quickStartQuizBtn');
-                    const startBtn = document.getElementById('startQuizBtn');
+                    // Ensure a slow, constant auto-rotation just like the original carousel
+                    // This uses the existing avatar controller API without changing assets or UI.
+                    (function(){
+                        let __autoRotateRAF = null;
+                        const ROTATE_DEGREES_PER_FRAME = 0.05; // ~3 deg/sec at 60fps (slow and consistent)
+
+                        function stopConstantRotate(){
+                            if(__autoRotateRAF){
+                                cancelAnimationFrame(__autoRotateRAF);
+                                __autoRotateRAF = null;
+                            }
+                        }
+
+                        function loop(){
+                            // Use the safe helper so we never throw if controller isn't ready yet
+                            try {
+                                safeAvatarRotate(ROTATE_DEGREES_PER_FRAME, true);
+                            } catch(_e) { /* controller not ready yet; keep looping */ }
+                            __autoRotateRAF = requestAnimationFrame(loop);
+                        }
+
+                        function startConstantSlowRotate(){
+                            // Prevent duplicate loops
+                            stopConstantRotate();
+                            // Mark auto-rotate on for UI indicators if present
+                            try { if (window.avatarControlState) { window.avatarControlState.autoRotate = true; } } catch(_e){}
+                            __autoRotateRAF = requestAnimationFrame(loop);
+                        }
+
+                        // Expose minimal API for other scripts (optional)
+                        window.startConstantSlowRotate = startConstantSlowRotate;
+                        window.stopConstantRotate = stopConstantRotate;
+
+                        // Start rotation immediately on DOM ready
+                        startConstantSlowRotate();
+                    })();
+                });
                     function gotoQuiz() {
                         try {
                             if (typeof startQuiz === 'function') { startQuiz(); return; }
@@ -5426,6 +5462,15 @@
 
             // Install kid-friendly click FX on main actions
             installClickFx();
+
+            // Initialize guest 3D GLB carousel with rotation
+            try {
+                if (typeof initGuestAvatar3DCarousel === 'function') {
+                    initGuestAvatar3DCarousel();
+                }
+            } catch(e) {
+                console.warn('initGuestAvatar3DCarousel failed:', e);
+            }
 
             // Gate certain features for guests
             try {
