@@ -9249,8 +9249,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
         .then(response => response.json())
         .then(data => {
+            const params = new URLSearchParams(window.location.search);
+            const autostart = params.get('autostart') === '1';
+            const seed = params.get('seed') === '1';
+
             if (!data.words || data.words.length === 0) {
-                BeeSmart.showError('No words loaded for the quiz!');
+                // Optional dev convenience: auto-seed sample words when ?seed=1
+                if (seed) {
+                    console.log('🌱 Seeding sample words for quick start...');
+                    const sample = [
+                        'apple','book','happy','school','friend',
+                        'music','family','garden','puzzle','story'
+                    ];
+                    fetch('/api/upload-manual-words', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ words: sample })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res && res.ok) {
+                            console.log('✅ Sample words seeded. Reloading quiz...');
+                            const next = new URL(window.location.href);
+                            // ensure autostart on return; keep seed only for this run
+                            next.searchParams.set('autostart', '1');
+                            next.searchParams.delete('seed');
+                            window.location.replace(next.toString());
+                        } else {
+                            console.warn('❌ Failed to seed sample words:', res);
+                            BeeSmart.showError('No words loaded. Please upload a list from the main menu.');
+                            setTimeout(() => window.location.href = '/', 2800);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('❌ Seed request failed:', err);
+                        BeeSmart.showError('No words loaded. Please upload a list from the main menu.');
+                        setTimeout(() => window.location.href = '/', 2800);
+                    });
+                    return;
+                }
+
+                // Default behavior: guide user back to upload
+                BeeSmart.showError('No words loaded for the quiz! Please upload or choose a list.');
                 setTimeout(() => window.location.href = '/', 2800);
                 return;
             }
