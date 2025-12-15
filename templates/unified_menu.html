@@ -4336,11 +4336,23 @@
                 // Ensure Quiz button works reliably
                 document.addEventListener('DOMContentLoaded', function() {
                     const quickBtn = document.getElementById('quickStartQuizBtn');
-                    // Ensure a slow, constant auto-rotation just like the original carousel
+                    // Ensure a slow, constant auto-rotation with morph-at-180 behavior
                     // This uses the existing avatar controller API without changing assets or UI.
                     (function(){
                         let __autoRotateRAF = null;
                         const ROTATE_DEGREES_PER_FRAME = 0.05; // ~3 deg/sec at 60fps (slow and consistent)
+                        const MORPH_THRESHOLD_DEGREES = 180;   // morph to next avatar at half turn
+                        let accumulatedDeg = 0;
+
+                        function getNextAvatarKey(currentKey){
+                            try {
+                                const keys = Object.keys(AVATAR_PERSONAS);
+                                const idx = Math.max(0, keys.indexOf(currentKey));
+                                return keys[(idx + 1) % keys.length];
+                            } catch(_) {
+                                return currentKey;
+                            }
+                        }
 
                         function stopConstantRotate(){
                             if(__autoRotateRAF){
@@ -4353,6 +4365,19 @@
                             // Use the safe helper so we never throw if controller isn't ready yet
                             try {
                                 safeAvatarRotate(ROTATE_DEGREES_PER_FRAME, true);
+                                accumulatedDeg += ROTATE_DEGREES_PER_FRAME;
+                                if (accumulatedDeg >= MORPH_THRESHOLD_DEGREES) {
+                                    accumulatedDeg = 0;
+                                    // Determine next avatar and morph
+                                    const nextKey = getNextAvatarKey(CURRENT_AVATAR_KEY);
+                                    CURRENT_AVATAR_KEY = nextKey;
+                                    const nextCfg = AVATAR_PERSONAS[nextKey];
+                                    if (nextCfg && typeof window.setCurrentAvatar === 'function') {
+                                        try {
+                                            window.setCurrentAvatar(nextCfg.id);
+                                        } catch(e){ console.warn('Morph to next avatar failed', e); }
+                                    }
+                                }
                             } catch(_e) { /* controller not ready yet; keep looping */ }
                             __autoRotateRAF = requestAnimationFrame(loop);
                         }
@@ -4360,6 +4385,7 @@
                         function startConstantSlowRotate(){
                             // Prevent duplicate loops
                             stopConstantRotate();
+                            accumulatedDeg = 0;
                             // Mark auto-rotate on for UI indicators if present
                             try { if (window.avatarControlState) { window.avatarControlState.autoRotate = true; } } catch(_e){}
                             __autoRotateRAF = requestAnimationFrame(loop);
