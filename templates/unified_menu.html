@@ -4397,10 +4397,13 @@
                                                 host.style.opacity = '0';
                                             }
 
+                                            // Attempt to clear/reset current model to prevent residual first avatar
+                                            try { safeAvatarReset(); } catch(_){ /* ignore */ }
+
                                             // Swap to next avatar
                                             window.setCurrentAvatar(nextCfg.id);
 
-                                            // Fade back in after a short delay (allow loader/scene swap)
+                                            // Fade back in after a slightly longer delay (allow loader/scene swap)
                                             setTimeout(() => {
                                                 if (host) {
                                                     host.style.opacity = '1';
@@ -4408,7 +4411,7 @@
                                                     host.classList.add('morph-pulse-once');
                                                     setTimeout(() => host.classList.remove('morph-pulse-once'), 600);
                                                 }
-                                            }, 180);
+                                            }, 260);
                                         } catch(e){ console.warn('Morph to next avatar failed', e); }
                                     }
                                 }
