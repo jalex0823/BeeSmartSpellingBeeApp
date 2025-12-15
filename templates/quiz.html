@@ -9286,6 +9286,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// 🐝 Quick start helper for backward compatibility and deep links
+// Allows other pages or tests to programmatically start the quiz without relying on button clicks
+// Platform-aware: uses Skip on iOS (no voice) to avoid autoplay restrictions; uses Start on Android/others
+window.quickStartQuiz = function() {
+    try {
+        const qm = window.quizManager;
+        if (!qm) {
+            console.warn('quickStartQuiz: quizManager not ready yet');
+        }
+
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isIOS) {
+            // Prefer triggering the skip button to unlock flow without voice gesture
+            const skipBtn = document.getElementById('skipVoiceBtn');
+            if (skipBtn) {
+                skipBtn.click();
+                return;
+            }
+            // Fallback: directly start without voice
+            if (qm) {
+                const feedbackArea = document.getElementById('feedbackArea');
+                if (feedbackArea) feedbackArea.style.display = 'none';
+                qm.voiceUnlocked = true;
+                qm.quizStarted = true;
+                qm.loadNextWordWithIntro();
+                return;
+            }
+        } else {
+            const startBtn = document.getElementById('startQuizBtn');
+            if (startBtn) {
+                startBtn.click();
+                return;
+            }
+            // Fallback: start immediately
+            if (qm) {
+                const feedbackArea = document.getElementById('feedbackArea');
+                if (feedbackArea) feedbackArea.style.display = 'none';
+                qm.quizStarted = true;
+                qm.loadNextWordWithIntro();
+                return;
+            }
+        }
+        console.warn('quickStartQuiz: UI not ready to start');
+    } catch (e) {
+        console.warn('quickStartQuiz failed:', e);
+    }
+};
+
+// 🔗 Optional autostart via URL parameter: /quiz?autostart=1
+// Wait briefly to ensure DOM nodes exist before attempting programmatic start
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('autostart') === '1') {
+            setTimeout(() => {
+                window.quickStartQuiz();
+            }, 600);
+        }
+    } catch (e) {
+        console.warn('autostart handler error:', e);
+    }
+});
+
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
 window.addEventListener('beforeunload', (event) => {
