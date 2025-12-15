@@ -5463,6 +5463,22 @@
             // Install kid-friendly click FX on main actions
             installClickFx();
 
+            // Crest/logo morphing: restore gentle, periodic morph transitions
+            try {
+                const el = document.getElementById('morph-badge-logo');
+                if (el) {
+                    const variants = ['morph-spin','morph-flip','morph-bounce','morph-swish','morph-sparkle','morph-pulse'];
+                    let idx = 0;
+                    const cycle = () => {
+                        variants.forEach(v => el.classList.remove(v));
+                        el.classList.add(variants[idx % variants.length]);
+                        idx++;
+                    };
+                    cycle();
+                    setInterval(cycle, 6000);
+                }
+            } catch(_) {}
+
             // Initialize guest 3D GLB carousel with rotation
             try {
                 if (typeof initGuestAvatar3DCarousel === 'function') {
