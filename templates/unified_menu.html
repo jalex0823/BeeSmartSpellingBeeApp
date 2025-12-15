@@ -747,8 +747,8 @@
         
         /* FINAL CONTAINER SIZE - Responsive avatar container */
         div#mascotBee3D {
-            width: 280px !important; /* INCREASED: Larger avatar (was 140px) */
-            height: 280px !important; /* INCREASED: Larger avatar (was 140px) */
+            width: 360px !important; /* Larger avatar */
+            height: 360px !important; /* Larger avatar */
             margin: 0 auto !important;
             position: relative !important;
             transform: translateY(10px) !important; /* MOVED DOWN: less than before */
@@ -760,8 +760,8 @@
             overflow: visible !important;
             pointer-events: auto !important; /* enable clicks for interaction */
             /* Match guest carousel vibrant background */
-            background: rgba(255,255,255,0.5) !important;
-            border-radius: 16px !important;
+            background: rgba(255,255,255,0.6) !important;
+            border-radius: 18px !important;
             box-shadow: 0 10px 22px rgba(0,0,0,0.12) !important;
         }
 
@@ -3092,9 +3092,9 @@
 
         /* 3. Optimized container - adopt picker preview sizing; the 3D canvas fills the frame */
         #mascotBee3D {
-            transform: translateY(-6px);      /* slight lift */
-            width: 100%;                      /* fill the preview container */
-            height: 100%;
+            transform: translateY(-4px);      /* slight lift */
+            width: min(420px, 90vw);          /* larger but responsive */
+            height: min(420px, 70vh);
             margin: 0 auto;                   /* centered within preview box */
             position: relative;
             display: flex;
