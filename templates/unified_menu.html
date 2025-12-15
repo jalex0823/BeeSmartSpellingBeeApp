@@ -748,12 +748,12 @@
         
         /* FINAL CONTAINER SIZE - Responsive avatar container */
         div#mascotBee3D {
-            width: 360px !important; /* Larger avatar */
-            height: 360px !important; /* Larger avatar */
+            width: 480px !important; /* Larger avatar - increased from 360px */
+            height: 480px !important; /* Larger avatar - increased from 360px */
             margin: 0 auto !important;
             position: relative !important;
             transform: translateY(10px) !important; /* MOVED DOWN: less than before */
-            transition: transform 0.3s ease !important;
+            transition: transform 0.3s ease, opacity 400ms ease-out !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -977,6 +977,19 @@
             }
             50% {
                 box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.5), inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+        }
+        
+        @keyframes avatar-morph-pulse {
+            0% {
+                transform: translateY(10px) scale(1);
+            }
+            50% {
+                transform: translateY(10px) scale(1.08);
+                box-shadow: 0 15px 35px rgba(255, 165, 0, 0.4);
+            }
+            100% {
+                transform: translateY(10px) scale(1);
             }
         }
         
@@ -18036,9 +18049,14 @@
             const container = document.getElementById('mascotBee3D') || document.getElementById('avatarControls3D');
             
             if (container && controller && controller.bee) {
+                // Add pulse animation
+                container.style.animation = 'avatar-morph-pulse 0.6s ease-in-out';
+                
                 // Fade out current avatar
-                container.style.transition = 'opacity 400ms ease-out';
-                container.style.opacity = '0';
+                setTimeout(() => {
+                    container.style.transition = 'opacity 400ms ease-out';
+                    container.style.opacity = '0';
+                }, 200); // Start fade after pulse begins
                 
                 // Wait for fade out, then change avatar and fade in
                 setTimeout(() => {
@@ -18050,13 +18068,19 @@
                         window.setCurrentAvatar(nextAvatarId);
                     }
                     
-                    // Fade in new avatar
+                    // Fade in new avatar with pulse
                     setTimeout(() => {
                         container.style.opacity = '1';
+                        container.style.animation = 'avatar-morph-pulse 0.6s ease-in-out';
                     }, 50);
                     
+                    // Clear animation after completion
+                    setTimeout(() => {
+                        container.style.animation = '';
+                    }, 700);
+                    
                     currentIndex++;
-                }, 400); // Match fade-out duration
+                }, 600); // Match pulse + fade-out duration
             } else {
                 // Fallback without fade if container not found
                 const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
