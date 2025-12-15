@@ -4403,15 +4403,34 @@
                                             // Swap to next avatar
                                             window.setCurrentAvatar(nextCfg.id);
 
-                                            // Fade back in after a slightly longer delay (allow loader/scene swap)
-                                            setTimeout(() => {
-                                                if (host) {
-                                                    host.style.opacity = '1';
-                                                    // Brief pulse to emphasize morph
-                                                    host.classList.add('morph-pulse-once');
-                                                    setTimeout(() => host.classList.remove('morph-pulse-once'), 600);
+                                            // Fade back in only when avatar is ready, with fallback timeout
+                                            (function fadeInWhenReady(hostEl){
+                                                const start = performance.now();
+                                                const MAX_WAIT_MS = 1200;
+                                                const CHECK_MS = 60;
+                                                function isReady(){
+                                                    try {
+                                                        const c = getAvatarController();
+                                                        if (!c) return false;
+                                                        if (c.isReady === true) return true;
+                                                        const sceneChildren = c.scene && c.scene.children ? c.scene.children.length : 0;
+                                                        return sceneChildren > 0;
+                                                    } catch(_){ return false; }
                                                 }
-                                            }, 260);
+                                                function tryFade(){
+                                                    const elapsed = performance.now() - start;
+                                                    if (isReady() || elapsed >= MAX_WAIT_MS){
+                                                        if (hostEl) {
+                                                            hostEl.style.opacity = '1';
+                                                            hostEl.classList.add('morph-pulse-once');
+                                                            setTimeout(() => hostEl.classList.remove('morph-pulse-once'), 600);
+                                                        }
+                                                    } else {
+                                                        setTimeout(tryFade, CHECK_MS);
+                                                    }
+                                                }
+                                                tryFade();
+                                            })(host);
                                         } catch(e){ console.warn('Morph to next avatar failed', e); }
                                     }
                                 }
