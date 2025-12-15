@@ -3451,6 +3451,24 @@
                         position: relative;
                     ">
                         <div class="rank-logo-pulse-glow"></div>
+                        
+                        <!-- Novice Swarm Container (Hidden by default, shown for Novice Bee) -->
+                        <div id="novice-swarm-container" style="display:none; position:absolute; inset:0; z-index:3; pointer-events:none;">
+                            <!-- Spread out swarm of bees -->
+                            <div class="swarm-bee" style="top: 20%; left: 20%; animation-delay: 0s;"></div>
+                            <div class="swarm-bee" style="top: 25%; left: 70%; animation-delay: 0.5s;"></div>
+                            <div class="swarm-bee" style="top: 60%; left: 30%; animation-delay: 1s;"></div>
+                            <div class="swarm-bee" style="top: 55%; left: 75%; animation-delay: 1.5s;"></div>
+                            <div class="swarm-bee" style="top: 40%; left: 50%; animation-delay: 0.2s;"></div>
+                            <div class="swarm-bee" style="top: 75%; left: 45%; animation-delay: 0.7s;"></div>
+                            <div class="swarm-bee" style="top: 15%; left: 55%; animation-delay: 1.2s;"></div>
+                            <div class="swarm-bee" style="top: 80%; left: 25%; animation-delay: 1.7s;"></div>
+                            <div class="swarm-bee" style="top: 35%; left: 85%; animation-delay: 0.3s;"></div>
+                            <div class="swarm-bee" style="top: 65%; left: 15%; animation-delay: 0.8s;"></div>
+                            <div class="swarm-bee" style="top: 50%; left: 10%; animation-delay: 1.3s;"></div>
+                            <div class="swarm-bee" style="top: 10%; left: 40%; animation-delay: 1.8s;"></div>
+                        </div>
+
                         <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
                         <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
                     </div>
@@ -3471,6 +3489,34 @@
                 </div>
                 
                 <style>
+                    /* Swarm Bee CSS */
+                    .swarm-bee {
+                        position: absolute;
+                        width: 10px;
+                        height: 10px;
+                        background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
+                        border-radius: 50%;
+                        box-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+                        animation: swarmFloat 3s ease-in-out infinite;
+                    }
+                    .swarm-bee::before, .swarm-bee::after {
+                        content: '';
+                        position: absolute;
+                        top: -4px;
+                        width: 6px;
+                        height: 8px;
+                        background: rgba(255, 255, 255, 0.8);
+                        border-radius: 50%;
+                        animation: wingFlutter 0.15s linear infinite;
+                    }
+                    .swarm-bee::before { left: -3px; transform: rotate(-30deg); }
+                    .swarm-bee::after { right: -3px; transform: rotate(30deg); }
+
+                    @keyframes swarmFloat {
+                        0%, 100% { transform: translate(0, 0); }
+                        50% { transform: translate(3px, -4px); }
+                    }
+
                     /*  SPARKLING FAIRY DUST ANIMATIONS  */
                     
                     /* Ticker shimmer animation */
@@ -17427,23 +17473,35 @@
                     
                     // Update morphing badge/logo container with same badge
                     const morphImg = document.getElementById('morph-badge-logo');
+                    const swarmContainer = document.getElementById('novice-swarm-container');
+                    const isNovice = (data.current_class.label === 'Novice Bee');
+
+                    if (swarmContainer) {
+                        swarmContainer.style.display = isNovice ? 'block' : 'none';
+                    }
+
                     if (morphImg) {
-                        // Store badge and crest URLs for morphing
-                        window._badgeUrl = `/static/assets/badges/${pngFile}`;
-                        window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
-                        
-                        // Set initial image to badge (not crest)
-                        morphImg.src = window._badgeUrl;
-                        
-                        // Start morphing animation (guard if function missing)
-                        if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
-                            initBadgeLogoMorphing();
-                            window._morphingInitialized = true;
-                            console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
-                        } else if (window._morphingInitialized) {
-                            console.log(' [TICKER] Morphing already initialized, badge URL updated');
+                        if (isNovice) {
+                            morphImg.style.display = 'none';
                         } else {
-                            console.warn(' [TICKER] initBadgeLogoMorphing not available');
+                            morphImg.style.display = 'block';
+                            // Store badge and crest URLs for morphing
+                            window._badgeUrl = `/static/assets/badges/${pngFile}`;
+                            window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
+                            
+                            // Set initial image to badge (not crest)
+                            morphImg.src = window._badgeUrl;
+                            
+                            // Start morphing animation (guard if function missing)
+                            if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
+                                initBadgeLogoMorphing();
+                                window._morphingInitialized = true;
+                                console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
+                            } else if (window._morphingInitialized) {
+                                console.log(' [TICKER] Morphing already initialized, badge URL updated');
+                            } else {
+                                console.warn(' [TICKER] initBadgeLogoMorphing not available');
+                            }
                         }
                     }
                 } else if (!badgeEl) {
