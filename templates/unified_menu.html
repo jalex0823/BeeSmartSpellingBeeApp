@@ -2137,7 +2137,7 @@
         /* Action buttons */
         .action-buttons {
             display: flex;
-            flex-direction: column; /* stack buttons vertically */
+            flex-direction: row; /* align buttons horizontally on desktop */
             gap: clamp(0.6rem, 1vw, 1rem);
             padding: 0;
             background: transparent;
@@ -2147,16 +2147,17 @@
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
+            justify-content: center;
         }
         .action-buttons button {
             pointer-events: auto !important; /* Ensure all buttons are clickable */
         }
         
         .action-btn {
-            flex: 0 0 auto;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
+            flex: 1 1 0;
+            width: auto;
+            max-width: none;
+            min-width: 220px; /* ensure consistent minimum width */
             padding: clamp(1.1rem, 1vw + 0.8rem, 1.6rem) clamp(1rem, 1vw + 0.4rem, 1.5rem);
             margin-left: 0;
             margin-right: 0;
@@ -2172,7 +2173,7 @@
             gap: 0.75rem;
             position: relative;
             overflow: hidden;
-            min-height: clamp(60px, 4vw + 48px, 78px);
+            min-height: 68px; /* standardize button height */
             text-align: center;
             word-wrap: break-word;
             white-space: normal;
@@ -2456,10 +2457,13 @@
             }
             
             /* Mobile button sizing */
+            .action-buttons { flex-direction: column; }
             .action-btn {
                 padding: 1.25rem 2rem;
                 font-size: 1rem;
                 min-height: 56px;
+                width: 100%;
+                min-width: 0; /* allow full-width stack on mobile */
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: rgba(255, 105, 180, 0.3);
             }
@@ -3990,8 +3994,6 @@
                                      Dashboard
                                 </a>
                                 <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
-                                    height: 54px;
-                                    padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                                     color: #5A2C15;
                                     border-radius: 14px;
@@ -4004,7 +4006,6 @@
                                     justify-content: center;
                                     border: 2px solid rgba(255, 215, 0, 0.6);
                                     cursor: pointer;
-                                    flex: 1;
                                     text-align: center;
                                     white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 215, 0, 0.5)'"
@@ -4331,6 +4332,26 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
+                <script>
+                // Ensure Quiz button works reliably
+                document.addEventListener('DOMContentLoaded', function() {
+                    const quickBtn = document.getElementById('quickStartQuizBtn');
+                    const startBtn = document.getElementById('startQuizBtn');
+                    function gotoQuiz() {
+                        try {
+                            if (typeof startQuiz === 'function') { startQuiz(); return; }
+                            if (typeof showRandomPlayInterface === 'function') { showRandomPlayInterface(); return; }
+                            // Fallback: navigate to quiz route if available
+                            window.location.href = '/quiz';
+                        } catch(e) {
+                            window.location.href = '/quiz';
+                        }
+                    }
+                    if (quickBtn) quickBtn.addEventListener('click', gotoQuiz);
+                    // Start button becomes enabled when wordbank ready; also wire fallback
+                    if (startBtn) startBtn.addEventListener('click', function(){ if(!this.disabled) gotoQuiz(); });
+                });
+                </script>
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title=" Save your word list with definitions">
                      Export List
                 </button>
