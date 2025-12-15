@@ -17993,11 +17993,11 @@
         // If controller supports it, enable/disable auto-rotation
         if (controller && controller.bee) {
             if (avatarControlState.autoRotate) {
-                // Start auto-rotation animation
+                // Start auto-rotation animation (slower speed)
                 function autoRotateLoop() {
                     if (!avatarControlState.autoRotate) return;
                     if (controller.bee) {
-                        controller.bee.rotation.y += 0.003;
+                        controller.bee.rotation.y += 0.001; // Reduced from 0.003 to 0.001 for slower rotation
                     }
                     requestAnimationFrame(autoRotateLoop);
                 }
@@ -18011,7 +18011,7 @@
         return avatarControlState.autoRotate;
     }
     
-    // Avatar morphing carousel - cycles through different avatar models
+    // Avatar morphing carousel - cycles through different avatar models with fade transitions
     function startAvatarMorphCarousel() {
         // Clear any existing timer
         if (window._avatarMorphTimer) {
@@ -18032,19 +18032,46 @@
         const morphToNext = () => {
             if (!avatarControlState.autoRotate) return;
             
-            const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
-            console.log('🔄 Morphing to:', nextAvatarId);
+            const controller = getAvatarController();
+            const container = document.getElementById('mascotBee3D') || document.getElementById('avatarControls3D');
             
-            // Update via setCurrentAvatar to trigger full avatar change
-            if (typeof window.setCurrentAvatar === 'function') {
-                window.setCurrentAvatar(nextAvatarId);
+            if (container && controller && controller.bee) {
+                // Fade out current avatar
+                container.style.transition = 'opacity 400ms ease-out';
+                container.style.opacity = '0';
+                
+                // Wait for fade out, then change avatar and fade in
+                setTimeout(() => {
+                    const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
+                    console.log('🔄 Morphing to:', nextAvatarId);
+                    
+                    // Update via setCurrentAvatar to trigger full avatar change
+                    if (typeof window.setCurrentAvatar === 'function') {
+                        window.setCurrentAvatar(nextAvatarId);
+                    }
+                    
+                    // Fade in new avatar
+                    setTimeout(() => {
+                        container.style.opacity = '1';
+                    }, 50);
+                    
+                    currentIndex++;
+                }, 400); // Match fade-out duration
+            } else {
+                // Fallback without fade if container not found
+                const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
+                console.log('🔄 Morphing to:', nextAvatarId);
+                
+                if (typeof window.setCurrentAvatar === 'function') {
+                    window.setCurrentAvatar(nextAvatarId);
+                }
+                
+                currentIndex++;
             }
-            
-            currentIndex++;
         };
         
-        // Change avatar every 3.5 seconds
-        window._avatarMorphTimer = setInterval(morphToNext, 3500);
+        // Change avatar every 4 seconds (increased from 3.5s for smoother transitions)
+        window._avatarMorphTimer = setInterval(morphToNext, 4000);
         
         // Start with first avatar
         morphToNext();
