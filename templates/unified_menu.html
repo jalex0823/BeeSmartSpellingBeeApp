@@ -11685,12 +11685,25 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
+                // Optional override to FORCE 3D even on constrained devices
+                const params = new URLSearchParams(window.location.search);
+                const force3dParam = params.get('force3d');
+                if (force3dParam === '1') {
+                    try { localStorage.setItem('bee_force3d', '1'); } catch(_) {}
+                } else if (force3dParam === '0') {
+                    try { localStorage.removeItem('bee_force3d'); } catch(_) {}
+                }
+                const force3d = (() => {
+                    try { return localStorage.getItem('bee_force3d') === '1'; } catch(_) { return false; }
+                })();
                 // Guest 3D carousel initialization
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
-                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-                if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
+                if (!force3d) {
+                    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+                    if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
+                }
 
                 // Prevent multiple initialization
                 if (window._guest3DCarouselInitialized) return false;
