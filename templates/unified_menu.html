@@ -5261,19 +5261,30 @@
                 if (!this.isEnabled) return;
 
                 // Add temporary bee particles to the element - realistic swarm scatter
-                for (let i = 0; i < 8; i++) {
+                for (let i = 0; i < 12; i++) { // Increased count
                     const particle = document.createElement('div');
                     particle.className = 'bee-particle';
-                    // Start from more central position (30-70% range)
-                    particle.style.left = (30 + Math.random() * 40) + '%';
-                    particle.style.top = (30 + Math.random() * 40) + '%';
-                    // Highly varied distances (100px to 400px) for scattered swarm effect
-                    const distance = 100 + Math.random() * 300;
+                    
+                    // Start from random position within the element (10-90% range)
+                    particle.style.left = (10 + Math.random() * 80) + '%';
+                    particle.style.top = (10 + Math.random() * 80) + '%';
+                    
+                    // Highly varied distances (150px to 500px) for wider scatter
+                    const distance = 150 + Math.random() * 350;
                     const angle = Math.random() * Math.PI * 2; // Random direction
+                    
+                    // Add some Z-axis randomness if supported by CSS
+                    const z = (Math.random() - 0.5) * 200;
+                    
                     particle.style.setProperty('--particle-x', Math.cos(angle) * distance + 'px');
                     particle.style.setProperty('--particle-y', Math.sin(angle) * distance + 'px');
+                    
                     // Vary animation duration for more organic movement
-                    particle.style.animationDuration = (0.6 + Math.random() * 0.4) + 's';
+                    particle.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
+                    
+                    // Randomize size slightly
+                    const scale = 0.8 + Math.random() * 0.6;
+                    particle.style.transform = `scale(${scale})`;
                     
                     element.style.position = 'relative';
                     element.appendChild(particle);
@@ -5283,7 +5294,7 @@
                         if (particle.parentNode) {
                             particle.parentNode.removeChild(particle);
                         }
-                    }, 1000);
+                    }, 1400);
                 }
             }
 
