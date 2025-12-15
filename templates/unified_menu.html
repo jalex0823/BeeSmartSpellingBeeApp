@@ -1946,6 +1946,11 @@
             }
         }
 
+        /* Morph pulse effect for avatar container */
+        .morph-pulse-once {
+            animation: pulseGlow 550ms ease-in-out 1;
+        }
+
         @keyframes highlightFlash {
             0%, 100% {
                 background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
@@ -4375,6 +4380,12 @@
                                     if (nextCfg && typeof window.setCurrentAvatar === 'function') {
                                         try {
                                             window.setCurrentAvatar(nextCfg.id);
+                                            // Trigger a brief pulse on the avatar container to emphasize morph
+                                            const host = document.getElementById('mascotBee3D');
+                                            if (host) {
+                                                host.classList.add('morph-pulse-once');
+                                                setTimeout(() => host.classList.remove('morph-pulse-once'), 600);
+                                            }
                                         } catch(e){ console.warn('Morph to next avatar failed', e); }
                                     }
                                 }
