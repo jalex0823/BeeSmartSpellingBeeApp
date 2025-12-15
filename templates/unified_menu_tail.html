@@ -1,0 +1,11 @@
+        if (window.audioContext && window.audioContext.state === 'suspended') {
+            window.audioContext.resume();
+        }
+        // Also check for soundboard context if it exists
+        if (window.soundboard && window.soundboard.context && window.soundboard.context.state === 'suspended') {
+            window.soundboard.context.resume();
+        }
+    }, { passive: true, once: true });
+    </script>
+</body>
+</html>

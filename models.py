@@ -163,6 +163,11 @@ class User(UserMixin, db.Model):
         
         # Get GLB filename from obj_file field (legacy naming)
         glb_filename = avatar.obj_file if avatar.obj_file else "MascotBee.glb"
+        
+        # Force .glb extension if it's .obj (fix for legacy database values)
+        if glb_filename and glb_filename.lower().endswith('.obj'):
+            glb_filename = glb_filename[:-4] + '.glb'
+            
         model_path = f"{base_path}/{glb_filename}"
         
         # Derive thumbnail from GLB filename (database thumbnail_file is outdated)

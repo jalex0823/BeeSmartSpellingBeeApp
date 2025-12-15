@@ -33,11 +33,10 @@
     <!-- Avatar Intro FX System -->
     <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
-    <!-- LOCAL VENDOR FILES - No CDN tracking prevention issues -->
-    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js CDN failed')"></script>
     
     <!-- Three.js Loaders - Must load after Three.js core -->
-    <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js" onerror="console.warn('GLTFLoader CDN failed'); window.GLTF_LOADER_FAILED = true;"></script>
     <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
     <!-- Expose model base path for OBJ/MTL/texture assets -->
     <script>
@@ -748,12 +747,12 @@
         
         /* FINAL CONTAINER SIZE - Responsive avatar container */
         div#mascotBee3D {
-            width: 480px !important; /* Larger avatar - increased from 360px */
-            height: 480px !important; /* Larger avatar - increased from 360px */
+            width: 280px !important; /* INCREASED: Larger avatar (was 140px) */
+            height: 280px !important; /* INCREASED: Larger avatar (was 140px) */
             margin: 0 auto !important;
             position: relative !important;
             transform: translateY(10px) !important; /* MOVED DOWN: less than before */
-            transition: transform 0.3s ease, opacity 400ms ease-out !important;
+            transition: transform 0.3s ease !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -761,8 +760,8 @@
             overflow: visible !important;
             pointer-events: auto !important; /* enable clicks for interaction */
             /* Match guest carousel vibrant background */
-            background: rgba(255,255,255,0.6) !important;
-            border-radius: 18px !important;
+            background: rgba(255,255,255,0.5) !important;
+            border-radius: 16px !important;
             box-shadow: 0 10px 22px rgba(0,0,0,0.12) !important;
         }
 
@@ -977,19 +976,6 @@
             }
             50% {
                 box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.5), inset 0 2px 8px rgba(0, 0, 0, 0.2);
-            }
-        }
-        
-        @keyframes avatar-morph-pulse {
-            0% {
-                transform: translateY(10px) scale(1);
-            }
-            50% {
-                transform: translateY(10px) scale(1.08);
-                box-shadow: 0 15px 35px rgba(255, 165, 0, 0.4);
-            }
-            100% {
-                transform: translateY(10px) scale(1);
             }
         }
         
@@ -1960,11 +1946,6 @@
             }
         }
 
-        /* Morph pulse effect for avatar container */
-        .morph-pulse-once {
-            animation: pulseGlow 550ms ease-in-out 1;
-        }
-
         @keyframes highlightFlash {
             0%, 100% {
                 background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
@@ -2156,7 +2137,7 @@
         /* Action buttons */
         .action-buttons {
             display: flex;
-            flex-direction: row; /* align buttons horizontally on desktop */
+            flex-direction: column; /* stack buttons vertically */
             gap: clamp(0.6rem, 1vw, 1rem);
             padding: 0;
             background: transparent;
@@ -2166,25 +2147,23 @@
             width: 100%;
             margin: 0 auto;
             box-sizing: border-box;
-            justify-content: center;
         }
         .action-buttons button {
             pointer-events: auto !important; /* Ensure all buttons are clickable */
         }
         
         .action-btn {
-            flex: 1 1 0;
-            width: auto;
-            max-width: none;
-            min-width: 220px; /* ensure consistent minimum width */
-            /* Normalize padding across variants for equal visual height */
-            padding: 1rem 1.2rem;
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            padding: clamp(1.1rem, 1vw + 0.8rem, 1.6rem) clamp(1rem, 1vw + 0.4rem, 1.5rem);
             margin-left: 0;
             margin-right: 0;
             border: none;
             border-radius: clamp(20px, 1vw + 18px, 26px); /* Match tile radius responsively */
             font-weight: 600;
-            font-size: 1rem;
+            font-size: clamp(1rem, 1vw + 0.85rem, 1.15rem);
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -2193,22 +2172,13 @@
             gap: 0.75rem;
             position: relative;
             overflow: hidden;
-            min-height: 56px; /* standardize button height */
+            min-height: clamp(60px, 4vw + 48px, 78px);
             text-align: center;
             word-wrap: break-word;
             white-space: normal;
-            line-height: 1.2;
+            line-height: 1.4;
             box-sizing: border-box;
             margin-bottom: 0;
-        }
-
-        /* Ensure variant classes don't change dimensions within action section */
-        section.action-buttons .action-btn.primary,
-        section.action-buttons .action-btn.secondary,
-        section.action-buttons .action-btn.info {
-            padding: 1rem 1.2rem !important;
-            font-size: 1rem !important;
-            line-height: 1.2 !important;
         }
 
         /* Keep button effects inside the white panel */
@@ -2486,13 +2456,10 @@
             }
             
             /* Mobile button sizing */
-            .action-buttons { flex-direction: column; }
             .action-btn {
                 padding: 1.25rem 2rem;
                 font-size: 1rem;
                 min-height: 56px;
-                width: 100%;
-                min-width: 0; /* allow full-width stack on mobile */
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: rgba(255, 105, 180, 0.3);
             }
@@ -3121,9 +3088,9 @@
 
         /* 3. Optimized container - adopt picker preview sizing; the 3D canvas fills the frame */
         #mascotBee3D {
-            transform: translateY(-4px);      /* slight lift */
-            width: min(420px, 90vw);          /* larger but responsive */
-            height: min(420px, 70vh);
+            transform: translateY(-6px);      /* slight lift */
+            width: 100%;                      /* fill the preview container */
+            height: 100%;
             margin: 0 auto;                   /* centered within preview box */
             position: relative;
             display: flex;
@@ -3135,8 +3102,6 @@
             pointer-events: auto;
             background: transparent !important;
             border: none !important;
-            opacity: 1;                        /* for crossfade */
-            transition: opacity 240ms ease;    /* smooth fade during morph */
         }
 
         /* keep canvas filling the space and perfectly centered with enhanced detail */
@@ -3841,27 +3806,6 @@
                     <span>Kid-Safe Content</span>
                 </div>
             </section>
-
-            <!-- Centralized click handling for auth-gated tiles to avoid inline Jinja in onclick -->
-            <script>
-            document.addEventListener('DOMContentLoaded', function(){
-                try {
-                    const tiles = document.querySelectorAll('.menu-container .menu-option[data-feature]');
-                    tiles.forEach(function(tile){
-                        const feature = tile.getAttribute('data-feature');
-                        const lockMsg = tile.getAttribute('data-lockmsg') || 'Premium Feature';
-                        tile.addEventListener('click', function(){
-                            try { if (window.kidSounds && typeof kidSounds.playRandomEffect === 'function') kidSounds.playRandomEffect(); } catch(e){}
-                            if (window.IS_AUTH) {
-                                try { if (typeof selectOption === 'function') selectOption(feature, tile); } catch(e){}
-                            } else {
-                                try { if (typeof showLockedFeature === 'function') showLockedFeature(lockMsg); } catch(e){}
-                            }
-                        }, { passive: true });
-                    });
-                } catch(e) { console.warn('Tile binding failed', e); }
-            });
-            </script>
             
             <!-- Safety Message - Centered Between Button and Title -->
             <section class="menu-container" style="padding: 0.5rem 2rem;">
@@ -4046,6 +3990,8 @@
                                      Dashboard
                                 </a>
                                 <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
+                                    height: 54px;
+                                    padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                                     color: #5A2C15;
                                     border-radius: 14px;
@@ -4058,6 +4004,7 @@
                                     justify-content: center;
                                     border: 2px solid rgba(255, 215, 0, 0.6);
                                     cursor: pointer;
+                                    flex: 1;
                                     text-align: center;
                                     white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 215, 0, 0.5)'"
@@ -4309,7 +4256,7 @@
                 </div>
 
                 <!-- Upload Image -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="image" data-lockmsg="Image Upload" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
+                <div id="tileImageUpload" class="menu-option theme-ocean {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('image', this){% else %}showLockedFeature('Image Upload'){% endif %}" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4331,7 +4278,7 @@
                 </div>
 
                 <!-- Saved Word Lists -->
-                <div id="tileSavedLists" class="menu-option theme-lavender {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="saved" data-lockmsg="Saved Word Lists" onmouseover="kidSounds.playBuzz()" title="{% if current_user.is_authenticated %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
+                <div id="tileSavedLists" class="menu-option theme-lavender {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('saved', this){% else %}showLockedFeature('Saved Word Lists'){% endif %}" onmouseover="kidSounds.playBuzz()" title="{% if current_user.is_authenticated %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4354,7 +4301,7 @@
                 </div>
 
                 <!-- Battle of the Bees -->
-                <div id="tileBattle" class="menu-option theme-battle {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Compete with classmates in an epic spelling battle!{% else %} Sign in to unlock multiplayer battles!{% endif %}">
+                <div id="tileBattle" class="menu-option theme-battle {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('battle', this){% else %}showLockedFeature('Battle of the Bees'){% endif %}" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Compete with classmates in an epic spelling battle!{% else %} Sign in to unlock multiplayer battles!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4368,7 +4315,7 @@
                 </div>
 
                 <!-- Speed Round Challenge -->
-                <div id="tileSpeedRound" class="menu-option theme-lightning {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="speed" data-lockmsg="Speed Round Challenge" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
+                <div id="tileSpeedRound" class="menu-option theme-lightning {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('speed', this){% else %}showLockedFeature('Speed Round Challenge'){% endif %}" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4384,129 +4331,6 @@
 
             <!-- Action buttons -->
             <section class="action-buttons">
-                <script>
-                // Ensure Quiz button works reliably
-                document.addEventListener('DOMContentLoaded', function() {
-                    const quickBtn = document.getElementById('quickStartQuizBtn');
-                    // Ensure a slow, constant auto-rotation with morph-at-180 behavior
-                    // This uses the existing avatar controller API without changing assets or UI.
-                    (function(){
-                        let __autoRotateRAF = null;
-                        const ROTATE_DEGREES_PER_FRAME = 0.05; // ~3 deg/sec at 60fps (slow and consistent)
-                        const MORPH_THRESHOLD_DEGREES = 180;   // morph to next avatar at half turn
-                        let accumulatedDeg = 0;
-
-                        function getNextAvatarKey(currentKey){
-                            try {
-                                const keys = Object.keys(AVATAR_PERSONAS);
-                                const idx = Math.max(0, keys.indexOf(currentKey));
-                                return keys[(idx + 1) % keys.length];
-                            } catch(_) {
-                                return currentKey;
-                            }
-                        }
-
-                        function stopConstantRotate(){
-                            if(__autoRotateRAF){
-                                cancelAnimationFrame(__autoRotateRAF);
-                                __autoRotateRAF = null;
-                            }
-                        }
-
-                        function loop(){
-                            // Use the safe helper so we never throw if controller isn't ready yet
-                            try {
-                                safeAvatarRotate(ROTATE_DEGREES_PER_FRAME, true);
-                                accumulatedDeg += ROTATE_DEGREES_PER_FRAME;
-                                if (accumulatedDeg >= MORPH_THRESHOLD_DEGREES) {
-                                    accumulatedDeg = 0;
-                                    // Determine next avatar and morph
-                                    const nextKey = getNextAvatarKey(CURRENT_AVATAR_KEY);
-                                    CURRENT_AVATAR_KEY = nextKey;
-                                    const nextCfg = AVATAR_PERSONAS[nextKey];
-                                    if (nextCfg && typeof window.setCurrentAvatar === 'function') {
-                                        try {
-                                            const host = document.getElementById('mascotBee3D');
-                                            if (host) {
-                                                // Fade out current avatar before morph to avoid overlap
-                                                host.style.opacity = '0';
-                                            }
-
-                                            // Attempt to clear/reset current model to prevent residual first avatar
-                                            try { safeAvatarReset(); } catch(_){ /* ignore */ }
-
-                                            // Swap to next avatar
-                                            window.setCurrentAvatar(nextCfg.id);
-
-                                            // Fade back in only when avatar is ready, with fallback timeout
-                                            (function fadeInWhenReady(hostEl){
-                                                const start = performance.now();
-                                                const MAX_WAIT_MS = 1200;
-                                                const CHECK_MS = 60;
-                                                function isReady(){
-                                                    try {
-                                                        const c = getAvatarController();
-                                                        if (!c) return false;
-                                                        if (c.isReady === true) return true;
-                                                        const sceneChildren = c.scene && c.scene.children ? c.scene.children.length : 0;
-                                                        return sceneChildren > 0;
-                                                    } catch(_){ return false; }
-                                                }
-                                                function tryFade(){
-                                                    const elapsed = performance.now() - start;
-                                                    if (isReady() || elapsed >= MAX_WAIT_MS){
-                                                        if (hostEl) {
-                                                            hostEl.style.opacity = '1';
-                                                            hostEl.classList.add('morph-pulse-once');
-                                                            setTimeout(() => hostEl.classList.remove('morph-pulse-once'), 600);
-                                                        }
-                                                    } else {
-                                                        setTimeout(tryFade, CHECK_MS);
-                                                    }
-                                                }
-                                                tryFade();
-                                            })(host);
-                                        } catch(e){ console.warn('Morph to next avatar failed', e); }
-                                    }
-                                }
-                            } catch(_e) { /* controller not ready yet; keep looping */ }
-                            __autoRotateRAF = requestAnimationFrame(loop);
-                        }
-
-                        function startConstantSlowRotate(){
-                            // Prevent duplicate loops
-                            stopConstantRotate();
-                            accumulatedDeg = 0;
-                            // Mark auto-rotate on for UI indicators if present
-                            try { if (window.avatarControlState) { window.avatarControlState.autoRotate = true; } } catch(_e){}
-                            __autoRotateRAF = requestAnimationFrame(loop);
-                        }
-
-                        // Expose minimal API for other scripts (optional)
-                        window.startConstantSlowRotate = startConstantSlowRotate;
-                        window.stopConstantRotate = stopConstantRotate;
-
-                        // Start rotation immediately on DOM ready
-                        startConstantSlowRotate();
-                    })();
-                    // Wire quiz buttons inside DOM ready to ensure elements exist
-                    function gotoQuiz() {
-                        try {
-                            if (typeof startQuiz === 'function') { startQuiz(); return; }
-                            if (typeof showRandomPlayInterface === 'function') { showRandomPlayInterface(); return; }
-                            // Fallback: navigate to quiz route if available
-                            window.location.href = '/quiz';
-                        } catch(e) {
-                            window.location.href = '/quiz';
-                        }
-                    }
-                    const quickBtn2 = document.getElementById('quickStartQuizBtn');
-                    if (quickBtn2) quickBtn2.addEventListener('click', gotoQuiz);
-                    // Optional: support a generic Start button if present
-                    const startBtn = document.getElementById('startBtn');
-                    if (startBtn) startBtn.addEventListener('click', function(){ if(!this.disabled) gotoQuiz(); });
-                });
-                </script>
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title=" Save your word list with definitions">
                      Export List
                 </button>
@@ -5261,30 +5085,19 @@
                 if (!this.isEnabled) return;
 
                 // Add temporary bee particles to the element - realistic swarm scatter
-                for (let i = 0; i < 12; i++) { // Increased count
+                for (let i = 0; i < 8; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'bee-particle';
-                    
-                    // Start from random position within the element (10-90% range)
-                    particle.style.left = (10 + Math.random() * 80) + '%';
-                    particle.style.top = (10 + Math.random() * 80) + '%';
-                    
-                    // Highly varied distances (150px to 500px) for wider scatter
-                    const distance = 150 + Math.random() * 350;
+                    // Start from more central position (30-70% range)
+                    particle.style.left = (30 + Math.random() * 40) + '%';
+                    particle.style.top = (30 + Math.random() * 40) + '%';
+                    // Highly varied distances (100px to 400px) for scattered swarm effect
+                    const distance = 100 + Math.random() * 300;
                     const angle = Math.random() * Math.PI * 2; // Random direction
-                    
-                    // Add some Z-axis randomness if supported by CSS
-                    const z = (Math.random() - 0.5) * 200;
-                    
                     particle.style.setProperty('--particle-x', Math.cos(angle) * distance + 'px');
                     particle.style.setProperty('--particle-y', Math.sin(angle) * distance + 'px');
-                    
                     // Vary animation duration for more organic movement
-                    particle.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
-                    
-                    // Randomize size slightly
-                    const scale = 0.8 + Math.random() * 0.6;
-                    particle.style.transform = `scale(${scale})`;
+                    particle.style.animationDuration = (0.6 + Math.random() * 0.4) + 's';
                     
                     element.style.position = 'relative';
                     element.appendChild(particle);
@@ -5294,7 +5107,7 @@
                         if (particle.parentNode) {
                             particle.parentNode.removeChild(particle);
                         }
-                    }, 1400);
+                    }, 1000);
                 }
             }
 
@@ -5592,31 +5405,6 @@
 
             // Install kid-friendly click FX on main actions
             installClickFx();
-
-            // Crest/logo morphing: restore gentle, periodic morph transitions
-            try {
-                const el = document.getElementById('morph-badge-logo');
-                if (el) {
-                    const variants = ['morph-spin','morph-flip','morph-bounce','morph-swish','morph-sparkle','morph-pulse'];
-                    let idx = 0;
-                    const cycle = () => {
-                        variants.forEach(v => el.classList.remove(v));
-                        el.classList.add(variants[idx % variants.length]);
-                        idx++;
-                    };
-                    cycle();
-                    setInterval(cycle, 6000);
-                }
-            } catch(_) {}
-
-            // Initialize guest 3D GLB carousel with rotation
-            try {
-                if (typeof initGuestAvatar3DCarousel === 'function') {
-                    initGuestAvatar3DCarousel();
-                }
-            } catch(e) {
-                console.warn('initGuestAvatar3DCarousel failed:', e);
-            }
 
             // Gate certain features for guests
             try {
@@ -11710,25 +11498,11 @@
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
-                // Optional override to FORCE 3D even on constrained devices
-                const params = new URLSearchParams(window.location.search);
-                const force3dParam = params.get('force3d');
-                if (force3dParam === '1') {
-                    try { localStorage.setItem('bee_force3d', '1'); } catch(_) {}
-                } else if (force3dParam === '0') {
-                    try { localStorage.removeItem('bee_force3d'); } catch(_) {}
-                }
-                const force3d = (() => {
-                    try { return localStorage.getItem('bee_force3d') === '1'; } catch(_) { return false; }
-                })();
-                // Guest 3D carousel initialization
                 if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
                 if (!window.WebGLRenderingContext) return false;
                 // Respect reduced motion and low-memory devices
-                if (!force3d) {
-                    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-                    if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
-                }
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+                if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
 
                 // Prevent multiple initialization
                 if (window._guest3DCarouselInitialized) return false;
@@ -15394,12 +15168,14 @@
                     window._guestCarouselTimer = null;
                 }
                 
-                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
+                let used3D = false;
                 if (typeof initGuestAvatar3DCarousel === 'function') {
-                    const ok = !!initGuestAvatar3DCarousel();
-                    console.log('[Avatar] 3D carousel initialized:', ok);
-                } else {
-                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                    used3D = !!initGuestAvatar3DCarousel();
+                    console.log('[Avatar] 3D carousel initialized:', used3D);
+                }
+                if (!used3D && typeof initGuestAvatarCarousel === 'function') {
+                    initGuestAvatarCarousel();
+                    console.log('[Avatar] 2D carousel initialized as fallback');
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
@@ -17869,6 +17645,7 @@
             return null;
         }
     }
+```
 
     function safeAvatarSpin360() {
         const controller = getAvatarController();
@@ -18007,108 +17784,22 @@
                 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' : '';
         }
         
-        // Clear any existing morph timer
-        if (window._avatarMorphTimer) {
-            clearInterval(window._avatarMorphTimer);
-            window._avatarMorphTimer = null;
-        }
-        
         // If controller supports it, enable/disable auto-rotation
         if (controller && controller.bee) {
             if (avatarControlState.autoRotate) {
-                // Start auto-rotation animation (slower speed)
+                // Start auto-rotation animation
                 function autoRotateLoop() {
                     if (!avatarControlState.autoRotate) return;
                     if (controller.bee) {
-                        controller.bee.rotation.y += 0.001; // Reduced from 0.003 to 0.001 for slower rotation
+                        controller.bee.rotation.y += 0.003;
                     }
                     requestAnimationFrame(autoRotateLoop);
                 }
                 autoRotateLoop();
-                
-                // Start avatar morphing carousel
-                startAvatarMorphCarousel();
             }
         }
         
         return avatarControlState.autoRotate;
-    }
-    
-    // Avatar morphing carousel - cycles through different avatar models with fade transitions
-    function startAvatarMorphCarousel() {
-        // Clear any existing timer
-        if (window._avatarMorphTimer) {
-            clearInterval(window._avatarMorphTimer);
-        }
-        
-        // Build list of all avatar IDs
-        const avatarIds = Object.keys(AVATAR_PERSONAS).map(key => AVATAR_PERSONAS[key].id);
-        
-        // Shuffle for variety
-        for (let i = avatarIds.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [avatarIds[i], avatarIds[j]] = [avatarIds[j], avatarIds[i]];
-        }
-        
-        let currentIndex = 0;
-        
-        const morphToNext = () => {
-            if (!avatarControlState.autoRotate) return;
-            
-            const controller = getAvatarController();
-            const container = document.getElementById('mascotBee3D') || document.getElementById('avatarControls3D');
-            
-            if (container && controller && controller.bee) {
-                // Add pulse animation
-                container.style.animation = 'avatar-morph-pulse 0.6s ease-in-out';
-                
-                // Fade out current avatar
-                setTimeout(() => {
-                    container.style.transition = 'opacity 400ms ease-out';
-                    container.style.opacity = '0';
-                }, 200); // Start fade after pulse begins
-                
-                // Wait for fade out, then change avatar and fade in
-                setTimeout(() => {
-                    const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
-                    console.log('🔄 Morphing to:', nextAvatarId);
-                    
-                    // Update via setCurrentAvatar to trigger full avatar change
-                    if (typeof window.setCurrentAvatar === 'function') {
-                        window.setCurrentAvatar(nextAvatarId);
-                    }
-                    
-                    // Fade in new avatar with pulse
-                    setTimeout(() => {
-                        container.style.opacity = '1';
-                        container.style.animation = 'avatar-morph-pulse 0.6s ease-in-out';
-                    }, 50);
-                    
-                    // Clear animation after completion
-                    setTimeout(() => {
-                        container.style.animation = '';
-                    }, 700);
-                    
-                    currentIndex++;
-                }, 600); // Match pulse + fade-out duration
-            } else {
-                // Fallback without fade if container not found
-                const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
-                console.log('🔄 Morphing to:', nextAvatarId);
-                
-                if (typeof window.setCurrentAvatar === 'function') {
-                    window.setCurrentAvatar(nextAvatarId);
-                }
-                
-                currentIndex++;
-            }
-        };
-        
-        // Change avatar every 4 seconds (increased from 3.5s for smoother transitions)
-        window._avatarMorphTimer = setInterval(morphToNext, 4000);
-        
-        // Start with first avatar
-        morphToNext();
     }
     
     // Setup touch gestures for main avatar

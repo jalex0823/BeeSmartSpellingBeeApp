@@ -3096,14 +3096,14 @@ async function loadSampleWords() {
     }
 }
 
-// Kick off preflight on DOM ready
-document.addEventListener('DOMContentLoaded', async () => {
-    const ok = await preflightQuiz();
-    if (!ok) return;
-    // IMPORTANT: Don't call loadNextWord() here - QuizManager constructor shows intro first
-    // The intro will call loadNextWordWithIntro() after user interaction
-    console.log('✅ Quiz preflight completed - QuizManager will handle intro and first word');
-});
+// Kick off preflight on DOM ready - DISABLED to avoid race condition with main listener
+// document.addEventListener('DOMContentLoaded', async () => {
+//     const ok = await preflightQuiz();
+//     if (!ok) return;
+//     // IMPORTANT: Don't call loadNextWord() here - QuizManager constructor shows intro first
+//     // The intro will call loadNextWordWithIntro() after user interaction
+//     console.log('✅ Quiz preflight completed - QuizManager will handle intro and first word');
+// });
 </script>
 {% endblock %}
 
@@ -4649,6 +4649,7 @@ class BeeDelightManager {
 
 class QuizManager {
     constructor(options = {}) {
+        console.log('🏗️ QuizManager constructor called');
         this.delight = options.delight || null;
         this.smartyBee = options.smartyBee || null;
         this.soundboard = (this.delight && this.delight.soundboard) || new BeeSoundboard(); // Get soundboard from delight or create new
@@ -4822,7 +4823,11 @@ class QuizManager {
         console.log('🎵 Music System Initialization:');
         console.log('   - musicEnabled:', this.musicEnabled);
         
-        this.initializeEventListeners();
+        try {
+            this.initializeEventListeners();
+        } catch (e) {
+            console.error('❌ Error in initializeEventListeners:', e);
+        }
         
         // 🍎 iOS-specific optimizations
         if (this.isIOS || this.isSafari) {
@@ -9029,8 +9034,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             'Cache-Control': 'no-cache'
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('✅ Wordbank loaded:', data.count, 'words');
             const params = new URLSearchParams(window.location.search);
             const autostart = params.get('autostart') === '1';
             const seed = params.get('seed') === '1';
@@ -9073,8 +9084,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Default behavior: guide user back to upload
-                BeeSmart.showError('No words loaded for the quiz! Please upload or choose a list.');
-                setTimeout(() => window.location.href = '/', 2800);
+                console.warn('[QUIZ] No wordbank loaded. Offering sample loader.');
+                const banner = document.getElementById('quiz-status-banner');
+                if (banner) {
+                    banner.textContent = 'No word list loaded. Click "Load Sample" or upload your own list.';
+                    banner.classList.remove('hidden');
+                }
+                const sampleBtn = document.getElementById('load-sample-btn');
+                if (sampleBtn) sampleBtn.classList.remove('hidden');
                 return;
             }
             
@@ -9094,9 +9111,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.quizManager = new QuizManager({ delight, smartyBee });
         })
         .catch(error => {
-            console.error('Failed to check word bank:', error);
-            BeeSmart.showError('Failed to check word bank. Redirecting to main menu...');
-            setTimeout(() => window.location.href = '/', 2800);
+            console.error('❌ Failed to check word bank or initialize quiz:', error);
+            const msg = error.message || 'Unknown error';
+            BeeSmart.showError(`Quiz Error: ${msg}. Redirecting...`);
+            setTimeout(() => window.location.href = '/', 4000);
         });
     } catch (initError) {
         console.error('🚨 CRITICAL: initialization error in DOMContentLoaded handler:', initError);
