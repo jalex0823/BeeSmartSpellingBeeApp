@@ -3827,6 +3827,27 @@
                     <span>Kid-Safe Content</span>
                 </div>
             </section>
+
+            <!-- Centralized click handling for auth-gated tiles to avoid inline Jinja in onclick -->
+            <script>
+            document.addEventListener('DOMContentLoaded', function(){
+                try {
+                    const tiles = document.querySelectorAll('.menu-container .menu-option[data-feature]');
+                    tiles.forEach(function(tile){
+                        const feature = tile.getAttribute('data-feature');
+                        const lockMsg = tile.getAttribute('data-lockmsg') || 'Premium Feature';
+                        tile.addEventListener('click', function(){
+                            try { if (window.kidSounds && typeof kidSounds.playRandomEffect === 'function') kidSounds.playRandomEffect(); } catch(e){}
+                            if (window.IS_AUTH) {
+                                try { if (typeof selectOption === 'function') selectOption(feature, tile); } catch(e){}
+                            } else {
+                                try { if (typeof showLockedFeature === 'function') showLockedFeature(lockMsg); } catch(e){}
+                            }
+                        }, { passive: true });
+                    });
+                } catch(e) { console.warn('Tile binding failed', e); }
+            });
+            </script>
             
             <!-- Safety Message - Centered Between Button and Title -->
             <section class="menu-container" style="padding: 0.5rem 2rem;">
@@ -4274,7 +4295,7 @@
                 </div>
 
                 <!-- Upload Image -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('image', this){% else %}showLockedFeature('Image Upload'){% endif %}" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
+                <div id="tileImageUpload" class="menu-option theme-ocean {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="image" data-lockmsg="Image Upload" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4296,7 +4317,7 @@
                 </div>
 
                 <!-- Saved Word Lists -->
-                <div id="tileSavedLists" class="menu-option theme-lavender {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('saved', this){% else %}showLockedFeature('Saved Word Lists'){% endif %}" onmouseover="kidSounds.playBuzz()" title="{% if current_user.is_authenticated %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
+                <div id="tileSavedLists" class="menu-option theme-lavender {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="saved" data-lockmsg="Saved Word Lists" onmouseover="kidSounds.playBuzz()" title="{% if current_user.is_authenticated %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4319,7 +4340,7 @@
                 </div>
 
                 <!-- Battle of the Bees -->
-                <div id="tileBattle" class="menu-option theme-battle {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('battle', this){% else %}showLockedFeature('Battle of the Bees'){% endif %}" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Compete with classmates in an epic spelling battle!{% else %} Sign in to unlock multiplayer battles!{% endif %}">
+                <div id="tileBattle" class="menu-option theme-battle {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Compete with classmates in an epic spelling battle!{% else %} Sign in to unlock multiplayer battles!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
@@ -4333,7 +4354,7 @@
                 </div>
 
                 <!-- Speed Round Challenge -->
-                <div id="tileSpeedRound" class="menu-option theme-lightning {% if not current_user.is_authenticated %}locked-tile{% endif %}" onclick="{% if current_user.is_authenticated %}kidSounds.playRandomEffect(); selectOption('speed', this){% else %}showLockedFeature('Speed Round Challenge'){% endif %}" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
+                <div id="tileSpeedRound" class="menu-option theme-lightning {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="speed" data-lockmsg="Speed Round Challenge" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
                     {% if not current_user.is_authenticated %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
