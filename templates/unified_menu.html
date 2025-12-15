@@ -3111,6 +3111,8 @@
             pointer-events: auto;
             background: transparent !important;
             border: none !important;
+            opacity: 1;                        /* for crossfade */
+            transition: opacity 240ms ease;    /* smooth fade during morph */
         }
 
         /* keep canvas filling the space and perfectly centered with enhanced detail */
@@ -4379,13 +4381,24 @@
                                     const nextCfg = AVATAR_PERSONAS[nextKey];
                                     if (nextCfg && typeof window.setCurrentAvatar === 'function') {
                                         try {
-                                            window.setCurrentAvatar(nextCfg.id);
-                                            // Trigger a brief pulse on the avatar container to emphasize morph
                                             const host = document.getElementById('mascotBee3D');
                                             if (host) {
-                                                host.classList.add('morph-pulse-once');
-                                                setTimeout(() => host.classList.remove('morph-pulse-once'), 600);
+                                                // Fade out current avatar before morph to avoid overlap
+                                                host.style.opacity = '0';
                                             }
+
+                                            // Swap to next avatar
+                                            window.setCurrentAvatar(nextCfg.id);
+
+                                            // Fade back in after a short delay (allow loader/scene swap)
+                                            setTimeout(() => {
+                                                if (host) {
+                                                    host.style.opacity = '1';
+                                                    // Brief pulse to emphasize morph
+                                                    host.classList.add('morph-pulse-once');
+                                                    setTimeout(() => host.classList.remove('morph-pulse-once'), 600);
+                                                }
+                                            }, 180);
                                         } catch(e){ console.warn('Morph to next avatar failed', e); }
                                     }
                                 }
