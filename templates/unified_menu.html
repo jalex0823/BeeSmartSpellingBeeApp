@@ -4475,7 +4475,7 @@
                         // Start rotation immediately on DOM ready
                         startConstantSlowRotate();
                     })();
-                });
+                    // Wire quiz buttons inside DOM ready to ensure elements exist
                     function gotoQuiz() {
                         try {
                             if (typeof startQuiz === 'function') { startQuiz(); return; }
@@ -4486,8 +4486,10 @@
                             window.location.href = '/quiz';
                         }
                     }
-                    if (quickBtn) quickBtn.addEventListener('click', gotoQuiz);
-                    // Start button becomes enabled when wordbank ready; also wire fallback
+                    const quickBtn2 = document.getElementById('quickStartQuizBtn');
+                    if (quickBtn2) quickBtn2.addEventListener('click', gotoQuiz);
+                    // Optional: support a generic Start button if present
+                    const startBtn = document.getElementById('startBtn');
                     if (startBtn) startBtn.addEventListener('click', function(){ if(!this.disabled) gotoQuiz(); });
                 });
                 </script>
