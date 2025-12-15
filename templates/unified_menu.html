@@ -17984,6 +17984,12 @@
                 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' : '';
         }
         
+        // Clear any existing morph timer
+        if (window._avatarMorphTimer) {
+            clearInterval(window._avatarMorphTimer);
+            window._avatarMorphTimer = null;
+        }
+        
         // If controller supports it, enable/disable auto-rotation
         if (controller && controller.bee) {
             if (avatarControlState.autoRotate) {
@@ -17996,10 +18002,52 @@
                     requestAnimationFrame(autoRotateLoop);
                 }
                 autoRotateLoop();
+                
+                // Start avatar morphing carousel
+                startAvatarMorphCarousel();
             }
         }
         
         return avatarControlState.autoRotate;
+    }
+    
+    // Avatar morphing carousel - cycles through different avatar models
+    function startAvatarMorphCarousel() {
+        // Clear any existing timer
+        if (window._avatarMorphTimer) {
+            clearInterval(window._avatarMorphTimer);
+        }
+        
+        // Build list of all avatar IDs
+        const avatarIds = Object.keys(AVATAR_PERSONAS).map(key => AVATAR_PERSONAS[key].id);
+        
+        // Shuffle for variety
+        for (let i = avatarIds.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [avatarIds[i], avatarIds[j]] = [avatarIds[j], avatarIds[i]];
+        }
+        
+        let currentIndex = 0;
+        
+        const morphToNext = () => {
+            if (!avatarControlState.autoRotate) return;
+            
+            const nextAvatarId = avatarIds[currentIndex % avatarIds.length];
+            console.log('🔄 Morphing to:', nextAvatarId);
+            
+            // Update via setCurrentAvatar to trigger full avatar change
+            if (typeof window.setCurrentAvatar === 'function') {
+                window.setCurrentAvatar(nextAvatarId);
+            }
+            
+            currentIndex++;
+        };
+        
+        // Change avatar every 3.5 seconds
+        window._avatarMorphTimer = setInterval(morphToNext, 3500);
+        
+        // Start with first avatar
+        morphToNext();
     }
     
     // Setup touch gestures for main avatar
