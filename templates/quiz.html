@@ -9716,12 +9716,70 @@ function playThemedSound(soundType) {
     //   - bee-buzz.mp3: Ambient bee sound for transitions/hover effects
     // ============================================================================
     
+    // Map logical sound names -> actual filenames.
+    // This prevents 404s when a feature uses a sound name that doesn't exist on disk.
+    // NOTE: Keep these values in sync with files under static/sounds/.
+    const SOUND_FILE_MAP = {
+        'correct': 'correct.mp3',
+        'incorrect': 'incorrect.mp3',
+        'word-complete': 'word-complete.mp3',
+        'perfect-score': 'perfect-score.mp3',
+        'hint-reveal': 'hint-reveal.mp3',
+        'level-up': 'level-up.mp3',
+        'daily-streak': 'daily-streak.mp3',
+        // Some code paths historically used underscore naming; the repo has a hyphenated file.
+        'daily_reward': 'daily-streak.mp3',
+
+        'button-click': 'button-click.mp3',
+        'upload-success': 'upload-success.mp3',
+        'avatar-unlock': 'avatar-unlock.mp3',
+        'intro-sound_1': 'intro-sound_1.mp3',
+
+        'speed-round-start': 'speed-round-start.mp3',
+        'timer-warning': 'timer-warning.mp3',
+        // Legacy name used in some places
+        'timer_beep': 'timer_beep.mp3',
+
+        // A gentle cue before TTS pronunciation. There is no pronounce-word.mp3 in static/sounds/.
+        // Use an existing short sound instead.
+        'pronounce-word': 'bee-buzz.mp3'
+    };
+
+    // Cache for sounds that failed to load in this session to avoid repeated 404 spam.
+    window.__beesmartSoundDisabled = window.__beesmartSoundDisabled || new Set();
+    window.__beesmartSoundLastPlayAt = window.__beesmartSoundLastPlayAt || new Map();
+
     try {
-        const audio = new Audio(`/static/sounds/${soundType}.mp3`);
+        if (!soundType) return;
+        if (window.__beesmartSoundDisabled.has(soundType)) return;
+
+        // Throttle repeat plays of the same sound to avoid accidental loops (double-clicks, etc.)
+        const now = Date.now();
+        const last = window.__beesmartSoundLastPlayAt.get(soundType) || 0;
+        if (now - last < 250) return;
+        window.__beesmartSoundLastPlayAt.set(soundType, now);
+
+        const filename = SOUND_FILE_MAP[soundType] || `${soundType}.mp3`;
+        const url = filename.startsWith('/') ? filename : `/static/sounds/${filename}`;
+
+        const audio = new Audio(url);
         audio.volume = 0.3;
-        audio.play().catch(() => {
-            // Ignore sound errors - effects work without sound
-        });
+
+        // If the file is missing (404) or otherwise fails, disable this sound name for the session.
+        audio.addEventListener('error', () => {
+            if (!window.__beesmartSoundDisabled.has(soundType)) {
+                window.__beesmartSoundDisabled.add(soundType);
+                console.warn(`Sound disabled for this session (failed to load): ${soundType} (${url})`);
+            }
+        }, { once: true });
+
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {
+                // Autoplay restrictions or other transient failures shouldn't break gameplay.
+                // Don't disable here; the error handler above handles missing files.
+            });
+        }
     } catch (e) {
         // Ignore sound errors - effects work without sound
     }
