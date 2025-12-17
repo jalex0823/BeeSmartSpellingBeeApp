@@ -12409,14 +12409,14 @@
                     setTimeout(() => particle.remove(), 2200 + (i * 20));
                 }
             };
- - BEE SWARM!
-                createMorphParticles();
-                console.log('🐝 [SWARM] Bee swarm particles launched!'
+            
+            function morph() {
                 const nextUrl = urls[idx % urls.length];
                 const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
                 
-                // Create particle burst at start of morph
+                // Create particle burst at start of morph - BEE SWARM!
                 createMorphParticles();
+                console.log('🐝 [SWARM] Bee swarm particles launched!');
                 
                 // Remove all animation classes
                 morphEffects.forEach(effect => imgEl.classList.remove(effect));
