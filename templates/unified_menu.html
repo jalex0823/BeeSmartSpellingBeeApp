@@ -3451,23 +3451,6 @@
                         position: relative;
                     ">
                         <div class="rank-logo-pulse-glow"></div>
-                        
-                        <!-- Novice Swarm Container (Hidden by default, shown for Novice Bee) -->
-                        <div id="novice-swarm-container" style="display:none; position:absolute; inset:0; z-index:3; pointer-events:none;">
-                            <!-- Spread out swarm of bees -->
-                            <div class="swarm-bee" style="top: 20%; left: 20%; animation-delay: 0s;"></div>
-                            <div class="swarm-bee" style="top: 25%; left: 70%; animation-delay: 0.5s;"></div>
-                            <div class="swarm-bee" style="top: 60%; left: 30%; animation-delay: 1s;"></div>
-                            <div class="swarm-bee" style="top: 55%; left: 75%; animation-delay: 1.5s;"></div>
-                            <div class="swarm-bee" style="top: 40%; left: 50%; animation-delay: 0.2s;"></div>
-                            <div class="swarm-bee" style="top: 75%; left: 45%; animation-delay: 0.7s;"></div>
-                            <div class="swarm-bee" style="top: 15%; left: 55%; animation-delay: 1.2s;"></div>
-                            <div class="swarm-bee" style="top: 80%; left: 25%; animation-delay: 1.7s;"></div>
-                            <div class="swarm-bee" style="top: 35%; left: 85%; animation-delay: 0.3s;"></div>
-                            <div class="swarm-bee" style="top: 65%; left: 15%; animation-delay: 0.8s;"></div>
-                            <div class="swarm-bee" style="top: 50%; left: 10%; animation-delay: 1.3s;"></div>
-                            <div class="swarm-bee" style="top: 10%; left: 40%; animation-delay: 1.8s;"></div>
-                        </div>
 
                         <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
                         <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
@@ -3489,34 +3472,6 @@
                 </div>
                 
                 <style>
-                    /* Swarm Bee CSS */
-                    .swarm-bee {
-                        position: absolute;
-                        width: 10px;
-                        height: 10px;
-                        background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
-                        border-radius: 50%;
-                        box-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
-                        animation: swarmFloat 3s ease-in-out infinite;
-                    }
-                    .swarm-bee::before, .swarm-bee::after {
-                        content: '';
-                        position: absolute;
-                        top: -4px;
-                        width: 6px;
-                        height: 8px;
-                        background: rgba(255, 255, 255, 0.8);
-                        border-radius: 50%;
-                        animation: wingFlutter 0.15s linear infinite;
-                    }
-                    .swarm-bee::before { left: -3px; transform: rotate(-30deg); }
-                    .swarm-bee::after { right: -3px; transform: rotate(30deg); }
-
-                    @keyframes swarmFloat {
-                        0%, 100% { transform: translate(0, 0); }
-                        50% { transform: translate(3px, -4px); }
-                    }
-
                     /*  SPARKLING FAIRY DUST ANIMATIONS  */
                     
                     /* Ticker shimmer animation */
@@ -9583,8 +9538,9 @@
                 return;
             }
             
-            // GLB-only system - use simple 3D animation instead of OBJ beehive
-            console.warn(' OBJ beehive deprecated - using simple 3D animation');
+            // Use simple 3D animation for the loading overlay beehive.
+            // Note: This is unrelated to user avatars (which are GLB-only).
+            console.log(' 🐝 Loading overlay: using simple 3D beehive animation (GLB avatars unaffected)');
             createSimple3DAnimation(container);
             return;
         }
@@ -17473,31 +17429,24 @@
                     
                     // Update morphing badge/logo container with same badge
                     const morphImg = document.getElementById('morph-badge-logo');
-                    const swarmContainer = document.getElementById('novice-swarm-container');
-                    const isNovice = (data.current_class.label === 'Novice Bee');
-
-                    if (swarmContainer) {
-                        swarmContainer.style.display = isNovice ? 'block' : 'none';
-                    }
 
                     if (morphImg) {
-                        if (isNovice) {
-                            morphImg.style.display = 'none';
-                        } else {
-                            morphImg.style.display = 'block';
-                            // Store badge and crest URLs for morphing
-                            window._badgeUrl = `/static/assets/badges/${pngFile}`;
-                            window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
-                            
-                            // Set initial image to badge (not crest)
-                            morphImg.src = window._badgeUrl;
-                            
-                            // Start morphing animation (guard if function missing)
-                            if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
-                                initBadgeLogoMorphing();
-                                window._morphingInitialized = true;
-                                console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
-                            } else if (window._morphingInitialized) {
+                        // RESTORED: Always show morphing badge for ALL ranks (including Novice)
+                        morphImg.style.display = 'block';
+                        
+                        // Store badge and crest URLs for morphing
+                        window._badgeUrl = `/static/assets/badges/${pngFile}`;
+                        window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
+                        
+                        // Set initial image to badge (not crest)
+                        morphImg.src = window._badgeUrl;
+                        
+                        // Start morphing animation (guard if function missing)
+                        if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
+                            initBadgeLogoMorphing();
+                            window._morphingInitialized = true;
+                            console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
+                        } else if (window._morphingInitialized) {
                                 console.log(' [TICKER] Morphing already initialized, badge URL updated');
                             } else {
                                 console.warn(' [TICKER] initBadgeLogoMorphing not available');
@@ -17894,6 +17843,15 @@
     // CONTROLLER HELPERS
     // =============================================================
 
+    // Set `window.AVATAR_DEBUG = true` in the browser console to enable verbose logs.
+    function avatarDebugLog(...args) {
+        if (window.AVATAR_DEBUG) {
+            console.log(...args);
+        }
+    }
+
+    let _warnedNoAvatarController = false;
+
     // Avatar control state
     const avatarControlState = {
         autoRotate: false,
@@ -17904,26 +17862,31 @@
 
     function getAvatarController() {
         try {
-            console.log('getAvatarController called');
+            avatarDebugLog('getAvatarController called');
             
             // Try NEW clean container first
             const cleanInstance = window.SmartyBee3DInstances?.['avatarControls3D'];
             if (cleanInstance) {
-                console.log('Found avatar controller in NEW clean container (avatarControls3D)');
+                avatarDebugLog('Found avatar controller in NEW clean container (avatarControls3D)');
                 return cleanInstance;
             }
             
             // Fallback to static method
             const controller = window.SmartyBee3D?.getController?.('avatarControls3D');
             if (controller) {
-                console.log('Found avatar controller via static method');
+                avatarDebugLog('Found avatar controller via static method');
                 return controller;
             }
             
-            console.warn('No avatar controller found in avatarControls3D');
+            if (!_warnedNoAvatarController) {
+                console.warn('No avatar controller found in avatarControls3D');
+                _warnedNoAvatarController = true;
+            }
             return null;
         } catch (e) {
-            console.warn('Avatar controller not available:', e);
+            if (window.AVATAR_DEBUG) {
+                console.warn('Avatar controller not available:', e);
+            }
             return null;
         }
     }
@@ -17957,7 +17920,7 @@
             } else {
                 // Ensure exact front-facing position
                 controller.bee.rotation.y = targetRotation;
-                console.log('✅ 360° spin complete, avatar locked to front:', controller.bee.rotation.y);
+                avatarDebugLog('✅ 360° spin complete, avatar locked to front:', controller.bee.rotation.y);
             }
         }
         
@@ -17966,8 +17929,8 @@
 
     function safeAvatarRotate(deltaDegrees, smooth = true) {
         const controller = getAvatarController();
-        console.log('safeAvatarRotate called. Controller:', controller);
-        console.log('  controller.bee:', controller?.bee);
+        avatarDebugLog('safeAvatarRotate called. Controller:', controller);
+        avatarDebugLog('  controller.bee:', controller?.bee);
         console.log('  controller.camera:', controller?.camera);
         if (!controller) return;
         

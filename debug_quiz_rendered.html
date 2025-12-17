@@ -1,14 +1,331 @@
-{% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-VOICE-VIZ-DEBUG -->
-{% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#FFD700">
+    <title>BeeSmart Quiz - Practice Your Spelling</title>
+    
+    <!-- Favicon for all platforms -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="/static/manifest.webmanifest">
+        <script>
+            // Register service worker if supported
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/static/service-worker.js').catch(() => {});
+                });
+            }
+        </script>
+    
+    <link rel="stylesheet" href="/static/css/BeeSmart.css?v=1765841264918">
+    <link rel="stylesheet" href="/static/css/ui-fixes.css?v=1765841264918">
+    <link rel="stylesheet" href="/static/css/mobile-fonts.css?v=1765841264918">
 
-{% block extra_css %}
+    <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
+    <script src="/static/js/logo-config.js?v=1765841264918"></script>
+    
+    <!-- Modern CSS Framework -->
+    <style>
+        /* CSS Reset and Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-color: #FF69B4;
+            --secondary-color: #fbc2eb;
+
+        /* Bee friends buzzing across the background */
+        .bee-swarm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 45;
+            overflow: hidden;
+        }
+
+        .bee {
+            position: absolute;
+            width: 26px;
+            height: 18px;
+            background: linear-gradient(90deg, #FFD166 0%, #FFD166 33%, #F49725 33%, #F49725 66%, #FFD166 66%, #FFD166 100%);
+            border-radius: 13px 13px 10px 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+            transform-origin: center;
+            --bee-x: 0px;
+            --bee-y: 0px;
+            --bee-rotation: 0deg;
+            --bee-scale: 1;
+            --bee-bob: 0px;
+            transform: translate3d(var(--bee-x), calc(var(--bee-y) + var(--bee-bob)), 0) rotate(var(--bee-rotation)) scale(var(--bee-scale));
+            animation: beeBuzz 1.6s ease-in-out infinite;
+            will-change: transform;
+        }
+
+        .bee::before,
+        .bee::after {
+            content: '';
+            position: absolute;
+            top: -7px;
+            width: 18px;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50% 50% 45% 45%;
+            box-shadow: 0 4px 12px rgba(173, 216, 230, 0.4);
+            animation: wingFlap 1.2s ease-in-out infinite;
+        }
+
+        .bee::before {
+            left: -4px;
+        }
+
+        .bee::after {
+            right: -4px;
+            animation-delay: 0.2s;
+        }
+
+        .bee span {
+            position: absolute;
+            right: -6px;
+            top: 7px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #F49725;
+            border-top: 3px solid transparent;
+            border-bottom: 3px solid transparent;
+            transform: rotate(15deg);
+        }
+
+        @keyframes beeBuzz {
+            0%, 100% {
+                --bee-bob: 0px;
+                --bee-scale: 1;
+            }
+            50% {
+                --bee-bob: -3px;
+                --bee-scale: 1.05;
+            }
+        }
+
+        @keyframes wingFlap {
+            0%, 100% {
+                transform: rotate(-15deg) scale(1);
+                opacity: 0.9;
+            }
+            50% {
+                transform: rotate(15deg) scale(1.15);
+                opacity: 1;
+            }
+        }
+
+            --accent-color: #FF1493;
+            --bg-primary: linear-gradient(135deg, #FFF4E6 0%, #FFEAC2 50%, #FFE4CC 100%);
+            --bg-secondary: #FFFFFF;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 8px 32px rgba(255, 105, 180, 0.2);
+            --shadow-hover: 0 12px 40px rgba(255, 105, 180, 0.3);
+            --border-radius: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            :root {
+                --transition: none;
+            }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+
+        
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Fairy Animation Container */
+        .fairy-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            overflow: hidden;
+        }
+        
+        .fairy {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, var(--primary-color), transparent);
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: fairyFloat 15s linear infinite;
+        }
+        
+        .fairy::before {
+            content: '✨';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            font-size: 12px;
+            animation: sparkle 2s ease-in-out infinite;
+        }
+        
+        @keyframes fairyFloat {
+            0% {
+                transform: translateX(-50px) translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateX(calc(100vw + 50px)) translateY(-50px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(180deg); }
+        }
+        
+        /* Reduce motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .fairy {
+                animation: none;
+                opacity: 0.3;
+            }
+            .fairy::before {
+                animation: none;
+            }
+            .bee {
+                animation: none;
+                opacity: 0.25;
+            }
+            .bee::before,
+            .bee::after {
+                animation: none;
+            }
+        }
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .mb-1 { margin-bottom: 1rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .mt-2 { margin-top: 2rem; }
+        .hidden { display: none; }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .toast {
+            background: linear-gradient(135deg, #FFF3C4 0%, #FFE4F4 100%);
+            color: #5A2C15;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 14px 26px rgba(255, 193, 204, 0.4);
+            margin-bottom: 1rem;
+            border-left: 6px solid #FF9AA2;
+            transform: translateX(100%);
+            transition: var(--transition);
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.error {
+            background: linear-gradient(135deg, #FFB4A2 0%, #FF8B94 100%);
+            color: #4A1F1F;
+            border-left-color: #FF6F91;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #C8F7C5 0%, #96E6B3 100%);
+            color: #1B5E20;
+            border-left-color: #66BB6A;
+        }
+        /* Unified Avatar Stage (shared across login/register/dashboards) */
+        .unified-avatar-stage {
+            width: 100%;
+            max-width: 800px;
+            height: 360px;
+            margin: 0.75rem auto 1rem auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible; /* let avatar glow/effects escape */
+        }
+        .unified-avatar-stage.large { height: 480px; }
+        .unified-avatar-stage .avatar-fallback { font-size: 4rem; text-align: center; }
+        @media (max-width: 600px) {
+            .unified-avatar-stage { height: 300px; margin: 0.5rem auto 0.75rem auto; }
+            .unified-avatar-stage.large { height: 380px; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header-content {
+                padding: 0 1rem;
+            }
+            
+            .logo h1 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+    
+    
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-1745">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-1745">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
+<link rel="stylesheet" href="/static/css/BeeSmart.css?v=20251213-1745">
+<link rel="stylesheet" href="/static/css/mobile-fonts.css?v=20251213-1745">
+<link rel="stylesheet" href="/static/css/android-performance-fix.css?v=20251213-1745">
 
 <script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
@@ -3105,9 +3422,26 @@ async function loadSampleWords() {
 //     console.log('✅ Quiz preflight completed - QuizManager will handle intro and first word');
 // });
 </script>
-{% endblock %}
 
-{% block content %}
+</head>
+<body>
+    <!-- Fairy Animation Container -->
+    <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
+    <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>
+
+    <!-- Global Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false" style="display: none;">
+    <img src="/static/BeeSmartCrestLogo1.png" alt="BeeSmart Crest Logo" class="crest-logo brand-logo" decoding="async" />
+        <div class="checks" id="loadingChecks" aria-live="polite" style="display: none;">
+            <!-- Loading check items -->
+        </div>
+        <button id="loadingStartBtn" class="pulse-btn" disabled aria-disabled="true" aria-label="Tap to start once ready" style="display: none;">Tap to Start</button>
+        <button class="skip-link" type="button" onclick="window.LoadingScreenManager && window.LoadingScreenManager.hide()" style="display: none;">Skip</button>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="container">
+        
 <!-- Mobile-only floating exit button (hidden on desktop) -->
 <button class="mobile-exit-button" onclick="confirmBackToMenu(event)" style="display: none;" 
         aria-label="Exit Quiz - Back to Main Menu" title="Exit Quiz">
@@ -3155,11 +3489,6 @@ async function loadSampleWords() {
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
-                <script>
-                    // Helps confirm whether the browser is receiving the latest quiz HTML (vs stale cache).
-                    // If you still see the SyntaxError, compare this value in DevTools console.
-                    window.BEESMART_QUIZ_TEMPLATE_VERSION = '2025-12-17-quiz-escape-fix-v1';
-                </script>
             </div>
             
             <div class="score-item">
@@ -3195,26 +3524,7 @@ async function loadSampleWords() {
             <div id="mascotBee3D" class="mascot-3d-container"></div>
             
             <!-- Avatar Name Badge (shows user's chosen avatar name) -->
-            {% if user_name %}
-            <div id="avatarNameBadge" style="
-                display: block;
-                margin: 8px auto 10px;
-                padding: 4px 12px;
-                background: linear-gradient(135deg, #FF4444, #FF0000);
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 600;
-                text-align: center;
-                color: white;
-                box-shadow: 0 2px 4px rgba(255, 0, 0, 0.3);
-                max-width: 120px;
-                position: relative;
-                z-index: 10;
-                border: 1px solid rgba(255, 0, 0, 0.5);
-            " title="Your chosen avatar name">
-                <span>🔴 {{ user_name if (user_name is defined and user_name) else 'User' }} 🔴</span>
-            </div>
-            {% else %}
+            
             <div style="
                 display: block;
                 margin: 8px auto 10px;
@@ -3233,7 +3543,7 @@ async function loadSampleWords() {
             " title="Debug: No user logged in">
                 <span>🟢 GUEST 🟢</span>
             </div>
-            {% endif %}
+            
             
             <!-- Kid-Safe Content Badge -->
             <div class="kid-safe-badge-quiz" title="All words are automatically filtered for age-appropriate content">
@@ -3243,7 +3553,7 @@ async function loadSampleWords() {
 
         <!-- Version Info -->
         <div class="version-info">
-            <small>JS v3-cache-{{ timestamp }}</small>
+            <small>JS v3-cache-1765841264918</small>
         </div>
 
 
@@ -3832,19 +4142,475 @@ async function loadSampleWords() {
 <!-- 3D Bee Swarm Canvas -->
 <canvas id="beeSwarmCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></canvas>
 
-{% endblock %}
 
-<!-- Progress Tracker OUTSIDE content block - truly fixed -->
-<div class="progress-tracker">
-    <div class="honey-jar">
-        <div id="honeyLevel" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #FFB300 0%, #FFC107 50%, #FFD54F 100%); border-radius: 0 0 14px 14px; height: 0%; transition: height 0.6s ease, box-shadow 0.6s ease; box-shadow: 0 -4px 15px rgba(255, 179, 0, 0.5);"></div>
-    </div>
-    <div class="progress-description">
-        Fill the honey jar as you spell correctly! 🍯
-    </div>
-</div>
+    </main>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Base JavaScript -->
+    <script>
+        // Fairy Animation System
+        class FairyAnimation {
+            constructor() {
+                this.container = document.getElementById('fairyContainer');
+                this.fairies = [];
+                this.isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                
+                if (!this.isReducedMotion) {
+                    this.startAnimation();
+                }
+            }
+            
+            createFairy() {
+                const fairy = document.createElement('div');
+                fairy.className = 'fairy';
+                fairy.style.left = Math.random() * -100 + 'px';
+                fairy.style.top = Math.random() * window.innerHeight + 'px';
+                
+                this.container.appendChild(fairy);
+                this.fairies.push(fairy);
+                
+                // Remove fairy after animation
+                setTimeout(() => {
+                    if (fairy.parentNode) {
+                        fairy.parentNode.removeChild(fairy);
+                    }
+                    this.fairies = this.fairies.filter(f => f !== fairy);
+                }, 15000);
+            }
+            
+            startAnimation() {
+                // Create initial fairy
+                this.createFairy();
+                
+                // Create new fairy every 3-8 seconds
+                setInterval(() => {
+                    if (this.fairies.length < 3) { // Limit concurrent fairies
+                        this.createFairy();
+                    }
+                }, Math.random() * 5000 + 3000);
+            }
+        }
+        
+        class BeeAnimation {
+            constructor() {
+                this.container = document.getElementById('beeSwarm');
+                this.bees = [];
+                this.animationId = null;
+                this.lastTimestamp = null;
+                this.honeycombCenters = [
+                    { x: 0.32, y: 0.32 },
+                    { x: 0.5, y: 0.22 },
+                    { x: 0.68, y: 0.32 },
+                    { x: 0.38, y: 0.57 },
+                    { x: 0.56, y: 0.68 },
+                    { x: 0.74, y: 0.57 }
+                ];
+                this.isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-{% block extra_js %}
+                if (!this.isReducedMotion && this.container) {
+                    this.populate();
+                    this.animate = this.animate.bind(this);
+                    this.animationId = requestAnimationFrame(this.animate);
+                    window.addEventListener('resize', () => this.updateBeeTransforms());
+                }
+            }
+
+            populate() {
+                const count = window.innerWidth > 1024 ? 6 : 4;
+                for (let i = 0; i < count; i++) {
+                    this.createBee(i);
+                }
+                this.updateBeeTransforms();
+            }
+
+            createBee(index) {
+                const element = document.createElement('div');
+                element.className = 'bee';
+                element.innerHTML = '<span></span>';
+                this.container.appendChild(element);
+
+                const center = this.honeycombCenters[index % this.honeycombCenters.length] || { x: 0.5, y: 0.5 };
+
+                const bee = {
+                    element,
+                    center,
+                    angle: Math.random() * Math.PI * 2,
+                    speed: (0.35 + Math.random() * 0.25) * (Math.random() < 0.5 ? 1 : -1),
+                    radius: 0.12 + Math.random() * 0.05,
+                    eccentricity: 0.75 + Math.random() * 0.15,
+                    wobblePhase: Math.random() * Math.PI * 2,
+                    wobbleAmplitude: 4 + Math.random() * 3
+                };
+
+                this.bees.push(bee);
+            }
+
+            updateBeeTransforms() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const minDimension = Math.min(width, height);
+
+                this.bees.forEach((bee) => {
+                    const radiusPx = bee.radius * minDimension;
+                    const x = bee.center.x * width + Math.cos(bee.angle) * radiusPx;
+                    const y = bee.center.y * height + Math.sin(bee.angle) * radiusPx * bee.eccentricity;
+
+                    bee.element.style.setProperty('--bee-x', `${x - 13}px`);
+                    bee.element.style.setProperty('--bee-y', `${y - 9}px`);
+                    bee.element.style.setProperty('--bee-rotation', `${(bee.angle * 180 / Math.PI) + 90}deg`);
+                });
+            }
+
+            animate(timestamp) {
+                if (!this.lastTimestamp) {
+                    this.lastTimestamp = timestamp;
+                }
+
+                const delta = (timestamp - this.lastTimestamp) / 1000;
+                this.lastTimestamp = timestamp;
+
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const minDimension = Math.min(width, height);
+
+                this.bees.forEach((bee) => {
+                    bee.angle += bee.speed * delta;
+                    const radiusPx = bee.radius * minDimension;
+                    const wobble = Math.sin(timestamp * 0.004 + bee.wobblePhase) * bee.wobbleAmplitude;
+                    const x = bee.center.x * width + Math.cos(bee.angle) * radiusPx;
+                    const y = bee.center.y * height + Math.sin(bee.angle) * radiusPx * bee.eccentricity + wobble;
+
+                    bee.element.style.setProperty('--bee-x', `${x - 13}px`);
+                    bee.element.style.setProperty('--bee-y', `${y - 9}px`);
+                    bee.element.style.setProperty('--bee-rotation', `${(bee.angle * 180 / Math.PI) + 90}deg`);
+                });
+
+                this.animationId = requestAnimationFrame(this.animate);
+            }
+        }
+        
+        // Toast Notification System
+        class ToastManager {
+            constructor() {
+                this.container = document.getElementById('toastContainer');
+            }
+            
+            show(message, type = 'info', duration = 5000) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <div>${message}</div>
+                    <button onclick="this.parentNode.remove()" style="float: right; background: none; border: none; cursor: pointer;">&times;</button>
+                `;
+                
+                this.container.appendChild(toast);
+                
+                // Show animation
+                setTimeout(() => toast.classList.add('show'), 100);
+                
+                // Auto-remove
+                if (duration > 0) {
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        setTimeout(() => toast.remove(), 300);
+                    }, duration);
+                }
+                
+                return toast;
+            }
+            
+            success(message, duration = 5000) {
+                return this.show(message, 'success', duration);
+            }
+            
+            error(message, duration = 8000) {
+                return this.show(message, 'error', duration);
+            }
+        }
+        
+        // Initialize systems when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            window.fairyAnimation = new FairyAnimation();
+            window.beeAnimation = new BeeAnimation();
+            window.toast = new ToastManager();
+            
+            // Focus management for accessibility
+            const focusableElements = document.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusableElements.length > 0) {
+                focusableElements[0].focus();
+            }
+        });
+        
+        // Global utility functions
+        window.BeeSmart = {
+            showToast: (message, type = 'info') => window.toast?.show(message, type),
+            showSuccess: (message) => window.toast?.success(message),
+            showError: (message) => window.toast?.error(message)
+        };
+    </script>
+    
+    <!-- Three.js for 3D GLB Avatars -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTF/GLB loader for GLB avatars across all pages (quiz, results, etc.) -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- SmartyBee3D class for 3D avatar rendering -->
+    <script src="/static/js/smarty-bee-3d.js?v=1765841264918"></script>
+    
+    <!-- 3D Badge Renderer for GLB rank badges -->
+    <!-- Static JS with cache-busting timestamp -->
+    <script src="/static/js/badge-3d-renderer.js?v=1765841264918"></script>
+    
+    <!-- User Avatar System (single global include) -->
+    <script src="/static/js/user-avatar-loader.js?v=1765841264918"></script>
+    <!-- Bee Swarm Animation for Quiz Page -->
+    <script src="/static/js/bee-swarm-animation.js?v=1765841264918"></script>
+    <!-- Global celebrations (persona confetti + stinger) -->
+    <script src="/static/js/quiz-celebrations.js?v=1765841264918"></script>
+    
+    <!-- Mobile Viewport Handler for iOS/Android -->
+    <script>
+        // Fix iOS Safari viewport height issue
+        function setVhProperty() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        // Set initial viewport height
+        setVhProperty();
+        
+        // Update on resize (orientation change, keyboard show/hide)
+        window.addEventListener('resize', setVhProperty);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(setVhProperty, 100);
+        });
+        
+        // Enhanced scrolling for iOS
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            document.addEventListener('touchstart', function() {}, {passive: true});
+            
+            // Prevent zoom on double tap for form elements
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+        }
+        
+        // Android keyboard handling
+        if (/Android/.test(navigator.userAgent)) {
+            const viewport = document.querySelector("meta[name=viewport]");
+            viewport.setAttribute("content", viewport.content + ", viewport-fit=cover");
+        }
+        
+        // Always scroll to top on page load
+        window.addEventListener('load', function() {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        });
+        
+        // Also scroll to top immediately (before full load)
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    </script>
+    
+    <!-- 📱 Mobile Modal Auto-Centering System -->
+    <script>
+        /**
+         * Mobile-optimized modal display system
+         * Automatically centers modals and scrolls them into view on mobile devices
+         */
+        window.BeeMobileOptimization = {
+            /**
+             * Show a modal with mobile-optimized centering and scrolling
+             * @param {HTMLElement|string} modal - Modal element or selector
+             * @param {Object} options - Configuration options
+             */
+            showModal: function(modal, options = {}) {
+                const modalEl = typeof modal === 'string' ? document.querySelector(modal) : modal;
+                if (!modalEl) {
+                    console.warn('BeeMobileOptimization: Modal not found', modal);
+                    return;
+                }
+                
+                const defaults = {
+                    scrollIntoView: true,
+                    scrollBehavior: 'smooth',
+                    block: 'center',
+                    lockScroll: true,
+                    focusFirstInput: true
+                };
+                
+                const config = { ...defaults, ...options };
+                
+                // Show the modal
+                modalEl.style.display = 'flex';
+                
+                // Lock background scroll if requested
+                if (config.lockScroll) {
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                }
+                
+                // Auto-scroll into view after a small delay (allows CSS animations)
+                if (config.scrollIntoView) {
+                    setTimeout(() => {
+                        // Find the modal content (the actual dialog, not the overlay)
+                        const modalContent = modalEl.querySelector('.modal-content, .exit-modal-content, .voice-intro-content, .badge-modal-content, .content-filter-popup');
+                        const targetElement = modalContent || modalEl;
+                        
+                        // Scroll the modal content into view
+                        targetElement.scrollIntoView({
+                            behavior: config.scrollBehavior,
+                            block: config.block,
+                            inline: 'center'
+                        });
+                        
+                        // Also ensure parent modal is visible
+                        if (modalContent !== modalEl) {
+                            modalEl.scrollIntoView({
+                                behavior: config.scrollBehavior,
+                                block: config.block,
+                                inline: 'center'
+                            });
+                        }
+                        
+                        // Focus first input/button for accessibility
+                        if (config.focusFirstInput) {
+                            const firstInput = modalEl.querySelector('input:not([type="hidden"]), textarea, button');
+                            if (firstInput) {
+                                setTimeout(() => firstInput.focus(), 300);
+                            }
+                        }
+                    }, 150); // Delay to allow modal animation to start
+                }
+                
+                console.log('✅ Modal shown with mobile optimization:', modalEl.id || modalEl.className);
+            },
+            
+            /**
+             * Hide a modal and restore scroll
+             * @param {HTMLElement|string} modal - Modal element or selector
+             */
+            hideModal: function(modal) {
+                const modalEl = typeof modal === 'string' ? document.querySelector(modal) : modal;
+                if (!modalEl) return;
+                
+                modalEl.style.display = 'none';
+                
+                // Restore background scroll
+                document.body.style.overflow = '';
+                document.body.style.position = '';
+                document.body.style.width = '';
+                
+                console.log('✅ Modal hidden:', modalEl.id || modalEl.className);
+            },
+            
+            /**
+             * Auto-patch existing modal show/hide functions
+             */
+            patchExistingModals: function() {
+                // Patch common modal show patterns
+                const modalSelectors = [
+                    '#contentFilterModal',
+                    '#exitModal',
+                    '#voiceIntroModal',
+                    '.exit-modal',
+                    '.voice-intro-modal'
+                ];
+                
+                modalSelectors.forEach(selector => {
+                    const modal = document.querySelector(selector);
+                    if (modal) {
+                        // Add data attribute to mark as mobile-optimized
+                        modal.setAttribute('data-mobile-optimized', 'true');
+                        
+                        // Monitor style changes to auto-scroll when shown
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'style') {
+                                    const display = window.getComputedStyle(modal).display;
+                                    if (display === 'flex' || display === 'block') {
+                                        // Modal was just shown - auto-center it
+                                        setTimeout(() => {
+                                            const modalContent = modal.querySelector('.modal-content, .exit-modal-content, .voice-intro-content, .badge-modal-content, .content-filter-popup');
+                                            const target = modalContent || modal;
+                                            target.scrollIntoView({
+                                                behavior: 'smooth',
+                                                block: 'center',
+                                                inline: 'center'
+                                            });
+                                        }, 100);
+                                    }
+                                }
+                            });
+                        });
+                        
+                        observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+                    }
+                });
+            }
+        };
+        
+        // Auto-patch modals when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                window.BeeMobileOptimization.patchExistingModals();
+            });
+        } else {
+            window.BeeMobileOptimization.patchExistingModals();
+        }
+        
+        // Re-patch on dynamic content changes
+        setTimeout(() => {
+            window.BeeMobileOptimization.patchExistingModals();
+        }, 1000);
+    </script>
+    
+    <!-- Global Effects Toggle (floating) -->
+    <button id="globalEffectsToggle" aria-label="Toggle Celebrations"
+        style="position: fixed; bottom: 16px; right: 16px; z-index: 11000; border: 3px solid #FFA000; background: linear-gradient(135deg, #FFD54F, #FFB300); color: #5A2C15; font-weight: 800; border-radius: 999px; padding: 10px 16px; box-shadow: 0 8px 18px rgba(255,165,0,0.3); cursor: pointer;">
+        ✨ Effects On
+    </button>
+
+    <script>
+        // Wire global effects toggle to QuizCelebrations
+        (function(){
+            function sync(){
+                try {
+                    const btn = document.getElementById('globalEffectsToggle');
+                    if (!btn) return;
+                    const on = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+                    btn.textContent = on ? '✨ Effects On' : '✨ Effects Off';
+                } catch(_){}
+            }
+            function init(){
+                const btn = document.getElementById('globalEffectsToggle');
+                if (!btn) return;
+                sync();
+                btn.addEventListener('click', function(){
+                    try {
+                        const current = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+                        window.QuizCelebrations?.setEnabled && window.QuizCelebrations.setEnabled(!current);
+                        sync();
+                        // toast feedback if available
+                        try { window.BeeSmart?.showToast(!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled', 'success'); } catch(_){}
+                    } catch(_){}
+                });
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+            else init();
+        })();
+    </script>
+
+    
 <script>
 console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
 
@@ -4687,16 +5453,11 @@ class QuizManager {
         this.retryTimeoutId = null; // Timeout for auto-advance after retry
         
         // Get student name - prioritize server-provided name for logged-in users
-        {% if user_name is defined and user_name %}
-        this.studentName = {{ user_name|tojson }};
-        // Save to localStorage for consistency
-        localStorage.setItem('studentName', this.studentName);
-        console.log('👤 Using logged-in user name:', this.studentName);
-        {% else %}
+        
         // Check sessionStorage for guest name, then localStorage
         this.studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
         console.log('👤 Using guest/localStorage name:', this.studentName);
-        {% endif %}
+        
         
         // Reset honey jar to 0% at start
         this.resetHoneyJar();
@@ -5628,7 +6389,7 @@ class QuizManager {
             if (questionNumber === 1) {
                 const firstWordPhrases = [
                     'Your first word is:',
-                    "Let's start! Your first word is:",
+                    'Let\\'s start! Your first word is:',
                     'Here we go! First word is:',
                     'Ready? Your first word is:',
                     'Beginning now! Your word is:'
@@ -5639,11 +6400,11 @@ class QuizManager {
             } else {
                 const nextWordPhrases = [
                     'Next word:',
-                    "Here's the next one:",
+                    'Here\\'s the next one:',
                     'Moving on! Your word is:',
                     'Next up:',
                     'Ready for another? Word is:',
-                    "Let's keep going! Next word:"
+                    'Let\\'s keep going! Next word:'
                 ];
                 wordIntro = nextWordPhrases[Math.floor(Math.random() * nextWordPhrases.length)];
             }
@@ -10219,4 +10980,90 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Removed duplicate quizAvatarContainer and legacy render script.
      The quiz now relies solely on the primary mascot container #mascotBee3D
      initialized earlier with SmartyBee3D and userAvatarLoader. -->
-{% endblock %}
+
+    <script src="/static/js/brand-logo-replacer.js?v=1765841264918"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
+            });
+        }
+    </script>
+
+    <!-- If running inside Capacitor, open external links in the native browser -->
+    <script>
+        (function(){
+            function isExternalUrl(href){
+                try {
+                    const u = new URL(href, window.location.origin);
+                    return u.origin !== window.location.origin;
+                } catch(e){ return false; }
+            }
+            document.addEventListener('click', function(e){
+                const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+                if(!a) return;
+                const href = a.getAttribute('href');
+                if(!href || href.startsWith('#')) return;
+                const cap = window.Capacitor;
+                const browser = cap && cap.Plugins && cap.Plugins.Browser;
+                if (browser && isExternalUrl(href)) {
+                    e.preventDefault();
+                    try { browser.open({ url: href }); } catch(_) {}
+                }
+            }, true);
+
+            // Handle deep links (universal/app links) when app is launched from a URL
+            try {
+                const App = window.Capacitor && (window.Capacitor.App || (window.Capacitor.Plugins && window.Capacitor.Plugins.App));
+                if (App && App.addListener) {
+                    App.addListener('appUrlOpen', (data) => {
+                        if (data && data.url) {
+                            // Navigate webview to the incoming URL so the web app routes correctly
+                            try { window.location.href = data.url; } catch(_) {}
+                        }
+                    });
+                }
+            } catch(_) {}
+        })();
+    </script>
+    <!-- SVG viewBox sanitizer: converts percentage viewBox values to numeric units to silence console errors -->
+    <script>
+    (function(){
+        function sanitizeViewBoxes(){
+            try {
+                var svgs = document.querySelectorAll('svg[viewBox*="%"]');
+                svgs.forEach(function(svg){
+                    var raw = svg.getAttribute('viewBox');
+                    if(!raw) return;
+                    var parts = raw.trim().split(/\s+/);
+                    if(parts.length !== 4) return;
+                    var changed = false;
+                    var cleaned = parts.map(function(p){
+                        if(p.indexOf('%') !== -1){
+                            var num = parseFloat(p.replace('%',''));
+                            if(!isNaN(num)){
+                                changed = true;
+                                // Interpret percentage relative to 100 units (e.g., 90% -> 90)
+                                return (num).toString();
+                            }
+                            return '0';
+                        }
+                        return p;
+                    });
+                    if(changed && cleaned.every(function(x){return /^-?\d+(\.\d+)?$/.test(x);})){
+                        svg.setAttribute('viewBox', cleaned.join(' '));
+                    }
+                });
+            } catch(e){ /* silent */ }
+        }
+        if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', sanitizeViewBoxes);
+        } else {
+            sanitizeViewBoxes();
+        }
+    })();
+    </script>
+</body>
+</html>

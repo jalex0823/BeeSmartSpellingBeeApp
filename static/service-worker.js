@@ -1,11 +1,12 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.0-2025-12-07-glb-cache-optimized';
+const CACHE_VERSION = 'beesmart-v1.4.1-2025-12-17-quiz-fix-morph-fix';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
 const CORE_ASSETS = [
   '/',
+  '/static/BeeSmartCrestLogo1.png',
   '/static/css/BeeSmart.css',
   '/static/css/ui-fixes.css',
   '/static/css/mobile-fonts.css',
@@ -50,18 +51,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip service worker for other avatar assets (thumbnails, etc.)
-  if (url.pathname.endsWith('.png') || 
-      url.pathname.includes('/avatars/') ||
-      url.pathname.includes('/glb_files/') ||
-      url.pathname.includes('/AvatarThumbnails/')) {
-    return; // Let browser handle these requests directly
+  // Skip service worker ONLY for avatar-related assets (let the browser fetch directly).
+  // NOTE: Do NOT exclude all PNGs; we want the SW to be able to cache app icons + brand logos.
+  if (
+    url.pathname.includes('/static/assets/avatars/') ||
+    url.pathname.includes('/AvatarThumbnails/')
+  ) {
+    return;
   }
 
   // Network-first for navigation requests to keep content fresh
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/'))
+      // Force a network refresh for HTML navigations; fall back to cached home when offline.
+      fetch(new Request(request.url, { credentials: 'same-origin', cache: 'reload' }))
+        .catch(() => caches.match('/'))
     );
     return;
   }

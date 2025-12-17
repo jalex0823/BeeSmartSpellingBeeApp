@@ -4926,7 +4926,13 @@ def quiz_page():
             user_name = current_user.display_name
             print(f"DEBUG /quiz: User logged in as {user_name}")
         
-        return render_template("quiz.html", user_name=user_name, timestamp=timestamp)
+        # Force fresh HTML for quiz page (prevents stale cached templates that can preserve old JS syntax bugs)
+        from flask import make_response
+        resp = make_response(render_template("quiz.html", user_name=user_name, timestamp=timestamp))
+        resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
     except Exception as e:
         import traceback
         print(f" ERROR in /quiz: {e}")
@@ -14217,12 +14223,10 @@ def api_get_my_avatar():
     try:
         # Try to get authenticated user first
         if current_user.is_authenticated:
-            # CRITICAL FIX: Force fresh query from database to avoid stale session data
-            # This ensures quiz page shows the same avatar as home page
-            from models import User
-            user = User.query.get(current_user.id)
-            if not user:
-                user = current_user
+            # IMPORTANT: Avoid extra DB hits here.
+            # This endpoint is polled by multiple front-end components; a forced DB query
+            # on every request can amplify load and contribute to upstream timeouts (504).
+            user = current_user
         else:
             # Fall back to guest user
             user = get_or_create_guest_user()
