@@ -4816,7 +4816,9 @@ class QuizManager {
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
         // Background music settings
-        this.musicEnabled = localStorage.getItem('musicEnabled') !== 'false'; // Default ON
+        // Default OFF: background music should never auto-play on page load.
+        // Users can explicitly enable it via the Music toggle (persisted in localStorage).
+        this.musicEnabled = localStorage.getItem('musicEnabled') === 'true';
         this.backgroundMusic = null;
         
         console.log('🎤 Voice System Initialization:');
@@ -4853,10 +4855,13 @@ class QuizManager {
             this.showIntroAnnouncer();
         }
         
-        // Start background music if enabled
+        // Start background music only after a user gesture (prevents unwanted looping on load).
         if (this.musicEnabled) {
-            // Delay music start slightly to avoid autoplay blocking
-            setTimeout(() => this.playBackgroundMusic(), 500);
+            const startMusicOnce = () => {
+                try { this.playBackgroundMusic(); } catch (_e) { /* noop */ }
+            };
+            window.addEventListener('pointerdown', startMusicOnce, { once: true, passive: true });
+            window.addEventListener('keydown', startMusicOnce, { once: true });
         }
     }
     

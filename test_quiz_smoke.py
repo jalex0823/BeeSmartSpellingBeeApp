@@ -37,7 +37,16 @@ class QuizSmokeTest:
         
         if response.status_code == 200:
             data = response.json()
-            self.log(f"✅ Words uploaded: {data.get('word_count', 0)} words", "✅")
+            # API responses have varied over time; accept multiple shapes.
+            count = (
+                data.get('word_count')
+                or data.get('count')
+                or data.get('words_imported')
+                or data.get('wordsProcessed')
+                or (len(data.get('words', [])) if isinstance(data.get('words', None), list) else None)
+            )
+            count = int(count) if count is not None else 0
+            self.log(f"✅ Words uploaded: {count} words", "✅")
             return True
         else:
             self.log(f"❌ Upload failed: {response.status_code} - {response.text}", "❌")

@@ -3255,44 +3255,31 @@
         }
         
         /* Bee Swarm Particle Transition Effects */
-        .morph-particle {
+        /* Bee swarm particles for crest↔badge morph (NOT a glowing ball) */
+        .morph-bee {
             position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
             pointer-events: none;
             z-index: 10;
-            background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00);
-            box-shadow: 
-                0 0 8px rgba(255, 193, 7, 0.9),
-                0 0 16px rgba(255, 193, 7, 0.6),
-                0 0 24px rgba(255, 193, 7, 0.3);
+            line-height: 1;
+            transform-origin: center;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.22));
+            text-shadow:
+                0 0 10px rgba(255, 215, 0, 0.45),
+                0 0 18px rgba(255, 165, 0, 0.25);
             animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        
-        /* Add bee trail effect */
-        .morph-particle::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: inherit;
-            opacity: 0.4;
-            filter: blur(3px);
-            transform: scale(1.5);
+            will-change: transform, opacity;
         }
         
         /* Individual bee flight patterns */
-        .morph-particle:nth-child(odd) {
+        .morph-bee:nth-child(odd) {
             animation: beeSwarmFloat1 1.8s ease-out forwards;
         }
         
-        .morph-particle:nth-child(even) {
+        .morph-bee:nth-child(even) {
             animation: beeSwarmFloat2 2s ease-in-out forwards;
         }
         
-        .morph-particle:nth-child(3n) {
+        .morph-bee:nth-child(3n) {
             animation: beeSwarmZigzag 1.9s ease-out forwards;
         }
         
@@ -3434,60 +3421,13 @@
                     display: inline-block;
                     box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
                     border: 2px solid rgba(255, 255, 255, 0.9);
-                    margin: 2rem auto 0.5rem auto; /* INCREASED: More space above welcome (was 0) */
+                    margin: 1.25rem auto 0.5rem auto;
                     white-space: nowrap;
                     z-index: 35;
                 ">
                      Welcome {% if current_user.is_authenticated %}{{ current_user.username or current_user.email.split('@')[0] }}{% else %}NewBee{% endif %}
                 </div>
-                
-                {% if current_user.is_authenticated %}
-                <!-- Combined Rank + Name Badge (authenticated users only) -->
-                <div id="student-buzz-dust-rank" class="rank-pill-pulse" style="
-                    position: relative;
-                    background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(75, 0, 130, 0.15) 100%);
-                    border: 2px solid rgba(138, 43, 226, 0.3);
-                    border-radius: 20px;
-                    padding: 1.25rem 1.75rem;
-                    margin: 2rem auto 0.5rem auto;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    backdrop-filter: blur(10px);
-                    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
-                    max-width: 650px;
-                ">
-                    <!-- MORPHING LOGO (LEFT) - Slowly morphs between badge and crest -->
-                    <div class="rank-logo-pulse" style="
-                        width: 180px;
-                        height: 180px;
-                        flex-shrink: 0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        position: relative;
-                    ">
-                        <div class="rank-logo-pulse-glow"></div>
 
-                        <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
-                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
-                    </div>
-                    
-                    <div style="text-align: left; flex: 1;">
-                        <div id="student-rank-name" style="font-size: 1.3rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.25rem;">
-                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
-                        </div>
-                        <div id="student-buzz-dust-amount" style="font-size: 1.5rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">0 </div>
-                    </div>
-                    
-                    <!-- Hidden 3D GLB Badge (will be hidden by JS) -->
-                    <div id="student-rank-badge" class="rank-badge-3d" style="
-                        width: 0px; 
-                        height: 0px; 
-                        display: none;
-                    "></div>
-                </div>
-                
                 <style>
                     /*  SPARKLING FAIRY DUST ANIMATIONS  */
                     
@@ -3637,7 +3577,6 @@
                         50% { transform: rotate(180deg); opacity: 1; }
                     }
                 </style>
-                {% endif %}
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
                 <div class="logo-container" style="position: relative; display: inline-block; margin-top: 0.5rem;">
@@ -3661,6 +3600,61 @@
                         <!-- Fairy dust particles will be dynamically created here -->
                     </div>
                 </div>
+
+                {% if current_user.is_authenticated %}
+                <!-- Combined Rank + Name Badge (authenticated users only) -->
+                <div id="student-buzz-dust-rank" class="rank-pill-pulse" style="
+                    position: relative;
+                    background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(75, 0, 130, 0.15) 100%);
+                    border: 2px solid rgba(138, 43, 226, 0.3);
+                    border-radius: 20px;
+                    padding: 1.1rem 1.5rem;
+                    margin: 0.6rem auto 1.15rem auto;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
+                    max-width: 650px;
+                ">
+                    <!-- MORPHING LOGO (LEFT) - Slowly morphs between badge and crest -->
+                    <div class="rank-logo-pulse" style="
+                        width: 160px;
+                        height: 160px;
+                        flex-shrink: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                    ">
+                        <div class="rank-logo-pulse-glow"></div>
+
+                        <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
+                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
+                    </div>
+                    
+                    <div style="text-align: left; flex: 1;">
+                        <div id="student-rank-name" style="font-size: 1.25rem; font-weight: 700; color: #5A2C15; opacity: 0.95; line-height: 1.3; margin-bottom: 0.2rem;">
+                            <span id="rank-title">Loading</span> <span style="color: #8B008B;">{{ current_user.display_name or current_user.username or 'User' }}</span>
+                        </div>
+                        <div style="font-size: 1.45rem; font-weight: 900; color: #8B008B; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <span style="color:#5A2C15; font-weight:800; margin-right: 6px;">Buzz Dust</span>
+                            <span id="student-buzz-dust-amount">0</span>
+                        </div>
+                        <div style="margin-top: 2px; font-size: 1.05rem; font-weight: 800; color: #5A2C15; opacity: 0.9;">
+                            <span style="margin-right: 6px;">Points</span>
+                            <span id="student-total-points-amount">{{ current_user.total_lifetime_points|format_number or 0 }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden 3D GLB Badge (will be hidden by JS) -->
+                    <div id="student-rank-badge" class="rank-badge-3d" style="
+                        width: 0px; 
+                        height: 0px; 
+                        display: none;
+                    "></div>
+                </div>
+                {% endif %}
                 
                 {% if current_user.is_authenticated %}
                 <!-- Unified Card Background for Registered Users -->
@@ -12298,7 +12292,7 @@
                 window._badgeLogoMorphTimer = null;
             }
 
-            // Helper: Create realistic bee swarm particles during morph
+            // Helper: Create a bee swarm (visible bees) during morph
             const createMorphParticles = () => {
                 const container = imgEl.parentElement;
                 if (!container) return;
@@ -12306,34 +12300,15 @@
                 const rect = imgEl.getBoundingClientRect();
                 const containerRect = container.getBoundingClientRect();
                 
-                // Bee-inspired colors: gold, amber, brown, black with golden glow
-                const colors = [
-                    'radial-gradient(circle at 30% 30%, #FFD700, #FF8C00)',
-                    'radial-gradient(circle at 30% 30%, #FFC107, #FF6F00)',
-                    'radial-gradient(circle at 30% 30%, #FFEB3B, #FFA726)',
-                    'radial-gradient(circle at 30% 30%, #8B4513, #5D4037)',
-                    'radial-gradient(circle at 30% 30%, #212121, #424242)'
-                ];
-                
-                const particleCount = 40; // Dense swarm for visual impact
+                const particleCount = 28; // Dense enough to read as a swarm without looking like a blob
                 
                 for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
-                    particle.className = 'morph-particle';
-                    
-                    // Varied bee sizes for depth (larger for better visibility)
-                    const size = 10 + Math.random() * 8;
-                    particle.style.width = size + 'px';
-                    particle.style.height = size + 'px';
-                    
-                    // Random bee coloring with golden glow
-                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    const glowIntensity = 0.7 + Math.random() * 0.3;
-                    particle.style.boxShadow = `
-                        0 0 ${size * 0.8}px rgba(255, 193, 7, ${glowIntensity}),
-                        0 0 ${size * 1.5}px rgba(255, 193, 7, ${glowIntensity * 0.6}),
-                        0 0 ${size * 2}px rgba(255, 193, 7, ${glowIntensity * 0.3})
-                    `;
+                    particle.className = 'morph-bee';
+                    particle.textContent = '🐝';
+                    // Varied sizes for depth
+                    const size = 14 + Math.random() * 10;
+                    particle.style.fontSize = size + 'px';
                     
                     // Start from center of badge with slight random offset (swarm forming)
                     const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 20;
