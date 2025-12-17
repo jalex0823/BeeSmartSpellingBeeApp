@@ -5643,17 +5643,35 @@
             try {
                 const el = document.getElementById('morph-badge-logo');
                 if (el) {
+                    console.log('🔄 Starting badge morphing animation...');
                     const variants = ['morph-spin','morph-flip','morph-bounce','morph-swish','morph-sparkle','morph-pulse'];
                     let idx = 0;
                     const cycle = () => {
                         variants.forEach(v => el.classList.remove(v));
                         el.classList.add(variants[idx % variants.length]);
+                        console.log('🔄 Morphing with effect:', variants[idx % variants.length]);
                         idx++;
                     };
-                    cycle();
-                    setInterval(cycle, 6000);
+                    cycle(); // Start immediately
+                    setInterval(cycle, 6000); // Cycle every 6 seconds
+                    
+                    // Also enable full morphing if available
+                    if (typeof initBadgeLogoMorphing === 'function' && !window._morphingInitialized) {
+                        // Set fallback URLs if not already set
+                        if (!window._badgeUrl) {
+                            window._badgeUrl = el.src;
+                        }
+                        if (!window._crestUrl) {
+                            window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
+                        }
+                        initBadgeLogoMorphing();
+                        window._morphingInitialized = true;
+                        console.log('🔄 Full badge/logo morphing initialized');
+                    }
                 }
-            } catch(_) {}
+            } catch(e) {
+                console.warn('Badge morphing init error:', e);
+            }
 
             // Initialize guest 3D GLB carousel with rotation
             try {
