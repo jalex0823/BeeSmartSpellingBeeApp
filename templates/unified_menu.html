@@ -3257,13 +3257,30 @@
         /* Bee Swarm Particle Transition Effects */
         .morph-particle {
             position: absolute;
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             pointer-events: none;
             z-index: 10;
             background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00);
-            box-shadow: 0 0 4px rgba(255, 193, 7, 0.8);
+            box-shadow: 
+                0 0 8px rgba(255, 193, 7, 0.9),
+                0 0 16px rgba(255, 193, 7, 0.6),
+                0 0 24px rgba(255, 193, 7, 0.3);
+            animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        /* Add bee trail effect */
+        .morph-particle::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0.4;
+            filter: blur(3px);
+            transform: scale(1.5);
         }
         
         /* Individual bee flight patterns */
@@ -12342,20 +12359,25 @@
                     'radial-gradient(circle at 30% 30%, #212121, #424242)'
                 ];
                 
-                const particleCount = 30; // Increased for denser swarm
+                const particleCount = 40; // Dense swarm for visual impact
                 
                 for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'morph-particle';
                     
-                    // Varied bee sizes for depth
-                    const size = 8 + Math.random() * 6;
+                    // Varied bee sizes for depth (larger for better visibility)
+                    const size = 10 + Math.random() * 8;
                     particle.style.width = size + 'px';
                     particle.style.height = size + 'px';
                     
                     // Random bee coloring with golden glow
                     particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    particle.style.boxShadow = `0 0 ${size}px rgba(255, 193, 7, ${0.5 + Math.random() * 0.5})`;
+                    const glowIntensity = 0.7 + Math.random() * 0.3;
+                    particle.style.boxShadow = `
+                        0 0 ${size * 0.8}px rgba(255, 193, 7, ${glowIntensity}),
+                        0 0 ${size * 1.5}px rgba(255, 193, 7, ${glowIntensity * 0.6}),
+                        0 0 ${size * 2}px rgba(255, 193, 7, ${glowIntensity * 0.3})
+                    `;
                     
                     // Start from center of badge with slight random offset (swarm forming)
                     const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 20;
@@ -12387,8 +12409,9 @@
                     setTimeout(() => particle.remove(), 2200 + (i * 20));
                 }
             };
-
-            const morph = () => {
+ - BEE SWARM!
+                createMorphParticles();
+                console.log('🐝 [SWARM] Bee swarm particles launched!'
                 const nextUrl = urls[idx % urls.length];
                 const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
                 
