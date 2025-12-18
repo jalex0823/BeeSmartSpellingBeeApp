@@ -17,6 +17,11 @@ Complete this flow manually in the browser:
    - Click "Start Quiz" button
    - Verify quiz page loads
 
+   Timer Check (60s)
+   - On the quiz page, verify the honey-jar countdown appears and starts at **60**
+   - Let it run for a few seconds and confirm the number decreases (59, 58, ...)
+   - Confirm the honey fill level visibly drops as time counts down
+
 4. Answer Questions:
    - Type each word correctly
    - Check feedback after each answer
@@ -70,3 +75,11 @@ Quick Manual Verification
    - total_buzz_dust increases after quizzes
    - current_class label matches thresholds once total_buzz_dust crosses them
    - any "Earn X more Buzz Dust" messaging matches the same Buzz Dust value shown in the UI
+
+Badge vs Points Mismatch Check
+------------------------------
+- The Bee Class badge/rank should be driven by **total_buzz_dust** only (not lifetime points).
+- If the UI ever shows a badge that looks out-of-sync:
+  1) Run the `/api/buzz-dust/info` fetch above
+  2) Verify the UI badge label matches `data.current_class.label`
+  3) Verify the progress message matches `data.dust_needed`

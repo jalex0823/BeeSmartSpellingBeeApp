@@ -9754,12 +9754,12 @@ def api_buzz_dust_info():
             },
             'next_class': {
                 'label': 'Apprentice Bee',
-                'min_buzz_dust': 500,
-                'min_points': 500,
+                'min_buzz_dust': 10000,
+                'min_points': 10000,
                 'badge_image': 'Apprentice.glb'
             },
             'progress_percent': 0,
-            'dust_needed': 500,
+            'dust_needed': 10000,
             'at_max_rank': False,
             'all_classes': [],
             'is_authenticated': current_user.is_authenticated
