@@ -2684,7 +2684,9 @@ INAPPROPRIATE_WORDS = {
     # Hate speech
     "racist", "sexist", "nazi", "hate",
     # Other inappropriate
-    "death", "die", "dying", "blood", "bloody", "torture"
+    "death", "die", "dying", "blood", "bloody", "torture",
+    # Disturbing / age-inappropriate concepts
+    "sadism", "sadist", "sadistic"
 }
 
 def is_kid_friendly(word: str) -> tuple[bool, str]:

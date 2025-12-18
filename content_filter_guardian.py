@@ -137,7 +137,8 @@ ENHANCED_INAPPROPRIATE_WORDS = {
     },
     'disturbing_content': {
         "death", "die", "dying", "blood", "bloody", "torture", "pain", "suffering",
-        "corpse", "suicide", "self-harm"
+        "corpse", "suicide", "self-harm",
+        "sadism", "sadist", "sadistic"
     },
     'spam_patterns': {
         # Common spam/inappropriate patterns

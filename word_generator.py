@@ -39,7 +39,9 @@ def _is_word_safe(word):
         # Hate speech
         "racist", "sexist", "nazi", "hate",
         # Other inappropriate
-        "death", "die", "dying", "blood", "bloody", "torture"
+        "death", "die", "dying", "blood", "bloody", "torture",
+        # Disturbing / age-inappropriate concepts
+        "sadism", "sadist", "sadistic"
     }
     
     word_lower = word.lower().strip()

@@ -11,6 +11,17 @@ class SmartyBee3D {
     }
 
     constructor(containerId, options = {}) {
+        // If a controller already exists for this container, dispose it first.
+        // This prevents leaking WebGL contexts (a common cause of "Error creating WebGL context").
+        try {
+            const existing = SmartyBee3D.instances.get(containerId);
+            if (existing && existing !== this && typeof existing.destroy === 'function') {
+                existing.destroy();
+            }
+        } catch (e) {
+            console.warn('⚠️ Failed to dispose previous SmartyBee3D instance:', e);
+        }
+
         SmartyBee3D.instances.set(containerId, this);
         
         // ALSO register in global window object for getAvatarController()
@@ -45,6 +56,9 @@ class SmartyBee3D {
         this.isHovering = false;
         this.avatarData = null; // Store fetched avatar data
         this.manualControl = false; // Flag to disable animations during manual control
+
+        // WebGL availability flag
+        this.webglDisabled = false;
         
         // Animation states
         this.currentAnimation = 'idle';
@@ -102,8 +116,18 @@ class SmartyBee3D {
             return;
         }
 
-        this.setupScene();
-        this.setupLighting();
+        try {
+            const ok = this.setupScene();
+            if (!ok) {
+                // setupScene already fell back
+                return;
+            }
+            this.setupLighting();
+        } catch (e) {
+            console.warn('⚠️ 3D mascot initialization failed, falling back to 2D:', e);
+            this.showFallbackImage();
+            return;
+        }
         
         // Fetch avatar from server if needed (MUST complete before loading model)
         if (this.options.fetchFromServer && !this.options.modelPath) {
@@ -166,15 +190,49 @@ class SmartyBee3D {
         // Save default camera position for resetView()
         this.defaultCameraPosition = this.camera.position.clone();
 
-        // Create renderer
-        this.renderer = new THREE.WebGLRenderer({ 
-            alpha: true, 
-            antialias: true 
-        });
+        // Remove any existing canvases left behind (defensive cleanup)
+        try {
+            const existingCanvas = this.container.querySelector('canvas');
+            if (existingCanvas && existingCanvas.parentElement === this.container) {
+                existingCanvas.remove();
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // Create renderer (may throw if WebGL is unavailable/disabled)
+        try {
+            this.renderer = new THREE.WebGLRenderer({
+                alpha: true,
+                antialias: true,
+                powerPreference: 'high-performance'
+            });
+        } catch (e) {
+            // WebGL context could not be created (hardware acceleration disabled, too many contexts, etc.)
+            this.webglDisabled = true;
+            console.warn('🚫 WebGL unavailable for SmartyBee3D. Using 2D fallback.', e);
+            this.showFallbackImage();
+            return false;
+        }
+
         this.renderer.setSize(this.options.width, this.options.height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        
+
+        // Handle WebGL context loss gracefully
+        try {
+            const canvas = this.renderer.domElement;
+            canvas.addEventListener('webglcontextlost', (evt) => {
+                evt.preventDefault();
+                console.warn('🚫 WebGL context lost for SmartyBee3D. Falling back to 2D.');
+                this.webglDisabled = true;
+                this.showFallbackImage();
+            }, false);
+        } catch (e) {
+            // ignore
+        }
+
         this.container.appendChild(this.renderer.domElement);
+        return true;
     }
 
     setupLighting() {
@@ -294,6 +352,10 @@ class SmartyBee3D {
 
     animate() {
         this.animationId = requestAnimationFrame(() => this.animate());
+
+        if (this.webglDisabled || !this.renderer) {
+            return;
+        }
         
         if (this.bee) {
             this.animationTime += 0.016; // ~60fps
