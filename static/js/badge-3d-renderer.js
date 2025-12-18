@@ -194,7 +194,10 @@ class Badge3DRenderer {
     
     fallbackToPNG() {
         // Fallback to PNG badge if 3D rendering fails
-        const pngFile = this.options.badgeFile.replace('.glb', '.png');
+        const rawPngFile = this.options.badgeFile.replace('.glb', '.png');
+        const pngBase = rawPngFile.split('/').pop();
+        // Known filename mismatch in static assets: Elite.png is stored as Elete.png
+        const pngFile = (pngBase === 'Elite.png') ? 'Elete.png' : pngBase;
         const pngPath = `/static/assets/badges/${pngFile}`;
         
         console.warn(`⚠️ Falling back to PNG badge: ${pngPath}`);

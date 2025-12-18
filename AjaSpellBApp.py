@@ -9666,12 +9666,33 @@ def api_buzz_dust_info():
         print(f" DEBUG /api/buzz-dust/info: Starting request")
         print(f" DEBUG /api/buzz-dust/info: current_user.is_authenticated = {current_user.is_authenticated}")
         
-        from buzz_dust_helpers import get_rank_progress, get_all_bee_classes
+        from buzz_dust_helpers import BUZZ_DUST_MULTIPLIER, get_bee_class, get_rank_progress, get_all_bee_classes
         
         # Handle both authenticated and guest users
         if current_user.is_authenticated:
             buzz_dust = current_user.total_buzz_dust or 0
             print(f" DEBUG /api/buzz-dust/info: Authenticated user, buzz_dust={buzz_dust}")
+
+            # One-time backfill for existing users who have points but never had Buzz Dust initialized.
+            # This keeps older accounts from showing 0 Buzz Dust forever after enabling the feature.
+            try:
+                lifetime_points = current_user.total_lifetime_points or 0
+                if buzz_dust == 0 and lifetime_points > 0:
+                    estimated = int(lifetime_points * float(BUZZ_DUST_MULTIPLIER))
+                    if estimated > 0:
+                        print(
+                            f" DEBUG /api/buzz-dust/info: Backfilling total_buzz_dust from lifetime_points="
+                            f"{lifetime_points} at multiplier={BUZZ_DUST_MULTIPLIER} => {estimated}"
+                        )
+                        current_user.total_buzz_dust = estimated
+                        # Keep bee_class consistent with the recalculated total
+                        current_user.bee_class = get_bee_class(estimated).get('id', current_user.bee_class or 'novice')
+                        from models import db
+                        db.session.commit()
+                        buzz_dust = estimated
+            except Exception as backfill_error:
+                # Non-fatal: still return whatever value we have
+                print(f" WARN /api/buzz-dust/info: Backfill failed: {backfill_error}")
         else:
             # Guest users always start at 0
             buzz_dust = 0
@@ -9708,10 +9729,20 @@ def api_buzz_dust_info():
             'success': False,
             'error': str(e),
             'total_buzz_dust': 0,
-            'current_class': {'label': 'Novice Bee', 'min_points': 0, 'badge_image': 'novice.png'},
-            'next_class': {'label': 'Scholar Bee', 'min_points': 2500},
+            'current_class': {
+                'label': 'Novice Bee',
+                'min_buzz_dust': 0,
+                'min_points': 0,
+                'badge_image': 'Novice.glb'
+            },
+            'next_class': {
+                'label': 'Apprentice Bee',
+                'min_buzz_dust': 500,
+                'min_points': 500,
+                'badge_image': 'Apprentice.glb'
+            },
             'progress_percent': 0,
-            'dust_needed': 2500,
+            'dust_needed': 500,
             'at_max_rank': False,
             'all_classes': [],
             'is_authenticated': current_user.is_authenticated

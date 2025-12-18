@@ -12300,7 +12300,8 @@
                 const rect = imgEl.getBoundingClientRect();
                 const containerRect = container.getBoundingClientRect();
                 
-                const particleCount = 28; // Dense enough to read as a swarm without looking like a blob
+                // More obvious swarm (wider + denser) while keeping performance safe on mobile.
+                const particleCount = (window.innerWidth <= 480) ? 34 : 48;
                 
                 for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
@@ -12310,34 +12311,35 @@
                     const size = 14 + Math.random() * 10;
                     particle.style.fontSize = size + 'px';
                     
-                    // Start from center of badge with slight random offset (swarm forming)
-                    const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 20;
-                    const centerY = (rect.top - containerRect.top) + (rect.height / 2) + (Math.random() - 0.5) * 20;
+                    // Start from center of badge with a bit more jitter so it reads as a swarm (not a point)
+                    const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 32;
+                    const centerY = (rect.top - containerRect.top) + (rect.height / 2) + (Math.random() - 0.5) * 32;
                     particle.style.left = centerX + 'px';
                     particle.style.top = centerY + 'px';
                     
                     // Bee swarm flight pattern: spiraling outward with natural variation
-                    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
-                    const distance = 50 + Math.random() * 60; // Varied distances
+                    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.7;
+                    // Push bees farther so the morph reads as a real transition between two images.
+                    const distance = 80 + Math.random() * 110;
                     
                     // Add sine wave for natural bee flight wobble
-                    const wobble = Math.sin(angle * 3) * 15;
+                    const wobble = Math.sin(angle * 3) * 24;
                     const tx = Math.cos(angle) * distance + wobble;
-                    const ty = Math.sin(angle) * distance + (Math.random() - 0.5) * 20;
+                    const ty = Math.sin(angle) * distance + (Math.random() - 0.5) * 34;
                     
                     particle.style.setProperty('--tx', tx + 'px');
                     particle.style.setProperty('--ty', ty + 'px');
                     
                     // Staggered departure for natural swarm effect
-                    particle.style.animationDelay = (i * 20) + 'ms';
+                    particle.style.animationDelay = (i * 14) + 'ms';
                     
                     // Random animation duration for varied flight speeds
-                    particle.style.animationDuration = (1.6 + Math.random() * 0.6) + 's';
+                    particle.style.animationDuration = (1.9 + Math.random() * 0.8) + 's';
                     
                     container.appendChild(particle);
                     
                     // Remove after animation completes
-                    setTimeout(() => particle.remove(), 2200 + (i * 20));
+                    setTimeout(() => particle.remove(), 2800 + (i * 14));
                 }
             };
             

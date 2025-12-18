@@ -1210,10 +1210,10 @@ function announceSpeedRoundIntro() {
         return;
     }
 
-    const intro = `${studentName ? studentName + ', ' : ''}Welcome to the Speed Round! Get ready for an exciting challenge. ` +
-                  "You'll have limited time to spell each word correctly. " +
-                  "Listen carefully, type fast, and earn bonus points for quick answers! " +
-                  "Your Speed Round begins... now!";
+    // Keep the intro short + snappy so the round starts quickly.
+    const intro = `${studentName ? studentName + ', ' : ''}Welcome to Speed Round! ` +
+                  "You'll have a short timer for each word. " +
+                  "Listen, type fast, and earn bonus points. Starting now!";
     
     // iOS Fix: Cancel any existing speech with delay
     speechSynthesis.cancel();
@@ -1222,7 +1222,7 @@ function announceSpeedRoundIntro() {
     setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(intro);
         utterance.pitch = 1.0; // Natural neutral female voice
-        utterance.rate = 0.7; // Slower for clearer introduction
+        utterance.rate = 0.92; // Faster pacing for speed round intro
         utterance.volume = 0.9;
 
         // Use the same best-female voice selector as regular quiz
@@ -1239,34 +1239,14 @@ function announceSpeedRoundIntro() {
             visualizer.classList.add('speaking');
         };
 
-        // Boundary-driven pauses during announcement
-        utterance.onboundary = (event) => {
-            if (!visualizer) return;
-            if (event.name === 'word' || event.charLength > 0) {
-                visualizer.classList.add('word-pulse');
-                setTimeout(() => visualizer.classList.remove('word-pulse'), 150);
-                visualizer.classList.add('pausing');
-                setTimeout(() => visualizer.classList.remove('pausing'), 100);
-            }
-            const ch = (utterance.text || '').charAt(event.charIndex);
-            if (ch === '.' || ch === '!' || ch === '?' || ch === ';' || ch === ',') {
-                visualizer.classList.remove('speaking');
-                visualizer.classList.add('pausing');
-                setTimeout(() => {
-                    visualizer.classList.remove('pausing');
-                    visualizer.classList.add('speaking');
-                }, 400);
-            }
-        };
-
         // Sync visualizer with intro speech using natural pauses
         utterance.onboundary = (event) => {
             if (!visualizer) return;
             if (event.name === 'word' || event.charLength > 0) {
                 visualizer.classList.add('word-pulse');
-                setTimeout(() => visualizer.classList.remove('word-pulse'), 150);
+                setTimeout(() => visualizer.classList.remove('word-pulse'), 120);
                 visualizer.classList.add('pausing');
-                setTimeout(() => visualizer.classList.remove('pausing'), 100);
+                setTimeout(() => visualizer.classList.remove('pausing'), 80);
             }
             const ch = (utterance.text || '').charAt(event.charIndex);
             if (ch === '.' || ch === '!' || ch === '?' || ch === ';' || ch === ',') {
@@ -1275,7 +1255,7 @@ function announceSpeedRoundIntro() {
                 setTimeout(() => {
                     visualizer.classList.remove('pausing');
                     visualizer.classList.add('speaking');
-                }, 400);
+                }, 220);
             }
         };
         
@@ -1286,7 +1266,7 @@ function announceSpeedRoundIntro() {
             setTimeout(() => {
                 loadNextWord();
                 // Note: setupEventListeners() already called on DOMContentLoaded for iOS compatibility
-            }, 500);
+            }, 150);
         };
         
         utterance.onerror = () => {
@@ -2257,6 +2237,13 @@ window.addEventListener('error', (event) => {
     let H = canvas.height;
     let DPR = window.devicePixelRatio || 1;
 
+    // Swarm state must be initialized before any resize handler can call initSwarm().
+    // Otherwise, `initSwarm` (function declaration) is hoisted and can be called while
+    // `let particles`/`let swarmShape` are still in the temporal dead zone.
+    let particles = [];
+    let swarmShape = [];
+    let swarmReady = false;
+
     // Resize handler
     function resizeCanvas(){
         DPR = window.devicePixelRatio || 1;
@@ -2267,9 +2254,14 @@ window.addEventListener('error', (event) => {
         canvas.style.width = cssWidth + 'px';
         canvas.style.height = cssHeight + 'px';
         W = canvas.width; H = canvas.height;
-        // Only call initSwarm if it's defined (will be called later on initial resize)
-        if (typeof initSwarm === 'function') {
-            initSwarm();
+        // Only rebuild the swarm after all swarm variables have been initialized.
+        if (swarmReady) {
+            try {
+                swarmShape = generateSwarmShape();
+                initSwarm();
+            } catch (e) {
+                console.warn('⚠️ Swarm resize init failed (non-fatal):', e);
+            }
         }
     }
     resizeCanvas();
@@ -2335,7 +2327,6 @@ window.addEventListener('error', (event) => {
     })();
 
     // 🐝 BEE SWARM 3D VISUALIZATION
-    let particles = [];
     const particleCount = 200;
     
     // Blue swarm colors (light to deep blue)
@@ -2368,9 +2359,10 @@ window.addEventListener('error', (event) => {
         return points;
     }
 
-    let swarmShape = generateSwarmShape();
-
     function initSwarm() {
+        if (!swarmShape || swarmShape.length === 0) {
+            swarmShape = generateSwarmShape();
+        }
         particles = [];
         
         for (let i = 0; i < particleCount; i++) {
@@ -2406,6 +2398,10 @@ window.addEventListener('error', (event) => {
         // Sort by depth for layering
         particles.sort((a, b) => a.depth - b.depth);
     }
+
+    // Now it's safe to initialize and allow resize-driven rebuilds.
+    swarmShape = generateSwarmShape();
+    swarmReady = true;
     initSwarm();
 
     // Draw swarm visualization
