@@ -9677,12 +9677,17 @@ def api_buzz_dust_info():
             # This keeps older accounts from showing 0 Buzz Dust forever after enabling the feature.
             try:
                 lifetime_points = current_user.total_lifetime_points or 0
-                if buzz_dust == 0 and lifetime_points > 0:
+                if lifetime_points > 0:
                     estimated = int(lifetime_points * float(BUZZ_DUST_MULTIPLIER))
-                    if estimated > 0:
+
+                    # IMPORTANT: Keep Buzz Dust at least in sync with the baseline points system.
+                    # Some older accounts can have a small non-zero buzz_dust that is still far below
+                    # the baseline estimate; that would make the displayed badge/rank look "wrong"
+                    # relative to points-based expectations.
+                    if estimated > buzz_dust:
                         print(
-                            f" DEBUG /api/buzz-dust/info: Backfilling total_buzz_dust from lifetime_points="
-                            f"{lifetime_points} at multiplier={BUZZ_DUST_MULTIPLIER} => {estimated}"
+                            f" DEBUG /api/buzz-dust/info: Raising total_buzz_dust to baseline from lifetime_points="
+                            f"{lifetime_points} at multiplier={BUZZ_DUST_MULTIPLIER} => {estimated} (was {buzz_dust})"
                         )
                         current_user.total_buzz_dust = estimated
                         # Keep bee_class consistent with the recalculated total
@@ -9699,6 +9704,16 @@ def api_buzz_dust_info():
             print(f" DEBUG /api/buzz-dust/info: Guest user, defaulting to 0 Buzz Dust")
         
         rank_progress = get_rank_progress(buzz_dust)
+
+        # Provide baseline reference values to help the frontend keep displays consistent
+        baseline_estimate = 0
+        lifetime_points_for_baseline = 0
+        if current_user.is_authenticated:
+            lifetime_points_for_baseline = int(current_user.total_lifetime_points or 0)
+            try:
+                baseline_estimate = int(lifetime_points_for_baseline * float(BUZZ_DUST_MULTIPLIER))
+            except Exception:
+                baseline_estimate = 0
         
         response_data = {
             'success': True,
@@ -9709,7 +9724,10 @@ def api_buzz_dust_info():
             'dust_needed': rank_progress['dust_needed'],
             'at_max_rank': rank_progress['at_max_rank'],
             'all_classes': get_all_bee_classes(),
-            'is_authenticated': current_user.is_authenticated  # Help frontend debug
+            'is_authenticated': current_user.is_authenticated,  # Help frontend debug
+            'baseline_estimate': baseline_estimate,
+            'baseline_multiplier': float(BUZZ_DUST_MULTIPLIER),
+            'lifetime_points': lifetime_points_for_baseline
         }
         
         print(f" DEBUG /api/buzz-dust/info: Returning success response")
@@ -9717,7 +9735,12 @@ def api_buzz_dust_info():
         print(f"   - next_class: {rank_progress['next_class'].get('label', 'Max') if rank_progress['next_class'] else 'None'}")
         print(f"   - at_max_rank: {rank_progress['at_max_rank']}")
         
-        return jsonify(response_data)
+        resp = jsonify(response_data)
+        # Ensure browsers and service workers don't cache progress/rank data
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
         
     except Exception as e:
         print(f" ERROR /api/buzz-dust/info: {type(e).__name__}: {e}")

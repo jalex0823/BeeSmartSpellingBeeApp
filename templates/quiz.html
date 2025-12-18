@@ -3879,10 +3879,14 @@ class CountdownTimer {
         this.warningTriggered = false;
         this.criticalTriggered = false;
         
-        // Get honey jar elements
+        // Get honey jar elements (prefer explicit IDs to avoid selecting the wrong elements)
+        this.container = document.getElementById('countdownContainer') || document.querySelector('.countdown-container');
+        this.timerNumber = document.getElementById('timerNumber') || document.querySelector('.timer-number');
+        this.honeyFillRect = document.getElementById('honeyFillRect'); // SVG rect element inside timer jar
+        this.jar = document.getElementById('honeyJarTimer') || document.querySelector('.honey-jar-timer');
+
+        // Back-compat: some legacy UIs used a div-based fill element
         this.honeyFill = document.querySelector('.honey-fill');
-        this.timerNumber = document.querySelector('.timer-number');
-        this.container = document.querySelector('.countdown-container');
     }
     
     start() {
@@ -3945,19 +3949,31 @@ class CountdownTimer {
         const secondsRemaining = Math.ceil(this.remaining / 1000);
         const percentage = (this.remaining / this.duration) * 100;
         
-        // Update honey fill level
-        if (this.honeyFill) {
+        // Update honey fill level (SVG rect in the timer jar)
+        if (this.honeyFillRect) {
+            const jarHeight = 110; // matches SVG jar body height in markup
+            const baseY = 35;      // matches SVG jar body y in markup
+
+            const fillHeight = Math.max(0, Math.round(jarHeight * (percentage / 100)));
+            const fillY = baseY + (jarHeight - fillHeight);
+
+            this.honeyFillRect.setAttribute('height', fillHeight);
+            this.honeyFillRect.setAttribute('y', fillY);
+        } else if (this.honeyFill) {
+            // Legacy div-based fill
             this.honeyFill.style.height = `${percentage}%`;
-            
-            // Update color classes
+        }
+
+        // Warning/Critical styling is applied to the jar container (CSS targets .honey-jar-timer.warning/.critical)
+        if (this.jar) {
             if (secondsRemaining <= 3) {
-                this.honeyFill.classList.add('critical');
-                this.honeyFill.classList.remove('warning');
+                this.jar.classList.add('critical');
+                this.jar.classList.remove('warning');
             } else if (secondsRemaining <= 5) {
-                this.honeyFill.classList.add('warning');
-                this.honeyFill.classList.remove('critical');
+                this.jar.classList.add('warning');
+                this.jar.classList.remove('critical');
             } else {
-                this.honeyFill.classList.remove('warning', 'critical');
+                this.jar.classList.remove('warning', 'critical');
             }
         }
         
@@ -4003,9 +4019,15 @@ class CountdownTimer {
         this.criticalTriggered = false;
         
         // Reset visual display
-        if (this.honeyFill) {
+        if (this.honeyFillRect) {
+            // Full jar
+            this.honeyFillRect.setAttribute('height', 110);
+            this.honeyFillRect.setAttribute('y', 35);
+        } else if (this.honeyFill) {
             this.honeyFill.style.height = '100%';
-            this.honeyFill.classList.remove('warning', 'critical');
+        }
+        if (this.jar) {
+            this.jar.classList.remove('warning', 'critical');
         }
         if (this.timerNumber) {
             this.timerNumber.textContent = Math.ceil(this.duration / 1000);
@@ -4028,8 +4050,10 @@ class CountdownTimer {
     destroy() {
         this.hide();
         this.honeyFill = null;
+        this.honeyFillRect = null;
         this.timerNumber = null;
         this.container = null;
+        this.jar = null;
         this.soundboard = null;
     }
 }
@@ -5854,6 +5878,22 @@ class QuizManager {
         
         return announcement;
     }
+
+    // 🎭 Morph mode switching (controls whether the timer is visually shown)
+    setMorphMode(mode) {
+        const morphContainer = document.getElementById('morphContainer');
+        if (!morphContainer) {
+            console.warn('⚠️ Morph container not found (#morphContainer)');
+            return;
+        }
+
+        morphContainer.classList.remove('mode-voice', 'mode-timer');
+        if (mode === 'timer') {
+            morphContainer.classList.add('mode-timer');
+        } else {
+            morphContainer.classList.add('mode-voice');
+        }
+    }
     
     startCountdownTimer() {
         // Stop any existing timer (but don't hide it - we're restarting)
@@ -5865,6 +5905,16 @@ class QuizManager {
         const duration = this.getTimerDuration();
         
         console.log(`⏱️ Starting ${duration}s countdown timer (mode: ${this.timerMode})`);
+
+        // ✅ Make the timer layer visible (CSS depends on morphContainer mode)
+        this.setMorphMode('timer');
+
+        // Ensure countdown container is not forcibly hidden
+        const countdownContainer = document.getElementById('countdownContainer');
+        if (countdownContainer) {
+            countdownContainer.classList.remove('hidden');
+            countdownContainer.classList.add('active');
+        }
         
         // Create new timer
         this.countdownTimer = new CountdownTimer(duration, {
@@ -5918,6 +5968,9 @@ class QuizManager {
     
     handleTimerExpired() {
         console.log('⏰ Timer expired! Auto-advancing to next word...');
+
+        // Clean up timer visuals
+        this.stopCountdownTimer();
         
         // Mark as incorrect/missed
         this.incorrectCount++;
@@ -5947,8 +6000,16 @@ class QuizManager {
     
     stopCountdownTimer() {
         if (this.countdownTimer) {
-            this.countdownTimer.stop();
+            // Prefer hide() to clear UI state as well as stopping the interval
+            if (typeof this.countdownTimer.hide === 'function') {
+                this.countdownTimer.hide();
+            } else {
+                this.countdownTimer.stop();
+            }
         }
+
+        // Return to voice mode visuals
+        this.setMorphMode('voice');
     }
     
     pauseCountdownTimer() {

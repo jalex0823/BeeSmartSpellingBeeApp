@@ -17364,7 +17364,7 @@
                 console.log(' [TICKER] Authentication state:', true);
                 console.log(' [TICKER] Current user:', '{{ current_user.username }}');
                 
-                const res = await fetch('/api/buzz-dust/info', {
+                const res = await fetch(`/api/buzz-dust/info?t=${Date.now()}`, {
                     credentials: 'same-origin',
                     cache: 'no-store'
                 });
@@ -17392,10 +17392,39 @@
                     throw new Error('Invalid response structure: missing current_class');
                 }
                 
+                // Prefer a Buzz Dust value that is consistent with the baseline points system
+                // (some older accounts can have Buzz Dust far below the expected points-derived total).
+                const apiDust = Number(data.total_buzz_dust) || 0;
+                const baselineEstimate = Number(data.baseline_estimate) || 0;
+                const effectiveDust = Math.max(apiDust, baselineEstimate);
+
+                // Derive the class using the effective dust value (never downgrade due to baseline logic).
+                let effectiveClass = data.current_class;
+                if (effectiveDust > apiDust && Array.isArray(data.all_classes) && data.all_classes.length > 0) {
+                    const sorted = [...data.all_classes].sort((a, b) => {
+                        const amin = Number(a.min_buzz_dust ?? a.min_points ?? 0);
+                        const bmin = Number(b.min_buzz_dust ?? b.min_points ?? 0);
+                        return amin - bmin;
+                    });
+                    let best = sorted[0];
+                    for (const c of sorted) {
+                        const min = Number(c.min_buzz_dust ?? c.min_points ?? 0);
+                        if (effectiveDust >= min) best = c;
+                        else break;
+                    }
+                    effectiveClass = best;
+                    console.log(' [TICKER] Using baseline-synced Buzz Dust for display:', {
+                        apiDust,
+                        baselineEstimate,
+                        effectiveDust,
+                        effectiveClass: effectiveClass?.label
+                    });
+                }
+
                 // Update rank title
                 const rankTitleEl = document.getElementById('rank-title');
                 if (rankTitleEl) {
-                    const rankLabel = data.current_class.label || 'Novice Bee';
+                    const rankLabel = (effectiveClass && effectiveClass.label) ? effectiveClass.label : (data.current_class.label || 'Novice Bee');
                     rankTitleEl.textContent = rankLabel;
                     console.log(' [TICKER] Rank title updated:', rankLabel);
                 } else {
@@ -17405,22 +17434,22 @@
                 // Update Buzz Dust amount
                 const amountEl = document.getElementById('student-buzz-dust-amount');
                 if (amountEl) {
-                    const buzzDust = data.total_buzz_dust || 0;
-                    const formatted = buzzDust.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    const formatted = effectiveDust.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                     amountEl.textContent = formatted + ' ';
-                    console.log(' [TICKER] Buzz Dust amount updated:', buzzDust);
+                    console.log(' [TICKER] Buzz Dust amount updated:', effectiveDust);
                 } else {
                     console.warn(' [TICKER] Element #student-buzz-dust-amount not found in DOM');
                 }
                 
                 // Update badge with PNG (fallback from 3D GLB due to loading issues)
                 const badgeEl = document.getElementById('student-rank-badge');
-                if (badgeEl && data.current_class && data.current_class.badge_image) {
+                const currentClassForBadge = (effectiveClass && effectiveClass.badge_image) ? effectiveClass : data.current_class;
+                if (badgeEl && currentClassForBadge && currentClassForBadge.badge_image) {
                     // Clear any existing content
                     badgeEl.innerHTML = '';
                     
                     // Use PNG badge image instead of 3D GLB
-                    let pngFile = data.current_class.badge_image.replace('.glb', '.png');
+                    let pngFile = currentClassForBadge.badge_image.replace('.glb', '.png');
                     // Normalize basename to handle case differences
                     const base = pngFile.split('/').pop();
                     const pngOverrides = new Map([
@@ -17439,7 +17468,7 @@
                     const img = document.createElement('img');
                     // Primary path
                     img.src = `/static/assets/badges/${pngFile}`;
-                    img.alt = data.current_class.label || 'Badge';
+                    img.alt = currentClassForBadge.label || 'Badge';
                     img.style.width = '200px';
                     img.style.height = '200px';
                     img.style.objectFit = 'contain';
