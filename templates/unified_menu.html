@@ -17388,11 +17388,9 @@
                     throw new Error('Invalid response structure: missing current_class');
                 }
                 
-                // Prefer a Buzz Dust value that is consistent with the baseline points system
-                // (some older accounts can have Buzz Dust far below the expected points-derived total).
+                // Buzz Dust is independent from Points/grades. Display the stored total.
                 const apiDust = Number(data.total_buzz_dust) || 0;
-                const baselineEstimate = Number(data.baseline_estimate) || 0;
-                const effectiveDust = Math.max(apiDust, baselineEstimate);
+                const effectiveDust = apiDust;
 
                 // Derive class/next-class/progress from the SAME effectiveDust that we display.
                 // This prevents mismatches like:
@@ -17432,16 +17430,6 @@
                         effectiveDustNeeded = 0;
                     }
 
-                    if (effectiveDust > apiDust) {
-                        console.log(' [TICKER] Using baseline-synced Buzz Dust for display:', {
-                            apiDust,
-                            baselineEstimate,
-                            effectiveDust,
-                            effectiveClass: effectiveClass?.label,
-                            effectiveNextClass: effectiveNextClass?.label,
-                            effectiveDustNeeded
-                        });
-                    }
                 }
 
                 // Update rank title

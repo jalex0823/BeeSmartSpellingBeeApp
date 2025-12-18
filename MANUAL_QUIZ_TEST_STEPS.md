@@ -48,37 +48,17 @@ Automated Test Available:
 Run: python test_complete_quiz_flow.py
 
 
-Buzz Dust Baseline Expectations (No Bonuses)
--------------------------------------------
+Buzz Dust Expectations
+----------------------
 The app uses a dual scoring system:
-- Points = academic score
+- Points = academic score (grades/GPA)
 - Buzz Dust = XP used for Bee Class rank/badges
 
-For *baseline* estimation (ignoring all bonuses and badge points), Buzz Dust is:
+Important:
+- **Buzz Dust is separate from Points/grades.**
+- A student can have high Points but still be **Novice** if they have not earned much Buzz Dust yet.
 
-  Buzz Dust ≈ floor(Points × 0.10)
-
-So it takes about **10 points to earn ~1 Buzz Dust**.
-
-Example:
-- Points: 72,641
-- Baseline Buzz Dust: floor(72,641 × 0.10) = 7,264
-
-Approx Word-Points Needed Per Rank (No Bonuses, No Badge Points)
----------------------------------------------------------------
-These are approximate point totals needed to reach each Bee Class threshold using ONLY the 10% multiplier.
-
-| Bee Class | Min Buzz Dust | Approx word-points needed |
-|----------|---------------:|--------------------------:|
-| Apprentice | 500 | 5,000 |
-| Scholar | 2,500 | 25,000 |
-| Elite | 10,000 | 100,000 |
-| Magistrate | 50,000 | 500,000 |
-| Buzz Dust Master | 100,000 | 1,000,000 |
-
-Notes:
-- Real gameplay will often reach ranks faster due to bonuses (perfect round, streaks, etc.).
-- Badge bonus points (when earned) can also add directly to Buzz Dust in the regular quiz completion flow.
+Buzz Dust is earned during gameplay (e.g., from quiz activity and bonuses). It is **not** derived from lifetime points on page load.
 
 Quick Manual Verification
 -------------------------
@@ -89,4 +69,4 @@ Quick Manual Verification
 4) Confirm:
    - total_buzz_dust increases after quizzes
    - current_class label matches thresholds once total_buzz_dust crosses them
-   - any "Earn X more Buzz Dust" messaging matches the same Buzz Dust value shown in the UI (baseline-synced)
+   - any "Earn X more Buzz Dust" messaging matches the same Buzz Dust value shown in the UI
