@@ -245,7 +245,7 @@ catch (error) {
 ## Testing Instructions
 
 ### Test Case 1: Authenticated User with Buzz Dust
-1. **Login as existing user** with earned Buzz Dust (e.g., 2500+)
+1. **Login as existing user** with earned Buzz Dust (e.g., 10,000+)
 2. **Navigate to homepage** (/)
 3. **Check console** for `[TICKER]` logs
 4. **Verify ticker displays:** "🐝 Earn X more Buzz Dust to reach [Next Rank]! Keep spelling! ✨"
@@ -268,7 +268,7 @@ catch (error) {
 7. **Restore import** and reload to confirm recovery
 
 ### Test Case 4: Max Rank User
-1. **Login as user with 100,000+ Buzz Dust** (or modify DB temporarily)
+1. **Login as user with 2,000,000+ Buzz Dust** (or modify DB temporarily)
 2. **Navigate to homepage**
 3. **Verify ticker displays:** "👑 You've reached the highest rank: [Rank Name]! You're a legend! ✨"
 4. **Verify at_max_rank flag** in console logs shows `true`
@@ -283,13 +283,13 @@ catch (error) {
 🐝 [TICKER] Authentication state: true
 🐝 [TICKER] Current user: testuser
 🐝 [TICKER] Fetch response status: 200 OK
-✅ [TICKER] Full API response: { "success": true, "total_buzz_dust": 2500, ... }
+✅ [TICKER] Full API response: { "success": true, "total_buzz_dust": 50000, ... }
 ✅ [TICKER] Rank title updated: Scholar Bee
-✅ [TICKER] Buzz Dust amount updated: 2500
+✅ [TICKER] Buzz Dust amount updated: 50000
 ✅ [TICKER] Badge image updated: /static/assets/badges/scholar.png
 🔍 [TICKER] Ticker elements found: { tickerEl: true, tickerTextEl: true, at_max_rank: false, has_next_class: true }
-✅ [TICKER] Progress message set: { nextRank: "Elite Bee", needed: 7500, formatted: "7,500" }
-✅ [TICKER] Ticker text updated: 🐝 Earn 7,500 more Buzz Dust to reach Elite B...
+✅ [TICKER] Progress message set: { nextRank: "Elite Bee", needed: 150000, formatted: "150,000" }
+✅ [TICKER] Ticker text updated: 🐝 Earn 150,000 more Buzz Dust to reach Elite...
 ✅ [TICKER] Ticker visibility: block
 🎉 [TICKER] loadStudentBuzzDust completed successfully
 ```

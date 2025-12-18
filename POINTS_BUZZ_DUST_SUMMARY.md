@@ -49,11 +49,11 @@ Successfully implemented a comprehensive **dual scoring system** for BeeSmart Sp
 | Rank | Bee Class | Min Buzz Dust | Emoji |
 |------|-----------|---------------|-------|
 | 1 | **Novice Bee** | 0 | 🐝 |
-| 2 | **Apprentice Bee** | 500 | 📚 |
-| 3 | **Scholar Bee** | 2,500 | 🎓 |
-| 4 | **Elite Bee** | 10,000 | 🏆 |
-| 5 | **Magistrate Bee** | 50,000 | 👑 |
-| 6 | **Buzz Dust Master** | 100,000+ | ✨ |
+| 2 | **Apprentice Bee** | 10,000 | 📚 |
+| 3 | **Scholar Bee** | 50,000 | 🎓 |
+| 4 | **Elite Bee** | 200,000 | 🏆 |
+| 5 | **Magistrate Bee** | 1,000,000 | 👑 |
+| 6 | **Buzz Dust Master** | 2,000,000+ | ✨ |
 
 ---
 

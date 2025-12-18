@@ -21,11 +21,11 @@
 
 ### Bee Class Ranks 🏆
 - 🐝 **Novice Bee** - Just getting started (0+ Buzz Dust)
-- 📚 **Apprentice Bee** - Learning the hive way (500+ Buzz Dust)
-- 🎓 **Scholar Bee** - Dedicated learner (2,500+ Buzz Dust)
-- 🏆 **Elite Bee** - Spelling champion (10,000+ Buzz Dust)
-- 👑 **Magistrate Bee** - Hive leader (50,000+ Buzz Dust)
-- ✨ **Buzz Dust Master** - Legendary hero (100,000+ Buzz Dust)
+- 📚 **Apprentice Bee** - Learning the hive way (10,000+ Buzz Dust)
+- 🎓 **Scholar Bee** - Dedicated learner (50,000+ Buzz Dust)
+- 🏆 **Elite Bee** - Spelling champion (200,000+ Buzz Dust)
+- 👑 **Magistrate Bee** - Hive leader (1,000,000+ Buzz Dust)
+- ✨ **Buzz Dust Master** - Legendary hero (2,000,000+ Buzz Dust)
 
 ---
 
@@ -100,11 +100,11 @@ if rank_info['ranked_up']:
 ```json
 {
   "novice": 0,
-  "apprentice": 500,
-  "scholar": 2500,
-  "elite": 10000,
-  "magistrate": 50000,
-  "master": 100000
+    "apprentice": 10000,
+    "scholar": 50000,
+    "elite": 200000,
+    "magistrate": 1000000,
+    "master": 2000000
 }
 ```
 
@@ -123,14 +123,14 @@ if rank_info['ranked_up']:
 - Completes 20 quizzes over 2 weeks
 - Average 90 points per quiz, some perfect rounds
 - Total Buzz Dust: ~600
-- **Rank: Apprentice Bee** ✅
+- **Rank: Novice Bee** ✅ (needs 10,000 for Apprentice)
 
 ### Scenario 3: Star Student
 - Completes 100 quizzes
 - High accuracy, many perfect rounds
 - Long streaks (20+ correct)
 - Total Buzz Dust: ~12,000
-- **Rank: Elite Bee** 🏆
+- **Rank: Apprentice Bee** 🏆
 
 ---
 

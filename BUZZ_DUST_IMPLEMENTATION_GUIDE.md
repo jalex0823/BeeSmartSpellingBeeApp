@@ -175,11 +175,11 @@ Add a menu item or help button:
 | Rank | Label | Min Buzz Dust | Emoji |
 |------|-------|---------------|-------|
 | 1 | Novice Bee | 0 | 🐝 |
-| 2 | Apprentice Bee | 500 | 📚 |
-| 3 | Scholar Bee | 2,500 | 🎓 |
-| 4 | Elite Bee | 10,000 | 🏆 |
-| 5 | Magistrate Bee | 50,000 | 👑 |
-| 6 | Buzz Dust Master | 100,000 | ✨ |
+| 2 | Apprentice Bee | 10,000 | 📚 |
+| 3 | Scholar Bee | 50,000 | 🎓 |
+| 4 | Elite Bee | 200,000 | 🏆 |
+| 5 | Magistrate Bee | 1,000,000 | 👑 |
+| 6 | Buzz Dust Master | 2,000,000 | ✨ |
 
 ---
 
@@ -257,8 +257,8 @@ print(f"Buzz Dust: {dust}")
 print(f"Breakdown: {breakdown}")
 
 # Test rank determination
-bee_class = get_bee_class(2500)
-print(f"At 2,500 Buzz Dust: {bee_class['label']}")  # Should be "Apprentice Bee"
+bee_class = get_bee_class(50000)
+print(f"At 50,000 Buzz Dust: {bee_class['label']}")  # Should be "Scholar Bee"
 ```
 
 ---

@@ -128,14 +128,16 @@ Streaks:
 
 ## Bee Class Ranks
 
+> **Note (Updated):** Bee Class thresholds were later rebalanced to match a much higher-scoring environment. The authoritative source of truth is `config/buzz_dust_config.json`.
+
 | Rank | ID | Min Buzz Dust | Emoji |
 |------|-----|---------------|-------|
-| Novice Bee | novice | 0 | 🐣 |
-| Apprentice Bee | apprentice | 2,500 | 🐝 |
-| Scholar Bee | scholar | 5,000 | 📚 |
-| Elite Bee | elite | 10,000 | 👑 |
-| Magistrate Bee | magistrate | 20,000 | 🔮 |
-| Master Bee | master | 50,000 | 💎 |
+| Novice Bee | novice | 0 | 🐝 |
+| Apprentice Bee | apprentice | 10,000 | 📚 |
+| Scholar Bee | scholar | 50,000 | 🎓 |
+| Elite Bee | elite | 200,000 | 🏆 |
+| Magistrate Bee | magistrate | 1,000,000 | 👑 |
+| Buzz Dust Master | master | 2,000,000 | ✨ |
 
 ---
 
