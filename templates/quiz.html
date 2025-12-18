@@ -3856,43 +3856,124 @@ console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REM
 
 // ⏱️ Countdown Timer Class (formerly HoneyJarTimer)
 class CountdownTimer {
-    constructor(config = {}) {
-        this.duration = config.duration || 30000; // Default 30 seconds
+    constructor(duration, config = {}) {
+        // Support both old (config only) and new (duration, config) signatures
+        if (typeof duration === 'object') {
+            config = duration;
+            duration = config.duration;
+        }
+        
+        this.duration = (duration || config.duration || 30) * 1000; // Convert seconds to milliseconds
         this.onTick = config.onTick || (() => {});
         this.onComplete = config.onComplete || (() => {});
         this.onWarning = config.onWarning || (() => {}); // Callback when < 10s left
+        this.onCritical = config.onCritical || (() => {}); // Callback when < 3s left
+        this.soundboard = config.soundboard || null;
+        this.warningThreshold = (config.warningThreshold || 10) * 1000; // Convert to ms
+        this.criticalThreshold = (config.criticalThreshold || 3) * 1000; // Convert to ms
         
         this.startTime = null;
         this.remaining = this.duration;
         this.running = false;
         this.intervalId = null;
         this.warningTriggered = false;
+        this.criticalTriggered = false;
+        
+        // Get honey jar elements
+        this.honeyFill = document.querySelector('.honey-fill');
+        this.timerNumber = document.querySelector('.timer-number');
+        this.container = document.querySelector('.countdown-container');
     }
     
     start() {
         if (this.running) return;
         
+        console.log('🍯 CountdownTimer starting with duration:', this.duration / 1000, 'seconds');
+        
         this.startTime = Date.now();
         this.running = true;
         this.warningTriggered = false;
+        this.criticalTriggered = false;
+        
+        // Show the countdown container
+        if (this.container) {
+            this.container.classList.add('active');
+            this.container.classList.remove('hidden');
+        }
+        
+        // Initial display update
+        this.updateDisplay();
         
         this.intervalId = setInterval(() => {
             const elapsed = Date.now() - this.startTime;
             this.remaining = Math.max(0, this.duration - elapsed);
             
-            // Trigger warning callback when < 10 seconds
-            if (!this.warningTriggered && this.remaining < 10000) {
+            // Update visual display
+            this.updateDisplay();
+            
+            // Trigger warning callback when crossing threshold
+            if (!this.warningTriggered && this.remaining < this.warningThreshold) {
                 this.warningTriggered = true;
-                this.onWarning(this.remaining);
+                this.onWarning(this.remaining / 1000); // Convert to seconds
+                console.log('⚠️ Timer warning triggered');
+            }
+            
+            // Trigger critical callback when crossing threshold
+            if (!this.criticalTriggered && this.remaining < this.criticalThreshold) {
+                this.criticalTriggered = true;
+                this.onCritical(this.remaining / 1000); // Convert to seconds
+                console.log('🚨 Timer critical triggered');
+                if (this.soundboard) {
+                    this.soundboard.play('timer-critical');
+                }
             }
             
             this.onTick(this.remaining);
             
             if (this.remaining === 0) {
+                console.log('⏰ Timer expired!');
                 this.stop();
+                if (this.soundboard) {
+                    this.soundboard.play('timer-buzzer');
+                }
                 this.onComplete();
             }
         }, 100); // Update every 100ms for smooth countdown
+    }
+    
+    updateDisplay() {
+        const secondsRemaining = Math.ceil(this.remaining / 1000);
+        const percentage = (this.remaining / this.duration) * 100;
+        
+        // Update honey fill level
+        if (this.honeyFill) {
+            this.honeyFill.style.height = `${percentage}%`;
+            
+            // Update color classes
+            if (secondsRemaining <= 3) {
+                this.honeyFill.classList.add('critical');
+                this.honeyFill.classList.remove('warning');
+            } else if (secondsRemaining <= 5) {
+                this.honeyFill.classList.add('warning');
+                this.honeyFill.classList.remove('critical');
+            } else {
+                this.honeyFill.classList.remove('warning', 'critical');
+            }
+        }
+        
+        // Update countdown number
+        if (this.timerNumber) {
+            this.timerNumber.textContent = secondsRemaining;
+            
+            // Color coding for number
+            if (secondsRemaining <= 3) {
+                this.timerNumber.style.color = '#FF0000';
+            } else if (secondsRemaining <= 5) {
+                this.timerNumber.style.color = '#FF6347';
+            } else {
+                this.timerNumber.style.color = '#5d4100';
+            }
+        }
     }
     
     stop() {
@@ -3901,23 +3982,55 @@ class CountdownTimer {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
+        console.log('⏱️ CountdownTimer stopped');
+    }
+    
+    hide() {
+        this.stop();
+        if (this.container) {
+            this.container.classList.add('hidden');
+            this.container.classList.remove('active');
+        }
     }
     
     reset(newDuration) {
         this.stop();
         if (newDuration !== undefined) {
-            this.duration = newDuration;
+            this.duration = newDuration * 1000; // Convert to milliseconds
         }
         this.remaining = this.duration;
         this.warningTriggered = false;
+        this.criticalTriggered = false;
+        
+        // Reset visual display
+        if (this.honeyFill) {
+            this.honeyFill.style.height = '100%';
+            this.honeyFill.classList.remove('warning', 'critical');
+        }
+        if (this.timerNumber) {
+            this.timerNumber.textContent = Math.ceil(this.duration / 1000);
+            this.timerNumber.style.color = '#5d4100';
+        }
     }
     
     getRemaining() {
         return this.remaining;
     }
     
+    getRemainingSeconds() {
+        return Math.ceil(this.remaining / 1000);
+    }
+    
     isRunning() {
         return this.running;
+    }
+    
+    destroy() {
+        this.hide();
+        this.honeyFill = null;
+        this.timerNumber = null;
+        this.container = null;
+        this.soundboard = null;
     }
 }
 
