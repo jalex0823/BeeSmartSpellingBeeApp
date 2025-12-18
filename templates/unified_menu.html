@@ -17398,27 +17398,54 @@
                 const baselineEstimate = Number(data.baseline_estimate) || 0;
                 const effectiveDust = Math.max(apiDust, baselineEstimate);
 
-                // Derive the class using the effective dust value (never downgrade due to baseline logic).
-                let effectiveClass = data.current_class;
-                if (effectiveDust > apiDust && Array.isArray(data.all_classes) && data.all_classes.length > 0) {
-                    const sorted = [...data.all_classes].sort((a, b) => {
+                // Derive class/next-class/progress from the SAME effectiveDust that we display.
+                // This prevents mismatches like:
+                //   - showing 7,264 Buzz Dust (baseline)
+                //   - but still saying "Earn 5,267 more" (computed from stale apiDust)
+                const hasAllClasses = Array.isArray(data.all_classes) && data.all_classes.length > 0;
+                const sortedClasses = hasAllClasses
+                    ? [...data.all_classes].sort((a, b) => {
                         const amin = Number(a.min_buzz_dust ?? a.min_points ?? 0);
                         const bmin = Number(b.min_buzz_dust ?? b.min_points ?? 0);
                         return amin - bmin;
-                    });
-                    let best = sorted[0];
-                    for (const c of sorted) {
+                    })
+                    : null;
+
+                let effectiveClass = data.current_class;
+                let effectiveNextClass = data.next_class || null;
+                let effectiveAtMaxRank = !!data.at_max_rank;
+                let effectiveDustNeeded = Number(data.dust_needed) || 0;
+
+                if (sortedClasses) {
+                    let best = sortedClasses[0];
+                    for (const c of sortedClasses) {
                         const min = Number(c.min_buzz_dust ?? c.min_points ?? 0);
                         if (effectiveDust >= min) best = c;
                         else break;
                     }
                     effectiveClass = best;
-                    console.log(' [TICKER] Using baseline-synced Buzz Dust for display:', {
-                        apiDust,
-                        baselineEstimate,
-                        effectiveDust,
-                        effectiveClass: effectiveClass?.label
-                    });
+
+                    const idx = sortedClasses.findIndex(c => c && best && c.id === best.id);
+                    effectiveNextClass = (idx >= 0 && idx < sortedClasses.length - 1) ? sortedClasses[idx + 1] : null;
+                    effectiveAtMaxRank = !effectiveNextClass;
+
+                    if (effectiveNextClass) {
+                        const nextMin = Number(effectiveNextClass.min_buzz_dust ?? effectiveNextClass.min_points ?? 0);
+                        effectiveDustNeeded = Math.max(0, nextMin - effectiveDust);
+                    } else {
+                        effectiveDustNeeded = 0;
+                    }
+
+                    if (effectiveDust > apiDust) {
+                        console.log(' [TICKER] Using baseline-synced Buzz Dust for display:', {
+                            apiDust,
+                            baselineEstimate,
+                            effectiveDust,
+                            effectiveClass: effectiveClass?.label,
+                            effectiveNextClass: effectiveNextClass?.label,
+                            effectiveDustNeeded
+                        });
+                    }
                 }
 
                 // Update rank title
@@ -17540,21 +17567,21 @@
                 console.log(' [TICKER] Ticker elements found:', {
                     tickerEl: !!tickerEl,
                     tickerTextEl: !!tickerTextEl,
-                    at_max_rank: data.at_max_rank,
-                    has_next_class: !!data.next_class
+                    at_max_rank: effectiveAtMaxRank,
+                    has_next_class: !!effectiveNextClass
                 });
                 
                 if (tickerEl && tickerTextEl) {
                     let tickerMessage = '';
                     
-                    if (data.at_max_rank) {
+                    if (effectiveAtMaxRank) {
                         // Maximum rank achieved
                         tickerMessage = ` You've reached the highest rank: ${data.current_class.label}! You're a legend! `;
                         console.log(' [TICKER] Max rank message set');
-                    } else if (data.next_class && data.next_class.label) {
+                    } else if (effectiveNextClass && effectiveNextClass.label) {
                         // Show progress to next rank
-                        const nextRank = data.next_class.label;
-                        const needed = data.dust_needed || (data.next_class.min_points - (data.total_buzz_dust || 0));
+                        const nextRank = effectiveNextClass.label;
+                        const needed = Number(effectiveDustNeeded) || 0;
                         const formatted = needed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                         
                         tickerMessage = ` Earn ${formatted} more Buzz Dust to reach ${nextRank}! Keep spelling! `;

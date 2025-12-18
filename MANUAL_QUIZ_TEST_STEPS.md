@@ -60,6 +60,10 @@ For *baseline* estimation (ignoring all bonuses and badge points), Buzz Dust is:
 
 So it takes about **10 points to earn ~1 Buzz Dust**.
 
+Example:
+- Points: 72,641
+- Baseline Buzz Dust: floor(72,641 × 0.10) = 7,264
+
 Approx Word-Points Needed Per Rank (No Bonuses, No Badge Points)
 ---------------------------------------------------------------
 These are approximate point totals needed to reach each Bee Class threshold using ONLY the 10% multiplier.
@@ -85,3 +89,4 @@ Quick Manual Verification
 4) Confirm:
    - total_buzz_dust increases after quizzes
    - current_class label matches thresholds once total_buzz_dust crosses them
+   - any "Earn X more Buzz Dust" messaging matches the same Buzz Dust value shown in the UI (baseline-synced)
