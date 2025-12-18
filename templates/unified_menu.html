@@ -5610,16 +5610,12 @@
                 const el = document.getElementById('morph-badge-logo');
                 if (el) {
                     console.log('🔄 Starting badge morphing animation...');
-                    const variants = ['morph-spin','morph-flip','morph-bounce','morph-swish','morph-sparkle','morph-pulse'];
-                    let idx = 0;
-                    const cycle = () => {
-                        variants.forEach(v => el.classList.remove(v));
-                        el.classList.add(variants[idx % variants.length]);
-                        console.log('🔄 Morphing with effect:', variants[idx % variants.length]);
-                        idx++;
-                    };
-                    cycle(); // Start immediately
-                    setInterval(cycle, 6000); // Cycle every 6 seconds
+                    // Avoid a separate class-cycling interval here; it can stack on SPA-like reloads
+                    // and interfere with the slow morph transition. The full morphing system below
+                    // already applies randomized effects each cycle.
+                    try {
+                        el.classList.add('morph-pulse');
+                    } catch(_) {}
                     
                     // Also enable full morphing if available
                     if (typeof initBadgeLogoMorphing === 'function' && !window._morphingInitialized) {
@@ -12282,7 +12278,9 @@
             const imgEl = document.getElementById('morph-badge-logo');
             if (!imgEl || !window._badgeUrl || !window._crestUrl) return;
 
-            const urls = [window._badgeUrl, window._crestUrl];
+            // NOTE: Do NOT capture URLs permanently here. The badge URL can change
+            // after /api/buzz-dust/info loads (rank updates). We always read from
+            // window._badgeUrl / window._crestUrl at morph-time.
             const morphEffects = ['morph-spin', 'morph-flip', 'morph-bounce', 'morph-swish', 'morph-sparkle', 'morph-pulse'];
             let idx = 0;
 
@@ -12344,6 +12342,14 @@
             };
             
             function morph() {
+                const badgeUrl = window._badgeUrl;
+                const crestUrl = window._crestUrl;
+                if (!badgeUrl || !crestUrl) {
+                    console.warn('🔄 [MORPH] Missing badge/crest URL; skipping morph');
+                    return;
+                }
+
+                const urls = [badgeUrl, crestUrl];
                 const nextUrl = urls[idx % urls.length];
                 const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
                 
@@ -12373,6 +12379,20 @@
                 idx++;
                 console.log('🔄 [MORPH] Slow transition with particles:', randomEffect, '(8s cycle)');
             };
+
+            // Keep the morphing alive across tab backgrounding / return.
+            // Some browsers throttle timers aggressively; restarting on visibility improves reliability.
+            if (!window._badgeLogoMorphVisibilityHooked) {
+                window._badgeLogoMorphVisibilityHooked = true;
+                document.addEventListener('visibilitychange', () => {
+                    try {
+                        if (!document.hidden) {
+                            // Re-init will clear and recreate the timer with current URLs.
+                            initBadgeLogoMorphing();
+                        }
+                    } catch (_) {}
+                });
+            }
 
             // Start morphing: 8s per cycle (2s slow transition + 6s display)
             morph();
@@ -17465,7 +17485,13 @@
                             window._morphingInitialized = true;
                             console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
                         } else if (window._morphingInitialized) {
-                            console.log(' [TICKER] Morphing already initialized, badge URL updated');
+                            // IMPORTANT: Re-init so the running morph loop picks up the latest badge URL.
+                            if (typeof initBadgeLogoMorphing === 'function') {
+                                initBadgeLogoMorphing();
+                                console.log(' [TICKER] Morphing re-initialized with updated badge URL');
+                            } else {
+                                console.log(' [TICKER] Morphing already initialized, badge URL updated (init fn missing)');
+                            }
                         } else {
                             console.warn(' [TICKER] initBadgeLogoMorphing not available');
                         }
