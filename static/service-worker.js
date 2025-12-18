@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.1-2025-12-17-quiz-fix-morph-fix';
+const CACHE_VERSION = 'beesmart-v1.4.2-2025-12-18-auth-logout-sw-bypass';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -38,6 +38,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // ✅ Auth endpoints often use redirects (e.g., /auth/logout -> /auth/login or /).
+  // Some requests may have redirect mode != 'follow', which can produce:
+  // "a redirected response was used for a request whose redirect mode is not 'follow'".
+  // Let the browser handle these directly (no caching, no SW interception).
+  if (url.pathname.startsWith('/auth/')) {
+    return;
+  }
 
   // Cache GLB files with network-first strategy (they're large but static)
   if (url.pathname.endsWith('.glb')) {

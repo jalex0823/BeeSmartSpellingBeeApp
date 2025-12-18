@@ -11,12 +11,26 @@
 (function(window, document){
   'use strict';
 
+  function isThreeReady() {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        typeof window.THREE !== 'undefined' &&
+        typeof window.THREE.GLTFLoader !== 'undefined' &&
+        !!window.WebGLRenderingContext
+      );
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function AvatarDisplayManager(){ }
 
   AvatarDisplayManager.prototype.init = function(){
     // Prevent double initialization
     if (window._avatarDisplayManagerInitialized) return;
-    window._avatarDisplayManagerInitialized = true;
+    if (window._avatarDisplayManagerInitInProgress) return;
+    window._avatarDisplayManagerInitInProgress = true;
     
     try {
       var isAuth = !!(window && window.IS_AUTH === true);
@@ -26,6 +40,8 @@
       if (isAuth) {
         // Registered mode: ensure guest carousel stays hidden if present
         if (guestWrap) guestWrap.style.display = 'none';
+        window._avatarDisplayManagerInitialized = true;
+        window._avatarDisplayManagerInitInProgress = false;
         // Avatar is loaded by the page's deferred loader (initDefaultMascot), nothing else to do
         return;
       }
@@ -35,16 +51,61 @@
         try { mascot.parentElement.style.display = 'none'; } catch(_){}
       }
 
-      // Initialize carousel if page didn’t already
+      // Initialize a fast 2D carousel immediately, then upgrade to 3D when Three.js is ready.
+      // This prevents getting stuck in PNG mode if initialization happens before vendor scripts load.
       try {
-        var used3D = false;
-        if (typeof window.initGuestAvatar3DCarousel === 'function') {
-          used3D = !!window.initGuestAvatar3DCarousel();
-        }
-        if (!used3D && typeof window.initGuestAvatarCarousel === 'function') {
+        if (typeof window.initGuestAvatarCarousel === 'function') {
           window.initGuestAvatarCarousel();
         }
-      } catch(_){}
+      } catch(_){ }
+
+      // Attempt 3D upgrade with retries (best effort)
+      (function attempt3DUpgrade(){
+        var maxAttempts = 12; // ~12s worst case with 1s interval
+        var attempt = 0;
+
+        function tryOnce(){
+          attempt += 1;
+          try {
+            // Only attempt if Three is actually ready (avoid locking into 2D due to timing)
+            if (!isThreeReady()) {
+              return false;
+            }
+            if (typeof window.initGuestAvatar3DCarousel === 'function') {
+              var ok = !!window.initGuestAvatar3DCarousel();
+              if (ok) {
+                // Stop the 2D carousel timer if it is running
+                try {
+                  if (window._guestCarouselTimer) {
+                    clearInterval(window._guestCarouselTimer);
+                    window._guestCarouselTimer = null;
+                  }
+                } catch(_e) {}
+                return true;
+              }
+            }
+          } catch(_e) {}
+          return false;
+        }
+
+        // Try now, otherwise retry shortly
+        if (tryOnce()) {
+          return;
+        }
+        var t = setInterval(function(){
+          // If 3D init succeeds, stop retrying
+          if (tryOnce()) {
+            clearInterval(t);
+            return;
+          }
+          if (attempt >= maxAttempts) {
+            clearInterval(t);
+          }
+        }, 1000);
+      })();
+
+      window._avatarDisplayManagerInitialized = true;
+      window._avatarDisplayManagerInitInProgress = false;
 
       // Click anywhere on carousel to navigate to registration
       try {
@@ -57,6 +118,7 @@
     } catch (e) {
       // best effort only
       console.warn('[AvatarDisplayManager] init failed:', e);
+      window._avatarDisplayManagerInitInProgress = false;
     }
   };
 
