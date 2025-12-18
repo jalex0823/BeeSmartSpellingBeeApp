@@ -35,7 +35,7 @@
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
     <!-- LOCAL VENDOR FILES - No CDN tracking prevention issues -->
     <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}"></script>
-    
+
     <!-- Three.js Loaders - Must load after Three.js core -->
     <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}"></script>
     <!-- OBJLoader and MTLLoader removed - GLB-only avatars -->
@@ -104,7 +104,8 @@
     </script>
     <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
     <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203" defer></script>
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251204" defer></script>
+    <!-- Cache-bust: 2025-12-18 (fix AbortError spam + timeout reason) -->
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251218" defer></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251203" defer></script>
     
@@ -780,7 +781,8 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -50%) !important; /* CENTERED: Avatar in middle of container (was -40%) */
+            transform: translate3d(-50%, -50%, 0) !important; /* CENTERED (Safari iOS): more stable than 2D translate */
+            transform-origin: center center !important;
             pointer-events: none;     /* Allow clicks through to UI */
             z-index: 100 !important;   /* Ensure visibility above all cards */
         }
@@ -1356,10 +1358,26 @@
             filter: grayscale(50%) opacity(0.7);
             cursor: not-allowed;
         }
+
+        /* Feature-disabled (coming soon) tiles: stay greyed out and do not lift on hover */
+        .menu-option.feature-disabled {
+            filter: grayscale(70%) opacity(0.65);
+            cursor: not-allowed;
+        }
+        .menu-option.feature-disabled:hover {
+            transform: none !important;
+            filter: grayscale(70%) opacity(0.65) !important;
+        }
         
         .menu-option.locked-tile:hover {
             transform: translateY(-4px) scale(1.02);
             filter: grayscale(40%) opacity(0.8);
+        }
+
+        /* Make sure feature-disabled tiles stay static even though they also have locked-tile */
+        .menu-option.feature-disabled:hover {
+            transform: none !important;
+            filter: grayscale(70%) opacity(0.65) !important;
         }
         
         .lock-overlay {
@@ -3148,7 +3166,8 @@
             position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            transform: translate(-50%, -50%) !important; /* Centered without scaling to prevent stretching */
+            transform: translate3d(-50%, -50%, 0) !important; /* Centered (Safari/iOS): more stable than 2D translate */
+            transform-origin: center center !important;
             pointer-events: none;
             z-index: 100 !important;
             background: transparent !important;
@@ -4361,18 +4380,16 @@
                     <div class="kid-tip"> Challenge yourself with surprise words!</div>
                 </div>
 
-                <!-- Battle of the Bees -->
-                <div id="tileBattle" class="menu-option theme-battle {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Compete with classmates in an epic spelling battle!{% else %} Sign in to unlock multiplayer battles!{% endif %}">
-                    {% if not current_user.is_authenticated %}
+                <!-- Battle of the Bees (temporarily offline / coming soon) -->
+                <div id="tileBattle" class="menu-option theme-battle locked-tile feature-disabled" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Battles are coming soon — temporarily locked.{% else %} Sign in to unlock multiplayer battles!{% endif %}">
                     <div class="lock-overlay">
-                        <div class="lock-icon">🔒</div>
-                        <div class="lock-text">Sign In to Unlock</div>
+                        <div class="lock-icon">{% if current_user.is_authenticated %}⏳{% else %}🔒{% endif %}</div>
+                        <div class="lock-text">{% if current_user.is_authenticated %}Coming Soon{% else %}Sign In to Unlock{% endif %}</div>
                     </div>
-                    {% endif %}
                     <div class="option-icon"></div>
                     <div class="option-title">Battle of the Bees</div>
                     <div class="option-description">Compete with friends & classmates!</div>
-                    <div class="kid-tip">{% if current_user.is_authenticated %} Who will be the champion?{% else %} Premium Feature!{% endif %}</div>
+                    <div class="kid-tip">{% if current_user.is_authenticated %} Battles are offline for now — coming soon!{% else %} Premium Feature!{% endif %}</div>
                 </div>
 
                 <!-- Speed Round Challenge -->
@@ -5559,9 +5576,10 @@
             } catch (e) { /* no-op */ }
         }
 
-        // Helper: lock a menu tile for guests and show an upsell on click
-        function lockMenuTile(tile, { title = ' Locked Feature', message = 'Create a free account to unlock this feature.', buttonText = 'Register now' } = {}) {
+        // Helper: lock a menu tile and show a friendly modal on click
+        function lockMenuTile(tile, { title = ' Locked Feature', message = 'Create a free account to unlock this feature.', buttonText = 'Register now', appendBenefits = true } = {}) {
             if (!tile) return;
+            if (tile.getAttribute('data-locked') === '1') return;
             try {
                 tile.classList.add('locked');
                 tile.setAttribute('data-locked', '1');
@@ -5577,7 +5595,8 @@
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     if (typeof openFriendlyInfoModal === 'function') {
-                        openFriendlyInfoModal({ title, message: message + '\n\n• Track progress\n• Save word lists\n• Unlock Speed Round & Battles', buttonText });
+                        const extra = appendBenefits ? '\n\n• Track progress\n• Save word lists\n• Unlock Speed Round & Battles' : '';
+                        openFriendlyInfoModal({ title, message: message + extra, buttonText });
                     } else {
                         alert(title + '\n\n' + message);
                     }
@@ -5707,6 +5726,18 @@
                         } catch(_) {}
                     }
 
+                    // Battles are currently offline/coming soon: lock tile immediately so it stays greyed out.
+                    try {
+                        const battleTile = document.getElementById('tileBattle');
+                        lockMenuTile(battleTile, {
+                            title: ' Battle of the Bees',
+                            message: 'Coming in a future update. We\'re putting the final honey glaze on live battles!',
+                            buttonText: 'Got it',
+                            appendBenefits: false
+                        });
+                        setBattleStatusBadge({ online: false, count: 0 });
+                    } catch(_) { /* no-op */ }
+
                     // DEFER Battle availability check until after page loads
                     // This was blocking the loader by fetching /api/battles/live immediately
                     window.deferredBattleCheck = async function checkBattleAvailability(){
@@ -5717,7 +5748,8 @@
                             lockMenuTile(battleTile, {
                                 title: ' Battle of the Bees',
                                 message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! ',
-                                buttonText: 'Got it'
+                                buttonText: 'Got it',
+                                appendBenefits: false
                             });
                             setBattleStatusBadge({ online: false, count: 0 });
                         } catch (e) {
@@ -6571,7 +6603,9 @@
                         try {
                             console.log(` Loading saved list ${id} - will OVERRIDE current wordbank`);
                             const res = await fetch('/api/saved-lists/load', {
-                                method: 'POST', headers: {'Content-Type':'application/json'},
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {'Content-Type':'application/json'},
                                 body: JSON.stringify({ id })
                             });
                             const data = await res.json();
@@ -6594,7 +6628,8 @@
                                     // User chose Restart - reload list with force flag
                                     console.log(' User chose to restart - reloading list from scratch');
                                     const restartRes = await fetch('/api/saved-lists/load', {
-                                        method: 'POST', 
+                                        method: 'POST',
+                                        credentials: 'same-origin',
                                         headers: {'Content-Type':'application/json'},
                                         body: JSON.stringify({ id, force_restart: true })
                                     });

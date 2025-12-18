@@ -92,9 +92,19 @@ class UserAvatarLoader {
         let lastError;
         
         for (let attempt = 0; attempt <= retries; attempt++) {
+            let controller = null;
+            let timeout = null;
             try {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), timeoutMs);
+                controller = new AbortController();
+                // Provide an explicit abort reason so Edge doesn't log "aborted without reason".
+                timeout = setTimeout(() => {
+                    try {
+                        controller.abort('timeout');
+                    } catch (_e) {
+                        // Older engines may not accept a reason.
+                        controller.abort();
+                    }
+                }, timeoutMs);
                 
                 const response = await fetch(url, { 
                     credentials: 'same-origin', // Fix Safari ITP blocking
@@ -113,6 +123,21 @@ class UserAvatarLoader {
                 return response;
             } catch (error) {
                 lastError = error;
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+
+                // AbortErrors are expected for timeouts and navigation cancels.
+                // Don't spam the console for these; just retry (if it's our timeout) or fall back.
+                const isAbort = (error && (error.name === 'AbortError' || /aborted/i.test(error.message || '')));
+                const reason = controller && controller.signal ? controller.signal.reason : undefined;
+                if (isAbort) {
+                    if (attempt < retries && reason === 'timeout') {
+                        await new Promise(resolve => setTimeout(resolve, 350));
+                        continue;
+                    }
+                    throw error;
+                }
                 
                 if (attempt < retries) {
                     console.warn(`⚠️ Fetch attempt ${attempt + 1} error: ${url} (${error.message})`);
@@ -341,13 +366,13 @@ class UserAvatarLoader {
         }
         
         try {
-            // Increased timeout to 3000ms to prevent premature aborts on slow connections
+            // Increased timeout to prevent premature aborts on slower devices/connections.
             // Add cache-busting timestamp for iOS Safari to ensure fresh avatar data
             const cacheBuster = Date.now();
             const response = await this._safeFetch(`/api/users/me/avatar?_=${cacheBuster}`, {
                 credentials: 'same-origin',
                 cache: 'no-store'  // iOS Safari: prevent aggressive caching
-            }, 3000, 2);  // 3 second timeout, 2 retries
+            }, 8000, 2);  // 8 second timeout, 2 retries
             
             if (response.ok) {
                 const data = await response.json();
@@ -368,9 +393,17 @@ class UserAvatarLoader {
                 throw new Error(`HTTP ${response.status}`);
             }
         } catch (error) {
-            console.warn('⚠️ Using default avatar:', error.message);
+            // AbortError often means a timeout or navigation cancel. Treat it as a normal fallback.
+            const isAbort = (error && (error.name === 'AbortError' || /aborted/i.test(error.message || '')));
+            // Keep console noise low for expected aborts/timeouts.
+            if (!isAbort) {
+                console.warn('⚠️ Using default avatar:', (error.message || error));
+            }
             this.userAvatarValid = false;
-            this.showErrorState('mascotBee3D', error);
+            // Do not show a scary error UI for timeouts/aborts; just fall back quietly.
+            if (!isAbort) {
+                this.showErrorState('mascotBee3D', error);
+            }
             
             // Default avatar will load on-demand, skip validation
             this.showLoadedState();

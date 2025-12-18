@@ -212,7 +212,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
         background: radial-gradient(circle at 50% 30%, #FFF4C9 0%, #FFE289 45%, #FFC94D 75%, #FFB300 100%);
         box-shadow: 0 10px 30px rgba(255, 179, 0, 0.35), inset 0 6px 14px rgba(255,255,255,0.6), inset 0 -6px 18px rgba(204,120,0,0.25);
         overflow: hidden; /* clip waves inside egg */
-        border: 4px solid rgba(255, 193, 7, 0.55);
         isolation: isolate;
     }
 
@@ -2463,27 +2462,8 @@ window.addEventListener('error', (event) => {
             ctx.restore();
         });
         
-        // Add organic swarm outline glow when energy is high
-        if (energy > 0.4) {
-            ctx.save();
-            ctx.translate(W / 2, H / 2);
-            ctx.strokeStyle = `rgba(100, 149, 237, ${(energy - 0.4) * 0.5})`;
-            ctx.lineWidth = 3 + energy * 5;
-            ctx.shadowBlur = 20 + energy * 30;
-            ctx.shadowColor = 'rgba(100, 149, 237, 0.8)';
-            
-            ctx.beginPath();
-            swarmShape.forEach((point, i) => {
-                const pulse = Math.sin(time * 0.05 + i * 0.3) * 0.1 + 1;
-                const x = Math.cos(point.angle) * point.radius * pulse;
-                const y = Math.sin(point.angle) * point.radius * pulse;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.stroke();
-            ctx.restore();
-        }
+        // Intentionally no outline stroke around the swarm.
+        // (Users reported a distracting light-blue border; keep the swarm borderless.)
     }
 
     // Animation loop

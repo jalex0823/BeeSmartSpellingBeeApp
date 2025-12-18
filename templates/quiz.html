@@ -2276,6 +2276,71 @@ if ('speechSynthesis' in window) {
         100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
+    /* Resume/Restart Modal Styling */
+    .resume-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2500;
+        backdrop-filter: blur(6px);
+    }
+
+    .resume-modal-content {
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 22px;
+        padding: 2.2rem 2rem;
+        max-width: 460px;
+        max-height: 85vh;
+        width: 92%;
+        text-align: center;
+        box-shadow: 0 22px 48px rgba(255, 193, 7, 0.32);
+        border: 3px solid rgba(255, 193, 7, 0.55);
+        animation: modalBounceIn 0.45s ease-out;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .resume-modal-content h3 {
+        color: #6d4c00;
+        margin: 0 0 0.75rem 0;
+        font-size: 1.55rem;
+    }
+
+    .resume-modal-content p {
+        color: #6d4c00;
+        margin: 0.5rem 0;
+        font-size: 1.05rem;
+        line-height: 1.45;
+    }
+
+    .resume-progress {
+        background: rgba(255, 215, 0, 0.12);
+        border-radius: 14px;
+        padding: 1rem;
+        margin: 1.1rem 0 0.9rem;
+        color: #B8860B;
+        font-weight: 700;
+    }
+
+    .resume-modal-buttons {
+        display: flex;
+        gap: 0.9rem;
+        margin-top: 1.3rem;
+        flex-wrap: wrap;
+    }
+
+    .resume-modal-buttons .action-btn {
+        flex: 1;
+        min-height: 52px;
+        min-width: 140px;
+    }
+
     /* Voice Intro Modal - iOS Friendly */
     .voice-intro-modal {
         position: fixed;
@@ -2619,8 +2684,16 @@ if ('speechSynthesis' in window) {
         border-radius: 50px;
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
         z-index: 100;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        /* Remove any inner white oval/ring highlight */
+        border: none;
         transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    /* Defensive: if any theme adds a glossy inner oval via pseudo-elements, disable it */
+    .session-stats::before,
+    .session-stats::after {
+        content: none !important;
+        background: transparent !important;
     }
     
     .session-stats.collapsed {
@@ -3038,7 +3111,7 @@ if ('speechSynthesis' in window) {
 // Preflight: check wordbank and quiz state before starting
 async function preflightQuiz() {
     try {
-        const wbResp = await fetch('/api/wordbank');
+        const wbResp = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store' });
         const wbData = await wbResp.json();
         const words = wbData?.words || [];
         if (!Array.isArray(words) || words.length === 0) {
@@ -3053,10 +3126,10 @@ async function preflightQuiz() {
             return false;
         }
         // Ensure quiz state exists
-        const stateResp = await fetch('/api/quiz/state');
+        const stateResp = await fetch('/api/quiz/state', { credentials: 'same-origin', cache: 'no-store' });
         const state = await stateResp.json();
         if (!state || state.error) {
-            await fetch('/api/quiz/start', { method: 'POST' });
+            await fetch('/api/quiz/start', { method: 'POST', credentials: 'same-origin' });
         }
         return true;
     } catch (e) {
@@ -3071,6 +3144,7 @@ async function loadSampleWords() {
         const body = { words: ['apple','bee','cat','honey','buzz'] };
         const resp = await fetch('/api/upload-manual-words', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
@@ -3082,7 +3156,7 @@ async function loadSampleWords() {
                 banner.classList.remove('hidden');
             }
             // Initialize quiz state
-            await fetch('/api/quiz/start', { method: 'POST' });
+            await fetch('/api/quiz/start', { method: 'POST', credentials: 'same-origin' });
             // Proceed to next word
             if (window.quizManager && typeof window.quizManager.loadNextWord === 'function') {
                 await window.quizManager.loadNextWord();
@@ -3802,6 +3876,28 @@ async function loadSampleWords() {
                     Go to Menu
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Resume/Restart Quiz Modal -->
+    <div class="resume-modal" id="resumeModal" style="display: none;">
+        <div class="resume-modal-content">
+            <h3>📚 Quiz in progress</h3>
+            <p id="resumeModalMessage">You have an unfinished quiz. What would you like to do?</p>
+            <div class="resume-progress" id="resumeProgressText" style="display:none;"></div>
+            <div class="resume-modal-buttons">
+                <button type="button" class="action-btn primary" id="resumeQuizBtn">
+                    <span class="bee-icon" aria-hidden="true">▶️</span>
+                    Resume
+                </button>
+                <button type="button" class="action-btn secondary" id="restartQuizBtn">
+                    <span class="bee-icon" aria-hidden="true">🔄</span>
+                    Start Over
+                </button>
+            </div>
+            <p style="font-size: 0.92rem; color:#7a5a00; margin-top: 1.1rem;">
+                Starting over resets progress for this session.
+            </p>
         </div>
     </div>
 
@@ -4794,6 +4890,7 @@ class QuizManager {
         console.log('🏗️ QuizManager constructor called');
         this.delight = options.delight || null;
         this.smartyBee = options.smartyBee || null;
+        this.startMode = options.startMode || 'normal'; // 'normal' | 'resume'
         this.soundboard = (this.delight && this.delight.soundboard) || new BeeSoundboard(); // Get soundboard from delight or create new
         this.isAnswering = false;
         this.lastPronounceData = null;
@@ -4979,17 +5076,44 @@ class QuizManager {
         }
         
         // Show iOS voice intro modal if needed, otherwise show regular intro
-        if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
-            console.log('📱 Showing iOS/Safari voice intro modal');
-            this.updateVoiceToggleUI(); // Initialize UI to match state
-            this.updateMusicToggleUI(); // Initialize music UI to match state
-            this.showVoiceIntroModal();
+        // Resume mode skips the long intro (especially the 7s desktop delay) when possible.
+        if (this.startMode === 'resume') {
+            console.log('🔁 Resume mode: skipping intro when possible');
+
+            // Initialize UI to match state
+            this.updateVoiceToggleUI();
+            this.updateMusicToggleUI();
+
+            // iOS/Safari may still require a gesture; keep existing modal behavior if not shown yet.
+            if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
+                console.log('📱 Resume mode on iOS/Safari: showing voice intro modal for gesture unlock');
+                this.showVoiceIntroModal();
+            } else {
+                // Non-iOS (or already handled iOS/Safari modal): start immediately
+                this.voiceUnlocked = true;
+                const feedbackArea = document.getElementById('feedbackArea');
+                if (feedbackArea) feedbackArea.style.display = 'none';
+                this.quizStarted = true;
+                Promise.resolve()
+                    .then(() => this.loadNextWordWithIntro())
+                    .catch((err) => {
+                        console.error('❌ Resume auto-start failed:', err);
+                        try { BeeSmart.showError('Could not resume the quiz. Please refresh.'); } catch (_e) {}
+                    });
+            }
         } else {
-            console.log('💻 Desktop/Non-iOS browser detected - voice unlocked immediately');
-            this.voiceUnlocked = true; // Non-iOS can use voice immediately
-            this.updateVoiceToggleUI(); // Initialize UI to match state
-            this.updateMusicToggleUI(); // Initialize music UI to match state
-            this.showIntroAnnouncer();
+            if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
+                console.log('📱 Showing iOS/Safari voice intro modal');
+                this.updateVoiceToggleUI(); // Initialize UI to match state
+                this.updateMusicToggleUI(); // Initialize music UI to match state
+                this.showVoiceIntroModal();
+            } else {
+                console.log('💻 Desktop/Non-iOS browser detected - voice unlocked immediately');
+                this.voiceUnlocked = true; // Non-iOS can use voice immediately
+                this.updateVoiceToggleUI(); // Initialize UI to match state
+                this.updateMusicToggleUI(); // Initialize music UI to match state
+                this.showIntroAnnouncer();
+            }
         }
         
         // Start background music only after a user gesture (prevents unwanted looping on load).
@@ -6561,7 +6685,13 @@ class QuizManager {
             sessionStorage.setItem('voiceIntroShown', 'true');
             modal.style.display = 'none';
             this.updateVoiceToggleUI();
-            this.showIntroAnnouncer();
+            if (this.startMode === 'resume') {
+                // Resume mode: don't stack another intro; jump back into the quiz
+                this.quizStarted = true;
+                this.loadNextWordWithIntro();
+            } else {
+                this.showIntroAnnouncer();
+            }
         }, { once: true });
         
         // Skip voice button - disables announcer and starts quiz silently
@@ -6573,7 +6703,12 @@ class QuizManager {
             modal.style.display = 'none';
             this.updateVoiceToggleUI();
             // Don't call showIntroAnnouncer - just start quiz silently
-            this.loadNextWord();
+            if (this.startMode === 'resume') {
+                this.quizStarted = true;
+                this.loadNextWordWithIntro();
+            } else {
+                this.loadNextWord();
+            }
         }, { once: true });
     }
 
@@ -9211,6 +9346,91 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Resume/start-over modal for unfinished quizzes
+    const showResumeOrRestartModal = (resumePayload = {}) => {
+        const modal = document.getElementById('resumeModal');
+        const messageEl = document.getElementById('resumeModalMessage');
+        const progressEl = document.getElementById('resumeProgressText');
+        const resumeBtn = document.getElementById('resumeQuizBtn');
+        const restartBtn = document.getElementById('restartQuizBtn');
+
+        if (!modal || !resumeBtn || !restartBtn) {
+            return Promise.resolve('start_new');
+        }
+
+        if (messageEl) {
+            messageEl.textContent = resumePayload?.message || 'You have an unfinished quiz. What would you like to do?';
+        }
+
+        const cur = Number(resumePayload?.state?.current_word_index);
+        const tot = Number(resumePayload?.state?.total_words);
+        if (progressEl && Number.isFinite(cur) && Number.isFinite(tot) && tot > 0) {
+            progressEl.style.display = 'block';
+            progressEl.textContent = `Progress: ${cur}/${tot} words`;
+        } else if (progressEl) {
+            progressEl.style.display = 'none';
+            progressEl.textContent = '';
+        }
+
+        modal.style.display = 'flex';
+
+        return new Promise((resolve) => {
+            const cleanup = () => {
+                modal.style.display = 'none';
+                resumeBtn.onclick = null;
+                restartBtn.onclick = null;
+                document.removeEventListener('keydown', onKeyDown);
+                modal.removeEventListener('click', onBackdropClick);
+            };
+
+            const onKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    cleanup();
+                    resolve('resume');
+                }
+            };
+
+            const onBackdropClick = (e) => {
+                if (e.target === modal) {
+                    cleanup();
+                    resolve('resume');
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+
+            resumeBtn.onclick = () => {
+                cleanup();
+                resolve('resume');
+            };
+            restartBtn.onclick = () => {
+                cleanup();
+                resolve('start_new');
+            };
+
+            // Backdrop click defaults to resume
+            modal.addEventListener('click', onBackdropClick);
+        });
+    };
+
+    const resolveQuizStartAction = async () => {
+        try {
+            const resp = await fetch('/api/quiz/resume', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await resp.json();
+            if (data && data.status === 'success' && data.in_progress) {
+                return await showResumeOrRestartModal(data);
+            }
+        } catch (e) {
+            console.warn('⚠️ Resume check failed; starting new quiz:', e);
+        }
+        return 'start_new';
+    };
+
     fetch('/api/wordbank', {
         credentials: 'same-origin',  // CRITICAL: Ensure session cookie is sent
         cache: 'no-store',
@@ -9224,7 +9444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return response.json();
         })
-        .then(data => {
+        .then(async (data) => {
             console.log('✅ Wordbank loaded:', data.count, 'words');
             const params = new URLSearchParams(window.location.search);
             const autostart = params.get('autostart') === '1';
@@ -9292,7 +9512,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
             }
 
-            window.quizManager = new QuizManager({ delight, smartyBee });
+            // ✅ Restore resume/start-over UX for unfinished quizzes
+            const action = await resolveQuizStartAction();
+            try {
+                await fetch('/api/quiz/start', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+            } catch (e) {
+                console.warn('⚠️ /api/quiz/start failed:', e);
+            }
+
+            const startMode = (action === 'resume') ? 'resume' : 'normal';
+            window.quizManager = new QuizManager({ delight, smartyBee, startMode });
         })
         .catch(error => {
             console.error('❌ Failed to check word bank or initialize quiz:', error);

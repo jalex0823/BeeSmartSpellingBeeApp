@@ -2488,7 +2488,13 @@ if ('speechSynthesis' in window) {
         border-radius: 50px;
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
         z-index: 100;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: none;
+    }
+
+    .session-stats::before,
+    .session-stats::after {
+        content: none !important;
+        background: transparent !important;
     }
     
     .session-stat {
