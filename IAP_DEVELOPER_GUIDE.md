@@ -1,56 +1,65 @@
 # In‑App Purchases (IAP) – Developer Guide
 
 ## Overview
- - Native wrappers (iOS/Android) should provide a thin JS bridge for purchase/restore.
- - See also: `NATIVE_IAP_BRIDGE.md` for the client-side JS bridge contract (window.BeeSmartIAP) and examples.
 
- ## Client Integration (Web + Native)
- 
- - Pages expose the subscription SKU to JS via `window.SUBSCRIPTION_SKU`.
- - If `window.BeeSmartIAP.purchase` exists and the user is signed-in, the web UI can trigger the native purchase and then call `POST /api/iap/verify/<platform>`.
- - Daily restore: if `window.BeeSmartIAP.getOwnedProducts` exists, the web UI calls it and POSTs `/api/iap/restore`.
- - For quick manual testing without a native wrapper, append `?iap_mock=1` to the homepage URL. This enables a JS mock of `window.BeeSmartIAP` (does not override a real native implementation). Use `?iap_owned=1` with it to simulate an active subscription for restore.
- ## Environment Variables
- 
- - `PRODUCT_SUBSCRIPTION_FULL_ID`: SKU for monthly subscription (default `beesmart.sub.full_monthly`). Exposed to JS as `window.SUBSCRIPTION_SKU`.
- - `AVATAR_SKU_PREFIX`: Prefix for per-avatar product IDs (default `com.beesmart.avatar`). Example final product id: `com.beesmart.avatar.queen-bee`.
+- Native wrappers (iOS/Android) should provide a thin JS bridge for purchase/restore.
+- See also: `NATIVE_IAP_BRIDGE.md` for the client-side JS bridge contract (`window.BeeSmartIAP`) and examples.
+
+## Client Integration (Web + Native)
+
+- Pages expose the subscription SKU to JS via `window.SUBSCRIPTION_SKU`.
+- If `window.BeeSmartIAP.purchase` exists and the user is signed-in, the web UI can trigger the native purchase and then call `POST /api/iap/verify/<platform>`.
+- Daily restore: if `window.BeeSmartIAP.getOwnedProducts` exists, the web UI calls it and POSTs `/api/iap/restore`.
+- For quick manual testing without a native wrapper, append `?iap_mock=1` to the homepage URL. This enables a JS mock of `window.BeeSmartIAP` (does not override a real native implementation). Use `?iap_owned=1` with it to simulate an active subscription for restore.
+
+## Environment Variables
+
+- `PRODUCT_SUBSCRIPTION_FULL_ID`: Subscription SKU to expose to clients (default `beesmart.premium.monthly`). Legacy `beesmart.sub.full_monthly` remains supported server-side.
+- `AVATAR_SKU_PREFIX`: Prefix for per-avatar product IDs (default `com.beesmart.avatar`). Example final product id: `com.beesmart.avatar.queen-bee`.
 
 ## Enabling Live Verification
 
 By default, the server runs in mock mode (accepts all) for fast local development.
 
 Modes (env):
+
 - `IAP_MOCK=1` → always accept (default locally)
 - `IAP_VERIFICATION_MODE=live_strict` → require real store verification (recommended for production)
 - `IAP_VERIFICATION_MODE=live_permissive` → accept on basic checks if store calls fail/missing (useful for bring-up)
 - `IAP_LIVE_ACCEPT_BASIC=1` → allow acceptance on preflight checks even if API credentials aren’t configured
 
 Apple required env when doing live checks:
+
 - `APPLE_ISSUER_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` or `APPLE_PRIVATE_KEY_PATH`
 - `APPLE_APP_BUNDLE_ID`
 - `APPLE_ENV` (Sandbox | Production)
 
 Google required env when doing live checks:
+
 - `GOOGLE_PLAY_PACKAGE_NAME`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT` (JSON string) or `GOOGLE_PLAY_SERVICE_ACCOUNT_PATH`
 
 Optional dependencies for live verification:
+
 - `pyjwt`, `cryptography`, `requests` (Apple)
 - `google-auth`, `google-api-python-client` (Google)
 
 Install (example):
-```
+
+```bash
 pip install pyjwt cryptography requests google-auth google-api-python-client
 ```
 
 Implementation notes:
+
 - Live helpers live in `iap_verification.py`; the app will import and use them when not in mock mode.
 - In `live_permissive` mode, the server may accept purchases that pass basic preflight even if API calls aren’t possible. Use only for bring-up.
-# In‑App Purchases (IAP) — Backend Guide
+
+## Backend Guide
 
 This document explains how BeeSmart’s backend verifies purchases from Apple App Store and Google Play Billing, how product IDs map to user entitlements, and how clients (iOS/Android/Web) should integrate.
 
-Status: Server endpoints and entitlement mapping are implemented with a safe mock verification mode for development. Live Apple/Google verification hooks are stubbed and can be enabled in a later step.
+Status: Server endpoints and entitlement mapping are implemented with a safe mock verification mode for development. Live Apple/Google verification helpers exist (see `iap_verification.py`) and are invoked when `IAP_MOCK=0` (plus required env vars/dependencies).
 
 
 ## Why this exists
@@ -117,6 +126,7 @@ Entitlements are applied server-side and are idempotent (safe to call multiple t
 - `purchased_bundles: ["<bundle-id>", ...]` with bundled avatar unlocks
 
 The entitlements summary returned by both endpoints includes:
+
 - `premium_member` (boolean)
 - `purchased_avatars` (array)
 - `purchased_bundles` (array)
@@ -151,28 +161,34 @@ Admins can mint on-demand “BeeKeys” that define a dynamic bundle of exactly 
 - Inspect redemptions: `GET /api/admin/bundle-keys/<id>/redemptions` (most recent 200).
 
 Example generate:
+
 ```json
 {
   "name": "STEM Starter",
-  "avatar_ids": ["queen-bee", "superbee", "knight-bee", "rocker-bee"],
+  "avatar_ids": ["queen-bee", "super-bee", "knight-bee", "rocker-bee"],
   "max_uses": 25,
   "expires_days": 60
 }
 ```
+
 Response excerpt:
+
 ```json
 {
   "success": true,
-  "bundle": { "bundle_id": "beekey_a1b2c3d4", "avatars": ["queen-bee","superbee","knight-bee","rocker-bee"] },
+  "bundle": { "bundle_id": "beekey_a1b2c3d4", "avatars": ["queen-bee","super-bee","knight-bee","rocker-bee"] },
   "bundle_key": { "key_raw": "BEEKEY-BEEKEY-2025-Z1X2C3", "max_uses": 25, "status": "active" }
 }
 ```
 
 Example create (admin):
+
 ```json
 { "bundle_id": "classroom_starter_pack", "max_uses": 10, "expires_days": 30 }
 ```
+
 Example list response excerpt:
+
 ```json
 {
   "success": true,
@@ -189,14 +205,14 @@ Defined in `AjaSpellBApp.py` as `PRODUCT_MAP` and overridable via env vars. Defa
 
 - Full unlock (premium)
   - `PRODUCT_FULL_UNLOCK_ID` (default: `beesmart.full_unlock`) → `premium_member=true`
-  - `PRODUCT_SUBSCRIPTION_FULL_ID` (default: `beesmart.sub.full_monthly`) → `premium_member=true` (subscription)
+  - `PRODUCT_SUBSCRIPTION_FULL_ID` (default: `beesmart.premium.monthly`; legacy `beesmart.sub.full_monthly` supported) → `premium_member=true` (subscription)
 - Individual avatars
-  - `PRODUCT_AVATAR_SUPERBEE_ID` (default: `beesmart.avatar.superbee`) → unlock `superbee`
+  - `PRODUCT_AVATAR_SUPERBEE_ID` (default: `beesmart.avatar.superbee`) → unlock `super-bee`
   - `PRODUCT_AVATAR_QUEEN_ID` (default: `beesmart.avatar.queen`) → unlock `queen-bee`
   - `PRODUCT_AVATAR_KNIGHT_ID` (default: `beesmart.avatar.knight`) → unlock `knight-bee`
   - `PRODUCT_AVATAR_ROCKER_ID` (default: `beesmart.avatar.rocker`) → unlock `rocker-bee`
 - Bundle example
-  - `PRODUCT_BUNDLE_TOP_ID` (default: `beesmart.bundle.top`) → unlocks `superbee`, `queen-bee`, `knight-bee`, `rocker-bee`
+  - `PRODUCT_BUNDLE_TOP_ID` (default: `beesmart.bundle.top`) → unlocks `super-bee`, `queen-bee`, `knight-bee`, `rocker-bee`
 
 Add new SKUs by extending `PRODUCT_MAP` or setting env vars in your deployment.
 
@@ -209,7 +225,7 @@ Add new SKUs by extending `PRODUCT_MAP` or setting env vars in your deployment.
 
 Generate a CSV for store setup:
 
-```
+```bash
 # From repo root
 PYTHONPATH=. python3 scripts/dump_avatar_skus.py > store/avatar_skus.csv
 ```
@@ -265,6 +281,7 @@ Records are appended for traceability. Entitlements live on the `User` record (`
 ## Error handling
 
 Common error responses:
+
 - 400 `Unsupported platform` — path segment not in `apple|google|web`
 - 400 `Missing product_id` — request body missing `product_id`
 - 400 `apple_verification_not_configured`/`google_verification_not_configured` — live mode without creds
@@ -283,10 +300,12 @@ Common error responses:
 ## Try it locally (mock mode)
 
 With the app running and you logged in, mock mode lets you test the flow end-to-end. Example products:
+
 - Full unlock: `beesmart.full_unlock`
 - Avatar: `beesmart.avatar.superbee`
 
 Example request (JSON):
+
 ```json
 {
   "product_id": "beesmart.full_unlock",
@@ -298,6 +317,7 @@ Example request (JSON):
 Send to `/api/iap/verify/apple` or `/api/iap/verify/google` — both succeed in mock mode.
 
 To restore, POST to `/api/iap/restore` with:
+
 ```json
 {
   "platform": "apple",
@@ -312,9 +332,11 @@ Bundle redemption quick check (dev):
 3) POST to `/api/bundles/redeem` with a dev key from `avatar_bundles.py` (e.g., `BEE-CLASS-STARTER-1`)
 
 Example request:
+
 ```json
 { "key": "BEE-CLASS-STARTER-1" }
 ```
+
 Expect `{ success: true, bundle_id: "classroom_starter_pack", ... }` and unlocked avatars reflected in the entitlements.
 
 
@@ -343,6 +365,7 @@ Expect `{ success: true, bundle_id: "classroom_starter_pack", ... }` and unlocke
 - `PRODUCT_BUNDLE_TOP_ID` — overrides bundle SKU
 
 Additional live verification secrets (to be added when enabling live mode):
+
 - Apple: issuer ID, key ID, private key, bundle ID
 - Google: service account JSON, package name
 
@@ -359,4 +382,4 @@ Additional live verification secrets (to be added when enabling live mode):
 
 - `AjaSpellBApp.py` — endpoints and mapping
 - `models.py` — `PurchaseRecord` and `User` fields for entitlements
-- `avatar_catalog.py` — IDs for catalog avatars (e.g., `superbee`, `queen-bee`, `knight-bee`, `rocker-bee`)
+- `avatar_catalog.py` — IDs for catalog avatars (e.g., `super-bee`, `queen-bee`, `knight-bee`, `rocker-bee`)

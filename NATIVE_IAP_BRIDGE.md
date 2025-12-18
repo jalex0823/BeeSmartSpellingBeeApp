@@ -5,6 +5,7 @@ A minimal, platform-agnostic JS interface for native wrappers (iOS/Android) to i
 This complements IAP_DEVELOPER_GUIDE.md (server) by specifying the client bridge.
 
 ## TL;DR
+
 - Web renders SKU in `window.SUBSCRIPTION_SKU` and, if available, uses `window.BeeSmartIAP` to purchase and then `POST /api/iap/verify/<platform>`.
 - Web also calls `/api/iap/restore` once per day if `getOwnedProducts()` exists.
 - Server owns entitlements and is idempotent. Mock mode is supported in dev.
@@ -14,6 +15,7 @@ This complements IAP_DEVELOPER_GUIDE.md (server) by specifying the client bridge
 Implement this object in your native WebView (WKWebView / Android WebView) before page load or inject on DOMContentLoaded.
 
 Required properties/methods:
+
 - `platform: 'apple' | 'google' | 'web'`
 - `async getOwnedProducts(): Promise<string[]>`
   - Returns an array of product IDs (SKUs) the user currently owns (active subscriptions and non-consumables).
@@ -21,7 +23,8 @@ Required properties/methods:
   - Triggers native purchase flow and resolves with transaction details for server verification.
 
 PurchaseResult shape (flexible, server maps fields):
-```
+
+```javascript
 {
   // Either name your fields exactly as below, or provide them in `payload`.
   transaction_id?: string;      // App Store transactionId or Play purchase order id
@@ -36,23 +39,25 @@ Tip: It’s okay to return only `payload` with the raw receipt. The server prese
 
 ## Web → Native → Server Flow
 
-1) User clicks “Start Free Trial / Subscribe” and is already logged in
-- Website checks for `window.BeeSmartIAP.purchase` and `window.SUBSCRIPTION_SKU`.
-- Calls `purchase(SKU)`.
-- POSTs the result to `/api/iap/verify/<platform>` with JSON body:
-```
-{
-  "product_id": "...",
-  "transaction_id": "...",
-  "purchase_token": "...",
-  "payload": { /* raw receipt or full object */ }
-}
-```
-- Server verifies (mock in dev), applies entitlements idempotently, and returns `entitlements` in response.
+1. User clicks “Start Free Trial / Subscribe” and is already logged in
+   - Website checks for `window.BeeSmartIAP.purchase` and `window.SUBSCRIPTION_SKU`.
+   - Calls `purchase(SKU)`.
+   - POSTs the result to `/api/iap/verify/<platform>` with JSON body:
 
-2) Restore (once per day)
-- If `getOwnedProducts()` exists, web calls it and POSTs to `/api/iap/restore` with `{ platform, product_ids }`.
-- Server applies entitlements accordingly and logs a `PurchaseRecord` (status: verified via restore).
+     ```json
+     {
+       "product_id": "...",
+       "transaction_id": "...",
+       "purchase_token": "...",
+       "payload": { "...": "..." }
+     }
+     ```
+
+   - Server verifies (mock in dev), applies entitlements idempotently, and returns `entitlements` in response.
+
+1. Restore (once per day)
+   - If `getOwnedProducts()` exists, web calls it and POSTs to `/api/iap/restore` with `{ platform, product_ids }`.
+   - Server applies entitlements accordingly and logs a `PurchaseRecord` (status: verified via restore).
 
 ## Apple (StoreKit) mapping
 
@@ -64,6 +69,7 @@ Tip: It’s okay to return only `payload` with the raw receipt. The server prese
   - Return `payload` that includes the App Store receipt container or signed JWS, and optionally `transactionId`.
 
 Server-side (future live mode):
+
 - Validate receipt/JWS via App Store Server API.
 - Check subscription status (active/expired, grace) and respond accordingly.
 
@@ -77,11 +83,13 @@ Server-side (future live mode):
   - Return `{ purchaseToken, payload: original Google JSON, transactionId? }`.
 
 Server-side (future live mode):
+
 - Use Play Developer API to verify purchase token and subscription state.
 
 ## Environment and SKU
 
-- Subscription SKU comes from `PRODUCT_SUBSCRIPTION_FULL_ID` (default `beesmart.sub.full_monthly`).
+- Subscription SKU comes from `PRODUCT_SUBSCRIPTION_FULL_ID` (default `beesmart.premium.monthly`).
+- Legacy `beesmart.sub.full_monthly` remains supported server-side for older clients.
 - Exposed to pages as `window.SUBSCRIPTION_SKU`.
 
 ## Server endpoints
@@ -103,7 +111,8 @@ See `IAP_DEVELOPER_GUIDE.md` for product mapping and environment variables.
 ## Minimal Native Stubs (pseudo)
 
 Apple (Swift, StoreKit 2):
-```
+
+```javascript
 window.BeeSmartIAP = {
   platform: 'apple',
   async getOwnedProducts() {
@@ -121,7 +130,8 @@ window.BeeSmartIAP = {
 ```
 
 Android (Kotlin, Play Billing):
-```
+
+```javascript
 window.BeeSmartIAP = {
   platform: 'google',
   async getOwnedProducts() { return ownedSkus; },

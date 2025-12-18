@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BeeSmart Premium - Unlock All Features!</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20251218" defer></script>
     
     <style>
         * {
@@ -559,6 +560,21 @@
             };
 
             const productId = productIds[plan];
+
+            // Prefer the unified BeeSmartIAP bridge (Capacitor native plugin).
+            if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
+                Promise.resolve(window.BeeSmartIAP.purchase(productId))
+                    .then(() => {
+                        alert('Purchase complete!');
+                        // Most flows redirect users back to the main app shell.
+                        try { window.location.href = '/app'; } catch (e) {}
+                    })
+                    .catch((e) => {
+                        console.error('Native purchase failed:', e);
+                        alert('Purchase could not be completed. Please try again.');
+                    });
+                return;
+            }
             
             // Check if running in native app with iOS bridge
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iapBridge) {

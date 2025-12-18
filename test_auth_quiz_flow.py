@@ -50,9 +50,29 @@ def test_complete_flow():
     # Step 2: Login (should already be logged in after registration, but let's verify)
     print("\n🔑 Step 2: Verifying login...")
     time.sleep(0.5)
+
+    # Step 3: Upload a small word list (required to initialize server-side wordbank + quiz state)
+    print("\n📤 Step 3: Uploading a test word list...")
+    upload_words = [
+        {"word": "apple", "sentence": "", "hint": ""},
+        {"word": "bee", "sentence": "", "hint": ""},
+        {"word": "honey", "sentence": "", "hint": ""},
+        {"word": "rainbow", "sentence": "", "hint": ""},
+        {"word": "butterfly", "sentence": "", "hint": ""},
+    ]
+    response = session.post(f"{BASE_URL}/api/upload", json={"words": upload_words})
+    if response.status_code == 200:
+        up = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+        if not up.get("ok"):
+            print(f"   ❌ Upload not ok: {up}")
+            return False
+        print(f"   ✅ Uploaded {up.get('count')} words")
+    else:
+        print(f"   ❌ Upload failed: HTTP {response.status_code}: {response.text[:200]}")
+        return False
     
-    # Step 3: Check wordbank (should have default words)
-    print("\n📚 Step 3: Checking wordbank...")
+    # Step 4: Check wordbank
+    print("\n📚 Step 4: Checking wordbank...")
     response = session.get(f"{BASE_URL}/api/wordbank")
     if response.status_code == 200:
         wordbank = response.json()
@@ -64,46 +84,54 @@ def test_complete_flow():
     else:
         print(f"   ❌ Failed to get wordbank: {response.status_code}")
         return False
-    
-    # Step 4: Start quiz (first word)
-    print("\n🎯 Step 4: Starting quiz...")
-    response = session.post(f"{BASE_URL}/api/next")
-    if response.status_code == 200:
-        quiz_data = response.json()
-        print(f"   ✅ Quiz started")
-        print(f"   📖 Definition: {quiz_data.get('definition', 'N/A')[:60]}...")
-    else:
-        print(f"   ❌ Failed to start quiz: {response.status_code}")
-        return False
-    
-    # Step 5: Answer first 3 words
-    print("\n✍️ Step 5: Answering words...")
-    for i in range(min(3, word_count)):
-        # Get current word info
-        response = session.post(f"{BASE_URL}/api/next")
-        if response.status_code != 200:
-            print(f"   ⚠️ Couldn't get word {i+1}")
-            continue
-            
-        word_info = response.json()
-        
-        # Get the actual word from wordbank (cheat for testing)
-        current_word = wordbank[i]["word"]
-        
-        # Submit answer
-        answer_data = {
-            "user_input": current_word,  # Correct answer
-            "method": "keyboard",
-            "elapsed_ms": random.randint(3000, 8000)
-        }
-        
-        response = session.post(f"{BASE_URL}/api/answer", json=answer_data)
-        if response.status_code == 200:
-            result = response.json()
-            is_correct = result.get("correct", False)
-            print(f"   {'✅' if is_correct else '❌'} Word {i+1}: {current_word} - {'Correct' if is_correct else 'Incorrect'}")
+
+    # Step 5: Run quiz end-to-end via /api/next -> /api/answer
+    print("\n🎯 Step 5: Running quiz via /api/next -> /api/answer...")
+    answered = 0
+    correct = 0
+    incorrect = 0
+    while True:
+        nxt = session.post(f"{BASE_URL}/api/next")
+        if nxt.status_code != 200:
+            print(f"   ❌ /api/next failed: HTTP {nxt.status_code}: {nxt.text[:200]}")
+            return False
+        payload = nxt.json() if nxt.headers.get("content-type", "").startswith("application/json") else {}
+        if payload.get("done") is True:
+            summary = payload.get("summary") or {}
+            print(f"   ✅ Quiz complete: {summary.get('correct')}/{summary.get('total')} correct, points={summary.get('session_points')}")
+            break
+
+        word = payload.get("word", "")
+        if not word:
+            print(f"   ❌ /api/next returned no word: {payload}")
+            return False
+
+        # 80% correct to exercise both paths
+        will_be_correct = random.random() > 0.2
+        user_input = word if will_be_correct else "wrong"
+
+        ans = session.post(
+            f"{BASE_URL}/api/answer",
+            json={
+                "user_input": user_input,
+                "method": "keyboard",
+                "elapsed_ms": random.randint(2000, 8000),
+            },
+        )
+        if ans.status_code != 200:
+            print(f"   ❌ /api/answer failed: HTTP {ans.status_code}: {ans.text[:200]}")
+            return False
+
+        result = ans.json() if ans.headers.get("content-type", "").startswith("application/json") else {}
+        is_correct = bool(result.get("correct"))
+        answered += 1
+        if is_correct:
+            correct += 1
         else:
-            print(f"   ❌ Failed to submit answer for word {i+1}")
+            incorrect += 1
+
+        if answered <= 5 or (answered % 10 == 0):
+            print(f"   {'✅' if is_correct else '❌'} {answered}: word='{word}' input='{user_input}'")
     
     # Step 6: Check dashboard
     print("\n📊 Step 6: Checking dashboard...")
@@ -119,33 +147,9 @@ def test_complete_flow():
             print(f"   ⚠️ Dashboard loaded but may not have user data yet")
     else:
         print(f"   ❌ Failed to access dashboard: {response.status_code}")
-    
-    # Step 7: Complete entire quiz to trigger database save
-    print("\n🏁 Step 7: Completing full quiz...")
-    remaining_words = word_count - 3
-    if remaining_words > 0:
-        for i in range(3, word_count):
-            current_word = wordbank[i]["word"]
-            
-            # Submit answer
-            answer_data = {
-                "user_input": current_word if random.random() > 0.2 else "wrong",  # 80% correct
-                "method": "keyboard",
-                "elapsed_ms": random.randint(2000, 6000)
-            }
-            
-            response = session.post(f"{BASE_URL}/api/answer", json=answer_data)
-            if response.status_code == 200:
-                result = response.json()
-                progress = result.get("progress", {})
-                if i % 10 == 0 or i == word_count - 1:
-                    print(f"   📈 Progress: {progress.get('index')}/{progress.get('total')} - "
-                          f"Correct: {progress.get('correct')}, Incorrect: {progress.get('incorrect')}")
-        
-        print("   ✅ Quiz completed!")
-    
-    # Step 8: Verify dashboard shows quiz results
-    print("\n📈 Step 8: Verifying quiz saved to database...")
+
+    # Step 7: Verify dashboard shows quiz results
+    print("\n📈 Step 7: Verifying quiz saved to database...")
     time.sleep(1)  # Give database time to commit
     response = session.get(f"{BASE_URL}/auth/dashboard")
     if response.status_code == 200:

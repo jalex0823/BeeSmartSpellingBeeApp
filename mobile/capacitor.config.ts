@@ -9,9 +9,9 @@ const config: CapacitorConfig = {
   appName: 'BeeSmart Spelling',
   webDir: 'static',
   server: {
-    // Production Railway URL (canonical)
-    url: 'https://beesmartspellingbeeapp-production.up.railway.app',
-    cleartext: true,
+    // Canonical production URL (stable for App Review + store listings)
+    url: 'https://beesmartspelling.app',
+    cleartext: false,
     androidScheme: 'https'
   },
   plugins: {

@@ -44,7 +44,7 @@ def run():
     assert r.get_json().get('success') is True
 
     # Verify subscription (permissive)
-    subscription_pid = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly')
+    subscription_pid = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.premium.monthly')
     verify_payload = {
         "product_id": subscription_pid,
         "transaction_id": "tx-demo-permissive",
@@ -58,16 +58,17 @@ def run():
     assert ents.get('premium_member') is True, ents
 
     # Restore one avatar
+    from avatar_skus import sku_for_slug  # noqa: E402
     restore_payload = {
         "platform": "apple",
-        "product_ids": [os.environ.get('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee')]
+        "product_ids": [os.environ.get('PRODUCT_AVATAR_SUPERBEE_ID', sku_for_slug('super-bee'))]
     }
     r = client.post('/api/iap/restore', data=json.dumps(restore_payload), content_type='application/json')
     assert r.status_code == 200, f"restore failed: {r.status_code} {r.data}"
     resp = r.get_json()
     assert resp.get('success') is True, resp
     purchased = (resp.get('entitlements') or {}).get('purchased_avatars') or []
-    assert 'superbee' in purchased
+    assert 'super-bee' in purchased
 
     print("\n✅ IAP live_permissive test passed.")
 

@@ -124,6 +124,8 @@
         window.SUBSCRIPTION_MONTHLY_USD = {{ _subscription_monthly }};
         console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
     </script>
+    <!-- Native IAP bridge (Capacitor): defines window.BeeSmartIAP when running in iOS/Android wrapper -->
+    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20251218" defer></script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
@@ -154,13 +156,21 @@
             try {
                 const params = new URLSearchParams(location.search);
                 if (params.get('iap_mock') !== '1') return;
+                // App Review safety: never allow the mock bridge on non-local hosts.
+                // (Reviewers should not be able to toggle fake purchases by URL param.)
+                const host = String(location.hostname || '').toLowerCase();
+                const isLocalHost = (host === 'localhost' || host === '127.0.0.1' || host === '::1');
+                if (!isLocalHost) {
+                    console.warn('[IAP MOCK] blocked on non-local host:', host);
+                    return;
+                }
                 if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return; // don't override native
                 const guessPlatform = (/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web');
                 window.BeeSmartIAP = {
                     platform: guessPlatform,
                     async getOwnedProducts(){
                         try {
-                            const sku = window.SUBSCRIPTION_SKU || 'beesmart.sub.full_monthly';
+                            const sku = window.SUBSCRIPTION_SKU || 'beesmart.premium.monthly';
                             // Return active sub for quick restore tests when ?iap_owned=1
                             return (new URLSearchParams(location.search).get('iap_owned') === '1') ? [sku] : [];
                         } catch(e){ return []; }
@@ -179,6 +189,94 @@
                 };
                 console.log('[IAP MOCK] window.BeeSmartIAP enabled');
             } catch(e) { /* no-op */ }
+        })();
+    </script>
+    <script>
+        // Restore purchases (App Store / Play Billing)
+        // Visible for logged-in users; requires the native wrapper bridge.
+        (function(){
+            async function restorePurchases(){
+                try {
+                    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
+                        const msg = 'Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the app store version and try again.';
+                        if (typeof showLockedFeature === 'function') { showLockedFeature(msg); }
+                        else { alert(msg); }
+                        return;
+                    }
+
+                    const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
+                        ? String(window.BeeSmartIAP.platform).toLowerCase()
+                        : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
+
+                    const rawOwned = await Promise.resolve(window.BeeSmartIAP.getOwnedProducts());
+                    const extractPid = (x) => {
+                        if (x == null) return null;
+                        if (typeof x === 'string') {
+                            const v = x.trim();
+                            return v || null;
+                        }
+                        if (typeof x === 'object') {
+                            const keys = ['productId', 'product_id', 'productID', 'sku', 'id', 'identifier'];
+                            for (const k of keys) {
+                                if (x && x[k]) {
+                                    try {
+                                        const v = String(x[k]).trim();
+                                        return v || null;
+                                    } catch(e) {}
+                                }
+                            }
+                        }
+                        if (['number','boolean'].includes(typeof x)) {
+                            const v = String(x).trim();
+                            return v || null;
+                        }
+                        return null;
+                    };
+
+                    const productIds = Array.isArray(rawOwned) ? rawOwned.map(extractPid).filter(Boolean) : [];
+                    const deduped = [];
+                    const seen = new Set();
+                    for (const pid of productIds) {
+                        if (!seen.has(pid)) { seen.add(pid); deduped.push(pid); }
+                    }
+
+                    if (!Array.isArray(rawOwned) || deduped.length === 0) {
+                        const m = 'No previous purchases were found to restore on this device.';
+                        if (typeof showSuccessMessage === 'function') { showSuccessMessage(m); }
+                        else { alert(m); }
+                        return;
+                    }
+
+                    const resp = await fetch('/api/iap/restore', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ platform: platform, product_ids: deduped })
+                    });
+                    const data = await resp.json().catch(() => null);
+                    if (resp.ok && data && data.success) {
+                        const count = Array.isArray((data.applied || [])) ? data.applied.length : 0;
+                        const rid = (data && data.restore_id) ? String(data.restore_id) : '';
+                        const m = (count > 0)
+                            ? `Restored ${count} purchase${count === 1 ? '' : 's'} successfully!${rid ? ' (restore ' + rid + ')' : ''}`
+                            : `Restore complete. Your purchases are already active.${rid ? ' (restore ' + rid + ')' : ''}`;
+                        if (typeof showSuccessMessage === 'function') { showSuccessMessage(m); }
+                        else { alert(m); }
+                    } else {
+                        const err = (data && (data.error || data.message)) ? String(data.error || data.message) : `HTTP ${resp.status}`;
+                        const rid = (data && data.restore_id) ? String(data.restore_id) : '';
+                        const m = `Restore failed: ${err}`;
+                        if (typeof showLockedFeature === 'function') { showLockedFeature(m + (rid ? ` (restore ${rid})` : '')); }
+                        else { alert(m); }
+                    }
+                } catch (e) {
+                    const m = `Restore failed: ${e && e.message ? e.message : e}`;
+                    if (typeof showLockedFeature === 'function') { showLockedFeature(m); }
+                    else { alert(m); }
+                }
+            }
+
+            window.restorePurchases = restorePurchases;
         })();
     </script>
     <style>
@@ -3862,6 +3960,26 @@
                          Sounds ON
                     </button>
                 </div>
+
+                {% if current_user.is_authenticated %}
+                <!-- App Store compliance: explicit Restore Purchases control (requires native wrapper) -->
+                <div style="margin-top: 8px;">
+                    <button id="restorePurchasesBtn" onclick="restorePurchases()" style="
+                        background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
+                        color: white;
+                        border: 2px solid rgba(25, 118, 210, 0.25);
+                        border-radius: 12px;
+                        padding: 6px 12px;
+                        font-size: 0.8rem;
+                        font-weight: 700;
+                        cursor: pointer;
+                        box-shadow: 0 3px 8px rgba(13, 71, 161, 0.25);
+                        transition: all 0.3s ease;
+                    " title="Restore prior App Store / Play purchases on this device">
+                        Restore Purchases
+                    </button>
+                </div>
+                {% endif %}
                 
                 <!-- Kid-Safe Content Badge -->
                 <div class="kid-safe-badge" style="margin-top: 14px;">

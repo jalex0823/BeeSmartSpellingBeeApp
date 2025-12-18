@@ -478,11 +478,13 @@ class User(UserMixin, db.Model):
     
     def add_points(self, points):
         """Add points to lifetime total"""
-        self.total_lifetime_points += points
+        # Defensive: legacy rows/migrations may have NULL counters.
+        self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
     
     def increment_quizzes(self):
         """Increment total quizzes completed"""
-        self.total_quizzes_completed += 1
+        # Defensive: legacy rows/migrations may have NULL counters.
+        self.total_quizzes_completed = int(self.total_quizzes_completed or 0) + 1
     
     def update_gpa_and_accuracy(self):
         """
@@ -801,15 +803,18 @@ class WordMastery(db.Model):
     
     def update_stats(self, is_correct, time_taken=None):
         """Update mastery stats after attempt"""
-        self.times_seen += 1
+        # Defensive: older rows or legacy migrations may have NULL counters.
+        self.times_seen = int(self.times_seen or 0) + 1
         
         if is_correct:
-            self.times_correct += 1
+            self.times_correct = int(self.times_correct or 0) + 1
         else:
-            self.times_incorrect += 1
+            self.times_incorrect = int(self.times_incorrect or 0) + 1
         
         # Calculate success rate
-        self.success_rate = round((self.times_correct / self.times_seen) * 100, 2)
+        seen = max(int(self.times_seen or 0), 1)
+        correct = int(self.times_correct or 0)
+        self.success_rate = round((correct / seen) * 100, 2)
         
         # Update mastery level
         if self.success_rate >= 95:
@@ -826,16 +831,22 @@ class WordMastery(db.Model):
             self.needs_review = True
         
         # Update timing stats
-        if time_taken:
-            if self.average_time_seconds:
-                # Running average
-                total_time = self.average_time_seconds * (self.times_seen - 1)
-                self.average_time_seconds = round((total_time + time_taken) / self.times_seen, 2)
-            else:
-                self.average_time_seconds = time_taken
-            
-            if not self.fastest_time_seconds or time_taken < self.fastest_time_seconds:
-                self.fastest_time_seconds = time_taken
+        if time_taken is not None:
+            try:
+                t = float(time_taken)
+            except Exception:
+                t = None
+
+            if t is not None:
+                if self.average_time_seconds is not None:
+                    # Running average
+                    total_time = float(self.average_time_seconds) * (seen - 1)
+                    self.average_time_seconds = round((total_time + t) / seen, 2)
+                else:
+                    self.average_time_seconds = t
+
+                if self.fastest_time_seconds is None or t < float(self.fastest_time_seconds):
+                    self.fastest_time_seconds = t
         
         self.last_attempt_date = datetime.utcnow()
     

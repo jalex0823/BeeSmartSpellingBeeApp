@@ -3,9 +3,13 @@
   "appName": "BeeSmart Spelling",
   "webDir": "static",
   "server": {
-    "url": "https://beesmartspellingbeeapp-production.up.railway.app",
-    "cleartext": true,
-    "androidScheme": "https"
+    "url": "https://beesmartspelling.app",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "beesmartspelling.app",
+      "www.beesmartspelling.app"
+    ]
   },
   "plugins": {
     "SplashScreen": {
@@ -30,10 +34,10 @@
   "cordova": {},
   "ios": {
     "contentInset": "automatic",
-    "scheme": "BeeSmart Spelling"
+    "scheme": "BeeSmart"
   },
   "android": {
-    "allowMixedContent": true,
+    "allowMixedContent": false,
     "backgroundColor": "#FFD700"
   }
 }

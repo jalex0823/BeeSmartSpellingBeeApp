@@ -7,7 +7,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Register app-local Capacitor plugins.
+        if let bridgeVC = window?.rootViewController as? CAPBridgeViewController {
+            bridgeVC.bridge?.registerPluginInstance(BeeSmartIAPPlugin())
+        }
         return true
     }
 

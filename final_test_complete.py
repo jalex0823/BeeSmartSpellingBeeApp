@@ -45,17 +45,22 @@ except Exception as e:
 
 print("3️⃣ Testing current word (should work after upload)...")
 try:
-    response = session.get('http://127.0.0.1:5000/api/current')
+    response = session.post('http://127.0.0.1:5000/api/next', json={})
     print(f"Status: {response.status_code}")
     print(f"Response: {response.text[:200]}...")
-    
+
     if response.status_code == 200:
         data = response.json()
-        print(f"✅ Current challenge: {data.get('sentence', 'MISSING')}")
-        print(f"   Hint: {data.get('hint', 'MISSING')}")
-        print(f"   Word length: {data.get('word_length', 'MISSING')}")
+        if data.get('done') is True:
+            print("✅ Quiz is already complete (server returned done=true)")
+            summary = data.get('summary') or {}
+            print(f"   Summary: {summary.get('correct', 0)}/{summary.get('total', 0)} correct")
+        else:
+            print(f"✅ Current challenge: {data.get('sentence', 'MISSING')}")
+            print(f"   Hint: {data.get('hint', 'MISSING')}")
+            print(f"   Word length: {data.get('word_length', 'MISSING')}")
     else:
-        print(f"❌ Current word failed")
+        print("❌ Failed to fetch next quiz word via /api/next")
 
 except Exception as e:
     print(f"❌ Error: {e}")

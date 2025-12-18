@@ -12,6 +12,8 @@ let currentLoadingAvatar = null;
 let previewLoadProgress = 0;
 // Current user's honey points from API
 let currentUserHoneyPoints = 0;
+// Bundle catalog for bundle shop modal
+let bundlesData = [];
 // 3D viewer state to support zoom/rotate/reset controls
 const avatarViewerState = {
     scene: null,
@@ -40,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     loadAvatars();
     setupSearchFilter();
+    setupBundleShop();
 
     // Safety: hide loading overlay after 10s even if some thumbnails stall
     setTimeout(() => {
@@ -433,9 +436,15 @@ async function loadAvatars() {
                 is_locked: avatar.is_locked || false,
                 unlock_message: avatar.unlock_message || '',
                 // NEW: Numeric unlock info for computing remaining points
-                unlock_points: typeof avatar.unlock_points === 'number' ? avatar.unlock_points : null,
+                unlock_points: (typeof avatar.unlock_points === 'number')
+                    ? avatar.unlock_points
+                    : ((typeof avatar.unlock_requirement === 'number') ? avatar.unlock_requirement : null),
                 tier: avatar.tier || null,
-                price: typeof avatar.price === 'number' ? avatar.price : null,
+                price: (typeof avatar.price === 'number')
+                    ? avatar.price
+                    : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+                // NEW: In-app purchase product id / SKU (server-provided)
+                product_id: avatar.product_id || null,
             };
         });
 
@@ -1528,10 +1537,16 @@ function showLockedMessage(avatar) {
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
             </div>
         `;
-    } else if (tier === 'premium') {
+    } else if (tier === 'premium' || tier === 'earn_or_buy') {
+        const canPurchase = canPurchaseAvatar(avatar);
+        const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
         actionHtml = `
-            <p style="margin-top: 1rem; color: #FFB300;">💎 This is a premium avatar available for purchase.</p>
-            <button class="locked-modal-btn" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+            <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
+            <div style="display:flex; gap:1rem; justify-content:center; margin-top: 1.25rem; flex-wrap: wrap;">
+                ${canPurchase ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
+                <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Not now</button>
+            </div>
+            ${!canPurchase ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">Purchases are available in the BeeSmart iOS/Android app.</p>` : ''}
         `;
     } else {
         actionHtml = `
@@ -1559,6 +1574,341 @@ function showLockedMessage(avatar) {
             modal.remove();
         }
     });
+}
+
+// --------- Purchases (Native IAP bridge) ---------
+
+function escapeAttr(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getIapPlatform() {
+    if (window.BeeSmartIAP && window.BeeSmartIAP.platform) {
+        return String(window.BeeSmartIAP.platform).toLowerCase();
+    }
+    const ua = navigator.userAgent || '';
+    if (/Android/i.test(ua)) return 'google';
+    if (/iPhone|iPad|Mac/i.test(ua)) return 'apple';
+    return 'web';
+}
+
+function isUserAuthenticated() {
+    const session = window.userSessionData || {};
+    const userInfo = window.avatarUserInfo || {};
+    return !!(session.authenticated || userInfo.user_authenticated || window.IS_AUTH);
+}
+
+function canPurchaseAvatar(avatar) {
+    if (!avatar || !avatar.product_id) return false;
+    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
+    // Purchases require an authenticated user (server verify endpoint is login_required)
+    return isUserAuthenticated();
+}
+
+function findAvatarBySlug(slug) {
+    const s = String(slug || '').toLowerCase();
+    return (avatarsData || []).find(a => String(a.slug || '').toLowerCase() === s) || null;
+}
+
+async function purchaseLockedAvatar(slug) {
+    const avatar = findAvatarBySlug(slug);
+    if (!avatar) {
+        alert('Could not find that avatar. Please refresh and try again.');
+        return;
+    }
+
+    if (!isUserAuthenticated()) {
+        const next = encodeURIComponent(window.location.pathname);
+        window.location.href = `/auth/login?next=${next}`;
+        return;
+    }
+
+    if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
+        alert('Purchases are available in the BeeSmart iOS/Android app.');
+        return;
+    }
+
+    if (!avatar.product_id) {
+        alert('This avatar is not available for purchase right now.');
+        return;
+    }
+
+    const proceed = confirm(`Purchase ${avatar.name}? You can manage purchases in your App Store / Play settings.`);
+    if (!proceed) return;
+
+    try {
+        const platform = getIapPlatform();
+        const result = await Promise.resolve(window.BeeSmartIAP.purchase(avatar.product_id));
+
+        const body = {
+            product_id: avatar.product_id,
+            transaction_id: result && (result.transaction_id || result.transactionId || null),
+            purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+            payload: (result && result.payload) ? result.payload : (result || {})
+        };
+
+        const resp = await fetch(`/api/iap/verify/${platform}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body)
+        });
+        const json = await resp.json().catch(() => ({}));
+        if (!(resp.ok && json && json.success)) {
+            const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Purchase verification failed (HTTP ${resp.status})`;
+            throw new Error(msg);
+        }
+
+        // Refresh the avatar list to reflect new entitlements
+        alert(`✅ ${avatar.name} unlocked!`);
+        await loadAvatars();
+
+        // Try to auto-select the newly unlocked avatar if it’s now available
+        const updated = findAvatarBySlug(slug);
+        if (updated && !updated.is_locked) {
+            const escSlug = (window.CSS && typeof CSS.escape === 'function')
+                ? CSS.escape(updated.slug)
+                : String(updated.slug).replace(/"/g, '\\"');
+            const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
+            if (el) selectAvatar(updated, el);
+        }
+    } catch (err) {
+        console.error('❌ Avatar purchase failed:', err);
+        alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
+    }
+}
+
+// Expose for inline onclick handlers in modal HTML
+window.purchaseLockedAvatar = purchaseLockedAvatar;
+
+
+// --------- Bundle Shop (Packs) ---------
+
+function setupBundleShop() {
+    const openBtn = document.getElementById('openBundlesBtn');
+    const modal = document.getElementById('bundleShopModal');
+    const closeBtn = document.getElementById('closeBundlesBtn');
+    const closeFooter = document.getElementById('bundleShopCloseFooter');
+
+    if (!openBtn || !modal) return;
+
+    function open() {
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        // Load bundles fresh each open
+        loadBundles().catch(err => {
+            console.error('❌ Failed to load bundles:', err);
+        });
+    }
+
+    function close() {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    openBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        open();
+    });
+
+    closeBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        close();
+    });
+
+    closeFooter?.addEventListener('click', (e) => {
+        e.preventDefault();
+        close();
+    });
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+
+    // Escape to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            close();
+        }
+    });
+}
+
+function setBundleShopStatus(text) {
+    const el = document.getElementById('bundleShopStatus');
+    if (el) el.textContent = text;
+}
+
+function canPurchaseBundles() {
+    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
+    // Purchases require an authenticated user (verify endpoint is login_required)
+    return isUserAuthenticated();
+}
+
+async function loadBundles() {
+    const listEl = document.getElementById('bundleShopList');
+    if (!listEl) return;
+
+    setBundleShopStatus('Loading bundles...');
+    listEl.innerHTML = '';
+
+    const ts = Date.now();
+    const resp = await fetch(`/api/bundles?t=${ts}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-cache',
+        headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!(resp.ok && json && json.success && Array.isArray(json.bundles))) {
+        const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Failed to load bundles (HTTP ${resp.status})`;
+        setBundleShopStatus('Could not load bundles');
+        listEl.innerHTML = `<div style="grid-column: 1/-1; color:#5a4000; font-weight:700;">${escapeHtml(msg)}</div>`;
+        return;
+    }
+
+    bundlesData = json.bundles;
+    renderBundles(bundlesData, json.user || {});
+}
+
+function escapeHtml(s) {
+    return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderBundles(bundles, user) {
+    const listEl = document.getElementById('bundleShopList');
+    if (!listEl) return;
+
+    const isPremium = !!(user && user.premium_member);
+    const purchaseEnabled = canPurchaseBundles();
+
+    if (!bundles || bundles.length === 0) {
+        setBundleShopStatus('No bundles available');
+        listEl.innerHTML = `<div style="grid-column: 1/-1; color:#5a4000; font-weight:700;">No bundle packs are configured yet.</div>`;
+        return;
+    }
+
+    if (!purchaseEnabled) {
+        setBundleShopStatus('Purchases available in the BeeSmart iOS/Android app');
+    } else {
+        setBundleShopStatus(isPremium ? 'Premium includes all avatars 🎉' : 'Choose a pack to unlock more bees');
+    }
+
+    listEl.innerHTML = '';
+    bundles.forEach(b => {
+        const owned = !!b.is_owned;
+        const count = typeof b.count === 'number' ? b.count : (Array.isArray(b.avatars) ? b.avatars.length : 0);
+        const name = b.name || b.id || 'Bundle';
+        const pid = b.product_id || '';
+
+        const card = document.createElement('div');
+        card.style.cssText = [
+            'background: rgba(255,255,255,0.65)',
+            'border: 2px solid rgba(255, 215, 0, 0.35)',
+            'border-radius: 16px',
+            'padding: 12px',
+            'box-shadow: 0 10px 20px rgba(0,0,0,0.08)'
+        ].join(';');
+
+        const avatarList = Array.isArray(b.avatars) ? b.avatars.slice(0, 5) : [];
+        const more = Array.isArray(b.avatars) && b.avatars.length > 5 ? (b.avatars.length - 5) : 0;
+
+        card.innerHTML = `
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                <div>
+                    <div style="font-weight:900; color:#5a4000; font-size:1.05rem;">${escapeHtml(name)}</div>
+                    <div style="color:#6b4a00; font-weight:700; margin-top:2px;">Includes ${count} avatars</div>
+                </div>
+                <div style="font-size:1.5rem;">🎁</div>
+            </div>
+            <div style="margin-top:10px; color:#5a4000; font-weight:600; font-size:0.92rem; line-height:1.3;">
+                ${avatarList.map(a => `• ${escapeHtml(a)}`).join('<br/>')}
+                ${more > 0 ? `<br/><span style="opacity:0.85;">…and ${more} more</span>` : ''}
+            </div>
+            <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; justify-content:flex-end;">
+                <button type="button" class="bundle-buy-btn" ${owned ? 'disabled' : ''} style="
+                    padding: 10px 12px;
+                    border-radius: 12px;
+                    border: none;
+                    font-weight: 800;
+                    cursor: ${owned ? 'not-allowed' : 'pointer'};
+                    background: ${owned ? 'rgba(76,175,80,0.85)' : 'linear-gradient(135deg, #8E24AA, #5E35B1)'};
+                    color: #fff;
+                    opacity: ${(!purchaseEnabled && !owned) ? '0.75' : '1'};
+                ">${owned ? (isPremium ? 'Included with Premium' : 'Owned') : 'Purchase Pack'}</button>
+            </div>
+            ${(!purchaseEnabled && !owned) ? `<div style="margin-top:8px; color:#6b4a00; font-weight:700; opacity:0.9;">Available in the BeeSmart app</div>` : ''}
+        `;
+
+        const buyBtn = card.querySelector('.bundle-buy-btn');
+        if (buyBtn && !owned) {
+            buyBtn.disabled = !purchaseEnabled;
+            buyBtn.addEventListener('click', async () => {
+                await purchaseBundle(pid, name);
+            });
+        }
+
+        listEl.appendChild(card);
+    });
+}
+
+async function purchaseBundle(productId, bundleName) {
+    if (!productId) {
+        alert('This bundle is not available for purchase right now.');
+        return;
+    }
+    if (!isUserAuthenticated()) {
+        const next = encodeURIComponent(window.location.pathname);
+        window.location.href = `/auth/login?next=${next}`;
+        return;
+    }
+    if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
+        alert('Purchases are available in the BeeSmart iOS/Android app.');
+        return;
+    }
+
+    const proceed = confirm(`Purchase "${bundleName}"? You can manage purchases in your App Store / Play settings.`);
+    if (!proceed) return;
+
+    try {
+        const platform = getIapPlatform();
+        const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
+        const body = {
+            product_id: productId,
+            transaction_id: result && (result.transaction_id || result.transactionId || null),
+            purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+            payload: (result && result.payload) ? result.payload : (result || {})
+        };
+
+        const resp = await fetch(`/api/iap/verify/${platform}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body)
+        });
+        const json = await resp.json().catch(() => ({}));
+        if (!(resp.ok && json && json.success)) {
+            const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Purchase verification failed (HTTP ${resp.status})`;
+            throw new Error(msg);
+        }
+
+        alert(`✅ Bundle unlocked: ${bundleName}`);
+        // Refresh both bundles and avatars so locks update immediately
+        await loadBundles();
+        await loadAvatars();
+    } catch (err) {
+        console.error('❌ Bundle purchase failed:', err);
+        alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
+    }
 }
 
 

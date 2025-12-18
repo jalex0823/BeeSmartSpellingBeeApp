@@ -198,6 +198,7 @@
 {% endblock %}
 
 {% block content %}
+<script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20251218" defer></script>
 <script>
   // Expose subscription SKU for native wrappers on the registration page too
   window.SUBSCRIPTION_SKU = "{{ subscription_product_id|default('', true) }}";

@@ -46,6 +46,11 @@ from models import WordBankStorage  # Single source of truth for all word operat
 from datetime import date
 from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
 try:
+    from bundle_skus import build_bundle_product_entitlements, bundle_sku_for_id  # Bundle monetization mapping
+except Exception:
+    build_bundle_product_entitlements = None  # type: ignore
+    bundle_sku_for_id = None  # type: ignore
+try:
     from avatar_bundles import BUNDLE_CATALOG, REDEEMABLE_KEYS  # Optional: bundle catalog + redeemable keys
 except Exception:
     BUNDLE_CATALOG = {}
@@ -822,6 +827,8 @@ def api_avatars():
             "status": "success",
             "avatars": cached.get('data', []),
             "cached": True,
+            "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []) if user is not None else [],
+            "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []) if user is not None else [],
             "user": {
                 "role": role,
                 "is_authenticated": bool(user is not None),
@@ -873,6 +880,8 @@ def api_avatars():
             "status": "success",
             "avatars": guest_list,
             "cached": False,
+            "purchased_avatars": [],
+            "purchased_bundles": [],
             "user": {
                 "role": role,
                 "is_authenticated": False,
@@ -901,6 +910,41 @@ def api_avatars():
         obj_file = entry.get('obj_file') or ''
         # GLB avatars are in glb_files folder, not individual avatar folders
         glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
+        # Optional: stable product id for store purchase flows
+        product_id = None
+        try:
+            from avatar_skus import sku_for_slug  # type: ignore
+            tier_norm = (entry.get('tier') or '').lower()
+            if tier_norm in ('earn_or_buy', 'premium'):
+                product_id = sku_for_slug(entry.get('id') or '')
+        except Exception:
+            product_id = None
+
+        # Provide consistent unlock metadata for frontends
+        price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
+        unlock_points_val = int(entry.get('unlock_points') or 0) or None
+        unlock_msg = ''
+        try:
+            if is_unlocked:
+                unlock_msg = 'Unlocked'
+            else:
+                tier_norm = (entry.get('tier') or '').lower()
+                if tier_norm == 'earn_or_buy':
+                    points_needed = lc.get('points_needed')
+                    if isinstance(points_needed, int) and points_needed > 0:
+                        unlock_msg = f"Earn {points_needed} more Honey Points to unlock"
+                        if price_val:
+                            unlock_msg += f" or purchase for ${price_val:.2f}"
+                        unlock_msg += '.'
+                    else:
+                        unlock_msg = 'Earn Honey Points or purchase to unlock.'
+                elif tier_norm == 'premium':
+                    unlock_msg = f"Purchase to unlock{f' for ${price_val:.2f}' if price_val else ''}."
+                else:
+                    unlock_msg = (lc.get('reason') or 'Locked')
+        except Exception:
+            unlock_msg = (lc.get('reason') or 'Locked')
+
         dto = {
             'id': entry.get('id'),
             'name': entry.get('name'),
@@ -909,6 +953,11 @@ def api_avatars():
             'description': entry.get('description'),
             'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
             'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
+            # Back-compat + front-end friendly fields
+            'price': price_val,
+            'unlock_points': unlock_points_val,
+            'unlock_message': unlock_msg,
+            'product_id': product_id,
             'is_locked': not is_unlocked,
             'urls': {
                 'thumbnail': thumb,
@@ -939,6 +988,8 @@ def api_avatars():
         "status": "success",
         "avatars": result,
         "cached": False,
+        "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []) if user is not None else [],
+        "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []) if user is not None else [],
         "user": {
             "role": role,
             "is_authenticated": bool(user is not None),
@@ -1074,8 +1125,12 @@ PRODUCT_MAP = {
         'type': 'premium'
     },
     # SUBSCRIPTION TIERS (Auto-Renewable)
+    # Configurable subscription SKU (defaults to current monthly). Legacy remains supported.
+    os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.premium.monthly'): {
+        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
+    },
     # Legacy subscription (kept for backward compatibility)
-    os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly'): {
+    'beesmart.sub.full_monthly': {
         'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
     },
     # Monthly Premium Subscription ($4.99/month)
@@ -1095,7 +1150,8 @@ PRODUCT_MAP = {
     },
     # Individual avatar unlocks
     os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee'): {
-        'type': 'avatar', 'avatar_id': 'superbee'
+        # Canonical catalog id is hyphenated
+        'type': 'avatar', 'avatar_id': 'super-bee'
     },
     os.getenv('PRODUCT_AVATAR_QUEEN_ID', 'beesmart.avatar.queen'): {
         'type': 'avatar', 'avatar_id': 'queen-bee'
@@ -1109,7 +1165,7 @@ PRODUCT_MAP = {
     # Example bundle
     os.getenv('PRODUCT_BUNDLE_TOP_ID', 'beesmart.bundle.top'): {
         'type': 'bundle', 'bundle_id': 'top_bee_bundle',
-        'avatars': ['superbee', 'queen-bee', 'knight-bee', 'rocker-bee']
+        'avatars': ['super-bee', 'queen-bee', 'knight-bee', 'rocker-bee']
     },
 }
 
@@ -1122,10 +1178,53 @@ except Exception as _e:
 # Extend product map with bundle catalog → bundle entitlements
 try:
     if BUNDLE_CATALOG:
-        for _bundle_id, _cfg in BUNDLE_CATALOG.items():
-            pid = f"bundle:{_bundle_id}"
-            if pid not in PRODUCT_MAP:
-                PRODUCT_MAP[pid] = {
+        # Normalize avatar ids inside bundles to canonical catalog ids.
+        # This prevents mismatches like "superbee" vs "super-bee".
+        _catalog_ids: list[str] = []
+        try:
+            from avatar_catalog import AVATAR_CATALOG  # type: ignore
+            _catalog_ids = [str((a.get('id') or '')).strip().lower() for a in (AVATAR_CATALOG or []) if (a.get('id') or '').strip()]
+        except Exception:
+            _catalog_ids = []
+
+        _norm_to_canon: dict[str, str] = {}
+        for _cid in _catalog_ids:
+            _k = re.sub(r"[^a-z0-9]+", "", _cid)
+            if _k and _k not in _norm_to_canon:
+                _norm_to_canon[_k] = _cid
+
+        def _canon_avatar_id(_s: str) -> str:
+            v = str(_s or '').strip().lower()
+            if not v:
+                return ''
+            if v in _catalog_ids:
+                return v
+            k = re.sub(r"[^a-z0-9]+", "", v)
+            return _norm_to_canon.get(k, v)
+
+        _bundle_catalog_norm: dict[str, dict] = {}
+        for _bundle_id, _cfg in (BUNDLE_CATALOG or {}).items():
+            _cfg = _cfg or {}
+            raw = list(_cfg.get('avatars', []) or [])
+            norm_avatars: list[str] = []
+            for _a in raw:
+                ca = _canon_avatar_id(_a)
+                if ca:
+                    norm_avatars.append(ca)
+            _bundle_catalog_norm[_bundle_id] = {**_cfg, 'avatars': norm_avatars}
+
+        # 1) Store-friendly bundle SKUs (e.g., com.beesmart.bundle.classroom_starter_pack)
+        if callable(build_bundle_product_entitlements):
+            try:
+                PRODUCT_MAP.update(build_bundle_product_entitlements(_bundle_catalog_norm))
+            except Exception as _be:
+                print(f"WARN: Failed to load bundle SKU entitlements: {_be}")
+
+        # 2) Internal bundle ids (used by BeeKey redemption and dev tooling)
+        for _bundle_id, _cfg in _bundle_catalog_norm.items():
+            pid_internal = f"bundle:{_bundle_id}"
+            if pid_internal not in PRODUCT_MAP:
+                PRODUCT_MAP[pid_internal] = {
                     'type': 'bundle',
                     'bundle_id': _bundle_id,
                     'avatars': list(_cfg.get('avatars', []) or [])
@@ -4729,10 +4828,13 @@ def app_home():
         intro_months = int(os.environ.get('SUBSCRIPTION_INTRO_MONTHS', '0'))
     except Exception:
         intro_months = 0
+    # Default to the current monthly subscription SKU unless explicitly overridden.
+    # (The legacy 'beesmart.sub.full_monthly' remains supported via env and PRODUCT_MAP.)
     try:
-        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly')
+        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID')
+        subscription_product_id = (subscription_product_id or '').strip() or SUBSCRIPTION_PRODUCT_IDS['monthly']
     except Exception:
-        subscription_product_id = 'beesmart.sub.full_monthly'
+        subscription_product_id = SUBSCRIPTION_PRODUCT_IDS['monthly']
     # Determine premium state for signed-in users (for trial banner logic)
     try:
         from flask_login import current_user as _cu
@@ -7509,7 +7611,6 @@ def api_pronounce():
     safe_hint = sanitize_kid_friendly_text(_blank_word(word_rec.get("hint", ""), current_word))
 
     return jsonify({
-        "word": current_word,
         "definition": definition,
         "sentence": safe_sentence,
         "hint": safe_hint,
@@ -8100,7 +8201,12 @@ def api_answer():
             db.session.commit()
             print(f" Saved QuizResult for word '{correct_spelling}' (correct={is_correct}) to session {state['db_session_id']}")
         except Exception as e:
-            print(f"️ Failed to save quiz result: {e}")
+            import traceback
+            print(f"️ Failed to save quiz result: {type(e).__name__}: {e}")
+            try:
+                print(f"️ Quiz result save traceback: {traceback.format_exc()}")
+            except Exception:
+                pass
             db.session.rollback()
 
     # Get phonetic information for incorrect answers
@@ -8362,15 +8468,16 @@ def api_answer():
     elif quiz_complete and not state.get("db_session_id"):
         print(f"️ WARNING: Quiz complete but no db_session_id in state! Cannot save to database.")
 
-    # 📚 Enhanced Educational Features: Get word definition for educational purposes
+    # 📚 Enhanced Educational Features: Get a safe (blanked) definition snippet
+    # NOTE: Our canonical enrichment helper is get_word_info() defined in this module.
+    # It returns a formatted string: "<definition>. Fill in the blank: <sentence>".
+    # Avoid importing dictionary_api.get_word_info (it may not exist and can cause runtime errors).
     word_definition = ""
     if correct_spelling:
         try:
-            from dictionary_api import get_word_info
-            word_info = get_word_info(correct_spelling)
-            if word_info and word_info.get('definitions'):
-                # Use the first definition for display
-                word_definition = word_info['definitions'][0]
+            raw = get_word_info(correct_spelling)
+            d, _s = parse_enriched_info(raw, correct_spelling)
+            word_definition = (d or "").strip()
         except Exception as e:
             print(f"Failed to get definition for '{correct_spelling}': {e}")
     
@@ -9326,23 +9433,84 @@ def api_iap_restore():
     data = request.get_json(silent=True) or {}
     product_ids = data.get('product_ids') or []
     platform = (data.get('platform') or 'apple').lower()
+    restore_id = uuid.uuid4().hex[:12]
+
+    def _extract_pid(x):
+        """Accept either a string SKU or an object from native SDKs.
+        Some wrappers return objects (e.g., {productId, id, sku}).
+        """
+        if x is None:
+            return None
+        if isinstance(x, str):
+            v = x.strip()
+            return v or None
+        if isinstance(x, dict):
+            for k in ('productId', 'product_id', 'productID', 'sku', 'id', 'identifier'):
+                if k in x and x.get(k):
+                    try:
+                        v = str(x.get(k)).strip()
+                        return v or None
+                    except Exception:
+                        continue
+        # Last resort: stringify primitives
+        if isinstance(x, (int, float, bool)):
+            v = str(x).strip()
+            return v or None
+        return None
+
     if not isinstance(product_ids, list) or not product_ids:
         return jsonify({"success": False, "error": "product_ids must be a non-empty list"}), 400
 
+    # Normalize + de-dupe while preserving order
+    normalized = []
+    seen = set()
+    for item in product_ids:
+        pid = _extract_pid(item)
+        if not pid:
+            continue
+        if pid in seen:
+            continue
+        seen.add(pid)
+        normalized.append(pid)
+
+    if not normalized:
+        return jsonify({
+            "success": False,
+            "error": "No valid product_ids after normalization",
+            "restore_id": restore_id,
+        }), 400
+
+    try:
+        app.logger.info(f"IAP restore start restore_id={restore_id} user_id={getattr(current_user, 'id', None)} platform={platform} count_in={len(product_ids)} count_norm={len(normalized)}")
+    except Exception:
+        pass
+
     applied = []
-    for pid in product_ids:
-        res = _apply_entitlement(current_user, pid)
-        if res.get('applied'):
-            applied.append({"product_id": pid, **res})
+    errors = []
+    for pid in normalized:
+        had_error = False
+        err_msg = None
+        try:
+            res = _apply_entitlement(current_user, pid)
+            if res.get('applied'):
+                applied.append({"product_id": pid, **res})
+        except Exception as e:
+            had_error = True
+            err_msg = str(e)
+            errors.append({"product_id": pid, "error": err_msg})
+
         # Log a record for traceability (status verified via restore)
+        raw_payload = {'restore': True, 'restore_id': restore_id}
+        if had_error and err_msg:
+            raw_payload['restore_error'] = err_msg
         rec = PurchaseRecord(
             user_id=current_user.id,
             platform=platform,
             product_id=pid,
-            status='verified',
+            status='restore_error' if had_error else 'verified',
             transaction_id=None,
             purchase_token=None,
-            raw_payload={'restore': True}
+            raw_payload=raw_payload
         )
         db.session.add(rec)
 
@@ -9350,12 +9518,89 @@ def api_iap_restore():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+        return jsonify({"success": False, "error": f"db_commit_failed: {e}", "restore_id": restore_id}), 500
 
     return jsonify({
         "success": True,
+        "restore_id": restore_id,
+        "normalized_product_ids": normalized,
         "applied": applied,
+        "errors": errors,
         "entitlements": _entitlements_summary(current_user)
+    })
+
+
+@app.route('/api/bundles', methods=['GET'])
+@login_required
+def api_bundles_list():
+    """List available avatar bundles for the current user.
+
+    Returned bundle.product_id is intended to be passed to the native IAP bridge.
+    The same product_id must be recognized in PRODUCT_MAP for verification.
+    """
+    bundles = []
+    user_purchased = set(list(getattr(current_user, 'purchased_bundles', []) or []))
+    is_premium = bool(getattr(current_user, 'premium_member', False))
+
+    # Build a small normalization map once (catalog is tiny: 39 avatars)
+    try:
+        from avatar_catalog import AVATAR_CATALOG  # type: ignore
+        _catalog_ids = [str((a.get('id') or '')).strip().lower() for a in (AVATAR_CATALOG or []) if (a.get('id') or '').strip()]
+    except Exception:
+        _catalog_ids = []
+    _norm_to_canon = {}
+    for _cid in _catalog_ids:
+        _k = re.sub(r"[^a-z0-9]+", "", _cid)
+        if _k and _k not in _norm_to_canon:
+            _norm_to_canon[_k] = _cid
+
+    def _canon_avatar_id(_s: str) -> str:
+        v = str(_s or '').strip().lower()
+        if not v:
+            return ''
+        if v in _catalog_ids:
+            return v
+        k = re.sub(r"[^a-z0-9]+", "", v)
+        return _norm_to_canon.get(k, v)
+
+    for bundle_id, cfg in (BUNDLE_CATALOG or {}).items():
+        cfg = cfg or {}
+        name = cfg.get('name') or bundle_id
+        avatars_raw = list(cfg.get('avatars', []) or [])
+        avatars = []
+        for _a in avatars_raw:
+            ca = _canon_avatar_id(_a)
+            if ca:
+                avatars.append(ca)
+        # Prefer store-friendly SKU when available
+        product_id = None
+        if callable(bundle_sku_for_id):
+            try:
+                product_id = bundle_sku_for_id(bundle_id)
+            except Exception:
+                product_id = None
+        if not product_id:
+            # Back-compat/internal id (not recommended for store SKUs)
+            product_id = f"bundle:{bundle_id}"
+
+        bundles.append({
+            'id': bundle_id,
+            'name': name,
+            'avatars': avatars,
+            'count': int(len(avatars)),
+            'product_id': product_id,
+            'is_owned': bool(is_premium or (bundle_id in user_purchased)),
+        })
+
+    bundles.sort(key=lambda b: (b.get('name') or '').lower())
+
+    return jsonify({
+        'success': True,
+        'bundles': bundles,
+        'user': {
+            'premium_member': is_premium,
+            'purchased_bundles': list(user_purchased),
+        }
     })
 
 
@@ -9414,7 +9659,33 @@ def api_bundles_redeem():
                 bundle_cfg = { 'name': dyn.name, 'avatars': list(dyn.avatars or []) }
         except Exception:
             pass
-    avatars = list(bundle_cfg.get('avatars', []) or [])
+    # Normalize avatar ids inside bundles to canonical catalog ids.
+    avatars_raw = list(bundle_cfg.get('avatars', []) or [])
+    try:
+        from avatar_catalog import AVATAR_CATALOG  # type: ignore
+        _catalog_ids = [str((a.get('id') or '')).strip().lower() for a in (AVATAR_CATALOG or []) if (a.get('id') or '').strip()]
+    except Exception:
+        _catalog_ids = []
+    _norm_to_canon = {}
+    for _cid in _catalog_ids:
+        _k = re.sub(r"[^a-z0-9]+", "", _cid)
+        if _k and _k not in _norm_to_canon:
+            _norm_to_canon[_k] = _cid
+
+    def _canon_avatar_id(_s: str) -> str:
+        v = str(_s or '').strip().lower()
+        if not v:
+            return ''
+        if v in _catalog_ids:
+            return v
+        k = re.sub(r"[^a-z0-9]+", "", v)
+        return _norm_to_canon.get(k, v)
+
+    avatars = []
+    for _a in avatars_raw:
+        ca = _canon_avatar_id(_a)
+        if ca:
+            avatars.append(ca)
     bundle_name = bundle_cfg.get('name') or bundle_id
 
     product_id = f"bundle:{bundle_id}"
@@ -10026,10 +10297,13 @@ def register():
             intro_months = int(os.environ.get('SUBSCRIPTION_INTRO_MONTHS', '0'))
         except Exception:
             intro_months = 0
+        # Default to the current monthly subscription SKU unless explicitly overridden.
+        # (The legacy 'beesmart.sub.full_monthly' remains supported via env and PRODUCT_MAP.)
         try:
-            subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.sub.full_monthly')
+            subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID')
+            subscription_product_id = (subscription_product_id or '').strip() or SUBSCRIPTION_PRODUCT_IDS['monthly']
         except Exception:
-            subscription_product_id = 'beesmart.sub.full_monthly'
+            subscription_product_id = SUBSCRIPTION_PRODUCT_IDS['monthly']
         return render_template(
             'auth/register.html',
             registration_fee_usd=one_time_fee,

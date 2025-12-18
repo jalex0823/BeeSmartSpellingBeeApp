@@ -56,6 +56,58 @@ def _sku_prefix() -> str:
     return os.getenv('AVATAR_SKU_PREFIX', 'com.beesmart.avatar')
 
 
+def _sku_prefix_aliases() -> list[str]:
+    """Return a list of accepted SKU prefixes.
+
+    Why:
+      - Historical docs and older builds used different prefixes (e.g. 'beesmart.avatar')
+      - App/Store IDs are sticky once created in the stores
+      - Server should be liberal in what it accepts while mapping to canonical avatar ids
+
+    Configure additional accepted prefixes via:
+      AVATAR_SKU_PREFIX_ALIASES="prefix.one,prefix.two"
+    """
+    primary = (_sku_prefix() or '').strip()
+    common = ['com.beesmart.avatar', 'beesmart.avatar']
+    extra = []
+    raw = os.getenv('AVATAR_SKU_PREFIX_ALIASES', '')
+    if raw:
+        extra = [p.strip() for p in raw.split(',') if p.strip()]
+    # Stable de-dupe while preserving order
+    out: list[str] = []
+    for p in [primary, *common, *extra]:
+        if not p:
+            continue
+        if p not in out:
+            out.append(p)
+    return out
+
+
+def _slug_variants_for_store(slug: str) -> list[str]:
+    """Generate store-facing slug variants for a canonical avatar id.
+
+    Stores or historical docs have used:
+      - hyphens:  queen-bee
+      - underscores: queen_bee
+      - compact: queenbee (rare but exists in docs for Super Bee → superbee)
+      - special cases: sea-bee appears as 'seabea' in some legacy materials
+    """
+    if not slug:
+        return []
+    base = slug.strip().lower()
+    variants = {base}
+    if '-' in base:
+        variants.add(base.replace('-', '_'))
+        variants.add(base.replace('-', ''))
+    if '_' in base:
+        variants.add(base.replace('_', '-'))
+        variants.add(base.replace('_', ''))
+    # Known legacy oddity: 'sea-bee' sometimes documented as 'seabea'
+    if base == 'sea-bee':
+        variants.add('seabea')
+    return sorted(variants)
+
+
 def sku_for_slug(avatar_slug: str) -> str:
     """Build SKU for a given avatar slug"""
     prefix = _sku_prefix()
@@ -126,13 +178,20 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
         catalog_ids = set()
 
     entitlements: Dict[str, dict] = {}
-    for slug, pid in merged.items():
+
+    prefixes = _sku_prefix_aliases()
+    for slug, _pid in merged.items():
         target_slug = slug
         if catalog_ids and slug not in catalog_ids:
             alias = ALIASES.get(slug)
             if alias and alias in catalog_ids:
                 target_slug = alias
-        entitlements[pid] = { 'type': 'avatar', 'avatar_id': target_slug }
+
+        # Accept multiple SKU spellings/prefixes for the same canonical avatar id.
+        for prefix in prefixes:
+            for store_slug in _slug_variants_for_store(target_slug):
+                entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
+
     return entitlements
 
 

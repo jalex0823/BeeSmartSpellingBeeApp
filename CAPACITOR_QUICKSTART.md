@@ -60,7 +60,7 @@ npm run cap:add:android
 Already configured and ready:
 - **App ID**: com.beesmart.spelling
 - **App Name**: BeeSmart Spelling
-- **Backend**: https://beesmartspellingbeeapp-production.up.railway.app
+- **Backend**: https://beesmartspelling.app
 - **Web Directory**: static/
 
 No changes needed! Just run the commands above.
@@ -110,7 +110,7 @@ All plugins already installed in package.json!
 
 ### 1. Browser First (No Install Needed)
 Your app already works perfectly at:
-https://beesmartspellingbeeapp-production.up.railway.app
+https://beesmartspelling.app
 
 Test all features in browser before mobile build.
 

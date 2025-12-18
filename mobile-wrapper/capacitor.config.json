@@ -4,11 +4,11 @@
   "webDir": "static",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://beesmartspellingbeeapp-production.up.railway.app",
-    "cleartext": true,
+    "url": "https://beesmartspelling.app",
+    "cleartext": false,
     "allowNavigation": [
-      "beesmartspellingbeeapp-production.up.railway.app",
-      "*.railway.app"
+      "beesmartspelling.app",
+      "www.beesmartspelling.app"
     ]
   },
   "ios": {

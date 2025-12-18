@@ -202,11 +202,19 @@ function renderAvatarGrid(avatarsToRender) {
         
         grid.appendChild(card);
 
-        // Use 2D PNG thumbnail (simple and fast)
-        const thumbnailUrl = avatar.(urls && urls.thumbnail !== undefined) ? urls.thumbnail : null || avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`;
-        thumbContainer.innerHTML = `<img src="${thumbnailUrl}" 
-                        alt="${displayName}" 
-                        style="width:100%;height:100%;object-fit:contain;border-radius:0.5rem;">`;
+        // Use 2D thumbnail (simple and fast)
+        const thumbnailUrl = (avatar && avatar.urls && avatar.urls.thumbnail)
+            ? avatar.urls.thumbnail
+            : (avatar.thumbnail || `/static/assets/avatars/${avatar.id}/thumbnail.png`);
+        const img = document.createElement('img');
+        img.src = thumbnailUrl;
+        img.alt = displayName;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '0.5rem';
+        // Preserve any badges already appended (e.g., lock badge)
+        thumbContainer.insertBefore(img, thumbContainer.firstChild);
     });
     
     console.log(`✅ Rendered ${avatarsToRender.length} avatar cards with 2D thumbnails`);
@@ -214,144 +222,47 @@ function renderAvatarGrid(avatarsToRender) {
 
 // Render a 3D avatar model in a small, consistent-size thumbnail canvas
 async function render3DThumbnail(container, avatar) {
-    if (!avatar.urls || !avatar.urls.model_obj) {
-        throw new Error('No 3D model URLs available');
+    // Optional enhancement: render a tiny rotating GLB thumbnail.
+    // If Three.js isn't available (or no GLB URL), callers should fall back to 2D thumbnails.
+    if (!container || !window.THREE || !THREE.GLTFLoader) {
+        throw new Error('Three.js not available');
     }
-
-    // Create mini scene
-    const scene = new THREE.Scene();
-    scene.background = null; // Transparent
-    
-    const fov = 45;
-    const camera = new THREE.PerspectiveCamera(fov, 1, 0.1, 1000);
-    camera.position.set(0, 0, 3);
-    
-    const renderer = new THREE.WebGLRenderer({ 
-        antialias: true, 
-        alpha: true,
-        preserveDrawingBuffer: true
-    });
-    const sizePx = 140; // enforce uniform thumbnail size
-    renderer.setSize(sizePx, sizePx);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-
-    // Load GLB model (PRIMARY format - all avatars are GLB now)
-    const glbUrl = avatar.urls.glb || avatar.urls.model_obj; // Fallback to model_obj for backward compat
-    const avatarId = avatar.id;
-    
+    const glbUrl = (avatar && avatar.urls && (avatar.urls.glb || avatar.urls.model_obj))
+        ? String(avatar.urls.glb || avatar.urls.model_obj)
+        : '';
     if (!glbUrl) {
-        reject(new Error('No GLB URL available'));
-        return;
+        throw new Error('No GLB URL available');
     }
 
+    const scene = new THREE.Scene();
+    scene.background = null;
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.set(0, 0, 3);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const sizePx = 140;
+    renderer.setSize(sizePx, sizePx);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambient);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(5, 5, 5);
+    scene.add(dir);
+
+    const loader = new THREE.GLTFLoader();
     return new Promise((resolve, reject) => {
-        // Check cache first - instant load for previously viewed avatars
-        if (GLB_CACHE.has(avatarId)) {
-            console.log(`🚀 Cache HIT for avatar ${avatarId} - instant load`);
-            const cachedGltf = GLB_CACHE.get(avatarId);
-            const object = cachedGltf.scene.clone(); // Clone to avoid conflicts
-            
-            // Apply same transformations as fresh load
-            const box = new THREE.Box3().setFromObject(object);
-            const sizeVec = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
-            const center = box.getCenter(new THREE.Vector3());
-            object.position.sub(center);
-            const target = 1.6;
-            const scale = target / maxDim;
-            object.scale.setScalar(scale);
-            scene.add(object);
-            
-            // Start animation
-            let rotation = 0;
-            const animate = () => {
-                rotation += 0.01;
-                object.rotation.y = rotation;
-                renderer.render(scene, camera);
-                requestAnimationFrame(animate);
-            };
-            animate();
-            
-            resolve();
-            return;
-        }
-        
-        // Check if already loading this avatar - prevent duplicate network requests
-        if (GLB_LOADING.has(avatarId)) {
-            console.log(`⏳ Already loading avatar ${avatarId} - waiting...`);
-            GLB_LOADING.get(avatarId).then(() => {
-                // Retry after load completes
-                render3DThumbnail(container, avatar).then(resolve).catch(reject);
-            });
-            return;
-        }
-        
-        console.log(`📥 Cache MISS for avatar ${avatarId} - downloading GLB...`);
-        const loader = new THREE.GLTFLoader();
-        const loadingPromise = new Promise((loadResolve, loadReject) => {
-            loader.load(
-                glbUrl,
-                (gltf) => {
-                    // Cache management - remove oldest if cache is full
-                    if (GLB_CACHE.size >= MAX_CACHE_SIZE) {
-                        const oldestKey = GLB_CACHE.keys().next().value;
-                        GLB_CACHE.delete(oldestKey);
-                        console.log(`🗑️ Cache full - removed oldest model: ${oldestKey}`);
-                    }
-                    
-                    // Cache the loaded model for future use
-                    GLB_CACHE.set(avatarId, gltf);
-                    console.log(`✅ Cached avatar ${avatarId} (${GLB_CACHE.size}/${MAX_CACHE_SIZE} models cached)`);
-                    
-                    const object = gltf.scene;
-                
-                    // Center and scale uniformly so all thumbnails appear same visual size
-                    const box = new THREE.Box3().setFromObject(object);
-                    const sizeVec = box.getSize(new THREE.Vector3());
-                    const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
-                    const center = box.getCenter(new THREE.Vector3());
-                    object.position.sub(center);
-                    // Scale to target normalized dimension (fills ~80% of frame)
-                    const target = 1.6; // tune fill factor
-                    const scale = target / maxDim;
-                    object.scale.setScalar(scale);
-                    scene.add(object);
-
-                    // Animate
-                    let rotation = 0;
-                    const animate = () => {
-                        rotation += 0.01;
-                        object.rotation.y = rotation;
-                        renderer.render(scene, camera);
-                        requestAnimationFrame(animate);
-                    };
-                    animate();
-
-                    loadResolve();
-                    resolve();
-                }, 
-                undefined, 
-                (error) => {
-                    console.error(`❌ Failed to load avatar ${avatarId}:`, error);
-                    loadReject(error);
-                    reject(error);
-                }
-            );
-        });
-        
-        // Track loading state
-        GLB_LOADING.set(avatarId, loadingPromise);
-        loadingPromise.finally(() => {
-            GLB_LOADING.delete(avatarId);
-        });
+        loader.load(
+            glbUrl,
+            (gltf) => {
+                const object = gltf.scene;
+                const box = new THREE.Box3().setFromObject(object);
+                const sizeVec = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
+                const center = box.getCenter(new THREE.Vector3());
+                object.position.sub(center);
+                object.scale.setScalar(1.6 / maxDim);
+                scene.add(object);
                 let rotation = 0;
                 const animate = () => {
                     rotation += 0.01;
@@ -360,10 +271,11 @@ async function render3DThumbnail(container, avatar) {
                     requestAnimationFrame(animate);
                 };
                 animate();
-
                 resolve();
-            }, undefined, reject);
-        }, undefined, reject);
+            },
+            undefined,
+            (err) => reject(err)
+        );
     });
 }
 
@@ -377,7 +289,8 @@ function selectAvatar(avatar) {
     (function(){ const el = document.querySelector(`.avatar-option[data-avatar-id="${avatar.id}"]`); if(el && el.classList) el.classList.add('selected'); })();
     
     // Defer 3D preview loading to not block UI
-    requestIdleCallback(() => {
+    const idle = window.requestIdleCallback || function(cb){ return setTimeout(cb, 0); };
+    idle(() => {
         updatePreview();
     }, { timeout: 100 });
     
@@ -406,7 +319,7 @@ function updatePreview() {
     if (descEl) descEl.textContent = selectedAvatar.description;
     
     // Detect if GLB format available (ALL avatars are GLB now)
-    const isGLB = selectedAvatar.urls && selectedAvatar.urls.glb;
+    const isGLB = !!(selectedAvatar.urls && selectedAvatar.urls.glb);
     
     // Try to render 3D preview if GLTFLoader is available
     const loaderCheck = window.THREE && THREE.GLTFLoader;
@@ -554,7 +467,7 @@ function updatePreview() {
             
             // ========== GLB LOADING ==========
             if (isGLB) {
-                const glbUrl = selectedAvatar.urls.model_obj;
+                const glbUrl = selectedAvatar.urls.glb || selectedAvatar.urls.model_obj;
                 const avatarId = selectedAvatar.id;
                 
                 // Check cache first for instant loading
@@ -596,7 +509,6 @@ function updatePreview() {
                     });
                     
                     scene.add(object);
-                    setupInteractiveControls();
                     return;
                 }
                 
@@ -689,8 +601,8 @@ function updatePreview() {
 function showPreviewPlaceholder(preview) {
     preview.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">${(selectedAvatar && selectedAvatar.emoji !== undefined) ? selectedAvatar.emoji || '🐝'}</div>
-            <p style="color: #8B6914; font-size: 1.2rem; font-weight: bold;">${(selectedAvatar && selectedAvatar.name !== undefined) ? selectedAvatar.name || 'Bee Avatar'}</p>
+            <div style="font-size: 4rem; margin-bottom: 1rem;">${(selectedAvatar && selectedAvatar.emoji !== undefined) ? (selectedAvatar.emoji || '🐝') : '🐝'}</div>
+            <p style="color: #8B6914; font-size: 1.2rem; font-weight: bold;">${(selectedAvatar && selectedAvatar.name !== undefined) ? (selectedAvatar.name || 'Bee Avatar') : 'Bee Avatar'}</p>
             <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">3D Preview</p>
         </div>
     `;

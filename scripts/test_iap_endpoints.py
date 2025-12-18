@@ -15,6 +15,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from AjaSpellBApp import app  # noqa: E402
 from models import db  # noqa: E402
+from avatar_skus import sku_for_slug  # noqa: E402
+from bundle_skus import bundle_sku_for_id  # noqa: E402
+from avatar_bundles import BUNDLE_CATALOG  # noqa: E402
 
 
 def run():
@@ -51,7 +54,44 @@ def run():
     assert resp.get('success') is True, resp
     print("- Logged in user")
 
-    # 3) Verify full unlock in mock mode
+    # 3) Restore an avatar product id (non-premium path)
+    restore_payload = {
+        "platform": "apple",
+        # Use canonical store SKU form (prefix + hyphenated slug)
+        "product_ids": [sku_for_slug('super-bee')]
+    }
+    r = client.post('/api/iap/restore', data=json.dumps(restore_payload), content_type='application/json')
+    assert r.status_code == 200, f"restore failed: {r.status_code} {r.data}"
+    resp = r.get_json()
+    assert resp.get('success') is True, resp
+    ents = resp.get('entitlements') or {}
+    assert ents.get('premium_member') is False, ents
+    purchased = ents.get('purchased_avatars') or []
+    assert 'super-bee' in purchased, ents
+    print("- Restored avatar unlock (mock)")
+
+    # 4) Restore a bundle product id (non-premium path)
+    bundle_id = None
+    try:
+        bundle_id = next(iter((BUNDLE_CATALOG or {}).keys()))
+    except Exception:
+        bundle_id = None
+    assert bundle_id, f"No bundles available in BUNDLE_CATALOG: {BUNDLE_CATALOG}"
+    bundle_sku = bundle_sku_for_id(bundle_id)
+    restore_payload = {
+        "platform": "apple",
+        "product_ids": [bundle_sku]
+    }
+    r = client.post('/api/iap/restore', data=json.dumps(restore_payload), content_type='application/json')
+    assert r.status_code == 200, f"restore bundle failed: {r.status_code} {r.data}"
+    resp = r.get_json()
+    assert resp.get('success') is True, resp
+    ents = resp.get('entitlements') or {}
+    purchased_bundles = ents.get('purchased_bundles') or []
+    assert bundle_id in purchased_bundles, ents
+    print(f"- Restored bundle unlock (mock): {bundle_id}")
+
+    # 5) Verify full unlock in mock mode (premium path)
     verify_payload = {
         "product_id": os.environ.get('PRODUCT_FULL_UNLOCK_ID', 'beesmart.full_unlock'),
         "transaction_id": "tx-mock-123",
@@ -64,20 +104,6 @@ def run():
     ents = resp.get('entitlements') or {}
     assert ents.get('premium_member') is True, ents
     print("- Verified premium unlock (mock)")
-
-    # 4) Restore an avatar product id
-    restore_payload = {
-        "platform": "apple",
-        "product_ids": [os.environ.get('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee')]
-    }
-    r = client.post('/api/iap/restore', data=json.dumps(restore_payload), content_type='application/json')
-    assert r.status_code == 200, f"restore failed: {r.status_code} {r.data}"
-    resp = r.get_json()
-    assert resp.get('success') is True, resp
-    ents = resp.get('entitlements') or {}
-    purchased = ents.get('purchased_avatars') or []
-    assert 'superbee' in purchased, ents
-    print("- Restored avatar unlock (mock)")
 
     print("\n✅ IAP endpoints sanity test passed.")
 
