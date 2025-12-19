@@ -4630,6 +4630,13 @@ class BeeDelightManager {
     confirmExit() {
         this.soundboard.play('success');
         
+        // ✅ CRITICAL FIX: Stop live status polling to prevent 504 errors
+        console.log('🛑 Stopping live status polling before exit...');
+        if (window.__liveStatusInterval) {
+            clearInterval(window.__liveStatusInterval);
+            window.__liveStatusInterval = null;
+        }
+        
         // Add a friendly exit message
         const exitModal = document.getElementById('exitModal');
         const modalContent = exitModal.querySelector('.exit-modal-content');
@@ -9540,6 +9547,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const startMode = (action === 'resume') ? 'resume' : 'normal';
             window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+            
+            // ✅ START LIVE STATUS POLLING - Updates stats in real-time
+            console.log('🔄 Starting live status polling for stats updates...');
+            startLiveStatusPolling();
         })
         .catch(error => {
             console.error('❌ Failed to check word bank or initialize quiz:', error);
