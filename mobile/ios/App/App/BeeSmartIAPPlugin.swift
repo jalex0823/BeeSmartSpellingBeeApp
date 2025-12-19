@@ -77,8 +77,10 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                                 "transactionId": String(transaction.id)
                             ]
 
-                            // StoreKit 2 provides a signed JWS representation suitable for server verification.
-                            payload["jws"] = transaction.jwsRepresentation
+                            // StoreKit 2 does not expose a stable JWS string on Transaction across SDK versions.
+                            // Use the JSON representation (signed data can be added later via server receipt validation).
+                            // Keep the key name stable for the web layer.
+                            payload["jws"] = String(data: transaction.jsonRepresentation, encoding: .utf8) ?? ""
 
                             call.resolve([
                                 "productId": transaction.productID,

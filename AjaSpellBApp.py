@@ -3400,22 +3400,26 @@ def api_quiz_resume():
     """Check if a quiz is in progress and can be resumed."""
     try:
         qs = session.get(QUIZ_STATE_KEY)
-        if qs and qs.get("idx", 0) > 0:
-            # A quiz is in progress
+        # If we have quiz state at all, allow resume.
+        # Treating idx==0 as resumable fixes the "restart/resume modal" regression
+        # and matches the expectation in scripts/test_quiz_resume.py.
+        if qs is not None:
+            idx = int(qs.get("idx", 0) or 0)
+            order = qs.get("order", []) or []
             return jsonify({
                 'status': 'success',
+                'resumed': True,
                 'in_progress': True,
                 'message': 'A quiz is currently in progress. Do you want to resume?',
                 'state': {
-                    'current_word_index': qs.get("idx", 0),
-                    'total_words': len(qs.get("order", [])),
-                    'correct': qs.get("correct", 0),
-                    'incorrect': qs.get("incorrect", 0),
+                    'current_word_index': idx,
+                    'total_words': len(order),
+                    'correct': int(qs.get("correct", 0) or 0),
+                    'incorrect': int(qs.get("incorrect", 0) or 0),
                 }
             })
-        else:
-            # No quiz in progress or it's at the very beginning
-            return jsonify({'status': 'success', 'in_progress': False})
+
+        return jsonify({'status': 'success', 'resumed': False, 'in_progress': False})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 

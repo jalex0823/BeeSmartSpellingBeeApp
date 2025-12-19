@@ -22,17 +22,18 @@
   "license": "MIT",
   "dependencies": {
     "@capacitor/android": "^5.5.1",
-    "@capacitor/app": "^5.0.6",
-    "@capacitor/camera": "^5.0.7",
-    "@capacitor/core": "^5.5.1",
-    "@capacitor/filesystem": "^5.1.4",
-    "@capacitor/haptics": "^5.0.6",
-    "@capacitor/ios": "^5.5.1",
-    "@capacitor/keyboard": "^5.0.6",
-    "@capacitor/splash-screen": "^5.0.6",
-    "@capacitor/status-bar": "^5.0.6"
+    "@capacitor/app": "^5.0.8",
+    "@capacitor/browser": "^5.2.1",
+    "@capacitor/camera": "^5.0.10",
+    "@capacitor/core": "^5.7.8",
+    "@capacitor/filesystem": "^5.2.2",
+    "@capacitor/haptics": "^5.0.8",
+    "@capacitor/ios": "^5.7.8",
+    "@capacitor/keyboard": "^5.0.9",
+    "@capacitor/splash-screen": "^5.0.8",
+    "@capacitor/status-bar": "^5.0.8"
   },
   "devDependencies": {
-    "@capacitor/cli": "^5.5.1"
+    "@capacitor/cli": "^5.7.8"
   }
 }

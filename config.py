@@ -4,10 +4,46 @@ Environment-based configuration for development and production
 """
 
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+
+def _load_env_files() -> None:
+    """Load environment variables from dotenv files.
+
+    Priority:
+      1) Explicit path via BEESMART_ENV_FILE
+      2) Repo-root .env (this file's directory)
+      3) A couple common local locations (optional)
+
+    We never fail hard here; missing dotenv files are expected in CI.
+    """
+
+    # 1) Explicit override (lets a dev keep their .env outside the repo)
+    override = os.environ.get("BEESMART_ENV_FILE")
+    if override:
+        load_dotenv(dotenv_path=override, override=False)
+        return
+
+    # 2) Default: repo root (directory containing this config.py)
+    repo_root = Path(__file__).resolve().parent
+    load_dotenv(dotenv_path=repo_root / ".env", override=False)
+
+    # 3) Optional fallbacks (best-effort; do not override existing env)
+    # Note: None of these should be committed; they're just convenience.
+    candidates = [
+        repo_root / ".env.local",
+        repo_root / "config" / ".env",
+        Path.home() / ".config" / "beesmart" / ".env",
+    ]
+    for p in candidates:
+        if p.exists():
+            load_dotenv(dotenv_path=p, override=False)
+
+
+# Load environment variables from dotenv files (best-effort)
+_load_env_files()
 
 
 class Config:
@@ -17,7 +53,12 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production-abc123'
     
     # Database - Auto-detect from environment or default to SQLite
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///beesmart.db'
+    # Allow DIGITALOCEAN_DATABASE_URL as a friendly alias during migration.
+    SQLALCHEMY_DATABASE_URI = (
+        os.environ.get('DATABASE_URL')
+        or os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        or 'sqlite:///beesmart.db'
+    )
     
     # Fix for Railway's postgres:// vs postgresql://
     if SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
@@ -96,7 +137,13 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # In-memory database
+    # Prefer real DB in CI/dev when provided (e.g., DigitalOcean Postgres) so
+    # tests exercise the actual schema. Falls back to in-memory SQLite.
+    SQLALCHEMY_DATABASE_URI = (
+        os.environ.get('DATABASE_URL')
+        or os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        or 'sqlite:///:memory:'
+    )
     WTF_CSRF_ENABLED = False
 
 
