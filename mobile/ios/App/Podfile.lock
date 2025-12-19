@@ -20,38 +20,38 @@ PODS:
     - Capacitor
 
 DEPENDENCIES:
-  - "Capacitor (from `../../../node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../../node_modules/@capacitor/app`)"
-  - "CapacitorBrowser (from `../../../node_modules/@capacitor/browser`)"
-  - "CapacitorCamera (from `../../../node_modules/@capacitor/camera`)"
-  - "CapacitorCordova (from `../../../node_modules/@capacitor/ios`)"
-  - "CapacitorFilesystem (from `../../../node_modules/@capacitor/filesystem`)"
-  - "CapacitorHaptics (from `../../../node_modules/@capacitor/haptics`)"
-  - "CapacitorKeyboard (from `../../../node_modules/@capacitor/keyboard`)"
-  - "CapacitorSplashScreen (from `../../../node_modules/@capacitor/splash-screen`)"
-  - "CapacitorStatusBar (from `../../../node_modules/@capacitor/status-bar`)"
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
-    :path: "../../../node_modules/@capacitor/app"
+    :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
-    :path: "../../../node_modules/@capacitor/browser"
+    :path: "../../node_modules/@capacitor/browser"
   CapacitorCamera:
-    :path: "../../../node_modules/@capacitor/camera"
+    :path: "../../node_modules/@capacitor/camera"
   CapacitorCordova:
-    :path: "../../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
-    :path: "../../../node_modules/@capacitor/filesystem"
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorHaptics:
-    :path: "../../../node_modules/@capacitor/haptics"
+    :path: "../../node_modules/@capacitor/haptics"
   CapacitorKeyboard:
-    :path: "../../../node_modules/@capacitor/keyboard"
+    :path: "../../node_modules/@capacitor/keyboard"
   CapacitorSplashScreen:
-    :path: "../../../node_modules/@capacitor/splash-screen"
+    :path: "../../node_modules/@capacitor/splash-screen"
   CapacitorStatusBar:
-    :path: "../../../node_modules/@capacitor/status-bar"
+    :path: "../../node_modules/@capacitor/status-bar"
 
 SPEC CHECKSUMS:
   Capacitor: 9686e5711b48a1aa84671ede795d0175848abcba
@@ -65,6 +65,6 @@ SPEC CHECKSUMS:
   CapacitorSplashScreen: 0b962a2bee014151569dc59b089ba0e93daeeaf0
   CapacitorStatusBar: 8e0a8f213504695505dc8c4f808dffbe03aa0e0f
 
-PODFILE CHECKSUM: d79a91a8cc6f48b2b2d9fa19f585754376a30ecc
+PODFILE CHECKSUM: 051d3ae07b94a568a83bf0af76e87459ccf95262
 
 COCOAPODS: 1.16.2
