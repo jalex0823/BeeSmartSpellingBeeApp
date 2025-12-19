@@ -148,3 +148,4 @@ node_modules/
 
 # Transient wordbank storage files (runtime-generated; not source-controlled)
 data/wordbanks/*.json
+ios/
