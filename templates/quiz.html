@@ -5869,8 +5869,12 @@ class QuizManager {
             this.currentWordData = {
                 word: data.word || '',
                 sentence: data.sentence || '',
+                hint: data.hint || '',
                 definition: data.definition || ''
             };
+
+            // Back-compat alias (older code paths referenced currentWord)
+            this.currentWord = this.currentWordData;
 
             // ✅ Allow early typing — enable input immediately (no need to wait for timer)
             {
@@ -7003,11 +7007,17 @@ class QuizManager {
                 voiceDefBox.textContent = finalDefinition;
             }
 
-            // Store the word data for pronunciation
+            // Store the word data for helper buttons and pronunciation
+            // (Keep sentence/hint/definition in sync with /api/next so Show Sentence works pre-submit.)
             this.currentWordData = {
                 word: data.word || '',
+                sentence: data.sentence || '',
+                hint: data.hint || '',
                 definition: data.definition || ''
             };
+
+            // Back-compat alias (older code paths referenced currentWord)
+            this.currentWord = this.currentWordData;
             
             // Don't animate mascot on every question - keep it calm during gameplay
             // Mascot will only animate when answers are submitted
@@ -8263,26 +8273,27 @@ class QuizManager {
     
     showDefinition() {
         console.log('📖 Show Definition button clicked');
-        console.log('Current word:', this.currentWord);
+        console.log('Current word:', this.currentWordData);
         
-        if (!this.currentWord) {
+        const wordData = this.currentWordData || this.currentWord;
+        if (!wordData || !wordData.word) {
             this.showFeedback('📖 No word loaded yet.', 'error');
-            console.warn('No currentWord available');
+            console.warn('No currentWordData available');
             return;
         }
         
         // Check both definition and hint fields
-        const definition = this.currentWord.definition || this.currentWord.hint;
+        const definition = wordData.definition || wordData.hint;
         if (!definition) {
             this.showFeedback('📖 No definition available for this word.', 'error');
-            console.warn('No definition found for word:', this.currentWord.word);
+            console.warn('No definition found for word:', wordData.word);
             return;
         }
         
         const defDisplay = document.getElementById('definitionDisplay');
         if (defDisplay) {
             // Hide the target word from the definition to avoid giving away the answer
-            const safeDefinition = hideTargetWord(definition, this.currentWord.word);
+            const safeDefinition = hideTargetWord(definition, wordData.word);
             
             defDisplay.innerHTML = `
                 <div class="definition-content">
@@ -8311,24 +8322,25 @@ class QuizManager {
     
     showSentence() {
         console.log('📝 Show Sentence button clicked');
-        console.log('Current word:', this.currentWord);
+        console.log('Current word:', this.currentWordData);
         
-        if (!this.currentWord) {
+        const wordData = this.currentWordData || this.currentWord;
+        if (!wordData || !wordData.word) {
             this.showFeedback('📝 No word loaded yet.', 'error');
-            console.warn('No currentWord available');
+            console.warn('No currentWordData available');
             return;
         }
         
-        if (!this.currentWord.sentence) {
+        if (!wordData.sentence) {
             this.showFeedback('📝 No sentence available for this word.', 'error');
-            console.warn('No sentence found for word:', this.currentWord.word);
+            console.warn('No sentence found for word:', wordData.word);
             return;
         }
         
         const defDisplay = document.getElementById('definitionDisplay');
         if (defDisplay) {
             // Hide the target word from the sentence to avoid giving away the answer
-            const safeSentence = hideTargetWord(this.currentWord.sentence, this.currentWord.word);
+            const safeSentence = hideTargetWord(wordData.sentence, wordData.word);
             
             defDisplay.innerHTML = `
                 <div class="sentence-content">
