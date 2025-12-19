@@ -7424,8 +7424,9 @@ class QuizManager {
         // 🍎 iOS FIX: Normalize text for iOS compatibility (remove zero-width chars, normalize unicode)
         let userInput = spellingInput.value.trim();
         
-        // Remove zero-width characters that iOS keyboard might insert
-        userInput = userInput.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    // Remove invisible/control characters that keyboards/copy-paste might insert
+    // (zero-width, BOM, bidi markers, soft hyphen, ASCII controls incl. DEL)
+    userInput = userInput.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD\x00-\x1F\x7F]/g, '');
         
         // Normalize unicode (iOS may use different unicode representations)
         if (userInput.normalize) {

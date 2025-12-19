@@ -2748,6 +2748,14 @@ def normalize(s: str) -> str:
         return ""
     # Strip leading/trailing whitespace first
     s = str(s).strip()
+    # Remove invisible/control characters that can appear from mobile/macOS keyboards,
+    # copy/paste, or IME composition (e.g., zero-width chars, BOM, bidi markers, DEL).
+    # We keep this conservative and only remove known problematic classes.
+    try:
+        import re as _re
+        s = _re.sub(r"[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD\x00-\x1F\x7F]", "", s)
+    except Exception:
+        pass
     try:
         import unicodedata
         # Decompose characters and drop combining marks (accents/diacritics)
@@ -5196,7 +5204,7 @@ def magical_quiz_page():
 @app.route("/health")
 def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
-    return jsonify({"status": "ok", "version": "1.6"}), 200
+    return jsonify({"status": "ok", "version": "1.7"}), 200
 
 # Extra health endpoints for PaaS defaults (Railway/Render/Heroku variants)
 # Many platforms probe different default paths; keep them lightweight and identical
@@ -5206,7 +5214,7 @@ def health_check():
 @app.route("/_/health")
 @app.route("/ready")
 def health_check_aliases():
-    return jsonify({"status": "ok", "version": "1.6"}), 200
+    return jsonify({"status": "ok", "version": "1.7"}), 200
 
 @app.route("/health/iap")
 def health_iap():
@@ -5253,7 +5261,7 @@ def health_iap():
 
         return jsonify({
             "status": "ok",
-            "version": "1.6",
+            "version": "1.7",
             "iap": {
                 "mock": bool(mock),
                 "verification_mode": mode,
