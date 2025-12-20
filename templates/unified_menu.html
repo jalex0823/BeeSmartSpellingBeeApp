@@ -12043,13 +12043,11 @@
                 }
 
                 const loader = new THREE.GLTFLoader();
-                let carouselGroup = new THREE.Group(); // Container that rotates with avatars back-to-back
-                scene.add(carouselGroup);
-                let avatarSlots = [null, null]; // Two slots: front (0) and back (180°)
-                let currentSlot = 0;
+                let currentModel = null;   // Currently visible model
+                let outgoingModel = null;  // Model being faded out
                 let idx = 0;
                 let disposed = false;
-                let isRotating = false;
+                let isTransitioning = false;
 
                 function disposeObject(obj) {
                     try {
@@ -12136,13 +12134,11 @@
                     return group;
                 }
 
-                // Smooth rotation to reveal next avatar (back-to-back carousel)
-                function rotateCarousel(duration = 700) {  // FASTER: 700ms instead of 1200ms
-                    if (isRotating) return;
-                    isRotating = true;
+                // Smooth crossfade between avatars with rotation
+                function morphToNext(oldGroup, newGroup, duration = 700) {
+                    if (isTransitioning) return;
+                    isTransitioning = true;
                     
-                    const startRotation = carouselGroup.rotation.y;
-                    const targetRotation = startRotation + Math.PI; // 180° rotation to flip
                     const start = performance.now();
                     
                     function step(now) {
@@ -12150,14 +12146,39 @@
                         const t = Math.min(1, (now - start) / duration);
                         const e = easeInOutCubic(t);
                         
-                        carouselGroup.rotation.y = startRotation + (targetRotation - startRotation) * e;
+                        // Fade in new avatar with scale and rotation
+                        if (newGroup) {
+                            setOpacityRecursive(newGroup, e);
+                            newGroup.scale.setScalar(0.85 + (0.15 * e)); // Scale from 85% to 100%
+                            newGroup.rotation.y = (1 - e) * Math.PI * 0.5; // Rotate in from 90°
+                        }
+                        
+                        // Fade out old avatar with scale and rotation
+                        if (oldGroup) {
+                            setOpacityRecursive(oldGroup, 1 - e);
+                            oldGroup.scale.setScalar(1 - (0.15 * e)); // Scale down to 85%
+                            oldGroup.rotation.y += 0.02; // Gentle spin out
+                        }
                         
                         if (t < 1) {
                             requestAnimationFrame(step);
                         } else {
-                            isRotating = false;
-                            // Normalize rotation to avoid float precision issues
-                            carouselGroup.rotation.y = targetRotation % (Math.PI * 2);
+                            isTransitioning = false;
+                            
+                            // Remove old model
+                            if (oldGroup) {
+                                scene.remove(oldGroup);
+                                disposeObject(oldGroup);
+                            }
+                            
+                            // Finalize new model
+                            if (newGroup) {
+                                newGroup.scale.setScalar(1);
+                                newGroup.rotation.y = 0;
+                                setOpacityRecursive(newGroup, 1);
+                                setTransparentRecursive(newGroup, false);
+                                setDepthWriteRecursive(newGroup, true);
+                            }
                         }
                     }
                     requestAnimationFrame(step);
@@ -12165,7 +12186,6 @@
 
                 function loadNext() {
                     const item = candidates[idx % candidates.length];
-                    const nextSlot = (currentSlot + 1) % 2; // Alternate between 0 and 1
                     idx++;
                     
                     // Update name text
@@ -12226,30 +12246,27 @@
                             group.add(model);
                             group.add(podium);
                             
-                            // Position avatar in its slot (front = 0°, back = 180°)
-                            // Each avatar faces outward from center
-                            const angle = nextSlot * Math.PI; // 0 or π
-                            group.rotation.y = angle;
-
-                            // Remove old avatar from this slot if it exists
-                            if (avatarSlots[nextSlot]) {
-                                carouselGroup.remove(avatarSlots[nextSlot]);
-                                disposeObject(avatarSlots[nextSlot]);
+                            // Prepare for crossfade - start transparent
+                            setTransparentRecursive(group, true);
+                            setOpacityRecursive(group, 0);
+                            setDepthWriteRecursive(group, true);
+                            group.scale.setScalar(0.85);
+                            group.rotation.y = Math.PI * 0.5; // Start rotated 90°
+                            
+                            scene.add(group);
+                            
+                            // Hand off previous model as outgoing
+                            if (currentModel) {
+                                outgoingModel = currentModel;
+                                setTransparentRecursive(outgoingModel, true);
+                                setOpacityRecursive(outgoingModel, 1);
+                                setDepthWriteRecursive(outgoingModel, false);
                             }
                             
-                            // Add new avatar to slot
-                            avatarSlots[nextSlot] = group;
-                            carouselGroup.add(group);
+                            currentModel = group;
                             
-                            // If this is the first avatar, show it immediately
-                            if (idx === 1) {
-                                currentSlot = 0;
-                                console.log('✅ First avatar loaded and displayed');
-                            } else {
-                                // Rotate carousel to show the new avatar
-                                currentSlot = nextSlot;
-                                rotateCarousel(1200);
-                            }
+                            // Smooth morph transition
+                            morphToNext(outgoingModel, currentModel, 700);
                         },
                         undefined,
                         (err) => {
@@ -12263,19 +12280,18 @@
                 function tick() {
                     if (disposed) return;
                     requestAnimationFrame(tick);
-                    // Only add gentle idle rotation when not actively rotating
-                    if (!isRotating) {
-                        carouselGroup.rotation.y += 0.005;  // FASTER: More visible rotation
+                    // Only add gentle rotation when not transitioning
+                    if (!isTransitioning && currentModel) {
+                        currentModel.rotation.y += 0.005;  // Gentle continuous spin
                     }
                     renderer.render(scene, camera);
                 }
                 tick();
 
-                // Load first TWO avatars to fill both slots (front and back)
-                loadNext(); // Load first avatar (slot 0, front-facing)
-                setTimeout(() => loadNext(), 400); // Load second avatar (slot 1, back-facing) faster
+                // Load first avatar immediately
+                loadNext();
                 
-                // Continue rotating every 3 seconds (FASTER: was 4.5s)
+                // Continue rotating every 3 seconds
                 window._guest3DTimer = setInterval(loadNext, 3000);
 
                 // Click anywhere on the carousel to prompt registration/login
@@ -12290,8 +12306,8 @@
                 window.addEventListener('beforeunload', () => {
                     disposed = true;
                     try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){}
-                    avatarSlots.forEach(slot => { if (slot) disposeObject(slot); });
-                    if (carouselGroup) disposeObject(carouselGroup);
+                    if (currentModel) disposeObject(currentModel);
+                    if (outgoingModel) disposeObject(outgoingModel);
                     try { renderer.dispose(); } catch(_){}
                 }, { once: true });
 
