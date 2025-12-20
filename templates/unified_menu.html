@@ -3314,6 +3314,15 @@
                 padding: 1.5rem 1rem;
                 font-size: 1rem;
             }
+            /* Make avatar container responsive on mobile */
+            #avatarControls3D {
+                width: 280px !important;
+                height: 280px !important;
+                max-width: 90vw;
+            }
+            #avatarFxHost {
+                padding: 10px 0 !important;
+            }
         }
         /* Help links container should stack items full-width */
         section.action-buttons .help-links {
@@ -3782,8 +3791,8 @@
                     margin: 0 auto;
                 ">
                 <!-- Avatar Display - NEW clean container for controls -->
-                <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0;">
-                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto;"></div>
+                <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: flex; flex-direction: column; align-items: center;">
+                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto; max-width: 100%;"></div>
                     
                     <!-- Interactive Caption -->
                     <div style="
