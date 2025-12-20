@@ -11957,6 +11957,14 @@
                 if (window._guest3DCarouselInitialized) return false;
                 window._guest3DCarouselInitialized = true;
 
+                // Extra safety: clear any prior timers if the page was restored from bfcache
+                try {
+                    if (window._guest3DTimer) {
+                        clearInterval(window._guest3DTimer);
+                        window._guest3DTimer = null;
+                    }
+                } catch(_e) {}
+
                 const wrap = document.getElementById('guestAvatarCarousel');
                 const nameEl = document.getElementById('guestAvatarName');
                 const imgEl = document.getElementById('guestAvatarSlide');
@@ -12074,9 +12082,13 @@
 
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
-                    console.warn('GLTFLoader not available - using fallback');
-                    createCarouselFallback(canvasWrap);
-                    return;
+                    // GLB-only policy: do NOT fall back to PNG or placeholder tiles.
+                    // Keep the carousel hidden instead of showing non-GLB content.
+                    console.warn('GLTFLoader not available - hiding guest carousel (GLB-only policy)');
+                    try { wrap.style.display = 'none'; } catch(_e) {}
+                    try { canvasWrap.style.display = 'none'; } catch(_e) {}
+                    try { if (imgEl) imgEl.style.display = 'none'; } catch(_e) {}
+                    return false;
                 }
 
                 const loader = new THREE.GLTFLoader();
@@ -12102,14 +12114,23 @@
 
                 // Helpers to manage smooth crossfades on arbitrary GLTF graphs
                 function setTransparentRecursive(obj, enabled){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
-                            if (Array.isArray(child.material)) child.material.forEach(m => m.transparent = enabled);
-                            else if (child.material) child.material.transparent = enabled;
+                            const mats = Array.isArray(child.material) ? child.material : [child.material];
+                            mats.forEach(m => {
+                                if (!m) return;
+                                m.transparent = enabled;
+                                // Important for proper crossfade: avoid depth-writing occluding the incoming model
+                                // and avoid leaving the renderer in a weird state.
+                                m.depthWrite = !enabled;
+                                m.needsUpdate = true;
+                            });
                         }
                     });
                 }
                 function setOpacityRecursive(obj, opacity){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
                             if (Array.isArray(child.material)) child.material.forEach(m => { m.opacity = opacity; });
@@ -12119,6 +12140,7 @@
                 }
 
                 function setDepthWriteRecursive(obj, depthWrite){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
                             if (Array.isArray(child.material)) child.material.forEach(m => { if (m) m.depthWrite = depthWrite; });
@@ -12128,6 +12150,7 @@
                 }
 
                 function setRenderOrderRecursive(obj, order){
+                    if (!obj) return;
                     obj.traverse((child)=>{ child.renderOrder = order; });
                 }
 
@@ -12171,8 +12194,9 @@
                     return group;
                 }
 
-                // Smooth crossfade between avatars with rotation
-                function morphToNext(oldGroup, newGroup, duration = 700) {
+                // Smooth crossfade between avatars with rotation.
+                // IMPORTANT: this MUST last your carousel cadence (2.5s) so the outgoing avatar actually fades out.
+                function morphToNext(oldGroup, newGroup, duration = 2500) {
                     if (isTransitioning) return;
                     isTransitioning = true;
                     
@@ -12215,6 +12239,7 @@
                                 setOpacityRecursive(newGroup, 1);
                                 setTransparentRecursive(newGroup, false);
                                 setDepthWriteRecursive(newGroup, true);
+                                setRenderOrderRecursive(newGroup, 1);
                             }
                         }
                     }
@@ -12228,7 +12253,10 @@
                     // Update name text
                     nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
-                    if (imgEl) imgEl.style.display = 'none';
+                    if (imgEl) {
+                        imgEl.classList.remove('is-visible');
+                        imgEl.style.display = 'none';
+                    }
                     canvasWrap.style.display = 'block';
                     wrap.style.display = 'block';
 
@@ -12286,7 +12314,9 @@
                             // Prepare for crossfade - start transparent
                             setTransparentRecursive(group, true);
                             setOpacityRecursive(group, 0);
-                            setDepthWriteRecursive(group, true);
+                            setDepthWriteRecursive(group, false);
+                            // Keep incoming model on top while blending
+                            setRenderOrderRecursive(group, 2);
                             group.scale.setScalar(0.85);
                             group.rotation.y = Math.PI * 0.5; // Start rotated 90°
                             
@@ -12298,12 +12328,13 @@
                                 setTransparentRecursive(outgoingModel, true);
                                 setOpacityRecursive(outgoingModel, 1);
                                 setDepthWriteRecursive(outgoingModel, false);
+                                setRenderOrderRecursive(outgoingModel, 1);
                             }
                             
                             currentModel = group;
                             
                             // Smooth morph transition
-                            morphToNext(outgoingModel, currentModel, 700);
+                            morphToNext(outgoingModel, currentModel, 2500);
                         },
                         undefined,
                         (err) => {
