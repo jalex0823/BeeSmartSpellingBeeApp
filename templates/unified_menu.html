@@ -5768,10 +5768,23 @@
                 console.warn('Badge morphing init error:', e);
             }
 
-            // Initialize guest 3D GLB carousel with rotation
+            // Initialize guest 3D GLB carousel with rotation (with retry for script loading)
             try {
                 if (typeof initGuestAvatar3DCarousel === 'function') {
-                    initGuestAvatar3DCarousel();
+                    // Wait for THREE.GLTFLoader to be ready (deferred scripts may not be loaded yet)
+                    let attempts = 0;
+                    const maxAttempts = 20; // 2 seconds max wait
+                    const waitForLoader = setInterval(() => {
+                        attempts++;
+                        if (typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined') {
+                            clearInterval(waitForLoader);
+                            console.log('✅ THREE.GLTFLoader ready, initializing guest carousel');
+                            initGuestAvatar3DCarousel();
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(waitForLoader);
+                            console.warn('⚠️ THREE.GLTFLoader not available after 2s, skipping guest carousel');
+                        }
+                    }, 100);
                 }
             } catch(e) {
                 console.warn('initGuestAvatar3DCarousel failed:', e);
