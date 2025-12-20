@@ -1430,13 +1430,63 @@ def generate_smart_fallback(word):
             "source": "pattern_fallback"
         }
     else:
-        # Generic fallback with more helpful context
+        # Generic fallback.
+        # IMPORTANT: Keep this helpful while never revealing the target word.
+        # We avoid the unhelpful "Practice spelling this N-letter word" style copy.
         return {
-            "definition": f"Practice spelling this {word_len}-letter word",
-            "example": f"Listen carefully and spell _____ correctly",
+            "definition": f"A {word_len}-letter word to practice spelling",
+            "example": "Use your ears: spell _____ out loud.",
             "source": "generic_fallback",
-            "note": "Definition not available - focus on correct spelling"
+            "note": "No definition available - focus on correct spelling"
         }
+
+
+def _truthy_param(value) -> bool:
+    """Parse a boolean-ish value from query params or JSON payload fields."""
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    try:
+        s = str(value).strip().lower()
+    except Exception:
+        return False
+    return s in {"1", "true", "yes", "y", "on"}
+
+
+def require_replace_confirmation_if_needed(payload: dict | None = None):
+    """Guard against accidental wordbank overwrite.
+
+    Behavior:
+      - If an existing wordbank is present (>0 words), require explicit confirmation.
+      - Confirmation can be sent as:
+          * query param: ?confirm_replace=1
+          * JSON body: {"confirm_replace": true}
+    Returns: (ok: bool, response: Flask response | None)
+    """
+    try:
+        wb = get_wordbank() or []
+        has_existing = len(wb) > 0
+    except Exception:
+        # If we can't read the wordbank (rare), err on the safe side and require confirmation.
+        has_existing = True
+
+    if not has_existing:
+        return True, None
+
+    confirm_from_args = _truthy_param(request.args.get("confirm_replace"))
+    payload = payload or {}
+    confirm_from_payload = _truthy_param(payload.get("confirm_replace"))
+
+    if confirm_from_args or confirm_from_payload:
+        return True, None
+
+    msg = "Importing will replace (clear) your current word list. Please confirm to continue."
+    return False, jsonify({
+        "ok": False,
+        "error": msg,
+        "requires_confirm_replace": True
+    }), 409
 
 def _blank_word(text, word):
     """Backend safety blanker - replace target word AND variations with blanks in text.
@@ -1630,7 +1680,7 @@ def get_word_info(word):
     global DICTIONARY_CACHE, SIMPLE_WIKTIONARY_INDEX
 
     if not word:
-        return "Definition not available for this word. Listen carefully and spell _____ correctly"
+        return "A word to practice spelling. Fill in the blank: Use your ears: spell _____ out loud."
 
     word_lower = word.lower().strip()
 
@@ -1693,7 +1743,7 @@ def get_word_info(word):
         _cache_word_info(word_lower, formatted)
         return formatted
     except Exception as _e:
-        formatted = "Definition not available for this word. Listen carefully and spell _____ correctly"
+        formatted = "A word to practice spelling. Fill in the blank: Use your ears: spell _____ out loud."
         _cache_word_info(word_lower, formatted)
         print(f"️ Fallback failed for '{word}': {_e}")
         return formatted
@@ -6782,10 +6832,12 @@ def api_upload():
         app.logger.warning(f"Error logging upload request details: {e}")
     
     rows: List[Dict[str, str]] = []
+    payload_for_confirm: dict | None = None
 
     # JSON payload path
     if request.content_type and "application/json" in request.content_type:
         payload = request.get_json(silent=True) or {}
+        payload_for_confirm = payload
         words_json = payload.get("words", [])
         for w in words_json:
             word = (w.get("word") or "").strip()
@@ -6852,6 +6904,11 @@ def api_upload():
 
     if not rows:
         return jsonify({"error": "No words parsed"}), 400
+
+    # SAFETY: prevent accidental overwrite unless user explicitly confirms replacement.
+    ok, resp = require_replace_confirmation_if_needed(payload_for_confirm)
+    if not ok:
+        return resp
 
     # Trim and deduplicate
     seen = set()
@@ -7080,6 +7137,12 @@ def api_upload_manual_words():
     """
     try:
         data = request.get_json(silent=True) or {}
+
+        # SAFETY: prevent accidental overwrite unless user explicitly confirms replacement.
+        ok, resp = require_replace_confirmation_if_needed(data)
+        if not ok:
+            return resp
+
         words_list = data.get('words', [])
         
         if not words_list or not isinstance(words_list, list):

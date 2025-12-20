@@ -11306,7 +11306,7 @@
             document.getElementById('importFileInput').click();
         }
         
-        function handleImportFile(input) {
+        async function handleImportFile(input) {
             const file = input.files[0];
             if (!file) return;
             
@@ -11346,9 +11346,34 @@
             
             const formData = new FormData();
             formData.append('file', file);
+
+            // Check existing wordbank and confirm replacement (server enforces this too)
+            let confirmReplace = false;
+            try {
+                const wbRes = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store' });
+                const wbData = await wbRes.json();
+                const currentCount = wbData.words ? wbData.words.length : 0;
+                if (currentCount > 0) {
+                    const ok = await showBeeConfirm({
+                        title: 'Replace Current Words?',
+                        message: `You currently have <strong>${currentCount} word(s)</strong> loaded.\n\n` +
+                                 `Importing will clear them and replace with the new list.`,
+                        okText: 'Yes, Replace',
+                        cancelText: 'Cancel'
+                    });
+                    if (!ok) {
+                        hideFileUploadProgress();
+                        input.value = '';
+                        return;
+                    }
+                    confirmReplace = true;
+                }
+            } catch (e) {
+                console.warn('Could not check existing wordbank before import:', e);
+            }
             
             // First, initiate the import
-            fetch('/api/import', {
+            fetch('/api/import' + (confirmReplace ? '?confirm_replace=1' : ''), {
                 method: 'POST',
                 body: formData
             })

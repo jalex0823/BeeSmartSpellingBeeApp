@@ -3219,10 +3219,51 @@ async function loadSampleWords() {
             <div class="progress-section">
                 <span id="progressText">Question 1 of 10</span>
             </div>
+            <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" id="quizRefreshBtn" class="secondary-btn" onclick="refreshQuizState()" title="Resync word count and progress" style="
+                    padding: 10px 12px;
+                    border-radius: 999px;
+                    border: 2px solid rgba(255,165,0,0.35);
+                    background: rgba(255,255,255,0.96);
+                    color: #8a4b00;
+                    font-weight: 800;
+                    cursor: pointer;
+                    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+                ">
+                    ↻ Refresh
+                </button>
+                <button type="button" id="quizRestartBtn" class="secondary-btn" onclick="restartQuizReshuffle()" title="Restart and reshuffle this word list" style="
+                    padding: 10px 12px;
+                    border-radius: 999px;
+                    border: 2px solid rgba(255,165,0,0.45);
+                    background: rgba(255,255,255,0.96);
+                    color: #8a4b00;
+                    font-weight: 900;
+                    cursor: pointer;
+                    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+                ">
+                    ⟲ Restart
+                </button>
             <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
                 <span class="exit-icon">×</span>
                 <span>Exit Quiz</span>
             </a>
+            </div>
+        </div>
+
+        <!-- Restart/Reshuffle Modal (BeeSmart UI) -->
+        <div class="resume-modal" id="restartModal" style="display: none;">
+            <div class="resume-modal-content" role="dialog" aria-modal="true" aria-labelledby="restartModalTitle">
+                <h3 id="restartModalTitle">Restart &amp; Reshuffle?</h3>
+                <p id="restartModalMessage">This will reset your score for this round, but your word list will stay the same.</p>
+                <div class="resume-modal-buttons">
+                    <button type="button" class="action-btn" id="restartCancelBtn">Cancel</button>
+                    <button type="button" class="action-btn primary" id="restartConfirmBtn">Restart</button>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #8a4b00; opacity: 0.9;">
+                    Tip: Use <strong>↻ Refresh</strong> if the screen looks stuck.
+                </div>
+            </div>
         </div>
 
         <div class="score-display">
@@ -7764,6 +7805,13 @@ class QuizManager {
 
     updateScoreDisplay(progress = {}) {
         const total = progress.total ?? this.totalWords ?? 0;
+        // Always prefer the live wordbank total over any cached/stale totals
+        // that can leak across imports or restored sessions.
+        const liveTotal = Number(this.liveTotalWords || 0);
+        const incomingTotal = Number(progress.total ?? this.totalWords ?? 0);
+        const total = (Number.isFinite(liveTotal) && liveTotal > 0)
+            ? liveTotal
+            : (Number.isFinite(incomingTotal) ? incomingTotal : 0);
         if (Number.isFinite(total) && total > 0) {
             this.totalWords = total;
         }
@@ -9225,6 +9273,180 @@ function startLiveStatusPolling(intervalMs = 5000) {
         }
     }, intervalMs + jitter);
 }
+
+// Manual refresh/resync button for when the quiz UI gets stuck.
+// This does NOT overwrite the user's wordbank; it just re-reads the authoritative totals
+// and restarts polling if needed.
+async function refreshQuizState(options = {}) {
+    const { hardReload = false } = options;
+    const btn = document.getElementById('quizRefreshBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+    }
+
+    try {
+        // 1) Fetch live word count (source of truth)
+        const wbResp = await fetch(`/api/wordbank?_refresh=${Date.now()}`, {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        });
+        if (!wbResp.ok) {
+            throw new Error(`Wordbank fetch failed: ${wbResp.status}`);
+        }
+        const wbData = await wbResp.json();
+        const liveCount = Number((wbData && (wbData.count || (wbData.words && wbData.words.length))) || 0);
+
+        // 2) Clamp totals in the UI to liveCount
+        const qm = window.quizManager || window.BeeSmart || null;
+        if (qm) {
+            qm.liveTotalWords = liveCount;
+            qm.totalWords = (Number.isFinite(liveCount) && liveCount > 0) ? liveCount : (qm.totalWords || 0);
+
+            if (typeof qm.updateProgressDisplays === 'function') {
+                const currentIndex = Number(qm.currentWordData && (qm.currentWordData.index || qm.currentWordData.number)) || 1;
+                qm.updateProgressDisplays(currentIndex, qm.totalWords);
+            } else {
+                const pt = document.getElementById('progressText');
+                if (pt && Number.isFinite(liveCount) && liveCount > 0) {
+                    pt.textContent = `Question 1 of ${liveCount}`;
+                }
+            }
+
+            if (typeof qm.updateScoreDisplay === 'function') {
+                // Keep existing score numbers intact; just ensure total is synced.
+                const correct = Number(document.getElementById('correctCount')?.textContent) || 0;
+                const incorrect = Number(document.getElementById('incorrectCount')?.textContent) || 0;
+                const streak = Number(document.getElementById('streakCount')?.textContent) || 0;
+                qm.updateScoreDisplay({ total: qm.totalWords, correct, incorrect, streak });
+            }
+        }
+
+        // 3) Restart live polling if it stopped
+        if (!__liveStatusInterval) {
+            startLiveStatusPolling();
+        }
+
+        if (typeof BeeSmart !== 'undefined' && typeof BeeSmart.showSuccess === 'function') {
+            BeeSmart.showSuccess(`Refreshed! Word count is ${liveCount}.`);
+        }
+
+        // Optional escape hatch
+        if (hardReload) {
+            window.location.reload();
+        }
+    } catch (e) {
+        console.warn('refreshQuizState failed', e);
+        try {
+            if (typeof BeeSmart !== 'undefined' && typeof BeeSmart.showError === 'function') {
+                BeeSmart.showError('Refresh failed. Check your connection, then try again.');
+            }
+        } catch (_e) { /* ignore */ }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+    }
+}
+window.refreshQuizState = refreshQuizState;
+
+function confirmRestartReshuffle() {
+    // Promise-based confirm to avoid native confirm() (nicer UX, better iOS behavior)
+    return new Promise((resolve) => {
+        const modal = document.getElementById('restartModal');
+        const cancelBtn = document.getElementById('restartCancelBtn');
+        const confirmBtn = document.getElementById('restartConfirmBtn');
+
+        if (!modal || !cancelBtn || !confirmBtn) {
+            // Fallback (should rarely happen)
+            resolve(confirm('Restart quiz and reshuffle the words?\n\nThis will reset your score for this round, but your word list will stay the same.'));
+            return;
+        }
+
+        const cleanup = () => {
+            cancelBtn.removeEventListener('click', onCancel);
+            confirmBtn.removeEventListener('click', onConfirm);
+            modal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKeydown);
+            modal.style.display = 'none';
+        };
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onConfirm = () => { cleanup(); resolve(true); };
+        const onBackdrop = (e) => {
+            if (e.target === modal) { cleanup(); resolve(false); }
+        };
+        const onKeydown = (e) => {
+            if (e.key === 'Escape') { cleanup(); resolve(false); }
+            if (e.key === 'Enter') { cleanup(); resolve(true); }
+        };
+
+        cancelBtn.addEventListener('click', onCancel);
+        confirmBtn.addEventListener('click', onConfirm);
+        modal.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKeydown);
+
+        modal.style.display = 'flex';
+        // Auto-focus confirm for quick restart (but doesn't steal focus on iOS keyboard)
+        try { confirmBtn.focus({ preventScroll: true }); } catch (_e) {}
+    });
+}
+window.confirmRestartReshuffle = confirmRestartReshuffle;
+
+// Restart the quiz from the beginning AND reshuffle word order.
+// This resets the current run's stats/position, but keeps the same word list.
+async function restartQuizReshuffle() {
+    const ok = await confirmRestartReshuffle();
+    if (!ok) return;
+
+    const btn = document.getElementById('quizRestartBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+    }
+
+    try {
+        const resp = await fetch('/api/quiz/start', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'start_new' })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || (data && data.status && data.status !== 'success')) {
+            throw new Error((data && (data.message || data.error)) || `HTTP ${resp.status}`);
+        }
+
+        // Reload with autostart so the restarted run begins immediately.
+        const next = new URL(window.location.href);
+        next.searchParams.set('autostart', '1');
+        window.location.replace(next.toString());
+    } catch (e) {
+        console.warn('restartQuizReshuffle failed', e);
+        try {
+            if (typeof BeeSmart !== 'undefined' && typeof BeeSmart.showError === 'function') {
+                BeeSmart.showError('Could not restart the quiz right now. Please try again.');
+            } else {
+                alert('Could not restart the quiz right now. Please try again.');
+            }
+        } catch (_e) { /* ignore */ }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+    }
+}
+window.restartQuizReshuffle = restartQuizReshuffle;
+
 document.addEventListener('visibilitychange', () => {
     // If tab becomes visible again and polling stopped, restart it
     if (!document.hidden && !__liveStatusInterval) {
@@ -9520,6 +9742,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Initialize progress displays with actual word count
+            // Initialize progress displays with actual word count (server is source of truth)
             const totalWords = data.words.length;
             const progressText = document.getElementById('progressText');
             const progressPercentage = document.getElementById('progressPercentage');
@@ -9547,6 +9770,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const startMode = (action === 'resume') ? 'resume' : 'normal';
             window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+
+            // Fetch live wordbank count once at init and use it as the authoritative quiz total.
+            // This prevents stale/cumulative totals (e.g., after importing a new list).
+            try {
+                const wbResp = await fetch(`/api/wordbank?_quizinit=${Date.now()}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                if (wbResp.ok) {
+                    const wbData = await wbResp.json();
+                    const liveCount = Number((wbData && (wbData.count || (wbData.words && wbData.words.length))) || 0);
+                    if (Number.isFinite(liveCount) && liveCount > 0) {
+                        window.quizManager.liveTotalWords = liveCount;
+                        window.quizManager.totalWords = liveCount;
+                        // Sync UI immediately to avoid showing stale totals.
+                        window.quizManager.updateProgressDisplays(1, liveCount);
+                        window.quizManager.updateScoreDisplay({ total: liveCount, correct: 0, incorrect: 0, streak: 0 });
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Could not fetch live wordbank count on quiz init:', e);
+            }
             
             // ✅ START LIVE STATUS POLLING - Updates stats in real-time
             console.log('🔄 Starting live status polling for stats updates...');
