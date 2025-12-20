@@ -3364,6 +3364,134 @@ function hideTargetWord(text, word) {
     return text.replace(new RegExp(`\\b${esc}\\b`, 'gi'), '_____');
 }
 
+// 🎤 BeeSpeech: shared speech-synthesis controller
+// Prevents iOS/Safari "echo" by deduping rapid repeats and avoiding multiple
+// voiceschanged listeners that can trigger the same speech request twice.
+(function initBeeSpeech() {
+    if (window.BeeSpeech) return;
+
+    const state = {
+        voicesReady: false,
+        voicesReadyPromise: null,
+        latestRequestId: 0,
+        lastText: '',
+        lastTextAt: 0
+    };
+
+    const now = () => (window.performance && typeof performance.now === 'function') ? performance.now() : Date.now();
+
+    const cancel = () => {
+        try {
+            if ('speechSynthesis' in window && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+        } catch (e) {
+            // swallow
+        }
+    };
+
+    const shouldDedupe = (text, windowMs = 800) => {
+        const t = (text || '').trim();
+        if (!t) return false;
+        if (t !== state.lastText) return false;
+        return (now() - state.lastTextAt) < windowMs;
+    };
+
+    const markSpoken = (text) => {
+        state.lastText = (text || '').trim();
+        state.lastTextAt = now();
+    };
+
+    const nextRequestId = () => {
+        state.latestRequestId += 1;
+        return state.latestRequestId;
+    };
+
+    const isLatest = (id) => id === state.latestRequestId;
+
+    const ensureVoicesReady = (timeoutMs = 2000) => {
+        if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+            return Promise.resolve(false);
+        }
+
+        try {
+            if (speechSynthesis.getVoices().length > 0) {
+                state.voicesReady = true;
+                return Promise.resolve(true);
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        if (state.voicesReadyPromise) {
+            return state.voicesReadyPromise;
+        }
+
+        state.voicesReadyPromise = new Promise((resolve) => {
+            let settled = false;
+            let timeoutId = null;
+
+            const cleanup = () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                try {
+                    speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+                } catch (e) {
+                    // ignore
+                }
+                state.voicesReadyPromise = null;
+            };
+
+            const finish = (ready) => {
+                if (settled) return;
+                settled = true;
+                state.voicesReady = !!ready;
+                cleanup();
+                resolve(!!ready);
+            };
+
+            const onVoicesChanged = () => {
+                try {
+                    finish(speechSynthesis.getVoices().length > 0);
+                } catch (e) {
+                    finish(false);
+                }
+            };
+
+            timeoutId = setTimeout(() => finish(false), timeoutMs);
+
+            try {
+                speechSynthesis.addEventListener('voiceschanged', onVoicesChanged, { once: true });
+            } catch (e) {
+                // Fallback: some browsers only support assignment
+                try {
+                    const prev = speechSynthesis.onvoiceschanged;
+                    speechSynthesis.onvoiceschanged = () => {
+                        try { prev && prev(); } catch (err) {}
+                        onVoicesChanged();
+                    };
+                } catch (err) {
+                    finish(false);
+                }
+            }
+        });
+
+        return state.voicesReadyPromise;
+    };
+
+    window.BeeSpeech = {
+        cancel,
+        shouldDedupe,
+        markSpoken,
+        nextRequestId,
+        isLatest,
+        ensureVoicesReady,
+        _state: state
+    };
+})();
+
 class BeeSoundboard {
     constructor() {
         this.supported = typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined';
@@ -3550,70 +3678,97 @@ class BeeSoundboard {
     }
 
     speakWord(word, onEndCallback = null, rate = 0.85) {
-        if (!word || !('speechSynthesis' in window)) {
+        if (!word || !('speechSynthesis' in window) || !window.speechSynthesis) {
             if (onEndCallback) onEndCallback();
             return;
         }
-        
-        speechSynthesis.cancel();
-        
-        const speak = () => {
-            const utterance = new SpeechSynthesisUtterance(word);
+
+        const phrase = String(word);
+        const dedupeKey = phrase.trim();
+        const requestId = (window.BeeSpeech && typeof window.BeeSpeech.nextRequestId === 'function')
+            ? window.BeeSpeech.nextRequestId()
+            : Date.now();
+
+        let doneCalled = false;
+        const done = () => {
+            if (doneCalled) return;
+            doneCalled = true;
+            if (onEndCallback) onEndCallback();
+        };
+
+        if (window.BeeSpeech && window.BeeSpeech.shouldDedupe(dedupeKey)) {
+            done();
+            return;
+        }
+
+        if (window.BeeSpeech) {
+            window.BeeSpeech.cancel();
+        } else {
+            speechSynthesis.cancel();
+        }
+
+        const speakNow = () => {
+            if (window.BeeSpeech && typeof window.BeeSpeech.isLatest === 'function' && !window.BeeSpeech.isLatest(requestId)) {
+                done();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(phrase);
             utterance.pitch = 1.0; // Natural neutral female voice
             utterance.rate = rate; // Use provided rate (default 0.85 - natural conversational pace)
             utterance.volume = 0.9;
-            utterance.text = word;
-            
+            utterance.text = phrase;
+
             // Visualizer elements
             const visualizer = document.getElementById('voiceVisualizer');
             const statusEl = document.getElementById('voiceStatus');
-            
-            // Add event listeners for voice visualizer
-            if (onEndCallback) {
-                utterance.addEventListener('end', onEndCallback);
-                utterance.addEventListener('error', onEndCallback);
-            }
-            
-        // Use enhanced voice selection for natural-sounding female voices
-        if (!this.cachedVoice) {
-            // Try global cached voice first for consistency
-            if (window.QUIZ_CACHED_VOICE) {
-                this.cachedVoice = window.QUIZ_CACHED_VOICE;
-                console.log('🎤 speakWord using global cached voice:', this.cachedVoice.name);
-            } else {
-                this.cachedVoice = this.selectBestFemaleVoice();
-                
-                if (this.cachedVoice) {
-                    console.log('🎤 speakWord using enhanced voice:', this.cachedVoice.name, this.cachedVoice.lang, 
-                               'Quality:', this.cachedVoice.quality || 'default', 
-                               'Local:', this.cachedVoice.localService);
+
+            // Use enhanced voice selection for natural-sounding female voices
+            if (!this.cachedVoice) {
+                // Try global cached voice first for consistency
+                if (window.QUIZ_CACHED_VOICE) {
+                    this.cachedVoice = window.QUIZ_CACHED_VOICE;
+                    console.log('🎤 speakWord using global cached voice:', this.cachedVoice.name);
                 } else {
-                    console.warn('⚠️ speakWord: No suitable voice found, using browser default');
+                    this.cachedVoice = this.selectBestFemaleVoice();
+
+                    if (this.cachedVoice) {
+                        console.log(
+                            '🎤 speakWord using enhanced voice:',
+                            this.cachedVoice.name,
+                            this.cachedVoice.lang,
+                            'Quality:',
+                            this.cachedVoice.quality || 'default',
+                            'Local:',
+                            this.cachedVoice.localService
+                        );
+                    } else {
+                        console.warn('⚠️ speakWord: No suitable voice found, using browser default');
+                    }
                 }
             }
-        }
-        
-        if (this.cachedVoice) {
-            utterance.voice = this.cachedVoice;
-        }            // Sync visual display with announcer + morph to voice visualizer + bee swarm integration
+
+            if (this.cachedVoice) {
+                utterance.voice = this.cachedVoice;
+            }
+
+            // Sync visual display with announcer + bee swarm integration
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
-                if (statusEl) statusEl.textContent = this.cachedVoice
-                    ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
-                    : '🎙️ Speaking';
-                
-                // Trigger bee swarm activation
+                if (statusEl) {
+                    statusEl.textContent = this.cachedVoice
+                        ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
+                        : '🎙️ Speaking';
+                }
+
                 console.log('🎙️ Dispatching quiz-speech-start event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-start'));
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
             };
-            
+
             utterance.onboundary = (event) => {
-                // Trigger bee swarm mouth pulse on word boundaries
                 console.log('🎙️ Dispatching quiz-speech-boundary event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
-                
+
                 // Word-level micro pauses for natural cadence
                 if (event.name === 'word' || event.charLength > 0) {
                     if (visualizer) {
@@ -3625,9 +3780,10 @@ class BeeSoundboard {
                         }, 150);
                     }
                 }
+
                 // Longer pause at sentence punctuation
-                const char = (utterance.text || '').charAt(event.charIndex || 0);
-                if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                const ch = (utterance.text || '').charAt(event.charIndex || 0);
+                if (ch === ',' || ch === ';' || ch === '.' || ch === '!' || ch === '?') {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
@@ -3638,52 +3794,39 @@ class BeeSoundboard {
                     }
                 }
             };
-            
+
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '🐝 Ready';
-                
-                // Trigger bee swarm deactivation
+
                 console.log('🎙️ Dispatching quiz-speech-end event');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                done();
             };
-            
+
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) statusEl.textContent = '⚠️ Voice error';
-                
-                // Trigger bee swarm deactivation on error
+
                 console.log('🎙️ Dispatching quiz-speech-end event (error)');
                 window.dispatchEvent(new CustomEvent('quiz-speech-end'));
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                done();
             };
 
             try {
                 speechSynthesis.speak(utterance);
+                if (window.BeeSpeech) window.BeeSpeech.markSpoken(dedupeKey);
             } catch (err) {
                 console.error('speechSynthesis.speak failed:', err);
-                if (onEndCallback) onEndCallback();
+                done();
             }
         };
-        
-        // iOS Safari fix: Better voice loading with timeout
-        const voices = speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            speak();
+
+        // iOS/Safari: avoid stacking multiple voiceschanged listeners (a common "double speak" source)
+        if (window.BeeSpeech && typeof window.BeeSpeech.ensureVoicesReady === 'function') {
+            window.BeeSpeech.ensureVoicesReady(2000).finally(speakNow);
         } else {
-            // iOS often needs a delay
-            let timeout = setTimeout(() => {
-                console.warn('⚠️ Voice loading timeout - speaking anyway');
-                speak();
-            }, 2000);
-            
-            speechSynthesis.addEventListener('voiceschanged', () => {
-                clearTimeout(timeout);
-                speak();
-            }, { once: true });
+            speakNow();
         }
     }
     
@@ -4757,17 +4900,27 @@ class QuizManager {
             return Promise.resolve();
         }
         
-        // Cancel any ongoing speech to prevent interruption errors
-        if (window.speechSynthesis && window.speechSynthesis.speaking) {
-            console.log('🛑 Cancelling previous speech to prevent interruption');
-            window.speechSynthesis.cancel();
-        }
-        
-        // Trigger announce event for visualizer
-        window.dispatchEvent(new CustomEvent('announce'));
-        
         // Clean text by removing emojis before speaking
         const cleanText = this.cleanTextForSpeech(text);
+
+        // Global dedupe: prevent rapid repeated announcements (common iOS/Safari "echo" symptom)
+        const requestId = (window.BeeSpeech && typeof window.BeeSpeech.nextRequestId === 'function')
+            ? window.BeeSpeech.nextRequestId()
+            : Date.now();
+        if (window.BeeSpeech && window.BeeSpeech.shouldDedupe(cleanText)) {
+            console.log('🔁 Deduped announcement:', cleanText);
+            return Promise.resolve();
+        }
+
+        // Always cancel any ongoing/pending speech before starting a new one
+        if (window.BeeSpeech) {
+            window.BeeSpeech.cancel();
+        } else if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+
+        // Trigger announce event for visualizer
+        window.dispatchEvent(new CustomEvent('announce'));
         
         // Get visualizer elements
         const visualizer = document.getElementById('voiceVisualizer');
@@ -4795,6 +4948,16 @@ class QuizManager {
             
             // Function to speak with the selected voice
             const speak = () => {
+                // If another newer request arrived while voices were loading, skip this one
+                if (window.BeeSpeech && typeof window.BeeSpeech.isLatest === 'function' && !window.BeeSpeech.isLatest(requestId)) {
+                    if (visualizer && status) {
+                        visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                        status.textContent = '🐝 Ready';
+                    }
+                    resolve();
+                    return;
+                }
+
                 const utterance = new SpeechSynthesisUtterance(cleanText);
                 utterance.rate = 0.85;  // Natural conversational pace (consistent with speakWord)
                 utterance.pitch = 1.0; // Natural neutral female voice
@@ -4822,16 +4985,17 @@ class QuizManager {
                 if (this.cachedVoice) {
                     utterance.voice = this.cachedVoice;
                 }
-                
-                // Word boundary event - pulse animation on each word with natural pauses
+
+                // Word/sentence boundary events: mouth pulses + visual pauses
                 utterance.onboundary = (event) => {
+                    // Always dispatch boundary for the bee swarm
+                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
+
                     if (!visualizer) return;
-                    
+
                     // Pulse effect on word boundaries with brief natural pause
                     if (event.name === 'word') {
-                        console.log('🎤 Word boundary:', event.charIndex);
                         visualizer.classList.add('word-pulse');
-                        // Briefly switch from speaking→pausing→speaking for a visible dip
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
                         setTimeout(() => {
@@ -4839,12 +5003,11 @@ class QuizManager {
                             visualizer.classList.add('speaking');
                         }, 130);
                     }
-                    
+
                     // Natural pause on sentence boundaries (longer, amber bars)
                     const utterText = (utterance.text || '');
                     const ch = utterText.charAt(event.charIndex);
                     if (ch === '.' || ch === '!' || ch === '?' || event.name === 'sentence') {
-                        console.log('🎤 Sentence boundary - natural pause');
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
                         setTimeout(() => {
@@ -4868,11 +5031,6 @@ class QuizManager {
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                 };
                 
-                // Add boundary event for mouth pulses
-                utterance.onboundary = (event) => {
-                    window.dispatchEvent(new CustomEvent('quiz-speech-boundary'));
-                };
-                
                 // Add event listeners to resolve promise when speech ends
                 utterance.onend = () => {
                     console.log('✅ Speech finished');
@@ -4888,6 +5046,7 @@ class QuizManager {
                     
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                     
+                    if (window.BeeSpeech) window.BeeSpeech.markSpoken(cleanText);
                     resolve();
                 };
                 
@@ -4913,17 +5072,22 @@ class QuizManager {
                         window.morphController.morphToTimer();
                     }
                     
+                    if (window.BeeSpeech) window.BeeSpeech.markSpoken(cleanText);
                     resolve(); // Resolve even on error to prevent blocking
                 };
                 
                 speechSynthesis.speak(utterance);
             };
-            
-            // Ensure voices are loaded
-            if (speechSynthesis.getVoices().length > 0) {
-                speak();
+
+            // Ensure voices are loaded (single shared listener to avoid double-speak)
+            if (window.BeeSpeech && typeof window.BeeSpeech.ensureVoicesReady === 'function') {
+                window.BeeSpeech.ensureVoicesReady(2000).finally(speak);
             } else {
-                speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+                if (speechSynthesis.getVoices().length > 0) {
+                    speak();
+                } else {
+                    speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+                }
             }
         });
     }
