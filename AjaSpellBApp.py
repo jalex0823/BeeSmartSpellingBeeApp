@@ -9286,11 +9286,11 @@ def api_dictionary_status():
 
 @app.route("/api/clear", methods=["POST"])
 def api_clear():
-    """Clear wordbank and quiz state - removes PRIMARY word storage from database"""
+    """Clear wordbank and quiz state with authorization check"""
     try:
-        # Check for authorization parameter (optional - allow clear without confirmation for testing)
-        data = request.get_json(silent=True) or {}
-        confirmed = data.get('confirmed', True)  # Default to True for backward compatibility
+        # Check for authorization parameter
+        data = request.get_json() or {}
+        confirmed = data.get('confirmed', False)
         
         if not confirmed:
             return jsonify({
@@ -9298,20 +9298,16 @@ def api_clear():
                 "message": "Please confirm you want to clear all word lists"
             }), 400
         
-        print(f"DEBUG /api/clear: Clearing wordbank - session_id={session.get('session_id')}")
+        print(f"DEBUG /api/clear: Clearing session - session_id={session.get('session_id')}")
         
         # Get current storage_id before clearing
         storage_id = session.get("wordbank_storage_id")
         print(f"DEBUG /api/clear: Current storage_id={storage_id}")
         
-        # Delete PRIMARY word storage from DigitalOcean database
+        # Delete from Railway database (single source of truth)
         if storage_id:
-            try:
-                delete_wordbank(storage_id)
-                print(f" /api/clear: Deleted PRIMARY wordbank from database (storage_id={storage_id})")
-            except Exception as e:
-                print(f"⚠️ /api/clear: Error deleting wordbank from database: {e}")
-                # Continue with session clearing even if DB delete fails
+            delete_wordbank(storage_id)
+            print(f"DEBUG /api/clear: Deleted wordbank from Railway database")
         
         # Clear all session data thoroughly
         session.pop("wordbank_storage_id", None)
@@ -9330,7 +9326,7 @@ def api_clear():
         # Force session modification
         session.modified = True
         
-        print(f" /api/clear: Wordbank cleared successfully. Database and session both empty.")
+        print(f"DEBUG /api/clear: Session cleared. User must manually upload words or use Random Words feature")
         
         return jsonify({
             "ok": True, 
@@ -9338,15 +9334,12 @@ def api_clear():
             "cleared": {
                 "wordbank": True,
                 "quiz_state": True,
-                "session_data": True,
-                "database_storage": bool(storage_id)
+                "session_data": True
             }
-        }), 200  # Explicit 200 status
+        })
         
     except Exception as e:
-        import traceback
-        print(f"❌ ERROR /api/clear: {str(e)}")
-        traceback.print_exc()
+        print(f"ERROR /api/clear: {str(e)}")
         return jsonify({"error": f"Failed to clear data: {str(e)}"}), 500
 
 @app.route("/api/reset", methods=["POST"])
