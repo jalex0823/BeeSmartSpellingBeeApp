@@ -9768,8 +9768,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.warn('⚠️ /api/quiz/start failed:', e);
             }
 
+            // ✅ CRITICAL: Verify QuizManager class is defined before instantiation
+            if (typeof QuizManager === 'undefined') {
+                console.error('❌ FATAL: QuizManager class not defined! Script loading may have failed.');
+                BeeSmart.showError('Quiz initialization failed. Please refresh the page.');
+                setTimeout(() => window.location.href = '/', 3000);
+                return;
+            }
+
             const startMode = (action === 'resume') ? 'resume' : 'normal';
-            window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+            
+            try {
+                window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+                console.log('✅ QuizManager instance created successfully');
+            } catch (qmError) {
+                console.error('❌ FATAL: Failed to create QuizManager instance:', qmError);
+                BeeSmart.showError(`Quiz initialization failed: ${qmError.message}. Redirecting...`);
+                setTimeout(() => window.location.href = '/', 3000);
+                return;
+            }
 
             // Fetch live wordbank count once at init and use it as the authoritative quiz total.
             // This prevents stale/cumulative totals (e.g., after importing a new list).
@@ -9803,8 +9820,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
         .catch(error => {
             console.error('❌ Failed to check word bank or initialize quiz:', error);
-            const msg = error.message || 'Unknown error';
-            BeeSmart.showError(`Quiz Error: ${msg}. Redirecting...`);
+            
+            // Provide more specific error messages
+            let errorMsg = 'Unknown error';
+            if (error.message) {
+                if (error.message.includes('500')) {
+                    errorMsg = 'Server error loading word bank. Please try uploading words again.';
+                } else if (error.message.includes('QuizManager')) {
+                    errorMsg = 'Quiz system failed to load. Please refresh the page.';
+                } else {
+                    errorMsg = error.message;
+                }
+            }
+            
+            BeeSmart.showError(`Quiz Error: ${errorMsg} Redirecting...`);
             setTimeout(() => window.location.href = '/', 4000);
         });
     } catch (initError) {
