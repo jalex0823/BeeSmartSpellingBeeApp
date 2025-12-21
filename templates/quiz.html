@@ -7804,6 +7804,7 @@ class QuizManager {
     }
 
     updateScoreDisplay(progress = {}) {
+        const total = progress.total ?? this.totalWords ?? 0;
         // Always prefer the live wordbank total over any cached/stale totals
         // that can leak across imports or restored sessions.
         const liveTotal = Number(this.liveTotalWords || 0);

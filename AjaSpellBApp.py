@@ -3341,33 +3341,24 @@ def get_wordbank() -> List[Dict[str, str]]:
         session["wordbank_count"] = 0
         return []
     
-    # Try Railway database first; fallback to in-memory WORD_STORAGE if DB unavailable
+    # Query Railway database (ONLY storage location)
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
             print(f" get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
             session["wordbank_count"] = len(words)
-            return list(words)
+            return list(words)  # Return copy to prevent modification
         else:
             print(f"️ get_wordbank: storage_id={storage_id} not found in Railway database")
+            session["wordbank_count"] = 0
+            return []
     except Exception as e:
-        print(f" get_wordbank: Database error, trying fallback: {e}")
-    
-    # Fallback to WORD_STORAGE (in-memory dict)
-    try:
-        if isinstance(WORD_STORAGE, dict) and storage_id in WORD_STORAGE:
-            fb = WORD_STORAGE[storage_id]
-            session["wordbank_count"] = len(fb)
-            print(f" get_wordbank: Fallback loaded {len(fb)} words from WORD_STORAGE")
-            return list(fb)
-    except Exception:
-        pass
-    
-    session["wordbank_count"] = 0
-    return []
+        print(f" get_wordbank: Database error: {e}")
+        session["wordbank_count"] = 0
+        return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Save wordbank to Railway database; fallback to WORD_STORAGE if DB unavailable.
+    """Save wordbank to Railway database (ONLY storage location).
     
      CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
     Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
@@ -3382,43 +3373,28 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     else:
         print(f"DEBUG set_wordbank: Reusing existing storage_id={storage_id}")
     
-    # Try Railway database first
-    used_db = False
+    # CRITICAL FIX: Ensure old data is completely deleted before writing new data
+    # This prevents race conditions where quiz reads old data during upload
     try:
-        # Clear old data first
-        try:
-            existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
-            if existing_wordbank:
-                print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
-                db.session.delete(existing_wordbank)
-                db.session.flush()
-        except Exception as e:
-            print(f"️ set_wordbank: Error deleting old wordbank: {e}")
-            db.session.rollback()
-        
-        user_id = None
-        try:
-            user_id = current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
-        except Exception:
-            pass
-        
+        # If storage_id already exists, delete it first to ensure clean slate
+        existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
+        if existing_wordbank:
+            print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+            db.session.delete(existing_wordbank)
+            db.session.flush()  # Ensure delete happens before insert
+    except Exception as e:
+        print(f"️ set_wordbank: Error deleting old wordbank: {e}")
+        db.session.rollback()
+    
+    # Save to Railway database (ONLY storage location)
+    try:
+        user_id = current_user.id if current_user.is_authenticated else None
         WordBankStorage.save_wordbank(storage_id, rows, user_id)
         print(f" set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
-        used_db = True
     except Exception as e:
-        print(f"️ set_wordbank: Database write failed, using fallback. Error: {e}")
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-    
-    # Fallback to WORD_STORAGE if DB failed
-    if not used_db:
-        try:
-            WORD_STORAGE[storage_id] = list(rows)
-            print(f" set_wordbank: Fallback stored {len(rows)} words in WORD_STORAGE")
-        except Exception as fe:
-            raise RuntimeError(f"Wordbank storage failed (db + fallback): {fe}") from e
+        print(f" set_wordbank: Database error: {e}")
+        db.session.rollback()
+        raise
     
     # Update session with storage_id (new or reused)
     session["wordbank_storage_id"] = storage_id
@@ -3429,10 +3405,10 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
-        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words" + (" (fallback)" if not used_db else ""))
+        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words")
     else:
         session["using_default_words"] = True
-        print(f"DEBUG set_wordbank: System loaded {len(rows)} words" + (" (fallback)" if not used_db else ""))
+        print(f"DEBUG set_wordbank: System loaded {len(rows)} words")
 
 def delete_wordbank(storage_id: str):
     """Delete wordbank from Railway database (single source of truth).
