@@ -1146,6 +1146,19 @@
         /* FX Host Pseudo-Layers */
         #avatarFxHost {
             position: relative;
+            /* iOS Safari can behave oddly when parents apply text-align or flex rules.
+               Force the core avatar host + container to center in all cases. */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        #avatarControls3D {
+            margin-left: auto;
+            margin-right: auto;
         }
         
         #avatarFxHost::before,
