@@ -842,61 +842,43 @@ def api_avatars():
     # Build role-aware list
     result = []
 
-    # Guests: return the full catalog with lock state so the UI (and guest carousel)
-    # can rotate through all avatars. Guests never have purchases.
+    # Guest rule: only show the Mascot Bee avatar (full color); hide all others
     if role == 'guest':
-        guest_result = []
-        for entry in AVATAR_CATALOG:
-            try:
-                lc = _is_avatar_unlocked_for_user(entry, role, None)
-                is_unlocked = bool(lc.get('unlocked'))
-                thumb = _avatar_thumbnail_url_from_glb(entry.get('obj_file'))
-                obj_file = entry.get('obj_file') or ''
+        guest_list = []
+        try:
+            # Prefer Mascot Bee for guests
+            mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
+            # Fallback to Honey Comb if Mascot is missing
+            if mascot is None:
+                mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
+
+            if mascot is not None:
+                thumb = _avatar_thumbnail_url_from_glb(mascot.get('obj_file'))
+                obj_file = mascot.get('obj_file') or ''
+                # GLB avatars are in glb_files folder, not individual avatar folders
                 glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-
-                price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
-                unlock_points_val = int(entry.get('unlock_points') or 0) or None
-
-                unlock_msg = ''
-                try:
-                    if is_unlocked:
-                        unlock_msg = 'Unlocked'
-                    else:
-                        tier_norm = (entry.get('tier') or '').lower()
-                        if tier_norm == 'earn_or_buy':
-                            unlock_msg = 'Earn Honey Points or purchase to unlock.'
-                        elif tier_norm == 'premium':
-                            unlock_msg = f"Purchase to unlock{f' for ${price_val:.2f}' if price_val else ''}."
-                        else:
-                            unlock_msg = (lc.get('reason') or 'Locked')
-                except Exception:
-                    unlock_msg = (lc.get('reason') or 'Locked')
-
-                guest_result.append({
-                    'id': entry.get('id'),
-                    'name': entry.get('name'),
-                    'tier': entry.get('tier'),
-                    'category': entry.get('category'),
-                    'description': entry.get('description'),
-                    'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
-                    'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
-                    'price': price_val,
-                    'unlock_points': unlock_points_val,
-                    'unlock_message': unlock_msg,
-                    'product_id': None,
-                    'is_locked': not is_unlocked,
+                guest_list.append({
+                    'id': mascot.get('id'),
+                    'name': mascot.get('name'),
+                    'tier': mascot.get('tier'),
+                    'category': mascot.get('category'),
+                    'description': mascot.get('description'),
+                    'price_usd': float(mascot.get('price') or 0.0) if mascot.get('price') is not None else None,
+                    'unlock_requirement': int(mascot.get('unlock_points') or 0) or None,
+                    'is_locked': False,  # Full color for the one visible guest avatar
                     'urls': {
                         'thumbnail': thumb,
                         'glb': glb_url
                     }
                 })
-            except Exception as _e:
-                print(f"️ Guest avatar build error for {entry.get('id')}: {_e}")
+        except Exception as _e:
+            print(f"️ Guest avatar list build error: {_e}")
 
-        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_result }
+        # Cache and return minimal guest payload (no other avatars exposed)
+        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_list }
         return jsonify({
             "status": "success",
-            "avatars": guest_result,
+            "avatars": guest_list,
             "cached": False,
             "purchased_avatars": [],
             "purchased_bundles": [],
@@ -3359,24 +3341,33 @@ def get_wordbank() -> List[Dict[str, str]]:
         session["wordbank_count"] = 0
         return []
     
-    # Query Railway database (ONLY storage location)
+    # Try Railway database first; fallback to in-memory WORD_STORAGE if DB unavailable
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
             print(f" get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
             session["wordbank_count"] = len(words)
-            return list(words)  # Return copy to prevent modification
+            return list(words)
         else:
             print(f"️ get_wordbank: storage_id={storage_id} not found in Railway database")
-            session["wordbank_count"] = 0
-            return []
     except Exception as e:
-        print(f" get_wordbank: Database error: {e}")
-        session["wordbank_count"] = 0
-        return []
+        print(f" get_wordbank: Database error, trying fallback: {e}")
+    
+    # Fallback to WORD_STORAGE (in-memory dict)
+    try:
+        if isinstance(WORD_STORAGE, dict) and storage_id in WORD_STORAGE:
+            fb = WORD_STORAGE[storage_id]
+            session["wordbank_count"] = len(fb)
+            print(f" get_wordbank: Fallback loaded {len(fb)} words from WORD_STORAGE")
+            return list(fb)
+    except Exception:
+        pass
+    
+    session["wordbank_count"] = 0
+    return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Save wordbank to Railway database (ONLY storage location).
+    """Save wordbank to Railway database; fallback to WORD_STORAGE if DB unavailable.
     
      CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
     Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
@@ -3391,28 +3382,43 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     else:
         print(f"DEBUG set_wordbank: Reusing existing storage_id={storage_id}")
     
-    # CRITICAL FIX: Ensure old data is completely deleted before writing new data
-    # This prevents race conditions where quiz reads old data during upload
+    # Try Railway database first
+    used_db = False
     try:
-        # If storage_id already exists, delete it first to ensure clean slate
-        existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
-        if existing_wordbank:
-            print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
-            db.session.delete(existing_wordbank)
-            db.session.flush()  # Ensure delete happens before insert
-    except Exception as e:
-        print(f"️ set_wordbank: Error deleting old wordbank: {e}")
-        db.session.rollback()
-    
-    # Save to Railway database (ONLY storage location)
-    try:
-        user_id = current_user.id if current_user.is_authenticated else None
+        # Clear old data first
+        try:
+            existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
+            if existing_wordbank:
+                print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+                db.session.delete(existing_wordbank)
+                db.session.flush()
+        except Exception as e:
+            print(f"️ set_wordbank: Error deleting old wordbank: {e}")
+            db.session.rollback()
+        
+        user_id = None
+        try:
+            user_id = current_user.id if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated else None
+        except Exception:
+            pass
+        
         WordBankStorage.save_wordbank(storage_id, rows, user_id)
         print(f" set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
+        used_db = True
     except Exception as e:
-        print(f" set_wordbank: Database error: {e}")
-        db.session.rollback()
-        raise
+        print(f"️ set_wordbank: Database write failed, using fallback. Error: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    
+    # Fallback to WORD_STORAGE if DB failed
+    if not used_db:
+        try:
+            WORD_STORAGE[storage_id] = list(rows)
+            print(f" set_wordbank: Fallback stored {len(rows)} words in WORD_STORAGE")
+        except Exception as fe:
+            raise RuntimeError(f"Wordbank storage failed (db + fallback): {fe}") from e
     
     # Update session with storage_id (new or reused)
     session["wordbank_storage_id"] = storage_id
@@ -3423,10 +3429,10 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     if is_user_upload:
         session["has_uploaded_once"] = True
         session.pop("using_default_words", None)
-        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words")
+        print(f"DEBUG set_wordbank: User uploaded {len(rows)} words" + (" (fallback)" if not used_db else ""))
     else:
         session["using_default_words"] = True
-        print(f"DEBUG set_wordbank: System loaded {len(rows)} words")
+        print(f"DEBUG set_wordbank: System loaded {len(rows)} words" + (" (fallback)" if not used_db else ""))
 
 def delete_wordbank(storage_id: str):
     """Delete wordbank from Railway database (single source of truth).
