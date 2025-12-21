@@ -9598,7 +9598,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action })
+                    // Backend expects `action` field (not `action` nested under another key)
+                    body: JSON.stringify({ action: action })
                 });
             } catch (e) {
                 console.warn('⚠️ /api/quiz/start failed:', e);
