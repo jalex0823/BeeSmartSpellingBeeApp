@@ -446,111 +446,63 @@ def api_wordbank_import_text():
 
 @app.route('/api/wordbank/count', methods=['GET'])
 def api_wordbank_count():
-    """Return REAL-TIME counts from PRIMARY database storage - NO CACHE.
-    
-    Critical: This endpoint powers system checks and UI displays.
-    Always queries database directly, never relies on session cache.
-    """
+    """Return counts and system checks for loading state."""
     try:
-        # Get storage_id from session
-        storage_id = session.get("wordbank_storage_id")
-        
-        # Query PRIMARY database for real-time count
-        words = get_wordbank()  # Queries database, returns [] if empty
-        count = len(words)
-        
-        # Check if database record exists
-        db_exists = False
-        last_accessed = None
-        if storage_id:
-            try:
-                from models import WordBankStorage
-                db_record = WordBankStorage.query.filter_by(storage_id=storage_id).first()
-                if db_record:
-                    db_exists = True
-                    last_accessed = db_record.last_accessed.isoformat() if db_record.last_accessed else None
-            except Exception as e:
-                print(f"⚠️ /api/wordbank/count: Error checking DB record: {e}")
-        
+        sid = _ensure_session_storage_id()
+        path = _wordbank_path(sid)
+        rows = get_wordbank()  # Always compute from authoritative source
+        exists = os.path.exists(path)
+        last_modified = None
+        try:
+            if exists:
+                last_modified = datetime.fromtimestamp(os.path.getmtime(path)).isoformat()
+        except Exception:
+            last_modified = None
+
         return jsonify({
             'status': 'success',
-            'storage_id': storage_id or 'none',
-            'exists': db_exists,
-            'last_accessed': last_accessed,
-            'count': count,  # REAL-TIME from database query
-            'loaded': count > 0,
-            'source': 'database' if count > 0 else 'empty'
-        }), 200
-        
+            'storage_id': sid,
+            'exists': exists,
+            'last_modified': last_modified,
+            'count': len(rows),
+            'loaded': len(rows) > 0,
+            'source': 'uploaded' if len(rows) > 0 else 'dictionary'
+        })
     except Exception as e:
-        import traceback
-        print(f"❌ /api/wordbank/count error: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error', 
-            'message': str(e),
-            'count': 0,
-            'loaded': False
-        }), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/wordbank/live-summary', methods=['GET'])
 def api_wordbank_live_summary():
-    """REAL-TIME wordbank summary for UI modals and system checks - DATABASE FIRST.
+    """Real-time wordbank summary for UI modals and system checks.
 
-    Critical: This powers system checks and UI displays.
-    Always queries PRIMARY database storage, never relies on cache or disk.
-    
     Provides:
-    - count: live number of words from database query
+    - count: live number of words (authoritative from get_wordbank)
     - ready_for_quiz: True if count > 0
     - storage_id: current session pointer
     - quiz_state_present: True if a quiz state exists
-    - last_accessed: timestamp from database record
+    - last_modified: disk timestamp of the active storage file if present
     """
     try:
-        storage_id = session.get("wordbank_storage_id")
-        
-        # Query PRIMARY database for real-time count
-        words = get_wordbank()  # Queries database, returns [] if empty
-        count = len(words)
-        
-        # Get database record metadata
-        last_accessed = None
-        db_exists = False
-        if storage_id:
+        sid = _ensure_session_storage_id()
+        rows = get_wordbank()
+        exists = os.path.exists(_wordbank_path(sid))
+        last_modified = None
+        if exists:
             try:
-                from models import WordBankStorage
-                db_record = WordBankStorage.query.filter_by(storage_id=storage_id).first()
-                if db_record:
-                    db_exists = True
-                    last_accessed = db_record.last_accessed.isoformat() if db_record.last_accessed else None
-            except Exception as e:
-                print(f"⚠️ /api/wordbank/live-summary: Error checking DB: {e}")
-        
-        # Check quiz state
-        quiz_state = session.get(QUIZ_STATE_KEY)
-        
+                last_modified = datetime.fromtimestamp(os.path.getmtime(_wordbank_path(sid))).isoformat()
+            except Exception:
+                last_modified = None
+        qs = session.get(QUIZ_STATE_KEY)
         return jsonify({
             'status': 'success',
-            'storage_id': storage_id or 'none',
-            'count': count,  # REAL-TIME from database query
-            'ready_for_quiz': count > 0,
-            'quiz_state_present': bool(quiz_state),
-            'db_exists': db_exists,
-            'last_accessed': last_accessed,
-            'source': 'database'
-        }), 200
-        
+            'storage_id': sid,
+            'count': len(rows),
+            'ready_for_quiz': len(rows) > 0,
+            'quiz_state_present': bool(qs is not None),
+            'last_modified': last_modified
+        })
     except Exception as e:
-        import traceback
-        print(f"❌ /api/wordbank/live-summary error: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'count': 0,
-            'ready_for_quiz': False
-        }), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 #  Badge metadata for display
 BADGE_METADATA = {
