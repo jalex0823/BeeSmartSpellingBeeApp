@@ -3983,8 +3983,7 @@ async function loadSampleWords() {
 
 {% block extra_js %}
 <script>
-// 🔄 CACHE BUSTER: Force fresh script load - Updated: Dec 20, 2025 @ {{ timestamp }}
-console.log('✅ Quiz script loading - Dec 20, 2025 - QuizManager v1.7 - Cache buster: {{ timestamp }}');
+console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
 
 // ⚠️ CRITICAL: Define core classes FIRST before any other code
 // This ensures they're available even if other code fails
@@ -8955,14 +8954,6 @@ function pronounceWordFromReport(word) {
 // ✅ Register QuizManager on window for global access
 window.QuizManager = QuizManager;
 console.log('✅ QuizManager registered on window');
-
-// 🔍 IMMEDIATE VERIFICATION: Confirm QuizManager is actually accessible
-if (typeof QuizManager === 'undefined' || typeof window.QuizManager === 'undefined') {
-    console.error('❌❌❌ FATAL: QuizManager registration FAILED! This should never happen!');
-    alert('CRITICAL ERROR: Quiz system failed to initialize. Please hard-refresh (Ctrl+Shift+R or Cmd+Shift+R) and try again.');
-} else {
-    console.log('✅✅✅ QuizManager verification PASSED - class is accessible');
-}
 
 // Toggle stats bar visibility
 function toggleStatsBar() {
