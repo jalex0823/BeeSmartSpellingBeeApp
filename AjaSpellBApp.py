@@ -346,11 +346,10 @@ def init_quiz_state(total_words: int):
 @app.route('/api/wordbank', methods=['GET'])
 def api_wordbank_get():
     """
-    Get wordbank from database - NEVER returns 500 to prevent quiz redirect errors.
-    Returns empty wordbank on any error to allow quiz to show proper empty-state UI.
+    Get wordbank from Railway database - returns 'words' key for compatibility
     """
     try:
-        words = get_wordbank()  # Always returns [] on DB error, never raises
+        words = get_wordbank()
         response = jsonify({
             'status': 'success',
             'count': len(words),
@@ -363,18 +362,7 @@ def api_wordbank_get():
         response.headers['Expires'] = '0'
         return response
     except Exception as e:
-        # CRITICAL: Return valid empty wordbank (200) instead of 500 to prevent quiz redirect
-        # This allows quiz.html to show proper "upload words" UI instead of error redirect
-        print(f"❌ /api/wordbank CRITICAL error (returning empty wordbank to prevent redirect): {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'status': 'success',
-            'count': 0,
-            'words': [],
-            'rows': [],
-            'debug_error': str(e)  # Include error for debugging without breaking quiz
-        }), 200
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/wordbank', methods=['POST'])
 def api_wordbank_set():
