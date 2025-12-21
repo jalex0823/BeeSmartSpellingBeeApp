@@ -54,8 +54,9 @@
       // Initialize a fast 2D carousel immediately, then upgrade to 3D when Three.js is ready.
       // This prevents getting stuck in PNG mode if initialization happens before vendor scripts load.
       try {
-        // IMPORTANT: GLB-only policy. Do not start the PNG carousel.
-        // If 3D can't initialize, we'll simply keep the carousel hidden.
+        if (typeof window.initGuestAvatarCarousel === 'function') {
+          window.initGuestAvatarCarousel();
+        }
       } catch(_){ }
 
       // Attempt 3D upgrade with retries (best effort)
@@ -99,11 +100,6 @@
           }
           if (attempt >= maxAttempts) {
             clearInterval(t);
-
-            // If 3D never came up, keep guest carousel hidden (no PNG fallback).
-            try {
-              if (guestWrap) guestWrap.style.display = 'none';
-            } catch(_e) {}
           }
         }, 1000);
       })();
