@@ -12137,7 +12137,7 @@
                 }
 
                 // Smooth rotation to reveal next avatar (back-to-back carousel)
-                function rotateCarousel(duration = 700) {  // FASTER: 700ms instead of 1200ms
+                function rotateCarousel(duration = 1200) {
                     if (isRotating) return;
                     isRotating = true;
                     
@@ -12265,7 +12265,7 @@
                     requestAnimationFrame(tick);
                     // Only add gentle idle rotation when not actively rotating
                     if (!isRotating) {
-                        carouselGroup.rotation.y += 0.005;  // FASTER: More visible rotation
+                        carouselGroup.rotation.y += 0.002;
                     }
                     renderer.render(scene, camera);
                 }
@@ -12273,10 +12273,10 @@
 
                 // Load first TWO avatars to fill both slots (front and back)
                 loadNext(); // Load first avatar (slot 0, front-facing)
-                setTimeout(() => loadNext(), 400); // Load second avatar (slot 1, back-facing) faster
+                setTimeout(() => loadNext(), 600); // Load second avatar (slot 1, back-facing) after brief delay
                 
-                // Continue rotating every 3 seconds (FASTER: was 4.5s)
-                window._guest3DTimer = setInterval(loadNext, 3000);
+                // Continue rotating every ~4.5s
+                window._guest3DTimer = setInterval(loadNext, 4500);
 
                 // Click anywhere on the carousel to prompt registration/login
                 try {
@@ -16749,9 +16749,6 @@
                         canvas.style.top = '50%';
                         canvas.style.left = '50%';
                         canvas.style.transform = 'translate(-50%, -50%)'; // Center only, no scale
-                        canvas.style.width = '100%';  // Force canvas to fill container width
-                        canvas.style.height = '100%'; // Force canvas to fill container height
-                        canvas.style.objectFit = 'contain'; // Maintain aspect ratio
                         canvas.style.pointerEvents = 'none'; // Allow clicks through to UI
                         canvas.style.zIndex = '10';
                         
