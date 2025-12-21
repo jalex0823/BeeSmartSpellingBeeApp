@@ -813,9 +813,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // NOTE: Register the canonical service worker path only.
-                // Double-registration can create split caches and stale-client behavior.
-                navigator.serviceWorker.register('/static/service-worker.js').catch(() => {/* no-op */});
+                navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
             });
         }
     </script>
