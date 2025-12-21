@@ -12043,13 +12043,10 @@
                 }
 
                 const loader = new THREE.GLTFLoader();
-                let carouselGroup = new THREE.Group(); // Container that rotates with avatars back-to-back
-                scene.add(carouselGroup);
-                let avatarSlots = [null, null]; // Two slots: front (0) and back (180°)
-                let currentSlot = 0;
+                let currentGroup = null;   // currently visible group (model + podium)
+                let outgoingGroup = null;  // group being faded out
                 let idx = 0;
                 let disposed = false;
-                let isRotating = false;
 
                 function disposeObject(obj) {
                     try {
@@ -12136,28 +12133,44 @@
                     return group;
                 }
 
-                // Smooth rotation to reveal next avatar (back-to-back carousel)
-                function rotateCarousel(duration = 1200) {
-                    if (isRotating) return;
-                    isRotating = true;
-                    
-                    const startRotation = carouselGroup.rotation.y;
-                    const targetRotation = startRotation + Math.PI; // 180° rotation to flip
+                function animateCrossfade(oldGroup, newGroup, duration){
+                    const D = Math.max(300, duration || 650);
                     const start = performance.now();
-                    
-                    function step(now) {
+                    function step(now){
                         if (disposed) return;
-                        const t = Math.min(1, (now - start) / duration);
+                        const t = Math.min(1, (now - start)/D);
                         const e = easeInOutCubic(t);
-                        
-                        carouselGroup.rotation.y = startRotation + (targetRotation - startRotation) * e;
-                        
-                        if (t < 1) {
+                        if (newGroup){
+                            setOpacityRecursive(newGroup, e);
+                            newGroup.position.y = (1 - e) * -0.04; // lift in slightly
+                            const s = 0.97 + 0.03*e; // scale up subtly
+                            newGroup.scale.setScalar(s);
+                        }
+                        if (oldGroup){
+                            setOpacityRecursive(oldGroup, 1 - e);
+                            oldGroup.position.y = e * 0.04; // float away
+                            const s2 = 1.0 + 0.02*e; // tiny overscale as it leaves
+                            oldGroup.scale.setScalar(s2);
+                        }
+                        if (t < 1){
                             requestAnimationFrame(step);
                         } else {
-                            isRotating = false;
-                            // Normalize rotation to avoid float precision issues
-                            carouselGroup.rotation.y = targetRotation % (Math.PI * 2);
+                            // Finalize
+                            if (oldGroup){
+                                scene.remove(oldGroup);
+                                disposeObject(oldGroup);
+                                if (outgoingGroup === oldGroup) outgoingGroup = null;
+                            }
+                            if (newGroup){
+                                // Normalize transforms for steady rotation post-fade
+                                newGroup.position.y = 0;
+                                newGroup.scale.setScalar(1);
+                                // Restore opaque materials to avoid transparent sorting artifacts
+                                setOpacityRecursive(newGroup, 1);
+                                setTransparentRecursive(newGroup, false);
+                                setDepthWriteRecursive(newGroup, true);
+                                setRenderOrderRecursive(newGroup, 0);
+                            }
                         }
                     }
                     requestAnimationFrame(step);
@@ -12165,10 +12178,9 @@
 
                 function loadNext() {
                     const item = candidates[idx % candidates.length];
-                    const nextSlot = (currentSlot + 1) % 2; // Alternate between 0 and 1
                     idx++;
-                    
-                    // Update name text
+                    // Begin micro wrap easing (kept subtle to avoid double-fade feel)
+                    try { wrap.style.transform = 'translateY(2px)'; } catch(_) {}
                     nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
                     if (imgEl) imgEl.style.display = 'none';
@@ -12178,6 +12190,16 @@
                     loader.load(
                         base + '/' + item.file,
                         (gltf) => {
+                            // Hand off previous as outgoing
+                            if (currentGroup) {
+                                outgoingGroup = currentGroup;
+                                // Prepare outgoing for fade-out to avoid depth popping
+                                setTransparentRecursive(outgoingGroup, true);
+                                setOpacityRecursive(outgoingGroup, 1);
+                                setDepthWriteRecursive(outgoingGroup, false);
+                                setRenderOrderRecursive(outgoingGroup, 0);
+                            }
+
                             const model = gltf.scene;
                             
                             //  PREMIUM TEXTURE OPTIMIZATION for carousel GLB files
@@ -12221,35 +12243,25 @@
                             const baseY = box1.min.y - 0.01; // tiny offset
                             podium.position.set(0, baseY - 0.01, 0);
 
-                            // Wrap group for unified transforms
+                            // Wrap group for unified transforms and opacity control
                             const group = new THREE.Group();
                             group.add(model);
                             group.add(podium);
-                            
-                            // Position avatar in its slot (front = 0°, back = 180°)
-                            // Each avatar faces outward from center
-                            const angle = nextSlot * Math.PI; // 0 or π
-                            group.rotation.y = angle;
+                            // Start invisible and slightly lowered for lift-in
+                            setTransparentRecursive(group, true);
+                            setOpacityRecursive(group, 0);
+                            setDepthWriteRecursive(group, true);
+                            setRenderOrderRecursive(group, 1);
+                            group.position.y = -0.04;
+                            group.scale.setScalar(0.97);
 
-                            // Remove old avatar from this slot if it exists
-                            if (avatarSlots[nextSlot]) {
-                                carouselGroup.remove(avatarSlots[nextSlot]);
-                                disposeObject(avatarSlots[nextSlot]);
-                            }
-                            
-                            // Add new avatar to slot
-                            avatarSlots[nextSlot] = group;
-                            carouselGroup.add(group);
-                            
-                            // If this is the first avatar, show it immediately
-                            if (idx === 1) {
-                                currentSlot = 0;
-                                console.log('✅ First avatar loaded and displayed');
-                            } else {
-                                // Rotate carousel to show the new avatar
-                                currentSlot = nextSlot;
-                                rotateCarousel(1200);
-                            }
+                            scene.add(group);
+                            currentGroup = group;
+
+                            // Crossfade between outgoing and current
+                            animateCrossfade(outgoingGroup, currentGroup, 700);
+                            // Restore wrap transform after a tick
+                            setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
                         },
                         undefined,
                         (err) => {
@@ -12259,23 +12271,18 @@
                     );
                 }
 
-                // Gentle continuous rotation on Y axis (idle animation)
+                // Gentle rotation
                 function tick() {
                     if (disposed) return;
                     requestAnimationFrame(tick);
-                    // Only add gentle idle rotation when not actively rotating
-                    if (!isRotating) {
-                        carouselGroup.rotation.y += 0.002;
-                    }
+                    if (currentGroup) currentGroup.rotation.y += 0.004;
+                    if (outgoingGroup) outgoingGroup.rotation.y += 0.004;
                     renderer.render(scene, camera);
                 }
                 tick();
 
-                // Load first TWO avatars to fill both slots (front and back)
-                loadNext(); // Load first avatar (slot 0, front-facing)
-                setTimeout(() => loadNext(), 600); // Load second avatar (slot 1, back-facing) after brief delay
-                
-                // Continue rotating every ~4.5s
+                // Start and rotate every ~4.5s (gives headroom for crossfade)
+                loadNext();
                 window._guest3DTimer = setInterval(loadNext, 4500);
 
                 // Click anywhere on the carousel to prompt registration/login
@@ -12290,8 +12297,7 @@
                 window.addEventListener('beforeunload', () => {
                     disposed = true;
                     try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){}
-                    avatarSlots.forEach(slot => { if (slot) disposeObject(slot); });
-                    if (carouselGroup) disposeObject(carouselGroup);
+                    if (currentGroup) { disposeObject(currentGroup); }
                     try { renderer.dispose(); } catch(_){}
                 }, { once: true });
 
