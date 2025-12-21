@@ -1,11 +1,10 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.2-2025-12-18-auth-logout-sw-bypass';
+const CACHE_VERSION = 'beesmart-v1.4.3-2025-12-20-noapi-nonnavhtml-cache';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
 const CORE_ASSETS = [
-  '/',
   '/static/BeeSmartCrestLogo1.png',
   '/static/css/BeeSmart.css',
   '/static/css/ui-fixes.css',
@@ -39,6 +38,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // ✅ CRITICAL: Never let the service worker cache or proxy API traffic.
+  // If we ever serve stale or synthetic API responses, the app can behave like
+  // the user has "no wordbank" and kick them out of the quiz.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // ✅ Auth endpoints often use redirects (e.g., /auth/logout -> /auth/login or /).
   // Some requests may have redirect mode != 'follow', which can produce:
   // "a redirected response was used for a request whose redirect mode is not 'follow'".
@@ -71,9 +78,11 @@ self.addEventListener('fetch', (event) => {
   // Network-first for navigation requests to keep content fresh
   if (request.mode === 'navigate') {
     event.respondWith(
-      // Force a network refresh for HTML navigations; fall back to cached home when offline.
-      fetch(new Request(request.url, { credentials: 'same-origin', cache: 'reload' }))
-        .catch(() => caches.match('/'))
+      // Always go to network for HTML navigations.
+      // IMPORTANT: Avoid falling back to cached '/' because that can serve an older shell
+      // which then loads mismatched JS and causes "QuizManager not defined"/redirect loops.
+      fetch(new Request(request.url, { credentials: 'same-origin', cache: 'no-store' }))
+        .catch(() => new Response('Offline', { status: 503 }))
     );
     return;
   }
