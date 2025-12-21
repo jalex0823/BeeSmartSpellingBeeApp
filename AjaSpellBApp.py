@@ -346,7 +346,7 @@ def init_quiz_state(total_words: int):
 @app.route('/api/wordbank', methods=['GET'])
 def api_wordbank_get():
     """
-    Get wordbank from DigitalOcean database - returns 'words' key for compatibility
+    Get wordbank from Railway database - returns 'words' key for compatibility
     """
     try:
         words = get_wordbank()
@@ -3329,7 +3329,7 @@ def _delete_wordbank_from_disk(storage_id: Optional[str]):
     pass
 
 def get_wordbank() -> List[Dict[str, str]]:
-    """Read wordbank from DigitalOcean database (ONLY source of truth).
+    """Read wordbank from Railway database (ONLY source of truth).
     
     All word operations use wordbank_storage table in PostgreSQL.
     Session stores small UUID pointer (~36 bytes) to avoid cookie limits.
@@ -3345,11 +3345,11 @@ def get_wordbank() -> List[Dict[str, str]]:
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
-            print(f" get_wordbank: Loaded {len(words)} words from database (storage_id={storage_id})")
+            print(f" get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
             session["wordbank_count"] = len(words)
             return list(words)  # Return copy to prevent modification
         else:
-            print(f"️ get_wordbank: storage_id={storage_id} not found in database")
+            print(f"️ get_wordbank: storage_id={storage_id} not found in Railway database")
             session["wordbank_count"] = 0
             return []
     except Exception as e:
@@ -3358,7 +3358,7 @@ def get_wordbank() -> List[Dict[str, str]]:
         return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Save wordbank to DigitalOcean database (ONLY storage location).
+    """Save wordbank to Railway database (ONLY storage location).
     
      CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
     Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
@@ -3386,35 +3386,21 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"️ set_wordbank: Error deleting old wordbank: {e}")
         db.session.rollback()
     
-    # Save to DigitalOcean database (ONLY storage location)
+    # Save to Railway database (ONLY storage location)
     try:
         user_id = current_user.id if current_user.is_authenticated else None
         WordBankStorage.save_wordbank(storage_id, rows, user_id)
-        print(f" set_wordbank: Saved {len(rows)} words to database (storage_id={storage_id})")
-        
-        # CRITICAL: Update session IMMEDIATELY after successful DB save
-        session["wordbank_storage_id"] = storage_id
-        session["wordbank_count"] = len(rows)
-        session.permanent = True
-        session.modified = True
-        
-        if is_user_upload:
-            session["has_uploaded_once"] = True
-            session.pop("using_default_words", None)
-            print(f"DEBUG set_wordbank: User uploaded {len(rows)} words, session updated")
-        else:
-            session["using_default_words"] = True
-            print(f"DEBUG set_wordbank: System loaded {len(rows)} words, session updated")
-            
+        print(f" set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
     except Exception as e:
-        import traceback
-        print(f" set_wordbank: CRITICAL DATABASE ERROR - wordbank NOT saved!")
-        print(f" Error: {e}")
-        traceback.print_exc()
+        print(f" set_wordbank: Database error: {e}")
         db.session.rollback()
-        
-        # Don't raise - return error to caller so they can handle gracefully
-        raise Exception(f"Failed to save wordbank to database: {str(e)}")
+        raise
+    
+    # Update session with storage_id (new or reused)
+    session["wordbank_storage_id"] = storage_id
+    session["wordbank_count"] = len(rows)
+    session.permanent = True
+    session.modified = True
     
     if is_user_upload:
         session["has_uploaded_once"] = True
@@ -3425,16 +3411,16 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"DEBUG set_wordbank: System loaded {len(rows)} words")
 
 def delete_wordbank(storage_id: str):
-    """Delete wordbank from DigitalOcean database (single source of truth).
+    """Delete wordbank from Railway database (single source of truth).
     
     Used when loading new word lists or clearing wordbank completely.
     """
     try:
         success = WordBankStorage.delete_wordbank(storage_id)
         if success:
-            print(f" delete_wordbank: Removed storage_id={storage_id} from database")
+            print(f" delete_wordbank: Removed storage_id={storage_id} from Railway database")
         else:
-            print(f"️ delete_wordbank: storage_id={storage_id} not found in database")
+            print(f"️ delete_wordbank: storage_id={storage_id} not found in Railway database")
         return success
     except Exception as e:
         print(f" delete_wordbank: Database error: {e}")
