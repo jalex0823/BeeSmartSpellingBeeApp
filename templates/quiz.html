@@ -4768,8 +4768,8 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data?.word) {
-            // Speak a friendly prompt and the word twice
-            const phrase = `Spell the word ${data.word}. ${data.word}.`;
+            // Speak a friendly prompt and say the word once (the old double-say sounded like a glitch)
+            const phrase = `Spell the word ${data.word}.`;
             const rate = data.rate || 0.92; // Use provided rate or default
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
