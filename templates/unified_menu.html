@@ -11945,8 +11945,15 @@
                     try { return localStorage.getItem('bee_force3d') === '1'; } catch(_) { return false; }
                 })();
                 // Guest 3D carousel initialization
-                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
-                if (!window.WebGLRenderingContext) return false;
+                // IMPORTANT: don't permanently fail if scripts haven't finished loading yet.
+                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') {
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
+                    return false;
+                }
+                if (!window.WebGLRenderingContext) {
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
+                    return false;
+                }
                 // Respect reduced motion and low-memory devices
                 if (!force3d) {
                     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
@@ -12083,11 +12090,9 @@
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
                     // GLB-only policy: do NOT fall back to PNG or placeholder tiles.
-                    // Keep the carousel hidden instead of showing non-GLB content.
-                    console.warn('GLTFLoader not available - hiding guest carousel (GLB-only policy)');
-                    try { wrap.style.display = 'none'; } catch(_e) {}
-                    try { canvasWrap.style.display = 'none'; } catch(_e) {}
-                    try { if (imgEl) imgEl.style.display = 'none'; } catch(_e) {}
+                    // But: don't permanently collapse the layout on transient loader timing.
+                    console.warn('GLTFLoader not available - guest carousel 3D init deferred (GLB-only policy)');
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
                     return false;
                 }
 
@@ -15655,11 +15660,12 @@
                 }
                 
                 // Prevent multiple initialization of the entire carousel system
+                // NOTE: don't mark initialized until 3D actually starts, otherwise transient timing can
+                // permanently disable the carousel.
                 if (window._avatarCarouselSystemInitialized) {
                     console.log('[Avatar] Carousel system already initialized, skipping');
                     return;
                 }
-                window._avatarCarouselSystemInitialized = true;
                 console.log('[Avatar] Initializing carousel system...');
                 
                 // Clean up any existing timers first to prevent doubles
@@ -15674,12 +15680,37 @@
                     window._guestCarouselTimer = null;
                 }
                 
-                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
-                if (typeof initGuestAvatar3DCarousel === 'function') {
+                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D.
+                // Retry because vendor scripts load with defer and may not be ready at first call.
+                const tryInit3D = () => {
+                    if (typeof initGuestAvatar3DCarousel !== 'function') {
+                        console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                        return false;
+                    }
                     const ok = !!initGuestAvatar3DCarousel();
                     console.log('[Avatar] 3D carousel initialized:', ok);
-                } else {
-                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                    if (ok) {
+                        window._avatarCarouselSystemInitialized = true;
+                    }
+                    return ok;
+                };
+
+                // Try immediately
+                if (!tryInit3D()) {
+                    // Then retry a few times (best effort) without collapsing the layout.
+                    let attempts = 0;
+                    const maxAttempts = 12;
+                    const t = setInterval(() => {
+                        attempts += 1;
+                        if (tryInit3D()) {
+                            clearInterval(t);
+                            return;
+                        }
+                        if (attempts >= maxAttempts) {
+                            clearInterval(t);
+                            console.warn('[Avatar] 3D carousel did not initialize after retries (GLB-only policy); leaving carousel area in place');
+                        }
+                    }, 750);
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
