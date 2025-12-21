@@ -218,6 +218,20 @@ class SmartyBee3D {
         this.renderer.setSize(this.options.width, this.options.height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
 
+        // iOS Safari alignment fix:
+        // Ensure the WebGL canvas behaves like a centered block within the container.
+        // Some iOS layouts can right-shift replaced elements inside nested flex/scroll contexts.
+        try {
+            const canvasEl = this.renderer.domElement;
+            canvasEl.style.display = 'block';
+            canvasEl.style.marginLeft = 'auto';
+            canvasEl.style.marginRight = 'auto';
+            canvasEl.style.maxWidth = '100%';
+            canvasEl.style.flexShrink = '0';
+        } catch (e) {
+            // ignore
+        }
+
         // Handle WebGL context loss gracefully
         try {
             const canvas = this.renderer.domElement;

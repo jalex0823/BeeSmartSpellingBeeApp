@@ -9598,6 +9598,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
+                    cache: 'no-store',
                     // Backend expects `action` field (not `action` nested under another key)
                     body: JSON.stringify({ action: action })
                 });
@@ -9614,14 +9615,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (action === 'resume') {
                 try {
                     // Prefer the centralized helper (handles iOS vs others).
-                    setTimeout(() => {
+                    // iOS Safari can race UI readiness after backgrounding, so retry a few times.
+                    const tryStart = () => {
                         if (typeof window.quickStartQuiz === 'function') {
                             window.quickStartQuiz();
-                        } else if (window.quizManager && typeof window.quizManager.loadNextWordWithIntro === 'function') {
+                            return true;
+                        }
+                        if (window.quizManager && typeof window.quizManager.loadNextWordWithIntro === 'function') {
                             window.quizManager.quizStarted = true;
                             window.quizManager.loadNextWordWithIntro();
+                            return true;
                         }
-                    }, 250);
+                        return false;
+                    };
+
+                    // Attempt quickly, then back off.
+                    const delays = [250, 650, 1200, 2000];
+                    delays.forEach((d) => setTimeout(() => {
+                        tryStart();
+                    }, d));
                 } catch (e) {
                     console.warn('Resume autostart failed:', e);
                 }
