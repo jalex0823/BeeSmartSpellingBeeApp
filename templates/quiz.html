@@ -9547,6 +9547,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const startMode = (action === 'resume') ? 'resume' : 'normal';
             window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+
+            // ✅ Resume reliability: when the user chooses Resume, force a programmatic start.
+            // This prevents a common dormant-PWA edge case where the intro UI isn't re-triggered
+            // after returning from background, leaving the screen waiting forever.
+            if (action === 'resume') {
+                try {
+                    // Prefer the centralized helper (handles iOS vs others).
+                    setTimeout(() => {
+                        if (typeof window.quickStartQuiz === 'function') {
+                            window.quickStartQuiz();
+                        } else if (window.quizManager && typeof window.quizManager.loadNextWordWithIntro === 'function') {
+                            window.quizManager.quizStarted = true;
+                            window.quizManager.loadNextWordWithIntro();
+                        }
+                    }, 250);
+                } catch (e) {
+                    console.warn('Resume autostart failed:', e);
+                }
+            }
             
             // ✅ START LIVE STATUS POLLING - Updates stats in real-time
             console.log('🔄 Starting live status polling for stats updates...');

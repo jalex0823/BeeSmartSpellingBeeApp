@@ -47,6 +47,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // ✅ Quiz/session-critical endpoints: always bypass the SW.
+  // These must reflect the *current* server-side session state, especially after app resume.
+  // Letting the SW return cached/offline responses here can cause the resume modal / quiz load to stall.
+  if (
+    url.pathname.startsWith('/api/quiz/') ||
+    url.pathname === '/api/next' ||
+    url.pathname === '/api/answer' ||
+    url.pathname === '/api/pronounce' ||
+    url.pathname === '/api/wordbank' ||
+    url.pathname.startsWith('/api/wordbank/')
+  ) {
+    return;
+  }
+
   // Cache GLB files with network-first strategy (they're large but static)
   if (url.pathname.endsWith('.glb')) {
     event.respondWith(

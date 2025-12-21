@@ -3428,12 +3428,18 @@ def api_quiz_start():
     """Starts a new quiz or resumes an existing one based on user choice."""
     try:
         data = request.get_json(silent=True) or {}
-        action = data.get('action', 'start_new')  # 'start_new' or 'resume'
+        # Accept both legacy and UI action names.
+        # UI uses: 'resume' | 'start_new'
+        # Some older callers may send: 'restart' | 'new'
+        action = (data.get('action') or 'start_new').strip().lower()
+        if action in {'restart', 'new', 'start', 'start_over'}:
+            action = 'start_new'
 
         qs = session.get(QUIZ_STATE_KEY)
 
-        if action == 'resume' and qs and qs.get("idx", 0) > 0:
-            # Resume existing quiz
+        if action == 'resume' and qs is not None:
+            # Resume existing quiz.
+            # IMPORTANT: idx==0 is still a valid in-progress quiz (user may have started but not answered yet).
             return jsonify({'status': 'success', 'resumed': True, 'state': qs})
         
         # Start a new quiz
