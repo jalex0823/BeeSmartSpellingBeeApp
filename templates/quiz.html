@@ -4904,6 +4904,13 @@ class QuizManager {
         this.currentWordData = null;
         this.totalWords = 0;
         this.quizStarted = false;
+
+        // 🔁 Anti-echo protection: block duplicate auto-speak for the same word.
+        // Safari/iOS + resume flows can trigger overlapping speech calls.
+        this._lastAnnouncedWord = null;
+        this._lastAnnouncedAt = 0;
+        this._lastAnnouncedKind = null; // 'intro' | 'pronounce'
+        this._speechSequenceId = 0;
         
         // ⏱️ Countdown Timer Settings (Updated to 60s with auto-advance)
         this.timerEnabled = true; // Can be toggled in settings
@@ -5070,6 +5077,11 @@ class QuizManager {
         console.log('   - localStorage announcerEnabled:', localStorage.getItem('announcerEnabled'));
         console.log('🎵 Music System Initialization:');
         console.log('   - musicEnabled:', this.musicEnabled);
+
+        // 🐢 Announcer pacing
+        // Slightly slower than default so prompts like "Your word is..." feel less rushed.
+        // Keep this subtle—pronunciation speed is controlled separately (pronounceWord rate).
+        this.announcerRate = 0.94;
         
         try {
             this.initializeEventListeners();
@@ -5131,6 +5143,34 @@ class QuizManager {
             window.addEventListener('pointerdown', startMusicOnce, { once: true, passive: true });
             window.addEventListener('keydown', startMusicOnce, { once: true });
         }
+    }
+
+    // 🔁 Prevent accidental repeat announcements (within a short window)
+    shouldSpeakWord(word, kind, windowMs = 1200) {
+        const w = (word || '').trim().toLowerCase();
+        if (!w) return true;
+        const now = Date.now();
+
+        // Skip if we're trying to do the same kind of speak for the same word too soon
+        if (this._lastAnnouncedWord === w && this._lastAnnouncedKind === kind && (now - this._lastAnnouncedAt) < windowMs) {
+            console.log(`🔁 Suppressing duplicate '${kind}' speech for word:`, w);
+            return false;
+        }
+
+        this._lastAnnouncedWord = w;
+        this._lastAnnouncedKind = kind;
+        this._lastAnnouncedAt = now;
+        return true;
+    }
+
+    // Sequencing helper: allows newer speech chains to invalidate older ones
+    beginSpeechSequence() {
+        this._speechSequenceId = (this._speechSequenceId || 0) + 1;
+        return this._speechSequenceId;
+    }
+
+    isSpeechSequenceActive(id) {
+        return id === this._speechSequenceId;
     }
     
     // 🍎 iOS-specific keyboard and viewport handling
@@ -5347,7 +5387,7 @@ class QuizManager {
             // Function to speak with the selected voice
             const speak = () => {
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.0;  // Normal speed for US English
+                utterance.rate = this.announcerRate || 0.94;  // Slightly slower for a calmer announcer
                 utterance.pitch = 1.1;
                 utterance.volume = 0.85;
                 
@@ -5931,9 +5971,20 @@ class QuizManager {
             }
             
             wordIntro += ' ' + data.word + '.';
-            
-            // 📣 Wait for word intro announcement to complete
-            await this.speakAnnouncement(wordIntro);
+
+            // Start a new speech chain for this word (cancels older overlapping chains)
+            const seq = this.beginSpeechSequence();
+
+            // 📣 Wait for word intro announcement to complete (deduped)
+            if (this.shouldSpeakWord(data.word, 'intro', 1400)) {
+                await this.speakAnnouncement(wordIntro);
+            }
+
+            // If something else started speaking since we began, stop this chain here
+            if (!this.isSpeechSequenceActive(seq)) {
+                console.log('🔁 Speech sequence superseded; skipping auto-pronounce/timer');
+                return;
+            }
             
             // Brief visual pause between phases
             {
@@ -5950,7 +6001,15 @@ class QuizManager {
             }
             
             // Auto‑pronounce the word (so kids hear it clearly before timing)
-            await this.pronounceWord({ refresh: true });
+            // Guarded to avoid Safari/iOS double-speak.
+            if (this.shouldSpeakWord(data.word, 'pronounce', 1200)) {
+                await this.pronounceWord({ refresh: true });
+            }
+
+            if (!this.isSpeechSequenceActive(seq)) {
+                console.log('🔁 Speech sequence superseded after pronounce; skipping timer');
+                return;
+            }
             
             // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
             if (this.timerEnabled && this.quizStarted) {
