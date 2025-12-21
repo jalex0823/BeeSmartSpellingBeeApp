@@ -3319,11 +3319,43 @@
                 width: 280px !important;
                 height: 280px !important;
                 max-width: 90vw;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                position: relative !important;
+                left: 0 !important;
+                right: 0 !important;
             }
             #avatarFxHost {
                 padding: 10px 0 !important;
+                display: -webkit-box !important;
+                display: -webkit-flex !important;
+                display: flex !important;
+                -webkit-box-align: center !important;
+                -webkit-align-items: center !important;
+                align-items: center !important;
+                -webkit-box-pack: center !important;
+                -webkit-justify-content: center !important;
+                justify-content: center !important;
             }
         }
+        
+        /* iOS Safari specific fixes for avatar centering */
+        @supports (-webkit-touch-callout: none) {
+            #avatarControls3D {
+                margin-left: auto !important;
+                margin-right: auto !important;
+                left: 0 !important;
+                right: 0 !important;
+                text-align: center !important;
+            }
+            #avatarFxHost {
+                -webkit-box-align: center !important;
+                -webkit-align-items: center !important;
+                align-items: center !important;
+                text-align: center !important;
+            }
+        }
+        
         /* Help links container should stack items full-width */
         section.action-buttons .help-links {
             display: flex;
@@ -3789,10 +3821,20 @@
                     max-width: var(--content-max);
                     width: 100%;
                     margin: 0 auto;
+                    display: -webkit-box;
+                    display: -webkit-flex;
+                    display: flex;
+                    -webkit-box-orient: vertical;
+                    -webkit-box-direction: normal;
+                    -webkit-flex-direction: column;
+                    flex-direction: column;
+                    -webkit-box-align: center;
+                    -webkit-align-items: center;
+                    align-items: center;
                 ">
                 <!-- Avatar Display - NEW clean container for controls -->
-                <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: flex; flex-direction: column; align-items: center;">
-                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto; max-width: 100%;"></div>
+                <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-orient: vertical; -webkit-box-direction: normal; -webkit-flex-direction: column; flex-direction: column; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center;">
+                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin-left: auto; margin-right: auto; max-width: 100%; display: block; position: relative; left: 0; right: 0;"></div>
                     
                     <!-- Interactive Caption -->
                     <div style="
