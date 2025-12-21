@@ -4969,17 +4969,20 @@ class QuizManager {
         this.isRetryAttempt = false; // Is current attempt a retry?
         this.retryTimeoutId = null; // Timeout for auto-advance after retry
         
-        // Get student name - prioritize server-provided name for logged-in users
-        {% if user_name is defined and user_name %}
-        this.studentName = {{ user_name|tojson }};
-        // Save to localStorage for consistency
-        localStorage.setItem('studentName', this.studentName);
-        console.log('👤 Using logged-in user name:', this.studentName);
-        {% else %}
-        // Check sessionStorage for guest name, then localStorage
-        this.studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
-        console.log('👤 Using guest/localStorage name:', this.studentName);
-        {% endif %}
+        // Get student name.
+        // IMPORTANT: Avoid Jinja control-flow blocks inside JS (they can cause hard syntax failures
+        // if anything ever serves this template without rendering).
+        const serverUserName = {{ (user_name if user_name is defined else '')|tojson }};
+        if (serverUserName) {
+            this.studentName = serverUserName;
+            // Save to localStorage for consistency
+            localStorage.setItem('studentName', this.studentName);
+            console.log('👤 Using logged-in user name:', this.studentName);
+        } else {
+            // Check sessionStorage for guest name, then localStorage
+            this.studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+            console.log('👤 Using guest/localStorage name:', this.studentName);
+        }
         
         // Reset honey jar to 0% at start
         this.resetHoneyJar();
