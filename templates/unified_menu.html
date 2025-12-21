@@ -3906,7 +3906,7 @@
                 <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
                     <div class="avatar-slide">
                         <!-- Progressive 3D canvas (shown when available) -->
-                        <div id="guestAvatar3D" style="display:none; position:relative; width: 240px; height: 180px; margin: 0 auto;"></div>
+                        <div id="guestAvatar3D" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
                         <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
@@ -12022,9 +12022,6 @@
                 canvas.style.left = '50%';
                 canvas.style.transform = 'translate(-50%, -50%)';
                 canvas.style.pointerEvents = 'none';
-                canvas.style.margin = '0';
-                canvas.style.padding = '0';
-                canvas.style.display = 'block';
                 canvasWrap.appendChild(canvas);
 
                 // Lights - BRIGHTENED to match registered user avatar quality
