@@ -11945,8 +11945,15 @@
                     try { return localStorage.getItem('bee_force3d') === '1'; } catch(_) { return false; }
                 })();
                 // Guest 3D carousel initialization
-                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
-                if (!window.WebGLRenderingContext) return false;
+                // IMPORTANT: don't permanently fail if scripts haven't finished loading yet.
+                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') {
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
+                    return false;
+                }
+                if (!window.WebGLRenderingContext) {
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
+                    return false;
+                }
                 // Respect reduced motion and low-memory devices
                 if (!force3d) {
                     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
@@ -11956,6 +11963,14 @@
                 // Prevent multiple initialization
                 if (window._guest3DCarouselInitialized) return false;
                 window._guest3DCarouselInitialized = true;
+
+                // Extra safety: clear any prior timers if the page was restored from bfcache
+                try {
+                    if (window._guest3DTimer) {
+                        clearInterval(window._guest3DTimer);
+                        window._guest3DTimer = null;
+                    }
+                } catch(_e) {}
 
                 const wrap = document.getElementById('guestAvatarCarousel');
                 const nameEl = document.getElementById('guestAvatarName');
@@ -12074,9 +12089,11 @@
 
                 // Check if GLTFLoader is available
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
-                    console.warn('GLTFLoader not available - using fallback');
-                    createCarouselFallback(canvasWrap);
-                    return;
+                    // GLB-only policy: do NOT fall back to PNG or placeholder tiles.
+                    // But: don't permanently collapse the layout on transient loader timing.
+                    console.warn('GLTFLoader not available - guest carousel 3D init deferred (GLB-only policy)');
+                    try { window._guest3DCarouselInitialized = false; } catch(_e) {}
+                    return false;
                 }
 
                 const loader = new THREE.GLTFLoader();
@@ -12102,14 +12119,23 @@
 
                 // Helpers to manage smooth crossfades on arbitrary GLTF graphs
                 function setTransparentRecursive(obj, enabled){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
-                            if (Array.isArray(child.material)) child.material.forEach(m => m.transparent = enabled);
-                            else if (child.material) child.material.transparent = enabled;
+                            const mats = Array.isArray(child.material) ? child.material : [child.material];
+                            mats.forEach(m => {
+                                if (!m) return;
+                                m.transparent = enabled;
+                                // Important for proper crossfade: avoid depth-writing occluding the incoming model
+                                // and avoid leaving the renderer in a weird state.
+                                m.depthWrite = !enabled;
+                                m.needsUpdate = true;
+                            });
                         }
                     });
                 }
                 function setOpacityRecursive(obj, opacity){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
                             if (Array.isArray(child.material)) child.material.forEach(m => { m.opacity = opacity; });
@@ -12119,6 +12145,7 @@
                 }
 
                 function setDepthWriteRecursive(obj, depthWrite){
+                    if (!obj) return;
                     obj.traverse((child)=>{
                         if (child.isMesh) {
                             if (Array.isArray(child.material)) child.material.forEach(m => { if (m) m.depthWrite = depthWrite; });
@@ -12128,6 +12155,7 @@
                 }
 
                 function setRenderOrderRecursive(obj, order){
+                    if (!obj) return;
                     obj.traverse((child)=>{ child.renderOrder = order; });
                 }
 
@@ -12171,8 +12199,9 @@
                     return group;
                 }
 
-                // Smooth crossfade between avatars with rotation
-                function morphToNext(oldGroup, newGroup, duration = 700) {
+                // Smooth crossfade between avatars with rotation.
+                // IMPORTANT: this MUST last your carousel cadence (2.5s) so the outgoing avatar actually fades out.
+                function morphToNext(oldGroup, newGroup, duration = 2500) {
                     if (isTransitioning) return;
                     isTransitioning = true;
                     
@@ -12215,6 +12244,7 @@
                                 setOpacityRecursive(newGroup, 1);
                                 setTransparentRecursive(newGroup, false);
                                 setDepthWriteRecursive(newGroup, true);
+                                setRenderOrderRecursive(newGroup, 1);
                             }
                         }
                     }
@@ -12228,7 +12258,10 @@
                     // Update name text
                     nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
-                    if (imgEl) imgEl.style.display = 'none';
+                    if (imgEl) {
+                        imgEl.classList.remove('is-visible');
+                        imgEl.style.display = 'none';
+                    }
                     canvasWrap.style.display = 'block';
                     wrap.style.display = 'block';
 
@@ -12286,7 +12319,9 @@
                             // Prepare for crossfade - start transparent
                             setTransparentRecursive(group, true);
                             setOpacityRecursive(group, 0);
-                            setDepthWriteRecursive(group, true);
+                            setDepthWriteRecursive(group, false);
+                            // Keep incoming model on top while blending
+                            setRenderOrderRecursive(group, 2);
                             group.scale.setScalar(0.85);
                             group.rotation.y = Math.PI * 0.5; // Start rotated 90°
                             
@@ -12298,12 +12333,13 @@
                                 setTransparentRecursive(outgoingModel, true);
                                 setOpacityRecursive(outgoingModel, 1);
                                 setDepthWriteRecursive(outgoingModel, false);
+                                setRenderOrderRecursive(outgoingModel, 1);
                             }
                             
                             currentModel = group;
                             
                             // Smooth morph transition
-                            morphToNext(outgoingModel, currentModel, 700);
+                            morphToNext(outgoingModel, currentModel, 2500);
                         },
                         undefined,
                         (err) => {
@@ -15624,11 +15660,12 @@
                 }
                 
                 // Prevent multiple initialization of the entire carousel system
+                // NOTE: don't mark initialized until 3D actually starts, otherwise transient timing can
+                // permanently disable the carousel.
                 if (window._avatarCarouselSystemInitialized) {
                     console.log('[Avatar] Carousel system already initialized, skipping');
                     return;
                 }
-                window._avatarCarouselSystemInitialized = true;
                 console.log('[Avatar] Initializing carousel system...');
                 
                 // Clean up any existing timers first to prevent doubles
@@ -15643,12 +15680,37 @@
                     window._guestCarouselTimer = null;
                 }
                 
-                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
-                if (typeof initGuestAvatar3DCarousel === 'function') {
+                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D.
+                // Retry because vendor scripts load with defer and may not be ready at first call.
+                const tryInit3D = () => {
+                    if (typeof initGuestAvatar3DCarousel !== 'function') {
+                        console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                        return false;
+                    }
                     const ok = !!initGuestAvatar3DCarousel();
                     console.log('[Avatar] 3D carousel initialized:', ok);
-                } else {
-                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                    if (ok) {
+                        window._avatarCarouselSystemInitialized = true;
+                    }
+                    return ok;
+                };
+
+                // Try immediately
+                if (!tryInit3D()) {
+                    // Then retry a few times (best effort) without collapsing the layout.
+                    let attempts = 0;
+                    const maxAttempts = 12;
+                    const t = setInterval(() => {
+                        attempts += 1;
+                        if (tryInit3D()) {
+                            clearInterval(t);
+                            return;
+                        }
+                        if (attempts >= maxAttempts) {
+                            clearInterval(t);
+                            console.warn('[Avatar] 3D carousel did not initialize after retries (GLB-only policy); leaving carousel area in place');
+                        }
+                    }, 750);
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);

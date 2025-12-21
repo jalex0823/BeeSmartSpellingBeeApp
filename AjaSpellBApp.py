@@ -842,43 +842,61 @@ def api_avatars():
     # Build role-aware list
     result = []
 
-    # Guest rule: only show the Mascot Bee avatar (full color); hide all others
+    # Guests: return the full catalog with lock state so the UI (and guest carousel)
+    # can rotate through all avatars. Guests never have purchases.
     if role == 'guest':
-        guest_list = []
-        try:
-            # Prefer Mascot Bee for guests
-            mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
-            # Fallback to Honey Comb if Mascot is missing
-            if mascot is None:
-                mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
-
-            if mascot is not None:
-                thumb = _avatar_thumbnail_url_from_glb(mascot.get('obj_file'))
-                obj_file = mascot.get('obj_file') or ''
-                # GLB avatars are in glb_files folder, not individual avatar folders
+        guest_result = []
+        for entry in AVATAR_CATALOG:
+            try:
+                lc = _is_avatar_unlocked_for_user(entry, role, None)
+                is_unlocked = bool(lc.get('unlocked'))
+                thumb = _avatar_thumbnail_url_from_glb(entry.get('obj_file'))
+                obj_file = entry.get('obj_file') or ''
                 glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-                guest_list.append({
-                    'id': mascot.get('id'),
-                    'name': mascot.get('name'),
-                    'tier': mascot.get('tier'),
-                    'category': mascot.get('category'),
-                    'description': mascot.get('description'),
-                    'price_usd': float(mascot.get('price') or 0.0) if mascot.get('price') is not None else None,
-                    'unlock_requirement': int(mascot.get('unlock_points') or 0) or None,
-                    'is_locked': False,  # Full color for the one visible guest avatar
+
+                price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
+                unlock_points_val = int(entry.get('unlock_points') or 0) or None
+
+                unlock_msg = ''
+                try:
+                    if is_unlocked:
+                        unlock_msg = 'Unlocked'
+                    else:
+                        tier_norm = (entry.get('tier') or '').lower()
+                        if tier_norm == 'earn_or_buy':
+                            unlock_msg = 'Earn Honey Points or purchase to unlock.'
+                        elif tier_norm == 'premium':
+                            unlock_msg = f"Purchase to unlock{f' for ${price_val:.2f}' if price_val else ''}."
+                        else:
+                            unlock_msg = (lc.get('reason') or 'Locked')
+                except Exception:
+                    unlock_msg = (lc.get('reason') or 'Locked')
+
+                guest_result.append({
+                    'id': entry.get('id'),
+                    'name': entry.get('name'),
+                    'tier': entry.get('tier'),
+                    'category': entry.get('category'),
+                    'description': entry.get('description'),
+                    'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
+                    'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
+                    'price': price_val,
+                    'unlock_points': unlock_points_val,
+                    'unlock_message': unlock_msg,
+                    'product_id': None,
+                    'is_locked': not is_unlocked,
                     'urls': {
                         'thumbnail': thumb,
                         'glb': glb_url
                     }
                 })
-        except Exception as _e:
-            print(f"️ Guest avatar list build error: {_e}")
+            except Exception as _e:
+                print(f"️ Guest avatar build error for {entry.get('id')}: {_e}")
 
-        # Cache and return minimal guest payload (no other avatars exposed)
-        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_list }
+        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_result }
         return jsonify({
             "status": "success",
-            "avatars": guest_list,
+            "avatars": guest_result,
             "cached": False,
             "purchased_avatars": [],
             "purchased_bundles": [],
