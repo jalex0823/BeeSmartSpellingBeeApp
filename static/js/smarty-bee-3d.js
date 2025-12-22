@@ -228,6 +228,54 @@ class SmartyBee3D {
             canvasEl.style.marginRight = 'auto';
             canvasEl.style.maxWidth = '100%';
             canvasEl.style.flexShrink = '0';
+
+            const forceCentered = () => {
+                try {
+                    // Make sure we have a positioning context so absolute centering works.
+                    let cs = null;
+                    try { cs = window.getComputedStyle(this.container); } catch (_e) {}
+                    if (!cs || cs.position === 'static') {
+                        this.container.style.position = 'relative';
+                    }
+
+                    // Anchor at 50/50 like the guest carousel does.
+                    canvasEl.style.position = 'absolute';
+                    canvasEl.style.top = '50%';
+                    canvasEl.style.left = '50%';
+                    canvasEl.style.transform = 'translate(-50%, -50%)';
+                } catch (_e) {
+                    // ignore
+                }
+            };
+
+            // If the container establishes a positioning context (recommended),
+            // anchor the canvas at 50/50 like the guest carousel does.
+            // This avoids Safari flexbox rounding/layout quirks that can
+            // right-shift <canvas> elements.
+            try {
+                const cs = window.getComputedStyle(this.container);
+                if (cs && cs.position && cs.position !== 'static') {
+                    forceCentered();
+                }
+            } catch (_e) {
+                // ignore
+            }
+
+            // iOS Safari: the first layout pass can happen *after* canvas insertion,
+            // leaving it uncentered on initial load. Re-assert over a few frames.
+            try {
+                this._forceCanvasCentered = forceCentered;
+                requestAnimationFrame(() => {
+                    forceCentered();
+                    setTimeout(forceCentered, 60);
+                    setTimeout(forceCentered, 220);
+                });
+                window.addEventListener('resize', forceCentered, { passive: true });
+                window.addEventListener('orientationchange', forceCentered, { passive: true });
+                window.addEventListener('pageshow', forceCentered, { passive: true });
+            } catch (_e) {
+                // ignore
+            }
         } catch (e) {
             // ignore
         }
@@ -246,6 +294,14 @@ class SmartyBee3D {
         }
 
         this.container.appendChild(this.renderer.domElement);
+        // Re-assert centering after insertion (iOS Safari can shift after append).
+        try {
+            if (typeof this._forceCanvasCentered === 'function') {
+                this._forceCanvasCentered();
+            }
+        } catch (_e) {
+            // ignore
+        }
         return true;
     }
 
