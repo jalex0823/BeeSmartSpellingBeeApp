@@ -149,3 +149,6 @@ node_modules/
 # Transient wordbank storage files (runtime-generated; not source-controlled)
 data/wordbanks/*.json
 ios/
+
+# Capacitor iOS wrapper lives under /mobile/ios and should be source-controlled
+!mobile/ios/
