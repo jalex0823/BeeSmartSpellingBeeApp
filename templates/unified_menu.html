@@ -6388,7 +6388,9 @@
             if (element) {
                 element.classList.add('active');
                 //  Auto-scroll to the selected option on mobile
-                autoScrollToElement(element);
+                if (type !== 'random') {
+                    autoScrollToElement(element);
+                }
             }
             currentSelection = type;
             
@@ -7236,17 +7238,17 @@
                 align-items: center;
                 justify-content: center;
                 z-index: 10020;
-                padding: 1.5rem;
+                padding: clamp(0.75rem, 3.5vw, 1.5rem);
                 animation: fadeIn 0.3s ease;
             `;
 
             modal.innerHTML = `
                 <div style="
-                    max-width: 450px;
+                    max-width: min(450px, 92vw);
                     width: 100%;
                     background: linear-gradient(135deg, #FFF0F6 0%, #FFFAE3 100%);
                     border-radius: 24px;
-                    padding: 2rem;
+                    padding: clamp(1rem, 4.5vw, 2rem);
                     text-align: center;
                     box-shadow: 0 18px 40px rgba(255, 182, 193, 0.45);
                     border: 3px solid rgba(255, 107, 157, 0.4);
@@ -7339,9 +7341,10 @@
                         gap: 1rem;
                         justify-content: center;
                         margin-top: 1.5rem;
+                        flex-wrap: wrap;
                     ">
                         <button id="randomPlaySubmit" style="
-                            flex: 1;
+                            flex: 1 1 220px;
                             background: linear-gradient(135deg, #FF6B9D 0%, #C44569 100%);
                             color: white;
                             border: none;
@@ -7367,6 +7370,7 @@
                             cursor: pointer;
                             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
                             transition: all 0.3s ease;
+                            flex: 0 1 auto;
                         ">
                             Cancel
                         </button>
@@ -7376,7 +7380,9 @@
 
             document.body.appendChild(modal);
             autoCenterModal(modal); //  Auto-center for mobile
-            autoRevealNextAction(modal);
+            autoRevealNextAction(modal, {
+                selectors: ['#randomPlaySubmit', '#difficultySlider', 'button.action-btn.primary:not([disabled])', 'button:not([disabled])']
+            });
 
             // Level data for display
             const levelData = {
@@ -7413,7 +7419,9 @@
             const randomPlaySubmitBtn = document.getElementById('randomPlaySubmit');
             
             // Click handler for desktop
-            randomPlaySubmitBtn.addEventListener('click', () => {
+            randomPlaySubmitBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const level = parseInt(slider.value);
                 console.log(' Submit button clicked! Level:', level);
                 modal.remove();
@@ -7422,7 +7430,9 @@
             
             //  iOS FIX: Touch handler for instant response on iPhone/iPad
             randomPlaySubmitBtn.addEventListener('touchend', (e) => {
-                e.preventDefault(); // Prevent 300ms click delay on iOS
+                // iOS: make it instant and prevent ghost-click + modal outside-click interference
+                e.preventDefault();
+                e.stopPropagation();
                 const level = parseInt(slider.value);
                 console.log(' Submit button touched (iOS)! Level:', level);
                 modal.remove();
@@ -7453,13 +7463,16 @@
             // Close button
             const randomPlayCloseBtn = document.getElementById('randomPlayClose');
             
-            randomPlayCloseBtn.addEventListener('click', () => {
+            randomPlayCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 modal.remove();
             });
             
             //  iOS FIX: Touch handler for instant close on iPhone/iPad
             randomPlayCloseBtn.addEventListener('touchend', (e) => {
-                e.preventDefault(); // Prevent 300ms click delay on iOS
+                e.preventDefault();
+                e.stopPropagation();
                 modal.remove();
             }, { passive: false });
 
@@ -7469,9 +7482,11 @@
                     modal.remove();
                 }
             });
-            
-            //  Auto-scroll to submit button on mobile for better visibility
-            autoCenterModal(modal);
+
+            // Ensure the primary CTA is visible on small screens (iOS sometimes lays out after a tick)
+            setTimeout(() => {
+                autoRevealNextAction(modal, { selectors: ['#randomPlaySubmit', '#difficultySlider', 'button:not([disabled])'] });
+            }, 120);
         }
 
         function generateRandomWords(difficulty) {
