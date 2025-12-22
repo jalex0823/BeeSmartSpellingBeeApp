@@ -9733,6 +9733,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const resolveQuizStartAction = async () => {
         try {
+            // iOS/Safari Resume is too error-prone (gesture-gating + backgrounding + session quirks).
+            // For now, we intentionally disable Resume on these browsers.
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isIOS || isSafari) {
+                return 'start_new';
+            }
+
             // Compute a stable fingerprint for the *current* loaded wordbank.
             // Resume should only be offered if the server-side quiz state belongs to this exact list.
             const normalizeWord = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
