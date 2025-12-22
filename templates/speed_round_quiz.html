@@ -828,6 +828,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
 {% endblock %}
 
 {% block content %}
+
+<!-- iOS Safari Gesture Gate: displayed only on iOS to ensure a user gesture before starting -->
+<div id="speedRoundStartGate" style="display:none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="max-width: 520px; width: 100%; background: #fff; border-radius: 18px; padding: 1.25rem 1.25rem 1.5rem; box-shadow: 0 18px 50px rgba(0,0,0,0.35); text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 900; color: #2C5F2D; margin-bottom: 0.5rem;">Speed Round</div>
+        <div style="font-size: 1rem; font-weight: 700; color: #1f2937; margin-bottom: 0.9rem;">
+            Tap Start to begin (required on iPhone/iPad for audio).
+        </div>
+        <button id="speedRoundStartGateBtn" style="padding: 0.95rem 1.6rem; font-size: 1.15rem; background: linear-gradient(135deg, #FFD93D 0%, #FFB300 100%); color: #2C5F2D; border: none; border-radius: 999px; cursor: pointer; font-weight: 900; box-shadow: 0 10px 25px rgba(255, 179, 0, 0.35); border: 3px solid rgba(44, 95, 45, 0.25);">
+            ▶ Start
+        </button>
+        <div style="margin-top: 0.8rem; font-size: 0.95rem; color: #4b5563; font-weight: 600;">
+            If it still gets stuck, use the retry button below.
+        </div>
+    </div>
+</div>
 <!-- Bee Swarm Voice Visualizer Background -->
 <div id="beeSwarmVisualizerContainer" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;"></div>
 
@@ -1158,16 +1174,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // iOS Critical Fix: Set up event listeners IMMEDIATELY on page load
     // Don't wait for speech synthesis to complete
     setupEventListeners();
-    
-    // iOS Speech Synthesis Fix: Force initialization with user interaction
+
+    // IMPORTANT (iOS Safari): speech + audio + even some fetches can behave differently
+    // unless triggered from a direct user gesture. To avoid stalls, we require a one-tap
+    // Start gesture on iOS before beginning the round.
+    if (isIOS()) {
+        showSpeedRoundStartGate();
+        return;
+    }
+
+    // Non-iOS: continue as before.
+    // Speech Synthesis init is best-effort here; iOS is handled by the Start gate.
     initializeSpeechSynthesisForIOS();
-    
+
     // Announce Speed Round intro first, then load first word.
-    // IMPORTANT (iOS Safari): speechSynthesis can fail to fire onend/onerror if not
-    // initiated from a direct user gesture. That can stall the entire round.
-    // So on iOS we skip the intro speech and start immediately.
     announceSpeedRoundIntro();
 });
+
+function showSpeedRoundStartGate() {
+    try {
+        const overlay = document.getElementById('speedRoundStartGate');
+        const btn = document.getElementById('speedRoundStartGateBtn');
+        const status = document.getElementById('voiceStatus');
+        if (!overlay || !btn) {
+            // Fail open: if overlay isn't present for any reason, just start.
+            setTimeout(() => loadNextWord(), 150);
+            return;
+        }
+
+        if (status) status.textContent = 'Tap Start to begin';
+        overlay.style.display = 'flex';
+
+        // Guard against double-init
+        if (overlay.dataset.started === '1') return;
+        overlay.dataset.started = '1';
+
+        const startFromGesture = () => {
+            try { overlay.style.display = 'none'; } catch (_) {}
+
+            // Kick iOS speech synthesis *from the gesture*.
+            try { initializeSpeechSynthesisForIOS(); } catch (_) {}
+
+            // Try to unlock audio *from the gesture*.
+            try {
+                const startSound = new Audio('/static/sounds/speed-round-start.mp3');
+                startSound.volume = 0.35;
+                startSound.play().catch(() => {});
+            } catch (_) {}
+
+            // Start immediately (no intro speech on iOS)
+            setTimeout(() => loadNextWord(), 100);
+        };
+
+        btn.addEventListener('click', (e) => { e.preventDefault(); startFromGesture(); }, { once: true });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); startFromGesture(); }, { once: true });
+    } catch (e) {
+        // Fail open
+        setTimeout(() => loadNextWord(), 150);
+    }
+}
 
 // iOS requires speechSynthesis to be triggered by user interaction
 function initializeSpeechSynthesisForIOS() {
@@ -1401,16 +1466,46 @@ async function loadNextWord() {
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout (allows dictionary pre-load)
         
         const response = await fetch('/api/speed-round/next', {
-            signal: controller.signal
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
         });
         clearTimeout(timeoutId);
         
         // Guard: Check response is valid
-        if (!response || !response.ok) {
-            throw new Error('Failed to fetch next word from server');
+        if (!response) {
+            throw new Error('No response from server');
+        }
+
+        // If the session is missing, some setups may redirect to HTML.
+        const contentType = (response.headers && response.headers.get('content-type')) ? response.headers.get('content-type') : '';
+        if (response.redirected || (contentType && !contentType.includes('application/json'))) {
+            const msg = 'Your Speed Round session may have expired. Please go back to setup and start again.';
+            showErrorBoundary('Speed Round Session', msg);
+            try {
+                const retryBtn = document.getElementById('errorRetryBtn');
+                if (retryBtn) retryBtn.style.display = 'inline-block';
+            } catch (_) {}
+            return;
+        }
+
+        if (!response.ok) {
+            // Provide a more actionable message for common auth/session failures.
+            const status = response.status;
+            const msg = (status === 401 || status === 403)
+                ? 'Speed Round is not active (session blocked). Please go back to setup and start again.'
+                : `Failed to fetch next word (HTTP ${status}).`;
+            showErrorBoundary('Speed Round Error', msg);
+            try {
+                const retryBtn = document.getElementById('errorRetryBtn');
+                if (retryBtn) retryBtn.style.display = 'inline-block';
+            } catch (_) {}
+            return;
         }
         
-        const data = await response.json();
+    const data = await response.json();
         
         // Guard: Validate data structure
         if (!data || typeof data !== 'object') {
