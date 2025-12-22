@@ -472,6 +472,16 @@ if ('speechSynthesis' in window) {
         border-radius: 0 8px 8px 0;
         line-height: 1.6;
     }
+
+    /* Honey Hint override: gentle fade-in so it visually takes precedence */
+    .definition-display.hint-fade-in {
+        animation: hintFadeIn 240ms ease-out;
+    }
+
+    @keyframes hintFadeIn {
+        from { opacity: 0.0; transform: translateY(4px); }
+        to { opacity: 1.0; transform: translateY(0); }
+    }
     
     .definition-display .example-label {
         font-weight: 600;
@@ -4951,6 +4961,9 @@ class QuizManager {
         
         // 💡 Hint tracking for current word
         this.hintUsedThisWord = false; // Track if hint was used for current word
+    // If user explicitly requests Honey Hint, it should override sentence display
+    // (until the next word is loaded or user shows sentence again).
+    this.hintOverrideActive = false;
         
         // 🔄 Retry System Tracking
         this.retryAvailable = false; // Can the user retry this word?
@@ -5931,6 +5944,7 @@ class QuizManager {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
             this.hintUsedThisWord = false;
+            this.hintOverrideActive = false;
             
             const response = await fetch('/api/next', { 
                 method: 'POST',
@@ -5980,7 +5994,9 @@ class QuizManager {
             }
             
             let chosen = '';
-            if (data.sentence) {
+            // If Honey Hint is active, do not overwrite the display with the sentence.
+            // (Hint is answered via /api/hint and displayed separately.)
+            if (!this.hintOverrideActive && data.sentence) {
                 console.log('✓ Using sentence:', data.sentence);
                 chosen = data.sentence;
             } else if (data.hint) {
@@ -7454,6 +7470,7 @@ class QuizManager {
         try {
             // Mark that hint was used for this word (affects points calculation)
             this.hintUsedThisWord = true;
+            this.hintOverrideActive = true;
             console.log('🍯 Honey Hint requested');
 
             const resp = await fetch('/api/hint', {
@@ -7478,6 +7495,10 @@ class QuizManager {
             const d = document.getElementById('definitionDisplay');
             if (d) {
                 d.style.display = 'block';
+                // Fade-in so it's clear the hint is overriding whatever was shown.
+                d.classList.remove('hint-fade-in');
+                void d.offsetWidth;
+                d.classList.add('hint-fade-in');
                 if (hintText || sentenceText) {
                     d.innerHTML = `
                         ${hintText ? `<div class="word-definition"><span class="definition-number">💡</span>${hintText}</div>` : ''}
@@ -9680,14 +9701,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const onKeyDown = (e) => {
                 if (e.key === 'Escape') {
                     cleanup();
-                    resolve('resume');
+                    // Safer default: if the modal is dismissed, prefer starting fresh
+                    // rather than risk resuming the wrong list (especially on mobile).
+                    resolve('start_new');
                 }
             };
 
             const onBackdropClick = (e) => {
                 if (e.target === modal) {
                     cleanup();
-                    resolve('resume');
+                    // Safer default: backdrop dismiss starts new.
+                    resolve('start_new');
                 }
             };
 
@@ -9702,7 +9726,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resolve('start_new');
             };
 
-            // Backdrop click defaults to resume
+            // Backdrop click defaults to start_new
             modal.addEventListener('click', onBackdropClick);
         });
     };
@@ -9758,9 +9782,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const unfinished = Number.isFinite(idx) && Number.isFinite(tot) && tot > 0 && idx < tot;
                 const stateFp = data?.state?.wordbank_fingerprint || '';
 
+                // Hard rule: NEVER offer Resume unless we can confidently match the list.
+                // If fingerprinting fails (common on older iOS/Safari contexts), fall back to start_new.
                 if (unfinished && stateFp && currentFp && stateFp === currentFp) {
                     return await showResumeOrRestartModal(data);
                 }
+                // If unfinished but we can't match fingerprints, explicitly do NOT resume.
                 // If we can't confidently match the list, treat as a new quiz start.
             }
         } catch (e) {
