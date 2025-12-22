@@ -303,6 +303,21 @@ def init_quiz_state(total_words: int):
     order = list(range(total_words))
     random.shuffle(order)
 
+    # Fingerprint the active wordbank so "resume" can be safely gated to the same list.
+    # We fingerprint ONLY the normalized words (not sentences/hints) so it stays stable.
+    try:
+        wb = get_wordbank() or []
+        normalized_words = []
+        for rec in wb:
+            w = rec.get('word', '') if isinstance(rec, dict) else str(rec or '')
+            w = normalize(str(w))
+            if w:
+                normalized_words.append(w)
+        joined = '|'.join(normalized_words)
+        wordbank_fingerprint = hashlib.sha256(joined.encode('utf-8')).hexdigest() if joined else ''
+    except Exception:
+        wordbank_fingerprint = ''
+
     db_session_id = None
     user_obj = get_or_create_guest_user()
 
@@ -335,7 +350,8 @@ def init_quiz_state(total_words: int):
         "session_points": 0,
         "hints_used_current_word": 0,
         "history": [],
-        "db_session_id": db_session_id
+        "db_session_id": db_session_id,
+        "wordbank_fingerprint": wordbank_fingerprint,
     }
     session.permanent = True
     session.modified = True
@@ -3406,6 +3422,11 @@ def api_quiz_resume():
         if qs is not None:
             idx = int(qs.get("idx", 0) or 0)
             order = qs.get("order", []) or []
+
+            # If the quiz is already completed (idx at/after total), do not offer resume.
+            if len(order) > 0 and idx >= len(order):
+                return jsonify({'status': 'success', 'resumed': False, 'in_progress': False})
+
             return jsonify({
                 'status': 'success',
                 'resumed': True,
@@ -3416,6 +3437,7 @@ def api_quiz_resume():
                     'total_words': len(order),
                     'correct': int(qs.get("correct", 0) or 0),
                     'incorrect': int(qs.get("incorrect", 0) or 0),
+                    'wordbank_fingerprint': qs.get('wordbank_fingerprint', ''),
                 }
             })
 

@@ -6760,9 +6760,21 @@ class QuizManager {
             speakButton.addEventListener('click', () => {
                 console.log('🔊 Pronounce button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                // Use the unified pronounce path (works for both normal + resume).
-                // Slower rate is a nice learning default.
-                this.pronounceWord({ refresh: true, rate: 0.7 });
+                // Pronounce should *repeat the spelling-bee ask*, then pronounce the word.
+                // The announce+pronounce sequence is handled inside loadNextWordWithIntro.
+                // Here we do a light-weight version: spoken prompt + pronounce.
+                try {
+                    const w = this.currentWordData?.word || this.currentWord?.word || '';
+                    if (w) {
+                        this.speakAnnouncement(`Please spell: ${w}`).then(() => {
+                            this.pronounceWord({ refresh: true, rate: 0.7 });
+                        });
+                    } else {
+                        this.pronounceWord({ refresh: true, rate: 0.7 });
+                    }
+                } catch (_e) {
+                    this.pronounceWord({ refresh: true, rate: 0.7 });
+                }
             });
         }
 
@@ -6776,7 +6788,7 @@ class QuizManager {
 
         if (getHintButton) getHintButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
-            this.getDefinition({ refresh: true });
+            this.getHint();
         });
         if (skipButton) skipButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
@@ -7432,6 +7444,60 @@ class QuizManager {
             if (d) {
                 d.style.display = 'block';
                 d.textContent = 'Please spell the word you hear.';
+            }
+        }
+    }
+
+    // 🍯 Honey Hint: use the dedicated /api/hint endpoint (does not require a word payload)
+    // This keeps the semantics clean: Hint button -> hint endpoint, not definition endpoint.
+    async getHint() {
+        try {
+            // Mark that hint was used for this word (affects points calculation)
+            this.hintUsedThisWord = true;
+            console.log('🍯 Honey Hint requested');
+
+            const resp = await fetch('/api/hint', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await resp.json().catch(() => null);
+            if (!resp.ok || !data || data.error) {
+                console.warn('🍯 Honey Hint failed:', resp.status, data);
+                const d = document.getElementById('definitionDisplay');
+                if (d) {
+                    d.style.display = 'block';
+                    d.textContent = 'Hint not available right now. Try Pronounce Word again.';
+                }
+                return;
+            }
+
+            const hintText = (data.hint || '').trim();
+            const sentenceText = (data.sentence || '').trim();
+            const d = document.getElementById('definitionDisplay');
+            if (d) {
+                d.style.display = 'block';
+                if (hintText || sentenceText) {
+                    d.innerHTML = `
+                        ${hintText ? `<div class="word-definition"><span class="definition-number">💡</span>${hintText}</div>` : ''}
+                        ${sentenceText ? `
+                            <div class="sentence-example" style="margin-top:0.6rem;">
+                                <span class="example-label">Example:</span>
+                                <span class="example-text">${sentenceText}</span>
+                            </div>
+                        ` : ''}
+                    `;
+                } else {
+                    d.textContent = 'No hint available for this word.';
+                }
+            }
+        } catch (e) {
+            console.warn('🍯 Honey Hint exception:', e);
+            const d = document.getElementById('definitionDisplay');
+            if (d) {
+                d.style.display = 'block';
+                d.textContent = 'Hint not available right now. Please try again.';
             }
         }
     }
@@ -9643,6 +9709,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const resolveQuizStartAction = async () => {
         try {
+            // Compute a stable fingerprint for the *current* loaded wordbank.
+            // Resume should only be offered if the server-side quiz state belongs to this exact list.
+            const normalizeWord = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+            const stableWordbankFingerprint = async (words) => {
+                try {
+                    const joined = (Array.isArray(words) ? words : [])
+                        .map(x => (typeof x === 'string' ? x : (x && x.word) ? x.word : ''))
+                        .map(normalizeWord)
+                        .filter(Boolean)
+                        .join('|');
+                    const enc = new TextEncoder();
+                    const bytes = enc.encode(joined);
+                    if (window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function') {
+                        const buf = await window.crypto.subtle.digest('SHA-256', bytes);
+                        const arr = Array.from(new Uint8Array(buf));
+                        return arr.map(b => b.toString(16).padStart(2, '0')).join('');
+                    }
+                    // Fallback: non-crypto hash (good enough for gating, not security)
+                    let h = 2166136261;
+                    for (let i = 0; i < joined.length; i++) {
+                        h ^= joined.charCodeAt(i);
+                        h = Math.imul(h, 16777619);
+                    }
+                    return (h >>> 0).toString(16);
+                } catch (e) {
+                    console.warn('Wordbank fingerprint failed:', e);
+                    return '';
+                }
+            };
+
+            const currentWordbank = (window.__wordbankWords || []);
+            const currentFp = await stableWordbankFingerprint(currentWordbank);
+
             const resp = await fetch('/api/quiz/resume', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -9651,7 +9750,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             const data = await resp.json();
             if (data && data.status === 'success' && data.in_progress) {
-                return await showResumeOrRestartModal(data);
+                // Only offer resume if:
+                // 1) quiz state is unfinished AND
+                // 2) the saved quiz fingerprint matches the current loaded list.
+                const idx = Number(data?.state?.current_word_index ?? 0);
+                const tot = Number(data?.state?.total_words ?? 0);
+                const unfinished = Number.isFinite(idx) && Number.isFinite(tot) && tot > 0 && idx < tot;
+                const stateFp = data?.state?.wordbank_fingerprint || '';
+
+                if (unfinished && stateFp && currentFp && stateFp === currentFp) {
+                    return await showResumeOrRestartModal(data);
+                }
+                // If we can't confidently match the list, treat as a new quiz start.
             }
         } catch (e) {
             console.warn('⚠️ Resume check failed; starting new quiz:', e);
@@ -9674,6 +9784,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
         .then(async (data) => {
             console.log('✅ Wordbank loaded:', data.count, 'words');
+            // Stash words for resume gating fingerprint.
+            // Note: data.words may be array of strings or objects depending on endpoint implementation.
+            window.__wordbankWords = data.words || [];
             const params = new URLSearchParams(window.location.search);
             const autostart = params.get('autostart') === '1';
             const seed = params.get('seed') === '1';
