@@ -7540,7 +7540,42 @@
                             await WordBankManager.updateAllDisplays(true);
                             
                             // Show quiz-ready notification (async, uses WordBankManager)
-                            showQuizReadyNotification();                        // Show success message
+                            showQuizReadyNotification();
+
+                            // Auto-start: after Random Play finishes, start the quiz immediately (especially important on iOS where Start Quiz may be off-screen)
+                            // Keep a safety fallback modal only if auto-start can't trigger.
+                            let _randomPlayAutoStartFired = false;
+                            const tryAutoStartQuiz = () => {
+                                try {
+                                    if (_randomPlayAutoStartFired) return true;
+                                    const startBtn = document.getElementById('startQuizBtn') || document.getElementById('welcomeStartBtn');
+                                    if (!startBtn) return false;
+                                    // Make sure it's in view (helps Safari occasionally ignore clicks on off-screen elements)
+                                    try {
+                                        startBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                                    } catch (_e) {
+                                        try { startBtn.scrollIntoView(true); } catch (_e2) { /* ignore */ }
+                                    }
+                                    // Trigger the same behavior as a user tap
+                                    startBtn.click();
+                                    _randomPlayAutoStartFired = true;
+                                    return true;
+                                } catch (e) {
+                                    console.warn('Auto-start quiz failed:', e);
+                                    return false;
+                                }
+                            };
+
+                            // First attempt: right away (after displays update)
+                            const didStartImmediately = tryAutoStartQuiz();
+
+                            // Second attempt: after a short tick (iOS layout timing)
+                            if (!didStartImmediately) {
+                                setTimeout(() => { tryAutoStartQuiz(); }, 180);
+                            }
+
+                        // If we successfully auto-started, don't interrupt the flow with a modal at all.
+                        // If we didn't, show a simple fallback message.
                         setTimeout(() => {
                             if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
                                 try {
@@ -7550,90 +7585,21 @@
                                 }
                             }
 
-                            openFriendlyInfoModal({
-                                title: ` ${data.count} Random Words Ready!`,
-                                message: `
-                                    <div style="text-align:center;">
-                                        <p style="margin:0 0 0.75rem 0;">We've picked <strong>${data.count}</strong> awesome words at difficulty level <strong>${difficulty}</strong> just for you!</p>
-                                        <p style="margin:0.5rem 0 0 0;">Tap below to start right away:</p>
-                                        <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap; margin-top:1rem;">
-                                            <button id="startQuizNowBtn" style="
-                                                background: linear-gradient(135deg, #FF6B9D 0%, #C44569 100%);
-                                                color: white;
-                                                border: none;
-                                                padding: 1rem 1.4rem;
-                                                border-radius: 15px;
-                                                font-size: 1rem;
-                                                font-weight: 800;
-                                                cursor: pointer;
-                                                box-shadow: 0 8px 22px rgba(255, 107, 157, 0.45);
-                                            "> Start Quiz Now</button>
-                                            <button id="scrollToStartQuizBtn" style="
-                                                background: linear-gradient(135deg, #A5F3FC 0%, #FBCFE8 100%);
-                                                color: #1F2937;
-                                                border: none;
-                                                padding: 1rem 1.2rem;
-                                                border-radius: 15px;
-                                                font-size: 1rem;
-                                                font-weight: 700;
-                                                cursor: pointer;
-                                                box-shadow: 0 8px 22px rgba(165, 243, 252, 0.35);
-                                            "> Show Start Button</button>
-                                        </div>
-                                    </div>
-                                `,
-                                buttonText: "Close"
-                            });
+                            // If auto-start fired, we're done—let the quiz UI take over.
+                            if (_randomPlayAutoStartFired) {
+                                return;
+                            }
 
-                            // Wire the in-modal CTA to the real Start Quiz button so it's never "hidden" behind the menu.
-                            setTimeout(() => {
-                                try {
-                                    const modalEl = document.getElementById('kidFriendlyModal');
-                                    const startBtn = document.getElementById('startQuizBtn') || document.getElementById('welcomeStartBtn');
-
-                                    const revealStartBtn = () => {
-                                        if (!startBtn) return;
-                                        try {
-                                            startBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                                        } catch (_e) {
-                                            try { startBtn.scrollIntoView(true); } catch (_e2) { /* ignore */ }
-                                        }
-                                    };
-
-                                    // As soon as the modal is open, also ensure the Start Quiz button is on screen behind it.
-                                    revealStartBtn();
-
-                                    const startNow = document.getElementById('startQuizNowBtn');
-                                    const scrollOnly = document.getElementById('scrollToStartQuizBtn');
-
-                                    if (scrollOnly) {
-                                        scrollOnly.addEventListener('click', (e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            // Close modal and reveal button
-                                            if (modalEl) modalEl.remove();
-                                            setTimeout(revealStartBtn, 60);
-                                        });
-                                    }
-
-                                    if (startNow) {
-                                        const fireStart = (e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            if (modalEl) modalEl.remove();
-                                            setTimeout(() => {
-                                                revealStartBtn();
-                                                // Trigger the same behavior as tapping the real button
-                                                try { startBtn?.click(); } catch (_e) { /* ignore */ }
-                                            }, 80);
-                                        };
-                                        startNow.addEventListener('click', fireStart);
-                                        startNow.addEventListener('touchend', fireStart, { passive: false });
-                                    }
-                                } catch (e) {
-                                    console.warn('Start Quiz Now wiring failed:', e);
-                                }
-                            }, 80);
+                            // Only show a modal if we weren't able to auto-start.
+                            // This keeps the flow 1-tap (difficulty -> quiz) instead of requiring another tap.
+                            const stillNotStarted = !tryAutoStartQuiz();
+                            if (stillNotStarted) {
+                                openFriendlyInfoModal({
+                                    title: ` ${data.count} Random Words Ready!`,
+                                    message: `We picked <strong>${data.count}</strong> words at difficulty <strong>${difficulty}</strong>. Tap <strong>Start Quiz</strong> to begin!`,
+                                    buttonText: "OK"
+                                });
+                            }
                         }, 500);
                     }, 800);
                 } else {
