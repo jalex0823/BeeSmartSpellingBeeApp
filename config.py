@@ -5,6 +5,7 @@ Environment-based configuration for development and production
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv
 
@@ -52,17 +53,49 @@ class Config:
     # Security
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production-abc123'
     
+    def _normalize_database_url(raw: str) -> str:
+        """Normalize DATABASE_URL / DIGITALOCEAN_DATABASE_URL.
+
+        - Accepts Railway-style postgres://
+        - Keeps SQLite URLs unchanged
+        - DigitalOcean Managed Postgres commonly *requires* SSL; if the URL doesn't
+          specify sslmode, we default to sslmode=require.
+        """
+        if not raw:
+            return raw
+
+        # Keep SQLite (and any non-postgres) URLs as-is.
+        if raw.startswith('sqlite:'):
+            return raw
+
+        # Fix for Railway's postgres:// vs postgresql://
+        if raw.startswith('postgres://'):
+            raw = raw.replace('postgres://', 'postgresql://', 1)
+
+        if not raw.startswith('postgresql://'):
+            return raw
+
+        # Ensure sslmode is present (DigitalOcean typically needs it).
+        try:
+            parts = urlsplit(raw)
+            q = dict(parse_qsl(parts.query, keep_blank_values=True))
+            if 'sslmode' not in {k.lower(): v for k, v in q.items()}:
+                q['sslmode'] = 'require'
+                parts = parts._replace(query=urlencode(q))
+                return urlunsplit(parts)
+        except Exception:
+            # If parsing fails, return raw; SQLAlchemy will raise a helpful error.
+            return raw
+
+        return raw
+
     # Database - Auto-detect from environment or default to SQLite
     # Allow DIGITALOCEAN_DATABASE_URL as a friendly alias during migration.
-    SQLALCHEMY_DATABASE_URI = (
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
         os.environ.get('DATABASE_URL')
         or os.environ.get('DIGITALOCEAN_DATABASE_URL')
         or 'sqlite:///beesmart.db'
     )
-    
-    # Fix for Railway's postgres:// vs postgresql://
-    if SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False  # Set to True for query debugging
