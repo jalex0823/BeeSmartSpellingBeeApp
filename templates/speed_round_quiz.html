@@ -1162,7 +1162,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // iOS Speech Synthesis Fix: Force initialization with user interaction
     initializeSpeechSynthesisForIOS();
     
-    // Announce Speed Round intro first, then load first word
+    // Announce Speed Round intro first, then load first word.
+    // IMPORTANT (iOS Safari): speechSynthesis can fail to fire onend/onerror if not
+    // initiated from a direct user gesture. That can stall the entire round.
+    // So on iOS we skip the intro speech and start immediately.
     announceSpeedRoundIntro();
 });
 
@@ -1200,6 +1203,14 @@ function announceSpeedRoundIntro() {
         startSound.play().catch(() => {});
     } catch(e) {}
     
+    // iOS Safari (and iPadOS-in-desktop-mode) often blocks speech without a direct
+    // user gesture; if we try anyway, the intro can stall and the round never starts.
+    if (isIOS()) {
+        status.textContent = '🐝 Starting...';
+        setTimeout(() => loadNextWord(), 150);
+        return;
+    }
+
     if (!('speechSynthesis' in window)) {
         // If no speech support, just start the round
         // Note: Event listeners already set up on DOMContentLoaded
@@ -1214,12 +1225,12 @@ function announceSpeedRoundIntro() {
                   "You'll have a short timer for each word. " +
                   "Listen, type fast, and earn bonus points. Starting now!";
     
-    // iOS Fix: Cancel any existing speech with delay
+    // Cancel any existing speech with delay
     speechSynthesis.cancel();
     
     // iOS Fix: Add 100ms delay after cancel
     setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(intro);
+    const utterance = new SpeechSynthesisUtterance(intro);
         utterance.pitch = 1.0; // Natural neutral female voice
         utterance.rate = 0.92; // Faster pacing for speed round intro
         utterance.volume = 0.9;
@@ -1258,29 +1269,37 @@ function announceSpeedRoundIntro() {
             }
         };
         
-        utterance.onend = () => {
-            visualizer.classList.remove('speaking');
+        // Safety: if onend/onerror never fires (Safari edge case), don't stall.
+        const safetyMs = Math.min(6500, 1200 + intro.length * 35);
+        let finished = false;
+        const finishIntro = () => {
+            if (finished) return;
+            finished = true;
+            try { visualizer.classList.remove('speaking', 'word-pulse', 'pausing'); } catch (_) {}
             status.textContent = '🐝 Ready';
-            // Start the actual quiz after intro
-            setTimeout(() => {
-                loadNextWord();
-                // Note: setupEventListeners() already called on DOMContentLoaded for iOS compatibility
-            }, 150);
+            setTimeout(() => loadNextWord(), 150);
+        };
+        const introSafetyTimer = setTimeout(() => {
+            console.warn('⏱️ Speed Round intro TTS did not finish; continuing via safety fallback');
+            finishIntro();
+        }, safetyMs);
+
+        utterance.onend = () => {
+            clearTimeout(introSafetyTimer);
+            finishIntro();
         };
         
         utterance.onerror = () => {
-            visualizer.classList.remove('speaking');
-            // Start anyway if there's an error
-            loadNextWord();
-            // Note: setupEventListeners() already called on DOMContentLoaded for iOS compatibility
+            clearTimeout(introSafetyTimer);
+            finishIntro();
         };
         
         try {
             speechSynthesis.speak(utterance);
         } catch (err) {
             console.error('speechSynthesis.speak failed:', err);
-            // Trigger onend behavior manually
-            if (typeof utterance.onend === 'function') utterance.onend();
+            clearTimeout(introSafetyTimer);
+            finishIntro();
         }
         
         // iOS fallback - reload voices if empty
