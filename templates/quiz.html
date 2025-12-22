@@ -3560,6 +3560,13 @@ async function loadSampleWords() {
                                 case 'skip': return pulse(300);
                                 case 'feedback-correct': return speak(700);
                                 case 'feedback-incorrect': return pulse(520);
+
+                                    // In resume mode, client state can be stale; ensure we always fetch a fresh next word.
+                                    // Also clear any lingering UI lock states that could make resume feel "stuck".
+                                    this.lastPronounceData = null;
+                                    if (this.spellingInput) {
+                                        this.spellingInput.value = '';
+                                    }
                                 default: return pulse(180);
                             }
                         }
@@ -3583,10 +3590,27 @@ async function loadSampleWords() {
                     // Store smoothed amplitudes per layer
                     let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
 
+
+                                        // Resume can sometimes desync; try a non-destructive resume advance as a fallback.
+                                        if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
+                                            try {
+                                                window.forceResumeAdvance();
+                                            } catch (e) {
+                                                console.warn('forceResumeAdvance fallback failed after skip error:', e);
+                                            }
+                                        }
                     // Draw smooth waveform with multiple translucent layers
                     function drawHorizontalWaveform() {
                         ctx.clearRect(0, 0, W, H);
                         
+
+                                    if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
+                                        try {
+                                            window.forceResumeAdvance();
+                                        } catch (e) {
+                                            console.warn('forceResumeAdvance fallback failed after skip exception:', e);
+                                        }
+                                    }
                         const centerY = H / 2;
                         const buffer = 40; // Increased safety buffer from edges to prevent clipping
                         const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
@@ -3765,11 +3789,6 @@ async function loadSampleWords() {
                 Pronounce Word
             </button>
             
-            <button type="button" class="action-btn secondary" id="repeatButton">
-                <span class="bee-icon" aria-hidden="true">🔁</span>
-                Repeat
-            </button>
-            
             <!-- Definition/Sentence Helper Buttons -->
             <button type="button" class="action-btn secondary" id="showDefinitionButton">
                 <span class="bee-icon" aria-hidden="true">📖</span>
@@ -3790,6 +3809,11 @@ async function loadSampleWords() {
             </button>
             <button type="button" class="action-btn secondary" id="skipButton">
                 Skip Word
+            </button>
+            <!-- Resume safety: always provide an obvious "reset/refresh" when resume stalls -->
+            <button type="button" class="action-btn secondary" id="refreshResumeButton" style="display:none;">
+                <span class="bee-icon" aria-hidden="true">🔄</span>
+                Reset / Refresh
             </button>
             <button type="button" class="action-btn retry" id="retryButton" disabled>
                 <span class="bee-icon" aria-hidden="true">🔄</span>
@@ -6682,13 +6706,13 @@ class QuizManager {
         const spellingInput = document.getElementById('spellingInput');
         const submitButton = document.getElementById('submitButton');
         const speakButton = document.getElementById('speakButton');
-        const repeatButton = document.getElementById('repeatButton');
         const getHintButton = document.getElementById('getHintButton');
         const skipButton = document.getElementById('skipButton');
         const restartButton = document.getElementById('restartButton');
+        const refreshResumeButton = document.getElementById('refreshResumeButton');
 
         // Add buzz sounds to all buttons
-        const allButtons = [submitButton, speakButton, repeatButton, getHintButton, skipButton, restartButton];
+        const allButtons = [submitButton, speakButton, getHintButton, skipButton, restartButton, refreshResumeButton];
         allButtons.forEach(button => {
             if (button) {
                 // Hover sound
@@ -6712,20 +6736,20 @@ class QuizManager {
             }
         });
 
-        submitButton.addEventListener('click', () => {
+        if (submitButton) submitButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
             this.submitAnswer();
         });
         
         // 🍎 iOS FIX: Add touch event for submit button to prevent iOS double-tap delay
-        submitButton.addEventListener('touchend', (e) => {
+        if (submitButton) submitButton.addEventListener('touchend', (e) => {
             if (this.isIOS || this.isSafari) {
                 e.preventDefault();
                 try { window.BeeVoiceViz?.react('submit'); } catch (err) {}
                 this.submitAnswer();
             }
         }, { passive: false });
-        spellingInput.addEventListener('keyup', (event) => {
+        if (spellingInput) spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
                 try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
                 this.submitAnswer();
@@ -6736,23 +6760,25 @@ class QuizManager {
             speakButton.addEventListener('click', () => {
                 console.log('🔊 Pronounce button clicked');
                 try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.pronounceWordSlow(); // Pronounce at slower speed for learning
+                // Use the unified pronounce path (works for both normal + resume).
+                // Slower rate is a nice learning default.
+                this.pronounceWord({ refresh: true, rate: 0.7 });
             });
         }
 
-        if (repeatButton) {
-            repeatButton.addEventListener('click', () => {
-                console.log('🔁 Repeat button clicked');
-                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
-                this.repeatWord(); // Repeat at normal speed
-            });
-        }
+        // Compatibility: If any legacy code still tries to "repeat", treat it as pronounce.
+        // We intentionally removed the Repeat UI because Pronounce covers the same user intent.
+        try {
+            if (typeof this.repeatWord !== 'function') {
+                this.repeatWord = () => this.pronounceWordSlow();
+            }
+        } catch (_e) {}
 
-        getHintButton.addEventListener('click', () => {
+        if (getHintButton) getHintButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
             this.getDefinition({ refresh: true });
         });
-        skipButton.addEventListener('click', () => {
+        if (skipButton) skipButton.addEventListener('click', () => {
             try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
             this.skipWord();
         });
@@ -6794,7 +6820,32 @@ class QuizManager {
             });
         }
         
-        restartButton.addEventListener('click', () => this.restartQuiz());
+        if (restartButton) restartButton.addEventListener('click', () => this.restartQuiz());
+
+        // Show + wire "Reset / Refresh" in resume mode as a safety hatch.
+        // - If resume is stalled: use forceResumeAdvance (safe + idempotent)
+        // - If user wants to fully reset: call restartQuiz
+        try {
+            if (refreshResumeButton) {
+                if (this.startMode === 'resume') {
+                    refreshResumeButton.style.display = '';
+                }
+                refreshResumeButton.addEventListener('click', async () => {
+                    try { window.BeeVoiceViz?.react('button'); } catch (_e) {}
+                    // Prefer a non-destructive advance first (break out of stalled UI)
+                    if (this.startMode === 'resume' && typeof this.forceResumeAdvance === 'function') {
+                        this.forceResumeAdvance();
+                        return;
+                    }
+                    // Fallback: restart the quiz session
+                    if (typeof this.restartQuiz === 'function') {
+                        await this.restartQuiz();
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('refreshResumeButton wiring failed:', e);
+        }
 
         // Voice toggle button
         const voiceToggleBtn = document.getElementById('voiceToggleBtn');
@@ -6808,7 +6859,7 @@ class QuizManager {
             musicToggleBtn.addEventListener('click', () => this.toggleMusic());
         }
 
-        spellingInput.focus();
+        if (spellingInput) spellingInput.focus();
     }
 
     // Show voice intro modal for iOS/Safari
@@ -7286,11 +7337,19 @@ class QuizManager {
             const data = await this.fetchPronounce(options.refresh);
             if (!data) {
                 // Set a default message if API fails
-                document.getElementById('definitionDisplay').textContent = 'Please spell the word you hear.';
+                const d = document.getElementById('definitionDisplay');
+                if (d) {
+                    d.style.display = 'block';
+                    d.textContent = 'Please spell the word you hear.';
+                }
                 return;
             }
 
             const definitionElement = document.getElementById('definitionDisplay');
+            if (definitionElement) {
+                // The panel is hidden by default in markup; always show it when providing content.
+                definitionElement.style.display = 'block';
+            }
             
             // Format the definition in dictionary style
             const fullText = data.definition || 'Please spell the word you hear.';
@@ -7369,7 +7428,11 @@ class QuizManager {
         } catch (error) {
             console.error('Error getting definition:', error);
             // Set fallback message instead of breaking the quiz
-            document.getElementById('definitionDisplay').textContent = 'Please spell the word you hear.';
+            const d = document.getElementById('definitionDisplay');
+            if (d) {
+                d.style.display = 'block';
+                d.textContent = 'Please spell the word you hear.';
+            }
         }
     }
 
@@ -9338,7 +9401,16 @@ function startLiveStatusPolling(intervalMs = 5000) {
                     BeeSmart.updateScoreDisplay(progress);
                 }
                 if (typeof BeeSmart.updateProgressDisplays === 'function') {
-                    BeeSmart.updateProgressDisplays(data.index, data.total);
+                    // Some versions expect (index,total); others expect a single object.
+                    try {
+                        BeeSmart.updateProgressDisplays(data.index, data.total);
+                    } catch (e) {
+                        try {
+                            BeeSmart.updateProgressDisplays(progress);
+                        } catch (_) {
+                            // Ignore: fallback below will cover DOM.
+                        }
+                    }
                 }
             } else {
                 // Fallback DOM direct updates
@@ -9372,6 +9444,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
 
     try {
+        // Ensure live-status polling starts even in resume mode.
+        // If polling is already running, startLiveStatusPolling is a no-op.
+        startLiveStatusPolling();
         // 🎭 MorphController INTENTIONALLY REMOVED (was causing errors)
         // All morph functionality has been disabled throughout the quiz
         debugLog('🎭 Morph controller DISABLED (visualization removed)');
