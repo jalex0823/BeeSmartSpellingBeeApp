@@ -16,10 +16,12 @@ except ImportError:
     print("⚠️  Could not load avatar_catalog.py")
     AVATAR_CATALOG = []
 
-# Paths
-GLB_DIR = Path("/Users/jalex0823/Dropbox/GitBackUpAppFolder/static/assets/avatars/glb_files")
+# Paths (default to this repo's checked-in assets)
+REPO_ROOT = Path(__file__).resolve().parent
+AVATARS_DIR = REPO_ROOT / "static" / "assets" / "avatars"
+GLB_DIR = AVATARS_DIR / "glb_files"
 THUMB_DIR = GLB_DIR / "AvatarThumbnails"
-OUTPUT_DIR = Path("/Users/jalex0823/Dropbox/GitBackUpAppFolder/static/assets/avatars/app_store_cards")
+OUTPUT_DIR = AVATARS_DIR / "app_store_cards"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Card settings - Apple App Store IAP screenshot format
@@ -36,46 +38,47 @@ def get_avatar_info(glb_filename):
     base = os.path.splitext(glb_filename)[0]
     
     # App Store metadata mapping
+    # NOTE: Do not include price strings here; promotional imagery/metadata should not embed pricing.
     app_store_data = {
-        'AlBee': {'sku': 'al_bee', 'product_id': 'beesmart.avatar.al_bee', 'tier': 'premium', 'price': '$1.99'},
-        'BrotherBee': {'sku': 'brother_bee', 'product_id': 'beesmart.avatar.brother_bee', 'tier': 'default_free', 'price': '$0.00'},
-        'BudaBee': {'sku': 'buda_bee', 'product_id': 'beesmart.avatar.buda_bee', 'tier': 'premium', 'price': '$0.99'},
-        'BuilderBee': {'sku': 'builder_bee', 'product_id': 'beesmart.avatar.builder_bee', 'tier': 'default_free', 'price': '$0.00'},
-        'BuzzBee': {'sku': 'buzz_bee', 'product_id': 'beesmart.avatar.buzz_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'CoolBee': {'sku': 'cool_bee', 'product_id': 'beesmart.avatar.cool_bee', 'tier': 'default_free', 'price': '$0.00'},
-        'CutieBee': {'sku': 'cutie_bee', 'product_id': 'beesmart.avatar.cutie_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'DetectiveBee': {'sku': 'detective_bee', 'product_id': 'beesmart.avatar.detective_bee', 'tier': 'default_free', 'price': '$0.00'},
-        'DivaBee': {'sku': 'diva_bee', 'product_id': 'beesmart.avatar.diva_bee', 'tier': 'premium', 'price': '$1.99'},
-        'DocBee': {'sku': 'doc_bee', 'product_id': 'beesmart.avatar.doc_bee', 'tier': 'premium', 'price': '$0.99'},
-        'ExplorerBee': {'sku': 'explorer_bee', 'product_id': 'beesmart.avatar.explorer_bee', 'tier': 'default_free', 'price': '$0.00'},
-        'FrankenBee': {'sku': 'franken_bee', 'product_id': 'beesmart.avatar.franken_bee', 'tier': 'premium', 'price': '$0.99'},
-        'GamerBee': {'sku': 'gamer_bee', 'product_id': 'beesmart.avatar.gamer_bee', 'tier': 'premium', 'price': '$1.99'},
-        'HoneyCombBee': {'sku': 'honey_comb', 'product_id': 'beesmart.avatar.honey_comb', 'tier': 'premium', 'price': '$0.99'},
-        'InventorBee': {'sku': 'inventor_bee', 'product_id': 'beesmart.avatar.inventor_bee', 'tier': 'premium', 'price': '$1.99'},
-        'JRockBee': {'sku': 'j_rock_bee', 'product_id': 'beesmart.avatar.j_rock_bee', 'tier': 'premium', 'price': '$0.99'},
-        'BeeKnight': {'sku': 'knight_bee', 'product_id': 'beesmart.avatar.knight_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'LumberjackBee': {'sku': 'lumberjack_bee', 'product_id': 'beesmart.avatar.lumberjack_bee', 'tier': 'premium', 'price': '$1.99'},
-        'MascotBee': {'sku': 'mascot_bee', 'product_id': 'beesmart.avatar.mascot_bee', 'tier': 'mascot', 'price': '$0.00'},
-        'MotorBee': {'sku': 'motor_bee', 'product_id': 'beesmart.avatar.motor_bee', 'tier': 'premium', 'price': '$0.99'},
-        'NurseBee': {'sku': 'nurse_bee', 'product_id': 'beesmart.avatar.nurse_bee', 'tier': 'premium', 'price': '$1.99'},
-        'OBee': {'sku': 'o_bee', 'product_id': 'beesmart.avatar.o_bee', 'tier': 'premium', 'price': '$0.99'},
-        'PlumberBee': {'sku': 'plumber_bee', 'product_id': 'beesmart.avatar.plumber_bee', 'tier': 'premium', 'price': '$1.99'},
-        'ProfessorBee': {'sku': 'professor_bee', 'product_id': 'beesmart.avatar.professor_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'QueenBee': {'sku': 'queen_bee', 'product_id': 'beesmart.avatar.queen_bee', 'tier': 'premium', 'price': '$1.99'},
-        'RoboBee': {'sku': 'robo_bee', 'product_id': 'beesmart.avatar.robo_bee', 'tier': 'premium', 'price': '$1.99'},
-        'RockerBee': {'sku': 'rocker_bee', 'product_id': 'beesmart.avatar.rocker_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'Seabea': {'sku': 'sea_bee', 'product_id': 'beesmart.avatar.sea_bee', 'tier': 'premium', 'price': '$0.99'},
-        'SelfieBee': {'sku': 'selfie_bee', 'product_id': 'beesmart.avatar.selfie_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'SingerBee': {'sku': 'singer_bee', 'product_id': 'beesmart.avatar.singer_bee', 'tier': 'premium', 'price': '$0.99'},
-        'SpaceBee': {'sku': 'space_bee', 'product_id': 'beesmart.avatar.space_bee', 'tier': 'premium', 'price': '$0.99'},
-        'SuperBee': {'sku': 'super_bee', 'product_id': 'beesmart.avatar.super_bee', 'tier': 'premium', 'price': '$0.99'},
-        'TechnoBee': {'sku': 'techno_bee', 'product_id': 'beesmart.avatar.techno_bee', 'tier': 'premium', 'price': '$1.99'},
-        'UmpireBee': {'sku': 'umpire_bee', 'product_id': 'beesmart.avatar.umpire_bee', 'tier': 'premium', 'price': '$1.99'},
-        'VampBee': {'sku': 'vamp_bee', 'product_id': 'beesmart.avatar.vamp_bee', 'tier': 'earn_or_buy', 'price': '$0.99'},
-        'WareBee': {'sku': 'ware_bee', 'product_id': 'beesmart.avatar.ware_bee', 'tier': 'premium', 'price': '$1.99'},
-        'XrayBee': {'sku': 'xray_bee', 'product_id': 'beesmart.avatar.xray_bee', 'tier': 'premium', 'price': '$1.99'},
-        'YetiBee': {'sku': 'yeti_bee', 'product_id': 'beesmart.avatar.yeti_bee', 'tier': 'premium', 'price': '$1.99'},
-        'ZomBee': {'sku': 'zom_bee', 'product_id': 'beesmart.avatar.zom_bee', 'tier': 'premium', 'price': '$1.99'}
+        'AlBee': {'sku': 'al_bee', 'product_id': 'beesmart.avatar.al_bee', 'tier': 'premium'},
+        'BrotherBee': {'sku': 'brother_bee', 'product_id': 'beesmart.avatar.brother_bee', 'tier': 'default_free'},
+        'BudaBee': {'sku': 'buda_bee', 'product_id': 'beesmart.avatar.buda_bee', 'tier': 'premium'},
+        'BuilderBee': {'sku': 'builder_bee', 'product_id': 'beesmart.avatar.builder_bee', 'tier': 'default_free'},
+        'BuzzBee': {'sku': 'buzz_bee', 'product_id': 'beesmart.avatar.buzz_bee', 'tier': 'earn_or_buy'},
+        'CoolBee': {'sku': 'cool_bee', 'product_id': 'beesmart.avatar.cool_bee', 'tier': 'default_free'},
+        'CutieBee': {'sku': 'cutie_bee', 'product_id': 'beesmart.avatar.cutie_bee', 'tier': 'earn_or_buy'},
+        'DetectiveBee': {'sku': 'detective_bee', 'product_id': 'beesmart.avatar.detective_bee', 'tier': 'default_free'},
+        'DivaBee': {'sku': 'diva_bee', 'product_id': 'beesmart.avatar.diva_bee', 'tier': 'premium'},
+        'DocBee': {'sku': 'doc_bee', 'product_id': 'beesmart.avatar.doc_bee', 'tier': 'premium'},
+        'ExplorerBee': {'sku': 'explorer_bee', 'product_id': 'beesmart.avatar.explorer_bee', 'tier': 'default_free'},
+        'FrankenBee': {'sku': 'franken_bee', 'product_id': 'beesmart.avatar.franken_bee', 'tier': 'premium'},
+        'GamerBee': {'sku': 'gamer_bee', 'product_id': 'beesmart.avatar.gamer_bee', 'tier': 'premium'},
+        'HoneyCombBee': {'sku': 'honey_comb', 'product_id': 'beesmart.avatar.honey_comb', 'tier': 'premium'},
+        'InventorBee': {'sku': 'inventor_bee', 'product_id': 'beesmart.avatar.inventor_bee', 'tier': 'premium'},
+        'JRockBee': {'sku': 'j_rock_bee', 'product_id': 'beesmart.avatar.j_rock_bee', 'tier': 'premium'},
+        'BeeKnight': {'sku': 'knight_bee', 'product_id': 'beesmart.avatar.knight_bee', 'tier': 'earn_or_buy'},
+        'LumberjackBee': {'sku': 'lumberjack_bee', 'product_id': 'beesmart.avatar.lumberjack_bee', 'tier': 'premium'},
+        'MascotBee': {'sku': 'mascot_bee', 'product_id': 'beesmart.avatar.mascot_bee', 'tier': 'mascot'},
+        'MotorBee': {'sku': 'motor_bee', 'product_id': 'beesmart.avatar.motor_bee', 'tier': 'premium'},
+        'NurseBee': {'sku': 'nurse_bee', 'product_id': 'beesmart.avatar.nurse_bee', 'tier': 'premium'},
+        'OBee': {'sku': 'o_bee', 'product_id': 'beesmart.avatar.o_bee', 'tier': 'premium'},
+        'PlumberBee': {'sku': 'plumber_bee', 'product_id': 'beesmart.avatar.plumber_bee', 'tier': 'premium'},
+        'ProfessorBee': {'sku': 'professor_bee', 'product_id': 'beesmart.avatar.professor_bee', 'tier': 'earn_or_buy'},
+        'QueenBee': {'sku': 'queen_bee', 'product_id': 'beesmart.avatar.queen_bee', 'tier': 'premium'},
+        'RoboBee': {'sku': 'robo_bee', 'product_id': 'beesmart.avatar.robo_bee', 'tier': 'premium'},
+        'RockerBee': {'sku': 'rocker_bee', 'product_id': 'beesmart.avatar.rocker_bee', 'tier': 'earn_or_buy'},
+        'Seabea': {'sku': 'sea_bee', 'product_id': 'beesmart.avatar.sea_bee', 'tier': 'premium'},
+        'SelfieBee': {'sku': 'selfie_bee', 'product_id': 'beesmart.avatar.selfie_bee', 'tier': 'earn_or_buy'},
+        'SingerBee': {'sku': 'singer_bee', 'product_id': 'beesmart.avatar.singer_bee', 'tier': 'premium'},
+        'SpaceBee': {'sku': 'space_bee', 'product_id': 'beesmart.avatar.space_bee', 'tier': 'premium'},
+        'SuperBee': {'sku': 'super_bee', 'product_id': 'beesmart.avatar.super_bee', 'tier': 'premium'},
+        'TechnoBee': {'sku': 'techno_bee', 'product_id': 'beesmart.avatar.techno_bee', 'tier': 'premium'},
+        'UmpireBee': {'sku': 'umpire_bee', 'product_id': 'beesmart.avatar.umpire_bee', 'tier': 'premium'},
+        'VampBee': {'sku': 'vamp_bee', 'product_id': 'beesmart.avatar.vamp_bee', 'tier': 'earn_or_buy'},
+        'WareBee': {'sku': 'ware_bee', 'product_id': 'beesmart.avatar.ware_bee', 'tier': 'premium'},
+        'XrayBee': {'sku': 'xray_bee', 'product_id': 'beesmart.avatar.xray_bee', 'tier': 'premium'},
+        'YetiBee': {'sku': 'yeti_bee', 'product_id': 'beesmart.avatar.yeti_bee', 'tier': 'premium'},
+        'ZomBee': {'sku': 'zom_bee', 'product_id': 'beesmart.avatar.zom_bee', 'tier': 'premium'}
     }
     
     # Get catalog info
@@ -98,7 +101,6 @@ def get_avatar_info(glb_filename):
         'sku': base.lower(),
         'product_id': f'beesmart.avatar.{base.lower()}',
         'tier': 'premium',
-        'price': '$0.99'
     })
     
     return {**catalog_info, **store_data}
@@ -160,12 +162,8 @@ def create_app_store_card(avatar_img, info, width=CARD_WIDTH, height=CARD_HEIGHT
     ]
     draw.rounded_rectangle(plate_rect, radius=15, fill=HONEY_GOLD)
     
-    # Price badge (top left corner - orange circle)
-    price_size = 90  # Circle diameter from sample
-    price_pos = (margin + 20, margin + 20)
-    price_color = (255, 150, 50, 255) if info.get('price') != '$0.00' else (100, 200, 100, 255)
-    draw.ellipse([price_pos[0], price_pos[1], price_pos[0] + price_size, price_pos[1] + price_size], 
-                 fill=price_color)
+    # NOTE: Apple 2.3.2 compliance — do NOT render any price text/symbols on promotional images.
+    # Keep the design clean by omitting the price badge entirely.
     
     # Tier badge (top right corner - yellow circle)
     tier_size = 90  # Circle diameter from sample
@@ -241,18 +239,7 @@ def create_app_store_card(avatar_img, info, width=CARD_WIDTH, height=CARD_HEIGHT
     draw.text((text_x, text_y), tier_text, fill=TEXT_DARK, font=small_font)
     text_y += 23  # Line spacing
     
-    # Price (line 5)
-    price_text = f"Price: {info.get('price', '$0.99')}"
-    draw.text((text_x, text_y), price_text, fill=TEXT_DARK, font=info_font)
-    
-    # Add price to price badge (centered in circle)
-    price_display = info.get('price', '$0.99').replace('$0.00', 'FREE')
-    price_bbox = draw.textbbox((0, 0), price_display, font=price_font)
-    price_text_w = price_bbox[2] - price_bbox[0]
-    price_text_h = price_bbox[3] - price_bbox[1]
-    price_text_x = price_pos[0] + (price_size - price_text_w) // 2
-    price_text_y = price_pos[1] + (price_size - price_text_h) // 2 - 2  # Slight adjustment
-    draw.text((price_text_x, price_text_y), price_display, fill=(255, 255, 255, 255), font=price_font)
+    # No price text on the card.
     
     return card
 

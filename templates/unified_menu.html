@@ -110,7 +110,9 @@
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251203" defer></script>
     
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
-    {% set _is_auth = 'true' if current_user.is_authenticated else 'false' %}
+    {# App Review / demo mode: when enabled, allow reviewers to navigate without login #}
+    {% set _review_mode = 'true' if session.get('app_review_mode') else 'false' %}
+    {% set _is_auth = 'true' if (current_user.is_authenticated or session.get('app_review_mode')) else 'false' %}
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
     {% set _billing_mode = (registration_billing_mode or 'subscription') %}
     {% set _subscription_sku = subscription_product_id if subscription_product_id is defined else '' %}
@@ -118,6 +120,7 @@
     <script>
         // CRITICAL: Set auth state EARLY so tile-locking logic works correctly
         window.IS_AUTH = {{ _is_auth }};
+    window.APP_REVIEW_MODE = {{ _review_mode }};
         window.IS_PREMIUM = {{ _is_premium }};
         window.BILLING_MODE = '{{ _billing_mode }}';
         window.SUBSCRIPTION_SKU = '{{ _subscription_sku }}';
@@ -202,6 +205,17 @@
                         if (typeof showLockedFeature === 'function') { showLockedFeature(msg); }
                         else { alert(msg); }
                         return;
+                    }
+
+                    // App Review expects tapping "Restore" to initiate the platform restore flow.
+                    // If the native wrapper supports it, trigger restore/sync first.
+                    if (typeof window.BeeSmartIAP.restore === 'function') {
+                        try {
+                            await Promise.resolve(window.BeeSmartIAP.restore());
+                        } catch(e) {
+                            // Do not fail hard here; continue to owned-products lookup.
+                            console.warn('[restorePurchases] native restore failed:', e);
+                        }
                     }
 
                     const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
@@ -3997,7 +4011,6 @@
                     </button>
                 </div>
 
-                {% if current_user.is_authenticated %}
                 <!-- App Store compliance: explicit Restore Purchases control (requires native wrapper) -->
                 <div style="margin-top: 8px;">
                     <button id="restorePurchasesBtn" onclick="restorePurchases()" style="
@@ -4015,11 +4028,28 @@
                         Restore Purchases
                     </button>
                 </div>
-                {% endif %}
                 
                 <!-- Kid-Safe Content Badge -->
                 <div class="kid-safe-badge" style="margin-top: 14px;">
                     <span>Kid-Safe Content</span>
+                </div>
+
+                <!-- App Store compliance: Terms/EULA link must be accessible in-app -->
+                <div style="margin-top: 10px;">
+                    <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" style="
+                        display: inline-block;
+                        color: rgba(60, 32, 12, 0.85);
+                        background: rgba(255, 255, 255, 0.6);
+                        border: 1px solid rgba(60, 32, 12, 0.15);
+                        border-radius: 12px;
+                        padding: 6px 12px;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        text-decoration: none;
+                        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+                    " title="View Terms of Use / EULA">
+                        Terms of Use (EULA)
+                    </a>
                 </div>
             </section>
 
@@ -4490,8 +4520,8 @@
                 </div>
 
                 <!-- Upload Image -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="image" data-lockmsg="Image Upload" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
-                    {% if not current_user.is_authenticated %}
+                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="image" data-lockmsg="Image Upload" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth == 'true' %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
+                    {% if _is_auth != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">Sign In to Unlock</div>
@@ -4512,8 +4542,8 @@
                 </div>
 
                 <!-- Saved Word Lists -->
-                <div id="tileSavedLists" class="menu-option theme-lavender {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="saved" data-lockmsg="Saved Word Lists" onmouseover="kidSounds.playBuzz()" title="{% if current_user.is_authenticated %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
-                    {% if not current_user.is_authenticated %}
+                <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="saved" data-lockmsg="Saved Word Lists" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth == 'true' %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
+                    {% if _is_auth != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">Sign In to Unlock</div>
@@ -4535,10 +4565,10 @@
                 </div>
 
                 <!-- Battle of the Bees (temporarily offline / coming soon) -->
-                <div id="tileBattle" class="menu-option theme-battle locked-tile feature-disabled" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if current_user.is_authenticated %} Battles are coming soon — temporarily locked.{% else %} Sign in to unlock multiplayer battles!{% endif %}">
+                <div id="tileBattle" class="menu-option theme-battle locked-tile feature-disabled" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if _is_auth == 'true' %} Battles are coming soon — temporarily locked.{% else %} Sign in to unlock multiplayer battles!{% endif %}">
                     <div class="lock-overlay">
-                        <div class="lock-icon">{% if current_user.is_authenticated %}⏳{% else %}🔒{% endif %}</div>
-                        <div class="lock-text">{% if current_user.is_authenticated %}Coming Soon{% else %}Sign In to Unlock{% endif %}</div>
+                        <div class="lock-icon">{% if _is_auth == 'true' %}⏳{% else %}🔒{% endif %}</div>
+                        <div class="lock-text">{% if _is_auth == 'true' %}Coming Soon{% else %}Sign In to Unlock{% endif %}</div>
                     </div>
                     <div class="option-icon"></div>
                     <div class="option-title">Battle of the Bees</div>
@@ -4547,8 +4577,8 @@
                 </div>
 
                 <!-- Speed Round Challenge -->
-                <div id="tileSpeedRound" class="menu-option theme-lightning {% if not current_user.is_authenticated %}locked-tile{% endif %}" data-feature="speed" data-lockmsg="Speed Round Challenge" onmouseover="kidSounds.playSoftClick()" title="{% if current_user.is_authenticated %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
-                    {% if not current_user.is_authenticated %}
+                <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="speed" data-lockmsg="Speed Round Challenge" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth == 'true' %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
+                    {% if _is_auth != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">Sign In to Unlock</div>

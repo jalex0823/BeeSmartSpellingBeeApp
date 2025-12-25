@@ -9,6 +9,23 @@ import StoreKit
 @objc(BeeSmartIAPPlugin)
 public class BeeSmartIAPPlugin: CAPPlugin {
 
+    // Initiate a real platform restore flow.
+    // App Review expects tapping a distinct "Restore" control to trigger an OS-level restore/sync.
+    @objc func restorePurchases(_ call: CAPPluginCall) {
+        if #available(iOS 15.0, *) {
+            Task {
+                do {
+                    try await AppStore.sync()
+                    call.resolve(["success": true])
+                } catch {
+                    call.reject("restore_error: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            call.reject("requires_ios_15")
+        }
+    }
+
     @objc func getOwnedProducts(_ call: CAPPluginCall) {
         if #available(iOS 15.0, *) {
             Task {

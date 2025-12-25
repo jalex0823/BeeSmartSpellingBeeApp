@@ -62,10 +62,7 @@
 - [ ] **Teacher Account** - Register new teacher account
 - [ ] **Parent Account** - Register new parent account
 - [ ] **Field Validation** - Try invalid emails, weak passwords (should reject)
-- [ ] **BeeKey Field** - Enter valid BeeKey code during registration (if available)
-  - [ ] Verify avatar pack unlocks
-  - [ ] Try invalid/expired BeeKey code
-  - [ ] Verify registration continues even with bad BeeKey
+- [ ] **(Removed for App Store builds)** BeeKey field / code redemption - code-based digital unlock flows are not shown
 
 #### 2.2 Login & Sessions
 - [ ] **Successful Login** - Log in with valid credentials
@@ -115,11 +112,7 @@
 - [ ] **Edit/Delete Lists** - Edit and delete word lists
 
 #### 4.2 BeeKey System
-- [ ] **Admin Request Button** - On admin dashboard, verify "Request BeeKey Pack" button
-- [ ] **Contact Link** - Button links to contact page (no in-dashboard generation)
-- [ ] **No JavaScript Errors** - Check console for errors
-- [ ] **Redemption Flow** - Redeem BeeKey, verify avatars unlock
-- [ ] **Usage Limits** - Try redeeming same key twice (should reject if single-use)
+- [ ] **(Removed for App Store builds)** BeeKey system UI - code-based digital unlock flows are hidden/disabled
 
 ---
 
@@ -143,8 +136,7 @@
 #### 5.3 Avatar Bundles & BeeKey
 - [ ] **Bundle Purchase** - Purchase avatar bundle (e.g., Top Bee Bundle)
 - [ ] **Multiple Avatars Unlock** - Verify all bundle avatars unlock
-- [ ] **BeeKey Redemption** - Redeem BeeKey during registration
-- [ ] **Teacher Dashboard Redemption** - Redeem via teacher/parent dashboard
+- [ ] **(Removed for App Store builds)** BeeKey redemption - code-based digital unlock flows are hidden/disabled
 
 #### 5.4 IAP Configuration in App Store Connect
 - [ ] **20 Avatar Products Exist** - Verify all avatar IAP products configured

@@ -152,3 +152,12 @@ ios/
 
 # Capacitor iOS wrapper lives under /mobile/ios and should be source-controlled
 !mobile/ios/
+# Local smoke test reports
+smoke_test_report_*.json
+
+# One-off review/docs
+APP_REVIEW_REPLY_DRAFT_DEC2025.md
+APP_STORE_CONNECT_CHECKLIST_DEC2025.md
+
+# Local scratch scripts
+test_iap_guest_flow.py

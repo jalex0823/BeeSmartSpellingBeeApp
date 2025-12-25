@@ -30,6 +30,11 @@ from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_file, Response, send_from_directory
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+
+# App Review helpers
+# When enabled, we provide a reviewer-friendly path for Apple App Review to access
+# core premium flows without creating an account or relying on fragile demo creds.
+APP_REVIEW_MODE = os.environ.get('APP_REVIEW_MODE', '0').strip() == '1'
 from PIL import Image
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
@@ -384,13 +389,38 @@ def api_wordbank_get():
 def api_wordbank_set():
     try:
         data = request.get_json(silent=True) or {}
-        rows = data.get('rows') or []
+        # Accept both modern and legacy payload shapes.
+        # - Legacy: { rows: [...] }
+        # - Modern: { words: [...] }
+        rows = data.get('rows')
+        if rows is None:
+            rows = data.get('words')
+        rows = rows or []
         # NOTE: OLD implementation used clear_first, NEW uses is_user_upload
         # Treating POST to /api/wordbank as user upload (manual API call)
-        stored_count = len(rows)
+        # Ensure the session has a stable storage_id before persisting.
+        # This prevents a mismatch where the DB write happens under one ID
+        # but subsequent reads (e.g., /api/next) look up a different/empty ID.
+        sid = _ensure_session_storage_id()
+        # Force the session pointer to the ensured id so the DB write and later
+        # reads use the same storage id.
+        session["wordbank_storage_id"] = sid
+        session.permanent = True
+        session.modified = True
+
+        # Normalize/dedupe and keep it kid-friendly (same flow as other upload paths)
+        try:
+            rows = deduplicate_words(rows)
+        except Exception:
+            pass
+        try:
+            rows, _blocked = _filter_records_excluding_inappropriate_text(rows)  # noqa: F841
+        except Exception:
+            pass
+
         set_wordbank(rows, is_user_upload=True)
-        init_quiz_state(stored_count)
-        return jsonify({'status': 'success', 'stored': stored_count})
+        init_quiz_state(len(rows))
+        return jsonify({'status': 'success', 'stored': len(rows)})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
@@ -464,16 +494,24 @@ def api_wordbank_import_text():
 def api_wordbank_count():
     """Return counts and system checks for loading state."""
     try:
-        sid = _ensure_session_storage_id()
-        path = _wordbank_path(sid)
+        # IMPORTANT: Do NOT auto-create a new storage_id here.
+        # The authoritative wordbank lives in the database and is keyed by the
+        # session's existing wordbank_storage_id pointer.
+        sid = session.get("wordbank_storage_id")
         rows = get_wordbank()  # Always compute from authoritative source
-        exists = os.path.exists(path)
+
+        # Disk path is legacy; keep it only as a best-effort diagnostic.
+        exists = False
         last_modified = None
-        try:
-            if exists:
-                last_modified = datetime.fromtimestamp(os.path.getmtime(path)).isoformat()
-        except Exception:
-            last_modified = None
+        if sid:
+            try:
+                path = _wordbank_path(sid)
+                exists = os.path.exists(path)
+                if exists:
+                    last_modified = datetime.fromtimestamp(os.path.getmtime(path)).isoformat()
+            except Exception:
+                exists = False
+                last_modified = None
 
         return jsonify({
             'status': 'success',
@@ -683,6 +721,13 @@ def home_preview():
     return render_template('honey_home.html')
 
 
+# Backwards-compatible alias: some templates build URLs for endpoint "unified_menu".
+# Our home route is implemented as `home()`, so provide a stable alias to avoid 500s.
+@app.route('/unified_menu')
+def unified_menu():
+    return home()
+
+
 @app.route('/points-buzz-dust-explanation')
 def points_buzz_dust_explanation():
     """Show Points vs Buzz Dust explanation screen"""
@@ -736,8 +781,13 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     if role == 'admin':
         return {"unlocked": True, "reason": "Admin access", "points_needed": None}
 
-    # Guest: by product decision only show Honey Comb avatar; anything else considered locked/hidden
+    # Guest: normally limited; in App Review / demo mode allow reviewers to explore
     if role == 'guest':
+        try:
+            if APP_REVIEW_MODE or bool(session.get('app_review_mode')):
+                return {"unlocked": True, "reason": "App Review mode", "points_needed": 0}
+        except Exception:
+            pass
         return {"unlocked": False, "reason": "Guest access limited", "points_needed": None}
 
     # Registered users (student/teacher/parent)
@@ -2039,18 +2089,41 @@ if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
     speed_logger.info("Speed Round Railway configuration applied")
 
 
-# Enhanced session configuration for mobile compatibility
-# Detect if running on HTTPS (production) or HTTP (local dev)
-is_production = os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("PORT")
-print(f" Environment: {'PRODUCTION (Railway)' if is_production else 'DEVELOPMENT (Local)'}")
+"""Session/cookie config
+
+Key rule: only set Secure cookies when the client is actually using HTTPS.
+
+We previously treated DATABASE_URL as a production signal. That’s fine for many
+deploys, but locally we often point at a remote Postgres (DO/Railway) over *HTTP*
+on localhost. If we mark the session cookie as Secure in that case, the client
+correctly refuses to send it back over HTTP → a brand new session on every
+request → lost wordbank pointer and broken quiz flow.
+"""
+
+# Detect if we're deployed on Railway/hosted.
+# NOTE: local runs can still have DATABASE_URL set; don't use that alone to decide cookie security.
+is_deployed_env = bool(os.environ.get("RAILWAY_ENVIRONMENT"))
+
+# Explicit override for secure cookies (set this in real HTTPS production if needed).
+force_secure_cookie = os.environ.get("FORCE_SECURE_COOKIE", "0") == "1"
+
+# In practice, Secure cookies should only be enabled when the app is behind HTTPS.
+cookie_secure = bool(force_secure_cookie or is_deployed_env)
+
+print(f" Environment: {'PRODUCTION (Railway)' if is_deployed_env else 'DEVELOPMENT (Local)'}")
 
 app.config.update(
-    SESSION_COOKIE_SECURE=bool(is_production),  # True in production (HTTPS), False locally
+    SESSION_COOKIE_SECURE=cookie_secure,  # Only True when we're actually on HTTPS
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',  # Better mobile compatibility than 'Strict'
+    # Use Lax by default. (SameSite=None requires Secure=True, which we *cannot*
+    # use on local HTTP dev.)
+    SESSION_COOKIE_SAMESITE='Lax',
     PERMANENT_SESSION_LIFETIME=3600 * 24 * 7,  # 7 days (increased from 1 day)
     SESSION_COOKIE_NAME='beesmart_session',
-    SESSION_REFRESH_EACH_REQUEST=True,  # Keep session alive on activity
+    # Avoid re-issuing the session cookie on every request.
+    # When combined with other code paths that also touch `session`, this can
+    # lead to cookie churn and lost keys in some clients/tests.
+    SESSION_REFRESH_EACH_REQUEST=False,
     SESSION_COOKIE_PATH='/',  # Ensure cookie works across all paths
     SESSION_COOKIE_DOMAIN=None,  # Let Flask auto-detect domain
     MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
@@ -2087,6 +2160,16 @@ def _ensure_db_initialized() -> None:
                 print(" Initializing database schema (create_all)")
                 db.create_all()
                 print(" Database tables created")
+
+            # If server-side sessions are enabled, ensure the sessions table exists.
+            try:
+                if SESSION_INIT_SUCCESS:
+                    has_sessions = inspector.has_table('sessions')
+                    if not has_sessions:
+                        print(" Creating sessions table for Flask-Session...")
+                        db.create_all()
+            except Exception as _se:
+                print(f"️ sessions table check failed: {_se}")
             
             # Migration: Add is_favorite column if missing
             try:
@@ -2135,31 +2218,33 @@ def load_user(user_id):
     """Load user by ID for Flask-Login"""
     return User.query.get(int(user_id))
 
-# TEMPORARY: Disable database sessions to fix Railway deployment
-# Using default Flask sessions until we can diagnose the hanging issue
 SESSION_INIT_SUCCESS = False
-print("️ Database sessions temporarily disabled for Railway deployment")
-print("️ Using default Flask sessions (data may be lost on redeploy)")
 
-# TODO: Re-enable once Railway database connection is stable
-# try:
-#     from flask_session import Session
-#     app.config.update(
-#         SESSION_TYPE="sqlalchemy",
-#         SESSION_SQLALCHEMY=db,
-#         SESSION_SQLALCHEMY_TABLE='sessions',
-#         SESSION_PERMANENT=True,
-#         SESSION_USE_SIGNER=True,
-#         SESSION_KEY_PREFIX='beesmart_',
-#     )
-#     sess = Session(app)
-#     SESSION_INIT_SUCCESS = True
-#     print(" Flask-Session configured (database sessions enabled)")
-# except Exception as _e:
-#     print(f"️ Flask-Session failed: {_e}")
-#     SESSION_INIT_SUCCESS = False
+# Prefer server-side sessions when possible (more reliable for larger session state like pointers).
+# This is opt-in via env var to avoid reintroducing historical Railway hangs.
+if os.getenv("ALLOW_DB_SESSIONS", "0") == "1":
+    try:
+        from flask_session import Session
+        app.config.update(
+            SESSION_TYPE="sqlalchemy",
+            SESSION_SQLALCHEMY=db,
+            SESSION_SQLALCHEMY_TABLE="sessions",
+            SESSION_PERMANENT=True,
+            # Keep session IDs as plain strings; in some environments enabling the
+            # signer can cause bytes session IDs which break response.set_cookie.
+            SESSION_USE_SIGNER=False,
+            SESSION_KEY_PREFIX="beesmart_",
+        )
+        Session(app)
+        SESSION_INIT_SUCCESS = True
+        print(" Flask-Session configured (database sessions enabled)")
+    except Exception as _e:
+        print(f"️ Flask-Session failed, falling back to cookie sessions: {_e}")
+        SESSION_INIT_SUCCESS = False
+else:
+    print("️ Database sessions disabled (set ALLOW_DB_SESSIONS=1 to enable)")
 
-print(f" Session config: SECURE={app.config['SESSION_COOKIE_SECURE']}, SAMESITE={app.config['SESSION_COOKIE_SAMESITE']}, PRODUCTION={is_production}")
+print(f" Session config: SECURE={app.config['SESSION_COOKIE_SECURE']}, SAMESITE={app.config['SESSION_COOKIE_SAMESITE']}, DEPLOYED={is_deployed_env}")
 
 # Dev/test toggle for exposing reset token peek endpoint
 ALLOW_DEV_RESET_PEEK = os.getenv('ALLOW_DEV_RESET_PEEK') == '1'
@@ -2294,11 +2379,14 @@ def ensure_session():
     if request.path.startswith(('/static/', '/health', '/favicon.ico', '/.well-known/')):
         return
     
+    # Only manage our *internal* tracking id; do not touch the Flask-Session
+    # backing store id (cookie value), or it can cause sid churn.
     if not session.get("session_id"):
         session["session_id"] = str(uuid.uuid4())
+
+    # Mark permanent, but don't toggle it repeatedly.
+    if not session.permanent:
         session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
-    elif not session.permanent:
-        session.permanent = True  # Ensure existing sessions are permanent
 
 
 # --- Session Logging Helper --------------------------------------------------
@@ -4846,6 +4934,18 @@ def home():
 
 @app.route("/app")
 def app_home():
+    # App Review / demo mode toggle.
+    # Only respected when APP_REVIEW_MODE=1 to avoid exposing a public backdoor.
+    try:
+        if APP_REVIEW_MODE:
+            rv = (request.args.get('review') or '').strip().lower()
+            if rv in ('1', 'true', 'yes', 'on'):
+                session['app_review_mode'] = True
+            elif rv in ('0', 'false', 'no', 'off'):
+                session.pop('app_review_mode', None)
+    except Exception:
+        pass
+
     import time
     timestamp = str(int(time.time()))
     from flask import make_response
@@ -9406,7 +9506,6 @@ def _entitlements_summary(user: User) -> dict:
 
 
 @app.route('/api/iap/verify/<platform>', methods=['POST'])
-@login_required
 def api_iap_verify(platform):
     """Verify a purchase from App Store / Play Billing and apply entitlements.
     Request JSON:
@@ -9415,6 +9514,59 @@ def api_iap_verify(platform):
     platform = (platform or '').lower().strip()
     if platform not in ('apple', 'google', 'web'):
         return jsonify({"success": False, "error": "Unsupported platform"}), 400
+
+    # In tests (and optionally in local dev), allow bypassing store verification
+    # so guest-flow behavior can be validated without live App Store/Play calls.
+    if os.environ.get('DISABLE_IAP_STORE_VERIFY', '0').strip() == '1':
+        data = request.get_json(silent=True) or {}
+        product_id = data.get('product_id')
+        if not product_id:
+            return jsonify({"success": False, "error": "Missing product_id"}), 400
+
+        user_for_verify = current_user if current_user.is_authenticated else None
+        anon_restore_id = None
+        if user_for_verify is None:
+            try:
+                anon_restore_id = request.cookies.get('anon_restore_id')
+            except Exception:
+                anon_restore_id = None
+            if not anon_restore_id:
+                anon_restore_id = uuid.uuid4().hex
+
+        if user_for_verify is not None:
+            try:
+                _apply_entitlement(user_for_verify, product_id)
+            except Exception:
+                pass
+        else:
+            try:
+                owned = session.get('anon_owned_products')
+                if not isinstance(owned, list):
+                    owned = []
+                if product_id not in owned:
+                    owned.append(product_id)
+                session['anon_owned_products'] = owned
+            except Exception:
+                pass
+
+        resp = jsonify({
+            "success": True,
+            "message": "Purchase verified (bypass)",
+            "record_id": None,
+            "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
+        })
+        if anon_restore_id:
+            try:
+                resp.set_cookie(
+                    'anon_restore_id',
+                    anon_restore_id,
+                    max_age=60 * 60 * 24 * 365,
+                    httponly=True,
+                    samesite='Lax'
+                )
+            except Exception:
+                pass
+        return resp
 
     data = request.get_json(silent=True) or {}
     product_id = data.get('product_id')
@@ -9425,46 +9577,94 @@ def api_iap_verify(platform):
     if not product_id:
         return jsonify({"success": False, "error": "Missing product_id"}), 400
 
+    # Apple Guideline 5.1.1: users must not be forced to register/login before
+    # purchasing content that is not account-based. Support guest verification by
+    # tracking ownership against an anonymous id.
+    user_for_verify = current_user if current_user.is_authenticated else None
+    anon_restore_id = None
+    if user_for_verify is None:
+        try:
+            anon_restore_id = request.cookies.get('anon_restore_id')
+        except Exception:
+            anon_restore_id = None
+        if not anon_restore_id:
+            anon_restore_id = uuid.uuid4().hex
+
     # Create purchase record (pending)
-    rec = PurchaseRecord(
-        user_id=current_user.id,
-        platform=platform,
-        product_id=product_id,
-        status='pending',
-        transaction_id=transaction_id,
-        purchase_token=purchase_token,
-        raw_payload=payload or {}
-    )
-    db.session.add(rec)
-    db.session.flush()  # get rec.id
+    # IMPORTANT: Some deployments have PurchaseRecord.user_id as NOT NULL.
+    # Guest flows must not crash; for guests we skip DB writes and store
+    # entitlements against anon_owned_products + anon_restore_id instead.
+    bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1' or (user_for_verify is None)
+    rec = None
+    if not bypass_db:
+        rec = PurchaseRecord(
+            user_id=user_for_verify.id,
+            platform=platform,
+            product_id=product_id,
+            status='pending',
+            transaction_id=transaction_id,
+            purchase_token=purchase_token,
+            raw_payload={**(payload or {}), **({'anon_restore_id': anon_restore_id} if anon_restore_id else {})}
+        )
+        db.session.add(rec)
+        db.session.flush()  # get rec.id
 
     ok, status_msg, details = _verify_with_store(platform, data)
     if not ok:
-        rec.status = 'failed'
-        rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details}
-        db.session.commit()
-        return jsonify({"success": False, "error": status_msg, "record_id": rec.id}), 400
+        if rec is not None:
+            rec.status = 'failed'
+            rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details}
+            db.session.commit()
+        return jsonify({"success": False, "error": status_msg, "record_id": (rec.id if rec is not None else None)}), 400
 
     # Apply entitlements idempotently
-    apply_res = _apply_entitlement(current_user, product_id)
-    rec.status = 'verified'
-    rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details, 'apply_result': apply_res}
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+    if user_for_verify is not None:
+        apply_res = _apply_entitlement(user_for_verify, product_id)
+    else:
+        # Guest flow: record owned SKUs for this device/session.
+        # The UI can reflect ownership without an account.
+        try:
+            owned = session.get('anon_owned_products')
+            if not isinstance(owned, list):
+                owned = []
+            if product_id not in owned:
+                owned.append(product_id)
+            session['anon_owned_products'] = owned
+        except Exception:
+            pass
+        apply_res = {'applied': True, 'details': {'mode': 'anon_session'}}
+    if rec is not None:
+        rec.status = 'verified'
+        rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details, 'apply_result': apply_res}
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
 
-    return jsonify({
+    resp = jsonify({
         "success": True,
         "message": "Purchase verified",
-        "record_id": rec.id,
-        "entitlements": _entitlements_summary(current_user)
+        "record_id": (rec.id if rec is not None else None),
+        "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
     })
+
+    if anon_restore_id:
+        try:
+            resp.set_cookie(
+                'anon_restore_id',
+                anon_restore_id,
+                max_age=60 * 60 * 24 * 365,
+                httponly=True,
+                samesite='Lax'
+            )
+        except Exception:
+            pass
+
+    return resp
 
 
 @app.route('/api/iap/restore', methods=['POST'])
-@login_required
 def api_iap_restore():
     """Restore entitlements from a list of product IDs (client-side provenience).
     This is helpful when a user reinstalls or switches devices; the platform
@@ -9474,6 +9674,19 @@ def api_iap_restore():
     product_ids = data.get('product_ids') or []
     platform = (data.get('platform') or 'apple').lower()
     restore_id = uuid.uuid4().hex[:12]
+
+    # Apple Guideline 5.1.1: users must not be forced to register/login to restore
+    # non-account-based IAP purchases. For guests, we store restored entitlements
+    # against a device-scoped anonymous id cookie.
+    user_for_restore = current_user if current_user.is_authenticated else None
+    anon_restore_id = None
+    if user_for_restore is None:
+        try:
+            anon_restore_id = request.cookies.get('anon_restore_id')
+        except Exception:
+            anon_restore_id = None
+        if not anon_restore_id:
+            anon_restore_id = uuid.uuid4().hex
 
     def _extract_pid(x):
         """Accept either a string SKU or an object from native SDKs.
@@ -9501,6 +9714,12 @@ def api_iap_restore():
     if not isinstance(product_ids, list) or not product_ids:
         return jsonify({"success": False, "error": "product_ids must be a non-empty list"}), 400
 
+    # In tests (and optionally in local dev), allow bypassing DB writes
+    # so restore can succeed without requiring a live database.
+    # Also bypass for guest restores because some deployments enforce NOT NULL
+    # user_id for PurchaseRecord.
+    bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1' or (user_for_restore is None)
+
     # Normalize + de-dupe while preserving order
     normalized = []
     seen = set()
@@ -9521,7 +9740,12 @@ def api_iap_restore():
         }), 400
 
     try:
-        app.logger.info(f"IAP restore start restore_id={restore_id} user_id={getattr(current_user, 'id', None)} platform={platform} count_in={len(product_ids)} count_norm={len(normalized)}")
+        app.logger.info(
+            f"IAP restore start restore_id={restore_id} "
+            f"user_id={getattr(current_user, 'id', None) if current_user.is_authenticated else None} "
+            f"anon_id={'set' if anon_restore_id else None} platform={platform} "
+            f"count_in={len(product_ids)} count_norm={len(normalized)}"
+        )
     except Exception:
         pass
 
@@ -9531,9 +9755,23 @@ def api_iap_restore():
         had_error = False
         err_msg = None
         try:
-            res = _apply_entitlement(current_user, pid)
-            if res.get('applied'):
-                applied.append({"product_id": pid, **res})
+            if user_for_restore is not None:
+                res = _apply_entitlement(user_for_restore, pid)
+                if res.get('applied'):
+                    applied.append({"product_id": pid, **res})
+            else:
+                # Guest restore: record owned SKUs for this device; the UI can reflect
+                # restored ownership without requiring an account.
+                try:
+                    owned = session.get('anon_owned_products')
+                    if not isinstance(owned, list):
+                        owned = []
+                    if pid not in owned:
+                        owned.append(pid)
+                    session['anon_owned_products'] = owned
+                    applied.append({"product_id": pid, "applied": True, "details": {"mode": "anon_session"}})
+                except Exception:
+                    applied.append({"product_id": pid, "applied": True, "details": {"mode": "anon"}})
         except Exception as e:
             had_error = True
             err_msg = str(e)
@@ -9543,35 +9781,50 @@ def api_iap_restore():
         raw_payload = {'restore': True, 'restore_id': restore_id}
         if had_error and err_msg:
             raw_payload['restore_error'] = err_msg
-        rec = PurchaseRecord(
-            user_id=current_user.id,
-            platform=platform,
-            product_id=pid,
-            status='restore_error' if had_error else 'verified',
-            transaction_id=None,
-            purchase_token=None,
-            raw_payload=raw_payload
-        )
-        db.session.add(rec)
+        if not bypass_db:
+            rec = PurchaseRecord(
+                user_id=user_for_restore.id,
+                platform=platform,
+                product_id=pid,
+                status='restore_error' if had_error else 'verified',
+                transaction_id=None,
+                purchase_token=None,
+                raw_payload=raw_payload
+            )
+            db.session.add(rec)
 
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": f"db_commit_failed: {e}", "restore_id": restore_id}), 500
+    if not bypass_db:
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "error": f"db_commit_failed: {e}", "restore_id": restore_id}), 500
 
-    return jsonify({
+    resp = jsonify({
         "success": True,
         "restore_id": restore_id,
         "normalized_product_ids": normalized,
         "applied": applied,
         "errors": errors,
-        "entitlements": _entitlements_summary(current_user)
+        "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
     })
+
+    if anon_restore_id:
+        try:
+            resp.set_cookie(
+                'anon_restore_id',
+                anon_restore_id,
+                max_age=60 * 60 * 24 * 365,
+                httponly=True,
+                samesite='Lax'
+            )
+        except Exception:
+            pass
+
+    return resp
 
 
 @app.route('/api/bundles', methods=['GET'])
-@login_required
 def api_bundles_list():
     """List available avatar bundles for the current user.
 
@@ -9579,8 +9832,14 @@ def api_bundles_list():
     The same product_id must be recognized in PRODUCT_MAP for verification.
     """
     bundles = []
-    user_purchased = set(list(getattr(current_user, 'purchased_bundles', []) or []))
-    is_premium = bool(getattr(current_user, 'premium_member', False))
+    user_purchased = set(list(getattr(current_user, 'purchased_bundles', []) or [])) if getattr(current_user, 'is_authenticated', False) else set()
+    is_premium = bool(getattr(current_user, 'premium_member', False)) if getattr(current_user, 'is_authenticated', False) else False
+
+    # Guest ownership support (Apple Guideline 5.1.1): allow the UI to reflect
+    # restore/purchase entitlements without requiring login.
+    anon_owned = session.get('anon_owned_products')
+    if not isinstance(anon_owned, list):
+        anon_owned = []
 
     # Build a small normalization map once (catalog is tiny: 39 avatars)
     try:
@@ -9623,13 +9882,15 @@ def api_bundles_list():
             # Back-compat/internal id (not recommended for store SKUs)
             product_id = f"bundle:{bundle_id}"
 
+        owned_by_anon = bool((product_id in anon_owned) or ((f"bundle:{bundle_id}") in anon_owned))
+
         bundles.append({
             'id': bundle_id,
             'name': name,
             'avatars': avatars,
             'count': int(len(avatars)),
             'product_id': product_id,
-            'is_owned': bool(is_premium or (bundle_id in user_purchased)),
+            'is_owned': bool(is_premium or (bundle_id in user_purchased) or owned_by_anon),
         })
 
     bundles.sort(key=lambda b: (b.get('name') or '').lower())
@@ -9640,6 +9901,7 @@ def api_bundles_list():
         'user': {
             'premium_member': is_premium,
             'purchased_bundles': list(user_purchased),
+            'anon_owned_products': anon_owned if not getattr(current_user, 'is_authenticated', False) else [],
         }
     })
 
@@ -9648,7 +9910,6 @@ def api_bundles_list():
 # Bundle Key Redemption (Teacher/Parent distributed keys)
 # ----------------------------------------------------------------------------
 @app.route('/api/bundles/redeem', methods=['POST'])
-@login_required
 def api_bundles_redeem():
     """Redeem a special bundle key to unlock a set of avatars.
     Request JSON: { key: string }
@@ -9661,6 +9922,11 @@ def api_bundles_redeem():
     raw_key = (data.get('key') or '').strip()
     if not raw_key:
         return jsonify({"success": False, "error": "Missing key"}), 400
+
+    # Apple guideline compliance: digital content unlocks must use IAP.
+    # Keep key-based redemption only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return jsonify({"success": False, "error": "Redemption unavailable"}), 403
 
     if not isinstance(REDEEMABLE_KEYS, dict) or not REDEEMABLE_KEYS:
         return jsonify({"success": False, "error": "Redemption unavailable"}), 503
@@ -9787,7 +10053,6 @@ def api_bundles_redeem():
 # BeeKey Redemption for Linked Users (Admin/Parent/Teacher)
 # ----------------------------------------------------------------------------
 @app.route('/api/beekey/redeem-for-linked', methods=['POST'])
-@login_required
 def api_beekey_redeem_for_linked():
     """Redeem a BeeKey and unlock avatars for all users linked to the redeemer's admin/teacher key.
     
@@ -9803,6 +10068,11 @@ def api_beekey_redeem_for_linked():
     
     if not raw_key:
         return jsonify({"success": False, "error": "Missing BeeKey code"}), 400
+
+    # Apple guideline compliance: digital content unlocks must use IAP.
+    # Keep BeeKey flows only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return jsonify({"success": False, "error": "Redemption unavailable"}), 403
     
     # Normalize the key
     norm_key = re.sub(r"\s+", "", raw_key).upper()
@@ -10143,6 +10413,10 @@ def api_check_rank_up():
 def api_admin_bundle_keys_list():
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
+    # Apple guideline compliance: key-based digital content unlocks must use IAP.
+    # Keep key management only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
     try:
         _ensure_db_initialized()
         rows = BundleKey.query.order_by(BundleKey.created_at.desc()).limit(250).all()
@@ -10159,6 +10433,10 @@ def api_admin_bundle_keys_list():
 @login_required
 def api_admin_bundle_keys_create():
     if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    # Apple guideline compliance: key-based digital content unlocks must use IAP.
+    # Keep key management only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
         return jsonify({"success": False, "error": "Forbidden"}), 403
     data = request.get_json(silent=True) or {}
     bundle_id = (data.get('bundle_id') or '').strip()
@@ -10205,6 +10483,10 @@ def api_admin_bee_keys_generate():
     Response: { success, bundle, bundle_key }
     """
     if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    # Apple guideline compliance: key-based digital content unlocks must use IAP.
+    # Keep key generation only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
         return jsonify({"success": False, "error": "Forbidden"}), 403
     data = request.get_json(silent=True) or {}
     avatar_ids = data.get('avatar_ids') or []
@@ -10276,6 +10558,10 @@ def api_admin_bee_keys_generate():
 def api_admin_bundle_key_redemptions(key_id: int):
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
+    # Apple guideline compliance: key-based digital content unlocks must use IAP.
+    # Keep key management only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
     try:
         _ensure_db_initialized()
         rows = BundleKeyRedemption.query.filter_by(bundle_key_id=key_id).order_by(BundleKeyRedemption.redeemed_at.desc()).limit(200).all()
@@ -10288,6 +10574,10 @@ def api_admin_bundle_key_redemptions(key_id: int):
 @login_required
 def api_admin_bundle_key_revoke(key_id: int):
     if current_user.role != 'admin':
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+    # Apple guideline compliance: key-based digital content unlocks must use IAP.
+    # Keep key management only for explicit dev/test environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
         return jsonify({"success": False, "error": "Forbidden"}), 403
     try:
         row = BundleKey.query.filter_by(id=key_id).first()
@@ -14800,8 +15090,13 @@ if not FAST_BOOT:
 else:
     print("⏭️ Skipping init_glb_avatars() at startup (FAST_BOOT)")
 
+# Avoid any slow/remote DB work during FAST_BOOT.
+# This keeps local smoke tests snappy and ensures the server actually comes up.
+if FAST_BOOT:
+    print("⏭️ Skipping avatar catalog DB sync (FAST_BOOT)")
+else:
+
 # Sync full avatar catalog (ensure all 39 entries exist) - runs after GLB init
-if not FAST_BOOT:
     try:
         from avatar_catalog import AVATAR_CATALOG
         from models import Avatar, db

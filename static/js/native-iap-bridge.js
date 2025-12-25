@@ -36,6 +36,15 @@
     window.BeeSmartIAP = {
       platform,
 
+      async restore() {
+        // Initiates the platform restore/sync flow (iOS: AppStore.sync()).
+        if (typeof nativePlugin.restorePurchases === 'function') {
+          return await Promise.resolve(nativePlugin.restorePurchases());
+        }
+        // Back-compat no-op: older native wrappers only supported getOwnedProducts.
+        return { unsupported: true };
+      },
+
       async getOwnedProducts() {
         const r = await Promise.resolve(nativePlugin.getOwnedProducts());
         if (!r) return [];

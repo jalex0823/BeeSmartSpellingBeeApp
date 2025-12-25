@@ -10833,15 +10833,7 @@ function showWordOfTheDay(wordData) {
     border: none;
     font-size: 24px;
     cursor: pointer;
-    color: #333;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-            response = await fetch('/api/daily-reward', {
-                method: 'POST',
-                credentials: 'same-origin',
+    justify-content: center;
                 cache: 'no-store',
                 headers: {
                     'Accept': 'application/json'
@@ -10867,7 +10859,6 @@ function showWordOfTheDay(wordData) {
 .definition-actions button {
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
     color: white;
-        console.warn('Daily reward check skipped:', e?.name || e);
     padding: 12px 24px;
     border-radius: 25px;
     font-size: 1rem;
