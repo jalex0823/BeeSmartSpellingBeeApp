@@ -1126,10 +1126,22 @@ let speechSynthesisInitialized = false; // iOS speech initialization flag
 let wordsUntilNameAnnouncement = 0; // Track sporadic name announcements (0 = announce now)
 // Try to personalize announcements with locally stored student name (set on quiz page)
 let studentName = '';
+const DEFAULT_STUDENT_NAME = 'Newbee';
+function normalizeStudentName(raw) {
+    const trimmed = (raw ?? '').toString().trim();
+    return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
+}
 // Prefer server-provided name when available; fall back to localStorage for continuity
 {% if user_name %}
 studentName = {{ user_name|tojson }};
-try { localStorage.setItem('studentName', studentName); } catch (e) {}
+try {
+    const trimmed = (studentName ?? '').toString().trim();
+    if (trimmed) {
+        localStorage.setItem('studentName', trimmed);
+    } else {
+        localStorage.removeItem('studentName');
+    }
+} catch (e) {}
 {% else %}
 try {
     studentName = localStorage.getItem('studentName') || '';
@@ -1137,6 +1149,7 @@ try {
     studentName = '';
 }
 {% endif %}
+studentName = normalizeStudentName(studentName);
 
 // Mask target word in text to prevent cheating
 function maskTargetWord(text, targetWord) {

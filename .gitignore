@@ -161,3 +161,5 @@ APP_STORE_CONNECT_CHECKLIST_DEC2025.md
 
 # Local scratch scripts
 test_iap_guest_flow.py
+
+.fake

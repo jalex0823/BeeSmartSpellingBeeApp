@@ -3743,10 +3743,33 @@
                         0%, 100% { transform: rotate(0deg); opacity: 0; }
                         50% { transform: rotate(180deg); opacity: 1; }
                     }
+
+                    /* Crest helix fairy dust: behind + in front layers */
+                    .fairy-dust-helix-layer {
+                        position: absolute;
+                        inset: 0;
+                        pointer-events: none;
+                        overflow: visible;
+                    }
+                    .fairy-dust-helix-back {
+                        z-index: 10;
+                    }
+                    .fairy-dust-helix-front {
+                        z-index: 30;
+                    }
+                    .fairy-dust-helix-dot {
+                        position: absolute;
+                        border-radius: 9999px;
+                        background: radial-gradient(circle, rgba(240,230,255,0.95) 0%, rgba(212,176,255,0.85) 40%, rgba(212,176,255,0) 72%);
+                        opacity: 0;
+                        transform: translate3d(0, 0, 0);
+                        will-change: transform, opacity;
+                    }
                 </style>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
                 <div class="logo-container" style="position: relative; display: inline-block; margin-top: 0.5rem;">
+                    <div class="fairy-dust-helix-layer fairy-dust-helix-back" aria-hidden="true"></div>
                     <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="brand-logo crest-logo" style="
                         width: clamp(180px, 40vw, 320px);
                         height: auto;
@@ -3754,18 +3777,10 @@
                         display: block;
                         filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
                         background: transparent !important;
+                        position: relative;
+                        z-index: 20;
                     " />
-                    <!-- Sparkling fairy dust container -->
-                    <div class="fairy-dust-container" style="
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        pointer-events: none;
-                        z-index: 100;
-                    ">
-                        <!-- Fairy dust particles will be dynamically created here -->
-                    </div>
+                    <div class="fairy-dust-helix-layer fairy-dust-helix-front" aria-hidden="true"></div>
                 </div>
 
                 {% if current_user.is_authenticated %}
@@ -4492,6 +4507,7 @@
                             transition: all 0.3s ease;
                         "
                         onkeyup="saveStudentName()"
+                        oninput="saveStudentName()"
                         onfocus="this.style.borderColor='#FF69B4'; this.style.boxShadow='0 0 0 4px rgba(255, 182, 193, 0.3), inset 0 2px 8px rgba(210, 105, 30, 0.15)'"
                         onblur="this.style.borderColor='#FFB6C1'; this.style.boxShadow='inset 0 2px 8px rgba(210, 105, 30, 0.15)'"
                     />
@@ -12325,47 +12341,112 @@
                     return group;
                 }
 
-                function animateCrossfade(oldGroup, newGroup, duration){
-                    const D = Math.max(300, duration || 650);
+                // Sequential swap (avoid overlap/"stacked" look): fade old OUT completely, then fade new IN
+                function animateSwapSequential(oldGroup, newGroup){
+                    const OUT_MS = 420;
+                    const IN_MS = 520;
                     const start = performance.now();
-                    function step(now){
+
+                    // Ensure starting states
+                    if (newGroup) {
+                        setTransparentRecursive(newGroup, true);
+                        setOpacityRecursive(newGroup, 0);
+                        setDepthWriteRecursive(newGroup, true);
+                        setRenderOrderRecursive(newGroup, 1);
+                        newGroup.position.y = -0.04;
+                        newGroup.scale.setScalar(0.97);
+                    }
+                    if (oldGroup) {
+                        setTransparentRecursive(oldGroup, true);
+                        setOpacityRecursive(oldGroup, 1);
+                        setDepthWriteRecursive(oldGroup, false);
+                        setRenderOrderRecursive(oldGroup, 0);
+                    }
+
+                    function fadeOutStep(now){
                         if (disposed) return;
-                        const t = Math.min(1, (now - start)/D);
+                        const t = Math.min(1, (now - start) / OUT_MS);
                         const e = easeInOutCubic(t);
-                        if (newGroup){
-                            setOpacityRecursive(newGroup, e);
-                            newGroup.position.y = (1 - e) * -0.04; // lift in slightly
-                            const s = 0.97 + 0.03*e; // scale up subtly
-                            newGroup.scale.setScalar(s);
-                        }
-                        if (oldGroup){
+
+                        if (oldGroup) {
                             setOpacityRecursive(oldGroup, 1 - e);
-                            oldGroup.position.y = e * 0.04; // float away
-                            const s2 = 1.0 + 0.02*e; // tiny overscale as it leaves
+                            oldGroup.position.y = e * 0.04;
+                            const s2 = 1.0 + 0.02 * e;
                             oldGroup.scale.setScalar(s2);
                         }
-                        if (t < 1){
-                            requestAnimationFrame(step);
-                        } else {
-                            // Finalize
-                            if (oldGroup){
-                                scene.remove(oldGroup);
-                                disposeObject(oldGroup);
-                                if (outgoingGroup === oldGroup) outgoingGroup = null;
+
+                        if (t < 1) {
+                            requestAnimationFrame(fadeOutStep);
+                            return;
+                        }
+
+                        // Fully remove old before fading in new
+                        if (oldGroup) {
+                            scene.remove(oldGroup);
+                            disposeObject(oldGroup);
+                            if (outgoingGroup === oldGroup) outgoingGroup = null;
+                        }
+
+                        const inStart = performance.now();
+                        function fadeInStep(now2){
+                            if (disposed) return;
+                            const t2 = Math.min(1, (now2 - inStart) / IN_MS);
+                            const e2 = easeInOutCubic(t2);
+
+                            if (newGroup) {
+                                setOpacityRecursive(newGroup, e2);
+                                newGroup.position.y = (1 - e2) * -0.04;
+                                const s = 0.97 + 0.03 * e2;
+                                newGroup.scale.setScalar(s);
                             }
-                            if (newGroup){
-                                // Normalize transforms for steady rotation post-fade
-                                newGroup.position.y = 0;
-                                newGroup.scale.setScalar(1);
-                                // Restore opaque materials to avoid transparent sorting artifacts
-                                setOpacityRecursive(newGroup, 1);
-                                setTransparentRecursive(newGroup, false);
-                                setDepthWriteRecursive(newGroup, true);
-                                setRenderOrderRecursive(newGroup, 0);
+
+                            if (t2 < 1) {
+                                requestAnimationFrame(fadeInStep);
+                            } else {
+                                if (newGroup) {
+                                    newGroup.position.y = 0;
+                                    newGroup.scale.setScalar(1);
+                                    setOpacityRecursive(newGroup, 1);
+                                    setTransparentRecursive(newGroup, false);
+                                    setDepthWriteRecursive(newGroup, true);
+                                    setRenderOrderRecursive(newGroup, 0);
+                                }
                             }
                         }
+                        requestAnimationFrame(fadeInStep);
                     }
-                    requestAnimationFrame(step);
+
+                    // If there is no oldGroup (first paint), skip straight to fade-in
+                    if (!oldGroup) {
+                        const inStart = performance.now();
+                        function firstIn(now2){
+                            if (disposed) return;
+                            const t2 = Math.min(1, (now2 - inStart) / IN_MS);
+                            const e2 = easeInOutCubic(t2);
+                            if (newGroup) {
+                                setOpacityRecursive(newGroup, e2);
+                                newGroup.position.y = (1 - e2) * -0.04;
+                                const s = 0.97 + 0.03 * e2;
+                                newGroup.scale.setScalar(s);
+                            }
+                            if (t2 < 1) {
+                                requestAnimationFrame(firstIn);
+                            } else {
+                                if (newGroup) {
+                                    newGroup.position.y = 0;
+                                    newGroup.scale.setScalar(1);
+                                    setOpacityRecursive(newGroup, 1);
+                                    setTransparentRecursive(newGroup, false);
+                                    setDepthWriteRecursive(newGroup, true);
+                                    setRenderOrderRecursive(newGroup, 0);
+                                }
+                            }
+                        }
+                        requestAnimationFrame(firstIn);
+                        return;
+                    }
+
+                    requestAnimationFrame(fadeOutStep);
                 }
 
                 function loadNext() {
@@ -12450,8 +12531,8 @@
                             scene.add(group);
                             currentGroup = group;
 
-                            // Crossfade between outgoing and current
-                            animateCrossfade(outgoingGroup, currentGroup, 700);
+                            // Sequential fade (old fully out before new in) to avoid stacked look
+                            animateSwapSequential(outgoingGroup, currentGroup);
                             // Restore wrap transform after a tick
                             setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
                         },
@@ -12473,9 +12554,9 @@
                 }
                 tick();
 
-                // Start and rotate every ~4.5s (gives headroom for crossfade)
+                // Start and rotate every ~6.5s (slower + enough time for full out->in fade)
                 loadNext();
-                window._guest3DTimer = setInterval(loadNext, 4500);
+                window._guest3DTimer = setInterval(loadNext, 6500);
 
                 // Click anywhere on the carousel to prompt registration/login
                 try {
@@ -12589,23 +12670,25 @@
                 }
 
                 let idx = 0;
+                const FADE_MS = 360;
+                const DISPLAY_MS = 3800;
                 const show = () => {
                     const item = loaded[idx % loaded.length];
                     imgEl.classList.remove('is-visible');
-                    // small delay to let opacity drop before swap
+                    // Wait for full fade-out before swapping
                     setTimeout(() => {
                         imgEl.src = item.url;
                         imgEl.alt = item.name + ' thumbnail';
                         nameEl.textContent = item.name;
                         imgEl.classList.add('is-visible');
-                    }, 120);
+                    }, FADE_MS);
                     idx++;
                 };
 
                 wrap.style.display = 'block';
                 show();
                 // Calm rotation
-                window._guestCarouselTimer = setInterval(show, 2800);
+                window._guestCarouselTimer = setInterval(show, DISPLAY_MS);
 
                 // Click anywhere on the carousel to prompt registration/login
                 try {
@@ -18085,79 +18168,97 @@
             console.log('Ticker fairy dust magic activated! Continuous sparkles enabled.');
         }
 
-        // SPARKLING FAIRY DUST MAGIC 
+        // CREST HELIX FAIRY DUST (bottom -> top, front <-> back)
         function createFairyDustEffect() {
-            const container = document.querySelector('.fairy-dust-container');
-            if (!container) {
-                console.log('Fairy dust container not found');
+            const logo = document.querySelector('.crest-logo');
+            const backLayer = document.querySelector('.fairy-dust-helix-back');
+            const frontLayer = document.querySelector('.fairy-dust-helix-front');
+            if (!logo || !backLayer || !frontLayer) {
                 return;
             }
-            
-            console.log('Creating magical fairy dust effect around logo...');
-            
-            // Create 12 magical particles
-            const particleCount = 12;
-            const sparkleCount = 8;
-            
-            // Regular fairy dust particles
-            for (let i = 0; i < particleCount; i++) {
-                setTimeout(() => {
-                    const particle = document.createElement('div');
-                    particle.className = 'fairy-dust-particle';
-                    
-                    // Randomize starting position slightly for organic feel
-                    const angleOffset = (i * (360 / particleCount)) + (Math.random() - 0.5) * 20;
-                    particle.style.transform = `rotate(${angleOffset}deg)`;
-                    
-                    // Random size variation
-                    const size = 3 + Math.random() * 3;
-                    particle.style.width = size + 'px';
-                    particle.style.height = size + 'px';
-                    
-                    // Stagger the animation slightly
-                    particle.style.animationDelay = (Math.random() * 0.5) + 's';
-                    
-                    container.appendChild(particle);
-                    
-                    // Clean up after animation
-                    setTimeout(() => {
-                        if (particle.parentNode) {
-                            particle.parentNode.removeChild(particle);
-                        }
-                    }, 3500);
-                }, i * 100); // Stagger creation
+
+            // Cancel any previous animation loop
+            if (window.__crestHelixDustRafId) {
+                cancelAnimationFrame(window.__crestHelixDustRafId);
+                window.__crestHelixDustRafId = null;
             }
-            
-            // Sparkle particles (brighter, faster)
-            for (let i = 0; i < sparkleCount; i++) {
-                setTimeout(() => {
-                    const sparkle = document.createElement('div');
-                    sparkle.className = 'fairy-dust-particle sparkle';
-                    
-                    // Different orbit radius for layered effect
-                    const angleOffset = (i * (360 / sparkleCount)) + (Math.random() - 0.5) * 30;
-                    sparkle.style.transform = `rotate(${angleOffset}deg)`;
-                    
-                    // Sparkles are slightly larger
-                    const size = 4 + Math.random() * 2;
-                    sparkle.style.width = size + 'px';
-                    sparkle.style.height = size + 'px';
-                    
-                    // Faster, more random timing
-                    sparkle.style.animationDelay = (Math.random() * 0.8) + 's';
-                    
-                    container.appendChild(sparkle);
-                    
-                    // Clean up after animation
-                    setTimeout(() => {
-                        if (sparkle.parentNode) {
-                            sparkle.parentNode.removeChild(sparkle);
-                        }
-                    }, 3000);
-                }, i * 150 + 500); // Start after initial particles
-            }
-            
-            console.log('Fairy dust magic complete! Particles will fade out naturally.');
+
+            backLayer.innerHTML = '';
+            frontLayer.innerHTML = '';
+
+            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const particleCount = 28;
+            const particles = Array.from({ length: particleCount }, () => {
+                const baseSize = 3 + Math.random() * 3.5;
+
+                const back = document.createElement('div');
+                back.className = 'fairy-dust-helix-dot';
+                back.style.width = `${baseSize}px`;
+                back.style.height = `${baseSize}px`;
+
+                const front = document.createElement('div');
+                front.className = 'fairy-dust-helix-dot';
+                front.style.width = `${baseSize}px`;
+                front.style.height = `${baseSize}px`;
+
+                backLayer.appendChild(back);
+                frontLayer.appendChild(front);
+
+                return { back, front, baseSize };
+            });
+
+            const speed = 0.22; // vertical progress speed
+            const turns = 1.9;  // wraps bottom->top
+            const baseAngle = Math.PI / 2; // start in front at bottom
+
+            const render = (nowMs) => {
+                const container = logo.parentElement;
+                const w = container ? container.clientWidth : 0;
+                const h = container ? container.clientHeight : 0;
+
+                if (!w || !h) {
+                    window.__crestHelixDustRafId = requestAnimationFrame(render);
+                    return;
+                }
+
+                const tNow = nowMs / 1000;
+                const cx = w / 2;
+                const topY = h * 0.10;
+                const bottomY = h * 0.92;
+                const radius = Math.min(w, h) * 0.34;
+
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    const t = (i / particles.length + tNow * speed) % 1;
+                    const y = bottomY + (topY - bottomY) * t;
+                    const angle = baseAngle + (t * turns * Math.PI * 2);
+                    const depth = Math.sin(angle); // >0 in front, <0 behind
+                    const x = cx + radius * Math.cos(angle);
+
+                    const glow = 0.25 + 0.75 * Math.abs(depth);
+                    const tx = x - p.baseSize / 2;
+                    const ty = y - p.baseSize / 2;
+
+                    if (depth >= 0) {
+                        const scale = 0.55 + 0.55 * ((depth + 1) / 2);
+                        p.front.style.opacity = `${glow}`;
+                        p.back.style.opacity = '0';
+                        p.front.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+                    } else {
+                        const scale = 0.55 + 0.45 * (((-depth) + 1) / 2);
+                        p.back.style.opacity = `${glow * 0.55}`;
+                        p.front.style.opacity = '0';
+                        p.back.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+                    }
+                }
+
+                if (!prefersReducedMotion) {
+                    window.__crestHelixDustRafId = requestAnimationFrame(render);
+                }
+            };
+
+            render(performance.now());
         }
         
         // Trigger fairy dust when page loads
