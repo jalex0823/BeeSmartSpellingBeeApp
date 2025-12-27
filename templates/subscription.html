@@ -389,8 +389,8 @@
                 </div>
 
                 <div class="pricing">
-                    <div class="price">$4.99</div>
-                    <div class="price-period">/month</div>
+                    <div class="price">Monthly</div>
+                    <div class="price-period">subscription</div>
                 </div>
 
                 <ul class="features">
@@ -415,14 +415,14 @@
                 </div>
 
                 <div class="pricing">
-                    <div class="price">$39.99</div>
-                    <div class="price-period">/year</div>
-                    <div class="savings">Save $20/year (33% off!)</div>
+                    <div class="price">Yearly</div>
+                    <div class="price-period">subscription</div>
+                    <div class="savings">Best value for year‑round spelling practice</div>
                 </div>
 
                 <ul class="features">
                     <li>Everything in Monthly</li>
-                    <li>Save 33% ($3.33/month)</li>
+                    <li>Lower average monthly cost</li>
                     <li>All 39 avatars unlocked forever</li>
                     <li>Full year of learning</li>
                     <li>All future updates included</li>
@@ -442,8 +442,8 @@
                 </div>
 
                 <div class="pricing">
-                    <div class="price">$7.99</div>
-                    <div class="price-period">/month</div>
+                    <div class="price">Family</div>
+                    <div class="price-period">subscription</div>
                     <div class="savings">Up to 6 family members!</div>
                 </div>
 
@@ -519,7 +519,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">Is there a free trial?</div>
-                <div class="faq-answer">Yes! All new subscribers get a 7-day free trial to test out all premium features before committing. You won't be charged until the trial ends.</div>
+                <div class="faq-answer">If a free trial or introductory offer is available, it will be presented in the App Store purchase sheet before you confirm.</div>
             </div>
 
             <div class="faq-item">
@@ -529,7 +529,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">Which plan should I choose?</div>
-                <div class="faq-answer">If you have multiple kids or family members learning spelling, go with Family ($7.99/mo). For individual learners committed to year-round practice, Yearly ($39.99/yr) saves you $20. Monthly ($4.99/mo) is great for trying it out!</div>
+                <div class="faq-answer">Family is best for multiple kids using Family Sharing. Yearly is best value for year‑round practice. Monthly is great for trying it out.</div>
             </div>
 
             <div class="faq-item">
@@ -541,6 +541,17 @@
         <!-- Footer -->
         <div class="footer">
             <p>Questions? Contact us at <a href="mailto:support@beesmartspelling.com">support@beesmartspelling.com</a></p>
+            <p style="margin-top: 16px;">
+                <button type="button" onclick="restorePurchases()" style="
+                    padding: 12px 16px;
+                    border-radius: 14px;
+                    border: 2px solid rgba(255,255,255,0.65);
+                    background: rgba(0,0,0,0.12);
+                    color: #ffffff;
+                    font-weight: 800;
+                    cursor: pointer;
+                ">Restore Purchases</button>
+            </p>
             <p style="margin-top: 10px;">
                 <a href="/privacy">Privacy Policy</a> • 
                 <a href="/terms">Terms of Service</a>
@@ -552,6 +563,21 @@
     </div>
 
     <script>
+        async function restorePurchases() {
+            try {
+                if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')) {
+                    alert('Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the App Store version and try again.');
+                    return;
+                }
+                await Promise.resolve(window.BeeSmartIAP.restore());
+                alert('Restore complete. If you had an active subscription or prior purchases, your access should now be updated.');
+                try { window.location.reload(); } catch(e) {}
+            } catch (e) {
+                console.error('Restore failed:', e);
+                alert('Restore could not be completed. Please check your connection and try again.');
+            }
+        }
+
         function subscribe(plan) {
             const productIds = {
                 'monthly': 'beesmart.premium.monthly',

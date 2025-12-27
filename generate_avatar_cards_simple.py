@@ -25,8 +25,9 @@ OUTPUT_DIR = AVATARS_DIR / "app_store_cards"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Card settings - Apple App Store IAP screenshot format
-CARD_WIDTH = 768
-CARD_HEIGHT = 768
+# Apple requirement: 1024 x 1024 pixels
+CARD_WIDTH = 1024
+CARD_HEIGHT = 1024
 BLACK = (0, 0, 0, 255)
 HONEY_GOLD = (250, 210, 90, 255)
 CARD_BG = (70, 70, 72, 255)  # Dark gray background from sample
@@ -249,7 +250,7 @@ def main():
     print("=" * 70)
     print(f"\n📂 Thumbnails: {THUMB_DIR}")
     print(f"📂 Output:     {OUTPUT_DIR}")
-    print(f"📐 Size:       {CARD_WIDTH}x{CARD_HEIGHT}px (Apple IAP screenshot)\n")
+    print(f"📐 Size:       {CARD_WIDTH}x{CARD_HEIGHT}px (Apple IAP screenshot requirement)\n")
     
     glb_files = sorted([p for p in GLB_DIR.iterdir() if p.suffix.lower() == ".glb"])
     

@@ -755,6 +755,15 @@ def privacy_page():
     """Public privacy policy page required for Play Console disclosures."""
     return _safe_template("privacy.html")
 
+
+@app.route("/terms")
+def terms_page():
+    """Public Terms of Use / EULA page.
+
+    App Store guideline 3.1.2 expects an in-app, no-login Terms/EULA link.
+    """
+    return _safe_template("terms.html")
+
 # ------------------------------
 # Avatar API helpers
 # ------------------------------
@@ -830,9 +839,8 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     if tier == 'premium':
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        # If premium membership should unlock all premium avatars, uncomment next lines:
-        # if premium_member:
-        #     return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
+        if premium_member:
+            return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
         return {"unlocked": False, "reason": "Premium - purchase to unlock", "points_needed": None}
 
     # Fallback - treat unknown tiers as locked
@@ -9918,15 +9926,18 @@ def api_bundles_redeem():
       - Idempotent: re-redeeming an already applied bundle won't duplicate unlocks
       - Keys are matched case-insensitively and with whitespace trimmed
     """
+    # App Store compliance: digital content unlocks must use IAP.
+    # Kill switch: in App Store builds, always hide key redemption regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
+    # Otherwise, keep key redemption only for explicit dev/teacher environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return ("Not Found", 404)
+
     data = request.get_json(silent=True) or {}
     raw_key = (data.get('key') or '').strip()
     if not raw_key:
         return jsonify({"success": False, "error": "Missing key"}), 400
-
-    # Apple guideline compliance: digital content unlocks must use IAP.
-    # Keep key-based redemption only for explicit dev/test environments.
-    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Redemption unavailable"}), 403
 
     if not isinstance(REDEEMABLE_KEYS, dict) or not REDEEMABLE_KEYS:
         return jsonify({"success": False, "error": "Redemption unavailable"}), 503
@@ -10063,16 +10074,19 @@ def api_beekey_redeem_for_linked():
     Request JSON: { beekey: string }
     Response: { success, bundle_id, avatars_count, users_unlocked, message }
     """
+    # App Store compliance: digital content unlocks must use IAP.
+    # Kill switch: in App Store builds, always hide BeeKey redemption regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
+    # Otherwise, keep BeeKey redemption only for explicit dev/teacher environments.
+    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
+        return ("Not Found", 404)
+
     data = request.get_json(silent=True) or {}
     raw_key = (data.get('beekey') or '').strip()
     
     if not raw_key:
         return jsonify({"success": False, "error": "Missing BeeKey code"}), 400
-
-    # Apple guideline compliance: digital content unlocks must use IAP.
-    # Keep BeeKey flows only for explicit dev/test environments.
-    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Redemption unavailable"}), 403
     
     # Normalize the key
     norm_key = re.sub(r"\s+", "", raw_key).upper()
@@ -10413,10 +10427,12 @@ def api_check_rank_up():
 def api_admin_bundle_keys_list():
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
-    # Apple guideline compliance: key-based digital content unlocks must use IAP.
-    # Keep key management only for explicit dev/test environments.
+    # App Store compliance: hide key management endpoints.
+    # Kill switch: in App Store builds, always hide key management regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
     if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Forbidden"}), 403
+        return ("Not Found", 404)
     try:
         _ensure_db_initialized()
         rows = BundleKey.query.order_by(BundleKey.created_at.desc()).limit(250).all()
@@ -10434,10 +10450,12 @@ def api_admin_bundle_keys_list():
 def api_admin_bundle_keys_create():
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
-    # Apple guideline compliance: key-based digital content unlocks must use IAP.
-    # Keep key management only for explicit dev/test environments.
+    # App Store compliance: hide key management endpoints.
+    # Kill switch: in App Store builds, always hide key management regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
     if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Forbidden"}), 403
+        return ("Not Found", 404)
     data = request.get_json(silent=True) or {}
     bundle_id = (data.get('bundle_id') or '').strip()
     max_uses = int(data.get('max_uses') or 1)
@@ -10484,10 +10502,12 @@ def api_admin_bee_keys_generate():
     """
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
-    # Apple guideline compliance: key-based digital content unlocks must use IAP.
-    # Keep key generation only for explicit dev/test environments.
+    # App Store compliance: hide key generation endpoints.
+    # Kill switch: in App Store builds, always hide key generation regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
     if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Forbidden"}), 403
+        return ("Not Found", 404)
     data = request.get_json(silent=True) or {}
     avatar_ids = data.get('avatar_ids') or []
     max_uses = int(data.get('max_uses') or 1)
@@ -10558,10 +10578,12 @@ def api_admin_bee_keys_generate():
 def api_admin_bundle_key_redemptions(key_id: int):
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
-    # Apple guideline compliance: key-based digital content unlocks must use IAP.
-    # Keep key management only for explicit dev/test environments.
+    # App Store compliance: hide key management endpoints.
+    # Kill switch: in App Store builds, always hide key management regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
     if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Forbidden"}), 403
+        return ("Not Found", 404)
     try:
         _ensure_db_initialized()
         rows = BundleKeyRedemption.query.filter_by(bundle_key_id=key_id).order_by(BundleKeyRedemption.redeemed_at.desc()).limit(200).all()
@@ -10575,10 +10597,12 @@ def api_admin_bundle_key_redemptions(key_id: int):
 def api_admin_bundle_key_revoke(key_id: int):
     if current_user.role != 'admin':
         return jsonify({"success": False, "error": "Forbidden"}), 403
-    # Apple guideline compliance: key-based digital content unlocks must use IAP.
-    # Keep key management only for explicit dev/test environments.
+    # App Store compliance: hide key management endpoints.
+    # Kill switch: in App Store builds, always hide key management regardless of other flags.
+    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
+        return ("Not Found", 404)
     if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return jsonify({"success": False, "error": "Forbidden"}), 403
+        return ("Not Found", 404)
     try:
         row = BundleKey.query.filter_by(id=key_id).first()
         if not row:
@@ -15096,7 +15120,7 @@ if FAST_BOOT:
     print("⏭️ Skipping avatar catalog DB sync (FAST_BOOT)")
 else:
 
-# Sync full avatar catalog (ensure all 39 entries exist) - runs after GLB init
+    # Sync full avatar catalog (ensure all entries exist) - runs after GLB init
     try:
         from avatar_catalog import AVATAR_CATALOG
         from models import Avatar, db
@@ -15123,8 +15147,8 @@ else:
                 avatar = Avatar(
                     slug=slug,
                     name=name,  # Preserve full display name with required " Avatar" suffix for compliance
-                    description=entry.get('description',''),
-                    category=entry.get('category','classic'),
+                    description=entry.get('description', ''),
+                    category=entry.get('category', 'classic'),
                     folder_path=folder,
                     obj_file=obj_file,
                     mtl_file=entry.get('mtl_file'),
@@ -15134,10 +15158,11 @@ else:
                     points_required=points_required,
                     is_premium=is_premium,
                     sort_order=sort_order,
-                    is_active=True
+                    is_active=True,
                 )
                 db.session.add(avatar)
                 added += 1
+
             if added > 0:
                 db.session.commit()
                 print(f" Avatar catalog sync: {added} missing avatars inserted (total expected: {catalog_total})")

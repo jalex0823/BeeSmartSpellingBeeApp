@@ -225,7 +225,7 @@
       <!-- Avatar removed for cleaner registration form -->
       <div id="alert-container"></div>
 
-      <!-- Registration Billing Disclosure -->
+      <!-- App Store compliance note: registration must be optional (Guideline 5.1.1) -->
       <div aria-live="polite" style="
         margin-bottom: 1rem;
         padding: 0.9rem 1rem;
@@ -235,45 +235,26 @@
         color: #5A2C15;
       ">
         <div style="font-weight: 800; color:#E65100; margin-bottom: 0.35rem;">
-          💳 Registration is a paid account
+          🐝 Creating an account is optional
         </div>
-        {% if (registration_billing_mode or 'subscription') == 'subscription' %}
         <div style="font-size: 0.95rem;">
-          {% if (subscription_trial_days or 0) | int > 0 %}
-            Start your <strong>{{ subscription_trial_days | int }}‑day free trial</strong>, then <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong>.
-            <span style="display:block; margin-top:0.25rem; color:#7A4A2A;">After the trial, your subscription auto‑renews and you’ll be charged unless you cancel during the trial period.</span>
-          {% elif (subscription_intro_price_usd is not none) and ((subscription_intro_months or 0) | int > 0) %}
-            Intro price: <strong>${{ subscription_intro_price_usd | round(2) }}/month</strong> for the first {{ subscription_intro_months | int }} month{{ 's' if (subscription_intro_months | int) != 1 else '' }}, then <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong>. Cancel anytime.
-          {% else %}
-            Monthly subscription: <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong> for full access and avatar creation. Cancel anytime in your App Store settings.
-          {% endif %}
+          You can start spelling practice in guest mode without signing up.
+          Create an account if you want to sync progress across devices.
         </div>
-        <div style="font-size: 0.8rem; color:#7A4A2A; margin-top:0.35rem;">
-          Manage or cancel any time in your Apple App Store or Google Play account settings.
+        <div style="font-size: 0.85rem; color:#7A4A2A; margin-top:0.5rem;">
+          Want premium features? You can subscribe anytime from the Premium page.
         </div>
-        {% else %}
-        <div style="font-size: 0.95rem;">
-          One‑time registration fee: <strong>${{ (registration_fee_usd or 4.99) | round(2) }}</strong> to unlock avatar creation and full app features.
+        <div style="margin-top:0.75rem; display:flex; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="/app" style="display:inline-block; padding: 0.7rem 0.9rem; border-radius: 12px; background:#ffffff; border:2px solid #FFCC80; color:#5A2C15; text-decoration:none; font-weight:800;">Continue as Guest</a>
+          <a href="/subscription" style="display:inline-block; padding: 0.7rem 0.9rem; border-radius: 12px; background: linear-gradient(135deg, #FFB300, #FFD54F); color:#3b2b04; text-decoration:none; font-weight:800;">View Premium Options</a>
         </div>
-        {% endif %}
       </div>
 
       <form id="registerForm" method="POST" action="{{ url_for('register') }}">
         <div class="consent-row" style="justify-content:flex-start; margin-top: 0;">
-          <label for="feeConsent">
-            <input type="checkbox" id="feeConsent" name="fee_consent" required>
-            {% if (registration_billing_mode or 'subscription') == 'subscription' %}
-            <span>
-              {% if (subscription_trial_days or 0) | int > 0 %}
-                I agree to start a {{ subscription_trial_days | int }}‑day free trial and be charged <strong>${{ (subscription_monthly_usd or 4.49) | round(2) }}/month</strong> after the trial unless I cancel during the trial period.
-              {% else %}
-                I agree to the monthly subscription billed by Apple/Google to access BeeSmart features.
-              {% endif %}
-            </span>
-            {% else %}
-            <span>I understand registration requires a one‑time payment to unlock features.</span>
-            {% endif %}
-          </label>
+          <span>
+            By creating an account you agree to our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.
+          </span>
         </div>
         <!-- CSRF removed (not configured in app) -->
         <div class="form-group">
@@ -520,16 +501,6 @@ updateFieldsBasedOnRole(); // Initialize on page load
 const registerForm = document.getElementById('registerForm');
 const submitBtn = document.getElementById('submitBtn');
 const alertContainer = document.getElementById('alert-container');
-const feeConsent = document.getElementById('feeConsent');
-
-// Enable submit only when fee consent is checked
-if (feeConsent) {
-  const updateSubmitState = () => {
-    submitBtn.disabled = !feeConsent.checked;
-  };
-  feeConsent.addEventListener('change', updateSubmitState);
-  updateSubmitState();
-}
 
 registerForm.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -549,8 +520,7 @@ registerForm.addEventListener('submit', async function(e) {
         email: document.getElementById('email').value.trim(),
         grade_level: document.getElementById('grade').value,
         teacher_key: document.getElementById('teacher_key').value.trim(),
-        avatar_id: document.getElementById('selected_avatar').value,  // Fixed: was 'avatar', should be 'avatar_id'
-        fee_consent: !!(document.getElementById('feeConsent')?.checked)
+    avatar_id: document.getElementById('selected_avatar').value  // Fixed: was 'avatar', should be 'avatar_id'
     };
     
     console.log('📝 Form data:', { ...formPayload, password: '***' });
