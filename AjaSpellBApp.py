@@ -764,6 +764,27 @@ def terms_page():
     """
     return _safe_template("terms.html")
 
+
+@app.route("/support")
+def support_page():
+    """Public support/contact page.
+
+    App Store Connect requires a functional Support URL.
+    """
+    try:
+        return render_template("support.html")
+    except Exception:
+        return "<html><head><meta charset='utf-8'><title>Support</title></head><body><h1>Support</h1><p>Email: <a href='mailto:support@beesmartspelling.app'>support@beesmartspelling.app</a></p><p><a href='/app'>Back to App</a></p></body></html>"
+
+
+@app.route("/contact")
+def contact_page():
+    """Alias for /support.
+
+    Some docs and older builds reference /contact.
+    """
+    return support_page()
+
 # ------------------------------
 # Avatar API helpers
 # ------------------------------

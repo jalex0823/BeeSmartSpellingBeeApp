@@ -19,6 +19,9 @@ Highlights:
 - Progress tracking: correct/incorrect counts and streaks
 - Ad‑free, privacy‑minded, and classroom‑ready
 
+Terms of Use (EULA): https://beesmartspelling.app/terms
+Privacy Policy: https://beesmartspelling.app/privacy
+
 ## Keywords (≤100 chars)
 
 spelling, kids, vocabulary, phonics, education, quiz, practice, classroom, teacher, OCR, worksheet
@@ -54,6 +57,7 @@ spelling, kids, vocabulary, phonics, education, quiz, practice, classroom, teach
 ## Required URLs
 
 - Privacy Policy: <https://beesmartspelling.app/privacy>
+- Terms of Use (EULA): <https://beesmartspelling.app/terms>
 - Support: <https://beesmartspelling.app/support>
 - Marketing: <https://beesmartspelling.app>
 
