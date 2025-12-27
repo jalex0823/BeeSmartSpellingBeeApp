@@ -241,18 +241,18 @@ Each avatar includes three components:
 
 ## 🔄 SUBSCRIPTIONS
 
-### Hive Membership (Monthly)
-- **Display Name**: Hive Membership (Monthly)
-- **Reference Name**: BeeSmart – Hive Membership (Monthly)
-- **Product ID**: `beesmart.subscription.hive_monthly`
-- **Price**: $3.99/month
+### BeeSmart Premium (Monthly)
+- **Display Name**: BeeSmart Premium (Monthly)
+- **Reference Name**: BeeSmart Premium Monthly
+- **Product ID**: `beesmart.premium.monthly`
+- **Price**: $4.99/month
 - **Type**: Auto-Renewable Subscription
 
-### Hive Membership (Annual)
-- **Display Name**: Hive Membership (Annual)
-- **Reference Name**: BeeSmart – Hive Membership (Annual)
-- **Product ID**: `beesmart.subscription.hive_annual`
-- **Price**: $29.99/year
+### BeeSmart Premium (Yearly)
+- **Display Name**: BeeSmart Premium (Yearly)
+- **Reference Name**: BeeSmart Premium Yearly
+- **Product ID**: `beesmart.premium.yearly`
+- **Price**: $39.99/year
 - **Type**: Auto-Renewable Subscription
 
 ---
