@@ -5,8 +5,12 @@ Remove duplicate inactive avatars from Railway database
 import os
 from sqlalchemy import create_engine, text
 
-# Railway PostgreSQL connection string
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# Database connection (use your current environment)
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DIGITALOCEAN_DATABASE_URL")
+if not DATABASE_URL:
+    raise SystemExit(
+        "DATABASE_URL (or DIGITALOCEAN_DATABASE_URL) must be set before running this script."
+    )
 
 # Inactive duplicate slugs to remove
 DUPLICATES_TO_REMOVE = [

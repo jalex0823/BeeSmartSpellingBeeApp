@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Update BigDaddy2's avatar to professor-bee in Railway database"""
 
+import os
 import psycopg2
 
-# Railway PostgreSQL connection
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# Database connection (use your current environment: DigitalOcean, Railway, local, etc.)
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DIGITALOCEAN_DATABASE_URL")
+if not DATABASE_URL:
+    raise SystemExit(
+        "DATABASE_URL (or DIGITALOCEAN_DATABASE_URL) must be set before running this script."
+    )
 
 try:
     conn = psycopg2.connect(DATABASE_URL)

@@ -2,9 +2,14 @@
 Deactivate Anxious Bee and Monster Bee to get to exactly 39 avatars
 These are not in the official 39 avatar catalog
 """
+import os
 import psycopg2
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DIGITALOCEAN_DATABASE_URL")
+if not DATABASE_URL:
+    raise SystemExit(
+        "DATABASE_URL (or DIGITALOCEAN_DATABASE_URL) must be set before running this script."
+    )
 
 print("=" * 60)
 print("🐝 Final Fix - Deactivate Extra Avatars")

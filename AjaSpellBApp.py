@@ -1205,6 +1205,32 @@ def get_railway_speed_round_engine_options():
 IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1') in ('1', 'true', 'True', 'yes')
 IAP_VERIFICATION_MODE = os.getenv('IAP_VERIFICATION_MODE', 'mock' if IAP_MOCK_MODE else 'live_strict').strip().lower()
 
+# App Store Connect configuration safety switch.
+# When enabled, the server will only accept the monthly subscription SKU and will reject
+# yearly/family subscription SKUs. This prevents accidental exposure of products that
+# are not yet created in App Store Connect for a given build.
+IAP_MONTHLY_ONLY = os.getenv('IAP_MONTHLY_ONLY', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _is_subscription_product_allowed(product_id: str) -> bool:
+    """Return True if a subscription SKU is allowed in the current build.
+
+    - If IAP_MONTHLY_ONLY=1, then only the monthly subscription is allowed.
+    - Non-subscription products (avatars/bundles/one-time unlock) are always allowed.
+    """
+    if not product_id:
+        return False
+    if not IAP_MONTHLY_ONLY:
+        return True
+    try:
+        mapping = PRODUCT_MAP.get(product_id) or {}
+        if not mapping.get('subscription'):
+            return True
+    except Exception:
+        # If we can't confidently classify it, be conservative in monthly-only mode.
+        return False
+    return product_id == SUBSCRIPTION_PRODUCT_IDS.get('monthly')
+
 # Subscription Product IDs (for App Store Connect)
 SUBSCRIPTION_PRODUCT_IDS = {
     'monthly': 'beesmart.premium.monthly',      # $4.99/month
@@ -2445,8 +2471,8 @@ def _public_base_url() -> str:
     base = app.config.get('APP_BASE_URL')
     if base:
         return str(base).rstrip('/')
-    # Default production base (Railway)
-    return 'https://beesmartspellingbee.up.railway.app'
+    # Final fallback: local dev. Production should always provide APP_BASE_URL.
+    return 'http://localhost:5000'
 
 
 def _static_url(path: str) -> str:
@@ -5039,6 +5065,10 @@ def app_home():
             'family_sharing': True
         }
     }
+
+    # In monthly-only builds, only expose the monthly subscription.
+    if IAP_MONTHLY_ONLY:
+        subscription_products = {k: v for k, v in subscription_products.items() if k == 'monthly'}
 
     html = render_template(
         "unified_menu.html",
@@ -9606,6 +9636,13 @@ def api_iap_verify(platform):
     if not product_id:
         return jsonify({"success": False, "error": "Missing product_id"}), 400
 
+    if not _is_subscription_product_allowed(product_id):
+        return jsonify({
+            "success": False,
+            "error": "product_not_available",
+            "details": {"product_id": product_id, "monthly_only": bool(IAP_MONTHLY_ONLY)}
+        }), 400
+
     # Apple Guideline 5.1.1: users must not be forced to register/login before
     # purchasing content that is not account-based. Support guest verification by
     # tracking ownership against an anonymous id.
@@ -9767,6 +9804,18 @@ def api_iap_restore():
             "error": "No valid product_ids after normalization",
             "restore_id": restore_id,
         }), 400
+
+    # In monthly-only builds, reject unsupported subscription SKUs early.
+    if IAP_MONTHLY_ONLY:
+        blocked = [pid for pid in normalized if not _is_subscription_product_allowed(pid)]
+        if blocked:
+            return jsonify({
+                "success": False,
+                "error": "product_not_available",
+                "restore_id": restore_id,
+                "blocked_product_ids": blocked,
+                "monthly_only": True
+            }), 400
 
     try:
         app.logger.info(
@@ -13947,10 +13996,15 @@ def subscription_page():
             user_id = session.get('user_id')
             current_user = User.query.get(user_id)
         
+        # When IAP_MONTHLY_ONLY is enabled, ensure templates don't accidentally
+        # render pricing for Yearly/Family options.
         return render_template(
             'subscription.html',
             user_authenticated=user_authenticated,
-            current_user=current_user
+            current_user=current_user,
+            iap_monthly_only=IAP_MONTHLY_ONLY,
+            subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
+            if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
     
     except Exception as e:
@@ -13960,7 +14014,10 @@ def subscription_page():
         return render_template(
             'subscription.html',
             user_authenticated=False,
-            current_user=None
+            current_user=None,
+            iap_monthly_only=IAP_MONTHLY_ONLY,
+            subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
+            if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
 
 @app.route("/api/validate-receipt", methods=["POST"])

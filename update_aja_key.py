@@ -2,7 +2,13 @@
 Quick script to update Aja's teacher_key
 """
 import os
-os.environ['DATABASE_URL'] = 'postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway'
+import os
+
+# Use the DB configured in your environment (.env / shell).
+if not (os.getenv("DATABASE_URL") or os.getenv("DIGITALOCEAN_DATABASE_URL")):
+    raise SystemExit(
+        "DATABASE_URL (or DIGITALOCEAN_DATABASE_URL) must be set before running this script."
+    )
 
 from AjaSpellBApp import app, db
 from models import User

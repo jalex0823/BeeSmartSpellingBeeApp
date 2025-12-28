@@ -19,11 +19,25 @@
             background: linear-gradient(135deg, #FFD54F 0%, #FFA726 100%);
             min-height: 100vh;
             padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Fairy dust background canvas */
+        #fairy-dust {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.85;
         }
 
         .subscription-container {
             max-width: 1200px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
         .header {
@@ -380,12 +394,12 @@
 
         <!-- Pricing Cards -->
         <div class="pricing-grid">
-            <!-- Monthly Plan -->
-            <div class="pricing-card">
+            <!-- Monthly Plan (only plan for this App Store build) -->
+            <div class="pricing-card recommended">
                 <div class="card-header">
                     <div class="card-icon">📅</div>
                     <h3 class="card-title">Monthly</h3>
-                    <p class="card-subtitle">Perfect for trying it out</p>
+                    <p class="card-subtitle">Unlock everything</p>
                 </div>
 
                 <div class="pricing">
@@ -404,60 +418,6 @@
                 </ul>
 
                 <button class="cta-button" onclick="subscribe('monthly')">Start Monthly</button>
-            </div>
-
-            <!-- Yearly Plan (Recommended) -->
-            <div class="pricing-card recommended">
-                <div class="card-header">
-                    <div class="card-icon">🎯</div>
-                    <h3 class="card-title">Yearly</h3>
-                    <p class="card-subtitle">Best value for learners</p>
-                </div>
-
-                <div class="pricing">
-                    <div class="price">Yearly</div>
-                    <div class="price-period">subscription</div>
-                    <div class="savings">Best value for year‑round spelling practice</div>
-                </div>
-
-                <ul class="features">
-                    <li>Everything in Monthly</li>
-                    <li>Lower average monthly cost</li>
-                    <li>All 39 avatars unlocked forever</li>
-                    <li>Full year of learning</li>
-                    <li>All future updates included</li>
-                    <li>Priority support</li>
-                    <li>Best bang for your buck!</li>
-                </ul>
-
-                <button class="cta-button" onclick="subscribe('yearly')">Start Yearly</button>
-            </div>
-
-            <!-- Family Plan -->
-            <div class="pricing-card">
-                <div class="card-header">
-                    <div class="card-icon">👨‍👩‍👧‍👦</div>
-                    <h3 class="card-title">Family</h3>
-                    <p class="card-subtitle">Share with up to 6 members</p>
-                </div>
-
-                <div class="pricing">
-                    <div class="price">Family</div>
-                    <div class="price-period">subscription</div>
-                    <div class="savings">Up to 6 family members!</div>
-                </div>
-
-                <ul class="features">
-                    <li>Everything in Monthly</li>
-                    <li>Share with 6 family members</li>
-                    <li>Individual progress tracking</li>
-                    <li>All 39 avatars for everyone</li>
-                    <li>Ad-free for whole family</li>
-                    <li>Individual leaderboards</li>
-                    <li>Perfect for siblings!</li>
-                </ul>
-
-                <button class="cta-button" onclick="subscribe('family')">Start Family</button>
             </div>
         </div>
 
@@ -513,11 +473,6 @@
             </div>
 
             <div class="faq-item">
-                <div class="faq-question">How does the Family plan work?</div>
-                <div class="faq-answer">With Family Sharing enabled, up to 6 family members can share one subscription. Each member gets their own account, progress tracking, and avatar customization. Perfect for households with multiple kids!</div>
-            </div>
-
-            <div class="faq-item">
                 <div class="faq-question">Is there a free trial?</div>
                 <div class="faq-answer">If a free trial or introductory offer is available, it will be presented in the App Store purchase sheet before you confirm.</div>
             </div>
@@ -529,7 +484,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">Which plan should I choose?</div>
-                <div class="faq-answer">Family is best for multiple kids using Family Sharing. Yearly is best value for year‑round practice. Monthly is great for trying it out.</div>
+                <div class="faq-answer">Monthly unlocks everything in BeeSmart Premium. You can cancel anytime from your device settings.</div>
             </div>
 
             <div class="faq-item">
@@ -563,6 +518,177 @@
     </div>
 
     <script>
+        // Lightweight fairy-dust animation (no dependencies)
+        (function () {
+            const canvas = document.getElementById('fairy-dust');
+            if (!canvas) return;
+
+            const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReduced) {
+                canvas.style.display = 'none';
+                return;
+            }
+
+            const ctx = canvas.getContext('2d', { alpha: true });
+            let w = 0;
+            let h = 0;
+            let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+            function resize() {
+                w = Math.floor(window.innerWidth);
+                h = Math.floor(window.innerHeight);
+                dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+                canvas.width = Math.floor(w * dpr);
+                canvas.height = Math.floor(h * dpr);
+                canvas.style.width = w + 'px';
+                canvas.style.height = h + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            const COLORS = [
+                '255, 255, 255',    // white
+                '255, 244, 184',    // warm gold
+                '255, 220, 120',    // amber
+                '208, 242, 255',    // icy blue
+                '214, 198, 255'     // lavender
+            ];
+
+            function rand(min, max) { return min + Math.random() * (max - min); }
+
+            function makeParticle(x, y, burst = false) {
+                const base = burst ? 1.7 : 1.0;
+                const c = COLORS[(Math.random() * COLORS.length) | 0];
+                return {
+                    x,
+                    y,
+                    vx: rand(-0.20, 0.20) * base,
+                    vy: rand(-0.34, -0.08) * base,
+                    life: burst ? rand(60, 120) : rand(170, 280),
+                    age: 0,
+                    r: burst ? rand(0.9, 2.1) : rand(0.6, 1.4),
+                    c,
+                    tw: rand(0.015, 0.045),
+                    phase: rand(0, Math.PI * 2),
+                    spin: rand(-0.09, 0.09),
+                    rot: rand(0, Math.PI * 2),
+                    trail: []
+                };
+            }
+
+            const particles = [];
+
+            function seed() {
+                const count = Math.min(170, Math.max(100, Math.floor((window.innerWidth * window.innerHeight) / 13000)));
+                particles.length = 0;
+                for (let i = 0; i < count; i++) {
+                    const p = makeParticle(rand(0, w), rand(0, h), false);
+                    p.vy = rand(-0.12, -0.03);
+                    p.vx = rand(-0.08, 0.08);
+                    particles.push(p);
+                }
+            }
+
+            function burst(x, y) {
+                for (let i = 0; i < 18; i++) {
+                    particles.push(makeParticle(x + rand(-10, 10), y + rand(-10, 10), true));
+                }
+            }
+
+            window.addEventListener('pointerdown', (e) => burst(e.clientX, e.clientY), { passive: true });
+            window.addEventListener('resize', () => { resize(); seed(); });
+
+            resize();
+            seed();
+
+            let last = performance.now();
+            function tick(now) {
+                const dt = Math.min(40, now - last);
+                last = now;
+
+                // Rippley glow trails (low alpha fill)
+                ctx.fillStyle = 'rgba(255, 213, 79, 0.08)';
+                ctx.fillRect(0, 0, w, h);
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.age += dt / 16.67;
+
+                    // Slight upward lift + tiny swirl
+                    p.vy -= 0.0004 * dt;
+                    p.vx += Math.sin((p.phase + p.age * 0.08)) * 0.0009 * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.rot += p.spin * (dt / 16.67);
+
+                    // Wrap ambient dust for continuity
+                    if (p.life >= 160) {
+                        if (p.y < -30) { p.y = h + 30; p.x = rand(0, w); p.age = 0; }
+                        if (p.x < -30) p.x = w + 30;
+                        if (p.x > w + 30) p.x = -30;
+                    }
+
+                    p.trail.push({ x: p.x, y: p.y });
+                    if (p.trail.length > 8) p.trail.shift();
+
+                    const t = Math.min(1, p.age / p.life);
+                    const fade = 1 - t;
+                    const twinkle = 0.55 + 0.45 * Math.sin(p.phase + p.age * 0.9);
+                    const alpha = Math.max(0, fade) * twinkle;
+
+                    // Trail line
+                    if (p.trail.length > 2) {
+                        ctx.beginPath();
+                        for (let j = 0; j < p.trail.length; j++) {
+                            const pt = p.trail[j];
+                            if (j === 0) ctx.moveTo(pt.x, pt.y);
+                            else ctx.lineTo(pt.x, pt.y);
+                        }
+                        ctx.strokeStyle = `rgba(${p.c}, ${0.085 * alpha})`;
+                        ctx.lineWidth = 2;
+                        ctx.lineCap = 'round';
+                        ctx.stroke();
+                    }
+
+                    // Sparkle body
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+
+                    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
+                    glow.addColorStop(0, `rgba(${p.c}, ${0.22 * alpha})`);
+                    glow.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = `rgba(${p.c}, ${0.55 * alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(-6, 0); ctx.lineTo(6, 0);
+                    ctx.moveTo(0, -6); ctx.lineTo(0, 6);
+                    ctx.stroke();
+
+                    ctx.fillStyle = `rgba(${p.c}, ${0.9 * alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.r * (0.9 + twinkle * 0.4), 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.restore();
+
+                    // Expire burst particles
+                    if (p.life < 160 && p.age >= p.life) {
+                        particles.splice(i, 1);
+                    }
+                }
+
+                requestAnimationFrame(tick);
+            }
+
+            ctx.clearRect(0, 0, w, h);
+            requestAnimationFrame(tick);
+        })();
+
         async function restorePurchases() {
             try {
                 if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')) {
@@ -579,10 +705,9 @@
         }
 
         function subscribe(plan) {
+            // App Store Connect currently only has the monthly subscription product.
             const productIds = {
-                'monthly': 'beesmart.premium.monthly',
-                'yearly': 'beesmart.premium.yearly',
-                'family': 'beesmart.premium.family.monthly'
+                'monthly': 'beesmart.premium.monthly'
             };
 
             const productId = productIds[plan];

@@ -8,6 +8,18 @@
 
 This folder contains the Capacitor wrapper to ship BeeSmart to Apple App Store and Google Play. It loads your deployed web app inside a secure native WebView.
 
+## IAP plugin (required for Restore Purchases + subscription mapping)
+
+This wrapper must include the Capacitor plugin **`BeeSmartIAP`** so the web UI can:
+
+- Trigger the OS restore flow (`AppStore.sync()` on iOS)
+- Read owned product IDs (monthly/yearly/family)
+
+Repo files (iOS):
+
+- `ios/App/App/BeeSmartIAPPlugin.swift`
+- `ios/App/App/BeeSmartIAPPlugin.m` (Capacitor plugin registration)
+
 ## Prereqs
 
 - macOS with Xcode 15+ (for iOS) and Android SDK/Android Studio (for Android)
@@ -35,6 +47,12 @@ npx cap add ios
 
 # Add Android project (already present but safe to re-sync)
 npx cap add android
+```
+
+After adding/updating the IAP plugin code, always re-sync:
+
+```zsh
+npx cap sync ios
 ```
 
 If you already have `android/`, just run `npx cap sync android`.

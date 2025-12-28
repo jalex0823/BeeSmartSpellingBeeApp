@@ -4,10 +4,15 @@ Sync 9 new avatars to Railway database
 Adds: Gamer, Inventor, Lumberjack, Nurse, Plumber, Techno, Umpire, Xray, Yeti
 """
 
+import os
 import psycopg2
 from avatar_catalog import AVATAR_CATALOG
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DIGITALOCEAN_DATABASE_URL")
+if not DATABASE_URL:
+    raise SystemExit(
+        "DATABASE_URL (or DIGITALOCEAN_DATABASE_URL) must be set before running this script."
+    )
 
 # 9 new avatars to add
 NEW_AVATAR_SLUGS = [
