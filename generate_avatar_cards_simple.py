@@ -8,6 +8,53 @@ import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
+
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load a reasonably standard TrueType font across platforms.
+
+    Apple promo assets are reviewed for legibility; Pillow's default bitmap font
+    can render too small. We try common system fonts first and then fall back.
+    """
+    candidates: list[str] = []
+
+    # Windows
+    windir = os.environ.get("WINDIR")
+    if windir:
+        candidates.extend(
+            [
+                str(Path(windir) / "Fonts" / "segoeui.ttf"),
+                str(Path(windir) / "Fonts" / "arial.ttf"),
+            ]
+        )
+
+    # macOS
+    candidates.extend(
+        [
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+        ]
+    )
+
+    # Linux (common)
+    candidates.extend(
+        [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ]
+    )
+
+    # Pillow often ships DejaVuSans.ttf as a known font name.
+    candidates.append("DejaVuSans.ttf")
+
+    for p in candidates:
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            continue
+
+    # Final fallback: bitmap font (may be small). Keep generator functional.
+    return ImageFont.load_default()
+
 # Import avatar catalog for proper names
 try:
     from avatar_catalog import AVATAR_CATALOG
@@ -30,7 +77,8 @@ CARD_WIDTH = 1024
 CARD_HEIGHT = 1024
 BLACK = (0, 0, 0, 255)
 HONEY_GOLD = (250, 210, 90, 255)
-CARD_BG = (70, 70, 72, 255)  # Dark gray background from sample
+TRANSPARENT_BG = True
+CARD_BG = (0, 0, 0, 0) if TRANSPARENT_BG else (70, 70, 72, 255)
 TEXT_DARK = (15, 15, 15, 255)
 GLOW_COLOR = (255, 200, 50, 120)
 
@@ -138,50 +186,28 @@ def find_thumbnail(base_name):
     return None
 
 def create_app_store_card(avatar_img, info, width=CARD_WIDTH, height=CARD_HEIGHT):
-    """Create Apple App Store IAP screenshot (768x768)"""
-    # Create base card
+    """Create Apple App Store promoted IAP promo image (1024x1024).
+
+    Notes (based on App Store Connect guidance):
+    - Avoid overlaying text on the image.
+    - Avoid putting important details in the lower-left (App Store may overlay your app icon).
+    - Do not include price/currency strings.
+    """
+    # Create base card (transparent PNG recommended for clean promoted IAP imagery)
     card = Image.new("RGBA", (width, height), CARD_BG)
     draw = ImageDraw.Draw(card)
     
     w, h = width, height
-    margin = 30  # Fixed margin from sample
-    border_width = 6  # Border width from sample
-    corner_radius = 30  # Rounded corner radius from sample
+    margin = 40
+
+    # Keep the design clean: no text overlays, no price badges.
+    # Also keep key artwork away from the lower-left where App Store UI may overlay the app icon.
     
-    # Gold border with rounded corners
-    border_rect = [margin, margin, w - margin, h - margin]
-    draw.rounded_rectangle(border_rect, radius=corner_radius, outline=HONEY_GOLD, width=border_width)
-    
-    # Name plate at bottom (yellow background)
-    plate_h = 160  # Height from sample card
-    plate_top = h - margin - plate_h - 30  # Position from sample
-    plate_rect = [
-        margin + 45,  # Inner margin
-        plate_top,
-        w - margin - 45,
-        h - margin - 30
-    ]
-    draw.rounded_rectangle(plate_rect, radius=15, fill=HONEY_GOLD)
-    
-    # NOTE: Apple 2.3.2 compliance — do NOT render any price text/symbols on promotional images.
-    # Keep the design clean by omitting the price badge entirely.
-    
-    # Tier badge (top right corner - yellow circle)
-    tier_size = 90  # Circle diameter from sample
-    tier_pos = (w - margin - tier_size - 20, margin + 20)
-    tier_colors = {
-        'default_free': (100, 200, 100, 255),
-        'earn_or_buy': (100, 150, 255, 255),
-        'premium': (250, 210, 90, 255),  # HONEY_GOLD
-        'mascot': (255, 100, 255, 255)
-    }
-    tier_color = tier_colors.get(info.get('tier'), tier_colors['premium'])
-    draw.ellipse([tier_pos[0], tier_pos[1], tier_pos[0] + tier_size, tier_pos[1] + tier_size], 
-                 fill=tier_color)
-    
-    # Avatar area (centered between badges and name plate)
-    avatar_top = margin + 120  # Start below badges
-    avatar_bottom = plate_top - 30  # End above name plate
+    # Safe area for artwork.
+    # - Leave room around the edges for Apple's framing system.
+    # - Leave extra room in the lower-left for the app icon overlay.
+    avatar_top = margin + 60
+    avatar_bottom = h - margin - 180
     avatar_area_h = avatar_bottom - avatar_top
     avatar_max_w = w - 2 * margin - 100  # Max width
     
@@ -205,42 +231,7 @@ def create_app_store_card(avatar_img, info, width=CARD_WIDTH, height=CARD_HEIGHT
     # Paste avatar
     card.paste(avatar_resized, (avatar_x, avatar_y), avatar_resized)
     
-    # Text on name plate - smaller fonts to fit everything
-    try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 42)  # Title size
-        info_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 22)   # Info size
-        small_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)  # Small size
-        price_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)  # Price badge
-    except:
-        title_font = ImageFont.load_default()
-        info_font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
-        price_font = ImageFont.load_default()
-    
-    # Draw text info on name plate - tighter spacing
-    text_x = plate_rect[0] + 20  # Left padding
-    text_y = plate_rect[1] + 12  # Top padding
-    
-    # Avatar name (line 1)
-    draw.text((text_x, text_y), info.get('name', 'Unknown'), fill=TEXT_DARK, font=title_font)
-    text_y += 35  # Line spacing
-    
-    # SKU (line 2)
-    sku_text = f"SKU: {info.get('sku', 'unknown')}"
-    draw.text((text_x, text_y), sku_text, fill=TEXT_DARK, font=small_font)
-    text_y += 23  # Line spacing
-    
-    # Product ID (line 3)
-    product_text = f"ID: {info.get('product_id', 'beesmart.avatar.unknown')}"
-    draw.text((text_x, text_y), product_text, fill=TEXT_DARK, font=small_font)
-    text_y += 23  # Line spacing
-    
-    # Tier (line 4)
-    tier_text = f"Tier: {info.get('tier', 'premium').replace('_', ' ').title()}"
-    draw.text((text_x, text_y), tier_text, fill=TEXT_DARK, font=small_font)
-    text_y += 23  # Line spacing
-    
-    # No price text on the card.
+    # No text overlay on the image. Use App Store Connect metadata for display name/description.
     
     return card
 
