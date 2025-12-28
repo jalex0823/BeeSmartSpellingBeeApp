@@ -1,7 +1,7 @@
 # 🐝 BeeSmart Spelling Bee App - Store Submission Documentation
 
 **App Version:** 1.6  
-**Last Updated:** October 30, 2025  
+**Last Updated:** December 28, 2025  
 **Monetization Model:** Freemium with In-App Purchases (Non-Consumable)
 
 ---
@@ -295,7 +295,7 @@ Download BeeSmart today and make spelling practice something kids actually look 
 ---
 Privacy Policy: [Your URL]
 Terms of Service: [Your URL]
-Support: contact@beeesamrtspelling.comgg
+Support: contact@beesmartspelling.com
 ```
 
 ### Screenshots Required
@@ -381,7 +381,7 @@ A: Yes, Google Play Billing Library v5+.
 
 ### Developer Information
 - **Developer Name:** [Your Company/Name]
-- **Support Email:** contact@beeesamrtspelling.comgg
+- **Support Email:** contact@beesmartspelling.com
 - **Website:** https://beesmartapp.com (or your domain)
 - **Privacy Policy URL:** https://beesmartapp.com/privacy
 - **Terms of Service URL:** https://beesmartapp.com/terms
@@ -481,7 +481,7 @@ Safety First:
 • No chat or social features
 • Device-level parental controls protect all purchases
 
-Questions? Contact us at contact@beeesamrtspelling.comgg
+Questions? Contact us at contact@beesmartspelling.com
 
 Thank you for choosing BeeSmart!
 ```

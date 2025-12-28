@@ -1,6 +1,6 @@
 # Privacy Policy — BeeSmart Spelling Bee
 
-Effective date: October 31, 2025
+Effective date: December 28, 2025
 
 BeeSmart Spelling Bee (the “App”) helps learners practice spelling with kid‑friendly definitions and optional voice input. We respect your and your child’s privacy. This policy explains what we collect, why, and your choices.
 
@@ -51,6 +51,6 @@ BeeSmart Spelling Bee (the “App”) helps learners practice spelling with kid�
 
 ## Contact
 - Email: privacy@beesmartspelling.app
-- Website: https://beesmartspelling.app/privacy
+- Website: [https://beesmartspelling.app/privacy](https://beesmartspelling.app/privacy)
 
 If you are a parent or guardian and have a question about your child’s information, please contact us.
