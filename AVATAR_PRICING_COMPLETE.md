@@ -267,7 +267,7 @@ BeeSmart uses a **3-tier unlock system** for avatars:
 ## 📞 Support & Questions
 
 For pricing inquiries or purchase issues:
-- **Email:** support@beesmartspelling.app
+- **Email:** contact@beesmartspelling.com
 - **In-App:** Settings → Help & Support
 - **Website:** https://beesmartspelling.app/help
 

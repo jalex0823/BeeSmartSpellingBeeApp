@@ -774,7 +774,7 @@ def support_page():
     try:
         return render_template("support.html")
     except Exception:
-        return "<html><head><meta charset='utf-8'><title>Support</title></head><body><h1>Support</h1><p>Email: <a href='mailto:support@beesmartspelling.app'>support@beesmartspelling.app</a></p><p><a href='/app'>Back to App</a></p></body></html>"
+        return "<html><head><meta charset='utf-8'><title>Support</title></head><body><h1>Support</h1><p>Email: <a href='mailto:contact@beeesamrtspelling.comgg'>contact@beeesamrtspelling.comgg</a></p><p><a href='/app'>Back to App</a></p></body></html>"
 
 
 @app.route("/contact")

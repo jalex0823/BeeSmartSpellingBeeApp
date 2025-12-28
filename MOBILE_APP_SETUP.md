@@ -458,4 +458,4 @@ Once approved, your app will be available:
 
 ---
 
-**Questions?** Open an issue or contact support at support@beesmartspelling.app
+**Questions?** Open an issue or contact support at contact@beesmartspelling.com

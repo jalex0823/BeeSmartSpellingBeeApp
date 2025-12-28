@@ -295,7 +295,7 @@ Download BeeSmart today and make spelling practice something kids actually look 
 ---
 Privacy Policy: [Your URL]
 Terms of Service: [Your URL]
-Support: [Your support email]
+Support: contact@beeesamrtspelling.comgg
 ```
 
 ### Screenshots Required
@@ -381,7 +381,7 @@ A: Yes, Google Play Billing Library v5+.
 
 ### Developer Information
 - **Developer Name:** [Your Company/Name]
-- **Support Email:** support@beesmartapp.com (or your email)
+- **Support Email:** contact@beeesamrtspelling.comgg
 - **Website:** https://beesmartapp.com (or your domain)
 - **Privacy Policy URL:** https://beesmartapp.com/privacy
 - **Terms of Service URL:** https://beesmartapp.com/terms
@@ -481,7 +481,7 @@ Safety First:
 • No chat or social features
 • Device-level parental controls protect all purchases
 
-Questions? Contact us at support@beesmartapp.com
+Questions? Contact us at contact@beeesamrtspelling.comgg
 
 Thank you for choosing BeeSmart!
 ```

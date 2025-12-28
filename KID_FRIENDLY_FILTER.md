@@ -240,7 +240,7 @@ Teachers can report:
 - False positives (safe words blocked)
 - False negatives (inappropriate words allowed)
 
-Email: support@beesmartspelling.com
+Email: contact@beesmartspelling.com
 
 ## Compliance
 

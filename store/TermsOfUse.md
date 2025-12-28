@@ -38,4 +38,4 @@ We may suspend or terminate access for violation of these Terms or to protect th
 Specify your governing law/jurisdiction here.
 
 ## Contact
-support@beesmartspelling.app | https://beesmartspelling.app/terms
+contact@beeesamrtspelling.comgg | https://beesmartspelling.app/terms
