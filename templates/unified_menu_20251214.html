@@ -17499,10 +17499,11 @@
 
         // CREST HELIX FAIRY DUST (bottom -> top, front <-> back)
         function createFairyDustEffect() {
-            const logo = document.querySelector('.crest-logo');
             const backLayer = document.querySelector('.fairy-dust-helix-back');
             const frontLayer = document.querySelector('.fairy-dust-helix-front');
-            if (!logo || !backLayer || !frontLayer) {
+            const container = (backLayer && backLayer.closest('.logo-container')) || (frontLayer && frontLayer.closest('.logo-container'));
+            const logo = container ? container.querySelector('img.crest-logo') : null;
+            if (!container || !logo || !backLayer || !frontLayer) {
                 return;
             }
 
@@ -17542,9 +17543,9 @@
             const baseAngle = Math.PI / 2;
 
             const render = (nowMs) => {
-                const container = logo.parentElement;
-                const w = container ? container.clientWidth : 0;
-                const h = container ? container.clientHeight : 0;
+                const rect = container.getBoundingClientRect();
+                const w = rect ? rect.width : 0;
+                const h = rect ? rect.height : 0;
 
                 if (!w || !h) {
                     window.__crestHelixDustRafId = requestAnimationFrame(render);
@@ -17600,6 +17601,11 @@
             // DOM already ready
             setTimeout(createFairyDustEffect, 800);
         }
+
+        // Re-run once the loader screen finishes (the loader also has a .crest-logo).
+        document.addEventListener('honeyLoaderFinished', () => {
+            setTimeout(createFairyDustEffect, 250);
+        });
 
     </script>
 
