@@ -116,7 +116,6 @@
     {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
     {% set _billing_mode = (registration_billing_mode or 'subscription') %}
     {% set _subscription_sku = subscription_product_id if subscription_product_id is defined else '' %}
-    {% set _subscription_monthly = (subscription_monthly_usd or 4.49) %}
     <script>
         // CRITICAL: Set auth state EARLY so tile-locking logic works correctly
         window.IS_AUTH = {{ _is_auth }};
@@ -124,7 +123,8 @@
         window.IS_PREMIUM = {{ _is_premium }};
         window.BILLING_MODE = '{{ _billing_mode }}';
         window.SUBSCRIPTION_SKU = '{{ _subscription_sku }}';
-        window.SUBSCRIPTION_MONTHLY_USD = {{ _subscription_monthly }};
+        // Do not display or hard-code subscription prices in-app.
+        window.SUBSCRIPTION_MONTHLY_USD = null;
         console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
     </script>
     <!-- Native IAP bridge (Capacitor): defines window.BeeSmartIAP when running in iOS/Android wrapper -->
@@ -4059,11 +4059,7 @@
                         </a>
                         {% if (registration_billing_mode or 'subscription') == 'subscription' %}
                         <div style="font-size: 0.8rem; color:#5A2C15; margin-top: 0.35rem;">
-                            {% if (subscription_trial_days or 0) | int > 0 %}
-                                Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled during trial.
-                            {% else %}
-                                ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
-                            {% endif %}
+                            Auto‑renews unless canceled. Pricing shown in the App Store.
                         </div>
                         {% endif %}
                     </div>
@@ -4124,7 +4120,7 @@
 
                 <!-- App Store compliance: Terms/EULA link must be accessible in-app -->
                 <div style="margin-top: 10px;">
-                    <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" style="
+                    <a href="/terms" style="
                         display: inline-block;
                         color: rgba(60, 32, 12, 0.85);
                         background: rgba(255, 255, 255, 0.6);
@@ -4136,7 +4132,7 @@
                         text-decoration: none;
                         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
                     " title="View Terms of Use / EULA">
-                        Terms of Use (EULA)
+                        Terms of Service
                     </a>
                 </div>
             </section>
@@ -4450,11 +4446,7 @@
                             </div>
                             {% if (registration_billing_mode or 'subscription') == 'subscription' %}
                             <div style="font-size: 0.85rem; color:#5A2C15; text-align: center; margin-top: 1rem;">
-                                {% if (subscription_trial_days or 0) | int > 0 %}
-                                    ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
-                                {% else %}
-                                    ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
-                                {% endif %}
+                                Auto‑renews unless canceled. Pricing shown in the App Store.
                             </div>
                             {% endif %}
                             <div style="margin-top: 1rem; font-size: 0.85rem; color: #999; text-align: center;">

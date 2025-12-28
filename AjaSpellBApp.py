@@ -1233,9 +1233,9 @@ def _is_subscription_product_allowed(product_id: str) -> bool:
 
 # Subscription Product IDs (for App Store Connect)
 SUBSCRIPTION_PRODUCT_IDS = {
-    'monthly': 'beesmart.premium.monthly',      # $4.99/month
-    'yearly': 'beesmart.premium.yearly',        # $39.99/year (Save 33%)
-    'family': 'beesmart.premium.family.monthly', # $7.99/month (Up to 6 members)
+    'monthly': 'beesmart.premium.monthly',
+    'yearly': 'beesmart.premium.yearly',
+    'family': 'beesmart.premium.family.monthly',
     'legacy': 'beesmart.sub.full_monthly'       # Legacy subscription (backward compatibility)
 }
 
@@ -1248,25 +1248,25 @@ PRODUCT_MAP = {
     # SUBSCRIPTION TIERS (Auto-Renewable)
     # Configurable subscription SKU (defaults to current monthly). Legacy remains supported.
     os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.premium.monthly'): {
-        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
+        'type': 'premium', 'subscription': True, 'duration': '1 month'
     },
     # Legacy subscription (kept for backward compatibility)
     'beesmart.sub.full_monthly': {
-        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month'
+        'type': 'premium', 'subscription': True, 'duration': '1 month'
     },
-    # Monthly Premium Subscription ($4.99/month)
+    # Monthly Premium Subscription
     'beesmart.premium.monthly': {
-        'type': 'premium', 'subscription': True, 'price': 4.99, 'duration': '1 month',
+        'type': 'premium', 'subscription': True, 'duration': '1 month',
         'name': 'Premium Monthly Membership'
     },
-    # Yearly Premium Subscription ($39.99/year - Best Value, Save 33%)
+    # Yearly Premium Subscription
     'beesmart.premium.yearly': {
-        'type': 'premium', 'subscription': True, 'price': 39.99, 'duration': '1 year',
+        'type': 'premium', 'subscription': True, 'duration': '1 year',
         'name': 'Premium Yearly Membership'
     },
-    # Family Premium Subscription ($7.99/month - Up to 6 members)
+    # Family Premium Subscription
     'beesmart.premium.family.monthly': {
-        'type': 'premium', 'subscription': True, 'price': 7.99, 'duration': '1 month',
+        'type': 'premium', 'subscription': True, 'duration': '1 month',
         'name': 'Premium Family Membership', 'family_sharing': True
     },
     # Individual avatar unlocks
@@ -5007,9 +5007,10 @@ def app_home():
     # Pass subscription messaging to home for guest upsell
     billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
     try:
-        monthly_fee = float(os.environ.get('SUBSCRIPTION_MONTHLY_USD', '4.49'))
+        _m = os.environ.get('SUBSCRIPTION_MONTHLY_USD')
+        monthly_fee = float(_m) if _m not in (None, '') else None
     except Exception:
-        monthly_fee = 4.49
+        monthly_fee = None
     try:
         trial_days = int(os.environ.get('SUBSCRIPTION_TRIAL_DAYS', '7'))
     except Exception:
@@ -5046,20 +5047,17 @@ def app_home():
     subscription_products = {
         'monthly': {
             'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
-            'price': 4.99,
             'duration': '1 month',
             'name': 'Premium Monthly Membership'
         },
         'yearly': {
             'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
-            'price': 39.99,
             'duration': '1 year',
             'name': 'Premium Yearly Membership',
-            'savings': '33%'
+            'savings': None
         },
         'family': {
             'id': SUBSCRIPTION_PRODUCT_IDS['family'],
-            'price': 7.99,
             'duration': '1 month',
             'name': 'Premium Family Membership',
             'family_sharing': True
@@ -10699,14 +10697,16 @@ def register():
         billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
         # Legacy one-time fee support (fallback)
         try:
-            one_time_fee = float(os.environ.get('REGISTRATION_FEE_USD', '4.99'))
+            _f = os.environ.get('REGISTRATION_FEE_USD')
+            one_time_fee = float(_f) if _f not in (None, '') else None
         except Exception:
-            one_time_fee = 4.99
-        # Monthly subscription fee (default lower than typical $4.99)
+            one_time_fee = None
+        # Monthly subscription fee
         try:
-            monthly_fee = float(os.environ.get('SUBSCRIPTION_MONTHLY_USD', '4.49'))
+            _m = os.environ.get('SUBSCRIPTION_MONTHLY_USD')
+            monthly_fee = float(_m) if _m not in (None, '') else None
         except Exception:
-            monthly_fee = 4.49
+            monthly_fee = None
         # Optional: free trial days and intro pricing
         try:
             trial_days = int(os.environ.get('SUBSCRIPTION_TRIAL_DAYS', '7'))
@@ -13870,122 +13870,58 @@ def speed_round_results():
 
 @app.route("/api/subscriptions", methods=["GET"])
 def api_get_subscriptions():
-    """Get available subscription products with pricing and details.
-    
-    Returns subscription tiers for App Store Connect integration:
-    - Monthly Premium ($4.99/month)
-    - Yearly Premium ($39.99/year - Save 33%)
-    - Family Premium ($7.99/month - Up to 6 members)
+    """Get available subscription products (no price display).
+
+    For Apple policy and consistency, this endpoint does not return explicit pricing.
+    Pricing is shown in the App Store purchase flow.
     """
     try:
+        products = [
+            {
+                'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
+                'type': 'monthly',
+                'name': 'Premium Monthly Membership',
+                'displayName': 'Premium Monthly',
+                'duration': '1 month',
+                'subscription': True,
+                'familySharing': False,
+                'price': None,
+                'currency': None,
+                'description': 'Unlock unlimited spelling practice with Premium Monthly Membership!',
+                'benefits': [
+                    'Unlimited word lists and quizzes',
+                    'All 39 premium bee avatars unlocked',
+                    'Ad-free experience',
+                    'Speed Round mode access',
+                    'Offline mode for practice anywhere',
+                    'Priority customer support',
+                    'Monthly content updates'
+                ]
+            }
+        ]
+
+        # Only expose monthly for current live offering / monthly-only builds.
+        if not IAP_MONTHLY_ONLY:
+            # If you later enable yearly/family, add them back without explicit price fields.
+            pass
+
         subscriptions = {
             'status': 'success',
-            'products': [
-                {
-                    'id': SUBSCRIPTION_PRODUCT_IDS['monthly'],
-                    'type': 'monthly',
-                    'name': 'Premium Monthly Membership',
-                    'displayName': 'Premium Monthly',
-                    'price': 4.99,
-                    'currency': 'USD',
-                    'duration': '1 month',
-                    'subscription': True,
-                    'familySharing': False,
-                    'description': 'Unlock unlimited spelling practice with Premium Monthly Membership!',
-                    'benefits': [
-                        'Unlimited word lists and quizzes',
-                        'All 39 premium bee avatars unlocked',
-                        'Ad-free experience',
-                        'Speed Round mode access',
-                        'Offline mode for practice anywhere',
-                        'Priority customer support',
-                        'Monthly content updates'
-                    ]
-                },
-                {
-                    'id': SUBSCRIPTION_PRODUCT_IDS['yearly'],
-                    'type': 'yearly',
-                    'name': 'Premium Yearly Membership',
-                    'displayName': 'Premium Yearly',
-                    'price': 39.99,
-                    'currency': 'USD',
-                    'duration': '1 year',
-                    'subscription': True,
-                    'familySharing': False,
-                    'savings': '33%',
-                    'savingsAmount': 20.00,
-                    'monthlyEquivalent': 3.33,
-                    'recommended': True,
-                    'badge': 'Best Value',
-                    'description': 'Best Value! Unlock unlimited spelling practice for a full year!',
-                    'benefits': [
-                        'Everything in Monthly Premium',
-                        'Save 33% compared to monthly billing',
-                        'All 39 premium bee avatars unlocked forever',
-                        'Ad-free experience for the entire year',
-                        'Speed Round mode access',
-                        'Offline mode for practice anywhere',
-                        'Priority customer support',
-                        'All future content updates included'
-                    ]
-                },
-                {
-                    'id': SUBSCRIPTION_PRODUCT_IDS['family'],
-                    'type': 'family',
-                    'name': 'Premium Family Membership',
-                    'displayName': 'Premium Family',
-                    'price': 7.99,
-                    'currency': 'USD',
-                    'duration': '1 month',
-                    'subscription': True,
-                    'familySharing': True,
-                    'maxMembers': 6,
-                    'description': 'Perfect for families! Share Premium access with up to 6 family members!',
-                    'benefits': [
-                        'Premium access for up to 6 family members',
-                        'Each member gets their own progress tracking',
-                        'All 39 premium bee avatars unlocked',
-                        'Ad-free experience for everyone',
-                        'Speed Round mode access',
-                        'Offline mode for practice anywhere',
-                        'Priority customer support',
-                        'Individual leaderboards and achievements'
-                    ]
-                }
-            ],
-            'subscriptionGroup': 'BeeSmart Premium Membership',
-            'freeTrial': {
-                'available': True,
-                'duration': 7,
-                'durationUnit': 'days'
-            }
+            'products': products,
+            'pricingNotice': 'Pricing is shown in the App Store purchase flow.'
         }
-        
-        # Include user's current subscription status if authenticated
-        if current_user.is_authenticated:
-            subscriptions['user'] = {
-                'isPremium': getattr(current_user, 'premium_member', False),
-                'activeSubscription': None  # TODO: Track active subscription type
-            }
-        
+
         return jsonify(subscriptions)
-        
+
     except Exception as e:
-        import traceback
-        print(f" Error fetching subscriptions: {e}")
-        print(traceback.format_exc())
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'trace': traceback.format_exc()
-        }), 500
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 @app.route("/subscription")
 @app.route("/premium")
 def subscription_page():
     """
     Subscription landing page for BeeSmart Premium
-    Shows all 3 tiers (Monthly, Yearly, Family) with pricing comparison
+    Shows available premium subscription options (pricing shown in the App Store purchase flow)
     """
     try:
         # Check if user is authenticated
