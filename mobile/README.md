@@ -35,9 +35,8 @@ See **STATUS.txt** for current setup status.
 
 - **App Name:** BeeSmart Spelling Bee
 - **App ID:** app.beesmartspelling
-- **Backend URL:** https://beesmartspelling.app
 - **Version:** 1.0.0 (versionCode 1)
-- **Approach:** Capacitor WebView wrapper pointing to Railway
+- **Approach:** Capacitor WebView wrapper bundling web assets (no remote hosting)
 
 ---
 
@@ -74,13 +73,12 @@ Build release AAB or APK with optional version updates.
 ## 🏗️ Architecture
 
 ### Web App (Flask/Python)
-- Hosted on Railway: https://beesmartspelling.app
-- PostgreSQL database
+- Flask backend (this repo)
 - Full web UI with PWA support
 
 ### Mobile App (Capacitor)
 - Native Android wrapper
-- WebView loads Railway URL
+- WebView loads bundled web assets
 - Native integrations: Camera, Microphone, StatusBar
 - Splash screen and app icons
 - Play Store ready
@@ -144,17 +142,17 @@ npm i -D @capacitor/cli @capacitor/core
 npx cap init "BeeSmart Spelling Bee" app.beesmartspelling --web-dir=dist
 ```
 
-You can keep `web-dir=dist` even though we point to a remote URL—Capacitor requires a folder. We won’t bundle web assets initially.
+You can keep `web-dir=dist` even though we use a different folder for bundled assets in this repo—Capacitor requires a folder.
 
-2) Configure Capacitor server to point to production
+2) Use the bundled-assets Capacitor configuration
 
-Edit `capacitor.config.ts` (created here for you). Ensure:
+Edit `capacitor.config.ts` (created here for you). Ensure you **do not** set `server.url`:
 
 ```ts
 server: {
-  url: 'https://beesmartspelling.app',
+  // No remote hosting or external server URL.
+  // The app loads the bundled assets from webDir.
   cleartext: false,
-  androidScheme: 'https'
 }
 ```
 

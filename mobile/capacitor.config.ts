@@ -1,18 +1,20 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 // BeeSmart Spelling Bee - Capacitor Configuration
-// This connects your mobile app to the Railway backend
+// Store builds load bundled web assets (no remote hosting dependency)
 
 const config: CapacitorConfig = {
   // Normalized to match root config for store builds
   appId: 'com.beesmart.spelling',
   appName: 'BeeSmart Spelling',
-  webDir: 'static',
+  // IMPORTANT: this wrapper lives in /mobile but should bundle the root app's web assets
+  // (BeeSmart serves templates/static via Flask). For a packaged build we point at the
+  // root `static/` folder.
+  webDir: '../static',
+  // IMPORTANT: No `server.url` here. Using it turns the app into a remote WebView.
+  // We want a true wrapped app that ships the latest web build inside the bundle.
   server: {
-    // Canonical production URL (stable for App Review + store listings)
-    url: 'https://beesmartspelling.app',
-    cleartext: false,
-    androidScheme: 'https'
+    cleartext: false
   },
   plugins: {
     SplashScreen: {

@@ -126,7 +126,7 @@ npm run cap:open:android
   - `-BuildAPK` - Build APK instead of AAB
   - `-VersionName "1.0.1"` - Set version name
   - `-VersionCode 2` - Set version code
-- Syncs web assets from Railway
+- Syncs bundled web assets into the native projects
 - Runs Gradle build
 - Creates signed AAB/APK
 - Shows output location

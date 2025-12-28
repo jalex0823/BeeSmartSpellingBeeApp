@@ -95,7 +95,7 @@ STEP 3: Follow the wizard (it will guide you through)
    → Updates security settings
 
 3. Choose option 3 - Build release AAB
-   → Syncs your web app from Railway
+   → Syncs bundled web assets into the native projects
    → Builds signed Android App Bundle
    → Takes 2-5 minutes
    → Output: android/app/build/outputs/bundle/release/app-release.aab
