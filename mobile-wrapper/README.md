@@ -25,7 +25,7 @@ Repo files (iOS):
 - macOS with Xcode 15+ (for iOS) and Android SDK/Android Studio (for Android)
 - Node.js 18+
 - Apple Developer and Google Play developer accounts
-- Backend deployed over HTTPS (e.g., Railway)
+- Backend deployed over HTTPS (if you choose a hosted-WebView approach)
 
 The wrapper points to your production URL via `capacitor.config.json > server.url`.
 
@@ -69,14 +69,14 @@ If you already have `android/`, just run `npx cap sync android`.
    - Signing & Capabilities: your Team, Bundle ID `com.beesmart.spellingbee` (or your own), and build version.
    - Targets > Info: CFBundleShortVersionString (e.g., 1.7) and CFBundleVersion (build number).
    - App Icons and Launch Screen: drag your assets into the asset catalog.
-   - App Transport Security: no exceptions needed for HTTPS Railway; ensure your production domain is HTTPS.
+   - App Transport Security: no exceptions needed for HTTPS; ensure your production domain is HTTPS.
    - Privacy Manifest (iOS 17+): add a Privacy Manifest file and set “No tracking”. No Required‑Reason APIs are used.
 3. Build: Product > Archive, then Distribute via Organizer to TestFlight/App Store.
 
 Tip: You can override health version for production without code changes:
 
 ```zsh
-# In your production env (Railway or similar)
+# In your production env
 export HEALTH_VERSION=1.7
 ```
 
