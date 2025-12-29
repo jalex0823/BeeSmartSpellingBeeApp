@@ -277,6 +277,7 @@
                             : `Restore complete. Your purchases are already active.${rid ? ' (restore ' + rid + ')' : ''}`;
                         if (typeof showSuccessMessage === 'function') { showSuccessMessage(m); }
                         else { alert(m); }
+                        try { window.location.reload(); } catch(e) {}
                     } else {
                         const err = (data && (data.error || data.message)) ? String(data.error || data.message) : `HTTP ${resp.status}`;
                         const rid = (data && data.restore_id) ? String(data.restore_id) : '';

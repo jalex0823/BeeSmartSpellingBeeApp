@@ -987,6 +987,52 @@ def api_avatars():
         })
 
     # Registered users and admins: evaluate all catalog entries
+    # NOTE: For native IAP, the client must purchase using the exact App Store / Play
+    # product id. We derive a preferred SKU from PRODUCT_MAP so it matches the store.
+    def _build_avatar_sku_lookup() -> dict:
+        lookup = {}
+        try:
+            items = PRODUCT_MAP.items() if isinstance(PRODUCT_MAP, dict) else []
+        except Exception:
+            items = []
+
+        candidates = {}
+        for pid, mapping in items:
+            try:
+                if not isinstance(mapping, dict):
+                    continue
+                if mapping.get('type') != 'avatar':
+                    continue
+                aid = str(mapping.get('avatar_id') or '').strip().lower()
+                if not aid:
+                    continue
+                candidates.setdefault(aid, []).append(str(pid))
+            except Exception:
+                continue
+
+        def _score(pid: str):
+            p = (pid or '').strip().lower()
+            # Prefer the legacy store prefix used by existing App Store Connect metadata.
+            if p.startswith('beesmart.avatar.'):
+                prefix_rank = 0
+            elif p.startswith('com.beesmart.avatar.'):
+                prefix_rank = 1
+            else:
+                prefix_rank = 2
+            # Prefer underscore style (matches existing product ids like cool_bee)
+            style_rank = 0 if '_' in p else 1
+            return (prefix_rank, style_rank, len(p))
+
+        for aid, pids in candidates.items():
+            try:
+                best = sorted(set(pids), key=_score)[0] if pids else None
+            except Exception:
+                best = pids[0] if pids else None
+            if best:
+                lookup[aid] = best
+        return lookup
+
+    avatar_sku_lookup = _build_avatar_sku_lookup()
     locked_count = 0
     unlocked_count = 0
     for entry in AVATAR_CATALOG:
@@ -1008,10 +1054,10 @@ def api_avatars():
         # Optional: stable product id for store purchase flows
         product_id = None
         try:
-            from avatar_skus import sku_for_slug  # type: ignore
             tier_norm = (entry.get('tier') or '').lower()
-            if tier_norm in ('earn_or_buy', 'premium'):
-                product_id = sku_for_slug(entry.get('id') or '')
+            avatar_id = str(entry.get('id') or '').strip().lower()
+            if tier_norm in ('earn_or_buy', 'premium') and avatar_id:
+                product_id = avatar_sku_lookup.get(avatar_id)
         except Exception:
             product_id = None
 
@@ -9569,6 +9615,12 @@ def api_iap_verify(platform):
       { product_id, transaction_id, purchase_token, payload }
     """
     platform = (platform or '').lower().strip()
+    # Be tolerant of common native platform labels.
+    if platform in ('ios', 'appstore', 'app_store'):
+        platform = 'apple'
+    elif platform in ('android', 'play', 'playstore', 'play_store'):
+        platform = 'google'
+
     if platform not in ('apple', 'google', 'web'):
         return jsonify({"success": False, "error": "Unsupported platform"}), 400
 
