@@ -229,15 +229,32 @@
     }
 
     function startFairyDust(opts) {
-        if (prefersReducedMotion()) return;
+        console.log('[FairyDust] Starting with opts:', opts);
+        
+        if (prefersReducedMotion()) {
+            console.log('[FairyDust] Reduced motion preference detected, skipping');
+            return;
+        }
 
         const logo = findLogo(opts.logoSelector);
-        if (!logo) return;
+        console.log('[FairyDust] Logo element:', logo);
+        if (!logo) {
+            console.warn('[FairyDust] Logo not found with selector:', opts.logoSelector);
+            return;
+        }
 
         const container = ensureContainer();
+        console.log('[FairyDust] Container created/found:', container);
+        
         const canvas = ensureCanvas(container, opts.zIndex);
+        console.log('[FairyDust] Canvas created/found:', canvas);
+        
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        if (!ctx) {
+            console.error('[FairyDust] Could not get 2d context');
+            return;
+        }
+        console.log('[FairyDust] Animation starting...');
 
         let running = true;
         let particles = [];
@@ -333,22 +350,27 @@
     }
 
     function init() {
+        console.log('[FairyDust] Initializing...');
         // Expose a tiny API for manual triggering.
         window.BeeSmartLogoFX = window.BeeSmartLogoFX || {};
         window.BeeSmartLogoFX.startFairyDust = function (override = {}) {
+            console.log('[FairyDust] Manual trigger called');
             startFairyDust(Object.assign({}, DEFAULTS, override));
         };
 
         // Auto-run on pages where the crest logo shows up (safe no-op if not).
         // Delay slightly so `brand-logo-replacer.js` can swap logo src first.
         setTimeout(() => {
+            console.log('[FairyDust] Auto-starting after 600ms delay...');
             startFairyDust(DEFAULTS);
         }, 600);
     }
 
     if (document.readyState === 'loading') {
+        console.log('[FairyDust] Document still loading, waiting for DOMContentLoaded');
         document.addEventListener('DOMContentLoaded', init);
     } else {
+        console.log('[FairyDust] Document already loaded, initializing immediately');
         init();
     }
 })();
