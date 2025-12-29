@@ -6640,6 +6640,75 @@ def api_wordbank_delete():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+@app.route("/api/export", methods=["GET"])
+def api_export():
+    """
+    Export the user's word list in JSON or CSV format.
+    Query parameter: format=json or format=csv (default: json)
+    """
+    try:
+        # Get format parameter
+        export_format = request.args.get('format', 'json').lower()
+        
+        # Get current wordbank
+        words = get_wordbank()
+        
+        if not words:
+            return jsonify({"error": "No words to export"}), 400
+        
+        # Generate filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        if export_format == 'csv':
+            # Create CSV output
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write header
+            writer.writerow(['Word', 'Sentence', 'Hint'])
+            
+            # Write data rows
+            for word_data in words:
+                writer.writerow([
+                    word_data.get('word', ''),
+                    word_data.get('sentence', ''),
+                    word_data.get('hint', '')
+                ])
+            
+            output.seek(0)
+            return Response(
+                output.read(),
+                mimetype='text/csv',
+                headers={
+                    'Content-Disposition': f'attachment; filename="beesmart_wordlist_{timestamp}.csv"',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            )
+        else:
+            # Default to JSON format
+            json_data = json.dumps({
+                'exported_at': timestamp,
+                'word_count': len(words),
+                'words': words
+            }, indent=2)
+            
+            return Response(
+                json_data,
+                mimetype='application/json',
+                headers={
+                    'Content-Disposition': f'attachment; filename="beesmart_wordlist_{timestamp}.json"',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            )
+    except Exception as e:
+        print(f"Export error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/quiz/reset", methods=["POST"])
 def api_quiz_reset():
     """
