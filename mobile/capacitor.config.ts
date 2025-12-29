@@ -7,9 +7,9 @@ const config: CapacitorConfig = {
   // Normalized to match root config for store builds
   appId: 'com.beesmart.spelling',
   appName: 'BeeSmart Spelling',
-  // IMPORTANT: Flask app loads from hosted URL (beesmartspelling.app)
-  // The app is a web wrapper that loads your production site
-  webDir: 'www',  // placeholder directory (not used with server.url)
+  // Production wrapper: load the deployed site (DigitalOcean)
+  // NOTE: If you want a fully-offline/bundled build later, remove server.url.
+  webDir: 'www',
   server: {
     url: 'https://beesmartspelling.app',
     cleartext: false
