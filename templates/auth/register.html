@@ -788,6 +788,54 @@ teacherKeyInput.addEventListener('input', function() {
     this.value = this.value.toUpperCase();
 });
 
+// Form validation to enable/disable submit button
+function validateForm() {
+    const username = document.getElementById('username').value.trim();
+    const displayName = document.getElementById('display_name').value.trim();
+    const role = document.getElementById('role').value;
+    const password = document.getElementById('password').value;
+    const avatarId = document.getElementById('selected_avatar').value;
+    
+    // Check all required fields
+    const isValid = username.length >= 3 && 
+                    displayName.length > 0 && 
+                    role.length > 0 && 
+                    password.length >= 6 && 
+                    avatarId.length > 0;
+    
+    // Enable or disable submit button based on validation
+    submitBtn.disabled = !isValid;
+    
+    console.log('Form validation:', {
+        username: username.length >= 3,
+        displayName: displayName.length > 0,
+        role: role.length > 0,
+        password: password.length >= 6,
+        avatarId: avatarId.length > 0,
+        isValid
+    });
+}
+
+// Add input listeners to all required fields
+document.getElementById('username').addEventListener('input', validateForm);
+document.getElementById('display_name').addEventListener('input', validateForm);
+document.getElementById('role').addEventListener('change', validateForm);
+document.getElementById('password').addEventListener('input', validateForm);
+document.getElementById('selected_avatar').addEventListener('change', validateForm);
+
+// Also validate when avatar is clicked (since it updates hidden input)
+const avatarGridElement = document.getElementById('avatarGrid');
+if (avatarGridElement) {
+    const originalClickHandler = avatarGridElement.onclick;
+    avatarGridElement.addEventListener('click', function(e) {
+        // Small delay to ensure the hidden input is updated first
+        setTimeout(validateForm, 50);
+    });
+}
+
+// Initial validation check on page load
+setTimeout(validateForm, 500);
+
 // 🔙 REGISTRATION CANCEL/EXIT FUNCTIONALITY 🔙
 let formIsPristine = true;
 let formInitialValues = {};
