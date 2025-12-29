@@ -6,18 +6,18 @@
         logoSelector: '.brand-logo.crest-logo, img.crest-logo, img.brand-logo',
         zIndex: 12, // logo is z=10 in unified_menu, so we sit above it
         durationMs: 3200,
-        particleIntervalMs: 26,
-        trailLifetimeMs: 900,
-        maxParticles: 140,
+        particleIntervalMs: 16,
+        trailLifetimeMs: 1200,
+        maxParticles: 200,
         headColor: '#FFF8C9',
         tailColor: '#FFD36A',
         glowColor: 'rgba(255, 215, 0, 0.65)',
         // Path behavior
-        loops: 1.15, // how many times it snakes around
-        wobbleAmp: 10,
-        wobbleFreq: 6.5,
+        loops: 2.0, // how many times it snakes around
+        wobbleAmp: 18,
+        wobbleFreq: 5.0,
         // Dissipation
-        fadeStartT: 0.72,
+        fadeStartT: 0.65,
         // Sparkle burst
         burstCount: 10,
         burstLingerMs: 520,
@@ -151,21 +151,22 @@
 
     function drawTail(ctx, from, to, t, opts) {
         // Tail is drawn as a series of fading beads behind the head.
-        const steps = 9;
+        const steps = 14;
         for (let i = 1; i <= steps; i++) {
             const k = i / steps;
             const x = lerp(from.x, to.x, k);
             const y = lerp(from.y, to.y, k);
 
-            const base = 7.8 * (1 - k);
-            const size = Math.max(0.8, base * (1 - t * 0.25));
+            const base = 10.0 * (1 - k);
+            const size = Math.max(0.6, base * (1 - t * 0.2));
 
             // Dissipation as we approach the top
             const fadeT = t > opts.fadeStartT ? (1 - (t - opts.fadeStartT) / (1 - opts.fadeStartT)) : 1;
-            const alpha = 0.24 * (1 - k) * fadeT;
+            const alpha = 0.35 * (1 - k) * fadeT;
 
             const grad = ctx.createRadialGradient(x, y, 0, x, y, size);
             grad.addColorStop(0, `rgba(255,211,106,${alpha})`);
+            grad.addColorStop(0.5, `rgba(255,248,201,${alpha * 0.7})`);
             grad.addColorStop(1, 'rgba(255,211,106,0)');
 
             ctx.fillStyle = grad;
@@ -312,7 +313,7 @@
                 // Fade and shrink by age and by global ascent.
                 const fadeT = pt.t > opts.fadeStartT ? (1 - (pt.t - opts.fadeStartT) / (1 - opts.fadeStartT)) : 1;
                 const alpha = (1 - life) * fadeT;
-                const headSize = lerp(10.5, 5.0, pt.t) * (0.85 + (1 - life) * 0.15);
+                const headSize = lerp(12.0, 4.0, pt.t) * (0.9 + (1 - life) * 0.2);
 
                 ctx.globalAlpha = alpha;
                 drawTail(ctx, pt.last, { x: pt.x, y: pt.y }, pt.t, opts);
