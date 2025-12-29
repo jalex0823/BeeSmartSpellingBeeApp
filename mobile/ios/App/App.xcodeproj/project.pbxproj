@@ -109,6 +109,7 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				9592DBEFFC6D2A0C8D5DEB22 /* [CP] Embed Pods Frameworks */,
+				BEEICON01234567890ABCDEF /* Copy iPad Icons to Bundle */,
 			);
 			buildRules = (
 			);
@@ -202,6 +203,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-App/Pods-App-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BEEICON01234567890ABCDEF /* Copy iPad Icons to Bundle */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy iPad Icons to Bundle";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Copy iPad icon PNGs directly into app bundle for App Store validation\nICON_DIR=\"${SRCROOT}/App/Assets.xcassets/AppIcon.appiconset\"\ncp \"${ICON_DIR}/Icon-App-76x76@2x.png\" \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Icon-App-76x76@2x.png\"\ncp \"${ICON_DIR}/Icon-App-83.5x83.5@2x.png\" \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Icon-App-83.5x83.5@2x.png\"\necho \"Copied iPad icons to bundle\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
