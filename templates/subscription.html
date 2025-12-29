@@ -497,7 +497,7 @@
         <div class="footer">
             <p>Questions? Contact us at <a href="mailto:contact@beesmartspelling.com">contact@beesmartspelling.com</a></p>
             <p style="margin-top: 16px;">
-                <button type="button" onclick="restorePurchases()" style="
+                <button type="button" id="restorePurchasesBtn" onclick="restorePurchases()" style="
                     padding: 12px 16px;
                     border-radius: 14px;
                     border: 2px solid rgba(255,255,255,0.65);
@@ -505,7 +505,8 @@
                     color: #ffffff;
                     font-weight: 800;
                     cursor: pointer;
-                ">Restore Purchases</button>
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='rgba(33,150,243,0.85)'; this.style.borderColor='rgba(255,255,255,0.9)';" onmouseout="this.style.background='rgba(0,0,0,0.12)'; this.style.borderColor='rgba(255,255,255,0.65)';">Restore Purchases</button>
             </p>
             <p style="margin-top: 10px;">
                 <a href="/privacy">Privacy Policy</a> • 
@@ -691,14 +692,33 @@
 
         async function restorePurchases() {
             try {
+                // Scroll restore button into view so user knows action is happening
+                const restoreBtn = document.getElementById('restorePurchasesBtn');
+                if (restoreBtn) {
+                    restoreBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Visual feedback - button becomes active
+                    restoreBtn.style.background = 'rgba(33,150,243,0.85)';
+                    restoreBtn.textContent = 'Restoring...';
+                    restoreBtn.disabled = true;
+                }
+
                 if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
+                    if (restoreBtn) {
+                        restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                        restoreBtn.textContent = 'Restore Purchases';
+                        restoreBtn.disabled = false;
+                    }
                     alert('Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the App Store version and try again.');
                     return;
                 }
 
                 // If the native wrapper supports explicit restore/sync, trigger it first.
                 if (typeof window.BeeSmartIAP.restore === 'function') {
-                    try { await Promise.resolve(window.BeeSmartIAP.restore()); } catch(e) {}
+                    try { 
+                        await Promise.resolve(window.BeeSmartIAP.restore()); 
+                    } catch(e) {
+                        console.warn('Native restore call failed:', e);
+                    }
                 }
 
                 const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
@@ -738,7 +758,12 @@
                 }
 
                 if (!Array.isArray(rawOwned) || deduped.length === 0) {
-                    alert('No previous purchases were found to restore on this device.');
+                    if (restoreBtn) {
+                        restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                        restoreBtn.textContent = 'Restore Purchases';
+                        restoreBtn.disabled = false;
+                    }
+                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any previous purchases to restore on this device.', false);
                     return;
                 }
 
@@ -748,22 +773,134 @@
                     credentials: 'same-origin',
                     body: JSON.stringify({ platform: platform, product_ids: deduped })
                 });
+                
                 const data = await resp.json().catch(() => null);
+                
+                if (restoreBtn) {
+                    restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                    restoreBtn.textContent = 'Restore Purchases';
+                    restoreBtn.disabled = false;
+                }
+
                 if (resp.ok && data && data.success) {
                     const count = Array.isArray((data.applied || [])) ? data.applied.length : 0;
-                    alert(count > 0
-                        ? `Restored ${count} purchase${count === 1 ? '' : 's'} successfully!`
-                        : 'Restore complete. Your purchases are already active.'
-                    );
-                    try { window.location.reload(); } catch(e) {}
+                    const message = count > 0
+                        ? `Successfully restored ${count} purchase${count === 1 ? '' : 's'}!`
+                        : 'Restore complete. Your purchases are already active.';
+                    showRestoreDialog('Restore Successful', message, true);
                 } else {
                     const err = (data && (data.error || data.message)) ? String(data.error || data.message) : `HTTP ${resp.status}`;
-                    alert(`Restore failed: ${err}`);
+                    showRestoreDialog('Restore Failed', `Could not restore purchases: ${err}`, false);
                 }
             } catch (e) {
                 console.error('Restore failed:', e);
-                alert('Restore could not be completed. Please check your connection and try again.');
+                const restoreBtn = document.getElementById('restorePurchasesBtn');
+                if (restoreBtn) {
+                    restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                    restoreBtn.textContent = 'Restore Purchases';
+                    restoreBtn.disabled = false;
+                }
+                showRestoreDialog('Error', 'Restore could not be completed. Please check your connection and try again.', false);
             }
+        }
+
+        function showRestoreDialog(title, message, isSuccess) {
+            return new Promise((resolve) => {
+                // Create modal overlay
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s ease-out;
+                `;
+
+                // Create dialog
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: white;
+                    border-radius: 16px;
+                    padding: 24px;
+                    max-width: 90%;
+                    width: 340px;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+                    text-align: center;
+                    animation: slideUp 0.3s ease-out;
+                `;
+
+                const iconColor = isSuccess ? '#4CAF50' : '#FF9800';
+                const btnColor = isSuccess ? '#4CAF50' : '#2196F3';
+                const btnHoverColor = isSuccess ? '#45A049' : '#1976D2';
+
+                dialog.innerHTML = `
+                    <div style="font-size: 3rem; margin-bottom: 12px;">${isSuccess ? '✅' : '⚠️'}</div>
+                    <h3 style="margin: 0 0 12px; font-size: 1.3rem; color: ${iconColor};">${title}</h3>
+                    <p style="margin: 0 0 24px; color: #666; font-size: 0.95rem; line-height: 1.5;">
+                        ${message}
+                    </p>
+                    <button id="restoreDialogOkay" style="
+                        background: ${btnColor};
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        padding: 12px 32px;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: background 0.2s;
+                    ">Okay</button>
+                `;
+
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+
+                // Scroll the dialog into view
+                setTimeout(() => {
+                    dialog.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+
+                // Add hover effect
+                const btn = dialog.querySelector('#restoreDialogOkay');
+                btn.addEventListener('mouseenter', () => btn.style.background = btnHoverColor);
+                btn.addEventListener('mouseleave', () => btn.style.background = btnColor);
+
+                // Handle button click
+                btn.addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                    resolve(true);
+                    if (isSuccess) {
+                        // Reload page to reflect restored purchases
+                        setTimeout(() => {
+                            try { window.location.reload(); } catch(e) {}
+                        }, 300);
+                    }
+                });
+
+                // Add animations if not already present
+                if (!document.getElementById('restoreDialogStyles')) {
+                    const style = document.createElement('style');
+                    style.id = 'restoreDialogStyles';
+                    style.textContent = `
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes slideUp {
+                            from { transform: translateY(20px); opacity: 0; }
+                            to { transform: translateY(0); opacity: 1; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            });
         }
 
         async function checkExistingSubscription() {
