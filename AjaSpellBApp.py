@@ -7123,12 +7123,24 @@ def api_upload():
     if request.content_type and "application/json" in request.content_type:
         payload = request.get_json(silent=True) or {}
         words_json = payload.get("words", [])
-        for w in words_json:
-            word = (w.get("word") or "").strip()
-            sentence = (w.get("sentence") or "").strip()
-            hint = (w.get("hint") or "").strip()
-            if word:
-                rows.append({"word": word, "sentence": sentence, "hint": hint})
+        # Back-compat / convenience: allow a newline-delimited string, not just a list.
+        # Canonical payload remains: {"words": [{"word":"...","sentence":"","hint":""}, ...]}
+        if isinstance(words_json, str):
+            words_json = [ln.strip() for ln in words_json.splitlines() if ln.strip()]
+        elif words_json is None:
+            words_json = []
+
+        if isinstance(words_json, list):
+            for w in words_json:
+                if isinstance(w, str):
+                    w = {"word": w}
+                if not isinstance(w, dict):
+                    continue
+                word = (w.get("word") or "").strip()
+                sentence = (w.get("sentence") or "").strip()
+                hint = (w.get("hint") or "").strip()
+                if word:
+                    rows.append({"word": word, "sentence": sentence, "hint": hint})
 
     # File upload path
     else:
