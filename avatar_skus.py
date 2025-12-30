@@ -111,9 +111,10 @@ def _slug_variants_for_store(slug: str) -> list[str]:
 def sku_for_slug(avatar_slug: str) -> str:
     """Build SKU for a given avatar slug"""
     prefix = _sku_prefix()
-    # Ensure slug is safe
-    safe = re.sub(r"[^a-z0-9-]", "-", (avatar_slug or '').lower())
-    safe = re.sub(r"-+", "-", safe).strip('-')
+    # Ensure slug is safe - use underscores to match App Store Connect format
+    # App Store Connect Product IDs use: beesmart.avatar.brother_bee (not brother-bee)
+    safe = re.sub(r"[^a-z0-9_]", "_", (avatar_slug or '').lower())
+    safe = re.sub(r"_+", "_", safe).strip('_')
     return f"{prefix}.{safe}"
 
 

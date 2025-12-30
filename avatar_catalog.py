@@ -160,7 +160,7 @@ AVATAR_CATALOG: List[Dict] = [
     },
     {
         "id": "diva-bee",
-        "product_id": "beesmart.avatar.diva_bee",
+        "product_id": "beesmart.avatar.diva_bee2",  # Updated to match App Store Connect
         "name": "Diva Bee Avatar",
         "folder": "diva-bee",
         "obj_file": "DivaBee.glb",  # GLB format (legacy field name)
