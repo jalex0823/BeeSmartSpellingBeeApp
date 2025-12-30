@@ -5143,11 +5143,18 @@ def app_home():
     if IAP_MONTHLY_ONLY:
         subscription_products = {k: v for k, v in subscription_products.items() if k == 'monthly'}
 
+    # Some deployments may fail to load pricing config (or return None).
+    # Ensure templates always receive a real number to avoid Jinja formatting errors.
+    try:
+        _monthly_fee_for_template = float(monthly_fee) if monthly_fee is not None else 3.99
+    except Exception:
+        _monthly_fee_for_template = 3.99
+
     html = render_template(
         "unified_menu.html",
         timestamp=timestamp,
         registration_billing_mode=billing_mode,
-        subscription_monthly_usd=monthly_fee,
+        subscription_monthly_usd=_monthly_fee_for_template,
         subscription_trial_days=trial_days,
         subscription_intro_price_usd=intro_price,
         subscription_intro_months=intro_months,
