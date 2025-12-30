@@ -3,7 +3,10 @@ Add Zom Bee Avatar back to Railway database with all required fields
 """
 import psycopg2
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+import os
+
+# IMPORTANT: Do not hardcode production DB credentials.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 print("=" * 60)
 print("🐝 Add Zom Bee Avatar Back")

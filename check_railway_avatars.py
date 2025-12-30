@@ -2,11 +2,14 @@
 Check what avatars exist in Railway PostgreSQL and how they work
 """
 
+import os
 import psycopg2
 import requests
 
 # Railway PostgreSQL connection
-RAILWAY_DB_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# IMPORTANT: Do not hardcode production DB credentials.
+# Provide DATABASE_URL via environment variables.
+RAILWAY_DB_URL = os.getenv("DATABASE_URL", "")
 
 def check_railway_database():
     """Check what's in Railway's avatar table"""

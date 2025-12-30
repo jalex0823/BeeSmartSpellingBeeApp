@@ -2,10 +2,15 @@
 """
 Connect to Railway PostgreSQL and delete broken avatars
 """
+import os
 import psycopg2
 
-# Railway public connection string
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# PostgreSQL connection string
+# IMPORTANT: Do not hardcode production DB credentials.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your PostgreSQL connection string via env vars.")
 
 # List of broken avatars to delete
 BROKEN_AVATARS = [

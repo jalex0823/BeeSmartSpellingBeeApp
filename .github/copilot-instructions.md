@@ -22,14 +22,14 @@ This repo is a Flask app for kids’ spelling practice with uploads, an interact
 - **Apple Store Compliance:** ALL avatar names MUST end with " Avatar" suffix
 - **Tier Distribution:** 5 free, 7 earn/buy, 1 mascot, 26 premium
 - **GLB Files:** All 39 avatars have GLB files in `static/assets/avatars/glb_files/`
-- **Database:** Railway PostgreSQL with 39 active avatars (connection string in sync docs)
+- **Database:** PostgreSQL (DigitalOcean-managed in production) with 39 active avatars
 - **Key Mappings (IMPORTANT):**
   - Robo Bee Avatar → uses `BuzzbotBee.glb` (not a separate "Buzzbot Bee")
   - Super Bee Avatar → uses `SuperBee.glb` (not a separate "Buzzhero Bee")
   - Knight Bee Avatar → uses `KnightBee.glb` (same as "Bee Knight" reference)
 - **API:** `/api/avatars` endpoint uses catalog names for GLB avatars (see `AjaSpellBApp.py` lines 9400-9460)
 - **Verification:** Run `python3 count_avatars.py` to confirm catalog state (should show 39 total)
-- **Sync Scripts:** Use `cleanup_railway_database.py` to sync database with catalog changes
+- **Sync Scripts:** Use the DB cleanup/sync scripts to keep the database aligned with `avatar_catalog.py`
 - **Reference:** 39 avatars total verified via `count_avatars.py` - catalog is the definitive source
 - Static assets live under `static/assets/avatars/`.
     - **GLB FORMAT ONLY:** All avatars use GLB format exclusively - stored in `glb_files/` with thumbnails in `glb_files/AvatarThumbnails/`.
@@ -64,4 +64,4 @@ This repo is a Flask app for kids’ spelling practice with uploads, an interact
 - Main app: `AjaSpellBApp.py` (routes, session logic, uploads, quiz, auth, avatars).
 - Dictionary: `dictionary_api.py` + `data/dictionary.json`.
 - Avatars: templates under `templates/*avatar*`, JS under `static/js/*avatar*`, assets under `static/assets/avatars/`.
-- CI: `ci.yml` and `avatar-asset-check.yml` lint, basic tests, and optional Railway deploy.
+- CI: `ci.yml` and `avatar-asset-check.yml` lint and run basic tests; deployment is handled outside CI.

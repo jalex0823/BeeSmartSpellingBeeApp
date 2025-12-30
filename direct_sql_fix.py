@@ -1,10 +1,15 @@
 """
 Direct SQL fix for avatar paths - no Flask dependencies
 """
+import os
 import psycopg2
 
-# Railway database connection
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# PostgreSQL database connection
+# IMPORTANT: Do not hardcode production DB credentials.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your PostgreSQL connection string via env vars.")
 
 print("=" * 60)
 print("🐝 Avatar GLB Fix - Direct SQL")

@@ -451,7 +451,9 @@
                 </div>
 
                 <div class="pricing">
-                    <div class="price">Monthly</div>
+                    {# Prefer a dynamic server-provided value when available; fall back to $3.99 per user request. #}
+                    {% set monthly_price_display = subscription_monthly_usd if subscription_monthly_usd is defined and subscription_monthly_usd else 3.99 %}
+                    <div class="price">${{ monthly_price_display | round(2) }}</div>
                     <div class="price-period">subscription</div>
                 </div>
 

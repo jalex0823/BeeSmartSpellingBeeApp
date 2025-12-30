@@ -711,9 +711,14 @@ def home_root_direct():
     print(f" [HOME] Passing to template: user_avatar={user_avatar_data is not None}, use_mascot={use_mascot}")
     print("="*80)
     
-    return render_template('unified_menu.html', 
-                         user_avatar=user_avatar_data,
-                         use_mascot=use_mascot)
+    # Keep the home menu's Premium CTA price driven by the backend so UI stays future-proof.
+    # (This is display copy only; the actual purchase flow still uses StoreKit/Google billing.)
+    return render_template(
+        'unified_menu.html',
+        user_avatar=user_avatar_data,
+        use_mascot=use_mascot,
+        subscription_monthly_usd=3.99,
+    )
 
 # Optional legacy preview alias retained (can be removed later)
 @app.route('/home_preview')
@@ -1012,13 +1017,16 @@ def api_avatars():
 
         def _score(pid: str):
             p = (pid or '').strip().lower()
-            # Prefer the legacy store prefix used by existing App Store Connect metadata.
-            if p.startswith('beesmart.avatar.'):
+            # Prefer the NEW App Store Connect v2 product IDs.
+            if p.startswith('beesmart.avatar.') and p.endswith('.v2'):
                 prefix_rank = 0
-            elif p.startswith('com.beesmart.avatar.'):
+            # Next best: legacy beesmart.avatar.* (for back-compat restores)
+            elif p.startswith('beesmart.avatar.'):
                 prefix_rank = 1
-            else:
+            elif p.startswith('com.beesmart.avatar.'):
                 prefix_rank = 2
+            else:
+                prefix_rank = 3
             # Prefer underscore style (matches existing product ids like cool_bee)
             style_rank = 0 if '_' in p else 1
             return (prefix_rank, style_rank, len(p))
@@ -1279,9 +1287,9 @@ def _is_subscription_product_allowed(product_id: str) -> bool:
 
 # Subscription Product IDs (for App Store Connect)
 SUBSCRIPTION_PRODUCT_IDS = {
-    'monthly': 'beesmart.premium.monthly',
-    'yearly': 'beesmart.premium.yearly',
-    'family': 'beesmart.premium.family.monthly',
+    'monthly': os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'com.beesmart.premium.monthly'),
+    'yearly': os.getenv('PRODUCT_SUBSCRIPTION_YEARLY_ID', 'com.beesmart.premium.yearly'),
+    'family': os.getenv('PRODUCT_SUBSCRIPTION_FAMILY_ID', 'com.beesmart.premium.family.monthly'),
     'legacy': 'beesmart.sub.full_monthly'       # Legacy subscription (backward compatibility)
 }
 
@@ -1293,7 +1301,7 @@ PRODUCT_MAP = {
     },
     # SUBSCRIPTION TIERS (Auto-Renewable)
     # Configurable subscription SKU (defaults to current monthly). Legacy remains supported.
-    os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.premium.monthly'): {
+    os.getenv('PRODUCT_SUBSCRIPTION_FULL_ID', 'com.beesmart.premium.monthly'): {
         'type': 'premium', 'subscription': True, 'duration': '1 month'
     },
     # Legacy subscription (kept for backward compatibility)
@@ -1301,32 +1309,32 @@ PRODUCT_MAP = {
         'type': 'premium', 'subscription': True, 'duration': '1 month'
     },
     # Monthly Premium Subscription
-    'beesmart.premium.monthly': {
+    'com.beesmart.premium.monthly': {
         'type': 'premium', 'subscription': True, 'duration': '1 month',
         'name': 'Premium Monthly Membership'
     },
     # Yearly Premium Subscription
-    'beesmart.premium.yearly': {
+    'com.beesmart.premium.yearly': {
         'type': 'premium', 'subscription': True, 'duration': '1 year',
         'name': 'Premium Yearly Membership'
     },
     # Family Premium Subscription
-    'beesmart.premium.family.monthly': {
+    'com.beesmart.premium.family.monthly': {
         'type': 'premium', 'subscription': True, 'duration': '1 month',
         'name': 'Premium Family Membership', 'family_sharing': True
     },
     # Individual avatar unlocks
-    os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'beesmart.avatar.superbee'): {
+    os.getenv('PRODUCT_AVATAR_SUPERBEE_ID', 'com.beesmart.avatar.super_bee'): {
         # Canonical catalog id is hyphenated
         'type': 'avatar', 'avatar_id': 'super-bee'
     },
-    os.getenv('PRODUCT_AVATAR_QUEEN_ID', 'beesmart.avatar.queen'): {
+    os.getenv('PRODUCT_AVATAR_QUEEN_ID', 'com.beesmart.avatar.queen_bee'): {
         'type': 'avatar', 'avatar_id': 'queen-bee'
     },
-    os.getenv('PRODUCT_AVATAR_KNIGHT_ID', 'beesmart.avatar.knight'): {
+    os.getenv('PRODUCT_AVATAR_KNIGHT_ID', 'com.beesmart.avatar.knight_bee'): {
         'type': 'avatar', 'avatar_id': 'knight-bee'
     },
-    os.getenv('PRODUCT_AVATAR_ROCKER_ID', 'beesmart.avatar.rocker'): {
+    os.getenv('PRODUCT_AVATAR_ROCKER_ID', 'com.beesmart.avatar.rocker_bee'): {
         'type': 'avatar', 'avatar_id': 'rocker-bee'
     },
     # Example bundle
@@ -1424,8 +1432,11 @@ def _apply_entitlement(user: User, product_id: str) -> dict:
         avatar_id = mapping.get('avatar_id')
         if avatar_id:
             # Ensure purchased_avatars list
-            if not user.purchased_avatars:
-                user.purchased_avatars = []
+            pa = getattr(user, 'purchased_avatars', None)
+            # Defensive: legacy/corrupted rows might store JSON as a string
+            if not isinstance(pa, list):
+                pa = []
+            user.purchased_avatars = pa
             if avatar_id not in user.purchased_avatars:
                 user.purchased_avatars.append(avatar_id)
                 result["applied"] = True
@@ -1435,13 +1446,17 @@ def _apply_entitlement(user: User, product_id: str) -> dict:
     if mapping.get('type') == 'bundle':
         bundle_id = mapping.get('bundle_id')
         avatars = mapping.get('avatars', [])
-        if not user.purchased_bundles:
-            user.purchased_bundles = []
+        pb = getattr(user, 'purchased_bundles', None)
+        if not isinstance(pb, list):
+            pb = []
+        user.purchased_bundles = pb
         if bundle_id and bundle_id not in user.purchased_bundles:
             user.purchased_bundles.append(bundle_id)
             # Unlock avatars
-            if not user.purchased_avatars:
-                user.purchased_avatars = []
+            pa = getattr(user, 'purchased_avatars', None)
+            if not isinstance(pa, list):
+                pa = []
+            user.purchased_avatars = pa
             new_ones = 0
             for a in avatars:
                 if a not in user.purchased_avatars:
@@ -9669,10 +9684,17 @@ def _entitlements_summary(user: User) -> dict:
         unlocked = user.get_unlocked_avatars()
     except Exception:
         unlocked = []
+
+    pa = getattr(user, 'purchased_avatars', [])
+    if not isinstance(pa, list):
+        pa = []
+    pb = getattr(user, 'purchased_bundles', [])
+    if not isinstance(pb, list):
+        pb = []
     return {
         "premium_member": bool(getattr(user, 'premium_member', False)),
-        "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []),
-        "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []),
+        "purchased_avatars": list(pa or []),
+        "purchased_bundles": list(pb or []),
         "unlocked_avatars": unlocked,
     }
 
@@ -14060,6 +14082,9 @@ def subscription_page():
             user_authenticated=user_authenticated,
             current_user=current_user,
             iap_monthly_only=IAP_MONTHLY_ONLY,
+            # Display price on /subscription (requested). If you later fetch live
+            # prices from StoreKit / server, pass the dynamic value here.
+            subscription_monthly_usd=3.99,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
@@ -14073,6 +14098,7 @@ def subscription_page():
             user_authenticated=False,
             current_user=None,
             iap_monthly_only=IAP_MONTHLY_ONLY,
+            subscription_monthly_usd=3.99,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )

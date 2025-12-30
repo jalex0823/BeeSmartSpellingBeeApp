@@ -3,7 +3,10 @@ Add Zom Bee back and verify we have exactly 39 avatars matching the catalog
 """
 import psycopg2
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+import os
+
+# IMPORTANT: Do not hardcode production DB credentials.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # The 39 avatars from your catalog
 CATALOG_AVATARS = [

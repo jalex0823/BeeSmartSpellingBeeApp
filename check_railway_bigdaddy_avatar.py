@@ -1,10 +1,13 @@
 """
 Check BigDaddy2's avatar in Railway PostgreSQL database
 """
+import os
 import psycopg2
 
 # Railway PostgreSQL connection URL (hardcoded)
-RAILWAY_DB_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# IMPORTANT: Do not hardcode production DB credentials.
+# Provide DATABASE_URL via environment variables.
+RAILWAY_DB_URL = os.getenv("DATABASE_URL", "")
 
 print("\n🐝 BeeSmart Railway - Check BigDaddy2 Avatar\n")
 print("=" * 70)

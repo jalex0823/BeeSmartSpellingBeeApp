@@ -6,8 +6,12 @@ import os
 from sqlalchemy import create_engine, text
 from collections import Counter
 
-# Railway PostgreSQL connection string (from AVATAR_CATALOG_SYNC_COMPLETE_NOV13.md)
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# IMPORTANT: Do not hardcode production DB credentials.
+# Provide DATABASE_URL via environment variables (DigitalOcean-managed PostgreSQL in production).
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your DigitalOcean PostgreSQL connection string via env vars.")
 
 try:
     engine = create_engine(DATABASE_URL)

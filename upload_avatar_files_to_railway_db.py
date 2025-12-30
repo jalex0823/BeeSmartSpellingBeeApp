@@ -1,16 +1,19 @@
 """
-Upload 3D Avatar Files as Binary Data to Railway PostgreSQL Database
+Upload 3D Avatar Files as Binary Data to PostgreSQL Database
 
 This script reads the .obj, .mtl, .png files from the local filesystem
-and uploads them as binary data directly into Railway's PostgreSQL database.
+and uploads them as binary data directly into your PostgreSQL database.
 """
 
-import psycopg2
 import os
+import psycopg2
 from pathlib import Path
 
-# Railway PostgreSQL connection
-RAILWAY_DB_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# IMPORTANT: Do not hardcode production DB credentials.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your PostgreSQL connection string via env vars.")
 
 # Base path for avatar files
 AVATAR_BASE_PATH = Path("static/assets/avatars")
@@ -24,13 +27,15 @@ NEW_AVATARS = [
 
 
 def connect_to_railway():
-    """Connect to Railway PostgreSQL database"""
+    """Connect to PostgreSQL database (configured via DATABASE_URL)."""
     try:
-        conn = psycopg2.connect(RAILWAY_DB_URL)
-        print("✅ Connected to Railway PostgreSQL database")
+        if not DATABASE_URL:
+            raise ValueError("DATABASE_URL is not set")
+        conn = psycopg2.connect(DATABASE_URL)
+        print("✅ Connected to PostgreSQL database")
         return conn
     except Exception as e:
-        print(f"❌ Failed to connect to Railway database: {e}")
+        print(f"❌ Failed to connect to database: {e}")
         return None
 
 

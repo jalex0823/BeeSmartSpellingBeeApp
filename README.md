@@ -1,7 +1,6 @@
 # BeeSmart Spelling Bee App
 
 ![CI/CD Pipeline](https://github.com/jalex0823/BeeSmartSpellingBeeApp/actions/workflows/ci.yml/badge.svg)
-[![Railway Deploy](https://img.shields.io/badge/Railway-Deployed-brightgreen)](https://railway.app)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
 
 A Flask-based spelling quiz application that supports uploading word banks in various formats (CSV, TXT, DOCX, PDF).
@@ -113,19 +112,14 @@ Mobile checklist we’ll tackle when we start wrapping:
 - Notifications (optional follow-up)
    - Integrate FCM/APNs if we later want reminders or streak nudges.
 
-## Railway Deployment
+## Deployment (production)
 
-This app is configured to deploy on Railway.
+This app can be deployed to your preferred platform. In production we use a managed PostgreSQL database (DigitalOcean-managed).
 
-1. Connect your GitHub repository to Railway
-2. Railway will automatically detect the Python app and deploy using the included configuration files
-3. The app will be available at your Railway-provided URL
-
-### Files for Railway:
+### Deployment-related files
 
 - `requirements.txt` - Python dependencies
-- `Procfile` - Tells Railway how to run the app
-- `railway.toml` - Railway configuration
+- `Procfile` - Tells the host how to run the app (binds to `$PORT` via gunicorn)
 - `templates/unified_menu.html` - Main landing page
 - `/health` - Simple status endpoint
 
@@ -159,8 +153,8 @@ Words can be extracted from document text, one word per line.
    - If you see 429s on forgot-password, configure Redis via `REDIS_URL`/`REDIS_CONNECTION_STRING` or slow down requests during tests.
 - OCR uploads (images)
    - OCR is optional and requires Tesseract; if not installed, image OCR features will be disabled gracefully.
-- Railway port binding
-   - Railway assigns a dynamic port. The included `Procfile` uses gunicorn and binds to `$PORT` automatically. Verify `/health` returns a version string.
+- Port binding
+   - Many hosts assign a dynamic port. The included `Procfile` uses gunicorn and binds to `$PORT` automatically. Verify `/health` returns a version string.
 - Sessions
    - Ensure `SECRET_KEY` is set in production to keep sessions secure.
 - Dependencies

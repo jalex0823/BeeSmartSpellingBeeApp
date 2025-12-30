@@ -5,6 +5,17 @@ Runs in-process using Flask test client without starting a server.
 from __future__ import annotations
 
 import json
+import os
+import sys
+
+# Ensure repo root is importable when running from ./scripts
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+# Keep smoke tests fast/robust (skip slow startup checks)
+os.environ.setdefault("FAST_BOOT", "1")
+os.environ.setdefault("SKIP_AVATAR_STARTUP_SYNC", "1")
 
 try:
     import AjaSpellBApp as app_module

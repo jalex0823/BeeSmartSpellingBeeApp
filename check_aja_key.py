@@ -1,18 +1,32 @@
+"""check_aja_key.py
+
+Utility script to check Aja's (PRINCESS) admin/teacher key assignment.
+
+Connection notes:
+- Uses DATABASE_URL from the environment (DigitalOcean Postgres in production).
+- This avoids hardcoded provider-specific credentials (Railway, etc.).
 """
-Check Aja's (PRINCESS) admin key assignment in Railway PostgreSQL
-"""
+
+import os
+
 import psycopg2
 
-# Railway PostgreSQL connection URL
-RAILWAY_DB_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
 
-print("\nChecking Aja's Account (PRINCESS) in Railway Database\n")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+if not DATABASE_URL:
+    raise SystemExit(
+        "ERROR: DATABASE_URL is not set. Refusing to run to avoid connecting to the wrong DB.\n"
+        "Set DATABASE_URL to your DigitalOcean Postgres URL and re-run."
+    )
+
+print("\nChecking Aja's Account (PRINCESS) in connected database\n")
 print("=" * 70)
 
 try:
-    conn = psycopg2.connect(RAILWAY_DB_URL)
+    conn = psycopg2.connect(DATABASE_URL)
     cursor = conn.cursor()
-    print("Connected to Railway PostgreSQL\n")
+    print("Connected to PostgreSQL\n")
     
     # Query for PRINCESS account
     cursor.execute("""

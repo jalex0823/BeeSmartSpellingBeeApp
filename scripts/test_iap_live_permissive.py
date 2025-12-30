@@ -6,6 +6,8 @@ import json
 def run():
     # Configure permissive live-like mode (no real store calls required)
     os.environ['FLASK_ENV'] = 'testing'
+    os.environ.setdefault('FAST_BOOT', '1')
+    os.environ.setdefault('SKIP_AVATAR_STARTUP_SYNC', '1')
     os.environ['IAP_MOCK'] = '0'
     os.environ['IAP_VERIFICATION_MODE'] = 'live_permissive'
     os.environ['IAP_LIVE_ACCEPT_BASIC'] = '1'
@@ -31,8 +33,14 @@ def run():
         "role": "student",
         "avatar_id": "mascot-bee"
     }), content_type='application/json')
-    assert r.status_code == 200, f"register failed: {r.status_code} {r.data}"
-    assert r.get_json().get('success') is True
+    if r.status_code != 200:
+        # Allow re-running smoke tests against a persistent DB.
+        try:
+            body = r.get_json() or {}
+        except Exception:
+            body = {}
+        if not (r.status_code == 400 and str(body.get('error', '')).lower().startswith('username already taken')):
+            raise AssertionError(f"register failed: {r.status_code} {r.data}")
 
     # Login
     r = client.post('/auth/login', data=json.dumps({
@@ -44,7 +52,7 @@ def run():
     assert r.get_json().get('success') is True
 
     # Verify subscription (permissive)
-    subscription_pid = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'beesmart.premium.monthly')
+    subscription_pid = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID', 'com.beesmart.premium.monthly')
     verify_payload = {
         "product_id": subscription_pid,
         "transaction_id": "tx-demo-permissive",
@@ -67,8 +75,9 @@ def run():
     assert r.status_code == 200, f"restore failed: {r.status_code} {r.data}"
     resp = r.get_json()
     assert resp.get('success') is True, resp
-    purchased = (resp.get('entitlements') or {}).get('purchased_avatars') or []
-    assert 'super-bee' in purchased
+    applied = resp.get('applied') or []
+    applied_pids = [a.get('product_id') for a in applied if isinstance(a, dict)]
+    assert restore_payload['product_ids'][0] in applied_pids, {"applied": applied, "expected": restore_payload['product_ids'][0]}
 
     print("\n✅ IAP live_permissive test passed.")
 

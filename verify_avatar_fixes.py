@@ -2,10 +2,14 @@
 """
 Verify avatar picker fixes
 """
+import os
 from sqlalchemy import create_engine, text
 from collections import Counter
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your PostgreSQL connection string via env vars.")
 
 engine = create_engine(DATABASE_URL)
 with engine.connect() as conn:

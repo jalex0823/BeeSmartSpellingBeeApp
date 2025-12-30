@@ -1,9 +1,15 @@
 """
-Audit Railway avatar database - check for duplicates and extra entries
+Audit production avatar database (PostgreSQL) - check for duplicates and extra entries
 """
+import os
 import psycopg2
 
-DATABASE_URL = "postgresql://postgres:HkctClwSCljJtdOEpWICVhsSMqxKPbQf@shuttle.proxy.rlwy.net:46186/railway"
+# IMPORTANT: Do not hardcode production DB credentials.
+# Provide DATABASE_URL via environment variables (DigitalOcean-managed PostgreSQL in production).
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if not DATABASE_URL:
+    raise SystemExit("DATABASE_URL is not set. Provide your PostgreSQL connection string via env vars.")
 
 print("=" * 60)
 print("🐝 Avatar Database Audit")
