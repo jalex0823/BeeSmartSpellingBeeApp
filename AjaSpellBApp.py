@@ -914,8 +914,22 @@ def api_avatars():
         except Exception:
             role = 'student'
 
+    # Dev-only override: allow the local StoreKit webview to fetch the full avatar catalog
+    # (including product IDs) even when not logged in.
+    #
+    # Enable with: ALLOW_DEV_FULL_AVATARS=1 and request /api/avatars?dev_full=1
+    # This is intentionally *opt-in* via both env var and query param, and uses its own
+    # cache key to avoid contaminating the normal guest response.
+    allow_dev_full = os.getenv('ALLOW_DEV_FULL_AVATARS', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+    dev_full_requested = (request.args.get('dev_full') or '').strip().lower() in ('1', 'true', 'yes', 'on')
+    dev_full_effective = bool(user is None and role == 'guest' and allow_dev_full and dev_full_requested)
+    if dev_full_effective:
+        role = 'student'
+
     # Build cache key per user+role (prevents admin cache bleed)
-    if user is None:
+    if dev_full_effective:
+        cache_key = 'guest_role_dev_full'
+    elif user is None:
         cache_key = 'guest_role_guest'
     else:
         cache_key = f"user_{getattr(user, 'id', 'unknown')}_role_{role}"
