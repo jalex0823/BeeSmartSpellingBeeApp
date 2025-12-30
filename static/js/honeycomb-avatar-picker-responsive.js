@@ -5,6 +5,8 @@
  */
 
 let avatarsData = [];
+// Server-provided list of avatar ids/slugs that have been purchased by the current user
+let purchasedAvatarIds = [];
 let selectedAvatar = null;
 let loadedThumbnails = 0;
 let totalThumbnails = 0;
@@ -416,6 +418,15 @@ async function loadAvatars() {
             console.log('📦 Sample avatar structure:', JSON.stringify(apiAvatars[0], null, 2));
         }
         
+        // Capture purchased avatar ids so the grid can distinguish Purchased (Owned) vs Earned (Unlocked)
+        try {
+            purchasedAvatarIds = Array.isArray(data && data.purchased_avatars)
+                ? data.purchased_avatars.map(x => String(x || '').toLowerCase())
+                : [];
+        } catch (e) {
+            purchasedAvatarIds = [];
+        }
+
         const rawAvatars = apiAvatars.map(avatar => {
             // Extract GLB URL from standard urls.glb field (all avatars are now GLB-only)
             var urlsObj = (avatar && typeof avatar.urls === 'object') ? avatar.urls : {};
@@ -630,9 +641,23 @@ function createAvatarElement(avatar, index) {
     const nameDiv = document.createElement('div');
     nameDiv.className = 'avatar-hex-name';
     nameDiv.textContent = avatar.name;
+
+    // Optional status label (small, below thumbnail)
+    // - Locked purchasable: "Buy $X.XX"
+    // - Unlocked (but purchasable tier): "Unlocked"
+    // NOTE: We do NOT show "Owned" unless the API gives an explicit entitlement flag.
+    const label = getAvatarGridStatusLabel(avatar);
+    let priceDiv = null;
+    if (label) {
+        priceDiv = document.createElement('div');
+        priceDiv.className = 'avatar-hex-price';
+        priceDiv.textContent = label;
+        priceDiv.title = label.startsWith('Buy ') ? 'In-app purchase price' : '';
+    }
     
     div.appendChild(checkmark);
     div.appendChild(thumbDiv);
+    if (priceDiv) div.appendChild(priceDiv);
     div.appendChild(nameDiv);
     
     // Unlock tooltip
@@ -701,6 +726,40 @@ function createAvatarElement(avatar, index) {
     }
     
     return div;
+}
+
+function isPurchasableTier(avatar) {
+    const tier = (avatar && avatar.tier) ? String(avatar.tier).toLowerCase().trim() : '';
+    return tier === 'premium' || tier === 'earn_or_buy';
+}
+
+function getAvatarDisplayPrice(avatar) {
+    if (!avatar) return null;
+    if (typeof avatar.price === 'number') return avatar.price;
+    if (typeof avatar.price_usd === 'number') return avatar.price_usd;
+    return null;
+}
+
+function getAvatarGridStatusLabel(avatar) {
+    if (!avatar) return null;
+    if (!isPurchasableTier(avatar)) return null;
+
+    // Locked purchasable avatars should show their price so kids/parents know the cost.
+    if (avatar.is_locked) {
+        const price = getAvatarDisplayPrice(avatar);
+        if (price == null) return null;
+        return `Buy $${Number(price).toFixed(2)}`;
+    }
+
+    // Unlocked purchasable-tier avatars: distinguish Purchased vs Earned.
+    if (isAvatarPurchased(avatar)) return 'Owned';
+    return 'Unlocked';
+}
+
+function isAvatarPurchased(avatar) {
+    const slug = (avatar && avatar.slug) ? String(avatar.slug).toLowerCase() : '';
+    if (!slug) return false;
+    return Array.isArray(purchasedAvatarIds) && purchasedAvatarIds.includes(slug);
 }
 
 // Build a minimal, stable set of thumbnail candidates (server now provides robust URLs)

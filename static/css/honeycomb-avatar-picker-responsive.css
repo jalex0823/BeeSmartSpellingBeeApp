@@ -306,6 +306,17 @@ p, h1, h2, h3, h4, h5, h6, span {
     white-space: nowrap;
 }
 
+/* Small price label under the thumbnail (shown for locked purchasable avatars) */
+.avatar-hex-price {
+    color: rgba(255, 215, 0, 0.95);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
 /* Preview Panel */
 .avatar-preview-panel {
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(20, 20, 20, 0.9) 100%);
@@ -808,6 +819,7 @@ p, h1, h2, h3, h4, h5, h6, span {
     .ctrl-btn {
         -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
         -webkit-user-select: none;
+        user-select: none;
     }
 }
 

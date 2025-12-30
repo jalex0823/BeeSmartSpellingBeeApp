@@ -3,7 +3,8 @@
   "appName": "BeeSmart Spelling",
   "webDir": "static",
   "server": {
-    "cleartext": false
+    "cleartext": false,
+    "url": "https://beesmartspelling.app"
   },
   "plugins": {
     "SplashScreen": {

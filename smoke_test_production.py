@@ -1,14 +1,19 @@
-"""
-Production Smoke Test - BeeSmart Spelling Bee App
-Tests critical user flows on live Railway deployment
+"""Production Smoke Test - BeeSmart Spelling Bee App
+
+Tests critical user flows on the live production deployment.
+
+This repo previously hardcoded Railway URLs. The app is now deployed on
+DigitalOcean behind the custom domain, so we default to that domain and allow
+overrides via environment variables.
 """
 
+import os
 import requests
 import time
 import json
 from io import BytesIO
 
-BASE_URL = "https://beesmartspellingbee.up.railway.app"
+BASE_URL = os.environ.get("BASE_URL", "https://beesmartspelling.app").rstrip("/")
 TEST_USER = "BigDaddy2"
 TEST_PASSWORD = "Aja123!!"
 
