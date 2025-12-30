@@ -139,8 +139,14 @@ class UserAvatarLoader {
                     throw error;
                 }
                 
+                const msg = (error && (typeof error.message === 'string') && error.message.trim())
+                    ? error.message
+                    : (error && (typeof error.name === 'string') && error.name.trim())
+                        ? error.name
+                        : String(error);
+
                 if (attempt < retries) {
-                    console.warn(`⚠️ Fetch attempt ${attempt + 1} error: ${url} (${error.message})`);
+                    console.warn(`⚠️ Fetch attempt ${attempt + 1} error: ${url} (${msg})`);
                     await new Promise(resolve => setTimeout(resolve, 500));
                 } else {
                     console.error(`❌ All fetch attempts failed for: ${url}`);

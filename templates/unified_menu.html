@@ -28,7 +28,7 @@
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v=20251129"></script>
-    <script src="{{ url_for('static', filename='js/logo-fairy-dust.js') }}?v=20251228b"></script>
+    <script src="{{ url_for('static', filename='js/logo-fairy-dust.js') }}?v=20251229a"></script>
     <!-- Matrix Rain Effect -->
     <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Avatar Intro FX System -->
@@ -2973,6 +2973,7 @@
         
         <!-- BeeSmart Crest Logo -->
         <img
+            id="beesmartCrestLogoLoader"
             src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}"
             alt="BeeSmart Spelling Bee Application™ logo"
             class="brand-logo crest-logo"
@@ -3746,106 +3747,19 @@
                         50% { transform: rotate(180deg); opacity: 1; }
                     }
 
-                    /* Crest helix fairy dust: behind + in front layers */
-                    .fairy-dust-helix-layer {
-                        position: absolute;
-                        inset: 0;
-                        pointer-events: none;
-                        overflow: visible;
-                    }
-                    .fairy-dust-helix-back {
-                        z-index: 10;
-                    }
-                    .fairy-dust-helix-front {
-                        z-index: 30;
-                    }
+                    /*
+                     * Crest "dot circle" overlay: disabled.
+                     * The snaking fairy-dust canvas effect (logo-fairy-dust.js) is the desired style.
+                     */
+                    .fairy-dust-helix-layer,
                     .fairy-dust-helix-dot {
-                        position: absolute;
-                        /* Sparkle shape (diamond) so it doesn't read as a "dot" */
-                        border-radius: 2px;
-                        transform: translate3d(0, 0, 0) rotate(45deg);
-
-                        /* Stronger sparkle core + colorful aura (still kid-friendly) */
-                        background:
-                            radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0) 32%),
-                            radial-gradient(circle at 55% 55%, rgba(170, 255, 252, 0.70) 0%, rgba(170, 255, 252, 0) 62%),
-                            radial-gradient(circle at 50% 50%, rgba(255, 214, 102, 0.95) 0%, rgba(255, 153, 102, 0.78) 45%, rgba(255, 107, 157, 0.48) 75%, rgba(255, 107, 157, 0) 100%);
-
-                        opacity: 0;
-                        will-change: transform, opacity, filter;
-                        filter:
-                            drop-shadow(0 0 10px rgba(255, 214, 102, 0.75))
-                            drop-shadow(0 0 18px rgba(255, 107, 157, 0.45))
-                            drop-shadow(0 0 26px rgba(170, 255, 252, 0.30));
-                        mix-blend-mode: screen;
-
-                        /* Slower twinkle so it feels like dust, not static noise */
-                        animation: fairyDustTwinkle 2200ms ease-in-out infinite;
-                    }
-
-                    /* A tiny star glint overlay so dots feel like sparkles */
-                    .fairy-dust-helix-dot::before {
-                        content: '';
-                        position: absolute;
-                        inset: -95%;
-                        background:
-                            linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0) 100%),
-                            linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 100%);
-                        transform: rotate(0deg);
-                        opacity: 0.0;
-                        border-radius: 9999px;
-                        filter: blur(0.2px);
-                        animation: fairyDustGlint 2600ms ease-in-out infinite;
-                        pointer-events: none;
-                    }
-
-                    /* Soft "afterglow" trail */
-                    .fairy-dust-helix-dot::after {
-                        content: '';
-                        position: absolute;
-                        inset: -140%;
-                        border-radius: 9999px;
-                        background: radial-gradient(circle, rgba(173, 216, 255, 0.20) 0%, rgba(255, 214, 102, 0.12) 40%, rgba(173, 216, 255, 0.0) 72%);
-                        opacity: 0.0;
-                        filter: blur(1.2px);
-                        animation: fairyDustGlow 2400ms ease-in-out infinite;
-                        pointer-events: none;
-                    }
-
-                    @keyframes fairyDustTwinkle {
-                        0%, 100% {
-                            transform: translate3d(0,0,0) rotate(45deg) scale(0.78);
-                            filter: brightness(1.05) saturate(1.05);
-                        }
-                        50% {
-                            transform: translate3d(0,0,0) rotate(45deg) scale(1.35);
-                            filter: brightness(1.55) saturate(1.25);
-                        }
-                    }
-                    @keyframes fairyDustGlint {
-                        0%, 64%, 100% { opacity: 0; transform: scale(0.85); }
-                        72% { opacity: 1.0; transform: scale(1.18); }
-                        82% { opacity: 0.18; transform: scale(1.05); }
-                    }
-                    @keyframes fairyDustGlow {
-                        0%, 100% { opacity: 0.0; transform: scale(0.85); }
-                        50% { opacity: 0.62; transform: scale(1.25); }
-                    }
-
-                    /* Accessibility: respect reduced-motion */
-                    @media (prefers-reduced-motion: reduce) {
-                        .fairy-dust-helix-dot,
-                        .fairy-dust-helix-dot::before,
-                        .fairy-dust-helix-dot::after {
-                            animation: none !important;
-                        }
+                        display: none !important;
                     }
                 </style>
                 
                 <!-- Brand logo (bee + wording with ™) placed ABOVE avatar -->
                 <div class="logo-container" style="position: relative; display: inline-block; margin-top: 0.5rem;">
-                    <div class="fairy-dust-helix-layer fairy-dust-helix-back" aria-hidden="true"></div>
-                    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="brand-logo crest-logo" style="
+                    <img id="beesmartCrestLogo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="brand-logo crest-logo" onerror="this.onerror=null; this.style.display='none'; const fb=document.createElement('div'); fb.textContent='BeeSmart Crest Logo'; fb.setAttribute('aria-label','BeeSmart Crest Logo'); fb.style.cssText='width: clamp(180px, 40vw, 320px); margin: 10px auto 6px; text-align:center; font-weight: 800; color:#6B3E00; text-shadow: 0 2px 0 rgba(255,255,255,0.75);'; this.parentNode && this.parentNode.appendChild(fb);" style="
                         width: clamp(180px, 40vw, 320px);
                         height: auto;
                         margin: 4px auto 6px;
@@ -3854,8 +3768,9 @@
                         background: transparent !important;
                         position: relative;
                         z-index: 20;
+                        opacity: 1 !important;
+                        visibility: visible !important;
                     " />
-                    <div class="fairy-dust-helix-layer fairy-dust-helix-front" aria-hidden="true"></div>
                 </div>
 
                 {% if current_user.is_authenticated %}
@@ -12325,6 +12240,7 @@
                 let outgoingGroup = null;  // group being faded out
                 let idx = 0;
                 let disposed = false;
+                let loadSeq = 0; // increments per requested carousel item to prevent slow-load stacking
 
                 function disposeObject(obj) {
                     try {
@@ -12417,6 +12333,16 @@
                     const IN_MS = 520;
                     const start = performance.now();
 
+                    // Hard guarantee: never allow more than one *visible* avatar group.
+                    // If something re-entrant happens (timer tick + slow GLB load), immediately
+                    // force any previous outgoing group fully invisible so it can't "morph".
+                    try {
+                        if (outgoingGroup && outgoingGroup !== oldGroup) {
+                            setTransparentRecursive(outgoingGroup, true);
+                            setOpacityRecursive(outgoingGroup, 0);
+                        }
+                    } catch(_) {}
+
                     // Ensure starting states
                     if (newGroup) {
                         setTransparentRecursive(newGroup, true);
@@ -12456,6 +12382,16 @@
                             disposeObject(oldGroup);
                             if (outgoingGroup === oldGroup) outgoingGroup = null;
                         }
+
+                        // Extra safety: if anything else is still lingering as outgoing,
+                        // remove it now (prevents the "Super Bee won't fade out" stacking).
+                        try {
+                            if (outgoingGroup && outgoingGroup !== oldGroup && outgoingGroup !== newGroup) {
+                                scene.remove(outgoingGroup);
+                                disposeObject(outgoingGroup);
+                                outgoingGroup = null;
+                            }
+                        } catch(_) {}
 
                         const inStart = performance.now();
                         function fadeInStep(now2){
@@ -12520,6 +12456,8 @@
                 }
 
                 function loadNext() {
+                    loadSeq++;
+                    const mySeq = loadSeq;
                     const item = candidates[idx % candidates.length];
                     idx++;
                     // Begin micro wrap easing (kept subtle to avoid double-fade feel)
@@ -12533,6 +12471,14 @@
                     loader.load(
                         base + '/' + item.file,
                         (gltf) => {
+                            // If another load finished after this request was issued, ignore this result.
+                            // (prevents slow GLB from being added on top of the current avatar)
+                            if (disposed) return;
+                            if (mySeq !== loadSeq) {
+                                try { disposeObject(gltf.scene); } catch(_) {}
+                                return;
+                            }
+
                             // Hand off previous as outgoing
                             if (currentGroup) {
                                 outgoingGroup = currentGroup;
@@ -15337,6 +15283,26 @@
                     this.updateCheck(check6, 'Offline', '', 55);
                     this.updateProgress(55, ' Offline mode');
                 }
+
+                // Check 6.5: Logo Animation (Fairy Dust) - preload/warmup
+                // Purpose: start the snaking canvas effect while the loader overlay is visible so it is
+                // already initialized and drawing when the main menu becomes interactive (Safari-friendly).
+                const check6b = this.addCheck('Logo Animation', 'Preloading...', '');
+                await this.delay(80);
+                try {
+                    const ok = await this.preloadLogoFairyDust();
+                    if (ok) {
+                        this.updateCheck(check6b, 'Ready', '', 58);
+                        this.updateProgress(58, ' Logo animation ready');
+                    } else {
+                        this.updateCheck(check6b, 'Skipped', 'ℹ', 58);
+                        this.updateProgress(58, ' Logo animation skipped');
+                    }
+                } catch (fxErr) {
+                    console.warn(' Logo animation preload failed:', fxErr);
+                    this.updateCheck(check6b, 'Fallback', 'ℹ', 58);
+                    this.updateProgress(58, ' Logo animation fallback');
+                }
                 
                 // Check 7: Speech API (removed from display)
                 await this.delay(200);
@@ -15486,6 +15452,40 @@
                         resolve(); // Don't reject, use fallback
                     }
                 });
+            }
+
+            async preloadLogoFairyDust() {
+                // Warm up the canvas animation so 1) Safari can't "miss" the first few frames and
+                // 2) the effect is already running when loader disappears.
+                // Returns true if we successfully requested a warmup, false if not available.
+                try {
+                    // Ensure script has executed / registered itself.
+                    if (typeof window.startLogoFairyDust !== 'function') {
+                        // Script tag exists in <head>, so this is mostly a safety fallback.
+                        console.warn(' startLogoFairyDust not available yet');
+                        return false;
+                    }
+
+                    // If it already started (e.g., auto-start), just mark as ready.
+                    if (window.__logoFairyDustRunning) return true;
+
+                    // Start in a low-impact mode: normal visuals but we allow it to run behind overlay.
+                    // Avoid forcing ?fx=on here; if reduced-motion is enabled, the user opted out.
+                    window.startLogoFairyDust({
+                        // Give it a bit longer to find the logo, since the loader swaps elements.
+                        maxWaitMs: 6000,
+                        // Subtle extra safety for Safari compositing issues.
+                        containerZIndex: 9999,
+                    });
+
+                    // Mark and give it a brief moment to paint at least one frame.
+                    window.__logoFairyDustRunning = true;
+                    await this.delay(180);
+                    return true;
+                } catch (e) {
+                    console.warn(' preloadLogoFairyDust error:', e);
+                    return false;
+                }
             }
             
             delay(ms) {
@@ -18239,7 +18239,20 @@
         }
 
         // CREST HELIX FAIRY DUST (bottom -> top, front <-> back)
+        // NOTE: This DOM-dot helix effect tends to read as "white dots" on many screens.
+        // We prefer the canvas-based snaking fairy dust in `static/js/logo-fairy-dust.js`.
+        // Keep this disabled by default so the crest stays clean.
+        const CREST_HELIX_DUST_ENABLED = false;
+
         function createFairyDustEffect() {
+            if (!CREST_HELIX_DUST_ENABLED) {
+                // Ensure any previously injected dots are removed.
+                const backLayer = document.querySelector('.fairy-dust-helix-back');
+                const frontLayer = document.querySelector('.fairy-dust-helix-front');
+                if (backLayer) backLayer.innerHTML = '';
+                if (frontLayer) frontLayer.innerHTML = '';
+                return;
+            }
             const backLayer = document.querySelector('.fairy-dust-helix-back');
             const frontLayer = document.querySelector('.fairy-dust-helix-front');
             const container = (backLayer && backLayer.closest('.logo-container')) || (frontLayer && frontLayer.closest('.logo-container'));
@@ -18335,21 +18348,23 @@
             render(performance.now());
         }
         
-        // Trigger fairy dust when page loads
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                // Wait a moment for logo to appear, then add magic
+        // Trigger helix dust only when explicitly enabled.
+        if (CREST_HELIX_DUST_ENABLED) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Wait a moment for logo to appear, then add magic
+                    setTimeout(createFairyDustEffect, 800);
+                });
+            } else {
+                // DOM already ready
                 setTimeout(createFairyDustEffect, 800);
-            });
-        } else {
-            // DOM already ready
-            setTimeout(createFairyDustEffect, 800);
-        }
+            }
 
-        // Re-run once the loader screen finishes (the loader also has a .crest-logo).
-        document.addEventListener('honeyLoaderFinished', () => {
-            setTimeout(createFairyDustEffect, 250);
-        });
+            // Re-run once the loader screen finishes (the loader also has a .crest-logo).
+            document.addEventListener('honeyLoaderFinished', () => {
+                setTimeout(createFairyDustEffect, 250);
+            });
+        }
 
     </script>
 
