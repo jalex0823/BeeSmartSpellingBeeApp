@@ -52,8 +52,12 @@ def _slugify_avatar_name(name: str) -> str:
 
 
 def _sku_prefix() -> str:
-    # Use reverse-domain style by default for App Store/Play best practices
-    return os.getenv('AVATAR_SKU_PREFIX', 'com.beesmart.avatar')
+    # App Store Connect Product ID format (current):
+    #   beesmart.avatar.<underscore_slug>.v2
+    #
+    # We keep the prefix as 'beesmart.avatar' and add the '.v2' suffix when
+    # generating the SKU.
+    return os.getenv('AVATAR_SKU_PREFIX', 'beesmart.avatar')
 
 
 def _sku_prefix_aliases() -> list[str]:
@@ -68,7 +72,9 @@ def _sku_prefix_aliases() -> list[str]:
       AVATAR_SKU_PREFIX_ALIASES="prefix.one,prefix.two"
     """
     primary = (_sku_prefix() or '').strip()
-    common = ['com.beesmart.avatar', 'beesmart.avatar']
+    # Accept historical prefixes for restore/back-compat.
+    # NOTE: Generation is controlled by _sku_prefix() + sku_for_slug().
+    common = ['beesmart.avatar', 'com.beesmart.avatar', 'com.beesmart.iap.avatar.v2']
     extra = []
     raw = os.getenv('AVATAR_SKU_PREFIX_ALIASES', '')
     if raw:
@@ -115,6 +121,9 @@ def sku_for_slug(avatar_slug: str) -> str:
     # App Store Connect Product IDs use: beesmart.avatar.brother_bee (not brother-bee)
     safe = re.sub(r"[^a-z0-9_]", "_", (avatar_slug or '').lower())
     safe = re.sub(r"_+", "_", safe).strip('_')
+    # New App Store Connect IDs append .v2
+    if prefix == 'beesmart.avatar':
+        return f"{prefix}.{safe}.v2"
     return f"{prefix}.{safe}"
 
 
@@ -142,6 +151,12 @@ def build_skus_from_catalog() -> Dict[str, str]:
     for a in AVATAR_CATALOG:
         slug = (a.get('id') or '').strip()
         if not slug:
+            continue
+        # Catalog product_id is legacy (pre-v2). SKU generation is canonical.
+        # Be explicit about the two newest/pain-point avatars so they're always
+        # included even if catalog shape changes.
+        if slug in {'fairy-bee', 'gamer-bee'}:
+            mapping[slug] = sku_for_slug(slug)
             continue
         # Only create SKUs for purchasable avatars
         if not a.get('is_purchasable', True):
@@ -189,9 +204,16 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
                 target_slug = alias
 
         # Accept multiple SKU spellings/prefixes for the same canonical avatar id.
+        # For the current App Store Connect scheme, the canonical product id is:
+        #   beesmart.avatar.<store_slug>.v2
         for prefix in prefixes:
             for store_slug in _slug_variants_for_store(target_slug):
-                entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
+                if prefix == 'beesmart.avatar':
+                    entitlements[f"{prefix}.{store_slug}.v2"] = { 'type': 'avatar', 'avatar_id': target_slug }
+                    # Also accept pre-v2 ids for restores/upgrades from old builds.
+                    entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
+                else:
+                    entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
 
     return entitlements
 
