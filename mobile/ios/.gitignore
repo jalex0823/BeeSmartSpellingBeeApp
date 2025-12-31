@@ -1,7 +1,11 @@
 App/build
 App/Pods
 App/output
+# We generally keep the generated `public/` output ignored, but we *do* commit
+# the entrypoint `index.html` because it controls how TestFlight/production
+# loads the app (and can enabling debugging toggles when needed).
 App/App/public
+!App/App/public/index.html
 DerivedData
 xcuserdata
 
