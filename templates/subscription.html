@@ -740,6 +740,21 @@
             requestAnimationFrame(tick);
         })();
 
+        function _sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function _waitForIAPBridge(timeoutMs = 2000) {
+            const deadline = Date.now() + timeoutMs;
+            while (Date.now() < deadline) {
+                if (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') {
+                    return true;
+                }
+                await _sleep(100);
+            }
+            return (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
+        }
+
         async function restorePurchases() {
             try {
                 // Scroll restore button into view so user knows action is happening
@@ -751,6 +766,9 @@
                     restoreBtn.textContent = 'Restoring...';
                     restoreBtn.disabled = true;
                 }
+
+                // Wait briefly — Capacitor plugins can register after the page scripts run.
+                await _waitForIAPBridge(2000);
 
                 if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
                     if (restoreBtn) {

@@ -15,20 +15,30 @@
 (function () {
   'use strict';
 
-  try {
-    // Do not override an existing native bridge (or a test/mock bridge).
-    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') {
-      return;
-    }
+  // Capacitor sometimes populates `Capacitor.Plugins` slightly after our script runs
+  // (especially with `defer`), so we retry a few times before giving up.
+  const MAX_ATTEMPTS = 25; // ~2.5s @ 100ms
+  const RETRY_MS = 100;
 
+  function hasBridge() {
+    return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
+  }
+
+  function getNativePlugin() {
     const cap = window.Capacitor;
     const plugins = cap && cap.Plugins;
-
     // Capacitor v5 uses `Capacitor.Plugins.<PluginName>`.
-    const nativePlugin = plugins && (plugins.BeeSmartIAP || plugins.BeeSmartIAPPlugin);
-    if (!nativePlugin) {
-      return;
-    }
+    // Our iOS bridge registers as BeeSmartIAPPlugin (class name).
+    return plugins && (plugins.BeeSmartIAP || plugins.BeeSmartIAPPlugin);
+  }
+
+  function initBridgeOnce() {
+    // Do not override an existing native bridge (or a test/mock bridge).
+    if (hasBridge()) return true;
+
+    const cap = window.Capacitor;
+    const nativePlugin = getNativePlugin();
+    if (!nativePlugin) return false;
 
     const capPlatform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
     const platform = (capPlatform === 'ios') ? 'apple' : ((capPlatform === 'android') ? 'google' : 'web');
@@ -74,9 +84,34 @@
 
     try {
       console.log('[BeeSmartIAP] bridged from Capacitor plugin (platform=' + platform + ')');
+      // Light readiness signal for UI/debugging.
+      window.dispatchEvent(new CustomEvent('beesmart:iap-ready', { detail: { platform } }));
     } catch (e) {
       // ignore
     }
+    return true;
+  }
+
+  try {
+    // Fast path
+    if (initBridgeOnce()) return;
+
+    // Retry while the app is settling.
+    let attempts = 0;
+    const timer = setInterval(function () {
+      attempts++;
+      try {
+        if (initBridgeOnce() || attempts >= MAX_ATTEMPTS) {
+          clearInterval(timer);
+        }
+      } catch (e) {
+        // Keep retrying unless we hit max attempts.
+        if (attempts >= MAX_ATTEMPTS) {
+          clearInterval(timer);
+          try { console.warn('[BeeSmartIAP] native bridge init failed:', e); } catch (e2) {}
+        }
+      }
+    }, RETRY_MS);
   } catch (e) {
     try {
       console.warn('[BeeSmartIAP] native bridge init failed:', e);

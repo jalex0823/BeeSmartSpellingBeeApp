@@ -202,8 +202,19 @@
         // Restore purchases (App Store / Play Billing)
         // Visible for logged-in users; requires the native wrapper bridge.
         (function(){
+            function _sleep(ms){ return new Promise((r)=>setTimeout(r, ms)); }
+            async function _waitForIAPBridge(timeoutMs){
+                const deadline = Date.now() + (timeoutMs || 2000);
+                while (Date.now() < deadline) {
+                    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') return true;
+                    await _sleep(100);
+                }
+                return (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
+            }
+
             async function restorePurchases(){
                 try {
+                    await _waitForIAPBridge(2000);
                     if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
                         const msg = 'Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the app store version and try again.';
                         if (typeof showLockedFeature === 'function') { showLockedFeature(msg); }
