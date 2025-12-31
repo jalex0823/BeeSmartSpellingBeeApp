@@ -1031,23 +1031,27 @@
         }
 
         async function checkExistingSubscription() {
-            // Check for existing subscriptions using the IAP bridge
+            // Check for existing subscriptions using the IAP bridge.
+            // IMPORTANT: In TestFlight, the bridge can be late. An empty list is not
+            // definitive — it often means "still loading".
             if (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') {
                 try {
                     const ownedProducts = await Promise.resolve(window.BeeSmartIAP.getOwnedProducts());
-                    // Check if user has any active subscription products
                     if (ownedProducts && ownedProducts.length > 0) {
-                        // User has an active subscription
                         return {
                             hasSubscription: true,
-                            products: ownedProducts
+                            products: ownedProducts,
+                            source: 'native'
                         };
                     }
+                    // Bridge exists but returns empty: treat as unknown to avoid false negatives.
+                    return { hasSubscription: null, products: [], source: 'native_empty' };
                 } catch (e) {
                     console.error('Error checking subscriptions:', e);
+                    return { hasSubscription: null, products: [], source: 'native_error' };
                 }
             }
-            return { hasSubscription: false, products: [] };
+            return { hasSubscription: null, products: [], source: 'no_bridge' };
         }
 
         // Auto-refresh subscription UI when:
@@ -1081,19 +1085,26 @@
         })();
 
         async function subscribe(plan) {
-            // First check if there's an existing subscription
+            // First check if there's an existing subscription.
+            // If status is unknown/loading, do a quick server reconcile before we show
+            // any "No Subscription Found" messaging.
             const subscriptionStatus = await checkExistingSubscription();
-            
-            if (subscriptionStatus.hasSubscription) {
-                // Show active subscription message
+
+            if (subscriptionStatus && subscriptionStatus.hasSubscription === true) {
                 showSubscriptionActiveDialog(subscriptionStatus.products);
                 return;
             }
 
-            // No existing subscription found - show popup before proceeding
-            const shouldProceed = await showNoSubscriptionDialog();
-            if (!shouldProceed) {
-                return;
+            if (subscriptionStatus && subscriptionStatus.hasSubscription == null) {
+                // Try to self-heal: reconcile with the server which knows anon cookie + DB.
+                const rec = await reconcileAndRefreshSubscriptionUI('subscribe_preflight');
+                const ent = (rec && (rec.entitlements || rec)) || {};
+                const owned = (ent && ent.anon_owned_products) ? ent.anon_owned_products : [];
+                const looksPremium = Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+                if (looksPremium) {
+                    showSubscriptionActiveDialog(owned);
+                    return;
+                }
             }
 
             // App Store Connect currently only has the monthly subscription product.
@@ -1104,11 +1115,16 @@
             const productId = productIds[plan];
 
             // Prefer the unified BeeSmartIAP bridge (Capacitor native plugin).
+            // Wait briefly for the bridge if we're in a native context; this reduces
+            // TestFlight false "web" fallback.
+            await _waitForIAPBridge(2000);
+
             if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
                 Promise.resolve(window.BeeSmartIAP.purchase(productId))
-                    .then(() => {
+                    .then(async () => {
+                        // Purchase complete — reconcile and refresh UI.
+                        try { await reconcileAndRefreshSubscriptionUI('purchase_success'); } catch (e) {}
                         alert('Purchase complete!');
-                        // Most flows redirect users back to the main app shell.
                         try { window.location.href = '/app'; } catch (e) {}
                     })
                     .catch((e) => {

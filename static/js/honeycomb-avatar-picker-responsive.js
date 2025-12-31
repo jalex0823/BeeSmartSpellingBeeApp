@@ -1634,13 +1634,16 @@ function showLockedMessage(avatar) {
     } else if (tier === 'premium' || tier === 'earn_or_buy') {
         const canPurchase = canPurchaseAvatar(avatar);
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
+        const notReadyMsg = isProbablyNativeAppContext()
+            ? 'In-app purchases are still loading. If you are in TestFlight, wait a few seconds and try again.'
+            : 'Purchases are available in the BeeSmart iOS/Android app.';
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top: 1.25rem; flex-wrap: wrap;">
                 ${canPurchase ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Not now</button>
             </div>
-            ${!canPurchase ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">Purchases are available in the BeeSmart iOS/Android app.</p>` : ''}
+            ${!canPurchase ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">${notReadyMsg}</p>` : ''}
         `;
     } else {
         actionHtml = `
@@ -1699,6 +1702,16 @@ function canPurchaseAvatar(avatar) {
     return isUserAuthenticated();
 }
 
+function isProbablyNativeAppContext() {
+    try {
+        // Capacitor present is our strongest signal.
+        if (window.Capacitor) return true;
+    } catch (e) { /* ignore */ }
+    const ua = navigator.userAgent || '';
+    // TestFlight still reports as iPhone/iPad; Android wrapper reports Android.
+    return (/iPhone|iPad|iPod/i.test(ua) || /Android/i.test(ua));
+}
+
 function findAvatarBySlug(slug) {
     const s = String(slug || '').toLowerCase();
     return (avatarsData || []).find(a => String(a.slug || '').toLowerCase() === s) || null;
@@ -1710,9 +1723,27 @@ async function _sleep(ms){
 
 async function _waitForNativeIapBridge(timeoutMs){
     const deadline = Date.now() + (timeoutMs || 2000);
-    while (Date.now() < deadline) {
-        if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return true;
-        await _sleep(100);
+    // Fast path
+    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return true;
+
+    // In TestFlight, the bridge can become ready after the page JS runs.
+    // Listen for the readiness event emitted by native-iap-bridge.js.
+    let sawReadyEvent = false;
+    const onReady = function() { sawReadyEvent = true; };
+    try { window.addEventListener('beesmart:iap-ready', onReady); } catch (e) { /* ignore */ }
+
+    try {
+        while (Date.now() < deadline) {
+            if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return true;
+            // If the ready event fired, poll a little more aggressively for a moment.
+            if (sawReadyEvent) {
+                await _sleep(50);
+            } else {
+                await _sleep(100);
+            }
+        }
+    } finally {
+        try { window.removeEventListener('beesmart:iap-ready', onReady); } catch (e) { /* ignore */ }
     }
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
@@ -1730,8 +1761,9 @@ async function purchaseLockedAvatar(slug) {
         return;
     }
 
-    // Capacitor plugins can register after page JS runs; wait briefly before gating.
-    await _waitForNativeIapBridge(2000);
+    // Capacitor plugins can register after page JS runs; wait a bit longer in TestFlight
+    // and prefer the explicit iap-ready event.
+    await _waitForNativeIapBridge(isProbablyNativeAppContext() ? 5000 : 2000);
     if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
         // Don't hard-block TestFlight if bridge detection is flaky.
         // Try a quick server-side restore/reconcile for users who already own premium/avatars.
@@ -1786,6 +1818,18 @@ async function purchaseLockedAvatar(slug) {
         if (!(resp.ok && json && json.success)) {
             const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Purchase verification failed (HTTP ${resp.status})`;
             throw new Error(msg);
+        }
+
+        // Nudge the server to refresh device/user entitlements (covers late bridge + restore logic)
+        try {
+            await fetch('/api/iap/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ platform: 'web', product_ids: [] })
+            });
+        } catch (e) {
+            // ignore
         }
 
         // Refresh the avatar list to reflect new entitlements

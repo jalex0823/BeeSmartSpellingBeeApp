@@ -103,6 +103,184 @@
             else { window.addEventListener('load', jumpTop, { once: true }); }
         })();
     </script>
+
+    <script>
+        // IAP Debug UI (TEMP): enabled by default for TestFlight diagnostics.
+        // REMOVE AFTER CAPTURING DEBUG INFO BEFORE SHIPPING PRODUCTION.
+        (function(){
+            window.BEESMART_IAP_DEBUG = true;
+        })();
+
+        (function(){
+            if (!window.BEESMART_IAP_DEBUG) return;
+            if (window.__beesmartIapDebugInstalled) return;
+            window.__beesmartIapDebugInstalled = true;
+
+            const state = {
+                installedAt: new Date().toISOString(),
+                lastReady: null,
+                lastReconciled: null,
+                lastError: null,
+                samples: []
+            };
+
+            function safeJson(obj) {
+                try { return JSON.stringify(obj, null, 2); } catch (e) {
+                    try { return String(obj); } catch (e2) { return '[unserializable]'; }
+                }
+            }
+
+            function getSnapshot(label) {
+                const ua = navigator.userAgent || '';
+                const snap = {
+                    ts: new Date().toISOString(),
+                    label: label || 'snapshot',
+                    location: { href: String(location.href || ''), host: String(location.host || ''), path: String(location.pathname || '') },
+                    ua,
+                    capacitor: !!window.Capacitor,
+                    beeSmartIapPresent: !!window.BeeSmartIAP,
+                    platform: (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? String(window.BeeSmartIAP.platform) : null,
+                    hasPurchase: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function'),
+                    hasRestore: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function'),
+                    hasGetOwnedProducts: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function'),
+                    isAuth: !!window.IS_AUTH,
+                    isPremiumFlag: !!window.IS_PREMIUM,
+                    subscriptionSku: window.SUBSCRIPTION_SKU || null,
+                    lastReady: state.lastReady,
+                    lastReconciled: state.lastReconciled,
+                    lastError: state.lastError
+                };
+                return snap;
+            }
+
+            function renderPanel() {
+                const existing = document.getElementById('iapDebugPanel');
+                if (existing) return existing;
+
+                const panel = document.createElement('div');
+                panel.id = 'iapDebugPanel';
+                panel.style.cssText = [
+                    'position:fixed',
+                    'left:10px',
+                    'right:10px',
+                    'bottom:10px',
+                    'z-index:99999',
+                    'background:rgba(255,255,255,0.98)',
+                    'border:2px solid rgba(255,193,7,0.55)',
+                    'border-radius:14px',
+                    'box-shadow:0 10px 26px rgba(0,0,0,0.22)',
+                    'padding:10px',
+                    'display:none'
+                ].join(';');
+
+                panel.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div style="font-weight:900; color:#5a3c00;">IAP Debug (TestFlight)</div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                            <button id="iapDebugRefresh" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Refresh</button>
+                            <button id="iapDebugCopy" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#FFD54F; font-weight:900;">Copy</button>
+                            <button id="iapDebugClose" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Close</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px; font-size:0.92rem; color:#3f2b00;">
+                        Tap <b>Refresh</b>, then <b>Copy</b>, and text it.
+                    </div>
+                    <pre id="iapDebugText" style="margin-top:8px; max-height:38vh; overflow:auto; font-size:12px; line-height:1.35; background:rgba(0,0,0,0.04); padding:10px; border-radius:12px; white-space:pre-wrap;"></pre>
+                    <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button id="iapDebugDisable" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Disable Debug (prod-safe)</button>
+                    </div>
+                `;
+
+                document.body.appendChild(panel);
+
+                function updateText(label) {
+                    const snap = getSnapshot(label || 'manual');
+                    state.samples.push(snap);
+                    const txt = {
+                        header: 'BeeSmart IAP Debug Snapshot',
+                        ...snap,
+                        samplesCount: state.samples.length
+                    };
+                    const pre = document.getElementById('iapDebugText');
+                    if (pre) pre.textContent = safeJson(txt);
+                }
+
+                panel.querySelector('#iapDebugClose')?.addEventListener('click', () => {
+                    panel.style.display = 'none';
+                });
+                panel.querySelector('#iapDebugRefresh')?.addEventListener('click', () => updateText('refresh'));
+                panel.querySelector('#iapDebugCopy')?.addEventListener('click', async () => {
+                    try {
+                        const text = document.getElementById('iapDebugText')?.textContent || '';
+                        await navigator.clipboard.writeText(text);
+                        alert('Copied IAP debug info. Paste it into a text message.');
+                    } catch (e) {
+                        alert('Could not copy automatically. Please select the text and copy manually.');
+                    }
+                });
+                panel.querySelector('#iapDebugDisable')?.addEventListener('click', () => {
+                    try { localStorage.removeItem('BEESMART_IAP_DEBUG'); } catch (e) {}
+                    window.BEESMART_IAP_DEBUG = false;
+                    alert('IAP debug disabled. Restart the app to fully clear it.');
+                    panel.style.display = 'none';
+                });
+
+                // First render
+                updateText('initial');
+                return panel;
+            }
+
+            // Expose a global that a Home tile/button can call.
+            window.openIapDebugPanel = function(){
+                try {
+                    const panel = renderPanel();
+                    panel.style.display = 'block';
+                    // refresh immediately
+                    try {
+                        const pre = document.getElementById('iapDebugText');
+                        if (pre) pre.textContent = safeJson({ header: 'Loading…', ts: new Date().toISOString() });
+                    } catch (e) {}
+                    // short delayed refresh to catch late bridge
+                    setTimeout(() => {
+                        try {
+                            const panel2 = renderPanel();
+                            panel2.style.display = 'block';
+                            const pre = document.getElementById('iapDebugText');
+                            if (pre) pre.textContent = safeJson(getSnapshot('open_delayed'));
+                        } catch (e) {}
+                    }, 350);
+                } catch (e) {
+                    alert('Could not open IAP debug panel.');
+                }
+            };
+
+            // Listen for native bridge events and record them.
+            try {
+                window.addEventListener('beesmart:iap-ready', function(ev){
+                    state.lastReady = {
+                        ts: new Date().toISOString(),
+                        detail: ev && ev.detail ? ev.detail : null
+                    };
+                });
+                window.addEventListener('beesmart:iap-reconciled', function(ev){
+                    state.lastReconciled = {
+                        ts: new Date().toISOString(),
+                        detail: ev && ev.detail ? ev.detail : null
+                    };
+                });
+            } catch (e) { /* ignore */ }
+
+            // Show the debug tile in the home menu when enabled.
+            try {
+                window.addEventListener('DOMContentLoaded', function(){
+                    try {
+                        const tile = document.getElementById('tileIapDebug');
+                        if (tile) tile.style.display = '';
+                    } catch (e) {}
+                }, { once: true });
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
     <!-- SmartyBee3D GLB Renderer (CRITICAL: Must load before avatar loader) -->
     <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v=20251203" defer></script>
     <!-- Cache-bust: 2025-12-18 (fix AbortError spam + timeout reason) -->
@@ -4579,6 +4757,14 @@
                     <div class="option-title">Dictionary Search</div>
                     <div class="option-description">Look up word definitions</div>
                     <div class="kid-tip"> Discover new words to learn!</div>
+                </div>
+
+                <!-- IAP Debug (TestFlight) - debug-only tile -->
+                <div id="tileIapDebug" class="menu-option" style="display:none; background: linear-gradient(135deg, #FFFDE7 0%, #FFF3C0 100%); border-color: rgba(255, 193, 7, 0.55);" onclick="try{ kidSounds.playRandomEffect(); if(window.openIapDebugPanel) window.openIapDebugPanel(); else alert('IAP debug panel not ready yet.'); }catch(e){ alert('IAP debug panel error.'); }" onmouseover="kidSounds.playPop()" title=" IAP Debug (TestFlight): tap to view and copy IAP bridge status">
+                    <div class="option-icon">🧪</div>
+                    <div class="option-title">IAP Debug</div>
+                    <div class="option-description">Copy IAP status for support</div>
+                    <div class="kid-tip"> For TestFlight troubleshooting only</div>
                 </div>
 
                 <!-- Saved Word Lists -->

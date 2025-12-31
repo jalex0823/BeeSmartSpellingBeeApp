@@ -5560,7 +5560,20 @@ def magical_quiz_page():
 @app.route("/health")
 def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
-    return jsonify({"status": "ok", "version": APP_VERSION}), 200
+    # Include a build fingerprint so we can confirm which commit is deployed.
+    # DigitalOcean deployments can sometimes serve stale code if the process wasn't restarted.
+    try:
+        import subprocess
+        build_sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=1.0,
+        ).decode("utf-8").strip()
+    except Exception:
+        build_sha = os.getenv("APP_BUILD_SHA") or None
+
+    return jsonify({"status": "ok", "version": APP_VERSION, "build": build_sha}), 200
 
 # Extra health endpoints for PaaS defaults (Railway/Render/Heroku variants)
 # Many platforms probe different default paths; keep them lightweight and identical
@@ -5570,7 +5583,18 @@ def health_check():
 @app.route("/_/health")
 @app.route("/ready")
 def health_check_aliases():
-    return jsonify({"status": "ok", "version": APP_VERSION}), 200
+    try:
+        import subprocess
+        build_sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=1.0,
+        ).decode("utf-8").strip()
+    except Exception:
+        build_sha = os.getenv("APP_BUILD_SHA") or None
+
+    return jsonify({"status": "ok", "version": APP_VERSION, "build": build_sha}), 200
 
 @app.route("/health/iap")
 def health_iap():
