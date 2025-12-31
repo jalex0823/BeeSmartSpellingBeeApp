@@ -744,6 +744,47 @@
             return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
+        // Keep subscription UI in sync with server-side entitlements (cookie + DB-backed guest restore).
+        // This is critical for TestFlight where the native bridge can appear late.
+        async function reconcileAndRefreshSubscriptionUI(reason) {
+            try {
+                // Ask server for current entitlements without requiring native product enumeration.
+                const res = await fetch('/api/iap/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ platform: 'web', product_ids: [] })
+                });
+                const data = await res.json().catch(() => ({}));
+
+                // Best-effort: if premium is active, swap the CTA to "Active".
+                // We keep this defensive because templates vary across builds.
+                const ent = (data && (data.entitlements || data)) || {};
+                const owned = (ent && ent.anon_owned_products) ? ent.anon_owned_products : [];
+                const looksPremium = Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+
+                const statusEl = document.getElementById('subscription-status');
+                if (statusEl) {
+                    statusEl.textContent = looksPremium
+                        ? '✅ Premium is active on this device.'
+                        : 'Premium is not active yet.';
+                }
+
+                // If there is an explicit subscribe button, disable it when premium is active.
+                const subBtn = document.getElementById('subscribeMonthlyBtn');
+                if (subBtn && looksPremium) {
+                    subBtn.disabled = true;
+                    subBtn.textContent = 'Premium Active';
+                }
+
+                console.log('[Subscription] reconcile refresh:', reason, { ok: !!(data && (data.success || data.ok)), looksPremium });
+                return data;
+            } catch (e) {
+                console.warn('[Subscription] reconcile refresh failed:', reason, e);
+                return null;
+            }
+        }
+
         async function _waitForIAPBridge(timeoutMs = 2000) {
             const deadline = Date.now() + timeoutMs;
             while (Date.now() < deadline) {
@@ -790,10 +831,10 @@
                         const ok = !!(data && (data.ok === true || data.success === true));
                         const msg = ok
                             ? 'Restore started. If your purchase was found, premium will unlock automatically.'
-                            : 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.';
+                            : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.';
                         showRestoreDialog('Restore Purchases', msg, ok);
                     } catch (e) {
-                        showRestoreDialog('Restore Purchases', 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.', false);
+                        showRestoreDialog('Restore Purchases', 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again.', false);
                     }
                     return;
                 }
@@ -963,10 +1004,10 @@
                     document.body.removeChild(overlay);
                     resolve(true);
                     if (isSuccess) {
-                        // Reload page to reflect restored purchases
+                        // Prefer an in-place refresh so we don't lose the user's scroll position.
                         setTimeout(() => {
-                            try { window.location.reload(); } catch(e) {}
-                        }, 300);
+                            try { reconcileAndRefreshSubscriptionUI('restore_success_dialog'); } catch(e) {}
+                        }, 250);
                     }
                 });
 
@@ -1008,6 +1049,36 @@
             }
             return { hasSubscription: false, products: [] };
         }
+
+        // Auto-refresh subscription UI when:
+        // - the server reconcile completes (bridge missing/late)
+        // - the native IAP bridge becomes ready
+        (function installSubscriptionIapListeners() {
+            try {
+                if (window.__beesmartSubscriptionIapListenersInstalled) return;
+                window.__beesmartSubscriptionIapListenersInstalled = true;
+
+                let t = null;
+                const schedule = function(reason) {
+                    try { if (t) clearTimeout(t); } catch (e) {}
+                    t = setTimeout(function() {
+                        try { reconcileAndRefreshSubscriptionUI(reason); } catch (e) {}
+                    }, 400);
+                };
+
+                window.addEventListener('beesmart:iap-reconciled', function(ev) {
+                    const ok = ev && ev.detail ? ev.detail.ok : null;
+                    schedule('iap-reconciled' + (ok === false ? ':fail' : ''));
+                });
+                window.addEventListener('beesmart:iap-ready', function(ev) {
+                    const platform = ev && ev.detail ? ev.detail.platform : null;
+                    schedule('iap-ready' + (platform ? ':' + platform : ''));
+                });
+
+                // Initial paint: do a quick reconcile so UI is correct even before any clicks.
+                schedule('initial');
+            } catch (e) { /* ignore */ }
+        })();
 
         async function subscribe(plan) {
             // First check if there's an existing subscription

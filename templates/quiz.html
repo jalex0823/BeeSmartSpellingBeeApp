@@ -7886,11 +7886,41 @@ class QuizManager {
             }
             
         } catch (error) {
+            // If a secondary/optional network call fails during the correct-answer
+            // path (e.g., hot-streak / bonus tracking), we never want to block
+            // progression to the next word.
             console.error('❌ submitAnswer error:', error);
-            console.error('Error details:', error.message, error.stack);
-            BeeSmart.showError('Network error. Please try again.');
-            this.enableInput();
+            console.error('Error details:', error?.message, error?.stack);
+
+            // Re-enable input so the kid isn't stuck.
+            try { this.enableInput(); } catch (_e) {}
             this.isAnswering = false;
+
+            // Best-effort recovery: if we were already in the "correct answer"
+            // flow, continue forward after a short delay.
+            // (This addresses the "hot streak" network error where the quiz
+            // visually continues but stalls before fetching /api/next.)
+            try {
+                const feedbackArea = document.getElementById('feedbackArea');
+                const msg = (feedbackArea?.textContent || '').toLowerCase();
+                const looksLikeCorrectPath = msg.includes('moving to the next word');
+                if (looksLikeCorrectPath) {
+                    console.warn('⚠️ Non-fatal network error during advance; continuing to next word...');
+                    setTimeout(() => {
+                        try {
+                            this.loadNextWord();
+                        } catch (e) {
+                            console.error('❌ Recovery loadNextWord failed:', e);
+                            this.showNextWordButton?.();
+                        }
+                    }, 600);
+                    return;
+                }
+            } catch (_e) {
+                // ignore
+            }
+
+            BeeSmart.showError('Network error. Please try again.');
         }
     }
 

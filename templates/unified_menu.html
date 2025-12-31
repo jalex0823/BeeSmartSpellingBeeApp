@@ -250,12 +250,11 @@
                             // Do not fail hard here; continue to owned-products lookup.
                             console.warn('[restorePurchases] native restore failed:', e);
                         }
-                    }
+
 
                     const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
                         ? String(window.BeeSmartIAP.platform).toLowerCase()
                         : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
-
                     const rawOwned = await Promise.resolve(window.BeeSmartIAP.getOwnedProducts());
                     const extractPid = (x) => {
                         if (x == null) return null;

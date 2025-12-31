@@ -15,6 +15,62 @@
 (function () {
   'use strict';
 
+  // Optional continuity helper:
+  // - In production native wrappers, prefer providing a stable keychain identifier
+  //   via the Capacitor plugin (e.g., getInstallId()) so guest restores can be
+  //   re-associated after reinstall.
+  // - In pure web contexts, we fall back to localStorage (best-effort only).
+  function _getOrCreateWebInstallId() {
+    try {
+      if (!window.localStorage) return null;
+      const key = 'beesmart_install_id_v1';
+      let v = window.localStorage.getItem(key);
+      if (v && typeof v === 'string' && v.length >= 12) return v;
+      // Prefer crypto.randomUUID where available
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        v = window.crypto.randomUUID();
+      } else {
+        // Non-crypto fallback: still fine for *best-effort* browser continuity.
+        v = 'web_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+      }
+      window.localStorage.setItem(key, v);
+      return v;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function _getInstallIdForServer() {
+    // Try native first. This is the key part for "survive reinstall".
+    try {
+      const p = getNativePlugin();
+      if (p && typeof p.getInstallId === 'function') {
+        const r = await Promise.resolve(p.getInstallId());
+        if (r && typeof r.installId === 'string' && r.installId.trim()) return r.installId.trim();
+        if (typeof r === 'string' && r.trim()) return r.trim();
+      }
+    } catch (e) { /* ignore */ }
+
+    return _getOrCreateWebInstallId();
+  }
+
+  // Regression guard: we never want to present a dead-end “browser session” message
+  // inside TestFlight/native wrappers. If any caller reintroduces this wording,
+  // surface a console warning to make it obvious during QA.
+  try {
+    const _warn = console.warn;
+    console.warn = function () {
+      try {
+        const args = Array.prototype.slice.call(arguments);
+        const joined = args.map(function (x) { return String(x); }).join(' ');
+        if (joined.toLowerCase().indexOf('browser session') !== -1) {
+          _warn.call(console, '[BeeSmartIAP][guard] Detected "browser session" wording. This should not be shown to users.');
+        }
+      } catch (e) { /* ignore */ }
+      return _warn.apply(console, arguments);
+    };
+  } catch (e) { /* ignore */ }
+
   // Capacitor sometimes populates `Capacitor.Plugins` slightly after our script runs
   // (especially with `defer`), so we retry a few times before giving up.
   const MAX_ATTEMPTS = 25; // ~2.5s @ 100ms
@@ -22,6 +78,35 @@
 
   function hasBridge() {
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
+  }
+
+  async function serverReconcile(reason) {
+    // Server-first reconcile: when the JS/native bridge is missing or late,
+    // ask the backend to return current entitlements (cookie + DB-backed anon_restore_id).
+    // This keeps TestFlight from getting stuck in a "web-only" branch.
+    try {
+      const install_id = await _getInstallIdForServer();
+      const r = await fetch('/api/iap/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ platform: 'apple', product_ids: [], install_id })
+      });
+      const data = await r.json().catch(function () { return null; });
+      try {
+        window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+          detail: { ok: !!(data && data.success), reason: reason || 'unknown', data }
+        }));
+      } catch (e) { /* ignore */ }
+      return data;
+    } catch (e) {
+      try {
+        window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+          detail: { ok: false, reason: reason || 'unknown', error: String(e) }
+        }));
+      } catch (e2) { /* ignore */ }
+      return null;
+    }
   }
 
   function getNativePlugin() {
@@ -365,6 +450,11 @@
 
     // Fast path
     if (initBridgeOnce()) return;
+
+  // Bridge isn't ready yet. Kick off a server reconcile so the UI can reflect
+  // DB-backed guest entitlements immediately (and not show web-only warnings).
+  // A later beesmart:iap-ready event can still flip to native flows.
+  try { serverReconcile('bridge_missing_initial'); } catch (e) { /* ignore */ }
 
     // Retry while the app is settling.
     let attempts = 0;

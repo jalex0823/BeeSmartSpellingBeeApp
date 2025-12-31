@@ -41,6 +41,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     await verifyUserAuthentication();
     // Apply initial role-based UI before heavy loading
     applyRoleBasedUI();
+
+    // If the native IAP bridge is missing/late (common in TestFlight),
+    // native-iap-bridge.js will do a server reconcile and emit events.
+    // Listen and refresh avatars so locks/unlocks update immediately.
+    (function installIapRefreshListeners() {
+        try {
+            if (window.__beesmartAvatarIapListenersInstalled) return;
+            window.__beesmartAvatarIapListenersInstalled = true;
+
+            let refreshTimer = null;
+            const scheduleRefresh = function(reason) {
+                try {
+                    if (refreshTimer) clearTimeout(refreshTimer);
+                } catch (e) { /* ignore */ }
+                refreshTimer = setTimeout(async function() {
+                    try {
+                        console.log('🔄 IAP event refresh avatars:', reason);
+                        await loadAvatars();
+                    } catch (e) {
+                        // Non-fatal: avoid breaking the avatar page if refresh fails.
+                        console.warn('🐞 IAP-triggered avatar refresh failed:', e);
+                    }
+                }, 350);
+            };
+
+            window.addEventListener('beesmart:iap-reconciled', function(ev) {
+                const ok = ev && ev.detail ? ev.detail.ok : null;
+                scheduleRefresh('iap-reconciled' + (ok === false ? ':fail' : ''));
+            });
+            window.addEventListener('beesmart:iap-ready', function(ev) {
+                const platform = ev && ev.detail ? ev.detail.platform : null;
+                scheduleRefresh('iap-ready' + (platform ? ':' + platform : ''));
+            });
+        } catch (e) { /* ignore */ }
+    })();
     
     loadAvatars();
     setupSearchFilter();
@@ -1698,7 +1733,27 @@ async function purchaseLockedAvatar(slug) {
     // Capacitor plugins can register after page JS runs; wait briefly before gating.
     await _waitForNativeIapBridge(2000);
     if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
-        alert('Purchases are available in the BeeSmart iOS/Android app.');
+        // Don't hard-block TestFlight if bridge detection is flaky.
+        // Try a quick server-side restore/reconcile for users who already own premium/avatars.
+        try {
+            const res = await fetch('/api/iap/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ platform: 'web', product_ids: [] })
+            });
+            const data = await res.json().catch(() => ({}));
+            const restored = !!(data && (data.ok === true || data.success === true));
+            if (restored) {
+                await loadAvatars();
+                alert('Restored purchases. If you already owned this avatar, it should be unlocked now.');
+                return;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        alert('In-app purchase is not ready yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.');
         return;
     }
 

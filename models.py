@@ -1356,6 +1356,90 @@ class PurchaseRecord(db.Model):
         return f"<PurchaseRecord user={self.user_id} product={self.product_id} platform={self.platform} status={self.status}>"
 
 
+class AnonPurchaseOwnership(db.Model):
+    """Device-scoped (cookie-based) ownership records for guest restore.
+
+    This supports Apple guideline-compliant restore without forcing account creation.
+    It also helps when the native IAP bridge is temporarily unavailable in TestFlight:
+    the server can still remember an anonymous restore attempt across sessions.
+    """
+    __tablename__ = 'anon_purchase_ownership'
+
+    id = db.Column(db.Integer, primary_key=True)
+    anon_restore_id = db.Column(db.String(64), index=True, nullable=False)
+
+    platform = db.Column(db.String(20), index=True)  # 'apple' | 'google' | 'web'
+    product_id = db.Column(db.String(150), index=True, nullable=False)
+    status = db.Column(db.String(30), index=True, default='verified')  # verified|restore_error
+    raw_payload = db.Column(db.JSON, default=dict)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('anon_restore_id', 'product_id', name='uq_anon_purchase_ownership_restore_product'),
+    )
+
+    @staticmethod
+    def upsert(anon_restore_id: str, platform: str, product_id: str, status: str = 'verified', raw_payload=None):
+        rec = AnonPurchaseOwnership.query.filter_by(
+            anon_restore_id=anon_restore_id,
+            product_id=product_id
+        ).first()
+        if rec is None:
+            rec = AnonPurchaseOwnership(
+                anon_restore_id=anon_restore_id,
+                platform=platform,
+                product_id=product_id,
+                status=status,
+                raw_payload=raw_payload or {}
+            )
+            db.session.add(rec)
+        else:
+            rec.platform = platform
+            rec.status = status
+            rec.raw_payload = raw_payload or rec.raw_payload or {}
+        return rec
+
+
+class AnonInstallLink(db.Model):
+        """Optional bridge between a stable native install identifier and anon_restore_id.
+
+        Why this exists:
+        - The cookie-based anon_restore_id works well across sessions, but is lost on
+            app reinstall or data deletion.
+        - Native wrappers can provide a stable keychain-backed install id that
+            survives reinstalls. When available, we can map that to the existing
+            anon_restore_id so a restored guest can regain entitlements.
+
+        Privacy note:
+        - This is an app-scoped random identifier, not a device fingerprint.
+        - We do not attempt to derive it from hardware identifiers.
+        """
+        __tablename__ = 'anon_install_links'
+
+        id = db.Column(db.Integer, primary_key=True)
+        install_id = db.Column(db.String(128), unique=True, index=True, nullable=False)
+        anon_restore_id = db.Column(db.String(64), index=True, nullable=False)
+
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+        updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+        @staticmethod
+        def upsert(install_id: str, anon_restore_id: str):
+                install_id = (install_id or '').strip()
+                anon_restore_id = (anon_restore_id or '').strip()
+                if not install_id or not anon_restore_id:
+                        return None
+                rec = AnonInstallLink.query.filter_by(install_id=install_id).first()
+                if rec is None:
+                        rec = AnonInstallLink(install_id=install_id, anon_restore_id=anon_restore_id)
+                        db.session.add(rec)
+                else:
+                        rec.anon_restore_id = anon_restore_id
+                return rec
+
+
 class BundleKey(db.Model):
     """Database-managed avatar bundle distribution keys.
 

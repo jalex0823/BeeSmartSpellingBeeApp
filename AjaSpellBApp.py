@@ -85,6 +85,10 @@ print(f" Platform: {sys.platform}")
 print(f" Working directory: {os.getcwd()}")
 print("="*70)
 
+# Build/release version (surfaced via /health)
+# Keep this in sync with the public app version used by validation scripts.
+APP_VERSION = "1.7"
+
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -853,10 +857,51 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     if tier in ('default_free', 'mascot_free') or is_default_free:
         return {"unlocked": True, "reason": "Default free avatar", "points_needed": 0}
 
+    # Guest entitlement support (Apple Guideline 5.1.1): allow anon-owned SKUs to
+    # unlock premium and avatar purchases without requiring login.
+    anon_owned = []
+    anon_premium = False
+    if role == 'guest' and user is None:
+        try:
+            ent = _get_guest_entitlements()
+            ao = ent.get('anon_owned_products', []) if isinstance(ent, dict) else []
+            anon_owned = ao if isinstance(ao, list) else []
+        except Exception:
+            anon_owned = []
+
+        # Treat any premium/subscription SKU as premium entitlement for guests
+        try:
+            for pid in anon_owned:
+                try:
+                    mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                except Exception:
+                    mapping = None
+                if isinstance(mapping, dict) and mapping.get('type') == 'subscription':
+                    anon_premium = True
+                    break
+            if not anon_premium:
+                for pid in anon_owned:
+                    p = (pid or '').lower()
+                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly')):
+                        anon_premium = True
+                        break
+        except Exception:
+            anon_premium = False
+
     # Earn-or-buy tier: unlock by points or purchase
     if tier == 'earn_or_buy':
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
+        # Guest restore/purchase unlock
+        if role == 'guest' and user is None and anon_owned:
+            try:
+                for pid in anon_owned:
+                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                    if isinstance(m, dict) and m.get('type') == 'avatar':
+                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
+                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
+            except Exception:
+                pass
         if honey_points >= unlock_points:
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
         return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
@@ -865,8 +910,18 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     if tier == 'premium':
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        if premium_member:
+        if premium_member or anon_premium:
             return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
+        # If guest owns a matching avatar SKU, unlock it.
+        if anon_owned:
+            try:
+                for pid in anon_owned:
+                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                    if isinstance(m, dict) and m.get('type') == 'avatar':
+                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
+                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
+            except Exception:
+                pass
         return {"unlocked": False, "reason": "Premium - purchase to unlock", "points_needed": None}
 
     # Fallback - treat unknown tiers as locked
@@ -914,6 +969,19 @@ def api_avatars():
         except Exception:
             role = 'student'
 
+    # Guest entitlement support (Apple Guideline 5.1.1): allow a non-logged-in
+    # user to restore/purchase and have avatar lock state persist via anon_restore_id.
+    guest_entitlements = None
+    anon_owned = []
+    if user is None:
+        try:
+            guest_entitlements = _get_guest_entitlements()
+            ao = guest_entitlements.get('anon_owned_products', []) if isinstance(guest_entitlements, dict) else []
+            anon_owned = ao if isinstance(ao, list) else []
+        except Exception:
+            guest_entitlements = None
+            anon_owned = []
+
     # Dev-only override: allow the local StoreKit webview to fetch the full avatar catalog
     # (including product IDs) even when not logged in.
     #
@@ -927,10 +995,22 @@ def api_avatars():
         role = 'student'
 
     # Build cache key per user+role (prevents admin cache bleed)
+    # NOTE: Guests with DB-backed entitlements must not be lumped into the
+    # generic guest cache key, otherwise a restored user could see the mascot-only list.
     if dev_full_effective:
         cache_key = 'guest_role_dev_full'
     elif user is None:
-        cache_key = 'guest_role_guest'
+        if anon_owned:
+            # Keep this key stable per entitlements, but avoid leaking raw product ids
+            # into cache keys (logs). Hash-like: just encode count + a short checksum.
+            try:
+                joined = "|".join(sorted([str(x) for x in anon_owned if x]))
+                checksum = str(abs(hash(joined)) % 100000000)
+            except Exception:
+                checksum = '0'
+            cache_key = f"guest_role_guest_ent_{len(anon_owned)}_{checksum}"
+        else:
+            cache_key = 'guest_role_guest'
     else:
         cache_key = f"user_{getattr(user, 'id', 'unknown')}_role_{role}"
 
@@ -956,8 +1036,10 @@ def api_avatars():
     # Build role-aware list
     result = []
 
-    # Guest rule: only show the Mascot Bee avatar (full color); hide all others
-    if role == 'guest':
+    # Guest rule:
+    # - With NO guest entitlements: only show the Mascot Bee avatar (full color); hide all others
+    # - With guest entitlements present (anon_restore_id restored/purchased): show full catalog
+    if role == 'guest' and not anon_owned:
         guest_list = []
         try:
             # Prefer Mascot Bee for guests
@@ -989,7 +1071,7 @@ def api_avatars():
             print(f"️ Guest avatar list build error: {_e}")
 
         # Cache and return minimal guest payload (no other avatars exposed)
-        AVATAR_LIST_CACHE['guest_role_guest'] = { 'ts': now_ts, 'data': guest_list }
+        AVATAR_LIST_CACHE[cache_key] = { 'ts': now_ts, 'data': guest_list }
         return jsonify({
             "status": "success",
             "avatars": guest_list,
@@ -1153,6 +1235,7 @@ def api_avatars():
         "cached": False,
         "purchased_avatars": list(getattr(user, 'purchased_avatars', []) or []) if user is not None else [],
         "purchased_bundles": list(getattr(user, 'purchased_bundles', []) or []) if user is not None else [],
+        "anon_owned_products": anon_owned if user is None else [],
         "user": {
             "role": role,
             "is_authenticated": bool(user is not None),
@@ -1175,7 +1258,7 @@ def save_dictionary_cache(cache_data):
         else:
             data = {
                 "_metadata": {
-                    "version": "1.6",
+                    "version": APP_VERSION,
                     "created": datetime.now().strftime("%Y-%m-%d"),
                     "description": "BeeSmart dictionary cache - API fetched definitions only"
                 },
@@ -5475,7 +5558,7 @@ def magical_quiz_page():
 @app.route("/health")
 def health_check():
     """Ultra-simple health check for Railway - always returns 200"""
-    return jsonify({"status": "ok", "version": "1.7"}), 200
+    return jsonify({"status": "ok", "version": APP_VERSION}), 200
 
 # Extra health endpoints for PaaS defaults (Railway/Render/Heroku variants)
 # Many platforms probe different default paths; keep them lightweight and identical
@@ -5485,7 +5568,7 @@ def health_check():
 @app.route("/_/health")
 @app.route("/ready")
 def health_check_aliases():
-    return jsonify({"status": "ok", "version": "1.7"}), 200
+    return jsonify({"status": "ok", "version": APP_VERSION}), 200
 
 @app.route("/health/iap")
 def health_iap():
@@ -5532,7 +5615,7 @@ def health_iap():
 
         return jsonify({
             "status": "ok",
-            "version": "1.7",
+            "version": APP_VERSION,
             "iap": {
                 "mock": bool(mock),
                 "verification_mode": mode,
@@ -9732,6 +9815,89 @@ def _entitlements_summary(user: User) -> dict:
     }
 
 
+def _get_anon_owned_products_from_db() -> list[str]:
+    """Best-effort lookup of anonymous/device-scoped ownership.
+
+    Uses the `anon_restore_id` cookie as a stable key (Apple guideline 5.1.1 guest restore).
+    Returns a de-duped list of product_ids.
+    """
+    # Prefer a request-scoped override (used during reconcile-only / install_id relink)
+    # before falling back to the cookie.
+    anon_restore_id = None
+    try:
+        anon_restore_id = session.get('anon_restore_id')
+    except Exception:
+        anon_restore_id = None
+    if not anon_restore_id:
+        try:
+            anon_restore_id = request.cookies.get('anon_restore_id')
+        except Exception:
+            anon_restore_id = None
+    if not anon_restore_id:
+        return []
+
+    try:
+        from models import AnonPurchaseOwnership
+        rows = (AnonPurchaseOwnership.query
+                .filter_by(anon_restore_id=anon_restore_id)
+                .filter(AnonPurchaseOwnership.status != 'restore_error')
+                .all())
+        out = []
+        seen = set()
+        for r in rows or []:
+            pid = getattr(r, 'product_id', None)
+            if not pid:
+                continue
+            if pid in seen:
+                continue
+            seen.add(pid)
+            out.append(pid)
+        return out
+    except Exception:
+        return []
+
+
+def _get_guest_entitlements() -> dict:
+    """Return guest entitlements, merging session + DB-backed anon ownership.
+
+    This ensures sticky access for TestFlight users even if the JS bridge is flaky.
+    """
+    anon_owned = session.get('anon_owned_products')
+    if not isinstance(anon_owned, list):
+        anon_owned = []
+
+    # Reconcile-only requests (no product_ids) should still return durable
+    # guest ownership from the DB even if the session doesn't yet contain it.
+    # If we have nothing in-session, seed from DB so the API response reflects
+    # persisted ownership immediately.
+    if not anon_owned:
+        try:
+            anon_owned = _get_anon_owned_products_from_db() or []
+            if not isinstance(anon_owned, list):
+                anon_owned = []
+            session['anon_owned_products'] = anon_owned
+        except Exception:
+            anon_owned = []
+
+    db_owned = _get_anon_owned_products_from_db()
+    if db_owned:
+        merged = []
+        seen = set()
+        for pid in list(anon_owned) + list(db_owned):
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            merged.append(pid)
+        anon_owned = merged
+        # keep session in sync so downstream code (avatars/bundles) keeps working
+        try:
+            session['anon_owned_products'] = anon_owned
+        except Exception:
+            pass
+
+    return {"anon_owned_products": anon_owned}
+
+
 @app.route('/api/iap/verify/<platform>', methods=['POST'])
 def api_iap_verify(platform):
     """Verify a purchase from App Store / Play Billing and apply entitlements.
@@ -9786,7 +9952,7 @@ def api_iap_verify(platform):
             "success": True,
             "message": "Purchase verified (bypass)",
             "record_id": None,
-            "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
+            "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else _get_guest_entitlements()
         })
         if anon_restore_id:
             try:
@@ -9886,7 +10052,7 @@ def api_iap_verify(platform):
         "success": True,
         "message": "Purchase verified",
         "record_id": (rec.id if rec is not None else None),
-        "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
+        "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else _get_guest_entitlements()
     })
 
     if anon_restore_id:
@@ -9911,8 +10077,9 @@ def api_iap_restore():
     client should pre-validate owned purchases and send the product IDs here.
     """
     data = request.get_json(silent=True) or {}
-    product_ids = data.get('product_ids') or []
+    product_ids = data.get('product_ids')
     platform = (data.get('platform') or 'apple').lower()
+    install_id = (data.get('install_id') or '').strip()
     restore_id = uuid.uuid4().hex[:12]
 
     # Apple Guideline 5.1.1: users must not be forced to register/login to restore
@@ -9925,8 +10092,35 @@ def api_iap_restore():
             anon_restore_id = request.cookies.get('anon_restore_id')
         except Exception:
             anon_restore_id = None
+
+        # Optional: if the cookie is missing (reinstall), try using a stable native
+        # install identifier to recover the prior anon_restore_id.
+        if not anon_restore_id and install_id:
+            try:
+                from models import AnonInstallLink
+                link = AnonInstallLink.query.filter_by(install_id=install_id).first()
+                if link and getattr(link, 'anon_restore_id', None):
+                    anon_restore_id = link.anon_restore_id
+            except Exception:
+                pass
+
         if not anon_restore_id:
             anon_restore_id = uuid.uuid4().hex
+
+        # Important: if we had to mint a new anon_restore_id (no cookie and no
+        # existing install link), persist the install_id -> anon_restore_id link
+        # immediately so a subsequent request/session can relink.
+        _bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1'
+        if anon_restore_id and install_id and not _bypass_db:
+            try:
+                from models import AnonInstallLink
+                _ = AnonInstallLink.upsert(install_id=install_id, anon_restore_id=anon_restore_id)
+                db.session.commit()
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
 
     def _extract_pid(x):
         """Accept either a string SKU or an object from native SDKs.
@@ -9951,14 +10145,59 @@ def api_iap_restore():
             return v or None
         return None
 
+    # If the client can't enumerate product_ids yet (bridge not ready), treat this
+    # as a reconcile request instead of a hard failure. We'll return current
+    # entitlements from DB/session.
     if not isinstance(product_ids, list) or not product_ids:
-        return jsonify({"success": False, "error": "product_ids must be a non-empty list"}), 400
+        # If we recovered anon_restore_id via install_id (reinstall scenario), ensure
+        # _get_guest_entitlements() can see it in this request even before the
+        # response cookie is persisted client-side.
+        if user_for_restore is None and anon_restore_id:
+            try:
+                session['anon_restore_id'] = anon_restore_id
+            except Exception:
+                pass
+
+        resp = jsonify({
+            "success": True,
+            "restore_id": restore_id,
+            "normalized_product_ids": [],
+            "applied": [],
+            "errors": [],
+            "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else _get_guest_entitlements(),
+            "note": "no_product_ids_provided_reconcile_only"
+        })
+        if anon_restore_id:
+            try:
+                resp.set_cookie(
+                    'anon_restore_id',
+                    anon_restore_id,
+                    max_age=60 * 60 * 24 * 365,
+                    httponly=True,
+                    samesite='Lax'
+                )
+            except Exception:
+                pass
+
+        # Persist optional install_id -> anon_restore_id link for reinstall continuity.
+        # Keep this best-effort and avoid managing transactions here.
+        _bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1'
+        if anon_restore_id and install_id and not _bypass_db:
+            try:
+                from models import AnonInstallLink
+                _ = AnonInstallLink.upsert(install_id=install_id, anon_restore_id=anon_restore_id)
+                db.session.commit()
+            except Exception:
+                # no-op: reconcile-only should never fail due to the install link
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+        return resp
 
     # In tests (and optionally in local dev), allow bypassing DB writes
     # so restore can succeed without requiring a live database.
-    # Also bypass for guest restores because some deployments enforce NOT NULL
-    # user_id for PurchaseRecord.
-    bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1' or (user_for_restore is None)
+    bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1'
 
     # Normalize + de-dupe while preserving order
     normalized = []
@@ -10034,16 +10273,42 @@ def api_iap_restore():
         if had_error and err_msg:
             raw_payload['restore_error'] = err_msg
         if not bypass_db:
-            rec = PurchaseRecord(
-                user_id=user_for_restore.id,
-                platform=platform,
-                product_id=pid,
-                status='restore_error' if had_error else 'verified',
-                transaction_id=None,
-                purchase_token=None,
-                raw_payload=raw_payload
-            )
-            db.session.add(rec)
+            # Only write PurchaseRecord for authenticated users (schema requires user_id).
+            if user_for_restore is not None:
+                rec = PurchaseRecord(
+                    user_id=user_for_restore.id,
+                    platform=platform,
+                    product_id=pid,
+                    status='restore_error' if had_error else 'verified',
+                    transaction_id=None,
+                    purchase_token=None,
+                    raw_payload=raw_payload
+                )
+                db.session.add(rec)
+            else:
+                # Guest restore: store durable ownership tied to anon_restore_id cookie.
+                try:
+                    from models import AnonPurchaseOwnership
+                    owner = AnonPurchaseOwnership.upsert(
+                        anon_restore_id=anon_restore_id,
+                        platform=platform,
+                        product_id=pid,
+                        status='restore_error' if had_error else 'verified',
+                        raw_payload=raw_payload
+                    )
+                    # keep lint quiet
+                    _ = owner
+
+                    # Optional: link a stable native install id to this anon_restore_id
+                    # so a reinstall can recover guest entitlements.
+                    if install_id:
+                        try:
+                            from models import AnonInstallLink
+                            _ = AnonInstallLink.upsert(install_id=install_id, anon_restore_id=anon_restore_id)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
 
     if not bypass_db:
         try:
@@ -10058,7 +10323,7 @@ def api_iap_restore():
         "normalized_product_ids": normalized,
         "applied": applied,
         "errors": errors,
-        "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else {"anon_owned_products": session.get('anon_owned_products', [])}
+        "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else _get_guest_entitlements()
     })
 
     if anon_restore_id:
@@ -10089,9 +10354,7 @@ def api_bundles_list():
 
     # Guest ownership support (Apple Guideline 5.1.1): allow the UI to reflect
     # restore/purchase entitlements without requiring login.
-    anon_owned = session.get('anon_owned_products')
-    if not isinstance(anon_owned, list):
-        anon_owned = []
+    anon_owned = _get_guest_entitlements().get('anon_owned_products', [])
 
     # Build a small normalization map once (catalog is tiny: 39 avatars)
     try:
@@ -15289,7 +15552,7 @@ def api_unlock_avatar(user_id):
 print("=" * 60)
 print(" BeeSmart Spelling Bee App - Initialization Complete")
 print("=" * 60)
-print(f" App version: 1.6")
+print(f" App version: {APP_VERSION}")
 print(f" Environment: {os.environ.get('FLASK_ENV', 'development')}")
 print(f" Database: {app.config['SQLALCHEMY_DATABASE_URI'][:30]}...")
 print(f" Sessions: {'Database (persistent)' if SESSION_INIT_SUCCESS else 'Filesystem (temporary)'}")
@@ -15390,8 +15653,14 @@ else:
             pass
         print(f"️ Avatar catalog sync warning: {e}")
 
-# Validate and fix avatar thumbnail paths on EVERY startup (skipped in FAST_BOOT)
-if not FAST_BOOT:
+# Validate and fix avatar thumbnail paths.
+# This can involve DB queries and is not required to boot the web app.
+# Keep it OFF by default so local dev, smoke tests, and CI don't hang on DB.
+ENABLE_STARTUP_AVATAR_THUMBNAIL_VALIDATION = os.getenv(
+    'ENABLE_STARTUP_AVATAR_THUMBNAIL_VALIDATION', '0'
+).strip().lower() in ('1', 'true', 'yes', 'on')
+
+if (not FAST_BOOT) and ENABLE_STARTUP_AVATAR_THUMBNAIL_VALIDATION:
     try:
         with app.app_context():
             all_avatars = Avatar.query.filter_by(is_active=True).all()
@@ -15432,7 +15701,7 @@ if not FAST_BOOT:
         except:
             pass
 else:
-    print("⏭️ Skipping avatar thumbnail validation at startup (FAST_BOOT)")
+    print("⏭️ Skipping avatar thumbnail validation at startup (FAST_BOOT or disabled)")
 
 def _is_port_free(p: int) -> bool:
     try:
