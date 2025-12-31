@@ -109,17 +109,51 @@
 
   try {
     // Optional on-device diagnostics via `?iap_diag=1`.
-    // This is intentionally non-UI and low-risk: it only logs to console.
+    // This is intentionally low-risk: it logs to console and (optionally)
+    // shows a small non-interactive overlay for quick TestFlight debugging.
     try {
       const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
       if (qs.get('iap_diag') === '1') {
         const cap = window.Capacitor;
         const plugin = getNativePlugin();
         const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
-        console.log('[BeeSmartIAP][diag] hasCapacitor=', !!cap,
-          'platform=', (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null,
+        const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
+        const hasCap = !!cap;
+        const found = !!plugin;
+
+        console.log('[BeeSmartIAP][diag] hasCapacitor=', hasCap,
+          'platform=', platform,
           'plugins=', availableKeys,
-          'pluginFound=', !!plugin);
+          'pluginFound=', found);
+
+        // Tiny overlay for cases where Web Inspector isn't available.
+        try {
+          const id = 'beesmart-iap-diag-overlay';
+          if (!document.getElementById(id)) {
+            const el = document.createElement('div');
+            el.id = id;
+            el.style.cssText = [
+              'position:fixed',
+              'left:8px',
+              'bottom:8px',
+              'z-index:2147483647',
+              'max-width:92vw',
+              'padding:8px 10px',
+              'border-radius:10px',
+              'background:rgba(0,0,0,0.72)',
+              'color:#fff',
+              'font:12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+              'box-shadow:0 8px 24px rgba(0,0,0,0.28)',
+              'pointer-events:none',
+              'white-space:pre-wrap'
+            ].join(';');
+            const keysStr = availableKeys.length ? availableKeys.join(', ') : '(none)';
+            el.textContent = `IAP diag\nCapacitor: ${hasCap ? 'YES' : 'NO'}\nPlatform: ${platform || '(unknown)'}\nPlugin found: ${found ? 'YES' : 'NO'}\nPlugins: ${keysStr}`;
+
+            // Add after DOM is ready.
+            (document.body ? document.body : document.documentElement).appendChild(el);
+          }
+        } catch (e2) { /* ignore */ }
       }
     } catch (e) { /* ignore */ }
 
