@@ -185,6 +185,7 @@
                     <div style="margin-top:8px; font-size:0.92rem; color:#3f2b00;">
                         Tap <b>Refresh</b>, then <b>Copy</b>, and text it.
                     </div>
+                    <div id="iapDebugStatus" style="margin-top:6px; font-size:0.9rem; color:#5a3c00; font-weight:800;"></div>
                     <pre id="iapDebugText" style="margin-top:8px; max-height:38vh; overflow:auto; font-size:12px; line-height:1.35; background:rgba(0,0,0,0.04); padding:10px; border-radius:12px; white-space:pre-wrap;"></pre>
                     <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap;">
                         <button id="iapDebugDisable" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Disable Debug (prod-safe)</button>
@@ -205,18 +206,66 @@
                     if (pre) pre.textContent = safeJson(txt);
                 }
 
+                function setStatus(message, kind) {
+                    try {
+                        const el = document.getElementById('iapDebugStatus');
+                        if (!el) return;
+                        el.textContent = message || '';
+                        const color = (kind === 'ok') ? '#1b5e20' : (kind === 'warn') ? '#8a5a00' : '#5a3c00';
+                        el.style.color = color;
+                    } catch (e) {}
+                }
+
+                function selectTextFallback(preEl) {
+                    try {
+                        if (!preEl) return false;
+                        const range = document.createRange();
+                        range.selectNodeContents(preEl);
+                        const sel = window.getSelection();
+                        if (!sel) return false;
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                        return true;
+                    } catch (e) { return false; }
+                }
+
                 panel.querySelector('#iapDebugClose')?.addEventListener('click', () => {
                     panel.style.display = 'none';
                 });
                 panel.querySelector('#iapDebugRefresh')?.addEventListener('click', () => updateText('refresh'));
                 panel.querySelector('#iapDebugCopy')?.addEventListener('click', async () => {
-                    try {
-                        const text = document.getElementById('iapDebugText')?.textContent || '';
-                        await navigator.clipboard.writeText(text);
-                        alert('Copied IAP debug info. Paste it into a text message.');
-                    } catch (e) {
-                        alert('Could not copy automatically. Please select the text and copy manually.');
+                    const pre = document.getElementById('iapDebugText');
+                    const text = pre?.textContent || '';
+                    if (!text) {
+                        setStatus('Nothing to copy yet — tap Refresh first.', 'warn');
+                        return;
                     }
+
+                    // 1) Modern clipboard API (often restricted in WKWebView)
+                    try {
+                        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                            await navigator.clipboard.writeText(text);
+                            setStatus('Copied to clipboard. Now paste into a text message.', 'ok');
+                            return;
+                        }
+                    } catch (e) {
+                        // fall through
+                    }
+
+                    // 2) Legacy copy (execCommand) — still works in many iOS contexts
+                    try {
+                        const okSelect = selectTextFallback(pre);
+                        if (okSelect && document.execCommand && document.execCommand('copy')) {
+                            setStatus('Copied (legacy). Now paste into a text message.', 'ok');
+                            return;
+                        }
+                    } catch (e) {
+                        // fall through
+                    }
+
+                    // 3) Manual: just select text and instruct user
+                    try { selectTextFallback(pre); } catch (e) {}
+                    setStatus('Copy blocked by iOS. Text is selected — tap Copy, then paste into Messages.', 'warn');
                 });
                 panel.querySelector('#iapDebugDisable')?.addEventListener('click', () => {
                     try { localStorage.removeItem('BEESMART_IAP_DEBUG'); } catch (e) {}
@@ -227,6 +276,7 @@
 
                 // First render
                 updateText('initial');
+                setStatus('Ready. Tap Refresh then Copy.', 'info');
                 return panel;
             }
 
@@ -270,12 +320,73 @@
                 });
             } catch (e) { /* ignore */ }
 
-            // Show the debug tile in the home menu when enabled.
+            function openPanelSafe(source){
+                try {
+                    if (typeof window.openIapDebugPanel === 'function') {
+                        window.openIapDebugPanel();
+                        return true;
+                    }
+                } catch (e) {}
+                try {
+                    // Avoid alert() in WKWebView if possible; log only.
+                    console.warn('IAP debug panel not ready yet', { source: source || 'unknown' });
+                } catch (e) {}
+                return false;
+            }
+
+            // Show the debug tile in the home menu when enabled, and bind WKWebView-safe handlers.
             try {
                 window.addEventListener('DOMContentLoaded', function(){
                     try {
                         const tile = document.getElementById('tileIapDebug');
-                        if (tile) tile.style.display = '';
+                        if (!tile) return;
+
+                        // Make visible
+                        tile.style.display = '';
+
+                        // Remove inline handlers that can fail if kidSounds isn't defined yet.
+                        try {
+                            tile.onclick = null;
+                            tile.removeAttribute('onclick');
+                        } catch (e) {}
+
+                        // Normal tap
+                        tile.addEventListener('click', function(ev){
+                            try {
+                                // Best-effort fun sound, but never block opening.
+                                if (window.kidSounds && typeof window.kidSounds.playRandomEffect === 'function') {
+                                    window.kidSounds.playRandomEffect();
+                                }
+                            } catch (e) {}
+                            openPanelSafe('tile_click');
+                        });
+
+                        // Long-press fallback (1s) — useful when click handlers are interfered with.
+                        let pressTimer = null;
+                        const startPress = function(){
+                            try { if (pressTimer) clearTimeout(pressTimer); } catch (e) {}
+                            pressTimer = setTimeout(function(){
+                                openPanelSafe('tile_longpress');
+                            }, 1000);
+                        };
+                        const endPress = function(){
+                            try { if (pressTimer) clearTimeout(pressTimer); } catch (e) {}
+                            pressTimer = null;
+                        };
+                        tile.addEventListener('touchstart', startPress, { passive: true });
+                        tile.addEventListener('touchend', endPress, { passive: true });
+                        tile.addEventListener('touchcancel', endPress, { passive: true });
+                        tile.addEventListener('mousedown', startPress);
+                        tile.addEventListener('mouseup', endPress);
+                        tile.addEventListener('mouseleave', endPress);
+
+                        // Optional auto-open for TestFlight: https://.../app?iap_debug=1
+                        try {
+                            const params = new URLSearchParams(window.location.search || '');
+                            if (params.get('iap_debug') === '1') {
+                                setTimeout(() => openPanelSafe('query_auto_open'), 350);
+                            }
+                        } catch (e) {}
                     } catch (e) {}
                 }, { once: true });
             } catch (e) { /* ignore */ }
@@ -4760,7 +4871,7 @@
                 </div>
 
                 <!-- IAP Debug (TestFlight) - debug-only tile -->
-                <div id="tileIapDebug" class="menu-option" style="display:none; background: linear-gradient(135deg, #FFFDE7 0%, #FFF3C0 100%); border-color: rgba(255, 193, 7, 0.55);" onclick="try{ kidSounds.playRandomEffect(); if(window.openIapDebugPanel) window.openIapDebugPanel(); else alert('IAP debug panel not ready yet.'); }catch(e){ alert('IAP debug panel error.'); }" onmouseover="kidSounds.playPop()" title=" IAP Debug (TestFlight): tap to view and copy IAP bridge status">
+                <div id="tileIapDebug" class="menu-option" style="display:none; background: linear-gradient(135deg, #FFFDE7 0%, #FFF3C0 100%); border-color: rgba(255, 193, 7, 0.55);" title=" IAP Debug (TestFlight): tap to view and copy IAP bridge status">
                     <div class="option-icon">🧪</div>
                     <div class="option-title">IAP Debug</div>
                     <div class="option-description">Copy IAP status for support</div>
