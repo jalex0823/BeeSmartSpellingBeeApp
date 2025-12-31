@@ -4030,7 +4030,7 @@
                 
                 <!-- Version badge below website -->
                 <div id="versionBadge" style="margin-top: 6px; font-size: 11px; color: rgba(0,0,0,0.4); font-family: monospace; letter-spacing: 0.5px;">
-                    v1.6
+                    v22
                 </div>
                 
                 <!-- Sound Toggle Button -->
@@ -6072,12 +6072,12 @@
 
         // Cache buster: 2025-10-14-v3 (force refresh)
         (function(){
-            const V='v1.6-'+Date.now();
+            const V='v22-'+Date.now();
             console.log('BeeSmart App JavaScript loaded -', V);
             // Update version badge below logo instead of top corner
             const versionBadge = document.getElementById('versionBadge');
             if (versionBadge) {
-                versionBadge.textContent = 'v1.6';
+                versionBadge.textContent = 'v22';
             }
             // Install fetch override to detect any legacy /upload usage
             if(!window.__uploadPatched){

@@ -55,7 +55,7 @@ In Xcode:
 
 ### In Code:
 - [ ] Backend URL in capacitor.config.ts: `https://beesmartspelling.app`
-- [ ] Health endpoint working: https://beesmartspelling.app/health returns v1.7
+- [ ] Health endpoint working: `https://beesmartspelling.app/health` returns v22
 - [ ] IAP endpoints ready: `/api/iap/verify/apple` and `/api/iap/restore`
 
 ---

@@ -87,7 +87,7 @@ print("="*70)
 
 # Build/release version (surfaced via /health)
 # Keep this in sync with the public app version used by validation scripts.
-APP_VERSION = "1.7"
+APP_VERSION = "22"
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -2629,8 +2629,10 @@ def _public_base_url() -> str:
     base = app.config.get('APP_BASE_URL')
     if base:
         return str(base).rstrip('/')
-    # Final fallback: local dev. Production should always provide APP_BASE_URL.
-    return 'http://localhost:5000'
+    # Final fallback (best-effort): use production domain for deployed builds.
+    # Dev should set APP_BASE_URL explicitly, but this prevents accidental
+    # localhost links in outbound emails if the env var is missing.
+    return 'https://beesmartspelling.app'
 
 
 def _static_url(path: str) -> str:

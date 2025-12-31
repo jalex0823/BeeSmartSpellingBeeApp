@@ -18,7 +18,7 @@ from AjaSpellBApp import app, normalize, get_word_info, generate_smart_fallback,
 
 
 class TestCompleteApp(unittest.TestCase):
-    """Test complete v1.6 application functionality"""
+    """Test complete v22 application functionality"""
     
     def setUp(self):
         """Set up test client"""
@@ -40,7 +40,7 @@ class TestCompleteApp(unittest.TestCase):
             'fairy-container',  # Animation element
             'menu-card',  # Modern card design
             'BeeSmart Spelling',  # Title
-            'v1.6'  # Version badge
+            'v22'  # Version badge
         ]
         
         for element in modern_elements:
@@ -228,7 +228,7 @@ class TestCompleteApp(unittest.TestCase):
         health_data = json.loads(response.data)
         self.assertEqual(health_data['status'], 'ok')
         # App version bumped
-        self.assertEqual(health_data['version'], '1.7')
+        self.assertEqual(health_data['version'], '22')
         # The health endpoint intentionally stays lightweight in production.
         # Deeper diagnostics live under /api/debug/* endpoints.
         print(f"✅ Health check ok: {health_data['status']} v{health_data['version']}")

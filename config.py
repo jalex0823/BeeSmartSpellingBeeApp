@@ -120,7 +120,7 @@ class Config:
     
     # Application settings
     APP_NAME = 'BeeSmart Spelling Bee'
-    APP_VERSION = '1.6'
+    APP_VERSION = '22'
     
     # Pagination
     STUDENTS_PER_PAGE = 25
