@@ -123,29 +123,101 @@
   }
 
   function ensureDiagButton() {
-    // Visible debug control for TestFlight: a small button to toggle diagnostics.
-    // We keep it behind a safe opt-in so it won't show for regular production users.
-    // Enable by adding either:
-    //   1) URL param:  ?iap_diag_btn=1
-    //   2) localStorage: beesmart_iap_diag_btn=1
-    // Once visible, it can enable the overlay and show the key info immediately.
+    // Visible debug control for TestFlight (and anywhere else): always show a button
+    // that reveals a diagnostics panel and attempts to copy the info.
+    // This avoids invisible-gating problems and gives you a single obvious control.
     try {
-      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
-      const enabledByUrl = qs.get('iap_diag_btn') === '1';
-      let enabledByStorage = false;
-      try {
-        enabledByStorage = (window.localStorage && window.localStorage.getItem('beesmart_iap_diag_btn') === '1');
-      } catch (e) { /* ignore */ }
+      const btnId = 'beesmart-iap-diag-btn';
+      const panelId = 'beesmart-iap-diag-panel';
 
-      if (!enabledByUrl && !enabledByStorage) return;
+      if (document.getElementById(btnId)) return;
 
-      const id = 'beesmart-iap-diag-btn';
-      if (document.getElementById(id)) return;
+      function buildDiagnosticsText() {
+        const cap = window.Capacitor;
+        const plugin = getNativePlugin();
+        const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
+        const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
+        const hasCap = !!cap;
+        const found = !!plugin;
+        const bridgeReady = hasBridge();
+
+        return [
+          'BeeSmart IAP Diagnostics',
+          'Capacitor: ' + (hasCap ? 'YES' : 'NO'),
+          'Platform: ' + (platform || '(unknown)'),
+          'Plugin found: ' + (found ? 'YES' : 'NO'),
+          'Bridge ready (window.BeeSmartIAP): ' + (bridgeReady ? 'YES' : 'NO'),
+          'Plugins: ' + (availableKeys.length ? availableKeys.join(', ') : '(none)'),
+          'URL: ' + String(window.location && window.location.href ? window.location.href : '(unknown)')
+        ].join('\n');
+      }
+
+      function ensurePanel() {
+        let panel = document.getElementById(panelId);
+        if (panel) return panel;
+
+        panel = document.createElement('div');
+        panel.id = panelId;
+        panel.style.cssText = [
+          'position:fixed',
+          'left:10px',
+          'right:10px',
+          'bottom:56px',
+          'z-index:2147483647',
+          'max-height:45vh',
+          'overflow:auto',
+          'padding:12px',
+          'border-radius:12px',
+          'border:1px solid rgba(255,255,255,0.22)',
+          'background:rgba(0,0,0,0.78)',
+          'color:#fff',
+          'font:500 12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+          'box-shadow:0 10px 30px rgba(0,0,0,0.35)'
+        ].join(';');
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:8px;';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy';
+        copyBtn.style.cssText = 'padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.12);color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.textContent = 'Close';
+        closeBtn.style.cssText = 'padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.12);color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
+        closeBtn.addEventListener('click', function () {
+          try { panel.remove(); } catch (e) { /* ignore */ }
+        });
+
+        row.appendChild(copyBtn);
+        row.appendChild(closeBtn);
+
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'margin:0;white-space:pre-wrap;word-break:break-word;';
+        pre.textContent = buildDiagnosticsText();
+
+        copyBtn.addEventListener('click', function () {
+          const txt = buildDiagnosticsText();
+          pre.textContent = txt;
+          try {
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(txt).catch(function () { /* ignore */ });
+            }
+          } catch (e) { /* ignore */ }
+        });
+
+        panel.appendChild(row);
+        panel.appendChild(pre);
+        (document.body ? document.body : document.documentElement).appendChild(panel);
+        return panel;
+      }
 
       const btn = document.createElement('button');
-      btn.id = id;
+      btn.id = btnId;
       btn.type = 'button';
-      btn.textContent = 'IAP Diag';
+      btn.textContent = 'IAP Diagnostics';
       btn.style.cssText = [
         'position:fixed',
         'right:10px',
@@ -156,40 +228,32 @@
         'border:1px solid rgba(255,255,255,0.22)',
         'background:rgba(0,0,0,0.72)',
         'color:#fff',
-        'font:600 13px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+        'font:700 13px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
         'box-shadow:0 8px 24px rgba(0,0,0,0.28)'
       ].join(';');
 
       btn.addEventListener('click', function () {
-        const enabled = toggleDiagFlag();
-        const cap = window.Capacitor;
-        const plugin = getNativePlugin();
-        const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
-        const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
-        const hasCap = !!cap;
-        const found = !!plugin;
-
-        const msg = [
-          'IAP diagnostics ' + (enabled ? 'ENABLED' : 'DISABLED'),
-          'Capacitor: ' + (hasCap ? 'YES' : 'NO'),
-          'Platform: ' + (platform || '(unknown)'),
-          'Plugin found: ' + (found ? 'YES' : 'NO'),
-          'Plugins: ' + (availableKeys.length ? availableKeys.join(', ') : '(none)')
-        ].join('\n');
-
-        // Try to copy the info so it can be pasted into chat.
+        // Keep existing overlay behavior available, but don't require reload or alerts.
         try {
+          if (window.localStorage) window.localStorage.setItem('beesmart_iap_diag', '1');
+        } catch (e) { /* ignore */ }
+
+        const panel = ensurePanel();
+        try {
+          const pre = panel && panel.querySelector ? panel.querySelector('pre') : null;
+          if (pre) pre.textContent = buildDiagnosticsText();
+        } catch (e) { /* ignore */ }
+
+        // Attempt an immediate copy.
+        try {
+          const txt = buildDiagnosticsText();
           if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(msg).catch(function () { /* ignore */ });
+            navigator.clipboard.writeText(txt).catch(function () { /* ignore */ });
           }
         } catch (e) { /* ignore */ }
 
-        alert(msg + '\n\n(Info copied if clipboard access is allowed.)');
-
-        // If enabling, reload to trigger overlay.
-        if (enabled) {
-          try { window.location.reload(); } catch (e) { /* ignore */ }
-        }
+        // If the bridge is not ready yet, try initializing once more now.
+        try { initBridgeOnce(); } catch (e) { /* ignore */ }
       });
 
       (document.body ? document.body : document.documentElement).appendChild(btn);
@@ -250,7 +314,7 @@
     // without needing to manually type a URL.
     installDiagGesture();
 
-  // Optional: show a visible button when explicitly enabled.
+  // Always show a visible diagnostics button.
   ensureDiagButton();
 
     // Optional on-device diagnostics.
