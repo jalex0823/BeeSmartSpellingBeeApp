@@ -1,4 +1,6 @@
-﻿# Python
+﻿### Xcode local StoreKit test config (created by Xcode / Capacitor sync)
+mobile/ios/App/*.storekit
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
