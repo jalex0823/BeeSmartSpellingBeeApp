@@ -130,15 +130,73 @@
                 }
             }
 
+            function getCapacitorPluginKeys() {
+                try {
+                    const plugins = window.Capacitor && window.Capacitor.Plugins ? window.Capacitor.Plugins : null;
+                    if (!plugins) return null;
+                    return Object.keys(plugins).sort();
+                } catch (e) {
+                    return { error: String(e) };
+                }
+            }
+
+            function getLikelyIapPluginSummary() {
+                // We don't know the exact plugin name in your wrapper, so we look for common candidates.
+                const candidates = [
+                    'BeeSmartIAP',
+                    'IAP',
+                    'InAppPurchase',
+                    'InAppPurchases',
+                    'InAppPurchase2',
+                    'Purchases',
+                    'CapacitorPurchases',
+                    'StoreKit',
+                    'StoreKit2',
+                    'AppStore',
+                    'AppStoreKit',
+                    'RevenueCat',
+                    'CordovaPurchase'
+                ];
+
+                const out = {};
+                try {
+                    const plugins = window.Capacitor && window.Capacitor.Plugins ? window.Capacitor.Plugins : null;
+                    if (!plugins) return { capacitorPluginsPresent: false };
+                    out.capacitorPluginsPresent = true;
+                    for (const name of candidates) {
+                        out[name] = !!plugins[name];
+                    }
+                    return out;
+                } catch (e) {
+                    return { error: String(e) };
+                }
+            }
+
             function getSnapshot(label) {
                 const ua = navigator.userAgent || '';
+                const pluginKeys = getCapacitorPluginKeys();
+                const likelyIapPlugins = getLikelyIapPluginSummary();
+                let beeSmartIapProbe = null;
+                try {
+                    const probe = {
+                        present: !!window.BeeSmartIAP,
+                        keys: window.BeeSmartIAP ? Object.keys(window.BeeSmartIAP).sort() : null,
+                        type: window.BeeSmartIAP ? typeof window.BeeSmartIAP : null
+                    };
+                    beeSmartIapProbe = probe;
+                } catch (e) {
+                    beeSmartIapProbe = { error: String(e) };
+                }
                 const snap = {
                     ts: new Date().toISOString(),
                     label: label || 'snapshot',
                     location: { href: String(location.href || ''), host: String(location.host || ''), path: String(location.pathname || '') },
                     ua,
                     capacitor: !!window.Capacitor,
+                    capacitorPluginKeys: pluginKeys,
+                    likelyIapPlugins,
                     beeSmartIapPresent: !!window.BeeSmartIAP,
+                    beeSmartIapProbe,
                     platform: (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? String(window.BeeSmartIAP.platform) : null,
                     hasPurchase: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function'),
                     hasRestore: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function'),
@@ -146,6 +204,7 @@
                     isAuth: !!window.IS_AUTH,
                     isPremiumFlag: !!window.IS_PREMIUM,
                     subscriptionSku: window.SUBSCRIPTION_SKU || null,
+                    healthIap: state.lastHealthIap || null,
                     lastReady: state.lastReady,
                     lastReconciled: state.lastReconciled,
                     lastError: state.lastError
@@ -178,6 +237,7 @@
                         <div style="font-weight:900; color:#5a3c00;">IAP Debug (TestFlight)</div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
                             <button id="iapDebugRefresh" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Refresh</button>
+                            <button id="iapDebugFetchHealth" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:900;">Fetch /health/iap</button>
                             <button id="iapDebugCopy" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#FFD54F; font-weight:900;">Copy</button>
                             <button id="iapDebugClose" type="button" style="padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,0.15); background:#fff; font-weight:800;">Close</button>
                         </div>
@@ -216,6 +276,35 @@
                     } catch (e) {}
                 }
 
+                async function fetchHealthIap() {
+                    try {
+                        setStatus('Fetching /health/iap…', 'info');
+                        const res = await fetch('/health/iap', {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store'
+                        });
+                        const text = await res.text();
+                        let body = null;
+                        try { body = JSON.parse(text); } catch (e) { body = { raw: text }; }
+
+                        state.lastHealthIap = {
+                            ts: new Date().toISOString(),
+                            ok: !!res.ok,
+                            status: res.status,
+                            body
+                        };
+
+                        // Re-render snapshot so the fetched data is included in Copy.
+                        updateText('health_iap_fetched');
+                        setStatus('Fetched /health/iap and added to snapshot.', 'ok');
+                    } catch (e) {
+                        state.lastHealthIap = { ts: new Date().toISOString(), error: String(e) };
+                        updateText('health_iap_fetch_error');
+                        setStatus('Failed to fetch /health/iap (see snapshot).', 'warn');
+                    }
+                }
+
                 function selectTextFallback(preEl) {
                     try {
                         if (!preEl) return false;
@@ -233,6 +322,9 @@
                     panel.style.display = 'none';
                 });
                 panel.querySelector('#iapDebugRefresh')?.addEventListener('click', () => updateText('refresh'));
+                panel.querySelector('#iapDebugFetchHealth')?.addEventListener('click', () => {
+                    fetchHealthIap();
+                });
                 panel.querySelector('#iapDebugCopy')?.addEventListener('click', async () => {
                     const pre = document.getElementById('iapDebugText');
                     const text = pre?.textContent || '';
@@ -419,6 +511,33 @@
         // Keep this driven by backend so the badge stays future-proof.
         window.SUBSCRIPTION_MONTHLY_USD = {{ _subscription_monthly_usd if _subscription_monthly_usd is not none else 'null' }};
         console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
+
+        // If SKU wasn't injected (common prod-config miss), try to hydrate it from /health/iap.
+        // This runs once and is safe even if the endpoint is unavailable.
+        (function(){
+            try {
+                const isNative = !!window.Capacitor;
+                const skuMissing = !window.SUBSCRIPTION_SKU || String(window.SUBSCRIPTION_SKU).trim() === '';
+                if (!isNative || !skuMissing) return;
+                if (window.__beesmartSkuHydrateAttempted) return;
+                window.__beesmartSkuHydrateAttempted = true;
+
+                fetch('/health/iap', { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+                    .then(r => r.json().catch(() => null))
+                    .then(data => {
+                        try {
+                            const possible = data && (data.subscription_product_id || (data.config && data.config.subscription_product_id));
+                            if (possible && String(possible).trim()) {
+                                window.SUBSCRIPTION_SKU = String(possible).trim();
+                                console.log('[IAP] Hydrated SUBSCRIPTION_SKU from /health/iap:', window.SUBSCRIPTION_SKU);
+                            } else {
+                                console.warn('[IAP] /health/iap returned no subscription_product_id');
+                            }
+                        } catch (e) {}
+                    })
+                    .catch(() => {});
+            } catch (e) {}
+        })();
     </script>
     <!-- Native IAP bridge (Capacitor): defines window.BeeSmartIAP when running in iOS/Android wrapper -->
     <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20251218" defer></script>
