@@ -216,9 +216,28 @@
                 try {
                     await _waitForIAPBridge(2000);
                     if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
-                        const msg = 'Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the app store version and try again.';
-                        if (typeof showLockedFeature === 'function') { showLockedFeature(msg); }
-                        else { alert(msg); }
+                        // Do not gate Restore behind login or “locked feature” UI.
+                        // If we're not in the native wrapper, fall back to a permissive server-side restore.
+                        // This supports guest restores (Apple review guidance) and avoids login loops.
+                        try {
+                            const res = await fetch('/api/iap/restore', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ platform: 'web', product_ids: [] })
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            const ok = !!(data && (data.ok === true || data.success === true));
+                            const msg = ok
+                                ? 'Restore started. If your purchase was found, premium will unlock automatically.'
+                                : ('Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.');
+                            if (typeof showSuccessMessage === 'function') { showSuccessMessage(msg); }
+                            else { alert(msg); }
+                        } catch (e) {
+                            const msg = 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.';
+                            if (typeof showSuccessMessage === 'function') { showSuccessMessage(msg); }
+                            else { alert(msg); }
+                        }
                         return;
                     }
 

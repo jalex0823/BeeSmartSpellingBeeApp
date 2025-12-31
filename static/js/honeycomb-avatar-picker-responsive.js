@@ -1669,6 +1669,19 @@ function findAvatarBySlug(slug) {
     return (avatarsData || []).find(a => String(a.slug || '').toLowerCase() === s) || null;
 }
 
+async function _sleep(ms){
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+async function _waitForNativeIapBridge(timeoutMs){
+    const deadline = Date.now() + (timeoutMs || 2000);
+    while (Date.now() < deadline) {
+        if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return true;
+        await _sleep(100);
+    }
+    return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
+}
+
 async function purchaseLockedAvatar(slug) {
     const avatar = findAvatarBySlug(slug);
     if (!avatar) {
@@ -1682,6 +1695,8 @@ async function purchaseLockedAvatar(slug) {
         return;
     }
 
+    // Capacitor plugins can register after page JS runs; wait briefly before gating.
+    await _waitForNativeIapBridge(2000);
     if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
         alert('Purchases are available in the BeeSmart iOS/Android app.');
         return;

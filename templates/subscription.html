@@ -776,7 +776,25 @@
                         restoreBtn.textContent = 'Restore Purchases';
                         restoreBtn.disabled = false;
                     }
-                    alert('Restore Purchases is available in the BeeSmart mobile app build.\n\nIf you bought through Apple/Google, please open BeeSmart in the App Store version and try again.');
+                    // Don't lock or bounce users to login when the native bridge is missing.
+                    // Fall back to a safe, permissive server-side restore (guest-friendly).
+                    try {
+                        const res = await fetch('/api/iap/restore', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ platform: 'web', product_ids: [] })
+                        });
+
+                        const data = await res.json().catch(() => ({}));
+                        const ok = !!(data && (data.ok === true || data.success === true));
+                        const msg = ok
+                            ? 'Restore started. If your purchase was found, premium will unlock automatically.'
+                            : 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.';
+                        showRestoreDialog('Restore Purchases', msg, ok);
+                    } catch (e) {
+                        showRestoreDialog('Restore Purchases', 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.', false);
+                    }
                     return;
                 }
 

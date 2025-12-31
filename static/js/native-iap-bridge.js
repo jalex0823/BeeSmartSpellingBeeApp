@@ -1,4 +1,4 @@
-/**
+ /**
  * Native IAP Bridge (Capacitor)
  *
  * Purpose:
@@ -29,7 +29,22 @@
     const plugins = cap && cap.Plugins;
     // Capacitor v5 uses `Capacitor.Plugins.<PluginName>`.
     // Our iOS bridge registers as BeeSmartIAPPlugin (class name).
-    return plugins && (plugins.BeeSmartIAP || plugins.BeeSmartIAPPlugin);
+    if (!plugins) return null;
+
+    // Be tolerant: depending on how the plugin is registered, the key can vary.
+    const candidates = [
+      'BeeSmartIAP',
+      'BeeSmartIAPPlugin',
+      'BeeSmartIap',
+      'BeeSmartIapPlugin',
+      'IAP',
+      'IAPPlugin'
+    ];
+
+    for (const k of candidates) {
+      if (plugins[k]) return plugins[k];
+    }
+    return null;
   }
 
   function initBridgeOnce() {
@@ -93,6 +108,21 @@
   }
 
   try {
+    // Optional on-device diagnostics via `?iap_diag=1`.
+    // This is intentionally non-UI and low-risk: it only logs to console.
+    try {
+      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
+      if (qs.get('iap_diag') === '1') {
+        const cap = window.Capacitor;
+        const plugin = getNativePlugin();
+        const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
+        console.log('[BeeSmartIAP][diag] hasCapacitor=', !!cap,
+          'platform=', (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null,
+          'plugins=', availableKeys,
+          'pluginFound=', !!plugin);
+      }
+    } catch (e) { /* ignore */ }
+
     // Fast path
     if (initBridgeOnce()) return;
 
