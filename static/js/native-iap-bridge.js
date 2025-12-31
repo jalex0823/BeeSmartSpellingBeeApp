@@ -122,6 +122,80 @@
     return false;
   }
 
+  function ensureDiagButton() {
+    // Visible debug control for TestFlight: a small button to toggle diagnostics.
+    // We keep it behind a safe opt-in so it won't show for regular production users.
+    // Enable by adding either:
+    //   1) URL param:  ?iap_diag_btn=1
+    //   2) localStorage: beesmart_iap_diag_btn=1
+    // Once visible, it can enable the overlay and show the key info immediately.
+    try {
+      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
+      const enabledByUrl = qs.get('iap_diag_btn') === '1';
+      let enabledByStorage = false;
+      try {
+        enabledByStorage = (window.localStorage && window.localStorage.getItem('beesmart_iap_diag_btn') === '1');
+      } catch (e) { /* ignore */ }
+
+      if (!enabledByUrl && !enabledByStorage) return;
+
+      const id = 'beesmart-iap-diag-btn';
+      if (document.getElementById(id)) return;
+
+      const btn = document.createElement('button');
+      btn.id = id;
+      btn.type = 'button';
+      btn.textContent = 'IAP Diag';
+      btn.style.cssText = [
+        'position:fixed',
+        'right:10px',
+        'bottom:10px',
+        'z-index:2147483647',
+        'padding:10px 12px',
+        'border-radius:12px',
+        'border:1px solid rgba(255,255,255,0.22)',
+        'background:rgba(0,0,0,0.72)',
+        'color:#fff',
+        'font:600 13px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+        'box-shadow:0 8px 24px rgba(0,0,0,0.28)'
+      ].join(';');
+
+      btn.addEventListener('click', function () {
+        const enabled = toggleDiagFlag();
+        const cap = window.Capacitor;
+        const plugin = getNativePlugin();
+        const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
+        const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
+        const hasCap = !!cap;
+        const found = !!plugin;
+
+        const msg = [
+          'IAP diagnostics ' + (enabled ? 'ENABLED' : 'DISABLED'),
+          'Capacitor: ' + (hasCap ? 'YES' : 'NO'),
+          'Platform: ' + (platform || '(unknown)'),
+          'Plugin found: ' + (found ? 'YES' : 'NO'),
+          'Plugins: ' + (availableKeys.length ? availableKeys.join(', ') : '(none)')
+        ].join('\n');
+
+        // Try to copy the info so it can be pasted into chat.
+        try {
+          if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(msg).catch(function () { /* ignore */ });
+          }
+        } catch (e) { /* ignore */ }
+
+        alert(msg + '\n\n(Info copied if clipboard access is allowed.)');
+
+        // If enabling, reload to trigger overlay.
+        if (enabled) {
+          try { window.location.reload(); } catch (e) { /* ignore */ }
+        }
+      });
+
+      (document.body ? document.body : document.documentElement).appendChild(btn);
+    } catch (e) { /* ignore */ }
+  }
+
   function toggleDiagFlag() {
     try {
       const cur = window.localStorage && window.localStorage.getItem('beesmart_iap_diag');
@@ -175,6 +249,9 @@
     // Always install a hidden gesture so diagnostics can be enabled in TestFlight
     // without needing to manually type a URL.
     installDiagGesture();
+
+  // Optional: show a visible button when explicitly enabled.
+  ensureDiagButton();
 
     // Optional on-device diagnostics.
     // Enable via `?iap_diag=1` OR localStorage flag `beesmart_iap_diag=1`.
