@@ -224,7 +224,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Copy iPad icon PNGs directly into app bundle root for App Store validation\nICON_DIR=\"${SRCROOT}/App/Assets.xcassets/AppIcon.appiconset\"\nAPP_BUNDLE=\"${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}\"\ncp \"${ICON_DIR}/Icon-App-76x76@2x.png\" \"${APP_BUNDLE}/Icon-App-76x76@2x.png\"\ncp \"${ICON_DIR}/Icon-App-83.5x83.5@2x.png\" \"${APP_BUNDLE}/Icon-App-83.5x83.5@2x.png\"\necho \"✓ Copied iPad icons: Icon-App-76x76@2x.png, Icon-App-83.5x83.5@2x.png\"\nls -la \"${APP_BUNDLE}\" | grep Icon-App || echo \"⚠️ Icons not found in bundle\"\n";
+				shellScript = "# Copy iPad icon PNGs directly into app bundle root for App Store validation\n# Note: grepping `ls` output is brittle during archive builds; use file existence checks instead.\nset -e\nICON_DIR=\"${SRCROOT}/App/Assets.xcassets/AppIcon.appiconset\"\nAPP_BUNDLE=\"${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}\"\n\ncp \"${ICON_DIR}/Icon-App-76x76@2x.png\" \"${APP_BUNDLE}/Icon-App-76x76@2x.png\"\ncp \"${ICON_DIR}/Icon-App-83.5x83.5@2x.png\" \"${APP_BUNDLE}/Icon-App-83.5x83.5@2x.png\"\necho \"✓ Copied iPad icons: Icon-App-76x76@2x.png, Icon-App-83.5x83.5@2x.png\"\n\nif [ -f \"${APP_BUNDLE}/Icon-App-76x76@2x.png\" ] && [ -f \"${APP_BUNDLE}/Icon-App-83.5x83.5@2x.png\" ]; then\n  echo \"✓ Verified iPad icons exist in bundle\"\nelse\n  echo \"⚠️ iPad icon copy failed (icons not found in bundle path: ${APP_BUNDLE})\"\n  ls -la \"${APP_BUNDLE}\" | head -200 || true\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
