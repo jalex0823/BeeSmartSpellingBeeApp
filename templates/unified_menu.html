@@ -279,6 +279,49 @@
                     } catch (e) {}
                 }
 
+                async function maybeReconcile(reason) {
+                    const hasReconcile = !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function');
+                    if (!hasReconcile) {
+                        state.lastError = {
+                            ts: new Date().toISOString(),
+                            kind: 'no_reconcile',
+                            message: 'BeeSmartIAP.reconcile not available'
+                        };
+                        return null;
+                    }
+
+                    try {
+                        setStatus('Reconciling purchases…', 'info');
+                        const result = await window.BeeSmartIAP.reconcile(reason || 'iap_debug');
+
+                        // Best-effort: update flags in-page so the diagnostic snapshot reflects reality without reload.
+                        try {
+                            const ent = result && (result.entitlements || result.entitlement || result.data || null);
+                            const premium = !!(
+                                (result && (result.is_premium === true || result.premium === true))
+                                || (ent && (ent.premium === true || ent.premium_member === true))
+                            );
+                            if (premium) window.IS_PREMIUM = true;
+                        } catch (e) {}
+
+                        state.lastReconciled = {
+                            ts: new Date().toISOString(),
+                            reason: reason || 'iap_debug',
+                            result
+                        };
+                        setStatus('Reconcile completed and captured.', 'ok');
+                        return result;
+                    } catch (e) {
+                        state.lastError = {
+                            ts: new Date().toISOString(),
+                            kind: 'reconcile_error',
+                            message: String(e)
+                        };
+                        setStatus('Reconcile failed (see snapshot).', 'warn');
+                        return null;
+                    }
+                }
+
                 async function fetchHealthIap() {
                     try {
                         setStatus('Fetching /health/iap…', 'info');
@@ -324,7 +367,11 @@
                 panel.querySelector('#iapDebugClose')?.addEventListener('click', () => {
                     panel.style.display = 'none';
                 });
-                panel.querySelector('#iapDebugRefresh')?.addEventListener('click', () => updateText('refresh'));
+                panel.querySelector('#iapDebugRefresh')?.addEventListener('click', async () => {
+                    // Refresh should actively reconcile so we can see if entitlement is applied server-side.
+                    await maybeReconcile('iap_debug_refresh');
+                    updateText('refresh');
+                });
                 panel.querySelector('#iapDebugFetchHealth')?.addEventListener('click', () => {
                     fetchHealthIap();
                 });
@@ -370,7 +417,15 @@
                 });
 
                 // First render
-                updateText('initial');
+                // Run a best-effort reconcile on open so "open_delayed" snapshots include it.
+                setTimeout(async () => {
+                    try {
+                        await maybeReconcile('iap_debug_open');
+                        updateText('initial');
+                    } catch (e) {
+                        updateText('initial');
+                    }
+                }, 0);
                 setStatus('Ready. Tap Refresh then Copy.', 'info');
                 return panel;
             }
