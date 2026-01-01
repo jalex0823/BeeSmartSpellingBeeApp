@@ -1516,6 +1516,23 @@ function chooseAvatar() {
                 const errorMsg = data.error || `HTTP ${response.status}`;
                 const errorReason = data.reason || 'unknown';
                 console.error(`❌ Avatar select failed (${response.status}): ${errorMsg}`, data);
+
+                // Friendly, kid-safe messaging for backend fail-closed unlock enforcement
+                if (response.status === 503 && errorReason === 'unlock_system_unavailable') {
+                    alert(
+                        '🐝 Uh-oh! Our bee unlock system is taking a quick break.\n\n' +
+                        'Please try again in a little bit. Your account is safe!'
+                    );
+                    return Promise.reject(new Error('Unlock system temporarily unavailable'));
+                }
+
+                if (response.status === 500 && errorReason === 'unlock_check_failed') {
+                    alert(
+                        '🐝 Hmm… we couldn\'t check if that bee is unlocked right now.\n\n' +
+                        'Please try again in a moment.'
+                    );
+                    return Promise.reject(new Error('Unlock check failed'));
+                }
                 
                 // Handle specific error reasons (server no longer uses guest_restricted)
                 if (errorReason === 'premium_locked') {
@@ -1572,10 +1589,18 @@ function chooseAvatar() {
     })
     .catch(error => {
         console.error('❌ Error selecting avatar:', error);
-        const errorMsg = error.message || 'An unexpected error occurred. Please try again.';
-        
-        // Show detailed error message
-        alert(`Could not change your avatar: ${errorMsg}`);
+
+        // Most errors are already shown via a friendly alert above.
+        // This is a safe fallback for unexpected cases.
+        if (!(error && error.message && (
+            error.message.includes('Premium avatar locked') ||
+            error.message.includes('Insufficient honey points') ||
+            error.message.includes('Authentication required') ||
+            error.message.includes('Unlock system temporarily unavailable') ||
+            error.message.includes('Unlock check failed')
+        ))) {
+            alert('Could not change your avatar. Please try again.');
+        }
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Choose This Bee';

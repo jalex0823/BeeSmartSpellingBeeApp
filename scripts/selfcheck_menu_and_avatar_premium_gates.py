@@ -55,6 +55,12 @@ def main() -> None:
     assert_contains(app, "if tier == 'earn_or_buy':", "earn_or_buy policy")
     assert_contains(app, "if tier == 'premium':", "premium policy")
 
+    # ---- Avatar selection server-side enforcement ----
+    # The UI can be bypassed, so endpoints that change the avatar must validate unlock status.
+    assert_contains(app, "@app.route(\"/api/avatar/select\", methods=[\"POST\"])", "avatar select route")
+    assert_contains(app, "check_avatar_unlocked(", "avatar select unlock check")
+    assert_contains(app, "unlock_system_unavailable", "avatar select fail-closed on missing catalog")
+
     # ---- Server-side paywall enforcement for premium endpoints ----
     # These checks ensure premium-only features can't be accessed by calling
     # APIs/URLs directly (bypassing the main menu locks).

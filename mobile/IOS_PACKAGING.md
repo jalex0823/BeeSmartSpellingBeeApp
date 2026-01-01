@@ -55,9 +55,9 @@ In Xcode (targets → App → Signing & Capabilities):
 
 After installing a TestFlight build:
 
-- Open the app → tap **IAP Debug** tile
-- In the snapshot, you should see `Capacitor.Plugins` containing a plugin key like `BeeSmartIAPPlugin`.
-- If it’s missing, the native plugin isn’t being registered into the Capacitor bridge (IAP won’t work).
+- Open the app and navigate to the **Subscription** page.
+- Complete a purchase/restore test as needed.
+- If purchases don’t work, confirm the Capacitor StoreKit 2 plugin is registered and that iOS 15+ is used.
 
 ## 5) Permissions (Info.plist)
 

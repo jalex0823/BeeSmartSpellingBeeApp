@@ -15054,8 +15054,13 @@ def api_select_avatar():
                 'error': 'avatar_slug is required'
             }), 400
         
-        #  Guest logic removed: guests do not have access to avatar picker UI.
-        # Any access to this endpoint assumes authenticated non-guest users.
+        #  SECURITY CHECK 1: Block guest/legacy accounts from avatar customization
+        # Some legacy "guest" records may be authenticated but do not have a password.
+        if not getattr(current_user, 'password_hash', None):
+            return jsonify({
+                'success': False,
+                'error': 'Guest users cannot select avatars. Please register to customize your bee!'
+            }), 403
         
         #  SECURITY CHECK 2: Parental lock
         if getattr(current_user, 'avatar_locked', False):
@@ -15133,6 +15138,11 @@ def api_select_avatar():
                     'success': False,
                     'error': f'Avatar not found: {avatar_slug}'
                 }), 404
+
+        # Canonicalize selection key used for unlock checks.
+        # - Avatar catalog uses ids (slugs) like "mascot-bee".
+        # - We store user.avatar_id as a slug.
+        selected_avatar_id = str(avatar.slug or avatar_slug).strip().lower()
         
         #  SECURITY CHECK 3: Unlock validation (unless admin)
         if current_user.role != 'admin':
@@ -15145,7 +15155,7 @@ def api_select_avatar():
                 
                 # Check if avatar is unlocked
                 unlock_result = check_avatar_unlocked(
-                    avatar_slug,
+                    selected_avatar_id,
                     user_honey_points,
                     purchased_avatars
                 )
@@ -15153,7 +15163,7 @@ def api_select_avatar():
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar
                     tier = next(
-                        (a.get('tier', 'premium') for a in AVATAR_CATALOG if a['id'] == avatar_slug),
+                        (a.get('tier', 'premium') for a in AVATAR_CATALOG if a.get('id') == selected_avatar_id),
                         'premium'
                     )
                     
@@ -15179,12 +15189,22 @@ def api_select_avatar():
                         }), 403
                         
             except ImportError:
-                print(f"️ Avatar catalog unavailable, skipping unlock check for {avatar_slug}")
+                # Fail closed: if we can't validate locks, we should not allow premium selections.
+                return jsonify({
+                    'success': False,
+                    'error': 'Avatar unlock system unavailable. Please try again in a moment.',
+                    'reason': 'unlock_system_unavailable'
+                }), 503
             except Exception as e:
                 print(f"️ Error checking avatar unlock status: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Could not verify avatar unlock status. Please try again.',
+                    'reason': 'unlock_check_failed'
+                }), 500
         
         # Update current user's avatar
-        success, message = current_user.update_avatar(avatar.slug, variant='default')
+        success, message = current_user.update_avatar(selected_avatar_id, variant='default')
         
         if not success:
             return jsonify({

@@ -254,292 +254,31 @@
   }
 
   function isDiagEnabled() {
-    // Diagnostics can be enabled via URL param OR a persistent local flag.
-    // This is important for TestFlight where you often can't type a URL.
-    try {
-      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
-      if (qs.get('iap_diag') === '1') return true;
-    } catch (e) { /* ignore */ }
-
-    try {
-      if (window.localStorage && window.localStorage.getItem('beesmart_iap_diag') === '1') return true;
-    } catch (e) { /* ignore */ }
-
+    // Diagnostics UI is disabled.
     return false;
   }
 
   function isIapDebugEnabled() {
-    // Unified gating with the rest of the app: keep any diagnostic UI hidden
-    // unless explicitly enabled.
-    // NOTE: unified_menu.html sets window.BEESMART_IAP_DEBUG early.
-    try { if (window.BEESMART_IAP_DEBUG === true) return true; } catch (e) { /* ignore */ }
-
-    // Fallbacks in case the template hasn't defined the flag yet.
-    try {
-      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
-      if (qs.get('iap_debug') === '1') return true;
-    } catch (e) { /* ignore */ }
-
-    try {
-      const v = window.localStorage && window.localStorage.getItem('BEESMART_IAP_DEBUG');
-      if (v === '1' || v === 'true' || v === 'yes' || v === 'on') return true;
-    } catch (e) { /* ignore */ }
-
+    // Debug UI is disabled.
     return false;
   }
 
   function ensureDiagButton() {
-    // Visible debug control for TestFlight (and anywhere else): always show a button
-    // that reveals a diagnostics panel and attempts to copy the info.
-    // This avoids invisible-gating problems and gives you a single obvious control.
-    try {
-      const btnId = 'beesmart-iap-diag-btn';
-      const panelId = 'beesmart-iap-diag-panel';
-
-      if (document.getElementById(btnId)) return;
-
-      function buildDiagnosticsText() {
-        const cap = window.Capacitor;
-        const plugin = getNativePlugin();
-        const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
-        const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
-        const hasCap = !!cap;
-        const found = !!plugin;
-        const bridgeReady = hasBridge();
-
-        return [
-          'BeeSmart IAP Diagnostics',
-          'Capacitor: ' + (hasCap ? 'YES' : 'NO'),
-          'Platform: ' + (platform || '(unknown)'),
-          'Plugin found: ' + (found ? 'YES' : 'NO'),
-          'Bridge ready (window.BeeSmartIAP): ' + (bridgeReady ? 'YES' : 'NO'),
-          'Plugins: ' + (availableKeys.length ? availableKeys.join(', ') : '(none)'),
-          'URL: ' + String(window.location && window.location.href ? window.location.href : '(unknown)')
-        ].join('\n');
-      }
-
-      function ensurePanel() {
-        let panel = document.getElementById(panelId);
-        if (panel) return panel;
-
-        panel = document.createElement('div');
-        panel.id = panelId;
-        panel.style.cssText = [
-          'position:fixed',
-          'left:10px',
-          'right:10px',
-          'bottom:56px',
-          'z-index:2147483647',
-          'max-height:45vh',
-          'overflow:auto',
-          'padding:12px',
-          'border-radius:12px',
-          'border:1px solid rgba(255,255,255,0.22)',
-          'background:rgba(0,0,0,0.78)',
-          'color:#fff',
-          'font:500 12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-          'box-shadow:0 10px 30px rgba(0,0,0,0.35)'
-        ].join(';');
-
-        const row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:8px;';
-
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.textContent = 'Copy';
-        copyBtn.style.cssText = 'padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.12);color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
-
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.textContent = 'Close';
-        closeBtn.style.cssText = 'padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.12);color:#fff;font:600 12px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
-        closeBtn.addEventListener('click', function () {
-          try { panel.remove(); } catch (e) { /* ignore */ }
-        });
-
-        row.appendChild(copyBtn);
-        row.appendChild(closeBtn);
-
-        const pre = document.createElement('pre');
-        pre.style.cssText = 'margin:0;white-space:pre-wrap;word-break:break-word;';
-        pre.textContent = buildDiagnosticsText();
-
-        copyBtn.addEventListener('click', function () {
-          const txt = buildDiagnosticsText();
-          pre.textContent = txt;
-          try {
-            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(txt).catch(function () { /* ignore */ });
-            }
-          } catch (e) { /* ignore */ }
-        });
-
-        panel.appendChild(row);
-        panel.appendChild(pre);
-        (document.body ? document.body : document.documentElement).appendChild(panel);
-        return panel;
-      }
-
-      const btn = document.createElement('button');
-      btn.id = btnId;
-      btn.type = 'button';
-      btn.textContent = 'IAP Diagnostics';
-      btn.style.cssText = [
-        'position:fixed',
-        'right:10px',
-        'bottom:10px',
-        'z-index:2147483647',
-        'padding:10px 12px',
-        'border-radius:12px',
-        'border:1px solid rgba(255,255,255,0.22)',
-        'background:rgba(0,0,0,0.72)',
-        'color:#fff',
-        'font:700 13px/1 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-        'box-shadow:0 8px 24px rgba(0,0,0,0.28)'
-      ].join(';');
-
-      btn.addEventListener('click', function () {
-        // Keep existing overlay behavior available, but don't require reload or alerts.
-        try {
-          if (window.localStorage) window.localStorage.setItem('beesmart_iap_diag', '1');
-        } catch (e) { /* ignore */ }
-
-        const panel = ensurePanel();
-        try {
-          const pre = panel && panel.querySelector ? panel.querySelector('pre') : null;
-          if (pre) pre.textContent = buildDiagnosticsText();
-        } catch (e) { /* ignore */ }
-
-        // Attempt an immediate copy.
-        try {
-          const txt = buildDiagnosticsText();
-          if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(txt).catch(function () { /* ignore */ });
-          }
-        } catch (e) { /* ignore */ }
-
-        // If the bridge is not ready yet, try initializing once more now.
-        try { initBridgeOnce(); } catch (e) { /* ignore */ }
-      });
-
-      (document.body ? document.body : document.documentElement).appendChild(btn);
-    } catch (e) { /* ignore */ }
+    // Diagnostic UI disabled.
+    return;
   }
 
   function toggleDiagFlag() {
-    try {
-      const cur = window.localStorage && window.localStorage.getItem('beesmart_iap_diag');
-      const next = (cur === '1') ? '0' : '1';
-      if (window.localStorage) window.localStorage.setItem('beesmart_iap_diag', next);
-      return next === '1';
-    } catch (e) {
-      return false;
-    }
+    return false;
   }
 
   function installDiagGesture() {
-    // Hidden gesture: tap bottom-left corner 5 times within 2.5s.
-    // Then we toggle diagnostics and reload to make the overlay appear.
-    try {
-      let taps = 0;
-      let t0 = 0;
-
-      document.addEventListener('click', function (ev) {
-        try {
-          const x = (ev && typeof ev.clientX === 'number') ? ev.clientX : null;
-          const y = (ev && typeof ev.clientY === 'number') ? ev.clientY : null;
-          if (x === null || y === null) return;
-
-          // 70x70px hotspot
-          if (x > 70) return;
-          if (y < (window.innerHeight - 70)) return;
-
-          const now = Date.now();
-          if (!t0 || (now - t0) > 2500) {
-            t0 = now;
-            taps = 0;
-          }
-          taps++;
-
-          if (taps >= 5) {
-            taps = 0;
-            t0 = 0;
-            const enabled = toggleDiagFlag();
-            alert('IAP diagnostics ' + (enabled ? 'enabled' : 'disabled') + '.\nReloading…');
-            try { window.location.reload(); } catch (e) { /* ignore */ }
-          }
-        } catch (e) { /* ignore */ }
-      }, true);
-    } catch (e) {
-      // ignore
-    }
+    // Diagnostics disabled.
+    return;
   }
 
   try {
-    // Always install a hidden gesture so diagnostics can be enabled in TestFlight
-    // without needing to manually type a URL.
-    installDiagGesture();
-
-    // Safety: older builds may have left this flag enabled, causing the black
-    // overlay to reappear unexpectedly. We now gate diagnostics UI behind the
-    // unified debug flag, so clear the legacy flag unless debug is enabled.
-    try {
-      if (!isIapDebugEnabled() && window.localStorage && window.localStorage.getItem('beesmart_iap_diag') === '1') {
-        window.localStorage.setItem('beesmart_iap_diag', '0');
-      }
-    } catch (e) { /* ignore */ }
-
-    // Only show the visible diagnostics button when debug/diagnostics are enabled.
-    // (Avoid exposing developer UI in production/review builds.)
-    if (isIapDebugEnabled() || isDiagEnabled()) {
-      ensureDiagButton();
-    }
-
-    // Optional on-device diagnostics overlay.
-    // Keep this completely hidden unless unified debug is explicitly enabled.
-    // (The visible diagnostics button/panel is enough when debug is on.)
-    if (isIapDebugEnabled() && isDiagEnabled()) {
-      const cap = window.Capacitor;
-      const plugin = getNativePlugin();
-      const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
-      const platform = (cap && typeof cap.getPlatform === 'function') ? cap.getPlatform() : null;
-      const hasCap = !!cap;
-      const found = !!plugin;
-
-      console.log('[BeeSmartIAP][diag] hasCapacitor=', hasCap,
-        'platform=', platform,
-        'plugins=', availableKeys,
-        'pluginFound=', found);
-
-      // Tiny overlay for cases where Web Inspector isn't available.
-      try {
-        const id = 'beesmart-iap-diag-overlay';
-        if (!document.getElementById(id)) {
-          const el = document.createElement('div');
-          el.id = id;
-          el.style.cssText = [
-            'position:fixed',
-            'left:8px',
-            'bottom:8px',
-            'z-index:2147483647',
-            'max-width:92vw',
-            'padding:8px 10px',
-            'border-radius:10px',
-            'background:rgba(0,0,0,0.72)',
-            'color:#fff',
-            'font:12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-            'box-shadow:0 8px 24px rgba(0,0,0,0.28)',
-            'pointer-events:none',
-            'white-space:pre-wrap'
-          ].join(';');
-          const keysStr = availableKeys.length ? availableKeys.join(', ') : '(none)';
-          el.textContent = `IAP diag\nCapacitor: ${hasCap ? 'YES' : 'NO'}\nPlatform: ${platform || '(unknown)'}\nPlugin found: ${found ? 'YES' : 'NO'}\nPlugins: ${keysStr}`;
-
-          // Add after DOM is ready.
-          (document.body ? document.body : document.documentElement).appendChild(el);
-        }
-      } catch (e2) { /* ignore */ }
-    }
+    // Per request: no diagnostic UI.
 
     // Fast path
     if (initBridgeOnce()) return;
