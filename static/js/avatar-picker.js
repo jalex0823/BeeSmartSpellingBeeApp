@@ -720,9 +720,9 @@ function showLockedAvatarMessage(avatar) {
     
     let unlockText = '';
     if (avatar.tier === 'premium') {
-        unlockText = avatar.price_usd 
-            ? `<strong>Purchase for $${avatar.price_usd}</strong>` 
-            : '<strong>Premium Avatar - Purchase to unlock</strong>';
+        // Keep copy kid-friendly and avoid showing purchase/bundle messaging here.
+        // The main subscription page handles monetization.
+        unlockText = '<strong>Premium Avatar - unlock with BeeSmart Premium</strong>';
     } else if (avatar.unlock_requirement) {
         unlockText = `<strong>Earn ${avatar.unlock_requirement} 🍯 Honey Points</strong>`;
     } else {

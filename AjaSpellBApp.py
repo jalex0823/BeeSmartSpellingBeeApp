@@ -87,7 +87,7 @@ print("="*70)
 
 # Build/release version (surfaced via /health)
 # Keep this in sync with the public app version used by validation scripts.
-APP_VERSION = "30"
+APP_VERSION = "32"
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -2987,6 +2987,66 @@ def is_guest_user(user):
     
     return False
 
+
+def _require_premium_json(feature: str = "premium"):
+    """Server-side paywall enforcement for premium-only features.
+
+    Contract:
+    - For unauthenticated users: return a 403 JSON response with auth_required.
+    - For authenticated non-premium users: return a 402 JSON response with premium_required.
+    - For premium users: return None.
+
+    NOTE: We intentionally use a JSON response (not redirect) since these routes
+    are API endpoints.
+    """
+    try:
+        if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+            return jsonify({
+                "ok": False,
+                "error": "auth_required",
+                "auth_required": True,
+                "feature": feature,
+            }), 403
+        if not bool(getattr(current_user, 'premium_member', False)):
+            return jsonify({
+                "ok": False,
+                "error": "premium_required",
+                "premium_required": True,
+                "feature": feature,
+            }), 402
+    except Exception:
+        # Fail-safe: never break the API on guard errors.
+        return None
+    return None
+
+
+def _deny_guest_avatar_picker_access():
+    """Block guest users from avatar picker pages.
+
+    Guest users (session-based or DB guest_ users) must register before accessing
+    picker UI routes. Returns a Flask response when access should be denied,
+    otherwise returns None.
+    """
+    try:
+        # If this request is from a guest session/user, force them through the
+        # registration flow (not the picker).
+        if session.get('is_guest', False) or is_guest_user(current_user):
+            try:
+                flash('Please create an account to customize your avatar.', 'info')
+            except Exception:
+                pass
+            # Send them to registration flow.
+            return redirect(url_for('register'))
+
+        # Not logged in at all -> let @login_required handle it.
+        if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+            return None
+    except Exception:
+        # Fail safe: do not block on guard errors.
+        return None
+
+    return None
+
 def filter_non_guest_users(query):
     """
     Add filter to exclude guest users from a User query
@@ -3457,6 +3517,11 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
 @app.route('/api/upload/image', methods=['GET', 'POST'])
 def api_upload_image():
     """Upload an image file for OCR processing."""
+    # Pay-to-play: OCR/image upload is a Premium feature.
+    premium_block = _require_premium_json("image_upload")
+    if premium_block is not None:
+        return premium_block
+
     if request.method == 'GET':
         # The test checks this endpoint's availability via GET
         if not TESSERACT_AVAILABLE:
@@ -4468,6 +4533,10 @@ def _normalize_words(words_raw):
 def list_saved_wordlists():
     """GET all saved lists for current user."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": True, "lists": [], "error": "User session issue"}), 200
@@ -4490,6 +4559,10 @@ def list_saved_wordlists():
 def create_saved_list():
     """POST create a new saved list."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4562,6 +4635,10 @@ def create_saved_list():
 def get_saved_wordlist(list_id):
     """GET one list by id."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4582,6 +4659,10 @@ def get_saved_wordlist(list_id):
 def update_saved_wordlist(list_id):
     """PUT update list metadata and/or replace words."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4659,6 +4740,10 @@ def update_saved_wordlist(list_id):
 def delete_saved_wordlist(list_id=None):
     """DELETE list."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4699,6 +4784,10 @@ def delete_saved_wordlist(list_id=None):
 def toggle_saved_list_favorite(list_id=None):
     """POST toggle favorite/pin."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4738,6 +4827,10 @@ def toggle_saved_list_favorite(list_id=None):
 def clone_saved_list(list_id):
     """POST clone list."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4793,6 +4886,10 @@ def clone_saved_list(list_id):
 def save_current_wordlist():
     """Legacy: Save current session wordbank as a new list."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -4851,6 +4948,10 @@ def save_current_wordlist():
 def load_saved_wordlist():
     """Load a saved list into the current session and initialize quiz state."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         # CRITICAL DEBUG: Track session across request
         incoming_session_id = session.get("session_id", "NEW")
         incoming_storage_id = session.get("wordbank_storage_id", "NONE")
@@ -4988,6 +5089,10 @@ def load_saved_wordlist():
 def rename_saved_wordlist():
     """Rename a saved word list (legacy, use PUT instead)."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
@@ -5026,6 +5131,10 @@ def rename_saved_wordlist():
 def upload_to_saved_list():
     """Upload a file to update an existing saved word list."""
     try:
+        premium_block = _require_premium_json("saved_lists")
+        if premium_block is not None:
+            return premium_block
+
         # Get the saved list ID from form data
         saved_list_id = request.form.get('savedListId')
         if not saved_list_id:
@@ -7210,6 +7319,11 @@ def api_upload():
       - file upload (.csv, .txt, .docx, .pdf)
       - OR raw JSON body: { "words": [ {"word": "...", "sentence":"", "hint":""}, ... ] }
     """
+    # Pay-to-play: uploads are Premium-only.
+    premium_block = _require_premium_json("upload")
+    if premium_block is not None:
+        return premium_block
+
     # CRITICAL: Set session persistence FIRST before any session operations
     session.permanent = True
     session.modified = True
@@ -12151,15 +12265,25 @@ def api_update_user_avatar_legacy():
 
 
 @app.route('/avatar-picker')
-@login_required
 def avatar_picker_page():
     """Avatar picker page with 3D viewer for choosing your bee character"""
+    denied = _deny_guest_avatar_picker_access()
+    if denied:
+        return denied
+    # Registered users only
+    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+        return redirect(url_for('login', next=request.path))
     return render_template('test_avatar_picker.html')
 
 @app.route('/honeycomb-picker')
-@login_required
 def honeycomb_avatar_picker():
     """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)"""
+    denied = _deny_guest_avatar_picker_access()
+    if denied:
+        return denied
+    # Registered users only
+    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+        return redirect(url_for('login', next=request.path))
     timestamp = int(time.time())
     # Optional background override via query param `bg`.
     # Accepts values like '/static/images/my-bg.jpg' or 'images/my-bg.jpg'.
@@ -12193,9 +12317,14 @@ def honeycomb_avatar_picker():
     )
 
 @app.route('/honeycomb-picker-old')
-@login_required
 def honeycomb_avatar_picker_old():
     """OLD: Original honeycomb picker with absolute positioning"""
+    denied = _deny_guest_avatar_picker_access()
+    if denied:
+        return denied
+    # Registered users only
+    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+        return redirect(url_for('login', next=request.path))
     return render_template('honeycomb_avatar_picker.html')
 
 @app.route('/test/api')
@@ -13840,6 +13969,16 @@ def update_user_stats_railway(user_id, points_to_add, words_correct, words_attem
 @app.route("/speed-round/setup")
 def speed_round_setup():
     """Speed round configuration page"""
+    try:
+        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
+            try:
+                flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
+            except Exception:
+                pass
+            return redirect(url_for('subscription_page'))
+    except Exception:
+        pass
+
     timestamp = int(time.time())
     return render_template('speed_round_setup.html', timestamp=timestamp)
 
@@ -13847,6 +13986,16 @@ def speed_round_setup():
 @app.route("/speed-round/quiz")
 def speed_round_quiz():
     """Speed round quiz page with timer"""
+    try:
+        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
+            try:
+                flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
+            except Exception:
+                pass
+            return redirect(url_for('subscription_page'))
+    except Exception:
+        pass
+
     # Check if round is active
     if 'speed_round' not in session or not session.get('speed_round', {}).get('active'):
         flash('Please start a speed round first!', 'warning')
@@ -13869,6 +14018,10 @@ def speed_round_quiz():
 def api_speed_round_next():
     """Get the next word in the speed round"""
     try:
+        premium_block = _require_premium_json("speed_round")
+        if premium_block is not None:
+            return premium_block
+
         if 'speed_round' not in session:
             return jsonify({'error': 'No active speed round'}), 400
         
@@ -13932,6 +14085,10 @@ def api_speed_round_next():
 def api_speed_round_start():
     """Initialize a speed round with configuration"""
     try:
+        premium_block = _require_premium_json("speed_round")
+        if premium_block is not None:
+            return premium_block
+
         data = request.get_json()
         
         # Extract configuration
@@ -14048,6 +14205,10 @@ def api_speed_round_start():
 def api_speed_round_answer():
     """Process speed round answer with timing and scoring"""
     try:
+        premium_block = _require_premium_json("speed_round")
+        if premium_block is not None:
+            return premium_block
+
         data = request.get_json()
         speed_round = session.get('speed_round')
         

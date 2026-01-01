@@ -4596,7 +4596,7 @@
                 </div>
             </section>
 
-            <!-- Centralized click handling for auth-gated tiles to avoid inline Jinja in onclick -->
+            <!-- Centralized click handling for auth/premium-gated tiles to avoid inline Jinja in onclick -->
             <script>
             document.addEventListener('DOMContentLoaded', function(){
                 try {
@@ -4606,11 +4606,19 @@
                         const lockMsg = tile.getAttribute('data-lockmsg') || 'Premium Feature';
                         tile.addEventListener('click', function(){
                             try { if (window.kidSounds && typeof kidSounds.playRandomEffect === 'function') kidSounds.playRandomEffect(); } catch(e){}
-                            if (window.IS_AUTH) {
-                                try { if (typeof selectOption === 'function') selectOption(feature, tile); } catch(e){}
-                            } else {
+                            const requiresPremium = String(tile.getAttribute('data-requires-premium') || '').toLowerCase() === 'true';
+
+                            if (!window.IS_AUTH) {
                                 try { if (typeof showLockedFeature === 'function') showLockedFeature(lockMsg); } catch(e){}
+                                return;
                             }
+
+                            if (requiresPremium && !window.IS_PREMIUM) {
+                                try { if (typeof showLockedFeature === 'function') showLockedFeature('BeeSmart Premium'); } catch(e){}
+                                return;
+                            }
+
+                            try { if (typeof selectOption === 'function') selectOption(feature, tile); } catch(e){}
                         }, { passive: true });
                     });
                 } catch(e) { console.warn('Tile binding failed', e); }
@@ -5062,18 +5070,18 @@
                     <div class="kid-tip"> Quick and easy! Just type your words!</div>
                 </div>
 
-                <!-- Upload Image -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="image" data-lockmsg="Image Upload" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth == 'true' %} Take a photo of a book page or worksheet and we'll find the words for you!{% else %} Sign in to unlock image upload feature!{% endif %}">
-                    {% if _is_auth != 'true' %}
+                <!-- Upload Image (Premium) -->
+                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="image" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock image upload feature!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock image upload!{% else %} Take a photo of a book page or worksheet and we'll find the words for you!{% endif %}">
+                    {% if _is_auth != 'true' or _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
-                        <div class="lock-text">Sign In to Unlock</div>
+                        <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
                     </div>
                     {% endif %}
                     <div class="option-icon"></div>
                     <div class="option-title">Extract from Image</div>
                     <div class="option-description">Extract words from photos</div>
-                    <div class="kid-tip">{% if current_user.is_authenticated %} Magic word finder from pictures!{% else %} Premium Feature!{% endif %}</div>
+                    <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %} Magic word finder from pictures!{% endif %}</div>
                 </div>
 
                 <!-- Dictionary Search -->
@@ -5092,19 +5100,19 @@
                     <div class="kid-tip"> For TestFlight troubleshooting only</div>
                 </div>
 
-                <!-- Saved Word Lists -->
-                <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="saved" data-lockmsg="Saved Word Lists" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth == 'true' %} Access your previously saved spelling lists and continue practicing!{% else %} Sign in to access saved word lists!{% endif %}">
-                    {% if _is_auth != 'true' %}
+                <!-- Saved Word Lists (Premium) -->
+                <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="saved" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth != 'true' %} Sign in to access saved word lists!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to access saved word lists!{% else %} Access your previously saved spelling lists and continue practicing!{% endif %}">
+                    {% if _is_auth != 'true' or _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
-                        <div class="lock-text">Sign In to Unlock</div>
+                        <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
                     </div>
                     {% endif %}
                     <span id="savedListsBadge" class="option-badge" style="display:none;">0</span>
                     <div class="option-icon"></div>
                     <div class="option-title">Saved Word Lists</div>
                     <div class="option-description">Use previously uploaded lists</div>
-                    <div class="kid-tip">{% if current_user.is_authenticated %}⭐ Your favorite word collections!{% else %} Premium Feature!{% endif %}</div>
+                    <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %}⭐ Your favorite word collections!{% endif %}</div>
                 </div>
 
                 <!-- Random Play -->
@@ -5127,18 +5135,18 @@
                     <div class="kid-tip">{% if current_user.is_authenticated %} Battles are offline for now — coming soon!{% else %} Premium Feature!{% endif %}</div>
                 </div>
 
-                <!-- Speed Round Challenge -->
-                <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_auth != 'true' %}locked-tile{% endif %}" data-feature="speed" data-lockmsg="Speed Round Challenge" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth == 'true' %} Race against time in a fast-paced spelling challenge!{% else %} Sign in to unlock speed challenges!{% endif %}">
-                    {% if _is_auth != 'true' %}
+                <!-- Speed Round Challenge (Premium) -->
+                <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="speed" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock speed challenges!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock speed challenges!{% else %} Race against time in a fast-paced spelling challenge!{% endif %}">
+                    {% if _is_auth != 'true' or _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
-                        <div class="lock-text">Sign In to Unlock</div>
+                        <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
                     </div>
                     {% endif %}
                     <div class="option-icon"></div>
                     <div class="option-title">Speed Round Challenge</div>
                     <div class="option-description">Race against time! Earn bonus points!</div>
-                    <div class="kid-tip">{% if current_user.is_authenticated %} How fast can you spell?{% else %} Premium Feature!{% endif %}</div>
+                    <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %} How fast can you spell?{% endif %}</div>
                 </div>
             </section>
 

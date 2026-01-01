@@ -1856,55 +1856,10 @@ window.purchaseLockedAvatar = purchaseLockedAvatar;
 
 
 // --------- Bundle Shop (Packs) ---------
-
+// Bundle shop UI was removed from the picker. Keep this as a no-op so older
+// scripts/HTML can call it safely without throwing.
 function setupBundleShop() {
-    const openBtn = document.getElementById('openBundlesBtn');
-    const modal = document.getElementById('bundleShopModal');
-    const closeBtn = document.getElementById('closeBundlesBtn');
-    const closeFooter = document.getElementById('bundleShopCloseFooter');
-
-    if (!openBtn || !modal) return;
-
-    function open() {
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
-        // Load bundles fresh each open
-        loadBundles().catch(err => {
-            console.error('❌ Failed to load bundles:', err);
-        });
-    }
-
-    function close() {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-    }
-
-    openBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        open();
-    });
-
-    closeBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        close();
-    });
-
-    closeFooter?.addEventListener('click', (e) => {
-        e.preventDefault();
-        close();
-    });
-
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-    });
-
-    // Escape to close
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') {
-            close();
-        }
-    });
+    return;
 }
 
 function setBundleShopStatus(text) {
