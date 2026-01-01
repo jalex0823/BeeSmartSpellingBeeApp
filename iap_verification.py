@@ -31,9 +31,22 @@ from __future__ import annotations
 from typing import Tuple, Dict, Any
 import os
 import json
+import base64
 
 
 def _load_private_key() -> str | None:
+    # Preferred for platforms that can't save multiline secrets reliably:
+    # a single-line base64 encoding of the full PEM contents.
+    b64 = os.getenv('APPLE_PRIVATE_KEY_B64')
+    if b64:
+        try:
+            # Support common DO/CI paste variants (whitespace/newlines).
+            cleaned = ''.join(b64.split())
+            decoded = base64.b64decode(cleaned).decode('utf-8')
+            return decoded
+        except Exception:
+            return None
+
     key = os.getenv('APPLE_PRIVATE_KEY')
     if key:
         return key
@@ -66,7 +79,7 @@ def verify_apple_purchase(data: Dict[str, Any]) -> Tuple[bool, str, Dict[str, An
     bundle_id = os.getenv('APPLE_APP_BUNDLE_ID')
     private_key_pem = _load_private_key()
     if not (issuer_id and key_id and bundle_id and private_key_pem):
-        return False, 'apple_config_missing', {'need': ['APPLE_ISSUER_ID','APPLE_KEY_ID','APPLE_APP_BUNDLE_ID','APPLE_PRIVATE_KEY or APPLE_PRIVATE_KEY_PATH']}
+        return False, 'apple_config_missing', {'need': ['APPLE_ISSUER_ID','APPLE_KEY_ID','APPLE_APP_BUNDLE_ID','APPLE_PRIVATE_KEY or APPLE_PRIVATE_KEY_B64 or APPLE_PRIVATE_KEY_PATH']}
 
     # Build developer token (JWT ES256)
     try:

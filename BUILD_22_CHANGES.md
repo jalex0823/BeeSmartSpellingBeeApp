@@ -136,6 +136,69 @@ If the plugin still doesn’t appear:
 
 ---
 
+## DigitalOcean App Platform — Apple IAP env vars (required for real verification)
+
+If TestFlight purchases/restore run but premium **doesn’t unlock**, check:
+
+- `https://beesmartspelling.app/health/iap`
+
+If it shows `verification_mode: "mock"` or `iap.apple.configured: false`, the production backend is missing Apple credentials.
+
+### Where to add these
+
+In DigitalOcean **App Platform → Settings → Environment Variables**, add these to the **web/service component that runs Flask** (the one serving `AjaSpellBApp.py`).
+
+Make the private key a **Secret/Encrypted** env var.
+
+### Env vars to add (copy/paste)
+
+- `APPLE_ISSUER_ID` = `69a6de81-e6a6-47e3-e053-5b8c7c11a4d1`
+- `APPLE_KEY_ID` = `4267TG524Q`
+- `APPLE_APP_BUNDLE_ID` = `com.altech.beesmartspelling`
+
+If your platform (like DigitalOcean App Platform) won’t accept multiline env vars, use the **single-line** option:
+
+- `APPLE_PRIVATE_KEY_B64` = *(base64 of the full `.p8` PEM contents)*
+
+Or, if multiline works for you:
+
+- `APPLE_PRIVATE_KEY` = *(paste the full `.p8` contents including the BEGIN/END lines; keep newlines)*
+
+#### `APPLE_PRIVATE_KEY` format example
+
+Do **not** add quotes. Multiline is correct.
+
+```text
+-----BEGIN PRIVATE KEY-----
+PASTE_YOUR_KEY_CONTENTS_HERE
+-----END PRIVATE KEY-----
+```
+
+#### Generate `APPLE_PRIVATE_KEY_B64` (single line)
+
+The repo includes a helper script:
+
+- `scripts/encode_apple_p8_to_env_b64.py`
+
+Run it locally with your downloaded `.p8`:
+
+```bash
+python3 scripts/encode_apple_p8_to_env_b64.py ~/Downloads/AuthKey_4267TG524Q.p8
+```
+
+Copy the output and paste it as the value of `APPLE_PRIVATE_KEY_B64` in App Platform.
+
+### Deploy + verify
+
+After saving env vars, **redeploy** the App Platform component.
+
+Re-check `https://beesmartspelling.app/health/iap`:
+
+- `iap.apple.configured` should be `true`
+- it should no longer report missing `APPLE_ISSUER_ID` / `APPLE_KEY_ID` / `APPLE_APP_BUNDLE_ID` / `APPLE_PRIVATE_KEY`
+
+---
+
 ## Docs
 
 ### Submission checklist updated
