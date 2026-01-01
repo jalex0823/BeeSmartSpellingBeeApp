@@ -869,20 +869,28 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
         except Exception:
             anon_owned = []
 
-        # Treat any premium/subscription SKU as premium entitlement for guests
+        # Treat any premium/subscription SKU as premium entitlement for guests.
+        # Note: In this codebase, subscriptions are mapped as type 'premium' with
+        # subscription=True (not as type 'subscription').
         try:
             for pid in anon_owned:
                 try:
                     mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
                 except Exception:
                     mapping = None
-                if isinstance(mapping, dict) and mapping.get('type') == 'subscription':
-                    anon_premium = True
-                    break
+                if isinstance(mapping, dict):
+                    t = str(mapping.get('type') or '').strip().lower()
+                    if t == 'premium' and bool(mapping.get('subscription')):
+                        anon_premium = True
+                        break
+                    if t == 'premium':
+                        # One-time premium unlock also counts
+                        anon_premium = True
+                        break
             if not anon_premium:
                 for pid in anon_owned:
                     p = (pid or '').lower()
-                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly')):
+                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family')):
                         anon_premium = True
                         break
         except Exception:
@@ -1529,11 +1537,12 @@ def _apply_entitlement(user: User, product_id: str) -> dict:
     if not mapping:
         return result
 
-    if mapping.get('type') == 'premium':
+    mtype = str(mapping.get('type') or '').strip().lower()
+    if mtype == 'premium' or (mtype == 'subscription') or bool(mapping.get('subscription')):
         if not user.premium_member:
             user.premium_member = True
             result["applied"] = True
-        result["details"] = {"premium_member": True}
+        result["details"] = {"premium_member": True, "subscription": bool(mapping.get('subscription'))}
         return result
 
     if mapping.get('type') == 'avatar':
