@@ -10191,6 +10191,35 @@ def api_iap_restore():
             return v or None
         return None
 
+    def _canonicalize_pid(pid: str | None) -> str | None:
+        """Return a canonical product id for mapping.
+
+        We accept a few historical/legacy variants from mobile builds and
+        translate them into the current App Store Connect SKU so entitlements
+        apply correctly.
+
+        Example: native sometimes reports `beesmart.premium.monthly` while the
+        server mapping expects `com.beesmart.premium.monthly`.
+        """
+        if not pid:
+            return None
+        try:
+            p = str(pid).strip()
+        except Exception:
+            return None
+        if not p:
+            return None
+
+        # Map known legacy/malformed identifiers to the configured monthly SKU.
+        # Keep this tight to avoid accidentally re-mapping unrelated products.
+        try:
+            monthly = (SUBSCRIPTION_PRODUCT_IDS.get('monthly') or 'com.beesmart.premium.monthly').strip()
+        except Exception:
+            monthly = 'com.beesmart.premium.monthly'
+        if p == 'beesmart.premium.monthly':
+            return monthly
+        return p
+
     # If the client can't enumerate product_ids yet (bridge not ready), treat this
     # as a reconcile request instead of a hard failure. We'll return current
     # entitlements from DB/session.
@@ -10249,7 +10278,7 @@ def api_iap_restore():
     normalized = []
     seen = set()
     for item in product_ids:
-        pid = _extract_pid(item)
+        pid = _canonicalize_pid(_extract_pid(item))
         if not pid:
             continue
         if pid in seen:
