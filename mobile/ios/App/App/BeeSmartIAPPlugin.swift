@@ -3,11 +3,19 @@ import Capacitor
 import StoreKit
 
 // Native IAP bridge for the BeeSmart web UI.
-// Exposes a minimal API used by templates:
-// - getOwnedProducts() -> productIds
-// - purchase({productId}) -> purchase result (includes JWS when available)
+//
+// IMPORTANT: We explicitly register/export this plugin with the JS name `BeeSmartIAP`
+// so it shows up as `window.Capacitor.Plugins.BeeSmartIAP` inside the iOS Capacitor wrapper.
+// The web layer then wraps it as `window.BeeSmartIAP`.
+//
+// Capacitor v5 plugin export.
 @objc(BeeSmartIAPPlugin)
 public class BeeSmartIAPPlugin: CAPPlugin {
+
+    // Capacitor v5: method export and plugin naming are typically handled via a
+    // generated Obj-C bridge file when using the CAP_PLUGIN macro.
+    // This Swift-only plugin remains functional and can be registered via
+    // `registerPluginInstance(BeeSmartIAPPlugin())` in AppDelegate.
 
     // Initiate a real platform restore flow.
     // App Review expects tapping a distinct "Restore" control to trigger an OS-level restore/sync.
