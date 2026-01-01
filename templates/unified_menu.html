@@ -121,7 +121,9 @@
     {# App Review / demo mode: when enabled, allow reviewers to navigate without login #}
     {% set _review_mode = 'true' if session.get('app_review_mode') else 'false' %}
     {% set _is_auth = 'true' if (current_user.is_authenticated or session.get('app_review_mode')) else 'false' %}
-    {% set _is_premium = 'true' if (is_premium|default(False)) else 'false' %}
+    {# Admin should see the menu fully unlocked (same UI experience as premium). #}
+    {% set _is_admin = 'true' if (current_user.is_authenticated and (current_user.role|default('') == 'admin')) else 'false' %}
+    {% set _is_premium = 'true' if (_is_admin == 'true' or (is_premium|default(False))) else 'false' %}
     {% set _billing_mode = (registration_billing_mode or 'subscription') %}
     {% set _subscription_sku = subscription_product_id if (subscription_product_id is defined and subscription_product_id) else 'com.beesmart.premium.monthly' %}
     {# Used only for display copy (CTA) and optional client-side rendering. Keep server as source of truth. #}
@@ -130,7 +132,7 @@
         // CRITICAL: Set auth state EARLY so tile-locking logic works correctly
         window.IS_AUTH = {{ _is_auth }};
     window.APP_REVIEW_MODE = {{ _review_mode }};
-        window.IS_PREMIUM = {{ _is_premium }};
+    window.IS_PREMIUM = {{ _is_premium }};
         window.BILLING_MODE = '{{ _billing_mode }}';
         window.SUBSCRIPTION_SKU = '{{ _subscription_sku }}';
         // Subscription monthly price (USD) for UI copy only.
@@ -138,35 +140,8 @@
         window.SUBSCRIPTION_MONTHLY_USD = {{ _subscription_monthly_usd if _subscription_monthly_usd is not none else 'null' }};
         console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
 
-        // If SKU wasn't injected (common prod-config miss), try to hydrate it from /health/iap.
-        // This runs once and is safe even if the endpoint is unavailable.
-        (function(){
-            try {
-                const isNative = !!window.Capacitor;
-                const skuMissing = !window.SUBSCRIPTION_SKU || String(window.SUBSCRIPTION_SKU).trim() === '';
-                if (!isNative || !skuMissing) return;
-                if (window.__beesmartSkuHydrateAttempted) return;
-                window.__beesmartSkuHydrateAttempted = true;
-
-                fetch('/health/iap', { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' })
-                    .then(r => r.json().catch(() => null))
-                    .then(data => {
-                        try {
-                            const possible = data && (data.subscription_product_id || (data.config && data.config.subscription_product_id));
-                            if (possible && String(possible).trim()) {
-                                window.SUBSCRIPTION_SKU = String(possible).trim();
-                                console.log('[IAP] Hydrated SUBSCRIPTION_SKU from /health/iap:', window.SUBSCRIPTION_SKU);
-                            } else {
-                                console.warn('[IAP] /health/iap returned no subscription_product_id');
-                            }
-                        } catch (e) {}
-                    })
-                    .catch(() => {});
-            } catch (e) {}
-        })();
+        // IAP SKU hydration disabled on home menu (no IAP diagnostics on this screen).
     </script>
-    <!-- Native IAP bridge (Capacitor): defines window.BeeSmartIAP when running in iOS/Android wrapper -->
-    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ APP_VERSION }}" defer></script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
@@ -190,193 +165,7 @@
             // Detect any legacy calls by monkey patching FormData send (best-effort)
         })();
     </script>
-    <script>
-        // Developer helper: if ?iap_mock=1 is present in the URL, create a simple BeeSmartIAP mock
-        // This allows quick manual testing of purchaseverify without a native wrapper.
-        (function(){
-            try {
-                const params = new URLSearchParams(location.search);
-                if (params.get('iap_mock') !== '1') return;
-                // App Review safety: never allow the mock bridge on non-local hosts.
-                // (Reviewers should not be able to toggle fake purchases by URL param.)
-                const host = String(location.hostname || '').toLowerCase();
-                const isLocalHost = (host === 'localhost' || host === '127.0.0.1' || host === '::1');
-                if (!isLocalHost) {
-                    console.warn('[IAP MOCK] blocked on non-local host:', host);
-                    return;
-                }
-                if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return; // don't override native
-                const guessPlatform = (/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web');
-                window.BeeSmartIAP = {
-                    platform: guessPlatform,
-                    async getOwnedProducts(){
-                        try {
-                            const sku = window.SUBSCRIPTION_SKU || 'beesmart.premium.monthly';
-                            // Return active sub for quick restore tests when ?iap_owned=1
-                            return (new URLSearchParams(location.search).get('iap_owned') === '1') ? [sku] : [];
-                        } catch(e){ return []; }
-                    },
-                    async purchase(productId){
-                        // Simulate a short delay and return a dummy transaction
-                        await new Promise(r => setTimeout(r, 400));
-                        const id = 'mock_' + Math.random().toString(36).slice(2);
-                        const token = 'mocktok_' + Math.random().toString(36).slice(2);
-                        return {
-                            transactionId: id,
-                            purchaseToken: token,
-                            payload: { mock: true, productId, platform: guessPlatform }
-                        };
-                    }
-                };
-                console.log('[IAP MOCK] window.BeeSmartIAP enabled');
-            } catch(e) { /* no-op */ }
-        })();
-    </script>
-    <script>
-        // Restore purchases (App Store / Play Billing)
-        // Visible for logged-in users; requires the native wrapper bridge.
-        (function(){
-            function _sleep(ms){ return new Promise((r)=>setTimeout(r, ms)); }
-            async function _waitForIAPBridge(timeoutMs){
-                const deadline = Date.now() + (timeoutMs || 2000);
-                while (Date.now() < deadline) {
-                    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function') return true;
-                    await _sleep(100);
-                }
-                return (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
-            }
-
-            async function restorePurchases(){
-                try {
-                    await _waitForIAPBridge(2000);
-                    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
-                        // Do not gate Restore behind login or “locked feature” UI.
-                        // If we're not in the native wrapper, fall back to a permissive server-side restore.
-                        // This supports guest restores (Apple review guidance) and avoids login loops.
-                        try {
-                            const res = await fetch('/api/iap/restore', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'same-origin',
-                                body: JSON.stringify({ platform: 'web', product_ids: [] })
-                            });
-                            const data = await res.json().catch(() => ({}));
-                            const ok = !!(data && (data.ok === true || data.success === true));
-                            const msg = ok
-                                ? 'Restore started. If your purchase was found, premium will unlock automatically.'
-                                : ('Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.');
-                            if (typeof showSuccessMessage === 'function') { showSuccessMessage(msg); }
-                            else { alert(msg); }
-                        } catch (e) {
-                            const msg = 'Restore is unavailable in this browser session. Please use the App Store / TestFlight build to restore Apple purchases.';
-                            if (typeof showSuccessMessage === 'function') { showSuccessMessage(msg); }
-                            else { alert(msg); }
-                        }
-                        return;
-                    }
-
-                    // App Review expects tapping "Restore" to initiate the platform restore flow.
-                    // Support BOTH shapes:
-                    //  - window.BeeSmartIAP.restore() (our web bridge convenience)
-                    //  - window.BeeSmartIAP.restorePurchases() (raw Capacitor plugin method)
-                    const restoreFn = (
-                        (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')
-                            ? window.BeeSmartIAP.restore
-                            : ((window.BeeSmartIAP && typeof window.BeeSmartIAP.restorePurchases === 'function')
-                                ? window.BeeSmartIAP.restorePurchases
-                                : null)
-                    );
-                    if (restoreFn) {
-                        try {
-                            await Promise.resolve(restoreFn());
-                        } catch(e) {
-                            // Do not fail hard here; continue to owned-products lookup.
-                            console.warn('[restorePurchases] native restore failed:', e);
-                        }
-                    }
-
-                    const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
-                        ? String(window.BeeSmartIAP.platform).toLowerCase()
-                        : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
-                    const rawOwned = await Promise.resolve(window.BeeSmartIAP.getOwnedProducts());
-                    const extractPid = (x) => {
-                        if (x == null) return null;
-                        if (typeof x === 'string') {
-                            const v = x.trim();
-                            return v || null;
-                        }
-                        if (typeof x === 'object') {
-                            const keys = ['productId', 'product_id', 'productID', 'sku', 'id', 'identifier'];
-                            for (const k of keys) {
-                                if (x && x[k]) {
-                                    try {
-                                        const v = String(x[k]).trim();
-                                        return v || null;
-                                    } catch(e) {}
-                                }
-                            }
-                        }
-                        if (['number','boolean'].includes(typeof x)) {
-                            const v = String(x).trim();
-                            return v || null;
-                        }
-                        return null;
-                    };
-
-                    const productIds = Array.isArray(rawOwned) ? rawOwned.map(extractPid).filter(Boolean) : [];
-                    const deduped = [];
-                    const seen = new Set();
-                    for (const pid of productIds) {
-                        if (!seen.has(pid)) { seen.add(pid); deduped.push(pid); }
-                    }
-
-                    if (!Array.isArray(rawOwned) || deduped.length === 0) {
-                        const m = 'No previous purchases were found to restore on this device.';
-                        if (typeof showSuccessMessage === 'function') { showSuccessMessage(m); }
-                        else { alert(m); }
-                        return;
-                    }
-
-                    const resp = await fetch('/api/iap/restore', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ platform: platform, product_ids: deduped })
-                    });
-                    const data = await resp.json().catch(() => null);
-                    if (resp.ok && data && data.success) {
-                        const count = Array.isArray((data.applied || [])) ? data.applied.length : 0;
-                        const rid = (data && data.restore_id) ? String(data.restore_id) : '';
-                        const m = (count > 0)
-                            ? `Restored ${count} purchase${count === 1 ? '' : 's'} successfully!${rid ? ' (restore ' + rid + ')' : ''}`
-                            : `Restore complete. Your purchases are already active.${rid ? ' (restore ' + rid + ')' : ''}`;
-                        if (typeof showSuccessMessage === 'function') { showSuccessMessage(m); }
-                        else { alert(m); }
-                        try { window.location.reload(); } catch(e) {}
-                    } else {
-                        const err = (data && (data.error || data.message)) ? String(data.error || data.message) : `HTTP ${resp.status}`;
-                        const rid = (data && data.restore_id) ? String(data.restore_id) : '';
-                        const isAuthish = (resp.status === 401 || resp.status === 403 || /login|sign\s*in|auth/i.test(err));
-                        if (isAuthish) {
-                            const msg = 'Restore needs an active signed-in session. If you are already signed in, please fully quit and reopen the app to refresh your session, then try Restore again.';
-                            if (typeof showErrorMessage === 'function') { showErrorMessage(msg); }
-                            else { alert(msg); }
-                        } else {
-                            const m = `Restore failed: ${err}`;
-                            if (typeof showErrorMessage === 'function') { showErrorMessage(m + (rid ? ` (restore ${rid})` : '')); }
-                            else { alert(m + (rid ? ` (restore ${rid})` : '')); }
-                        }
-                    }
-                } catch (e) {
-                    const m = `Restore failed: ${e && e.message ? e.message : e}`;
-                    if (typeof showErrorMessage === 'function') { showErrorMessage(m); }
-                    else { alert(m); }
-                }
-            }
-
-            window.restorePurchases = restorePurchases;
-        })();
-    </script>
+    {# IAP restore UI intentionally removed from the main menu to prevent IAP diagnostics from surfacing on this screen. #}
     <style>
         * {
             margin: 0;
