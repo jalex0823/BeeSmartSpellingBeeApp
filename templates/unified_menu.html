@@ -11681,10 +11681,8 @@
         let mascotShowPlaying = false;
         
         function playMascotShow(evt) {
-            // If user is not authenticated (guest), redirect to registration
+            // Guests are handled elsewhere (guest carousel/caption). Never redirect signed-in users.
             if (typeof window !== 'undefined' && window.IS_AUTH !== true) {
-                console.log(' Guest user clicked avatar - redirecting to registration');
-                window.location.href = '/auth/register';
                 return;
             }
             
@@ -11862,7 +11860,7 @@
             return !!theme && theme !== 'happy';
         }
 
-        // Show a friendly upsell for guests; keep an interactive hint for signed-in users
+        // Keep an interactive hint for signed-in users; guests can see the guest carousel.
         async function updateMascotCaptionVisibility() {
             const caption = document.getElementById('mascotCaption');
             if (!caption) return;
@@ -11875,14 +11873,9 @@
             // Auth state injected earlier by the template (window.IS_AUTH)
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
 
-            // Guests: always show a static caption inviting them to register
+            // Guests: do not show a register CTA caption here (keeps the menu clean and avoids “Join the hive” style upsells).
             if (!isAuthenticated) {
-                caption.style.display = '';
-                caption.innerHTML = ' Register to unlock your very own <strong>Bee Avatar</strong> and full features. <a href="/auth/register" style="text-decoration:underline; color:#FF6B00;">Register</a>';
-                caption.setAttribute('role', 'link');
-                caption.setAttribute('tabindex', '0');
-                caption.onclick = () => { window.location.href = '/auth/register'; };
-                caption.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = '/auth/register'; } };
+                caption.style.display = 'none';
                 return;
             }
 
@@ -11932,13 +11925,11 @@
             }, duration);
         }
 
-        // Caption click behavior: play show for signed-in, go to register for guests
+        // Caption click behavior: play show for signed-in; do nothing for guests.
         function handleMascotCaptionClick(evt) {
             const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
             if (isAuthenticated) {
                 if (typeof playMascotShow === 'function') playMascotShow(evt);
-            } else {
-                window.location.href = '/auth/register';
             }
         }
 
@@ -12433,7 +12424,8 @@
                 try {
                     wrap.style.cursor = 'pointer';
                     wrap.addEventListener('click', function(){
-                        window.location.href = '/auth/register';
+                        const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+                        if (!isAuthenticated) window.location.href = '/auth/register';
                     });
                 } catch(_) {}
 
@@ -12565,7 +12557,8 @@
                 try {
                     wrap.style.cursor = 'pointer';
                     wrap.addEventListener('click', function(){
-                        window.location.href = '/auth/register';
+                        const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
+                        if (!isAuthenticated) window.location.href = '/auth/register';
                     });
                 } catch(_) {}
             };
