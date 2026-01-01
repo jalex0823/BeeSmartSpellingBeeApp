@@ -1045,55 +1045,21 @@ def api_avatars():
     result = []
 
     # Guest rule:
-    # - With NO guest entitlements: only show the Mascot Bee avatar (full color); hide all others
+    # - With NO guest entitlements: return the full catalog, but lock everything
+    #   except the single allowed guest avatar (Mascot Bee; Honey Comb fallback).
+    #   This keeps the picker UI consistent while enforcing restrictions.
     # - With guest entitlements present (anon_restore_id restored/purchased): show full catalog
+    #   with per-item lock states.
+    guest_allowed_id = None
     if role == 'guest' and not anon_owned:
-        guest_list = []
         try:
-            # Prefer Mascot Bee for guests
             mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'mascot-bee'), None)
-            # Fallback to Honey Comb if Mascot is missing
             if mascot is None:
                 mascot = next((e for e in AVATAR_CATALOG if (e.get('id') or '').lower() == 'honey-comb'), None)
-
             if mascot is not None:
-                thumb = _avatar_thumbnail_url_from_glb(mascot.get('obj_file'))
-                obj_file = mascot.get('obj_file') or ''
-                # GLB avatars are in glb_files folder, not individual avatar folders
-                glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-                guest_list.append({
-                    'id': mascot.get('id'),
-                    'name': mascot.get('name'),
-                    'tier': mascot.get('tier'),
-                    'category': mascot.get('category'),
-                    'description': mascot.get('description'),
-                    'price_usd': float(mascot.get('price') or 0.0) if mascot.get('price') is not None else None,
-                    'unlock_requirement': int(mascot.get('unlock_points') or 0) or None,
-                    'is_locked': False,  # Full color for the one visible guest avatar
-                    'urls': {
-                        'thumbnail': thumb,
-                        'glb': glb_url
-                    }
-                })
-        except Exception as _e:
-            print(f"️ Guest avatar list build error: {_e}")
-
-        # Cache and return minimal guest payload (no other avatars exposed)
-        AVATAR_LIST_CACHE[cache_key] = { 'ts': now_ts, 'data': guest_list }
-        return jsonify({
-            "status": "success",
-            "avatars": guest_list,
-            "cached": False,
-            "purchased_avatars": [],
-            "purchased_bundles": [],
-            "user": {
-                "role": role,
-                "is_authenticated": False,
-                "is_guest": True,
-                "is_admin": False,
-                "honey_points": 0,
-            }
-        })
+                guest_allowed_id = (mascot.get('id') or '').strip().lower() or None
+        except Exception:
+            guest_allowed_id = None
 
     # Registered users and admins: evaluate all catalog entries
     # NOTE: For native IAP, the client must purchase using the exact App Store / Play
@@ -1149,8 +1115,18 @@ def api_avatars():
     unlocked_count = 0
     for entry in AVATAR_CATALOG:
         # Compute lock state
-        lc = _is_avatar_unlocked_for_user(entry, role, user)
-        is_unlocked = bool(lc.get('unlocked'))
+        if role == 'guest' and not anon_owned:
+            # Guests without entitlements: only one avatar is selectable.
+            avatar_id_norm = str(entry.get('id') or '').strip().lower()
+            is_unlocked = bool(guest_allowed_id and avatar_id_norm == guest_allowed_id)
+            lc = {
+                'unlocked': is_unlocked,
+                'reason': 'Guest default' if is_unlocked else 'Sign in to unlock',
+                'points_needed': None
+            }
+        else:
+            lc = _is_avatar_unlocked_for_user(entry, role, user)
+            is_unlocked = bool(lc.get('unlocked'))
 
         # Special admin debug log per item
         if role == 'admin' and is_unlocked:
