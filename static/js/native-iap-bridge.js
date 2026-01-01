@@ -80,6 +80,50 @@
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
   }
 
+  async function reconcileFromNative(reason) {
+    // Pull owned products from the native layer (if available) and apply them
+    // server-side so premium flags / avatar unlocks update immediately.
+    // Always emits beesmart:iap-reconciled for the UI to refresh.
+    try {
+      if (!hasBridge()) {
+        return await serverReconcile(reason || 'reconcile_no_bridge');
+      }
+
+      const install_id = await _getInstallIdForServer();
+      let owned = [];
+      try {
+        const r = await window.BeeSmartIAP.getOwnedProducts();
+        if (Array.isArray(r)) owned = r;
+      } catch (e) {
+        owned = [];
+      }
+
+      const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? window.BeeSmartIAP.platform : 'apple';
+      const res = await fetch('/api/iap/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ platform: platform || 'apple', product_ids: owned || [], install_id })
+      });
+      const data = await res.json().catch(function () { return null; });
+
+      try {
+        window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+          detail: { ok: !!(data && data.success), reason: reason || 'native_reconcile', data, owned }
+        }));
+      } catch (e) { /* ignore */ }
+
+      return data;
+    } catch (e) {
+      try {
+        window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+          detail: { ok: false, reason: reason || 'native_reconcile_error', error: String(e) }
+        }));
+      } catch (e2) { /* ignore */ }
+      return null;
+    }
+  }
+
   async function serverReconcile(reason) {
     // Server-first reconcile: when the JS/native bridge is missing or late,
     // ask the backend to return current entitlements (cookie + DB-backed anon_restore_id).
@@ -146,10 +190,19 @@
     window.BeeSmartIAP = {
       platform,
 
+      // Expose a reconciliation helper so templates can force-refresh entitlement
+      // state after purchase/restore without duplicating fetch logic.
+      async reconcile(reason) {
+        return await reconcileFromNative(reason || 'manual');
+      },
+
       async restore() {
         // Initiates the platform restore/sync flow (iOS: AppStore.sync()).
         if (typeof nativePlugin.restorePurchases === 'function') {
-          return await Promise.resolve(nativePlugin.restorePurchases());
+          const out = await Promise.resolve(nativePlugin.restorePurchases());
+          // After restore, reconcile owned products to server.
+          try { await reconcileFromNative('restore'); } catch (e) { /* ignore */ }
+          return out;
         }
         // Back-compat no-op: older native wrappers only supported getOwnedProducts.
         return { unsupported: true };
@@ -183,6 +236,9 @@
         if (out.transactionId && !out.transaction_id) out.transaction_id = out.transactionId;
 
         if (!out.payload) out.payload = out;
+
+        // After purchase, reconcile owned products to server.
+        try { await reconcileFromNative('purchase'); } catch (e) { /* ignore */ }
         return out;
       }
     };

@@ -543,7 +543,7 @@
         })();
     </script>
     <!-- Native IAP bridge (Capacitor): defines window.BeeSmartIAP when running in iOS/Android wrapper -->
-    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20251218" defer></script>
+    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ APP_VERSION }}" defer></script>
     <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
