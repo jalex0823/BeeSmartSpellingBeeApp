@@ -105,10 +105,30 @@
     </script>
 
     <script>
-        // IAP Debug UI (TEMP): enabled by default for TestFlight diagnostics.
-        // REMOVE AFTER CAPTURING DEBUG INFO BEFORE SHIPPING PRODUCTION.
+        // IAP Debug UI:
+        // - OFF by default for production.
+        // - Enable when needed via:
+        //    1) https://.../?iap_debug=1
+        //    2) localStorage.BEESMART_IAP_DEBUG = '1'
+        // - Also enabled in App Review mode (safe, gated server-side).
         (function(){
-            window.BEESMART_IAP_DEBUG = true;
+            let enabled = false;
+            try {
+                const params = new URLSearchParams(window.location.search || '');
+                if (params.get('iap_debug') === '1') enabled = true;
+            } catch (e) {}
+
+            try {
+                const ls = localStorage.getItem('BEESMART_IAP_DEBUG');
+                if (ls === '1' || ls === 'true' || ls === 'yes' || ls === 'on') enabled = true;
+                if (ls === '0' || ls === 'false' || ls === 'no' || ls === 'off') enabled = false;
+            } catch (e) {}
+
+            try {
+                if (window.APP_REVIEW_MODE === true) enabled = true;
+            } catch (e) {}
+
+            window.BEESMART_IAP_DEBUG = !!enabled;
         })();
 
         (function(){
@@ -410,7 +430,7 @@
                     setStatus('Copy blocked by iOS. Text is selected — tap Copy, then paste into Messages.', 'warn');
                 });
                 panel.querySelector('#iapDebugDisable')?.addEventListener('click', () => {
-                    try { localStorage.removeItem('BEESMART_IAP_DEBUG'); } catch (e) {}
+                    try { localStorage.setItem('BEESMART_IAP_DEBUG', '0'); } catch (e) {}
                     window.BEESMART_IAP_DEBUG = false;
                     alert('IAP debug disabled. Restart the app to fully clear it.');
                     panel.style.display = 'none';
