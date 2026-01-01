@@ -7,21 +7,8 @@
 <body>
     <p>Loading BeeSmart Spelling...</p>
     <script>
-        // TESTFLIGHT / DEBUG HELPERS
-        // This runs in the native wrapper before loading the main web UI.
-        // It forces the visible on-screen diagnostics button + overlay ON so
-        // we can confirm: (1) Capacitor present? (2) BeeSmartIAP plugin present?
-        // without needing to type a URL in TestFlight.
-        try {
-            window.localStorage.setItem('beesmart_iap_diag_btn', '1');
-            window.localStorage.setItem('beesmart_iap_diag', '1');
-        } catch (e) {
-            // ignore
-        }
-
-        // IMPORTANT: stay inside the Capacitor webview context.
-        // Loading the full remote site can break native plugin availability.
-        window.location.replace('/');
+        // Production wrapper: load the deployed site
+        window.location.replace('https://beesmartspelling.app');
     </script>
 </body>
 </html>

@@ -42,6 +42,23 @@ In Xcode (targets → App → Signing & Capabilities):
 - Build (Current Project Version): increment (e.g. `1` → `2`)
 - iOS Deployment Target: iOS 15.0 or newer (required for StoreKit 2 restore/purchase bridge)
 
+## 4b) In-App Purchases (direct App Store / StoreKit 2)
+
+This project includes an **app-local Capacitor plugin** (`BeeSmartIAPPlugin.swift`) that uses **StoreKit 2**.
+
+In Xcode (targets → App → Signing & Capabilities):
+
+- Add capability: **In-App Purchase**
+- Confirm **iOS Deployment Target is 15.0+** (StoreKit 2)
+
+### TestFlight sanity check
+
+After installing a TestFlight build:
+
+- Open the app → tap **IAP Debug** tile
+- In the snapshot, you should see `Capacitor.Plugins` containing a plugin key like `BeeSmartIAPPlugin`.
+- If it’s missing, the native plugin isn’t being registered into the Capacitor bridge (IAP won’t work).
+
 ## 5) Permissions (Info.plist)
 
 Already set in `ios/App/App/Info.plist`:

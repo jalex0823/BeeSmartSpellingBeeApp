@@ -9,7 +9,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Register app-local Capacitor plugins.
         if let bridgeVC = window?.rootViewController as? CAPBridgeViewController {
-            bridgeVC.bridge?.registerPluginInstance(BeeSmartIAPPlugin())
+            // Register the class so it appears in Capacitor.Plugins.
+            // (registerPluginInstance can work for instance calls, but doesn't always expose
+            // a stable plugin key to the JS layer.)
+            bridgeVC.bridge?.registerPlugin(BeeSmartIAPPlugin.self)
         }
         return true
     }
