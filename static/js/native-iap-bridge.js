@@ -155,6 +155,11 @@
         return { unsupported: true };
       },
 
+      async restorePurchases() {
+        // Alias for callers that expect the native method name.
+        return await this.restore();
+      },
+
       async getOwnedProducts() {
         const r = await Promise.resolve(nativePlugin.getOwnedProducts());
         if (!r) return [];

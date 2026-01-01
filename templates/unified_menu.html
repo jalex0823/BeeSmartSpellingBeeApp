@@ -199,7 +199,10 @@
                     beeSmartIapProbe,
                     platform: (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? String(window.BeeSmartIAP.platform) : null,
                     hasPurchase: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function'),
-                    hasRestore: !!(window.BeeSmartIAP && (typeof window.BeeSmartIAP.restore === 'function' || typeof window.BeeSmartIAP.restorePurchases === 'function')),
+                    hasRestore: (
+                        !!(window.BeeSmartIAP && (typeof window.BeeSmartIAP.restore === 'function' || typeof window.BeeSmartIAP.restorePurchases === 'function'))
+                        || !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BeeSmartIAP && typeof window.Capacitor.Plugins.BeeSmartIAP.restorePurchases === 'function')
+                    ),
                     hasGetOwnedProducts: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function'),
                     isAuth: !!window.IS_AUTH,
                     isPremiumFlag: !!window.IS_PREMIUM,
