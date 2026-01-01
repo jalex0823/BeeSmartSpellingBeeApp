@@ -1353,8 +1353,19 @@ def get_railway_speed_round_engine_options():
 # In-App Purchases (Apple/Google) – server-side verification stubs and mapping
 # ----------------------------------------------------------------------------
 
-IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1') in ('1', 'true', 'True', 'yes')
-IAP_VERIFICATION_MODE = os.getenv('IAP_VERIFICATION_MODE', 'mock' if IAP_MOCK_MODE else 'live_strict').strip().lower()
+# Mode selection rules:
+# - If IAP_VERIFICATION_MODE is explicitly set to a live mode, it wins and mock is OFF.
+# - Otherwise, IAP_MOCK=1 defaults us into mock mode.
+# - Otherwise default to live_strict.
+_env_mode_raw = (os.getenv('IAP_VERIFICATION_MODE') or '').strip().lower()
+IAP_MOCK_MODE = os.getenv('IAP_MOCK', '1').strip().lower() in ('1', 'true', 'yes', 'on')
+
+if _env_mode_raw in ('mock', 'live_strict', 'live_permissive'):
+    IAP_VERIFICATION_MODE = _env_mode_raw
+    if IAP_VERIFICATION_MODE != 'mock':
+        IAP_MOCK_MODE = False
+else:
+    IAP_VERIFICATION_MODE = 'mock' if IAP_MOCK_MODE else 'live_strict'
 
 # App Store Connect configuration safety switch.
 # When enabled, the server will only accept the monthly subscription SKU and will reject
@@ -1576,7 +1587,7 @@ def _verify_with_store_apple(data: dict) -> tuple[bool, str, dict]:
     Env (planned):
       - APPLE_ISSUER_ID
       - APPLE_KEY_ID
-      - APPLE_PRIVATE_KEY (PEM) or APPLE_PRIVATE_KEY_PATH
+    - APPLE_PRIVATE_KEY (PEM) or APPLE_PRIVATE_KEY_B64 (base64 PEM) or APPLE_PRIVATE_KEY_PATH
       - APPLE_APP_BUNDLE_ID
       - APPLE_ENV ("Sandbox" | "Production")
       - IAP_LIVE_ACCEPT_BASIC (optional: accept basic checks only for dev)
@@ -1596,7 +1607,7 @@ def _verify_with_store_apple(data: dict) -> tuple[bool, str, dict]:
 
     # Check configuration availability
     has_conf = all(os.getenv(k) for k in ('APPLE_ISSUER_ID', 'APPLE_KEY_ID')) and (
-        os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_PATH')
+        os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_B64') or os.getenv('APPLE_PRIVATE_KEY_PATH')
     )
     if not has_conf:
         if os.getenv('IAP_LIVE_ACCEPT_BASIC', '0') in ('1', 'true', 'True', 'yes'):
@@ -5600,8 +5611,8 @@ def health_check_aliases():
 def health_iap():
     """IAP health and configuration status for ops visibility."""
     try:
-        mock = IAP_MOCK_MODE
-        mode = (os.getenv('IAP_VERIFICATION_MODE') or ('mock' if mock else 'live_strict')).strip().lower()
+        mode = (IAP_VERIFICATION_MODE or 'mock').strip().lower()
+        mock = bool(mode == 'mock')
 
         # Apple config
         apple_missing = []
@@ -5613,9 +5624,9 @@ def health_iap():
         for k, v in apple_keys.items():
             if not v:
                 apple_missing.append(k)
-        has_priv = bool(os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_PATH'))
+        has_priv = bool(os.getenv('APPLE_PRIVATE_KEY') or os.getenv('APPLE_PRIVATE_KEY_B64') or os.getenv('APPLE_PRIVATE_KEY_PATH'))
         if not has_priv:
-            apple_missing.append('APPLE_PRIVATE_KEY or APPLE_PRIVATE_KEY_PATH')
+            apple_missing.append('APPLE_PRIVATE_KEY or APPLE_PRIVATE_KEY_B64 or APPLE_PRIVATE_KEY_PATH')
         apple_configured = (len(apple_missing) == 0)
         try:
             import jwt  # noqa: F401
