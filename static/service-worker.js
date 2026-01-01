@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.3-2026-01-01-avatar-picker-sw-bypass';
+const CACHE_VERSION = 'beesmart-v1.4.3-v34-2026-01-01-avatar-picker-sw-bypass';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
