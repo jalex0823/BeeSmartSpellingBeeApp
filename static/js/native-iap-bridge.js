@@ -268,6 +268,26 @@
     return false;
   }
 
+  function isIapDebugEnabled() {
+    // Unified gating with the rest of the app: keep any diagnostic UI hidden
+    // unless explicitly enabled.
+    // NOTE: unified_menu.html sets window.BEESMART_IAP_DEBUG early.
+    try { if (window.BEESMART_IAP_DEBUG === true) return true; } catch (e) { /* ignore */ }
+
+    // Fallbacks in case the template hasn't defined the flag yet.
+    try {
+      const qs = new URLSearchParams(window.location && window.location.search ? window.location.search : '');
+      if (qs.get('iap_debug') === '1') return true;
+    } catch (e) { /* ignore */ }
+
+    try {
+      const v = window.localStorage && window.localStorage.getItem('BEESMART_IAP_DEBUG');
+      if (v === '1' || v === 'true' || v === 'yes' || v === 'on') return true;
+    } catch (e) { /* ignore */ }
+
+    return false;
+  }
+
   function ensureDiagButton() {
     // Visible debug control for TestFlight (and anywhere else): always show a button
     // that reveals a diagnostics panel and attempts to copy the info.
@@ -460,13 +480,16 @@
     // without needing to manually type a URL.
     installDiagGesture();
 
-  // Always show a visible diagnostics button.
-  ensureDiagButton();
+    // Only show the visible diagnostics button when debug/diagnostics are enabled.
+    // (Avoid exposing developer UI in production/review builds.)
+    if (isIapDebugEnabled() || isDiagEnabled()) {
+      ensureDiagButton();
+    }
 
-    // Optional on-device diagnostics.
+    // Optional on-device diagnostics overlay.
     // Enable via `?iap_diag=1` OR localStorage flag `beesmart_iap_diag=1`.
-    // This is intentionally low-risk: it logs to console and shows a small overlay.
-    if (isDiagEnabled()) {
+    // Also requires the unified debug flag so we don't show it by accident.
+    if ((isIapDebugEnabled() || isDiagEnabled()) && isDiagEnabled()) {
       const cap = window.Capacitor;
       const plugin = getNativePlugin();
       const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
