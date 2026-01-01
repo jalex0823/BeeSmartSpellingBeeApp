@@ -78,6 +78,54 @@ Build 22 is a version-alignment and Xcode submission readiness update.
   - `MARKETING_VERSION` updated from `22` → `24.5` *(Xcode “Version” field)*
   - `CURRENT_PROJECT_VERSION` updated from `22` → `25` *(Xcode “Build” field)*
 
+### IAP (TestFlight/App Store Connect) — Capacitor plugin export fix
+
+This was the root cause behind device probes showing `capacitor: true` but `BeeSmartIAP: false` in `window.Capacitor.Plugins`.
+
+- **Files:**
+  - `mobile/ios/App/App/BeeSmartIAPPlugin.swift`
+  - `mobile/ios/App/App/BeeSmartIAPPlugin.m` *(new)*
+  - `mobile/ios/App/App.xcodeproj/project.pbxproj`
+- **Change:** Added an Objective-C Capacitor v5 `CAP_PLUGIN` export bridge so the native StoreKit2 plugin is visible to the web UI as:
+  - `window.Capacitor.Plugins.BeeSmartIAP`
+  - (and then wrapped by the web layer as `window.BeeSmartIAP`)
+- **Why:** In Capacitor v5, the plugin must be exported via the Obj-C bridge macros **and** the bridge file must be compiled into the target.
+- **Key verification in Xcode build logs:** you should see `CompileC ... BeeSmartIAPPlugin.m ... (in target 'App')`.
+- **Breadcrumb (git):**
+  - Commit that added/exported the bridge and ensured it’s in target sources: `43e57a6` — "iOS: export BeeSmartIAP Capacitor plugin"
+
+---
+
+## App Store Connect build — breadcrumbs (what to do next)
+
+These are operational notes for producing a submission-ready build and confirming the IAP bridge is present.
+
+### 1) Create an Archive (Release, device)
+
+- Xcode: **Product → Archive** (scheme: `App`, configuration: Release)
+- Expected: Archive succeeds and includes the `BeeSmartIAP` plugin export.
+
+### 2) Distribute to App Store Connect
+
+- Xcode Organizer: **Distribute App → App Store Connect → Upload**
+- Versioning should show **Version 24.5 / Build 25** for the iOS wrapper.
+
+### 3) After TestFlight install, run the on-device probe
+
+Expected probe result after this fix:
+
+- `window.Capacitor` exists
+- `window.Capacitor.Plugins.BeeSmartIAP` exists
+- Methods exist:
+  - `purchase`
+  - `restorePurchases`
+  - `getOwnedProducts`
+
+If the plugin still doesn’t appear:
+
+- Confirm `BeeSmartIAPPlugin.m` is in **Build Phases → Compile Sources** for the `App` target.
+- Confirm the build being tested is the new upload (not an older TestFlight build cached on device).
+
 ---
 
 ## Docs
