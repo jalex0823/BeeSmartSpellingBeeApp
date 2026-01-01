@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.2-2025-12-18-auth-logout-sw-bypass';
+const CACHE_VERSION = 'beesmart-v1.4.3-2026-01-01-avatar-picker-sw-bypass';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -44,6 +44,18 @@ self.addEventListener('fetch', (event) => {
   // "a redirected response was used for a request whose redirect mode is not 'follow'".
   // Let the browser handle these directly (no caching, no SW interception).
   if (url.pathname.startsWith('/auth/')) {
+    return;
+  }
+
+  // ✅ Avatar picker HTML routes can redirect to /auth/login when a session expires.
+  // If the SW intercepts one of these navigations and the response is a redirect,
+  // some browsers will surface a FetchEvent network error and render a blank page.
+  // Let the browser handle these routes directly.
+  if (
+    url.pathname === '/honeycomb-picker' ||
+    url.pathname === '/honeycomb-picker-old' ||
+    url.pathname === '/avatar-picker'
+  ) {
     return;
   }
 
