@@ -5678,7 +5678,22 @@ def health_check():
     except Exception:
         build_sha = os.getenv("APP_BUILD_SHA") or None
 
-    return jsonify({"status": "ok", "version": APP_VERSION, "build": build_sha}), 200
+    # Prefer a version derived from the git state when available. This prevents a long-running
+    # process from accidentally reporting a stale hardcoded value after multiple deploy cycles.
+    try:
+        import subprocess
+        derived_version = subprocess.check_output(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=1.0,
+        ).decode("utf-8").strip()
+    except Exception:
+        derived_version = None
+
+    version = os.getenv("APP_HEALTH_VERSION") or derived_version or APP_VERSION
+
+    return jsonify({"status": "ok", "version": version, "build": build_sha}), 200
 
 # Extra health endpoints for PaaS defaults (Railway/Render/Heroku variants)
 # Many platforms probe different default paths; keep them lightweight and identical
@@ -5699,7 +5714,20 @@ def health_check_aliases():
     except Exception:
         build_sha = os.getenv("APP_BUILD_SHA") or None
 
-    return jsonify({"status": "ok", "version": APP_VERSION, "build": build_sha}), 200
+    try:
+        import subprocess
+        derived_version = subprocess.check_output(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=1.0,
+        ).decode("utf-8").strip()
+    except Exception:
+        derived_version = None
+
+    version = os.getenv("APP_HEALTH_VERSION") or derived_version or APP_VERSION
+
+    return jsonify({"status": "ok", "version": version, "build": build_sha}), 200
 
 @app.route("/health/iap")
 def health_iap():
