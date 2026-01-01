@@ -10,7 +10,7 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 
 - App version is now **22** across backend, config, UI badge, and validation tests.
 - Production/public URL fallback now defaults to **`https://beesmartspelling.app`** (prevents accidental localhost links).
-- iOS wrapper now shows **Version 24.5 / Build 25** in Xcode (**MARKETING_VERSION**/**CURRENT_PROJECT_VERSION**).
+- iOS wrapper now shows **Version 24.5 / Build 27** in Xcode (**MARKETING_VERSION**/**CURRENT_PROJECT_VERSION**).
 
 > Note: “Build 22” in this document refers to the **web/backend app version alignment**. The iOS wrapper uses a separate Xcode Marketing Version / Build Number for App Store Connect submission.
 
@@ -84,7 +84,7 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 - **File:** `mobile/ios/App/App.xcodeproj/project.pbxproj`
 - **Changes (Debug + Release):**
   - `MARKETING_VERSION` updated from `22` → `24.5` *(Xcode “Version” field)*
-  - `CURRENT_PROJECT_VERSION` updated from `22` → `25` *(Xcode “Build” field)*
+  - `CURRENT_PROJECT_VERSION` updated from `22` → `27` *(Xcode “Build” field)*
 
 ### IAP (TestFlight/App Store Connect) — Capacitor plugin export fix
 
@@ -116,7 +116,7 @@ These are operational notes for producing a submission-ready build and confirmin
 ### 2) Distribute to App Store Connect
 
 - Xcode Organizer: **Distribute App → App Store Connect → Upload**
-- Versioning should show **Version 24.5 / Build 25** for the iOS wrapper.
+- Versioning should show **Version 24.5 / Build 27** for the iOS wrapper.
 
 ### 3) After TestFlight install, run the on-device probe
 
