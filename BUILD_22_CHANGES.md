@@ -16,6 +16,14 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 
 ---
 
+## IAP Restore button fix (Jan 1, 2026)
+
+- **Files:** `templates/unified_menu.html`, `templates/subscription.html`
+- **Problem:** In the native wrapper, the Capacitor plugin exposes `restorePurchases()` (native export), while some web UI logic only attempted `window.BeeSmartIAP.restore()`.
+- **Fix:** Restore now supports **both** `restore()` and `restorePurchases()` so tapping “Restore Purchases” always initiates the native restore flow when available (and then re-syncs owned products via `/api/iap/restore`).
+
+---
+
 ## Backend (Flask)
 
 ### Version bump

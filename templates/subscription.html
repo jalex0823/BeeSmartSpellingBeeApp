@@ -840,9 +840,19 @@
                 }
 
                 // If the native wrapper supports explicit restore/sync, trigger it first.
-                if (typeof window.BeeSmartIAP.restore === 'function') {
-                    try { 
-                        await Promise.resolve(window.BeeSmartIAP.restore()); 
+                // Support BOTH shapes:
+                //  - window.BeeSmartIAP.restore() (our web bridge convenience)
+                //  - window.BeeSmartIAP.restorePurchases() (raw Capacitor plugin method)
+                const restoreFn = (
+                    (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')
+                        ? window.BeeSmartIAP.restore
+                        : ((window.BeeSmartIAP && typeof window.BeeSmartIAP.restorePurchases === 'function')
+                            ? window.BeeSmartIAP.restorePurchases
+                            : null)
+                );
+                if (restoreFn) {
+                    try {
+                        await Promise.resolve(restoreFn());
                     } catch(e) {
                         console.warn('Native restore call failed:', e);
                     }

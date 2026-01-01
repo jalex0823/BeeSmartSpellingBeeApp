@@ -199,7 +199,7 @@
                     beeSmartIapProbe,
                     platform: (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? String(window.BeeSmartIAP.platform) : null,
                     hasPurchase: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function'),
-                    hasRestore: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function'),
+                    hasRestore: !!(window.BeeSmartIAP && (typeof window.BeeSmartIAP.restore === 'function' || typeof window.BeeSmartIAP.restorePurchases === 'function')),
                     hasGetOwnedProducts: !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function'),
                     isAuth: !!window.IS_AUTH,
                     isPremiumFlag: !!window.IS_PREMIUM,
@@ -650,15 +650,24 @@
                     }
 
                     // App Review expects tapping "Restore" to initiate the platform restore flow.
-                    // If the native wrapper supports it, trigger restore/sync first.
-                    if (typeof window.BeeSmartIAP.restore === 'function') {
+                    // Support BOTH shapes:
+                    //  - window.BeeSmartIAP.restore() (our web bridge convenience)
+                    //  - window.BeeSmartIAP.restorePurchases() (raw Capacitor plugin method)
+                    const restoreFn = (
+                        (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')
+                            ? window.BeeSmartIAP.restore
+                            : ((window.BeeSmartIAP && typeof window.BeeSmartIAP.restorePurchases === 'function')
+                                ? window.BeeSmartIAP.restorePurchases
+                                : null)
+                    );
+                    if (restoreFn) {
                         try {
-                            await Promise.resolve(window.BeeSmartIAP.restore());
+                            await Promise.resolve(restoreFn());
                         } catch(e) {
                             // Do not fail hard here; continue to owned-products lookup.
                             console.warn('[restorePurchases] native restore failed:', e);
                         }
-
+                    }
 
                     const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
                         ? String(window.BeeSmartIAP.platform).toLowerCase()
