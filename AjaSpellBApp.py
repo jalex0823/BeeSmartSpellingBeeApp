@@ -10354,14 +10354,59 @@ def api_iap_restore():
             db.session.rollback()
             return jsonify({"success": False, "error": f"db_commit_failed: {e}", "restore_id": restore_id}), 500
 
-    resp = jsonify({
+    # Optional debug payload to help diagnose entitlement mismatches in TestFlight.
+    # Off by default; enable temporarily via env var.
+    iap_debug = os.environ.get('IAP_DEBUG_RESTORE', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+    debug_info = None
+    if iap_debug:
+        try:
+            known = []
+            unknown = []
+            premium_like = []
+            subscription_like = []
+            premium_map_types = set(['premium', 'subscription'])
+            for pid in normalized:
+                m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                if m:
+                    known.append({'product_id': pid, 'type': m.get('type'), 'mapping': {k: m.get(k) for k in ('type', 'subscription', 'bundle_id', 'avatar_id') if k in m}})
+                    t = (m.get('type') or '').lower()
+                    if t in premium_map_types:
+                        premium_like.append(pid)
+                    if m.get('subscription') or t == 'subscription':
+                        subscription_like.append(pid)
+                else:
+                    unknown.append(pid)
+                    p = (pid or '').lower()
+                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family')):
+                        premium_like.append(pid)
+            debug_info = {
+                'platform': platform,
+                'user_id': getattr(user_for_restore, 'id', None) if user_for_restore is not None else None,
+                'is_authenticated': bool(user_for_restore is not None),
+                'install_id_present': bool(install_id),
+                'anon_restore_id_set': bool(anon_restore_id),
+                'count_in': len(product_ids) if isinstance(product_ids, list) else None,
+                'count_normalized': len(normalized),
+                'normalized_known': known,
+                'normalized_unknown': unknown,
+                'premium_like_product_ids': list(dict.fromkeys(premium_like)),
+                'subscription_like_product_ids': list(dict.fromkeys(subscription_like)),
+            }
+        except Exception as _e:
+            debug_info = {'error': f'debug_failed: {_e}'}
+
+    resp_payload = {
         "success": True,
         "restore_id": restore_id,
         "normalized_product_ids": normalized,
         "applied": applied,
         "errors": errors,
         "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else _get_guest_entitlements()
-    })
+    }
+    if debug_info is not None:
+        resp_payload['debug'] = debug_info
+
+    resp = jsonify(resp_payload)
 
     if anon_restore_id:
         try:
