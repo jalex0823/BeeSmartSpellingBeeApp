@@ -87,7 +87,7 @@ print("="*70)
 
 # Build/release version (surfaced via /health)
 # Keep this in sync with the public app version used by validation scripts.
-APP_VERSION = "22"
+APP_VERSION = "30"
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

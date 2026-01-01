@@ -511,6 +511,14 @@
                         const tile = document.getElementById('tileIapDebug');
                         if (!tile) return;
 
+                        // Leave the tile hidden unless debug is explicitly enabled.
+                        try {
+                            if (!window.BEESMART_IAP_DEBUG) {
+                                tile.style.display = 'none';
+                                return;
+                            }
+                        } catch (e) { /* ignore */ }
+
                         // Make visible
                         tile.style.display = '';
 

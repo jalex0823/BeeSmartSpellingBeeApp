@@ -36,8 +36,9 @@ def _slugify_avatar_name(name: str) -> str:
 
     # Drop extension if present
     base = re.sub(r"\.[A-Za-z0-9]+$", "", name)
-    # Remove trailing punctuation like '!'
-    base = base.rstrip('!')
+    # Remove '!' anywhere. Many source render files end with '!' (e.g. AlBee!.png)
+    # and some shells treat '!' specially (history expansion).
+    base = base.replace('!', '')
     # Trim whitespace
     base = base.strip()
     # Convert CamelCase boundaries into dash
@@ -102,12 +103,11 @@ def _slug_variants_for_store(slug: str) -> list[str]:
         return []
     base = slug.strip().lower()
     variants = {base}
-    if '-' in base:
-        variants.add(base.replace('-', '_'))
-        variants.add(base.replace('-', ''))
-    if '_' in base:
-        variants.add(base.replace('_', '-'))
-        variants.add(base.replace('_', ''))
+    # Always include underscore and compact variants; some store ids were created
+    # with underscores even when our canonical ids use kebab-case.
+    variants.add(base.replace('-', '_'))
+    variants.add(base.replace('_', '-'))
+    variants.add(base.replace('-', '').replace('_', ''))
     # Known legacy oddity: 'sea-bee' sometimes documented as 'seabea'
     if base == 'sea-bee':
         variants.add('seabea')
@@ -117,10 +117,13 @@ def _slug_variants_for_store(slug: str) -> list[str]:
 def sku_for_slug(avatar_slug: str) -> str:
     """Build SKU for a given avatar slug"""
     prefix = _sku_prefix()
-    # Ensure slug is safe - use underscores to match App Store Connect format
+    # Ensure slug is safe - treat input as canonical kebab-case id, then convert
+    # to underscores to match App Store Connect format.
     # App Store Connect Product IDs use: beesmart.avatar.brother_bee (not brother-bee)
-    safe = re.sub(r"[^a-z0-9_]", "_", (avatar_slug or '').lower())
-    safe = re.sub(r"_+", "_", safe).strip('_')
+    canonical = (avatar_slug or '').strip().lower().replace('_', '-')
+    canonical = re.sub(r"[^a-z0-9-]+", "-", canonical)
+    canonical = re.sub(r"-+", "-", canonical).strip('-')
+    safe = canonical.replace('-', '_')
     # New App Store Connect IDs append .v2
     if prefix == 'beesmart.avatar':
         return f"{prefix}.{safe}.v2"
@@ -173,8 +176,11 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
     Later sources win for the same slug (identical outcome since SKU is deterministic).
     """
     catalog = build_skus_from_catalog()
+    # Always seed from our known render-name list to guarantee coverage even when
+    # avatar_catalog import isn't available (or is configured off).
+    seeded = build_skus_from_names(_PNG_NAMES)
     extras = build_skus_from_names(extra_names or [])
-    merged: Dict[str, str] = {**catalog, **extras}
+    merged: Dict[str, str] = {**catalog, **seeded, **extras}
 
     # Optional alias mapping from PNG-derived slugs → canonical catalog ids
     # Helps when file naming differs (e.g., SpaceBee → astro-bee)
@@ -196,7 +202,9 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
     entitlements: Dict[str, dict] = {}
 
     prefixes = _sku_prefix_aliases()
-    for slug, _pid in merged.items():
+    # IMPORTANT: Iterate over canonical avatar ids (dict keys), not SKU values.
+    # We generate multiple acceptable product id spellings per avatar below.
+    for slug in merged.keys():
         target_slug = slug
         if catalog_ids and slug not in catalog_ids:
             alias = ALIASES.get(slug)
@@ -220,12 +228,14 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
 
 # Seed with the provided filenames to guarantee coverage today
 _PNG_NAMES = [
-    'AlBee!.png', 'BeeKnight!.png', 'BrotherBee!.png', 'BudaBee!.png', 'BuilderBee!.png',
-    'BuzzBee!.png', 'CoolBee!.png', 'CutieBee!.png', 'DetectiveBee!.png', 'DivaBee!.png',
-    'DocBee!.png', 'ExplorerBee!.png', 'FrankenBee!.png', 'HoneyComb!.png', 'JRockBee!.png',
-    'MascotBee!.png', 'MotorBee!.png', 'OBee!.png', 'ProfessorBee!.png', 'QueenBee!.png',
-    'RoboBee!.png', 'RockerBee!.png', 'SeaBee!.png', 'SelfieBee!.png', 'SingerBee!.png',
-    'SpaceBee!.png', 'SuperBee!.png', 'VampBee!.png', 'WareBee!.png', 'ZomBee!.png'
+    'AlBee.png', 'BeeKnight.png', 'BrotherBee.png', 'BudaBee.png', 'BuilderBee.png',
+    'BuzzBee.png', 'CoolBee.png', 'CutieBee.png', 'DetectiveBee.png', 'DivaBee.png',
+    'DocBee.png', 'ExplorerBee.png', 'FrankenBee.png', 'HoneyComb.png', 'JRockBee.png',
+    # These two are in App Store Connect as legacy non-v2 IDs.
+    'FairyBee.png', 'GamerBee.png',
+    'MascotBee.png', 'MotorBee.png', 'OBee.png', 'ProfessorBee.png', 'QueenBee.png',
+    'RoboBee.png', 'RockerBee.png', 'SeaBee.png', 'SelfieBee.png', 'SingerBee.png',
+    'SpaceBee.png', 'SuperBee.png', 'VampBee.png', 'WareBee.png', 'ZomBee.png'
 ]
 
 # Public: avatars → product IDs

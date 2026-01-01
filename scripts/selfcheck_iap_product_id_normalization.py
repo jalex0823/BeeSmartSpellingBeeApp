@@ -47,6 +47,65 @@ def main() -> int:
 
     print("OK: PRODUCT_MAP contains monthly subscription SKU:", monthly)
     print("OK: Legacy native SKU will be canonicalized:", legacy_native_monthly, "->", monthly)
+
+    # Validate the full list of avatar IAP Product IDs currently in App Store Connect.
+    # (Provided Jan 1, 2026)
+    app_store_connect_avatar_skus = [
+        "beesmart.avatar.al_bee.v2",
+        "beesmart.avatar.buda_bee.v2",
+        "beesmart.avatar.buzz_bee.v2",
+        "beesmart.avatar.cutie_bee.v2",
+        "beesmart.avatar.diva_bee.v2",
+        "beesmart.avatar.doc_bee.v2",
+        "beesmart.avatar.fairy_bee",
+        "beesmart.avatar.franken_bee.v2",
+        "beesmart.avatar.gamer_bee",
+        "beesmart.avatar.honey_comb.v2",
+        "beesmart.avatar.inventor_bee.v2",
+        "beesmart.avatar.j_rock_bee.v2",
+        "beesmart.avatar.knight_bee.v2",
+        "beesmart.avatar.lumberjack_bee.v2",
+        "beesmart.avatar.motor_bee.v2",
+        "beesmart.avatar.nurse_bee.v2",
+        "beesmart.avatar.o_bee.v2",
+        "beesmart.avatar.plumber_bee.v2",
+        "beesmart.avatar.professor_bee.v2",
+        "beesmart.avatar.queen_bee.v2",
+        "beesmart.avatar.robo_bee.v2",
+        "beesmart.avatar.rocker_bee.v2",
+        "beesmart.avatar.sea_bee.v2",
+        "beesmart.avatar.selfie_bee.v2",
+        "beesmart.avatar.singer_bee.v2",
+        "beesmart.avatar.space_bee.v2",
+        "beesmart.avatar.super_bee.v2",
+        "beesmart.avatar.techno_bee.v2",
+        "beesmart.avatar.umpire_bee.v2",
+        "beesmart.avatar.vamp_bee.v2",
+        "beesmart.avatar.ware_bee.v2",
+        "beesmart.avatar.xray_bee.v2",
+        "beesmart.avatar.yeti_bee.v2",
+        "beesmart.avatar.zom_bee.v2",
+    ]
+
+    missing = []
+    wrong_type = []
+    for sku in app_store_connect_avatar_skus:
+        m = product_map.get(sku)
+        if not m:
+            missing.append(sku)
+            continue
+        if (m.get("type") or "").lower() != "avatar":
+            wrong_type.append({"sku": sku, "type": m.get("type")})
+
+    if missing:
+        raise SystemExit(
+            "FAIL: Missing v2 avatar SKUs in PRODUCT_MAP (check avatar_skus.build_product_entitlements): "
+            + ", ".join(missing)
+        )
+    if wrong_type:
+        raise SystemExit(f"FAIL: Some v2 avatar SKUs are not typed as avatar: {wrong_type}")
+
+    print(f"OK: Found {len(app_store_connect_avatar_skus)} App Store Connect avatar SKUs in PRODUCT_MAP")
     return 0
 
 
