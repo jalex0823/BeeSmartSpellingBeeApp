@@ -914,8 +914,16 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
         return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
-    # Premium tier: unlock by purchase (optionally by premium membership if policy allows)
+    # Premium tier policy:
+    # - Admin: always unlocked (handled above)
+    # - Guests: locked unless purchased/restored or premium entitlement
+    # - Registered users (student/teacher/parent): unlocked (no subscription required)
     if tier == 'premium':
+        # Registered users should have access without needing premium.
+        if role in ('student', 'teacher', 'parent'):
+            return {"unlocked": True, "reason": "Registered user access", "points_needed": 0}
+
+        # Non-admin, non-registered fall back to entitlement-based unlock.
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
         if premium_member or anon_premium:
