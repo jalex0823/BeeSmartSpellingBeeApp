@@ -10,7 +10,9 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 
 - App version is now **22** across backend, config, UI badge, and validation tests.
 - Production/public URL fallback now defaults to **`https://beesmartspelling.app`** (prevents accidental localhost links).
-- iOS wrapper now shows **Version 22 / Build 22** in Xcode (**MARKETING_VERSION**/**CURRENT_PROJECT_VERSION**).
+- iOS wrapper now shows **Version 24.5 / Build 25** in Xcode (**MARKETING_VERSION**/**CURRENT_PROJECT_VERSION**).
+
+> Note: “Build 22” in this document refers to the **web/backend app version alignment**. The iOS wrapper uses a separate Xcode Marketing Version / Build Number for App Store Connect submission.
 
 ---
 
@@ -69,12 +71,12 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 
 ## iOS / Xcode Wrapper
 
-### Xcode Version/Build set to 22/22
+### Xcode Version/Build set to 24.5/25
 
 - **File:** `mobile/ios/App/App.xcodeproj/project.pbxproj`
 - **Changes (Debug + Release):**
-  - `MARKETING_VERSION` updated from `20` → `22` *(Xcode “Version” field)*
-  - `CURRENT_PROJECT_VERSION` updated from `21` → `22` *(Xcode “Build” field)*
+  - `MARKETING_VERSION` updated from `22` → `24.5` *(Xcode “Version” field)*
+  - `CURRENT_PROJECT_VERSION` updated from `22` → `25` *(Xcode “Build” field)*
 
 ---
 
@@ -89,4 +91,8 @@ Build 22 is a version-alignment and Xcode submission readiness update.
 
 ## Repo status
 
-- Repo is clean (no uncommitted changes).
+- Repo should have changes in:
+  - `mobile/ios/App/App.xcodeproj/project.pbxproj`
+  - `BUILD_22_CHANGES.md`
+
+If you’ve committed these changes, this section should be updated to reflect a clean state.
