@@ -480,6 +480,15 @@
     // without needing to manually type a URL.
     installDiagGesture();
 
+    // Safety: older builds may have left this flag enabled, causing the black
+    // overlay to reappear unexpectedly. We now gate diagnostics UI behind the
+    // unified debug flag, so clear the legacy flag unless debug is enabled.
+    try {
+      if (!isIapDebugEnabled() && window.localStorage && window.localStorage.getItem('beesmart_iap_diag') === '1') {
+        window.localStorage.setItem('beesmart_iap_diag', '0');
+      }
+    } catch (e) { /* ignore */ }
+
     // Only show the visible diagnostics button when debug/diagnostics are enabled.
     // (Avoid exposing developer UI in production/review builds.)
     if (isIapDebugEnabled() || isDiagEnabled()) {
@@ -487,9 +496,9 @@
     }
 
     // Optional on-device diagnostics overlay.
-    // Enable via `?iap_diag=1` OR localStorage flag `beesmart_iap_diag=1`.
-    // Also requires the unified debug flag so we don't show it by accident.
-    if ((isIapDebugEnabled() || isDiagEnabled()) && isDiagEnabled()) {
+    // Keep this completely hidden unless unified debug is explicitly enabled.
+    // (The visible diagnostics button/panel is enough when debug is on.)
+    if (isIapDebugEnabled() && isDiagEnabled()) {
       const cap = window.Capacitor;
       const plugin = getNativePlugin();
       const availableKeys = (cap && cap.Plugins) ? Object.keys(cap.Plugins) : [];
