@@ -16632,6 +16632,7 @@
             }
 
             function createShieldGlint(container){
+                if (window.__beesmartDisableSweepOverlays) return;
                 const glint=document.createElement('div');
                 glint.classList.add('allow-anim');
                 glint.style.cssText='position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; background:linear-gradient(60deg, transparent 40%, rgba(255,255,255,0.8) 50%, transparent 60%); transform:translateX(-120%); animation: glint-move 550ms ease-out forwards;';
@@ -17179,6 +17180,7 @@
             }
             
             function createSpotlight(container) {
+                if (window.__beesmartDisableSweepOverlays) return;
                 const light = document.createElement('div');
                 light.style.cssText = `
                     position: absolute;

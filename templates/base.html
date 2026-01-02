@@ -43,6 +43,19 @@
                 }
             })();
         </script>
+
+        <script>
+            // Hard-disable sweep/shimmer overlays globally (future-proof for mobile).
+            // This targets the translucent gradient sweeps that can appear over content.
+            (function () {
+                window.__beesmartDisableSweepOverlays = true;
+                try {
+                    document.documentElement.classList.add('beesmart-no-sweep-overlays');
+                } catch (e) {
+                    // no-op
+                }
+            })();
+        </script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">

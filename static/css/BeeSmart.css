@@ -69,6 +69,20 @@ body::after {
   content: none;
   display: none;
 }
+
+/*
+  Sweep/shimmer overlay kill switch:
+  Disable translucent gradient sweeps that can look like a moving overlay on mobile.
+  Keep other background effects (bees/fairies/etc.) intact.
+*/
+html.beesmart-no-sweep-overlays .content-card::before,
+html.beesmart-no-sweep-overlays .content-card::after,
+html.beesmart-no-sweep-overlays .logo-section::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+  background: none !important;
+}
 @keyframes slowPan {
   from { background-position: 0 0; }
   to { background-position: 200px 200px; }
