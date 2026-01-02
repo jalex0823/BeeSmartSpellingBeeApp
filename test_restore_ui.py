@@ -10,7 +10,7 @@ import re
 
 def test_restore_button():
     """Test that restore button has proper ID and hover effects."""
-    with open('templates/subscription.html', 'r') as f:
+    with open('templates/subscription.html', 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     
     # Check for button ID
@@ -27,7 +27,7 @@ def test_restore_button():
 
 def test_restore_function():
     """Test that restore function scrolls button into view."""
-    with open('templates/subscription.html', 'r') as f:
+    with open('templates/subscription.html', 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     
     # Check for scroll functionality
@@ -48,7 +48,7 @@ def test_restore_function():
 
 def test_restore_dialog():
     """Test that restore dialog exists and scrolls into view."""
-    with open('templates/subscription.html', 'r') as f:
+    with open('templates/subscription.html', 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     
     # Check for dialog function
@@ -67,7 +67,7 @@ def test_restore_dialog():
 
 def test_restore_states():
     """Test that restore function handles all states properly."""
-    with open('templates/subscription.html', 'r') as f:
+    with open('templates/subscription.html', 'r', encoding='utf-8', errors='replace') as f:
         content = f.read()
     
     # Check for success state

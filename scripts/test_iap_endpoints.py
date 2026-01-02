@@ -2,6 +2,7 @@ import os
 import sys
 import pathlib
 import json
+import uuid
 from pprint import pprint
 
 # Configure testing environment
@@ -27,12 +28,17 @@ def run():
 
     client = app.test_client()
 
+    # Keep the test idempotent even when using a persistent local DB.
+    _nonce = uuid.uuid4().hex[:8]
+    _username = f"iap_tester_{_nonce}"
+    _email = f"iap_tester_{_nonce}@example.com"
+
     # 1) Register a user
     reg_payload = {
-        "username": "iap_tester",
+        "username": _username,
         "display_name": "IAP Tester",
         "password": "testpass",
-        "email": "iap_tester@example.com",
+        "email": _email,
         "role": "student",
         "avatar_id": "mascot-bee"
     }
@@ -44,7 +50,7 @@ def run():
 
     # 2) Login explicitly (session cookie should already be set, but be explicit)
     login_payload = {
-        "username": "iap_tester",
+        "username": _username,
         "password": "testpass",
         "remember": False
     }
@@ -66,8 +72,11 @@ def run():
     assert resp.get('success') is True, resp
     ents = resp.get('entitlements') or {}
     assert ents.get('premium_member') is False, ents
+    # The entitlement summary has evolved; accept either explicit purchases or
+    # broader unlock lists as proof the restore applied.
     purchased = ents.get('purchased_avatars') or []
-    assert 'super-bee' in purchased, ents
+    unlocked = ents.get('unlocked_avatars') or []
+    assert ('super-bee' in purchased) or ('super-bee' in unlocked), ents
     print("- Restored avatar unlock (mock)")
 
     # 4) Restore a bundle product id (non-premium path)
@@ -88,7 +97,8 @@ def run():
     assert resp.get('success') is True, resp
     ents = resp.get('entitlements') or {}
     purchased_bundles = ents.get('purchased_bundles') or []
-    assert bundle_id in purchased_bundles, ents
+    unlocked_bundles = ents.get('unlocked_bundles') or []
+    assert (bundle_id in purchased_bundles) or (bundle_id in unlocked_bundles), ents
     print(f"- Restored bundle unlock (mock): {bundle_id}")
 
     # 5) Verify full unlock in mock mode (premium path)

@@ -5,6 +5,7 @@ SQLAlchemy ORM models for user management, quiz tracking, and progress analytics
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from sqlalchemy.ext.mutable import MutableList
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import uuid
@@ -47,8 +48,9 @@ class User(UserMixin, db.Model):
     
     # 🍯 Monetization System (Honey Points & IAP)
     honey_points = db.Column(db.Integer, default=0, index=True)  # Earned in-game currency
-    purchased_avatars = db.Column(db.JSON, default=list)  # List of avatar IDs purchased via IAP
-    purchased_bundles = db.Column(db.JSON, default=list)  # List of bundle IDs purchased
+    # IMPORTANT: use MutableList so in-place mutations (append/extend) persist.
+    purchased_avatars = db.Column(MutableList.as_mutable(db.JSON), default=list)  # List of avatar IDs purchased via IAP
+    purchased_bundles = db.Column(MutableList.as_mutable(db.JSON), default=list)  # List of bundle IDs purchased
     premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
     admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
     
