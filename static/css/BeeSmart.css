@@ -66,15 +66,8 @@ body::before {
   z-index: 0;
 }
 body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), transparent 55%),
-              radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.18), transparent 60%);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  animation: shimmer 12s ease-in-out infinite;
-  z-index: 0;
+  content: none;
+  display: none;
 }
 @keyframes slowPan {
   from { background-position: 0 0; }

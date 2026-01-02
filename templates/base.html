@@ -27,6 +27,22 @@
                 });
             }
         </script>
+
+        <script>
+            // Optional accessibility/performance: disable ALL animations via localStorage.
+            (function () {
+                try {
+                    const KEY_ANIM = 'beesmart_disable_animations_v1';
+                    const storedAnim = localStorage.getItem(KEY_ANIM);
+                    if (storedAnim === '1') {
+                        document.documentElement.classList.add('beesmart-no-motion');
+                        window.__beesmartDisableAnimations = true;
+                    }
+                } catch (e) {
+                    // no-op
+                }
+            })();
+        </script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
@@ -150,6 +166,56 @@
             :root {
                 --transition: none;
             }
+        }
+
+        :root.beesmart-no-motion {
+            --transition: none;
+        }
+
+        html.beesmart-no-motion {
+            scroll-behavior: auto;
+        }
+
+        html.beesmart-no-motion *,
+        html.beesmart-no-motion *::before,
+        html.beesmart-no-motion *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* Remove fixed shimmer/texture overlays that can wash out UI and hurt scroll performance */
+        html.beesmart-no-motion body::before,
+        html.beesmart-no-motion body::after {
+            content: none !important;
+            display: none !important;
+            animation: none !important;
+            background: none !important;
+        }
+
+        /* Also hide decorative layers entirely in no-motion mode */
+        html.beesmart-no-motion .fairy-container,
+        html.beesmart-no-motion .bee-swarm {
+            display: none !important;
+        }
+
+        html.beesmart-no-motion button,
+        html.beesmart-no-motion [role="button"],
+        html.beesmart-no-motion .menu-option,
+        html.beesmart-no-motion .action-btn,
+        html.beesmart-no-motion .btn,
+        html.beesmart-no-motion .btn-action,
+        html.beesmart-no-motion .btn-primary,
+        html.beesmart-no-motion .btn-secondary,
+        html.beesmart-no-motion .btn-danger,
+        html.beesmart-no-motion .btn-guest,
+        html.beesmart-no-motion .btn-back,
+        html.beesmart-no-motion .btn-back-to-menu,
+        html.beesmart-no-motion .back-link,
+        html.beesmart-no-motion .back-btn,
+        html.beesmart-no-motion .nav-btn,
+        html.beesmart-no-motion .view-btn,
+        html.beesmart-no-motion .register-button {
+            transform: none !important;
         }
         
         body {
@@ -351,7 +417,10 @@
             constructor() {
                 this.container = document.getElementById('fairyContainer');
                 this.fairies = [];
-                this.isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                this.isReducedMotion =
+                    (window.__beesmartDisableAnimations === true) ||
+                    document.documentElement.classList.contains('beesmart-no-motion') ||
+                    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 
                 if (!this.isReducedMotion) {
                     this.startAnimation();
@@ -403,7 +472,10 @@
                     { x: 0.56, y: 0.68 },
                     { x: 0.74, y: 0.57 }
                 ];
-                this.isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                this.isReducedMotion =
+                    (window.__beesmartDisableAnimations === true) ||
+                    document.documentElement.classList.contains('beesmart-no-motion') ||
+                    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
                 if (!this.isReducedMotion && this.container) {
                     this.populate();

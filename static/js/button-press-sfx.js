@@ -87,7 +87,7 @@
     try {
       if (!target || !target.closest) return null;
       const el = target.closest(
-        'button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"], .btn, .btn-action, .action-btn, .quiz-button, .menu-option'
+        'button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"], .btn, .btn-action, .action-btn, .quiz-button, .menu-option, .btn-primary, .btn-secondary, .btn-danger, .btn-guest, .btn-back, .btn-back-to-menu, .back-link, .back-btn, .nav-btn, .view-btn, .register-button'
       );
       if (!el) return null;
       if (el.getAttribute && el.getAttribute('data-no-button-sfx') === '1') return null;

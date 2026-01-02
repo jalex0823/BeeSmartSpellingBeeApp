@@ -4951,6 +4951,10 @@ class QuizManager {
         this.totalWords = 0;
         this.quizStarted = false;
 
+        // Intro sequencing/guard (prevents double-start and mid-speech cutoffs)
+        this.introInProgress = false;
+        this._introAdvanceScheduled = false;
+
         // 🔁 Anti-echo protection: block duplicate auto-speak for the same word.
         // Safari/iOS + resume flows can trigger overlapping speech calls.
         this._lastAnnouncedWord = null;
@@ -5620,6 +5624,12 @@ class QuizManager {
     }
     
     showIntroAnnouncer() {
+        // Guard: don't start the intro twice (a first user gesture can re-trigger it)
+        if (this.quizStarted || this.introInProgress) {
+            return;
+        }
+        this.introInProgress = true;
+
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         feedbackArea.className = 'feedback-area feedback-success';
@@ -5916,6 +5926,7 @@ class QuizManager {
             }
             
             // Desktop voice intro
+            let introSpeechPromise = Promise.resolve();
             if ('speechSynthesis' in window) {
                 const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
                 const introMessage = `${greeting} I'm Buzzy, your announcer bee! Welcome to BeeSmart Spelling! ` +
@@ -5940,24 +5951,43 @@ class QuizManager {
                 };
                 
                 if (speechSynthesis.getVoices().length > 0) {
-                    speakIntro();
+                    introSpeechPromise = Promise.resolve().then(() => speakIntro());
                 } else {
-                    speechSynthesis.addEventListener('voiceschanged', speakIntro, { once: true });
+                    introSpeechPromise = new Promise((resolve) => {
+                        speechSynthesis.addEventListener('voiceschanged', () => {
+                            try { speakIntro(); } finally { resolve(); }
+                        }, { once: true });
+                    });
                 }
             }
-            
-            // Auto-advance after 7 seconds on desktop
-            setTimeout(async () => {
-                feedbackArea.style.display = 'none';
-                this.quizStarted = true;
-                console.log('🎤 Intro complete - loading first word...');
-                try {
-                    await this.loadNextWordWithIntro();
-                } catch (err) {
-                    console.error('Failed to load first word:', err);
-                    BeeSmart.showError('Failed to start quiz. Please refresh.');
-                }
-            }, 7000);
+
+            // Desktop: advance after the intro finishes (prevents it being cut off).
+            // Keep a safety fallback in case a browser never fires onend.
+            if (!this._introAdvanceScheduled) {
+                this._introAdvanceScheduled = true;
+                (async () => {
+                    try {
+                        const FALLBACK_MS = 14000;
+                        await Promise.race([
+                            introSpeechPromise,
+                            new Promise((resolve) => setTimeout(resolve, FALLBACK_MS))
+                        ]);
+                    } catch (_e) {
+                        // Ignore; we still advance.
+                    }
+
+                    feedbackArea.style.display = 'none';
+                    this.quizStarted = true;
+                    this.introInProgress = false;
+                    console.log('🎤 Intro complete - loading first word...');
+                    try {
+                        await this.loadNextWordWithIntro();
+                    } catch (err) {
+                        console.error('Failed to load first word:', err);
+                        BeeSmart.showError('Failed to start quiz. Please refresh.');
+                    }
+                })();
+            }
         }
     }
 
