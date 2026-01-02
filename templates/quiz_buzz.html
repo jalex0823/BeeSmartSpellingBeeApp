@@ -3531,6 +3531,18 @@ class BeeSoundboard {
             return;
         }
 
+        // Prefer global randomized button press SFX if available.
+        // This keeps button sounds consistent across the whole app.
+        try {
+            if ((type === 'button-click' || type === 'button-primary') && window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.playRandom === 'function') {
+                // Avoid double-play if the global handler already fired on pointerdown.
+                if (!window.BeeSmartButtonSfx.wasJustPlayed || !window.BeeSmartButtonSfx.wasJustPlayed(220)) {
+                    window.BeeSmartButtonSfx.playRandom({ volume: 0.32 });
+                }
+                return;
+            }
+        } catch (e) { /* ignore */ }
+
         switch (type) {
             case 'correct':
                 this.sequence([

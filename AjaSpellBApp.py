@@ -20,6 +20,7 @@ import threading
 import uuid
 import logging
 from tempfile import NamedTemporaryFile
+from pathlib import Path
 from datetime import datetime, timedelta, timezone, date
 import socket
 import secrets
@@ -561,6 +562,32 @@ def api_wordbank_live_summary():
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/button-press-sfx', methods=['GET'])
+def api_button_press_sfx():
+    """Return available button-press SFX URLs.
+
+    The UI will randomly choose from these.
+    Source folder (if present on the server): static/sounds/ButtonPresses/*.mp3
+    Returns an empty list if the folder does not exist or has no mp3 files.
+    """
+    try:
+        static_root = app.static_folder or os.path.join(BASE_DIR, 'static')
+        folder = Path(static_root) / 'sounds' / 'ButtonPresses'
+        if not folder.exists():
+            return jsonify([])
+
+        names = sorted([p.name for p in folder.glob('*.mp3') if p.is_file()])
+        urls = [url_for('static', filename=f'sounds/ButtonPresses/{name}') for name in names]
+        resp = jsonify(urls)
+        # Prevent stale caching when users add/remove sound files during dev.
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
+    except Exception:
+        return jsonify([])
 
 #  Badge metadata for display
 BADGE_METADATA = {

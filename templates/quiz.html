@@ -4243,6 +4243,18 @@ class BeeSoundboard {
             return;
         }
 
+        // Prefer global randomized button press SFX if available.
+        // This keeps button sounds consistent across the whole app.
+        try {
+            if ((type === 'button-click' || type === 'button-primary') && window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.playRandom === 'function') {
+                // Avoid double-play if the global handler already fired on pointerdown.
+                if (!window.BeeSmartButtonSfx.wasJustPlayed || !window.BeeSmartButtonSfx.wasJustPlayed(220)) {
+                    window.BeeSmartButtonSfx.playRandom({ volume: 0.32 });
+                }
+                return;
+            }
+        } catch (e) { /* ignore */ }
+
         switch (type) {
             case 'correct':
                 this.sequence([
@@ -9273,10 +9285,7 @@ function toggleStatsBar() {
             toggleBtn.title = 'Hide stats bar';
         }
         
-        // Play button click sound if available
-        if (typeof playThemedSound === 'function') {
-            playThemedSound('button-click');
-        }
+        // Button SFX is handled globally in base.html.
     }
 }
 
@@ -10652,8 +10661,15 @@ function playThemedSound(soundType) {
         if (now - last < 250) return;
         window.__beesmartSoundLastPlayAt.set(soundType, now);
 
-        const filename = SOUND_FILE_MAP[soundType] || `${soundType}.mp3`;
-        const url = filename.startsWith('/') ? filename : `/static/sounds/${filename}`;
+        // Button click SFX should randomize from the ButtonPresses folder.
+        let url = null;
+        if (soundType === 'button-click' && window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.getRandomUrl === 'function') {
+            url = window.BeeSmartButtonSfx.getRandomUrl();
+        }
+        if (!url) {
+            const filename = SOUND_FILE_MAP[soundType] || `${soundType}.mp3`;
+            url = filename.startsWith('/') ? filename : `/static/sounds/${filename}`;
+        }
 
         const audio = new Audio(url);
         audio.volume = 0.3;

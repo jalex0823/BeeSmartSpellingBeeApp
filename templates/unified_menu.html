@@ -217,7 +217,7 @@
                                 opts = opts || {};
                                 const title = opts.title || '✨ Purchases restored!';
                                 const message = opts.message || 'All your purchases should now be in place. If anything still looks locked, give it a moment while the bees sync everything up.';
-                                const autoReloadMs = (typeof opts.autoReloadMs === 'number') ? opts.autoReloadMs : 1600;
+                                const autoReloadMs = (typeof opts.autoReloadMs === 'number') ? opts.autoReloadMs : 3200;
                                 const allowReload = (opts.allowReload !== false);
 
                                 // Glitter burst centered on screen (stays in place)
@@ -486,7 +486,7 @@
                                 'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
                             );
                             runRestoreGlitterOnly();
-                            setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 1400);
+                            setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 3200);
                         } else {
                             // No purchases found — keep messaging honest.
                             await showRestoreGreenModal(
@@ -522,7 +522,7 @@
                             message: _looksNative()
                                 ? 'We’re getting things ready. If purchases still look locked, wait a moment and try Restore Purchases again.'
                                 : 'Restore can only pull App Store purchases inside the iOS/Android app wrapper. If you installed from the App Store, open the app there and tap Restore Purchases.',
-                            autoReloadMs: 1200,
+                            autoReloadMs: 3200,
                             allowReload: true
                         });
                     } else {
@@ -18612,6 +18612,12 @@
     // =============================================================
     function playMenuSound(soundType) {
         try {
+            // Button click SFX now randomizes from /static/sounds/ButtonPresses
+            if (soundType === 'button-click' && window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.playRandom === 'function') {
+                window.BeeSmartButtonSfx.playRandom({ volume: 0.32 });
+                return;
+            }
+
             const audio = new Audio(`/static/sounds/${soundType}.mp3`);
             audio.volume = 0.3;
             audio.play().catch(() => {

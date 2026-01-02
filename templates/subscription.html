@@ -964,7 +964,8 @@
                     // Celebration AFTER validation modal.
                     try { runRestoreCelebrationBurst({ durationMs: 1200 }); } catch (e) {}
                     // Gentle refresh so entitlement-driven UI updates.
-                    setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 1400);
+                    // (Give kids a little more time after the restore confirmation.)
+                    setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 3200);
                 } else if (ok) {
                     showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same Apple ID, then try again.', false);
                 } else {
