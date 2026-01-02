@@ -136,6 +136,7 @@ class SmartyBee3D {
         
         // Only load model if we have a path
         if (this.options.modelPath) {
+            // Kick off GLB loading (async) but don't block UI thread.
             this.loadModel();
         } else {
             console.error('❌ No modelPath available after fetch');
@@ -144,6 +145,45 @@ class SmartyBee3D {
         
         this.setupControls();
         this.animate();
+    }
+
+    _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async _waitForGLTFLoader(maxWaitMs = 5000) {
+        // iOS Safari can evaluate scripts out-of-order vs module globals.
+        // Wait for GLTFLoader to exist before attempting a GLB load.
+        const start = Date.now();
+        while ((!window.THREE || !window.THREE.GLTFLoader) && (Date.now() - start) < maxWaitMs) {
+            await this._sleep(50);
+        }
+        if (!window.THREE || !window.THREE.GLTFLoader) {
+            throw new Error('GLTFLoader not available');
+        }
+    }
+
+    _normalizeGlbPath(modelPath) {
+        if (!modelPath) return null;
+        // Some older code used /static/models/. All avatars now live under glb_files.
+        try {
+            return String(modelPath).replace('/static/models/', '/static/assets/avatars/glb_files/');
+        } catch (_e) {
+            return modelPath;
+        }
+    }
+
+    _withCacheBuster(urlStr) {
+        // Always create a valid URL and use searchParams to avoid invalid "??" URLs.
+        try {
+            const url = new URL(urlStr, window.location.origin);
+            url.searchParams.set('v', String(Date.now()));
+            return url.toString();
+        } catch (_e) {
+            // Fallback: best-effort string concat
+            const sep = (String(urlStr).includes('?')) ? '&' : '?';
+            return `${urlStr}${sep}v=${Date.now()}`;
+        }
     }
     
     async fetchUserAvatar() {
@@ -216,7 +256,8 @@ class SmartyBee3D {
         }
 
         this.renderer.setSize(this.options.width, this.options.height);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        // iOS Safari is prone to WebGL memory pressure; cap DPR for stability.
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
         // iOS Safari alignment fix:
         // Ensure the WebGL canvas behaves like a centered block within the container.
@@ -319,68 +360,152 @@ class SmartyBee3D {
         this.scene.add(fillLight);
     }
 
-    loadModel() {
-        // GLB-only loader - all avatars are GLB format
-        const loader = new THREE.GLTFLoader();
-        
-        // Use modelPath directly (already set from server or options)
+    async loadModel() {
+        // GLB-only loader - all avatars are GLB format.
+        // IMPORTANT: No substitute model fallbacks (per product requirement).
         if (!this.options.modelPath) {
             console.error('❌ No modelPath specified');
-            this.addFallbackBee();
+            this.addFallbackBee(new Error('No modelPath specified'));
             return;
         }
-        
-        const correctedPath = this.options.modelPath.replace('/static/models/', '/static/assets/avatars/glb_files/');
-        const glbPath = correctedPath;
-        
-        // Cache-busting: add timestamp to force reload of updated files
-        const cacheBuster = Date.now();
-        const glbPathWithCache = `${glbPath}?v=${cacheBuster}`;
 
+        const basePath = this._normalizeGlbPath(this.options.modelPath);
         const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
-        console.log(`🐝 Loading GLB model: ${avatarName}`, glbPathWithCache);
 
-        // Load GLB model with materials and textures embedded
+        // Retry can help when iOS/PWA has just updated SW caches.
+        this._glbLoadAttempts = (this._glbLoadAttempts || 0) + 1;
+        const attempt = this._glbLoadAttempts;
+
+        try {
+            await this._waitForGLTFLoader(5000);
+        } catch (e) {
+            console.error('❌ GLTFLoader not ready (Safari race?)', e);
+            if (attempt < 3) {
+                await this._sleep(150);
+                return this.loadModel();
+            }
+            this.addFallbackBee(e);
+            return;
+        }
+
+        const glbUrl = this._withCacheBuster(basePath);
+        console.log(`🐝 Loading GLB model: ${avatarName} (attempt ${attempt})`, glbUrl);
+
+        let loader;
+        try {
+            loader = new THREE.GLTFLoader();
+            // If avatars are hosted on a CDN or different origin, Safari can be stricter.
+            if (loader && typeof loader.setCrossOrigin === 'function') {
+                loader.setCrossOrigin('anonymous');
+            }
+            // If the GLB references external resources, set a sane base path.
+            try {
+                const baseUrl = new URL(basePath, window.location.origin);
+                baseUrl.search = '';
+                const baseDir = baseUrl.toString().split('/').slice(0, -1).join('/') + '/';
+                if (typeof loader.setResourcePath === 'function') {
+                    loader.setResourcePath(baseDir);
+                }
+            } catch (_e) {
+                // ignore
+            }
+        } catch (e) {
+            console.error('❌ Failed to construct GLTFLoader', e);
+            this.addFallbackBee(e);
+            return;
+        }
+
         loader.load(
-            glbPathWithCache,
+            glbUrl,
             (gltf) => {
-                const object = gltf.scene;
-                
-                // Center and scale the model
-                const box = new THREE.Box3().setFromObject(object);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = 3 / maxDim;
-                object.scale.set(scale, scale, scale);
-                
-                object.position.sub(center.multiplyScalar(scale));
+                try {
+                    const object = gltf && gltf.scene;
+                    if (!object) {
+                        throw new Error('GLB contained no scene');
+                    }
 
-                this.bee = object;
-                
-                // Save default bee rotation for resetView()
-                this.defaultBeeRotation = this.bee.rotation.clone();
-                
-                this.scene.add(object);
-                
-                const avatarName = this.avatarData ? (this.avatarData.name || this.avatarData.avatar_id) : 'Avatar';
-                console.log(`✅ ${avatarName} GLB model loaded successfully!`);
-                
-                // Call onReady callback if provided
-                if (this.options.onReady && typeof this.options.onReady === 'function') {
-                    console.log('🚀 Calling onReady callback');
-                    this.options.onReady();
+                    // Center and scale the model
+                    const box = new THREE.Box3().setFromObject(object);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+
+                    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+                    const scale = 3 / maxDim;
+                    object.scale.set(scale, scale, scale);
+                    object.position.sub(center.multiplyScalar(scale));
+
+                    this.bee = object;
+
+                    // Save default bee rotation for resetView()
+                    this.defaultBeeRotation = this.bee.rotation.clone();
+
+                    this.scene.add(object);
+
+                    console.log(`✅ ${avatarName} GLB model loaded successfully!`);
+
+                    // Call onReady callback if provided
+                    if (this.options.onReady && typeof this.options.onReady === 'function') {
+                        try {
+                            console.log('🚀 Calling onReady callback');
+                            this.options.onReady();
+                        } catch (e) {
+                            console.warn('⚠️ onReady callback threw', e);
+                        }
+                    }
+                } catch (e) {
+                    console.error('❌ Error processing GLB scene:', e);
+                    this.addFallbackBee(e);
                 }
             },
             (xhr) => {
-                const percentComplete = (xhr.loaded / xhr.total * 100).toFixed(0);
-                console.log(`Loading GLB model: ${percentComplete}%`);
+                try {
+                    if (!xhr || !xhr.total) return;
+                    const pct = Math.round((xhr.loaded / xhr.total) * 100);
+                    console.log(`Loading GLB model: ${pct}%`);
+                } catch (_e) {
+                    // ignore
+                }
             },
-            (error) => {
+            async (error) => {
                 console.error('❌ Error loading GLB model:', error);
-                console.error('GLB path attempted:', glbPath);
-                this.addFallbackBee();
+                console.error('GLB path attempted:', basePath);
+                console.error('GLB URL attempted:', glbUrl);
+
+                // Extra diagnostics: attempt to fetch to surface status/content-type in Safari.
+                try {
+                    let resp = null;
+                    try {
+                        resp = await fetch(glbUrl, { method: 'HEAD', credentials: 'same-origin', cache: 'no-store' });
+                    } catch (_e) {
+                        resp = null;
+                    }
+
+                    // Some setups disallow HEAD. Fall back to a tiny range request.
+                    if (!resp || (resp.status === 405)) {
+                        resp = await fetch(glbUrl, {
+                            method: 'GET',
+                            headers: { 'Range': 'bytes=0-0' },
+                            credentials: 'same-origin',
+                            cache: 'no-store'
+                        });
+                    }
+
+                    console.error('GLB fetch diagnostics:', {
+                        ok: !!resp && resp.ok,
+                        status: resp ? resp.status : null,
+                        contentType: (resp && resp.headers && resp.headers.get) ? resp.headers.get('content-type') : null,
+                        contentLength: (resp && resp.headers && resp.headers.get) ? resp.headers.get('content-length') : null,
+                        acceptRanges: (resp && resp.headers && resp.headers.get) ? resp.headers.get('accept-ranges') : null
+                    });
+                } catch (e) {
+                    console.error('GLB fetch diagnostics failed:', e);
+                }
+
+                if (attempt < 2) {
+                    await this._sleep(250);
+                    return this.loadModel();
+                }
+                this.addFallbackBee(error);
             }
         );
     }
@@ -404,19 +529,45 @@ class SmartyBee3D {
         });
     }
 
-    addFallbackBee() {
-        // Lightweight 3D fallback so UI still looks alive if GLB loading fails
+    addFallbackBee(error) {
+        // NO 3D/2D substitute avatar model. Show a clear error state instead.
+        // (We keep the method name for compatibility with existing call sites.)
         try {
-            const geom = new THREE.SphereGeometry(1, 20, 20);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xffdd00, metalness: 0.2, roughness: 0.6 });
-            const bee = new THREE.Mesh(geom, mat);
-            bee.position.set(0, 1, 0);
-            this.scene.add(bee);
-            this.bee = bee;
-            console.warn('Fallback 3D bee added (GLB not available).');
-        } catch (e) {
-            console.error('Failed to add fallback 3D bee, showing image instead.', e);
-            this.showFallbackImage();
+            console.error('❌ GLB avatar failed to load (no fallback model).', error || 'Unknown error');
+        } catch (_e) {
+            // ignore
+        }
+
+        try {
+            // Avoid blowing away the renderer if it already exists; but if there's no canvas yet,
+            // show an inline error panel.
+            const hasCanvas = !!(this.container && this.container.querySelector && this.container.querySelector('canvas'));
+            if (this.container && !hasCanvas) {
+                this.container.innerHTML = `
+                    <div style="
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(255, 224, 130, 0.25);
+                        border-radius: 1rem;
+                        border: 2px solid rgba(255, 179, 0, 0.6);
+                        padding: 0.75rem;
+                        text-align: center;
+                    ">
+                        <div style="font-size: 0.95rem; color: #5D4037; font-weight: 700;">
+                            3D avatar failed to load
+                        </div>
+                        <div style="font-size: 0.75rem; color: #8D6E63; margin-top: 0.25rem;">
+                            Please refresh and check console logs
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (_e) {
+            // ignore
         }
     }
 
