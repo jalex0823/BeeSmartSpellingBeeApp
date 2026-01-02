@@ -291,12 +291,192 @@
                 btn.disabled = !!disabled;
             };
 
+            async function showRestoreGreenModal(title, message) {
+                // Simple green validation modal shown BEFORE the celebration animation.
+                return new Promise((resolve) => {
+                    const overlay = document.createElement('div');
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 100002;
+                        animation: fadeIn 0.2s ease-out;
+                        padding: 14px;
+                    `;
+
+                    const dialog = document.createElement('div');
+                    dialog.style.cssText = `
+                        background: white;
+                        border-radius: 16px;
+                        padding: 22px;
+                        max-width: 92%;
+                        width: 360px;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+                        text-align: center;
+                        animation: slideUp 0.3s ease-out;
+                    `;
+
+                    dialog.innerHTML = `
+                        <div style="font-size: 3rem; margin-bottom: 12px;">✅</div>
+                        <h3 style="margin: 0 0 12px; font-size: 1.3rem; color: #4CAF50;">${title || 'Restore Purchases'}</h3>
+                        <p style="margin: 0 0 20px; color: #666; font-size: 0.95rem; line-height: 1.5;">${message || ''}</p>
+                        <button id="restoreGreenOkay" style="
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            padding: 12px 32px;
+                            font-size: 1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            width: 100%;
+                            transition: background 0.2s;
+                        ">Okay</button>
+                    `;
+
+                    overlay.appendChild(dialog);
+                    document.body.appendChild(overlay);
+
+                    const okBtn = dialog.querySelector('#restoreGreenOkay');
+                    okBtn.addEventListener('mouseenter', () => okBtn.style.background = '#45A049');
+                    okBtn.addEventListener('mouseleave', () => okBtn.style.background = '#4CAF50');
+                    okBtn.addEventListener('click', () => {
+                        try { overlay.remove(); } catch (e) {}
+                        resolve(true);
+                    });
+
+                    // Add animations if not already present
+                    if (!document.getElementById('restoreGreenDialogStyles')) {
+                        const style = document.createElement('style');
+                        style.id = 'restoreGreenDialogStyles';
+                        style.textContent = `
+                            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                            @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                });
+            }
+
+            function runRestoreGlitterOnly() {
+                // Use the existing glitter CSS classes from __beeRestoreCelebrate but skip the modal.
+                try {
+                    const layer = document.createElement('div');
+                    layer.className = 'restore-glitter-layer';
+                    document.body.appendChild(layer);
+
+                    const rand = (min, max) => Math.random() * (max - min) + min;
+                    const cx = window.innerWidth * 0.5;
+                    const cy = window.innerHeight * 0.42;
+                    const colors = ['#4CAF50','#66BB6A','#FFD54F','#FFB74D','#4FC3F7','#FF80AB','#B39DDB'];
+                    const count = 46;
+                    for (let i = 0; i < count; i++) {
+                        const p = document.createElement('div');
+                        p.className = 'restore-glitter';
+                        p.style.left = `${cx + rand(-140, 140)}px`;
+                        p.style.top = `${cy + rand(-90, 120)}px`;
+                        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        p.style.width = `${rand(5, 11)}px`;
+                        p.style.height = `${rand(5, 11)}px`;
+                        p.style.animationDelay = `${rand(0, 180)}ms`;
+                        layer.appendChild(p);
+                    }
+                    setTimeout(() => { try { layer.remove(); } catch(e){} }, 1400);
+                } catch (e) { /* ignore */ }
+            }
+
+            const _sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            const _hasIap = () => (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
+            const _looksNative = () => {
+                try {
+                    // Capacitor v5 provides this helper.
+                    if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+                        return !!window.Capacitor.isNativePlatform();
+                    }
+                } catch (e) { /* ignore */ }
+                // Fallback heuristic: presence of Capacitor object in general.
+                return !!window.Capacitor;
+            };
+
+            async function _waitForIapBridge(timeoutMs) {
+                const deadline = Date.now() + (timeoutMs || 2500);
+                while (Date.now() < deadline) {
+                    if (_hasIap()) return true;
+                    await _sleep(120);
+                }
+                return _hasIap();
+            }
+
+            const _extractEnt = (payload) => {
+                if (!payload) return {};
+                // native-iap-bridge.js restore() returns {restore, reconcile, unsupported}
+                if (payload.reconcile) return payload.reconcile.entitlements || payload.reconcile;
+                return payload.entitlements || payload;
+            };
+
+            const _getOwnedList = (ent) => {
+                if (!ent || typeof ent !== 'object') return [];
+                // Guest flow
+                if (Array.isArray(ent.anon_owned_products)) return ent.anon_owned_products;
+                // Auth flow (defensive)
+                if (Array.isArray(ent.owned_products)) return ent.owned_products;
+                if (Array.isArray(ent.products)) return ent.products;
+                return [];
+            };
+
+            const _isPremiumish = (ent) => {
+                try {
+                    if (ent && ent.premium_member === true) return true;
+                } catch (e) { /* ignore */ }
+                const owned = _getOwnedList(ent);
+                return Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+            };
+
             try {
                 setBtn('Restoring…', true);
 
+                // In native wrappers, the bridge can register a moment after page load.
+                // Wait a bit longer here so we don't fall back to a web-only reconcile,
+                // because that won't trigger the iOS “Sign in” sheet.
+                if (_looksNative()) {
+                    await _waitForIapBridge(4500);
+                }
+
                 // Prefer native bridge reconcile (runs restore + server reconcile)
                 if (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function') {
-                    await window.BeeSmartIAP.restore();
+                    const result = await window.BeeSmartIAP.restore();
+                    const ent = _extractEnt(result);
+                    const premium = _isPremiumish(ent);
+                    const owned = _getOwnedList(ent);
+                    const ownedCount = Array.isArray(owned) ? owned.length : 0;
+
+                    // Green validation modal first, then celebration animation.
+                    try {
+                        setBtn('Restore Purchases', false);
+                        if (premium || ownedCount > 0) {
+                            await showRestoreGreenModal(
+                                'Restore Purchases',
+                                'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
+                            );
+                            runRestoreGlitterOnly();
+                            setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 1400);
+                        } else {
+                            // No purchases found — keep messaging honest.
+                            await showRestoreGreenModal(
+                                'No Purchases Found',
+                                'We couldn’t find any purchases to restore for the current Apple ID on this device. If you previously bought Premium, make sure you’re signed into the same Apple ID, then try again.'
+                            );
+                        }
+                    } catch (e) {
+                        try { window.location.reload(); } catch (e2) {}
+                    }
+                    return;
                 } else if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
                     // Best-effort when restore isn't supported by this wrapper build.
                     await window.BeeSmartIAP.reconcile('menu_restore');
@@ -310,19 +490,21 @@
                     });
                 }
 
-                // 🎉 Celebration + gentle auto-refresh so entitlement-driven UI updates.
+                // If we got here, we didn't have `BeeSmartIAP.restore()`.
+                // In a pure web context we cannot prompt Apple ID sign-in; best we can do is reconcile.
+                // Keep the copy honest.
                 try {
-                    // Re-enable the button immediately so the UI doesn't feel blocked.
                     setBtn('Restore Purchases', false);
                     if (typeof window.__beeRestoreCelebrate === 'function') {
                         window.__beeRestoreCelebrate({
-                            title: '✨ Purchases restored!',
-                            message: 'All your purchases should now be in place. If anything still looks locked, it may take a moment for the bees to sync — then we’ll refresh automatically.',
-                            autoReloadMs: 1600,
+                            title: 'Restore started',
+                            message: _looksNative()
+                                ? 'We’re getting things ready. If purchases still look locked, wait a moment and try Restore Purchases again.'
+                                : 'Restore can only pull App Store purchases inside the iOS/Android app wrapper. If you installed from the App Store, open the app there and tap Restore Purchases.',
+                            autoReloadMs: 1200,
                             allowReload: true
                         });
                     } else {
-                        // Fallback: old behavior
                         try { window.location.reload(); } catch (e) {}
                     }
                 } catch (e) {
@@ -4429,6 +4611,15 @@
                                 if (name) {
                                     // Save to sessionStorage for guest users
                                     sessionStorage.setItem('guestName', name);
+
+                                    // Also save to localStorage for continuity across pages (some quiz modes read from localStorage)
+                                    try {
+                                        if (window.safeStorage && safeStorage.local && typeof safeStorage.local.setItem === 'function') {
+                                            safeStorage.local.setItem('studentName', name);
+                                        } else {
+                                            localStorage.setItem('studentName', name);
+                                        }
+                                    } catch (e) {}
                                     
                                     // Visual feedback
                                     input.style.borderColor = '#4CAF50';
@@ -6487,8 +6678,22 @@
             if (name) {
                 safeStorage.local.setItem('studentName', name);
                 console.log(' Student name saved:', name);
+
+                // If the user is a guest, keep sessionStorage guestName in sync so quiz pages use the freshest value.
+                try {
+                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    if (!isAuthenticated) {
+                        sessionStorage.setItem('guestName', name);
+                    }
+                } catch (e) {}
             } else {
                 safeStorage.local.removeItem('studentName');
+                try {
+                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    if (!isAuthenticated) {
+                        sessionStorage.removeItem('guestName');
+                    }
+                } catch (e) {}
             }
         }
         
@@ -15242,7 +15447,9 @@
                         const nameInput = document.getElementById('studentName');
                         if (nameInput) {
                             nameInput.value = authenticatedName;
-                            safeStorage.local.setItem('studentName', authenticatedName);
+                            // IMPORTANT: Do NOT overwrite the guest name store.
+                            // Keep the authenticated display name in a dedicated key so guest sessions don't inherit it.
+                            safeStorage.local.setItem('lastAuthName', authenticatedName);
                             this.updateCheck(check3, authenticatedName, '', 35);
                             this.updateProgress(35, ` Welcome ${authenticatedName}!`);
                             console.log(' User name synced:', authenticatedName);

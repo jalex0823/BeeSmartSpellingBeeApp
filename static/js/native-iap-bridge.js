@@ -185,14 +185,21 @@
 
       async restore() {
         // Initiates the platform restore/sync flow (iOS: AppStore.sync()).
+        let restoreOut = null;
+        let reconcileOut = null;
+
         if (typeof nativePlugin.restorePurchases === 'function') {
-          const out = await Promise.resolve(nativePlugin.restorePurchases());
+          restoreOut = await Promise.resolve(nativePlugin.restorePurchases());
           // After restore, reconcile owned products to server.
-          try { await reconcileFromNative('restore'); } catch (e) { /* ignore */ }
-          return out;
+          try { reconcileOut = await reconcileFromNative('restore'); } catch (e) { /* ignore */ }
+          return { restore: restoreOut, reconcile: reconcileOut, unsupported: false };
         }
-        // Back-compat no-op: older native wrappers only supported getOwnedProducts.
-        return { unsupported: true };
+
+        // Back-compat: older native wrappers only supported getOwnedProducts.
+        // We can still reconcile to the server (best-effort), but we cannot
+        // trigger an OS-level restore/sync.
+        try { reconcileOut = await reconcileFromNative('restore_no_native_sync'); } catch (e) { /* ignore */ }
+        return { restore: restoreOut, reconcile: reconcileOut, unsupported: true };
       },
 
       async restorePurchases() {

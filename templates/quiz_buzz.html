@@ -4658,24 +4658,31 @@ class QuizManager {
             return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
         };
 
-        // Get student name - prioritize server-provided name for logged-in users
+        // Get student name:
+        // - Authenticated users: ALWAYS use server-provided display name.
+        // - Guests: use sessionStorage guestName first, then localStorage studentName.
         {% if user_name %}
         {
             const rawName = {{ user_name|tojson }};
             this.studentName = normalizeStudentName(rawName);
-            const trimmed = (rawName ?? '').toString().trim();
-            if (trimmed) {
-                localStorage.setItem('studentName', trimmed);
-            } else {
-                try { localStorage.removeItem('studentName'); } catch (e) {}
-            }
+            try {
+                const trimmed = (rawName ?? '').toString().trim();
+                if (trimmed) {
+                    localStorage.setItem('lastAuthName', trimmed);
+                }
+            } catch (e) {}
             console.log('👤 Using logged-in user name:', this.studentName);
         }
         {% else %}
         {
-            const rawName = localStorage.getItem('studentName') || '';
+            let rawName = '';
+            try {
+                rawName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+            } catch (e) {
+                rawName = '';
+            }
             this.studentName = normalizeStudentName(rawName);
-            console.log('👤 Using localStorage name:', this.studentName);
+            console.log('👤 Using guest/localStorage name:', this.studentName);
         }
         {% endif %}
         

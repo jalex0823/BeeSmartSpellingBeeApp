@@ -1017,20 +1017,19 @@ function normalizeStudentName(raw) {
     const trimmed = (raw ?? '').toString().trim();
     return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
 }
-// Prefer server-provided name when available; fall back to localStorage for continuity
+// Prefer server-provided name when available (authenticated), otherwise use guestName/sessionStorage,
+// then fall back to localStorage for continuity.
 {% if user_name %}
 studentName = {{ user_name|tojson }};
 try {
     const trimmed = (studentName ?? '').toString().trim();
     if (trimmed) {
-        localStorage.setItem('studentName', trimmed);
-    } else {
-        localStorage.removeItem('studentName');
+        localStorage.setItem('lastAuthName', trimmed);
     }
 } catch (e) {}
 {% else %}
 try {
-    studentName = localStorage.getItem('studentName') || '';
+    studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
 } catch (e) {
     studentName = '';
 }

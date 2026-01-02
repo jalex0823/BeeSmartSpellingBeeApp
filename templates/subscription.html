@@ -808,10 +808,35 @@
                     restoreBtn.disabled = true;
                 }
 
-                // Wait briefly — Capacitor plugins can register after the page scripts run.
-                await _waitForIAPBridge(2000);
+                const _extractEntitlements = (payload) => {
+                    if (!payload) return {};
+                    // native-iap-bridge.js restore() returns { restore, reconcile, unsupported }
+                    if (payload.reconcile) return payload.reconcile.entitlements || payload.reconcile;
+                    return payload.entitlements || payload;
+                };
 
-                if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')) {
+                const _ownedList = (ent) => {
+                    if (!ent || typeof ent !== 'object') return [];
+                    if (Array.isArray(ent.anon_owned_products)) return ent.anon_owned_products;
+                    if (Array.isArray(ent.owned_products)) return ent.owned_products;
+                    if (Array.isArray(ent.products)) return ent.products;
+                    return [];
+                };
+
+                const _isPremiumish = (ent) => {
+                    try {
+                        if (ent && ent.premium_member === true) return true;
+                    } catch (e) { /* ignore */ }
+                    const owned = _ownedList(ent);
+                    return Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+                };
+
+                // Wait briefly — Capacitor plugins can register after the page scripts run.
+                await _waitForIAPBridge(4500);
+
+                // If we don't have the native bridge, we cannot trigger Apple's restore/sync.
+                // We still do a server reconcile (guest-friendly), but messaging must be honest.
+                if (!(window.BeeSmartIAP && (typeof window.BeeSmartIAP.restore === 'function' || typeof window.BeeSmartIAP.reconcile === 'function' || typeof window.BeeSmartIAP.getOwnedProducts === 'function'))) {
                     if (restoreBtn) {
                         restoreBtn.style.background = 'rgba(0,0,0,0.12)';
                         restoreBtn.textContent = 'Restore Purchases';
@@ -830,7 +855,7 @@
                         const data = await res.json().catch(() => ({}));
                         const ok = !!(data && (data.ok === true || data.success === true));
                         const msg = ok
-                            ? 'Restore started. If your purchase was found, premium will unlock automatically.'
+                            ? 'Restore started. To restore App Store purchases, please use the iOS app (App Store/TestFlight build). If Apple needs it, iOS will prompt you to sign in during restore.'
                             : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.';
                         showRestoreDialog('Restore Purchases', msg, ok);
                     } catch (e) {
@@ -839,77 +864,74 @@
                     return;
                 }
 
-                // If the native wrapper supports explicit restore/sync, trigger it first.
-                // Support BOTH shapes:
-                //  - window.BeeSmartIAP.restore() (our web bridge convenience)
-                //  - window.BeeSmartIAP.restorePurchases() (raw Capacitor plugin method)
-                const restoreFn = (
-                    (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function')
-                        ? window.BeeSmartIAP.restore
-                        : ((window.BeeSmartIAP && typeof window.BeeSmartIAP.restorePurchases === 'function')
-                            ? window.BeeSmartIAP.restorePurchases
-                            : null)
-                );
-                if (restoreFn) {
-                    try {
-                        await Promise.resolve(restoreFn());
-                    } catch(e) { /* ignore */ }
-                }
+                // Preferred: use the unified bridge.
+                // - In iOS, this triggers AppStore.sync() (system may prompt Apple ID sign-in)
+                // - Then it reconciles entitlements to the server
+                let reconcilePayload = null;
+                if (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function') {
+                    const out = await Promise.resolve(window.BeeSmartIAP.restore());
+                    reconcilePayload = (out && out.reconcile) ? out.reconcile : out;
+                } else if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                    reconcilePayload = await Promise.resolve(window.BeeSmartIAP.reconcile('subscription_restore'));
+                } else {
+                    // Fallback: try enumerating and posting product ids (older wrappers)
+                    const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
+                        ? String(window.BeeSmartIAP.platform).toLowerCase()
+                        : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
 
-                const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
-                    ? String(window.BeeSmartIAP.platform).toLowerCase()
-                    : ((/iPhone|iPad|Mac/i.test(navigator.userAgent)) ? 'apple' : ((/Android/i.test(navigator.userAgent)) ? 'google' : 'web'));
+                    const rawOwned = (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function')
+                        ? await Promise.resolve(window.BeeSmartIAP.getOwnedProducts())
+                        : [];
 
-                const rawOwned = await Promise.resolve(window.BeeSmartIAP.getOwnedProducts());
-                const extractPid = (x) => {
-                    if (x == null) return null;
-                    if (typeof x === 'string') {
-                        const v = x.trim();
-                        return v || null;
-                    }
-                    if (typeof x === 'object') {
-                        const keys = ['productId', 'product_id', 'productID', 'sku', 'id', 'identifier'];
-                        for (const k of keys) {
-                            if (x && x[k]) {
-                                try {
-                                    const v = String(x[k]).trim();
-                                    return v || null;
-                                } catch(e) {}
+                    const extractPid = (x) => {
+                        if (x == null) return null;
+                        if (typeof x === 'string') {
+                            const v = x.trim();
+                            return v || null;
+                        }
+                        if (typeof x === 'object') {
+                            const keys = ['productId', 'product_id', 'productID', 'sku', 'id', 'identifier'];
+                            for (const k of keys) {
+                                if (x && x[k]) {
+                                    try {
+                                        const v = String(x[k]).trim();
+                                        return v || null;
+                                    } catch(e) {}
+                                }
                             }
                         }
-                    }
-                    if (['number','boolean'].includes(typeof x)) {
-                        const v = String(x).trim();
-                        return v || null;
-                    }
-                    return null;
-                };
+                        if (['number','boolean'].includes(typeof x)) {
+                            const v = String(x).trim();
+                            return v || null;
+                        }
+                        return null;
+                    };
 
-                const productIds = Array.isArray(rawOwned) ? rawOwned.map(extractPid).filter(Boolean) : [];
-                const deduped = [];
-                const seen = new Set();
-                for (const pid of productIds) {
-                    if (!seen.has(pid)) { seen.add(pid); deduped.push(pid); }
+                    const productIds = Array.isArray(rawOwned) ? rawOwned.map(extractPid).filter(Boolean) : [];
+                    const deduped = [];
+                    const seen = new Set();
+                    for (const pid of productIds) {
+                        if (!seen.has(pid)) { seen.add(pid); deduped.push(pid); }
+                    }
+
+                    const resp = await fetch('/api/iap/restore', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ platform: platform, product_ids: deduped })
+                    });
+                    reconcilePayload = await resp.json().catch(() => null);
                 }
 
-                if (!Array.isArray(rawOwned) || deduped.length === 0) {
-                    if (restoreBtn) {
-                        restoreBtn.style.background = 'rgba(0,0,0,0.12)';
-                        restoreBtn.textContent = 'Restore Purchases';
-                        restoreBtn.disabled = false;
-                    }
-                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any previous purchases to restore on this device.', false);
-                    return;
-                }
+                const ent = _extractEntitlements(reconcilePayload);
+                const premium = _isPremiumish(ent);
+                const owned = _ownedList(ent);
+                const ownedCount = Array.isArray(owned) ? owned.length : 0;
 
-                const resp = await fetch('/api/iap/restore', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ platform: platform, product_ids: deduped })
-                });
-                
-                const data = await resp.json().catch(() => null);
+                const ok = !!(reconcilePayload && (reconcilePayload.success === true || reconcilePayload.ok === true));
+                const appliedCount = Array.isArray((reconcilePayload && reconcilePayload.applied) ? reconcilePayload.applied : [])
+                    ? (reconcilePayload.applied || []).length
+                    : 0;
                 
                 if (restoreBtn) {
                     restoreBtn.style.background = 'rgba(0,0,0,0.12)';
@@ -917,14 +939,22 @@
                     restoreBtn.disabled = false;
                 }
 
-                if (resp.ok && data && data.success) {
-                    const count = Array.isArray((data.applied || [])) ? data.applied.length : 0;
-                    const message = count > 0
-                        ? `Successfully restored ${count} purchase${count === 1 ? '' : 's'}!`
+                if (ok && (premium || ownedCount > 0 || appliedCount > 0)) {
+                    const message = appliedCount > 0
+                        ? `Successfully restored ${appliedCount} purchase${appliedCount === 1 ? '' : 's'}!`
                         : 'Restore complete. Your purchases are already active.';
-                    showRestoreDialog('Restore Successful', message, true);
+                    await showRestoreDialog('Restore Successful', message + ' If iOS asked you to sign in, that’s the normal Apple ID restore step.', true);
+
+                    // Celebration AFTER validation modal.
+                    try { runRestoreCelebrationBurst({ durationMs: 1200 }); } catch (e) {}
+                    // Gentle refresh so entitlement-driven UI updates.
+                    setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 1400);
+                } else if (ok) {
+                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same Apple ID, then try again.', false);
                 } else {
-                    const err = (data && (data.error || data.message)) ? String(data.error || data.message) : `HTTP ${resp.status}`;
+                    const err = (reconcilePayload && (reconcilePayload.error || reconcilePayload.message))
+                        ? String(reconcilePayload.error || reconcilePayload.message)
+                        : 'Unknown error';
                     showRestoreDialog('Restore Failed', `Could not restore purchases: ${err}`, false);
                 }
             } catch (e) {
@@ -1035,6 +1065,55 @@
                     document.head.appendChild(style);
                 }
             });
+        }
+
+        function runRestoreCelebrationBurst(opts) {
+            // Lightweight celebration animation (no extra modal): a quick glitter burst.
+            // This intentionally runs AFTER the green validation modal is dismissed.
+            opts = opts || {};
+            const durationMs = (typeof opts.durationMs === 'number') ? opts.durationMs : 1200;
+
+            const STYLE_ID = 'restoreBurstStyles';
+            if (!document.getElementById(STYLE_ID)) {
+                const style = document.createElement('style');
+                style.id = STYLE_ID;
+                style.textContent = `
+                    .restore-burst-layer{position:fixed;inset:0;pointer-events:none;z-index:10001;}
+                    .restore-burst-p{position:absolute;width:8px;height:8px;border-radius:2px;opacity:.95;transform:translate(-50%,-50%);
+                        box-shadow:0 0 0 1px rgba(255,255,255,.28) inset;filter:drop-shadow(0 6px 10px rgba(0,0,0,.10));
+                        animation:restore-burst-pop 1000ms ease-out forwards;}
+                    @keyframes restore-burst-pop{0%{transform:translate(-50%,-50%) scale(.1) rotate(0deg);opacity:0}
+                        25%{opacity:1}
+                        65%{transform:translate(-50%,-50%) scale(1.15) rotate(120deg);opacity:1}
+                        100%{transform:translate(-50%,-50%) scale(.75) rotate(220deg);opacity:0}}
+                `;
+                document.head.appendChild(style);
+            }
+
+            const layer = document.createElement('div');
+            layer.className = 'restore-burst-layer';
+            document.body.appendChild(layer);
+
+            const rand = (min, max) => Math.random() * (max - min) + min;
+            const cx = window.innerWidth * 0.5;
+            const cy = window.innerHeight * 0.42;
+            const colors = ['#4CAF50', '#66BB6A', '#FFD54F', '#FFB74D', '#4FC3F7', '#B39DDB'];
+            const count = 44;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'restore-burst-p';
+                p.style.left = `${cx + rand(-150, 150)}px`;
+                p.style.top = `${cy + rand(-90, 130)}px`;
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                p.style.width = `${rand(5, 11)}px`;
+                p.style.height = `${rand(5, 11)}px`;
+                p.style.animationDelay = `${rand(0, 180)}ms`;
+                layer.appendChild(p);
+            }
+
+            setTimeout(() => {
+                try { layer.remove(); } catch (e) {}
+            }, Math.max(800, durationMs));
         }
 
         async function checkExistingSubscription() {
