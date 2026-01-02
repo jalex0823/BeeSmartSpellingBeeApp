@@ -155,9 +155,9 @@
         (function(){
             const VERSION = 'unified_menu_v2.3-' + Date.now();
             console.log('BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
-            // Disable distracting floating decorations on the home screen
-            // This hides sparkles/fairies and prevents their initialization later.
-            window.DISABLE_FLOATING_DECOR = true;
+            // Re-enable fairy dust / glitter effects on the home screen.
+            // Reduced-motion users are still respected via CSS/media-query safeguards.
+            window.DISABLE_FLOATING_DECOR = false;
             // Allow avatar loader to render - controls need the instance!
             // window.DISABLE_AUTO_AVATAR_RENDER = true;  // REMOVED - was blocking instance creation
             if (!window._originalFetch){
@@ -1169,13 +1169,15 @@
         /* Ensure avatar name/status badge stays behind the 3D avatar */
         #avatarSystemStatus { position: relative; z-index: 10; }
 
-        /* Reduce distraction: remove floating sparkles/fairies on home screen */
-        .magic-background,
-        .fairy-container,
-        .sparkle,
-        .fairy { display: none !important; }
-        /* Hide any inline decorative elements using the sparkleFloat animation */
-        [style*="sparkleFloat"] { display: none !important; }
+        /* Respect accessibility: if the user prefers reduced motion, hide floating decor */
+        @media (prefers-reduced-motion: reduce) {
+            .magic-background,
+            .fairy-container,
+            .sparkle,
+            .fairy { display: none !important; }
+            /* Hide any inline decorative elements using the sparkleFloat animation */
+            [style*="sparkleFloat"] { display: none !important; }
+        }
 
         /* Site-wide home page override: remove shimmer/pulse/glow animations */
         body.home-no-shimmer *,
@@ -2956,7 +2958,7 @@
         }
     </style>
 </head>
-<body class="home-no-shimmer">
+<body>
     <!-- Safety shim: ensure kidSounds exists so inline onclick handlers never throw before the real class initializes -->
     <script>
         (function(){
