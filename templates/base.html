@@ -23,7 +23,23 @@
             // Register service worker if supported
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/static/service-worker.js').catch(() => {});
+                    const swUrl = '/static/service-worker.js?v={{ timestamp }}';
+                    navigator.serviceWorker.register(swUrl).then((reg) => {
+                        try {
+                            if (reg && typeof reg.update === 'function') reg.update();
+                        } catch (e) { /* no-op */ }
+                        try {
+                            if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        } catch (e) { /* no-op */ }
+                        try {
+                            let reloaded = false;
+                            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                                if (reloaded) return;
+                                reloaded = true;
+                                window.location.reload();
+                            });
+                        } catch (e) { /* no-op */ }
+                    }).catch(() => {});
                 });
             }
         </script>
@@ -925,7 +941,11 @@
             window.addEventListener('load', () => {
                 // Serve the SW from /static/ (single source of truth) to avoid 404s
                 // when /service-worker.js is not mapped in certain deployments/CDNs.
-                navigator.serviceWorker.register('/static/service-worker.js').catch(() => {/* no-op */});
+                const swUrl = '/static/service-worker.js?v={{ timestamp }}';
+                navigator.serviceWorker.register(swUrl).then((reg) => {
+                    try { if (reg && typeof reg.update === 'function') reg.update(); } catch (e) { /* no-op */ }
+                    try { if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch (e) { /* no-op */ }
+                }).catch(() => {/* no-op */});
             });
         }
     </script>

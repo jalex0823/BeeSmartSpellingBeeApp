@@ -85,6 +85,16 @@ html.beesmart-no-bg-anim .magic-background {
   display: none !important;
 }
 
+/* Backstop: if a cached/stale FX script injects a full-screen canvas overlay, hard-hide it. */
+html.beesmart-no-sweep-overlays #logoFairyDustLayer,
+html.beesmart-no-bg-anim #logoFairyDustLayer,
+html.beesmart-no-sweep-overlays #logoFairyDustCanvas,
+html.beesmart-no-bg-anim #logoFairyDustCanvas {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 /*
   Sweep/shimmer overlay kill switch:
   Disable translucent gradient sweeps that can look like a moving overlay on mobile.

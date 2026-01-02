@@ -26,6 +26,18 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// Allow clients to force immediate activation (helps iOS Safari/PWA apply updates promptly).
+self.addEventListener('message', (event) => {
+  try {
+    const data = event && event.data;
+    if (data && (data.type === 'SKIP_WAITING' || data === 'SKIP_WAITING')) {
+      self.skipWaiting();
+    }
+  } catch (_e) {
+    // no-op
+  }
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
