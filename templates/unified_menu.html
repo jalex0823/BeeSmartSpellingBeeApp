@@ -4285,7 +4285,6 @@
                         const feature = tile.getAttribute('data-feature');
                         const lockMsg = tile.getAttribute('data-lockmsg') || 'Premium Feature';
                         tile.addEventListener('click', function(){
-                            try { if (window.kidSounds && typeof kidSounds.playRandomEffect === 'function') kidSounds.playRandomEffect(); } catch(e){}
                             const requiresPremium = String(tile.getAttribute('data-requires-premium') || '').toLowerCase() === 'true';
 
                             if (!window.IS_AUTH) {
