@@ -2,6 +2,34 @@
 (function () {
     'use strict';
 
+    // Global kill switch: some pages (and our base template) intentionally disable
+    // translucent overlay FX/background animations to avoid a “sweeping transparency” look.
+    // When disabled, expose no-op APIs so callers (e.g., preload checks) don’t error.
+    const __beesmartLogoFxDisabled = (() => {
+        try {
+            if (window.__beesmartDisableSweepOverlays || window.__beesmartDisableBackgroundAnimations) return true;
+            const de = document.documentElement;
+            if (de && de.classList) {
+                if (de.classList.contains('beesmart-no-sweep-overlays')) return true;
+                if (de.classList.contains('beesmart-no-bg-anim')) return true;
+            }
+        } catch (_e) {
+            // ignore
+        }
+        return false;
+    })();
+
+    if (__beesmartLogoFxDisabled) {
+        try {
+            window.BeeSmartLogoFX = window.BeeSmartLogoFX || {};
+            window.BeeSmartLogoFX.startFairyDust = function () { /* disabled */ };
+            window.startLogoFairyDust = function () { /* disabled */ };
+        } catch (_e) {
+            // ignore
+        }
+        return;
+    }
+
     const DEFAULTS = {
         // Prefer the actual IMG element first; include a stable id if present.
         logoSelector: '#beesmartCrestLogo, #beesmartCrestLogoLoader, img.brand-logo.crest-logo, img.crest-logo, img.brand-logo',

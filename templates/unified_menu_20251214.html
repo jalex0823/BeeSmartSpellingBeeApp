@@ -24,6 +24,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
+
+    <script>
+        // Standalone template: apply the same global kill switches as base.html.
+        // Goal: eliminate any translucent sweep/overlay FX and background motion on mobile/PWA.
+        (function(){
+            try {
+                window.__beesmartDisableSweepOverlays = true;
+                window.__beesmartDisableBackgroundAnimations = true;
+                document.documentElement.classList.add('beesmart-no-sweep-overlays', 'beesmart-no-bg-anim');
+            } catch (e) { /* no-op */ }
+        })();
+    </script>
     
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}?v=20251129"></script>
