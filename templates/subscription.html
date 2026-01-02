@@ -6,6 +6,11 @@
     <title>BeeSmart Premium - Unlock All Features!</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ APP_VERSION }}" defer></script>
+
+    <script>
+        // Real auth (registered user). Used for login-required actions like Restore Purchases.
+        window.IS_REAL_AUTH = {{ 'true' if current_user.is_authenticated else 'false' }};
+    </script>
     
     <style>
         * {
@@ -798,6 +803,17 @@
 
         async function restorePurchases() {
             try {
+                // Policy: Restore Purchases requires a registered/logged-in user.
+                if (!window.IS_REAL_AUTH) {
+                    await showRestoreDialog(
+                        'Sign in required',
+                        'Please sign in with your BeeSmart account before restoring purchases.',
+                        false
+                    );
+                    try { window.location.href = '/auth/login'; } catch (e) {}
+                    return;
+                }
+
                 // Scroll restore button into view so user knows action is happening
                 const restoreBtn = document.getElementById('restorePurchasesBtn');
                 if (restoreBtn) {
@@ -842,8 +858,8 @@
                         restoreBtn.textContent = 'Restore Purchases';
                         restoreBtn.disabled = false;
                     }
-                    // Don't lock or bounce users to login when the native bridge is missing.
-                    // Fall back to a safe, permissive server-side restore (guest-friendly).
+                    // If the native bridge is missing, we cannot trigger Apple's restore/sync.
+                    // Keep messaging honest and avoid implying App Store restore happened.
                     try {
                         const res = await fetch('/api/iap/restore', {
                             method: 'POST',

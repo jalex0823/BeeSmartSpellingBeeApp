@@ -125,6 +125,8 @@
     {# App Review / demo mode: when enabled, allow reviewers to navigate without login #}
     {% set _review_mode = 'true' if session.get('app_review_mode') else 'false' %}
     {% set _is_auth = 'true' if (current_user.is_authenticated or session.get('app_review_mode')) else 'false' %}
+    {# Real authenticated user (ignores app_review_mode). Used for login-required flows like restore purchases. #}
+    {% set _is_real_auth = 'true' if current_user.is_authenticated else 'false' %}
     {# Admin should see the menu fully unlocked (same UI experience as premium). #}
     {% set _is_admin = 'true' if (current_user.is_authenticated and (current_user.role|default('') == 'admin')) else 'false' %}
     {% set _is_premium = 'true' if (_is_admin == 'true' or (is_premium|default(False))) else 'false' %}
@@ -137,6 +139,7 @@
         window.IS_AUTH = {{ _is_auth }};
     window.APP_REVIEW_MODE = {{ _review_mode }};
     window.IS_PREMIUM = {{ _is_premium }};
+        window.IS_REAL_AUTH = {{ _is_real_auth }};
         window.BILLING_MODE = '{{ _billing_mode }}';
         window.SUBSCRIPTION_SKU = '{{ _subscription_sku }}';
         // Subscription monthly price (USD) for UI copy only.
@@ -362,6 +365,24 @@
                         document.head.appendChild(style);
                     }
                 });
+            }
+
+            // Policy: Restore Purchases requires a registered/logged-in user.
+            // (App Review mode is allowed to browse, but not to restore purchases.)
+            try {
+                if (!window.IS_REAL_AUTH) {
+                    setBtn('Restore Purchases', false);
+                    await showRestoreGreenModal(
+                        'Sign in required',
+                        'Please sign in with your BeeSmart account before restoring purchases.'
+                    );
+                    try { window.location.href = '/auth/login'; } catch (e) {}
+                    return;
+                }
+            } catch (e) {
+                // If anything goes sideways, fail closed (require login)
+                try { window.location.href = '/auth/login'; } catch (e2) {}
+                return;
             }
 
             function runRestoreGlitterOnly() {

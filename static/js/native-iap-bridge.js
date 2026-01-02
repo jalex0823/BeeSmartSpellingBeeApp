@@ -92,11 +92,19 @@
         credentials: 'include',
         body: JSON.stringify({ platform: platform || 'apple', product_ids: owned || [], install_id })
       });
-      const data = await res.json().catch(function () { return null; });
+      let data = await res.json().catch(function () { return null; });
+      if ((res.status === 401 || res.status === 403) && (!data || typeof data !== 'object')) {
+        data = {
+          success: false,
+          error: 'login_required',
+          message: 'Please sign in to restore purchases.',
+          login_url: '/auth/login'
+        };
+      }
 
       try {
         window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
-          detail: { ok: !!(data && data.success), reason: reason || 'native_reconcile', data, owned }
+          detail: { ok: !!(data && data.success), status: res.status, reason: reason || 'native_reconcile', data, owned }
         }));
       } catch (e) { /* ignore */ }
 
@@ -123,10 +131,18 @@
         credentials: 'include',
         body: JSON.stringify({ platform: 'apple', product_ids: [], install_id })
       });
-      const data = await r.json().catch(function () { return null; });
+      let data = await r.json().catch(function () { return null; });
+      if ((r.status === 401 || r.status === 403) && (!data || typeof data !== 'object')) {
+        data = {
+          success: false,
+          error: 'login_required',
+          message: 'Please sign in to restore purchases.',
+          login_url: '/auth/login'
+        };
+      }
       try {
         window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
-          detail: { ok: !!(data && data.success), reason: reason || 'unknown', data }
+          detail: { ok: !!(data && data.success), status: r.status, reason: reason || 'unknown', data }
         }));
       } catch (e) { /* ignore */ }
       return data;

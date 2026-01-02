@@ -10234,9 +10234,26 @@ def api_iap_restore():
     install_id = (data.get('install_id') or '').strip()
     restore_id = uuid.uuid4().hex[:12]
 
-    # Apple Guideline 5.1.1: users must not be forced to register/login to restore
-    # non-account-based IAP purchases. For guests, we store restored entitlements
-    # against a device-scoped anonymous id cookie.
+    # Policy: users must be logged in (registered account) before attempting a
+    # real "restore purchases" operation.
+    #
+    # We treat a non-empty `product_ids` list as a restore attempt (the client
+    # already enumerated ownership and is asking the server to apply it).
+    # Reconcile-only requests (missing/empty product_ids) remain allowed so the
+    # UI can refresh current entitlement state without unlocking anything new.
+    is_restore_attempt = isinstance(product_ids, list) and len(product_ids) > 0
+    if is_restore_attempt and not current_user.is_authenticated:
+        return jsonify({
+            "success": False,
+            "error": "login_required",
+            "message": "Please sign in with your BeeSmart account to restore purchases.",
+            "login_url": url_for('login')
+        }), 401
+
+    # NOTE: This endpoint historically supported guest restores via an anonymous
+    # cookie identifier. That behavior is now gated: restore attempts require a
+    # logged-in (registered) user account. We still allow reconcile-only calls
+    # (no product_ids) so the UI can refresh entitlement state.
     user_for_restore = current_user if current_user.is_authenticated else None
     anon_restore_id = None
     if user_for_restore is None:
