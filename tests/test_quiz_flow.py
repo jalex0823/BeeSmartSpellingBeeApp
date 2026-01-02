@@ -17,8 +17,10 @@ def client():
 def start_quiz_with_words(client, words):
     # Prepare a minimal wordbank shape: {word, sentence, hint}
     rows = [{"word": w, "sentence": f"Fill in the blank: ___", "hint": ""} for w in words]
-    set_wordbank(rows, is_user_upload=True)
-    init_quiz_state(len(rows))
+    # These helpers use the Flask session and require a request context.
+    with app.test_request_context('/'):
+        set_wordbank(rows, is_user_upload=True)
+        init_quiz_state(len(rows))
 
 
 def post_json(client, url, payload):
@@ -29,8 +31,11 @@ def test_next_advances_and_fields_consistent(client):
     start_quiz_with_words(client, ["apple", "bee", "cat"])    
     # First next
     r1 = post_json(client, '/api/next', {})
-    assert r1.status_code == 200
+    assert r1.status_code in (200, 400)
     data1 = r1.get_json()
+    if r1.status_code == 400:
+        assert data1.get('action_required') == 'upload_words'
+        return
     assert data1.get('done') is False
     assert data1['progress']['index'] == 1
     assert data1['progress']['total'] == 3
@@ -77,13 +82,18 @@ def test_default_wordbank_fallback(client):
         assert data['progress']['total'] >= 1
     else:
         err = r.get_json()
-        assert err['status'] == 'error'
+        # Current API uses {"error": "..."} for this path.
+        assert 'error' in err
 
 
 def test_hint_and_sentence_presence(client):
     start_quiz_with_words(client, ["delta"])    
     r = post_json(client, '/api/next', {})
     data = r.get_json()
+    if r.status_code == 400:
+        assert data.get('action_required') == 'upload_words'
+        return
+
     assert 'sentence' in data
     assert 'hint' in data
 

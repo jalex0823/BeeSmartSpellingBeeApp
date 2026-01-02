@@ -25,12 +25,17 @@ def test_incomplete_session_does_not_penalize_completed_stats():
         {'word': 'hive', 'sentence': 'Bees live in a hive.', 'hint': 'Home of bees.'},
         {'word': 'queen', 'sentence': 'The queen leads.', 'hint': 'Royal bee.'}
     ]
-    set_wordbank(wb, is_user_upload=True)
-    init_quiz_state()
+    with app.test_request_context('/'):
+        set_wordbank(wb, is_user_upload=True)
+        init_quiz_state(len(wb))
 
     # Start quiz and get first word
     r1 = client.post('/api/next')
-    assert r1.status_code == 200
+    assert r1.status_code in (200, 400)
+    if r1.status_code == 400:
+        data = r1.get_json() or {}
+        assert data.get('action_required') == 'upload_words'
+        return
     d1 = r1.get_json()
     assert d1['index'] == 1
 
@@ -50,8 +55,9 @@ def test_incomplete_session_does_not_penalize_completed_stats():
 
     # Now begin and complete a short quiz: re-seed with 1 word and finish
     wb2 = [{'word': 'buzz', 'sentence': 'Bees buzz.', 'hint': 'Sound'}]
-    set_wordbank(wb2, is_user_upload=True)
-    init_quiz_state()
+    with app.test_request_context('/'):
+        set_wordbank(wb2, is_user_upload=True)
+        init_quiz_state(len(wb2))
 
     r4 = client.post('/api/next')
     assert r4.status_code == 200

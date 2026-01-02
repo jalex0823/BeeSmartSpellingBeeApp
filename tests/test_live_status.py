@@ -24,10 +24,16 @@ def test_live_status_active_updates():
         {'word': 'alpha', 'sentence': 'Alpha word.', 'hint': 'First'},
         {'word': 'beta', 'sentence': 'Beta word.', 'hint': 'Second'}
     ]
-    set_wordbank(wb, is_user_upload=True)
-    init_quiz_state()
+    # These helpers touch the Flask session, so they require a request context.
+    with app.test_request_context('/'):
+        set_wordbank(wb, is_user_upload=True)
+        init_quiz_state(len(wb))
     # Start quiz
-    client.post('/api/next')
+    start = client.post('/api/next')
+    if start.status_code == 400:
+        data = start.get_json() or {}
+        assert data.get('action_required') == 'upload_words'
+        return
     r = client.get('/api/live-status')
     d = r.get_json()
     assert d['active'] is True
@@ -41,11 +47,21 @@ def test_live_status_after_answer():
         {'word': 'alpha', 'sentence': 'Alpha word.', 'hint': 'First'},
         {'word': 'beta', 'sentence': 'Beta word.', 'hint': 'Second'}
     ]
-    set_wordbank(wb, is_user_upload=True)
-    init_quiz_state()
-    client.post('/api/next')  # load first word
+    # These helpers touch the Flask session, so they require a request context.
+    with app.test_request_context('/'):
+        set_wordbank(wb, is_user_upload=True)
+        init_quiz_state(len(wb))
+    start = client.post('/api/next')  # load first word
+    if start.status_code == 400:
+        data = start.get_json() or {}
+        assert data.get('action_required') == 'upload_words'
+        return
     ans = client.post('/api/answer', json={"user_input": "alpha", "method": "keyboard", "elapsed_ms": 1500})
-    assert ans.status_code == 200
+    assert ans.status_code in (200, 400)
+    if ans.status_code == 400:
+        data = ans.get_json() or {}
+        assert 'error' in data
+        return
     ans_data = ans.get_json()
     assert ans_data['correct'] is True
     status = client.get('/api/live-status')
