@@ -54,22 +54,9 @@
     return _getOrCreateWebInstallId();
   }
 
-  // Regression guard: we never want to present a dead-end “browser session” message
-  // inside TestFlight/native wrappers. If any caller reintroduces this wording,
-  // surface a console warning to make it obvious during QA.
-  try {
-    const _warn = console.warn;
-    console.warn = function () {
-      try {
-        const args = Array.prototype.slice.call(arguments);
-        const joined = args.map(function (x) { return String(x); }).join(' ');
-        if (joined.toLowerCase().indexOf('browser session') !== -1) {
-          _warn.call(console, '[BeeSmartIAP][guard] Detected "browser session" wording. This should not be shown to users.');
-        }
-      } catch (e) { /* ignore */ }
-      return _warn.apply(console, arguments);
-    };
-  } catch (e) { /* ignore */ }
+  // IMPORTANT: No customer-facing diagnostics.
+  // We avoid monkey-patching console.* in production because some native shells
+  // surface console output on-screen.
 
   // Capacitor sometimes populates `Capacitor.Plugins` slightly after our script runs
   // (especially with `defer`), so we retry a few times before giving up.
@@ -244,12 +231,8 @@
     };
 
     try {
-      console.log('[BeeSmartIAP] bridged from Capacitor plugin (platform=' + platform + ')');
-      // Light readiness signal for UI/debugging.
       window.dispatchEvent(new CustomEvent('beesmart:iap-ready', { detail: { platform } }));
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
     return true;
   }
 
@@ -300,15 +283,10 @@
         // Keep retrying unless we hit max attempts.
         if (attempts >= MAX_ATTEMPTS) {
           clearInterval(timer);
-          try { console.warn('[BeeSmartIAP] native bridge init failed:', e); } catch (e2) {}
         }
       }
     }, RETRY_MS);
   } catch (e) {
-    try {
-      console.warn('[BeeSmartIAP] native bridge init failed:', e);
-    } catch (e2) {
-      // ignore
-    }
+    // Ignore bridge init errors; the UI will continue with server reconcile.
   }
 })();

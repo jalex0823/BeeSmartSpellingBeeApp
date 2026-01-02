@@ -3029,30 +3029,11 @@ def _require_premium_json(feature: str = "premium"):
 
 
 def _deny_guest_avatar_picker_access():
-    """Block guest users from avatar picker pages.
+    """DEPRECATED: guest gating for pickers is no longer enforced here.
 
-    Guest users (session-based or DB guest_ users) must register before accessing
-    picker UI routes. Returns a Flask response when access should be denied,
-    otherwise returns None.
+    We keep this function as a no-op for backward compatibility with older
+    deployments/branches that might still call it.
     """
-    try:
-        # If this request is from a guest session/user, force them through the
-        # registration flow (not the picker).
-        if session.get('is_guest', False) or is_guest_user(current_user):
-            try:
-                flash('Please create an account to customize your avatar.', 'info')
-            except Exception:
-                pass
-            # Send them to registration flow.
-            return redirect(url_for('register'))
-
-        # Not logged in at all -> let @login_required handle it.
-        if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
-            return None
-    except Exception:
-        # Fail safe: do not block on guard errors.
-        return None
-
     return None
 
 def filter_non_guest_users(query):
@@ -12303,11 +12284,6 @@ def api_update_user_avatar_legacy():
 @app.route('/avatar-picker')
 def avatar_picker_page():
     """Avatar picker page with 3D viewer for choosing your bee character"""
-    denied = _deny_guest_avatar_picker_access()
-    if denied:
-        return denied
-    # Keep the picker accessible for newly registered / logged-in users.
-    # Any true guest is already blocked by _deny_guest_avatar_picker_access().
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     return render_template('test_avatar_picker.html')
@@ -12315,11 +12291,6 @@ def avatar_picker_page():
 @app.route('/honeycomb-picker')
 def honeycomb_avatar_picker():
     """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)"""
-    denied = _deny_guest_avatar_picker_access()
-    if denied:
-        return denied
-    # Keep the picker accessible for registered users without any upsell.
-    # True guests are blocked by _deny_guest_avatar_picker_access().
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     timestamp = int(time.time())
@@ -12357,9 +12328,6 @@ def honeycomb_avatar_picker():
 @app.route('/honeycomb-picker-old')
 def honeycomb_avatar_picker_old():
     """OLD: Original honeycomb picker with absolute positioning"""
-    denied = _deny_guest_avatar_picker_access()
-    if denied:
-        return denied
     # Registered users only
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))

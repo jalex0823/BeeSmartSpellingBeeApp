@@ -116,6 +116,10 @@
     <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v=20251218" defer></script>
     <!-- Avatar Display Manager (unifies guest carousel vs registered avatar) -->
     <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20251203" defer></script>
+
+    <!-- Native IAP bridge: needed for "Restore Purchases" to function in TestFlight/app wrappers.
+        This does NOT enable any IAP diagnostics UI on the home screen. -->
+    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v=20260102a" defer></script>
     
     <!-- Minimal auth/billing flags (no inline conditionals inside JS logic) -->
     {# App Review / demo mode: when enabled, allow reviewers to navigate without login #}
@@ -164,6 +168,46 @@
             }
             // Detect any legacy calls by monkey patching FormData send (best-effort)
         })();
+    </script>
+
+    <script>
+        // Restore Purchases (App Store compliance)
+        // This wrapper is intentionally lightweight and does not render any IAP diagnostics.
+        async function restorePurchases() {
+            const btn = document.getElementById('restorePurchasesBtn');
+            const setBtn = (text, disabled) => {
+                if (!btn) return;
+                btn.textContent = text;
+                btn.disabled = !!disabled;
+            };
+
+            try {
+                setBtn('Restoring…', true);
+
+                // Prefer native bridge reconcile (runs restore + server reconcile)
+                if (window.BeeSmartIAP && typeof window.BeeSmartIAP.restore === 'function') {
+                    await window.BeeSmartIAP.restore();
+                } else if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                    // Best-effort when restore isn't supported by this wrapper build.
+                    await window.BeeSmartIAP.reconcile('menu_restore');
+                } else {
+                    // Safe fallback: ask server to reconcile current entitlements.
+                    await fetch('/api/iap/restore', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ platform: 'web', product_ids: [] })
+                    });
+                }
+
+                // Refresh so the backend-driven premium flag updates the UI.
+                try { window.location.reload(); } catch (e) {}
+            } catch (e) {
+                console.warn('[Menu] restorePurchases failed:', e);
+                setBtn('Restore Purchases', false);
+                try { alert('Restore couldn\'t complete right now. Please try again in a moment.'); } catch (e2) {}
+            }
+        }
     </script>
     {# IAP restore UI intentionally removed from the main menu to prevent IAP diagnostics from surfacing on this screen. #}
     <style>

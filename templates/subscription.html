@@ -777,10 +777,10 @@
                     subBtn.textContent = 'Premium Active';
                 }
 
-                console.log('[Subscription] reconcile refresh:', reason, { ok: !!(data && (data.success || data.ok)), looksPremium });
+                // Keep production console clean: no IAP diagnostics on customer-facing screens.
                 return data;
             } catch (e) {
-                console.warn('[Subscription] reconcile refresh failed:', reason, e);
+                // Silent (best-effort). UI is still usable even if reconcile fails.
                 return null;
             }
         }
@@ -853,9 +853,7 @@
                 if (restoreFn) {
                     try {
                         await Promise.resolve(restoreFn());
-                    } catch(e) {
-                        console.warn('Native restore call failed:', e);
-                    }
+                    } catch(e) { /* ignore */ }
                 }
 
                 const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
@@ -930,7 +928,6 @@
                     showRestoreDialog('Restore Failed', `Could not restore purchases: ${err}`, false);
                 }
             } catch (e) {
-                console.error('Restore failed:', e);
                 const restoreBtn = document.getElementById('restorePurchasesBtn');
                 if (restoreBtn) {
                     restoreBtn.style.background = 'rgba(0,0,0,0.12)';
@@ -1057,7 +1054,6 @@
                     // Bridge exists but returns empty: treat as unknown to avoid false negatives.
                     return { hasSubscription: null, products: [], source: 'native_empty' };
                 } catch (e) {
-                    console.error('Error checking subscriptions:', e);
                     return { hasSubscription: null, products: [], source: 'native_error' };
                 }
             }
@@ -1138,7 +1134,6 @@
                         try { window.location.href = '/app'; } catch (e) {}
                     })
                     .catch((e) => {
-                        console.error('Native purchase failed:', e);
                         alert('Purchase could not be completed. Please try again.');
                     });
                 return;
