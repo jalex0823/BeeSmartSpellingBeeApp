@@ -211,7 +211,7 @@
             position: relative;
             /*  iOS optimization: Prevent tap highlight and improve touch responsiveness */
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
+            touch-action: auto;
         }
         
         /* Bee Swarm Visual Effects */
@@ -17913,47 +17913,85 @@
         const canvas = container?.querySelector('canvas');
         if (!canvas) return;
         
+        // Allow vertical page scrolling; only intercept touch when user is actively
+        // rotating (horizontal drag) or pinching (zoom) the avatar.
+        canvas.style.touchAction = 'pan-y';
+
+        const HORIZONTAL_INTERACT_THRESHOLD_PX = 10;
+
         let touchStartDistance = 0;
         let lastTouchX = 0;
         let lastTouchY = 0;
-        let wasTouching = false;
-        
+        let startTouchX = 0;
+        let startTouchY = 0;
+        let interactingWithAvatar = false;
+
+        const pauseAutoRotateIfNeeded = () => {
+            if (avatarControlState.autoRotate) {
+                avatarControlState.wasAutoRotating = true;
+                avatarControlState.autoRotate = false;
+            }
+        };
+
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            wasTouching = true;
-            
             if (e.touches.length === 1) {
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
-                
-                // Pause auto-rotate during touch
-                if (avatarControlState.autoRotate) {
-                    avatarControlState.wasAutoRotating = true;
-                    avatarControlState.autoRotate = false;
-                }
+                interactingWithAvatar = false;
+                startTouchX = e.touches[0].clientX;
+                startTouchY = e.touches[0].clientY;
+                lastTouchX = startTouchX;
+                lastTouchY = startTouchY;
+                touchStartDistance = 0;
             } else if (e.touches.length === 2) {
+                interactingWithAvatar = true;
+                pauseAutoRotateIfNeeded();
+                e.preventDefault();
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 touchStartDistance = Math.sqrt(dx * dx + dy * dy);
             }
         }, { passive: false });
-        
+
         canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            
             if (e.touches.length === 1) {
-                const deltaX = e.touches[0].clientX - lastTouchX;
+                const currentX = e.touches[0].clientX;
+                const currentY = e.touches[0].clientY;
+
+                if (!interactingWithAvatar) {
+                    const totalDx = currentX - startTouchX;
+                    const totalDy = currentY - startTouchY;
+                    const absDx = Math.abs(totalDx);
+                    const absDy = Math.abs(totalDy);
+                    if (absDx > HORIZONTAL_INTERACT_THRESHOLD_PX && absDx > absDy) {
+                        interactingWithAvatar = true;
+                        pauseAutoRotateIfNeeded();
+                    }
+                }
+
+                if (!interactingWithAvatar) {
+                    // Let the browser handle vertical scrolling.
+                    lastTouchX = currentX;
+                    lastTouchY = currentY;
+                    return;
+                }
+
+                // Rotate avatar (horizontal drag)
+                e.preventDefault();
+                const deltaX = currentX - lastTouchX;
                 const controller = getAvatarController();
                 if (controller && controller.bee) {
                     controller.bee.rotation.y += deltaX * 0.01;
                 }
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
+                lastTouchX = currentX;
+                lastTouchY = currentY;
             } else if (e.touches.length === 2) {
+                interactingWithAvatar = true;
+                pauseAutoRotateIfNeeded();
+                e.preventDefault();
+
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (touchStartDistance > 0) {
                     const scale = distance / touchStartDistance;
                     const zoomDelta = (1 - scale) * 2;
@@ -17965,7 +18003,7 @@
         
         canvas.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
-                wasTouching = false;
+                interactingWithAvatar = false;
                 touchStartDistance = 0;
                 
                 // Resume auto-rotate if it was on
