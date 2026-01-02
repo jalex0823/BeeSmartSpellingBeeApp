@@ -917,11 +917,11 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     # Premium tier policy:
     # - Admin: always unlocked (handled above)
     # - Guests: locked unless purchased/restored or premium entitlement
-    # - Registered users (student/teacher/parent): unlocked (no subscription required)
+    # - Registered users (student/teacher/parent): follow catalog rules: only the
+    #   5 DEFAULT_FREE avatars are unlocked by default.
     if tier == 'premium':
-        # Registered users should have access without needing premium.
         if role in ('student', 'teacher', 'parent'):
-            return {"unlocked": True, "reason": "Registered user access", "points_needed": 0}
+            return {"unlocked": False, "reason": "Premium - subscribe to unlock", "points_needed": None}
 
         # Non-admin, non-registered fall back to entitlement-based unlock.
         if avatar_id in purchased:
@@ -12306,7 +12306,8 @@ def avatar_picker_page():
     denied = _deny_guest_avatar_picker_access()
     if denied:
         return denied
-    # Registered users only
+    # Keep the picker accessible for newly registered / logged-in users.
+    # Any true guest is already blocked by _deny_guest_avatar_picker_access().
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     return render_template('test_avatar_picker.html')
@@ -12317,7 +12318,8 @@ def honeycomb_avatar_picker():
     denied = _deny_guest_avatar_picker_access()
     if denied:
         return denied
-    # Registered users only
+    # Keep the picker accessible for registered users without any upsell.
+    # True guests are blocked by _deny_guest_avatar_picker_access().
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     timestamp = int(time.time())

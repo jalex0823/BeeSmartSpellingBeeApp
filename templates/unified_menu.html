@@ -4375,8 +4375,8 @@
                 </div>
 
                 <!-- Upload Image (Premium) -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="image" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock image upload feature!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock image upload!{% else %} Take a photo of a book page or worksheet and we'll find the words for you!{% endif %}">
-                    {% if _is_auth != 'true' or _is_premium != 'true' %}
+                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="image" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock image upload feature!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock image upload!{% else %} Take a photo of a book page or worksheet and we'll find the words for you!{% endif %}">
+                    {% if _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
@@ -4397,8 +4397,8 @@
                 </div>
 
                 <!-- Saved Word Lists (Premium) -->
-                <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="saved" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth != 'true' %} Sign in to access saved word lists!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to access saved word lists!{% else %} Access your previously saved spelling lists and continue practicing!{% endif %}">
-                    {% if _is_auth != 'true' or _is_premium != 'true' %}
+                <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="saved" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth != 'true' %} Sign in to access saved word lists!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to access saved word lists!{% else %} Access your previously saved spelling lists and continue practicing!{% endif %}">
+                    {% if _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
@@ -4432,8 +4432,8 @@
                 </div>
 
                 <!-- Speed Round Challenge (Premium) -->
-                <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_auth != 'true' or _is_premium != 'true' %}locked-tile{% endif %}" data-feature="speed" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock speed challenges!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock speed challenges!{% else %} Race against time in a fast-paced spelling challenge!{% endif %}">
-                    {% if _is_auth != 'true' or _is_premium != 'true' %}
+                <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="speed" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock speed challenges!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock speed challenges!{% else %} Race against time in a fast-paced spelling challenge!{% endif %}">
+                    {% if _is_premium != 'true' %}
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
                         <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
