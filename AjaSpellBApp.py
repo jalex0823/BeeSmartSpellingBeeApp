@@ -2946,6 +2946,42 @@ def get_or_create_guest_user():
             print(f"DEBUG get_or_create_guest_user: Looking up guest user with id: {guest_user_id}")
             guest_user = User.query.get(guest_user_id)
             if guest_user:
+                # Legacy DB safety: some JSON columns were historically stored as strings
+                # (e.g. "[]") which breaks runtime code expecting lists.
+                try:
+                    import json as _json
+
+                    def _coerce_json_list_runtime(v):
+                        if v is None:
+                            return []
+                        if isinstance(v, list):
+                            return v
+                        if isinstance(v, str):
+                            s = v.strip()
+                            if not s:
+                                return []
+                            try:
+                                parsed = _json.loads(s)
+                                return parsed if isinstance(parsed, list) else []
+                            except Exception:
+                                return []
+                        return []
+
+                    pa = _coerce_json_list_runtime(getattr(guest_user, 'purchased_avatars', None))
+                    pb = _coerce_json_list_runtime(getattr(guest_user, 'purchased_bundles', None))
+                    dirty = False
+                    if not isinstance(getattr(guest_user, 'purchased_avatars', None), list):
+                        guest_user.purchased_avatars = pa
+                        dirty = True
+                    if not isinstance(getattr(guest_user, 'purchased_bundles', None), list):
+                        guest_user.purchased_bundles = pb
+                        dirty = True
+                    if dirty:
+                        # Commit the fix so future requests don't hit the same issue.
+                        db.session.commit()
+                except Exception as _e:
+                    # Non-fatal: don't block guest login if coercion fails.
+                    print(f"DEBUG get_or_create_guest_user: JSON coercion skipped: {_e}")
                 print(f"DEBUG get_or_create_guest_user: Found existing guest user: {guest_user.username}")
                 return guest_user
             else:
@@ -2965,6 +3001,13 @@ def get_or_create_guest_user():
             avatar_variant="default"
         )
         guest_user.set_password(str(uuid.uuid4()))  # Random password (user can't login)
+
+        # Ensure JSON list fields are correct types from the start.
+        try:
+            guest_user.purchased_avatars = []
+            guest_user.purchased_bundles = []
+        except Exception:
+            pass
         
         print(f"DEBUG get_or_create_guest_user: Adding guest user to database: {guest_username}")
         db.session.add(guest_user)
