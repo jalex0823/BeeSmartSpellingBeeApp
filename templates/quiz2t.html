@@ -4589,12 +4589,26 @@ class QuizManager {
             return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
         };
 
+        const getAnnouncerOverride = () => {
+            try {
+                const s = sessionStorage.getItem('announcerName');
+                if (s && s.toString().trim()) return s.toString().trim();
+            } catch (e) {}
+            try {
+                const l = localStorage.getItem('announcerName');
+                if (l && l.toString().trim()) return l.toString().trim();
+            } catch (e) {}
+            return '';
+        };
+
         // Get student name:
-        // - Authenticated users: ALWAYS use server-provided display name.
-        // - Guests: use sessionStorage guestName first, then localStorage studentName.
+        // - Prefer manual announcer override (typed on menu) when present.
+        // - Otherwise: authenticated uses server-provided display name.
+        // - Guests: sessionStorage guestName first, then localStorage studentName.
         {% if user_name %}
         {
-            const rawName = {{ user_name|tojson }};
+            const overrideName = getAnnouncerOverride();
+            const rawName = overrideName || {{ user_name|tojson }};
             this.studentName = normalizeStudentName(rawName);
             try {
                 const trimmed = (rawName ?? '').toString().trim();
@@ -4608,7 +4622,8 @@ class QuizManager {
         {
             let rawName = '';
             try {
-                rawName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+                const overrideName = getAnnouncerOverride();
+                rawName = overrideName || sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
             } catch (e) {
                 rawName = '';
             }

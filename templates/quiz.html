@@ -4977,12 +4977,26 @@ class QuizManager {
             return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
         };
 
+        const getAnnouncerOverride = () => {
+            try {
+                const s = sessionStorage.getItem('announcerName');
+                if (s && s.toString().trim()) return s.toString().trim();
+            } catch (e) {}
+            try {
+                const l = localStorage.getItem('announcerName');
+                if (l && l.toString().trim()) return l.toString().trim();
+            } catch (e) {}
+            return '';
+        };
+
         // Get student name:
-        // - Authenticated users: ALWAYS use server-provided display name.
-        // - Guests: use sessionStorage guestName first (fresh per-session), then localStorage studentName.
+        // - Prefer manual announcer override (typed on menu) when present.
+        // - Otherwise: authenticated uses server-provided display name.
+        // - Guests: sessionStorage guestName first (fresh per-session), then localStorage studentName.
         {% if user_name is defined and user_name %}
         {
-            const rawName = {{ user_name|tojson }};
+            const overrideName = getAnnouncerOverride();
+            const rawName = overrideName || {{ user_name|tojson }};
             this.studentName = normalizeStudentName(rawName);
 
             // Store authenticated name in a dedicated key without overwriting guest names.
@@ -4998,7 +5012,8 @@ class QuizManager {
         {% else %}
         {
             // Check sessionStorage for guest name, then localStorage
-            const rawName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+            const overrideName = getAnnouncerOverride();
+            const rawName = overrideName || sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
             this.studentName = normalizeStudentName(rawName);
             console.log('👤 Using guest/localStorage name:', this.studentName);
         }

@@ -4599,71 +4599,10 @@
                             <div style="margin-top: 1rem; font-size: 0.85rem; color: #999; text-align: center;">
                                 Or continue as guest
                             </div>
-                            
-                            <!-- Guest Name Input -->
-                            <div style="margin-top: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-                                <input type="text" id="guestNameInput" placeholder="Enter your name (optional)" 
-                                    maxlength="20"
-                                    style="
-                                        padding: 0.6rem 1rem;
-                                        border: 2px solid #FFD700;
-                                        border-radius: 10px;
-                                        font-size: 0.95rem;
-                                        text-align: center;
-                                        background: white;
-                                        color: #5A2C15;
-                                        max-width: 250px;
-                                        width: 100%;
-                                        font-weight: 600;
-                                        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
-                                    "
-                                    onkeypress="if(event.key==='Enter') saveGuestName()"
-                                />
-                                <small style="color: #8B4513; font-size: 0.75rem;">
-                                    💡 Your name will appear in the quiz!
-                                </small>
-                            </div>
-                            
-                            <script>
-                            function saveGuestName() {
-                                const input = document.getElementById('guestNameInput');
-                                const name = input.value.trim();
-                                
-                                if (name) {
-                                    // Save to sessionStorage for guest users
-                                    sessionStorage.setItem('guestName', name);
 
-                                    // Also save to localStorage for continuity across pages (some quiz modes read from localStorage)
-                                    try {
-                                        if (window.safeStorage && safeStorage.local && typeof safeStorage.local.setItem === 'function') {
-                                            safeStorage.local.setItem('studentName', name);
-                                        } else {
-                                            localStorage.setItem('studentName', name);
-                                        }
-                                    } catch (e) {}
-                                    
-                                    // Visual feedback
-                                    input.style.borderColor = '#4CAF50';
-                                    input.style.background = '#E8F5E9';
-                                    
-                                    setTimeout(() => {
-                                        input.style.borderColor = '#FFD700';
-                                        input.style.background = 'white';
-                                    }, 1000);
-                                    
-                                    console.log('✅ Guest name saved:', name);
-                                }
-                            }
-                            
-                            // Load saved guest name if exists
-                            window.addEventListener('DOMContentLoaded', () => {
-                                const savedName = sessionStorage.getItem('guestName');
-                                const input = document.getElementById('guestNameInput');
-                                if (savedName && input) {
-                                    input.value = savedName;
-                                }
-                            });
-                            </script>
+                            <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #8B4513; text-align: center;">
+                                Tip: Enter your name in the box below so the quiz announcer can cheer you on.
+                            </div>
                             
                             <!-- Instructional Information -->
                             <div style="
@@ -4711,8 +4650,7 @@
                     <input 
                         type="text" 
                         id="studentName" 
-                        placeholder="{% if current_user.is_authenticated %}{{ current_user.display_name }}{% else %}Enter your name here...{% endif %}"
-                        value="{% if current_user.is_authenticated %}{{ current_user.display_name }}{% endif %}"
+                        placeholder="Enter your name here..."
                         style="
                             width: 100%;
                             max-width: 400px;
@@ -6700,6 +6638,17 @@
                 safeStorage.local.setItem('studentName', name);
                 console.log(' Student name saved:', name);
 
+                // Announcer override: always store the typed name so quiz pages can
+                // use it for voice personalization (even for logged-in users).
+                try { sessionStorage.setItem('announcerName', name); } catch (e) {}
+                try {
+                    if (window.safeStorage && safeStorage.local && typeof safeStorage.local.setItem === 'function') {
+                        safeStorage.local.setItem('announcerName', name);
+                    } else {
+                        localStorage.setItem('announcerName', name);
+                    }
+                } catch (e) {}
+
                 // If the user is a guest, keep sessionStorage guestName in sync so quiz pages use the freshest value.
                 try {
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
@@ -6709,6 +6658,14 @@
                 } catch (e) {}
             } else {
                 safeStorage.local.removeItem('studentName');
+                try { sessionStorage.removeItem('announcerName'); } catch (e) {}
+                try {
+                    if (window.safeStorage && safeStorage.local && typeof safeStorage.local.removeItem === 'function') {
+                        safeStorage.local.removeItem('announcerName');
+                    } else {
+                        localStorage.removeItem('announcerName');
+                    }
+                } catch (e) {}
                 try {
                     const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
                     if (!isAuthenticated) {
@@ -15467,7 +15424,10 @@
                         // Authenticated user - sync display_name to input and localStorage
                         const nameInput = document.getElementById('studentName');
                         if (nameInput) {
-                            nameInput.value = authenticatedName;
+                            // Only prefill if empty, so users can still type a custom announcer name.
+                            if (!String(nameInput.value || '').trim()) {
+                                nameInput.value = authenticatedName;
+                            }
                             // IMPORTANT: Do NOT overwrite the guest name store.
                             // Keep the authenticated display name in a dedicated key so guest sessions don't inherit it.
                             safeStorage.local.setItem('lastAuthName', authenticatedName);
@@ -15480,7 +15440,12 @@
                         }
                     } else {
                         // Guest user
-                        const savedName = safeStorage.local.getItem('studentName');
+                        const nameInput = document.getElementById('studentName');
+                        const savedSession = (function(){ try { return sessionStorage.getItem('guestName'); } catch(e){ return null; } })();
+                        const savedName = (savedSession && String(savedSession).trim()) ? String(savedSession).trim() : safeStorage.local.getItem('studentName');
+                        if (nameInput && savedName && !String(nameInput.value || '').trim()) {
+                            nameInput.value = savedName;
+                        }
                         if (savedName) {
                             this.updateCheck(check3, `Guest: ${savedName}`, '', 35);
                             this.updateProgress(35, ` Welcome back ${savedName}!`);

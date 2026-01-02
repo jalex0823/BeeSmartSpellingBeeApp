@@ -1017,10 +1017,22 @@ function normalizeStudentName(raw) {
     const trimmed = (raw ?? '').toString().trim();
     return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
 }
+
+function getAnnouncerOverride() {
+    try {
+        const s = sessionStorage.getItem('announcerName');
+        if (s && s.toString().trim()) return s.toString().trim();
+    } catch (e) {}
+    try {
+        const l = localStorage.getItem('announcerName');
+        if (l && l.toString().trim()) return l.toString().trim();
+    } catch (e) {}
+    return '';
+}
 // Prefer server-provided name when available (authenticated), otherwise use guestName/sessionStorage,
 // then fall back to localStorage for continuity.
 {% if user_name %}
-studentName = {{ user_name|tojson }};
+studentName = getAnnouncerOverride() || {{ user_name|tojson }};
 try {
     const trimmed = (studentName ?? '').toString().trim();
     if (trimmed) {
@@ -1029,7 +1041,7 @@ try {
 } catch (e) {}
 {% else %}
 try {
-    studentName = sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
+    studentName = getAnnouncerOverride() || sessionStorage.getItem('guestName') || localStorage.getItem('studentName') || '';
 } catch (e) {
     studentName = '';
 }
