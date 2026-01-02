@@ -71,6 +71,21 @@ body::after {
 }
 
 /*
+  Background animation kill switch:
+  Disable subtle moving background layers (panning textures, bee/fairy background systems).
+  Keep normal UI animations intact.
+*/
+html.beesmart-no-bg-anim body::before {
+  animation: none !important;
+}
+
+html.beesmart-no-bg-anim .fairy-container,
+html.beesmart-no-bg-anim .bee-swarm,
+html.beesmart-no-bg-anim .magic-background {
+  display: none !important;
+}
+
+/*
   Sweep/shimmer overlay kill switch:
   Disable translucent gradient sweeps that can look like a moving overlay on mobile.
   Keep other background effects (bees/fairies/etc.) intact.

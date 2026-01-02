@@ -56,6 +56,19 @@
                 }
             })();
         </script>
+
+        <script>
+            // Hard-disable background animations globally.
+            // This targets the subtle moving background layers (e.g., slow panning texture, bees/fairies).
+            (function () {
+                window.__beesmartDisableBackgroundAnimations = true;
+                try {
+                    document.documentElement.classList.add('beesmart-no-bg-anim');
+                } catch (e) {
+                    // no-op
+                }
+            })();
+        </script>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
@@ -432,7 +445,9 @@
                 this.fairies = [];
                 this.isReducedMotion =
                     (window.__beesmartDisableAnimations === true) ||
+                    (window.__beesmartDisableBackgroundAnimations === true) ||
                     document.documentElement.classList.contains('beesmart-no-motion') ||
+                    document.documentElement.classList.contains('beesmart-no-bg-anim') ||
                     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 
                 if (!this.isReducedMotion) {
@@ -487,7 +502,9 @@
                 ];
                 this.isReducedMotion =
                     (window.__beesmartDisableAnimations === true) ||
+                    (window.__beesmartDisableBackgroundAnimations === true) ||
                     document.documentElement.classList.contains('beesmart-no-motion') ||
+                    document.documentElement.classList.contains('beesmart-no-bg-anim') ||
                     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
                 if (!this.isReducedMotion && this.container) {
@@ -613,8 +630,14 @@
         
         // Initialize systems when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            window.fairyAnimation = new FairyAnimation();
-            window.beeAnimation = new BeeAnimation();
+            const bgDisabled =
+                (window.__beesmartDisableBackgroundAnimations === true) ||
+                document.documentElement.classList.contains('beesmart-no-bg-anim');
+
+            if (!bgDisabled) {
+                window.fairyAnimation = new FairyAnimation();
+                window.beeAnimation = new BeeAnimation();
+            }
             window.toast = new ToastManager();
             
             // Focus management for accessibility

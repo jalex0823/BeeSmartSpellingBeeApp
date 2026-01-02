@@ -5,6 +5,17 @@
 
 class BeeSwarmAnimation {
     constructor(canvasId = 'beeSwarmCanvas') {
+        const bgDisabled =
+            (window.__beesmartDisableAnimations === true) ||
+            (window.__beesmartDisableBackgroundAnimations === true) ||
+            document.documentElement?.classList?.contains('beesmart-no-motion') ||
+            document.documentElement?.classList?.contains('beesmart-no-bg-anim') ||
+            window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+        if (bgDisabled) {
+            return;
+        }
+
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) {
             console.warn('🐝 Bee swarm canvas not found');
