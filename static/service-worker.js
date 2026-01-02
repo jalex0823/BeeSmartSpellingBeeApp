@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.3-v34-2026-01-01-avatar-picker-sw-bypass';
+const CACHE_VERSION = 'beesmart-v1.4.3-v35-2026-01-02-admin-sw-bypass-and-no-redirect-cache';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -38,6 +38,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // ✅ Admin pages can redirect to login when a session expires.
+  // To avoid "redirected response" fetch errors and accidental caching of login HTML,
+  // let the browser handle all /admin/* traffic directly.
+  if (url.pathname.startsWith('/admin/')) {
+    return;
+  }
 
   // ✅ Auth endpoints often use redirects (e.g., /auth/logout -> /auth/login or /).
   // Some requests may have redirect mode != 'follow', which can produce:
@@ -77,8 +84,12 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.endsWith('.glb')) {
     event.respondWith(
       fetch(request).then((response) => {
-        const copy = response.clone();
-        caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        // Never cache redirects (e.g., auth/login redirects) or opaque-redirect responses.
+        // Caching those can trigger: "a redirected response was used for a request whose redirect mode is not 'follow'".
+        if (response && response.ok && !response.redirected && response.type !== 'opaqueredirect') {
+          const copy = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        }
         return response;
       }).catch(() => caches.match(request))
     );
@@ -109,8 +120,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         const fetchAndCache = fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+          if (response && response.ok && !response.redirected && response.type !== 'opaqueredirect') {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
           return response;
         }).catch(() => cached);
         return cached || fetchAndCache;

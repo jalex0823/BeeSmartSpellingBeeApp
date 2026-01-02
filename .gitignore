@@ -138,10 +138,7 @@ build/
 *.webm
 static/videos/
 
-# Optional button-press SFX pack (add only if you have explicit licensing)
-static/sounds/ButtonPresses/*.mp3
-static/sounds/ButtonPresses/*.wav
-static/sounds/ButtonPresses/*.ogg
+
 
 # Ignore mobile wrapper deps
 mobile/node_modules/
