@@ -1652,7 +1652,7 @@ function showLockedMessage(avatar) {
                 🎓 Register for free to unlock amazing bee avatars!
             </p>
             <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
-                <button class="locked-modal-btn" onclick="window.location.href='/auth/register'">Register Now</button>
+                <button class="locked-modal-btn" onclick="window.location.href='/auth/login'">Sign In</button>
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
             </div>
         `;

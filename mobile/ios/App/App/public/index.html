@@ -5,10 +5,13 @@
     <title>BeeSmart Spelling</title>
 </head>
 <body>
-    <p>Loading BeeSmart Spelling...</p>
+    <p>Loading BeeSmart Spelling…</p>
     <script>
-        // Production wrapper: load the deployed site
-        window.location.replace('https://beesmartspelling.app');
+        // Production wrapper: load the deployed site.
+        // Add a query flag so the web app can explicitly disable any native/IAP diagnostics UI
+        // even if an older build artifact accidentally includes it.
+        // (The site should ignore unknown params; this is safe.)
+        window.location.replace('https://beesmartspelling.app/?native=1&no_iap_diag=1');
     </script>
 </body>
 </html>

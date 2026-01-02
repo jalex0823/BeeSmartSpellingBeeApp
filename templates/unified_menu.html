@@ -173,6 +173,116 @@
     <script>
         // Restore Purchases (App Store compliance)
         // This wrapper is intentionally lightweight and does not render any IAP diagnostics.
+                (function installRestoreCelebration(){
+                        if (window.__restoreCelebrationInstalled) return;
+                        window.__restoreCelebrationInstalled = true;
+
+                        const STYLE_ID = 'restore-celebration-style-v1';
+                        if (!document.getElementById(STYLE_ID)) {
+                                const style = document.createElement('style');
+                                style.id = STYLE_ID;
+                                style.textContent = `
+                                    .restore-celebration-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;}
+                                    .restore-celebration-modal{max-width:520px;width:100%;background:linear-gradient(135deg,#FFF4E6 0%, #FFEAC2 60%, #FFE4CC 100%);
+                                        border:2px solid rgba(255,176,59,.55);border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.25);
+                                        overflow:hidden;position:relative;}
+                                    .restore-celebration-header{padding:18px 18px 10px 18px;display:flex;gap:12px;align-items:center;}
+                                    .restore-celebration-badge{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFD54F,#FFB74D);
+                                        display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(255,167,38,.35);font-size:22px;}
+                                    .restore-celebration-title{margin:0;font-size:20px;line-height:1.15;color:#4E2C12;}
+                                    .restore-celebration-body{padding:0 18px 16px 18px;color:#5A3A20;font-size:15px;}
+                                    .restore-celebration-actions{padding:0 18px 18px 18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+                                    .restore-celebration-btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;}
+                                    .restore-celebration-btn-primary{background:linear-gradient(135deg,#4FC3F7,#29B6F6);color:white;box-shadow:0 10px 26px rgba(41,182,246,.35);} 
+                                    .restore-celebration-btn-secondary{background:rgba(255,255,255,.55);color:#4E2C12;border:1px solid rgba(120,72,30,.18);} 
+                                    .restore-celebration-subtle{opacity:.9;font-size:13px;margin-top:10px;}
+                                    .restore-glitter-layer{position:fixed;inset:0;pointer-events:none;z-index:100001;}
+                                    .restore-glitter{position:absolute;width:8px;height:8px;border-radius:2px;opacity:.95;transform:translate(-50%,-50%);
+                                        box-shadow:0 0 0 1px rgba(255,255,255,.28) inset;filter:drop-shadow(0 6px 10px rgba(0,0,0,.10));
+                                        animation:restore-glitter-pop 1000ms ease-out forwards;}
+                                    @keyframes restore-glitter-pop{0%{transform:translate(-50%,-50%) scale(.1) rotate(0deg);opacity:0}
+                                        25%{opacity:1}
+                                        65%{transform:translate(-50%,-50%) scale(1.15) rotate(120deg);opacity:1}
+                                        100%{transform:translate(-50%,-50%) scale(.75) rotate(220deg);opacity:0}}
+                                `;
+                                document.head.appendChild(style);
+                        }
+
+                        function _rand(min, max) { return Math.random() * (max - min) + min; }
+
+                        window.__beeRestoreCelebrate = function __beeRestoreCelebrate(opts){
+                                opts = opts || {};
+                                const title = opts.title || '✨ Purchases restored!';
+                                const message = opts.message || 'All your purchases should now be in place. If anything still looks locked, give it a moment while the bees sync everything up.';
+                                const autoReloadMs = (typeof opts.autoReloadMs === 'number') ? opts.autoReloadMs : 1600;
+                                const allowReload = (opts.allowReload !== false);
+
+                                // Glitter burst centered on screen (stays in place)
+                                const layer = document.createElement('div');
+                                layer.className = 'restore-glitter-layer';
+                                document.body.appendChild(layer);
+
+                                const cx = window.innerWidth * 0.5;
+                                const cy = window.innerHeight * 0.42;
+                                const colors = ['#FFD54F','#FFB74D','#FFF59D','#4FC3F7','#FF80AB','#B39DDB'];
+                                const count = 42;
+                                for (let i = 0; i < count; i++) {
+                                        const p = document.createElement('div');
+                                        p.className = 'restore-glitter';
+                                        p.style.left = `${cx + _rand(-140, 140)}px`;
+                                        p.style.top = `${cy + _rand(-90, 120)}px`;
+                                        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                                        p.style.width = `${_rand(5, 11)}px`;
+                                        p.style.height = `${_rand(5, 11)}px`;
+                                        p.style.animationDelay = `${_rand(0, 180)}ms`;
+                                        layer.appendChild(p);
+                                }
+                                setTimeout(() => { try { layer.remove(); } catch(e){} }, 1400);
+
+                                // Success modal
+                                const backdrop = document.createElement('div');
+                                backdrop.className = 'restore-celebration-backdrop';
+                                backdrop.innerHTML = `
+                                    <div class="restore-celebration-modal" role="dialog" aria-modal="true" aria-label="Restore purchases result">
+                                        <div class="restore-celebration-header">
+                                            <div class="restore-celebration-badge">🐝</div>
+                                            <div>
+                                                <h3 class="restore-celebration-title">${title}</h3>
+                                                <div class="restore-celebration-subtle">Your hive is syncing…</div>
+                                            </div>
+                                        </div>
+                                        <div class="restore-celebration-body">
+                                            <div>${message}</div>
+                                        </div>
+                                        <div class="restore-celebration-actions">
+                                            <button class="restore-celebration-btn restore-celebration-btn-secondary" data-action="close">Nice!</button>
+                                            <button class="restore-celebration-btn restore-celebration-btn-primary" data-action="reload">Refresh now</button>
+                                        </div>
+                                    </div>
+                                `;
+                                document.body.appendChild(backdrop);
+
+                                const cleanup = () => { try { backdrop.remove(); } catch(e){} };
+                                const doReload = () => { cleanup(); try { window.location.reload(); } catch(e){} };
+
+                                backdrop.addEventListener('click', (ev) => {
+                                        const action = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-action');
+                                        if (action === 'reload') return doReload();
+                                        if (action === 'close') return cleanup();
+                                        if (ev.target === backdrop) cleanup();
+                                });
+
+                                // Optional gentle auto-refresh to update server-driven premium flags,
+                                // but delayed so it feels like a celebration instead of a restart.
+                                if (allowReload && autoReloadMs > 0) {
+                                        setTimeout(() => {
+                                                // If modal is still open, we refresh automatically.
+                                                if (document.body.contains(backdrop)) doReload();
+                                        }, autoReloadMs);
+                                }
+                        };
+                })();
+
         async function restorePurchases() {
             const btn = document.getElementById('restorePurchasesBtn');
             const setBtn = (text, disabled) => {
@@ -200,8 +310,24 @@
                     });
                 }
 
-                // Refresh so the backend-driven premium flag updates the UI.
-                try { window.location.reload(); } catch (e) {}
+                // 🎉 Celebration + gentle auto-refresh so entitlement-driven UI updates.
+                try {
+                    // Re-enable the button immediately so the UI doesn't feel blocked.
+                    setBtn('Restore Purchases', false);
+                    if (typeof window.__beeRestoreCelebrate === 'function') {
+                        window.__beeRestoreCelebrate({
+                            title: '✨ Purchases restored!',
+                            message: 'All your purchases should now be in place. If anything still looks locked, it may take a moment for the bees to sync — then we’ll refresh automatically.',
+                            autoReloadMs: 1600,
+                            allowReload: true
+                        });
+                    } else {
+                        // Fallback: old behavior
+                        try { window.location.reload(); } catch (e) {}
+                    }
+                } catch (e) {
+                    try { window.location.reload(); } catch (e2) {}
+                }
             } catch (e) {
                 console.warn('[Menu] restorePurchases failed:', e);
                 setBtn('Restore Purchases', false);

@@ -7336,10 +7336,9 @@ def api_upload():
       - file upload (.csv, .txt, .docx, .pdf)
       - OR raw JSON body: { "words": [ {"word": "...", "sentence":"", "hint":""}, ... ] }
     """
-    # Pay-to-play: uploads are Premium-only.
-    premium_block = _require_premium_json("upload")
-    if premium_block is not None:
-        return premium_block
+    # Uploading words is open to all users (including guests) per product policy:
+    # the only gating should be on *tiles/features* (e.g., Saved Lists), not on
+    # the ability to build a temporary wordbank for practice.
 
     # CRITICAL: Set session persistence FIRST before any session operations
     session.permanent = True
