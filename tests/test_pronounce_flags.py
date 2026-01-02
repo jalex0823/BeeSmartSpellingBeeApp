@@ -14,6 +14,9 @@ set_wordbank = AjaSpellBApp.set_wordbank
 init_quiz_state = AjaSpellBApp.init_quiz_state
 QUIZ_STATE_KEY = AjaSpellBApp.QUIZ_STATE_KEY
 
+# Ensure errors propagate during tests so 500s show useful tracebacks.
+app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
+
 # Minimal integration using Flask test client
 
 def test_should_announce_and_auto_pronounce_flags():
@@ -21,18 +24,13 @@ def test_should_announce_and_auto_pronounce_flags():
 
     # Seed a tiny wordbank
     wb = [{'word': 'bee', 'sentence': 'The bee buzzes.', 'hint': 'It makes honey.'}]
-    with app.test_request_context('/'):
-        set_wordbank(wb, is_user_upload=True)
-        init_quiz_state(len(wb))
+    seed = client.post('/api/upload-manual-words', json=wb)
+    assert seed.status_code == 200, (seed.get_json() or seed.get_data(as_text=True))
 
     # Hit /api/next to get flags
-    # In some environments guest-user creation can fail and /api/next returns a guided 400.
     resp = client.post('/api/next')
-    assert resp.status_code in (200, 400)
+    assert resp.status_code == 200
     data = resp.get_json()
-    if resp.status_code == 400:
-        assert data.get('action_required') == 'upload_words'
-        return
 
     assert 'shouldAnnounce' in data and 'announceToken' in data
 

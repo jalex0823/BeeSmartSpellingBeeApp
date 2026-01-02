@@ -6,6 +6,7 @@ SQLAlchemy ORM models for user management, quiz tracking, and progress analytics
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.types import TypeDecorator
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import uuid
@@ -13,6 +14,57 @@ import random
 import string
 
 db = SQLAlchemy()
+
+
+class JSONListCoerce(TypeDecorator):
+    """JSON type that tolerates legacy TEXT storage.
+
+    Some historical schemas stored JSON arrays as TEXT like "[]".
+    MutableList requires the ORM value to be a real Python list; if it sees a
+    string, it raises. This decorator coerces strings into lists on both bind and
+    fetch so the rest of the app can treat these fields as ``list[str]``.
+    """
+
+    impl = db.JSON
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            s = value.strip()
+            if not s:
+                return []
+            # Best effort parse, otherwise drop to empty
+            try:
+                import json
+
+                parsed = json.loads(s)
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                return []
+        # Any other unexpected type: make it safe for JSON
+        return []
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            s = value.strip()
+            if not s:
+                return []
+            try:
+                import json
+
+                parsed = json.loads(s)
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                return []
+        return []
 
 
 class User(UserMixin, db.Model):
@@ -49,8 +101,8 @@ class User(UserMixin, db.Model):
     # 🍯 Monetization System (Honey Points & IAP)
     honey_points = db.Column(db.Integer, default=0, index=True)  # Earned in-game currency
     # IMPORTANT: use MutableList so in-place mutations (append/extend) persist.
-    purchased_avatars = db.Column(MutableList.as_mutable(db.JSON), default=list)  # List of avatar IDs purchased via IAP
-    purchased_bundles = db.Column(MutableList.as_mutable(db.JSON), default=list)  # List of bundle IDs purchased
+    purchased_avatars = db.Column(MutableList.as_mutable(JSONListCoerce), default=list)  # List of avatar IDs purchased via IAP
+    purchased_bundles = db.Column(MutableList.as_mutable(JSONListCoerce), default=list)  # List of bundle IDs purchased
     premium_member = db.Column(db.Boolean, default=False)  # Premium membership flag
     admin_all_access = db.Column(db.Boolean, default=False)  # Admin key: bypass all monetization
     

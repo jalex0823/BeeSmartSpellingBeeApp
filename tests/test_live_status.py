@@ -10,6 +10,9 @@ app = AjaSpellBApp.app
 set_wordbank = AjaSpellBApp.set_wordbank
 init_quiz_state = AjaSpellBApp.init_quiz_state
 
+# Ensure errors propagate during tests so 500s show useful tracebacks.
+app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
+
 
 def test_live_status_inactive():
     client = app.test_client()
@@ -24,16 +27,12 @@ def test_live_status_active_updates():
         {'word': 'alpha', 'sentence': 'Alpha word.', 'hint': 'First'},
         {'word': 'beta', 'sentence': 'Beta word.', 'hint': 'Second'}
     ]
-    # These helpers touch the Flask session, so they require a request context.
-    with app.test_request_context('/'):
-        set_wordbank(wb, is_user_upload=True)
-        init_quiz_state(len(wb))
+    # Seed through a route so the same client session cookie gets the storage pointer.
+    seed = client.post('/api/upload-manual-words', json=wb)
+    assert seed.status_code == 200
     # Start quiz
     start = client.post('/api/next')
-    if start.status_code == 400:
-        data = start.get_json() or {}
-        assert data.get('action_required') == 'upload_words'
-        return
+    assert start.status_code == 200
     r = client.get('/api/live-status')
     d = r.get_json()
     assert d['active'] is True
@@ -47,15 +46,11 @@ def test_live_status_after_answer():
         {'word': 'alpha', 'sentence': 'Alpha word.', 'hint': 'First'},
         {'word': 'beta', 'sentence': 'Beta word.', 'hint': 'Second'}
     ]
-    # These helpers touch the Flask session, so they require a request context.
-    with app.test_request_context('/'):
-        set_wordbank(wb, is_user_upload=True)
-        init_quiz_state(len(wb))
+    # Seed through a route so the same client session cookie gets the storage pointer.
+    seed = client.post('/api/upload-manual-words', json=wb)
+    assert seed.status_code == 200
     start = client.post('/api/next')  # load first word
-    if start.status_code == 400:
-        data = start.get_json() or {}
-        assert data.get('action_required') == 'upload_words'
-        return
+    assert start.status_code == 200
     ans = client.post('/api/answer', json={"user_input": "alpha", "method": "keyboard", "elapsed_ms": 1500})
     assert ans.status_code in (200, 400)
     if ans.status_code == 400:

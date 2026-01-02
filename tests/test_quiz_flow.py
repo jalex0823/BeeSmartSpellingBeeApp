@@ -17,10 +17,30 @@ def client():
 def start_quiz_with_words(client, words):
     # Prepare a minimal wordbank shape: {word, sentence, hint}
     rows = [{"word": w, "sentence": f"Fill in the blank: ___", "hint": ""} for w in words]
-    # These helpers use the Flask session and require a request context.
-    with app.test_request_context('/'):
-        set_wordbank(rows, is_user_upload=True)
-        init_quiz_state(len(rows))
+    # Seed within the *client* session so the signed session cookie includes the
+    # wordbank pointer and any guest_user_id created during quiz init.
+    with client.session_transaction() as sess:
+        # Touch session so Flask creates it and we can safely mutate.
+        sess.setdefault("_seed", True)
+    r_clear = client.post(
+        '/api/clear',
+        data=json.dumps({"confirmed": True}),
+        content_type='application/json'
+    )
+    assert r_clear.status_code == 200
+
+    r_upload = client.post(
+        '/api/upload-manual-words',
+        data=json.dumps({"words": rows}),
+        content_type='application/json'
+    )
+    if r_upload.status_code != 200:
+        # Helpful in CI/local debugging: surface server error details.
+        try:
+            body = r_upload.get_json(silent=True)
+        except Exception:
+            body = None
+        raise AssertionError(f"upload-manual-words failed: {r_upload.status_code} body={body}")
 
 
 def post_json(client, url, payload):
@@ -31,11 +51,8 @@ def test_next_advances_and_fields_consistent(client):
     start_quiz_with_words(client, ["apple", "bee", "cat"])    
     # First next
     r1 = post_json(client, '/api/next', {})
-    assert r1.status_code in (200, 400)
+    assert r1.status_code == 200
     data1 = r1.get_json()
-    if r1.status_code == 400:
-        assert data1.get('action_required') == 'upload_words'
-        return
     assert data1.get('done') is False
     assert data1['progress']['index'] == 1
     assert data1['progress']['total'] == 3
@@ -90,9 +107,7 @@ def test_hint_and_sentence_presence(client):
     start_quiz_with_words(client, ["delta"])    
     r = post_json(client, '/api/next', {})
     data = r.get_json()
-    if r.status_code == 400:
-        assert data.get('action_required') == 'upload_words'
-        return
+    assert r.status_code == 200
 
     assert 'sentence' in data
     assert 'hint' in data

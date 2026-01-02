@@ -21,3 +21,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+
+def pytest_configure() -> None:
+    """Make Flask app errors visible during tests.
+
+    Several tests use dynamic imports of `AjaSpellBApp.py` via `importlib`,
+    but others may import `AjaSpellBApp` directly. Turning on TESTING and
+    propagating exceptions helps pytest surface server errors rather than
+    returning opaque 500s.
+    """
+
+    try:
+        import AjaSpellBApp
+
+        AjaSpellBApp.app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
+    except Exception:
+        # Avoid failing test collection/config if the app can't import here.
+        pass

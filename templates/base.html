@@ -946,7 +946,9 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').catch(() => {/* no-op */});
+                // Serve the SW from /static/ (single source of truth) to avoid 404s
+                // when /service-worker.js is not mapped in certain deployments/CDNs.
+                navigator.serviceWorker.register('/static/service-worker.js').catch(() => {/* no-op */});
             });
         }
     </script>
