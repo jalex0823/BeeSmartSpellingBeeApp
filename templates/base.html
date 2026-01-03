@@ -259,6 +259,19 @@
         html.beesmart-no-motion .register-button {
             transform: none !important;
         }
+
+        /* Mobile UX: ensure back/navigation controls have a minimum 44x44 tap target */
+        .back-button,
+        .btn-back,
+        .btn-back-to-menu,
+        .btn-back-menu,
+        .back-link,
+        .back-btn,
+        .back-home-btn,
+        .back-menu-btn {
+            min-width: 44px;
+            min-height: 44px;
+        }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
