@@ -1137,7 +1137,6 @@ function showSpeedRoundStartGate() {
         };
 
         btn.addEventListener('click', (e) => { e.preventDefault(); startFromGesture(); }, { once: true });
-        btn.addEventListener('touchend', (e) => { e.preventDefault(); startFromGesture(); }, { once: true });
     } catch (e) {
         // Fail open
         setTimeout(() => loadNextWord(), 150);

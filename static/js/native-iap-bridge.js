@@ -15,6 +15,115 @@
 (function () {
   'use strict';
 
+  // Login handoff:
+  // When the user signs in, /auth/login now returns a fresh entitlements summary.
+  // The login page stores it in localStorage so the *next* page load can trigger
+  // the same refresh pathway used by native restores (beesmart:iap-reconciled).
+  // This avoids requiring a manual refresh after login.
+  function consumeLoginEntitlementsHandoff() {
+    try {
+      if (!window.localStorage) return null;
+      const key = 'beesmart_login_entitlements_v1';
+      const raw = window.localStorage.getItem(key);
+      if (!raw || typeof raw !== 'string') return null;
+
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+      window.localStorage.removeItem(key);
+
+      if (!parsed || typeof parsed !== 'object') return null;
+      const ts = parsed.ts;
+      const entitlements = parsed.entitlements;
+      if (!entitlements || typeof entitlements !== 'object') return null;
+
+      // Expire old handoffs (e.g., stale localStorage) to avoid surprising refreshes.
+      if (typeof ts === 'number' && (Date.now() - ts) > 2 * 60 * 1000) return null;
+
+      return entitlements;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function schedulePostLoginRefresh(entitlements) {
+    try {
+      const fire = function () {
+        // Allow other DOMContentLoaded handlers (that install listeners) to run first.
+        setTimeout(function () {
+          try {
+            window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+              detail: {
+                ok: true,
+                status: 200,
+                reason: 'login_handoff',
+                data: { success: true, entitlements: entitlements },
+                owned: (entitlements && (entitlements.anon_owned_products || entitlements.owned_products)) || []
+              }
+            }));
+          } catch (e) { /* ignore */ }
+        }, 0);
+      };
+
+      if (document && document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', fire, { once: true });
+      } else {
+        fire();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Subscription enforcement refresh:
+  // Ensure entitlement state is refreshed on app launch and when the app resumes
+  // (iOS/Android WebView + Safari). This supports UI prompts and content gating.
+  let _lastAutoReconcileAt = 0;
+  function autoReconcile(reason) {
+    try {
+      const now = Date.now();
+      // Throttle to avoid repeated calls during rapid visibility changes.
+      if (_lastAutoReconcileAt && (now - _lastAutoReconcileAt) < 5000) return;
+      _lastAutoReconcileAt = now;
+
+      // Defer slightly to let page listeners install first.
+      setTimeout(function () {
+        try {
+          if (hasBridge()) {
+            reconcileFromNative(reason || 'auto');
+          } else {
+            serverReconcile(reason || 'auto_no_bridge');
+          }
+        } catch (e) { /* ignore */ }
+      }, 0);
+    } catch (e) { /* ignore */ }
+  }
+
+  function installAutoReconcileListeners() {
+    try {
+      if (window.__beesmartAutoReconcileInstalled) return;
+      window.__beesmartAutoReconcileInstalled = true;
+
+      // App launch / initial paint.
+      autoReconcile('app_launch');
+
+      // App resume.
+      document.addEventListener('visibilitychange', function () {
+        try {
+          if (document.visibilityState === 'visible') {
+            autoReconcile('app_resume_visibility');
+          }
+        } catch (e) { /* ignore */ }
+      });
+
+      // BFCache restores (Safari) can skip full reloads.
+      window.addEventListener('pageshow', function (ev) {
+        try {
+          if (ev && ev.persisted) {
+            autoReconcile('app_resume_pageshow');
+          }
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore */ }
+  }
+
   // Optional continuity helper:
   // - In production native wrappers, prefer providing a stable keychain identifier
   //   via the Capacitor plugin (e.g., getInstallId()) so guest restores can be
@@ -285,6 +394,16 @@
 
   try {
     // Per request: no diagnostic UI.
+
+    // If login handed off entitlements for this navigation, emit an event so
+    // pages with listeners (subscription, avatar picker) refresh immediately.
+    const loginEntitlements = consumeLoginEntitlementsHandoff();
+    if (loginEntitlements) {
+      schedulePostLoginRefresh(loginEntitlements);
+    }
+
+    // Keep subscription state fresh across launch/resume.
+    installAutoReconcileListeners();
 
     // Fast path
     if (initBridgeOnce()) return;

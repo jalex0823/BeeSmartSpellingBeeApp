@@ -147,7 +147,20 @@ loginForm.addEventListener('submit', async (e) => {
   };
 
   try {
-    const resp = await fetch(loginForm.action, {
+    // Preserve ?next=... so users return to the page they were on.
+    let loginUrl = loginForm.action;
+    try {
+      const u = new URL(loginForm.action, window.location.origin);
+      const cur = new URL(window.location.href);
+      const next = cur.searchParams.get('next');
+      if (next && !u.searchParams.get('next')) u.searchParams.set('next', next);
+      loginUrl = u.toString();
+    } catch (e) {
+      // Non-fatal: fall back to the original action.
+      loginUrl = loginForm.action;
+    }
+
+    const resp = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -156,6 +169,20 @@ loginForm.addEventListener('submit', async (e) => {
     if (data.success) {
       successAlert.textContent = data.message || 'Welcome back!';
       successAlert.style.display = 'block';
+
+      // Entitlements handoff: allow the next page load to refresh UI immediately
+      // (avatar locks, subscription state, etc.) without requiring a manual refresh.
+      try {
+        if (data.entitlements && window.localStorage) {
+          window.localStorage.setItem('beesmart_login_entitlements_v1', JSON.stringify({
+            ts: Date.now(),
+            entitlements: data.entitlements
+          }));
+        }
+      } catch (e) {
+        // Non-fatal: localStorage might be unavailable in some privacy modes.
+      }
+
       setTimeout(() => {
         window.location.href = data.redirect || '{{ url_for("home") }}';
       }, 800);

@@ -181,6 +181,45 @@
         // IAP SKU hydration disabled on home menu (no IAP diagnostics on this screen).
     </script>
     <script>
+        // Keep the home menu's server-rendered premium lock state in sync.
+        // native-iap-bridge.js emits `beesmart:iap-reconciled` on launch/resume and after login handoff.
+        (function installMenuEntitlementRefresh(){
+            try {
+                if (window.__beesmartMenuEntitlementRefreshInstalled) return;
+                window.__beesmartMenuEntitlementRefreshInstalled = true;
+
+                const currentPremium = !!window.IS_PREMIUM;
+                const isPremiumish = function(ent){
+                    try {
+                        if (ent && ent.premium_member === true) return true;
+                    } catch (e) { /* ignore */ }
+                    let owned = [];
+                    try {
+                        if (ent && Array.isArray(ent.anon_owned_products)) owned = ent.anon_owned_products;
+                        else if (ent && Array.isArray(ent.owned_products)) owned = ent.owned_products;
+                        else if (ent && Array.isArray(ent.products)) owned = ent.products;
+                    } catch (e) { owned = []; }
+                    return Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+                };
+
+                window.addEventListener('beesmart:iap-reconciled', function(ev){
+                    try {
+                        const detail = ev && ev.detail ? ev.detail : null;
+                        const data = detail && detail.data ? detail.data : null;
+                        // Server responses vary: sometimes {entitlements: {...}}, sometimes the entitlements object itself.
+                        const ent = (data && (data.entitlements || data.reconcile)) || data || null;
+                        if (!ent || typeof ent !== 'object') return;
+                        const nextPremium = !!isPremiumish(ent);
+                        if (nextPremium !== currentPremium) {
+                            // Reload to pick up server-rendered locks/CTAs.
+                            window.location.reload();
+                        }
+                    } catch (e) { /* ignore */ }
+                });
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+    <script>
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
             const VERSION = 'unified_menu_v2.3-' + Date.now();
@@ -6395,7 +6434,7 @@
         // Cache buster: 2025-10-14-v3 (force refresh)
         (function(){
             const V='v22-'+Date.now();
-            if (window.BEESMART_DEBUG) console.log('BeeSmart App JavaScript loaded -', V);
+            console.log('BeeSmart App JavaScript loaded -', V);
             // Update version badge below logo instead of top corner
             const versionBadge = document.getElementById('versionBadge');
             if (versionBadge) {
@@ -6408,10 +6447,6 @@
                 window.fetch=function(resource, init){
                     try {
                         let url=typeof resource==='string'?resource:(resource && resource.url)||'';
-                        // Fast path: only do URL parsing work when this looks like the legacy '/upload' endpoint.
-                        if (!url || (typeof url === 'string' && url.indexOf('/upload') === -1)) {
-                            return ofetch(resource, init);
-                        }
                         // Only rewrite EXACT legacy '/upload' (optionally with query), not '/api/upload-*' or other paths
                         const origin = (typeof location!=='undefined' ? location.origin : '');
                         const u = new URL(url, origin);
@@ -7457,21 +7492,39 @@
                     });
             }
 
-            // iOS Fix: Add both click and touchend events for better mobile support
+            // iOS: Use touch timestamp + click suppression (no preventDefault on touchend)
+            // to avoid interfering with scrolling/navigation.
             const saveBtn = document.getElementById('saveCurrentBtn');
             const refreshBtn = document.getElementById('refreshSavedBtn');
-            
-            saveBtn.onclick = saveCurrent;
-            saveBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
+
+            let saveBtnLastTouchAt = 0;
+            let refreshBtnLastTouchAt = 0;
+
+            saveBtn.addEventListener('click', (e) => {
+                if (Date.now() - saveBtnLastTouchAt < 700) {
+                    try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                    return;
+                }
+                try { e.preventDefault(); } catch (_e) {}
                 saveCurrent();
-            }, {passive: false});
-            
-            refreshBtn.onclick = loadSaved;
-            refreshBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
+            });
+            saveBtn.addEventListener('touchend', () => {
+                saveBtnLastTouchAt = Date.now();
+                saveCurrent();
+            }, { passive: true });
+
+            refreshBtn.addEventListener('click', (e) => {
+                if (Date.now() - refreshBtnLastTouchAt < 700) {
+                    try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                    return;
+                }
+                try { e.preventDefault(); } catch (_e) {}
                 loadSaved();
-            }, {passive: false});
+            });
+            refreshBtn.addEventListener('touchend', () => {
+                refreshBtnLastTouchAt = Date.now();
+                loadSaved();
+            }, { passive: true });
             
             loadSaved();
         }
@@ -7799,9 +7852,14 @@
 
             // Submit button
             const randomPlaySubmitBtn = document.getElementById('randomPlaySubmit');
-            
-            // Click handler for desktop
+            let randomPlaySubmitLastTouchAt = 0;
+
+            // Click handler for desktop (suppressed if just handled by touch)
             randomPlaySubmitBtn.addEventListener('click', (e) => {
+                if (Date.now() - randomPlaySubmitLastTouchAt < 700) {
+                    try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 const level = parseInt(slider.value);
@@ -7809,17 +7867,16 @@
                 modal.remove();
                 generateRandomWords(level);
             });
-            
-            //  iOS FIX: Touch handler for instant response on iPhone/iPad
+
+            // iOS: touch handler for instant response (no preventDefault on touchend)
             randomPlaySubmitBtn.addEventListener('touchend', (e) => {
-                // iOS: make it instant and prevent ghost-click + modal outside-click interference
-                e.preventDefault();
-                e.stopPropagation();
+                randomPlaySubmitLastTouchAt = Date.now();
+                try { e.stopPropagation(); } catch (_e) {}
                 const level = parseInt(slider.value);
                 console.log(' Submit button touched (iOS)! Level:', level);
                 modal.remove();
                 generateRandomWords(level);
-            }, { passive: false });
+            }, { passive: true });
 
             // Hover effect for submit button
             const submitBtn = document.getElementById('randomPlaySubmit');
@@ -7844,19 +7901,24 @@
 
             // Close button
             const randomPlayCloseBtn = document.getElementById('randomPlayClose');
-            
+            let randomPlayCloseLastTouchAt = 0;
+
             randomPlayCloseBtn.addEventListener('click', (e) => {
+                if (Date.now() - randomPlayCloseLastTouchAt < 700) {
+                    try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 modal.remove();
             });
-            
-            //  iOS FIX: Touch handler for instant close on iPhone/iPad
+
+            // iOS: touch handler for instant close (no preventDefault on touchend)
             randomPlayCloseBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                randomPlayCloseLastTouchAt = Date.now();
+                try { e.stopPropagation(); } catch (_e) {}
                 modal.remove();
-            }, { passive: false });
+            }, { passive: true });
 
             // Close on outside click
             modal.addEventListener('click', (e) => {
@@ -9120,18 +9182,24 @@
                     okBtn.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.4)';
                 });
                 
-                // Desktop click handler
-                okBtn.addEventListener('click', () => {
+                let okBtnLastTouchAt = 0;
+
+                // Desktop click handler (suppressed if just handled by touch)
+                okBtn.addEventListener('click', (e) => {
+                    if (Date.now() - okBtnLastTouchAt < 700) {
+                        try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                        return;
+                    }
                     modal.remove();
                     resolve(true);
                 });
-                
-                //  iOS touch handler for instant response
-                okBtn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
+
+                // iOS touch handler for instant response (no preventDefault)
+                okBtn.addEventListener('touchend', () => {
+                    okBtnLastTouchAt = Date.now();
                     modal.remove();
                     resolve(true);
-                }, { passive: false });
+                }, { passive: true });
                 
                 //  iOS touch feedback
                 okBtn.addEventListener('touchstart', () => {
@@ -9152,18 +9220,24 @@
                     cancelBtn.style.boxShadow = '0 8px 20px rgba(168, 230, 207, 0.4)';
                 });
                 
-                // Desktop click handler
-                cancelBtn.addEventListener('click', () => {
+                let cancelBtnLastTouchAt = 0;
+
+                // Desktop click handler (suppressed if just handled by touch)
+                cancelBtn.addEventListener('click', (e) => {
+                    if (Date.now() - cancelBtnLastTouchAt < 700) {
+                        try { e.preventDefault(); e.stopPropagation(); } catch (_e) {}
+                        return;
+                    }
                     modal.remove();
                     resolve(false);
                 });
-                
-                //  iOS touch handler for instant response
-                cancelBtn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
+
+                // iOS touch handler for instant response (no preventDefault)
+                cancelBtn.addEventListener('touchend', () => {
+                    cancelBtnLastTouchAt = Date.now();
                     modal.remove();
                     resolve(false);
-                }, { passive: false });
+                }, { passive: true });
                 
                 //  iOS touch feedback
                 cancelBtn.addEventListener('touchstart', () => {

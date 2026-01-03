@@ -10276,6 +10276,15 @@ def api_build_dictionary():
 # ============================================================================
 
 def _entitlements_summary(user: User) -> dict:
+    def _safe_is_premium(u: User) -> bool:
+        try:
+            # Prefer a richer check if the model supports it.
+            if hasattr(u, 'is_premium_active') and callable(getattr(u, 'is_premium_active')):
+                return bool(u.is_premium_active())
+        except Exception:
+            pass
+        return bool(getattr(u, 'premium_member', False))
+
     try:
         unlocked = user.get_unlocked_avatars()
     except Exception:
@@ -10288,11 +10297,131 @@ def _entitlements_summary(user: User) -> dict:
     if not isinstance(pb, list):
         pb = []
     return {
-        "premium_member": bool(getattr(user, 'premium_member', False)),
+        "premium_member": _safe_is_premium(user),
         "purchased_avatars": list(pa or []),
         "purchased_bundles": list(pb or []),
         "unlocked_avatars": unlocked,
     }
+
+
+def _reconcile_anon_entitlements_to_user(user: User) -> dict:
+    """Best-effort: import anon (cookie/device-scoped) entitlements into a logged-in user.
+
+    This supports the common flow:
+      - user restores/purchases on device (anon_restore_id)
+      - later they create an account or sign in
+      - their previously restored avatar/bundle ownership should carry over
+
+    Security note:
+      - We intentionally do *not* import premium/subscription SKUs from anon
+        ownership here (those require account-based verification/restore).
+    """
+    out = {
+        'imported': False,
+        'anon_restore_id_present': False,
+        'total_candidates': 0,
+        'applied_count': 0,
+        'applied_product_ids': [],
+        'skipped_product_ids': [],
+        'errors': [],
+    }
+    if user is None:
+        return out
+
+    anon_restore_id = None
+    try:
+        anon_restore_id = request.cookies.get('anon_restore_id')
+    except Exception:
+        anon_restore_id = None
+    if not anon_restore_id:
+        try:
+            anon_restore_id = session.get('anon_restore_id')
+        except Exception:
+            anon_restore_id = None
+
+    out['anon_restore_id_present'] = bool(anon_restore_id)
+    if not anon_restore_id:
+        return out
+
+    # Pull anon owned products (DB + session) and de-dupe.
+    try:
+        anon_ent = _get_guest_entitlements() or {}
+        owned = anon_ent.get('anon_owned_products') if isinstance(anon_ent, dict) else []
+    except Exception:
+        owned = []
+    if not isinstance(owned, list):
+        owned = []
+
+    merged: list[str] = []
+    seen: set[str] = set()
+    for pid in owned:
+        if not pid:
+            continue
+        spid = str(pid).strip()
+        if not spid or spid in seen:
+            continue
+        seen.add(spid)
+        merged.append(spid)
+
+    out['total_candidates'] = int(len(merged))
+    if not merged:
+        return out
+
+    def _looks_premiumish(pid: str) -> bool:
+        try:
+            p = (pid or '').lower()
+        except Exception:
+            return False
+        return any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family'))
+
+    # Apply only non-subscription entitlements from anon ownership.
+    applied: list[str] = []
+    skipped: list[str] = []
+    for pid in merged:
+        try:
+            mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+            mtype = str(mapping.get('type') or '').strip().lower() if isinstance(mapping, dict) else ''
+            is_subscription_like = bool(mtype in ('premium', 'subscription') or (isinstance(mapping, dict) and bool(mapping.get('subscription'))))
+            if is_subscription_like or _looks_premiumish(pid):
+                skipped.append(pid)
+                continue
+
+            res = _apply_entitlement(user, pid)
+            if isinstance(res, dict) and res.get('applied'):
+                applied.append(pid)
+        except Exception as e:
+            out['errors'].append({'product_id': pid, 'error': str(e)})
+
+    out['applied_product_ids'] = applied
+    out['skipped_product_ids'] = skipped
+    out['applied_count'] = int(len(applied))
+    out['imported'] = True
+
+    # Best-effort audit trail: record imported entitlements as PurchaseRecord rows.
+    bypass_db = os.environ.get('DISABLE_IAP_DB_WRITES', '0').strip() == '1'
+    if not bypass_db and applied:
+        try:
+            for pid in applied:
+                try:
+                    rec = PurchaseRecord(
+                        user_id=user.id,
+                        platform='web',
+                        product_id=pid,
+                        status='verified',
+                        transaction_id=None,
+                        purchase_token=None,
+                        raw_payload={
+                            'imported_from_anon_restore_id': anon_restore_id,
+                            'source': 'anon_entitlements_login_reconcile'
+                        }
+                    )
+                    db.session.add(rec)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    return out
 
 
 def _get_anon_owned_products_from_db() -> list[str]:
@@ -10562,26 +10691,11 @@ def api_iap_restore():
     install_id = (data.get('install_id') or '').strip()
     restore_id = uuid.uuid4().hex[:12]
 
-    # Policy: users must be logged in (registered account) before attempting a
-    # real "restore purchases" operation.
+    # NOTE: This endpoint supports reconcile-only calls (no product_ids) for both
+    # guests and authenticated users so the UI can refresh entitlement state.
     #
-    # We treat a non-empty `product_ids` list as a restore attempt (the client
-    # already enumerated ownership and is asking the server to apply it).
-    # Reconcile-only requests (missing/empty product_ids) remain allowed so the
-    # UI can refresh current entitlement state without unlocking anything new.
-    is_restore_attempt = isinstance(product_ids, list) and len(product_ids) > 0
-    if is_restore_attempt and not current_user.is_authenticated:
-        return jsonify({
-            "success": False,
-            "error": "login_required",
-            "message": "Please sign in with your BeeSmart account to restore purchases.",
-            "login_url": url_for('login')
-        }), 401
-
-    # NOTE: This endpoint historically supported guest restores via an anonymous
-    # cookie identifier. That behavior is now gated: restore attempts require a
-    # logged-in (registered) user account. We still allow reconcile-only calls
-    # (no product_ids) so the UI can refresh entitlement state.
+    # For security, we do NOT accept premium/subscription SKUs for guests, since
+    # restore relies on client-side enumeration and could otherwise be spoofed.
     user_for_restore = current_user if current_user.is_authenticated else None
     anon_restore_id = None
     if user_for_restore is None:
@@ -10736,6 +10850,43 @@ def api_iap_restore():
             continue
         seen.add(pid)
         normalized.append(pid)
+
+    def _looks_premiumish(pid: str) -> bool:
+        try:
+            p = (pid or '').lower()
+        except Exception:
+            return False
+        return any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family'))
+
+    # Guests: refuse to process subscription-like SKUs (prevents spoofed premium).
+    if user_for_restore is None and normalized:
+        safe = []
+        blocked = []
+        for pid in normalized:
+            mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+            mtype = str(mapping.get('type') or '').strip().lower() if isinstance(mapping, dict) else ''
+            is_subscription_like = bool(mtype in ('premium', 'subscription') or (isinstance(mapping, dict) and bool(mapping.get('subscription'))))
+            if is_subscription_like or _looks_premiumish(pid):
+                blocked.append(pid)
+            else:
+                safe.append(pid)
+        normalized = safe
+        if blocked:
+            # Keep response helpful for clients that try restore while signed-out.
+            errors = [{"product_id": pid, "error": "login_required_for_subscription"} for pid in blocked]
+            # If everything was blocked, return 401 so the UI can prompt login.
+            if not normalized:
+                return jsonify({
+                    "success": False,
+                    "error": "login_required",
+                    "message": "Please sign in with your BeeSmart account to restore subscriptions.",
+                    "login_url": url_for('login'),
+                    "restore_id": restore_id,
+                    "normalized_product_ids": [],
+                    "applied": [],
+                    "errors": errors,
+                    "entitlements": _get_guest_entitlements(),
+                }), 401
 
     if not normalized:
         return jsonify({
@@ -11947,6 +12098,14 @@ def login():
 
         # Update last login
         user.update_last_login(ip_address=request.remote_addr)
+        # Best-effort: if this device previously restored/purchased as a guest,
+        # import those non-subscription entitlements into the signed-in account.
+        # (Subscriptions remain login/verification-based.)
+        try:
+            _reconcile_anon_entitlements_to_user(user)
+        except Exception:
+            pass
+
         db.session.commit()
 
         # Redirect based on role
@@ -11960,7 +12119,8 @@ def login():
         return jsonify({
             "success": True,
             "message": f"Welcome back, {user.display_name}! ",
-            "redirect": redirect_url
+            "redirect": redirect_url,
+            "entitlements": _entitlements_summary(user)
         })
     except sa_exc.ProgrammingError as e:
         db.session.rollback()
