@@ -715,7 +715,13 @@
             document.addEventListener('touchend', function (event) {
                 const now = (new Date()).getTime();
                 if (now - lastTouchEnd <= 300) {
-                    event.preventDefault();
+                    // Avoid blocking normal taps/clicks on interactive controls.
+                    // A global preventDefault() on touchend can suppress click/navigation on iOS.
+                    const target = event && event.target;
+                    const isInteractive = !!(target && target.closest && target.closest('a, button, input, textarea, select, label'));
+                    if (!isInteractive && event.cancelable) {
+                        event.preventDefault();
+                    }
                 }
                 lastTouchEnd = now;
             }, false);

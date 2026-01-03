@@ -7,12 +7,14 @@ import time
 import json
 import sys
 import io
+import os
 
 # Fix Windows console encoding for emojis
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-BASE_URL = "http://localhost:5000"
+BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5051").rstrip("/")
+HTTP_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "15"))
 
 class QuizSmokeTest:
     def __init__(self):
@@ -33,7 +35,7 @@ class QuizSmokeTest:
         word_list_content = "\n".join(self.test_words)
         files = {'file': ('test_words.txt', word_list_content, 'text/plain')}
         
-        response = self.session.post(f"{BASE_URL}/api/upload", files=files)
+        response = self.session.post(f"{BASE_URL}/api/upload", files=files, timeout=HTTP_TIMEOUT)
         
         if response.status_code == 200:
             data = response.json()
@@ -56,7 +58,7 @@ class QuizSmokeTest:
         """Test 2: Get first word"""
         self.log("TEST 2: Starting quiz (fetching first word)...", "🎯")
         
-        response = self.session.post(f"{BASE_URL}/api/next")
+        response = self.session.post(f"{BASE_URL}/api/next", timeout=HTTP_TIMEOUT)
         
         if response.status_code == 200:
             data = response.json()
@@ -86,7 +88,8 @@ class QuizSmokeTest:
         response = self.session.post(
             f"{BASE_URL}/api/answer",
             json=payload,
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            timeout=HTTP_TIMEOUT,
         )
         
         if response.status_code == 200:
@@ -108,7 +111,7 @@ class QuizSmokeTest:
         """Test 4: Verify quiz advances to next word"""
         self.log("TEST 4: Fetching next word (verifying progression)...", "⏭️")
         
-        response = self.session.post(f"{BASE_URL}/api/next")
+        response = self.session.post(f"{BASE_URL}/api/next", timeout=HTTP_TIMEOUT)
         
         if response.status_code == 200:
             data = response.json()
@@ -139,7 +142,8 @@ class QuizSmokeTest:
         response = self.session.post(
             f"{BASE_URL}/api/answer",
             json=payload,
-            headers={'Content-Type': 'application/json'}
+            headers={'Content-Type': 'application/json'},
+            timeout=HTTP_TIMEOUT,
         )
         
         if response.status_code == 200:
@@ -162,7 +166,7 @@ class QuizSmokeTest:
         
         for i in range(3):  # Complete 3 more words
             # Get next word
-            response = self.session.post(f"{BASE_URL}/api/next")
+            response = self.session.post(f"{BASE_URL}/api/next", timeout=HTTP_TIMEOUT)
             if response.status_code != 200:
                 self.log(f"❌ Failed to get word {i+1}", "❌")
                 return False
@@ -185,7 +189,8 @@ class QuizSmokeTest:
             response = self.session.post(
                 f"{BASE_URL}/api/answer",
                 json=payload,
-                headers={'Content-Type': 'application/json'}
+                headers={'Content-Type': 'application/json'},
+                timeout=HTTP_TIMEOUT,
             )
             
             if response.status_code != 200:
@@ -201,7 +206,7 @@ class QuizSmokeTest:
         """Test 7: Verify quiz completion"""
         self.log("TEST 7: Checking quiz completion...", "🏁")
         
-        response = self.session.post(f"{BASE_URL}/api/next")
+        response = self.session.post(f"{BASE_URL}/api/next", timeout=HTTP_TIMEOUT)
         
         if response.status_code == 200:
             data = response.json()
@@ -227,7 +232,7 @@ class QuizSmokeTest:
         self.log("TEST 8: Checking session persistence...", "💾")
         
         # Make another request to verify session is still active
-        response = self.session.post(f"{BASE_URL}/api/next")
+        response = self.session.post(f"{BASE_URL}/api/next", timeout=HTTP_TIMEOUT)
         
         if response.status_code == 200:
             self.log(f"✅ Session persisted correctly", "✅")

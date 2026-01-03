@@ -6816,21 +6816,24 @@ class QuizManager {
                 
                 // Click sound (support both mouse and touch)
                 button.addEventListener('mousedown', () => {
+                    // On iOS, a touch can be followed by a synthetic mouse event.
+                    // Guard against double-playing the click sound.
+                    const lastTouchAt = this._lastTouchBuzzClickAt || 0;
+                    if (lastTouchAt && (Date.now() - lastTouchAt) < 800) return;
                     this.soundboard?.play('buzz-click');
                 });
                 
                 // 🍎 iOS FIX: Add touch event for better iOS button responsiveness
                 button.addEventListener('touchstart', (e) => {
+                    this._lastTouchBuzzClickAt = Date.now();
                     this.soundboard?.play('buzz-click');
-                    // Prevent duplicate mouse event on iOS
-                    if (this.isIOS || this.isSafari) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
+                }, { passive: true });
             }
         });
 
         if (submitButton) submitButton.addEventListener('click', () => {
+            // If we just handled a touchend submit, suppress the subsequent click.
+            if (this._suppressSubmitClickUntil && Date.now() < this._suppressSubmitClickUntil) return;
             try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
             this.submitAnswer();
         });
@@ -6838,11 +6841,13 @@ class QuizManager {
         // 🍎 iOS FIX: Add touch event for submit button to prevent iOS double-tap delay
         if (submitButton) submitButton.addEventListener('touchend', (e) => {
             if (this.isIOS || this.isSafari) {
-                e.preventDefault();
+                // Don't preventDefault(): it can suppress click/navigation on iOS.
+                // Instead, suppress the follow-up click handler for a short window.
+                this._suppressSubmitClickUntil = Date.now() + 900;
                 try { window.BeeVoiceViz?.react('submit'); } catch (err) {}
                 this.submitAnswer();
             }
-        }, { passive: false });
+        }, { passive: true });
         if (spellingInput) spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
                 try { window.BeeVoiceViz?.react('submit'); } catch (e) {}

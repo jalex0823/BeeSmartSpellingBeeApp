@@ -11,6 +11,7 @@ class AvatarIntroFX {
             enableParticles: true,
             particleCount: 12,
             autoPlay: true,
+            disabled: false,
             randomEffects: false, // Set to true for random effects
             ...options
         };
@@ -46,6 +47,9 @@ class AvatarIntroFX {
      * @param {Object} customOptions - Effect-specific options
      */
     init(container, effectName = null, customOptions = {}) {
+        if (this.options.disabled) {
+            return;
+        }
         if (!container) {
             console.warn('AvatarIntroFX: No container provided');
             return;
@@ -118,6 +122,7 @@ class AvatarIntroFX {
                 left: ${(i % Math.sqrt(tileCount)) * (100 / Math.sqrt(tileCount))}%;
                 clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
                 background: rgba(251, 191, 36, 0.1);
+                pointer-events: none;
             `;
             tile.style.animationDelay = `${i * staggerDelay}ms`;
             container.appendChild(tile);
@@ -325,6 +330,9 @@ class AvatarIntroFX {
      * @param {boolean} stagger - Whether to stagger animations
      */
     autoApply(selector = '.avatar-fx-container', effect = null, stagger = true) {
+        if (this.options.disabled) {
+            return;
+        }
         const containers = document.querySelectorAll(selector);
         containers.forEach((container, index) => {
             const delay = stagger ? index * 100 : 0;
@@ -338,6 +346,9 @@ class AvatarIntroFX {
      * Apply random effects to all avatars
      */
     autoApplyRandom(selector = '.avatar-fx-container', stagger = true) {
+        if (this.options.disabled) {
+            return;
+        }
         const containers = document.querySelectorAll(selector);
         containers.forEach((container, index) => {
             const delay = stagger ? index * 100 : 0;
@@ -363,29 +374,47 @@ class AvatarIntroFX {
     }
 }
 
-// Global instance with random effects enabled
+function __beeSmartShouldDisableIntroFx() {
+    try {
+        if (window.__beesmartDisableSweepOverlays) return true;
+        if (window.__beesmartDisableBackgroundAnimations) return true;
+        const de = document.documentElement;
+        if (de && (de.classList.contains('beesmart-no-sweep-overlays') || de.classList.contains('beesmart-no-bg-anim'))) return true;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    } catch (_e) {}
+    return false;
+}
+
+const __beeIntroFxDisabled = __beeSmartShouldDisableIntroFx();
+
+// Global instance (keep available for callers, but disable when kill-switch is active)
 window.AvatarFX = new AvatarIntroFX({
-    randomEffects: true,
-    enableParticles: true
+    randomEffects: !__beeIntroFxDisabled,
+    enableParticles: !__beeIntroFxDisabled,
+    disabled: __beeIntroFxDisabled
 });
 
-// Auto-initialize on DOM ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// Auto-initialize on DOM ready (skip when disabled)
+if (!__beeIntroFxDisabled) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✨ Avatar Intro FX system ready');
+
+            // Auto-apply random effects to all avatars and badges
+            setTimeout(() => {
+                window.AvatarFX.autoApplyRandom('.avatar-fx-container', true);
+                window.AvatarFX.autoApplyBadges('.badge-intro', true);
+            }, 100);
+        });
+    } else {
         console.log('✨ Avatar Intro FX system ready');
-        
+
         // Auto-apply random effects to all avatars and badges
         setTimeout(() => {
             window.AvatarFX.autoApplyRandom('.avatar-fx-container', true);
             window.AvatarFX.autoApplyBadges('.badge-intro', true);
         }, 100);
-    });
+    }
 } else {
-    console.log('✨ Avatar Intro FX system ready');
-    
-    // Auto-apply random effects to all avatars and badges
-    setTimeout(() => {
-        window.AvatarFX.autoApplyRandom('.avatar-fx-container', true);
-        window.AvatarFX.autoApplyBadges('.badge-intro', true);
-    }, 100);
+    console.log('✨ Avatar Intro FX disabled (kill-switch / reduced motion)');
 }

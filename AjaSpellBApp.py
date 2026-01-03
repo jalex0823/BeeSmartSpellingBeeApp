@@ -8967,13 +8967,19 @@ def api_answer():
         if state["streak"] > state.get("max_streak", 0):
             state["max_streak"] = state["streak"]
         
-        #  BUZZ DUST AWARDING - Award Buzz Dust immediately for correct answers (authenticated users)
+        #  BUZZ DUST AWARDING - Award Buzz Dust for correct answers (authenticated users)
+        # Buzz Dust is XP derived from points via BUZZ_DUST_MULTIPLIER.
         if current_user.is_authenticated and points_earned > 0:
+            from buzz_dust_helpers import get_bee_class, BUZZ_DUST_MULTIPLIER
+
+            dust_awarded = int(points_earned * float(BUZZ_DUST_MULTIPLIER))
+            if dust_awarded <= 0:
+                dust_awarded = 0
+
             old_buzz_dust = current_user.total_buzz_dust or 0
-            current_user.total_buzz_dust = old_buzz_dust + points_earned
+            current_user.total_buzz_dust = old_buzz_dust + dust_awarded
             
             # Check for rank advancement
-            from buzz_dust_helpers import get_bee_class
             old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
             new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
             
@@ -9010,7 +9016,10 @@ def api_answer():
             # Commit the Buzz Dust update immediately
             try:
                 db.session.commit()
-                print(f" BUZZ DUST AWARDED: +{points_earned} for correct answer (now {current_user.total_buzz_dust} total)")
+                print(
+                    f" BUZZ DUST AWARDED: +{dust_awarded} (mult={BUZZ_DUST_MULTIPLIER}) "
+                    f"for correct answer (now {current_user.total_buzz_dust} total)"
+                )
             except Exception as e:
                 print(f"️ Failed to commit Buzz Dust award: {e}")
                 db.session.rollback()
@@ -9237,38 +9246,47 @@ def api_answer():
                     current_user.honey_points = new_honey_points
                     print(f"    Set current_user.honey_points = {current_user.honey_points}")
                     
-                    #  BUZZ DUST AWARDING - Award Buzz Dust for quiz completion with full calculations
-                    from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust
+                    #  BUZZ DUST AWARDING - Award completion bonuses (avoid double-awarding base dust)
+                    # Base dust is already awarded per correct answer above.
+                    from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust, BUZZ_DUST_MULTIPLIER
                     
                     old_buzz_dust = current_user.total_buzz_dust or 0
-                    
+
                     # Calculate buzz dust with all bonuses: perfect round, no hints, streak, etc.
                     is_perfect_round = (state.get("incorrect", 0) == 0 and state.get("correct", 0) > 0)
                     no_hints_used = (state.get("hints_used_total", 0) == 0)
                     max_streak = state.get("max_streak", 0)
                     
-                    # Use calculate_quiz_buzz_dust to get proper bonuses
-                    buzz_dust_earned, buzz_dust_breakdown = calculate_quiz_buzz_dust(
-                        points=word_points,  # Base points from words answered
+                    full_quiz_dust, buzz_dust_breakdown = calculate_quiz_buzz_dust(
+                        points=word_points,
                         perfect_round=is_perfect_round,
                         no_hints=no_hints_used,
                         streak_length=max_streak,
-                        daily_challenge=False  # Set to True if this is a daily challenge quiz
+                        daily_challenge=False
                     )
-                    
-                    # Add badge bonus separately (badges are not part of calculate_quiz_buzz_dust)
-                    total_buzz_dust_earned = buzz_dust_earned + badge_points
-                    
-                    current_user.total_buzz_dust = old_buzz_dust + total_buzz_dust_earned
-                    
-                    # Store breakdown in state for display on report card
-                    state["buzz_dust_earned"] = total_buzz_dust_earned
+
+                    # Base dust that should already have been awarded incrementally.
+                    base_quiz_dust = int(word_points * float(BUZZ_DUST_MULTIPLIER))
+                    bonus_quiz_dust = max(0, int(full_quiz_dust) - int(base_quiz_dust))
+
+                    # Convert badge points to dust using the same multiplier.
+                    badge_dust = int(badge_points * float(BUZZ_DUST_MULTIPLIER)) if badge_points else 0
+
+                    completion_dust_awarded = bonus_quiz_dust + badge_dust
+                    current_user.total_buzz_dust = old_buzz_dust + completion_dust_awarded
+
+                    # Store full-quiz earned dust for display (base + bonuses), plus badge dust.
+                    state["buzz_dust_earned"] = int(full_quiz_dust) + int(badge_dust)
                     state["buzz_dust_breakdown"] = buzz_dust_breakdown
-                    # Only include badge-derived dust if those badges are buzz-dust related
-                    if badge_points:
-                        state["buzz_dust_breakdown"]["badges"] = badge_points
-                    
-                    print(f" BUZZ DUST AWARDED: Base={buzz_dust_earned} + Badges={badge_points} = {total_buzz_dust_earned} (was {old_buzz_dust}, now {current_user.total_buzz_dust})")
+                    if badge_dust:
+                        state["buzz_dust_breakdown"]["badges"] = badge_dust
+
+                    print(
+                        f" BUZZ DUST AWARDED (completion): +{completion_dust_awarded} "
+                        f"(quiz_bonus={bonus_quiz_dust}, badge_dust={badge_dust}, mult={BUZZ_DUST_MULTIPLIER}) "
+                        f"(was {old_buzz_dust}, now {current_user.total_buzz_dust})"
+                    )
+                    print(f"   Display earned this quiz: {state['buzz_dust_earned']} (incl. base already awarded per answer)")
                     print(f"   Breakdown: {state['buzz_dust_breakdown']}")
                     
                     # Check for rank advancement
@@ -11331,37 +11349,27 @@ def api_buzz_dust_info():
             print(f" DEBUG /api/buzz-dust/info: Authenticated user, buzz_dust={buzz_dust}")
 
             # NOTE: Buzz Dust is *separate* from Points/grades.
-            # Do NOT backfill or derive total_buzz_dust from lifetime points.
-            # (We previously did this and it incorrectly promoted some users to higher ranks.)
+            # Do NOT derive total_buzz_dust from lifetime points.
+            # Instead, if the stored bee_class is inconsistent with the user's Buzz Dust,
+            # reconcile bee_class without mutating total_buzz_dust.
             try:
-                lifetime_points = int(current_user.total_lifetime_points or 0)
-                estimated = int(lifetime_points * float(BUZZ_DUST_MULTIPLIER)) if lifetime_points > 0 else 0
-                current_class_id = (current_user.bee_class or 'novice')
-                last_rank_up_at = getattr(current_user, 'last_rank_up_at', None)
-
-                # Narrow rollback: if a user was auto-promoted by the old baseline sync,
-                # they'll often have:
-                #  - total_buzz_dust == floor(lifetime_points * multiplier)
-                #  - bee_class != 'novice'
-                #  - last_rank_up_at is None (no genuine rank-up event recorded)
-                if (
-                    estimated > 0
-                    and buzz_dust == estimated
-                    and current_class_id != 'novice'
-                    and last_rank_up_at is None
-                ):
+                computed_class_id = get_bee_class(buzz_dust).get('id', 'novice')
+                stored_class_id = (current_user.bee_class or 'novice')
+                if stored_class_id != computed_class_id:
                     print(
-                        " WARN /api/buzz-dust/info: Detected likely baseline-sync auto-promotion; "
-                        f"resetting total_buzz_dust {buzz_dust}→0 and bee_class {current_class_id}→novice"
+                        " WARN /api/buzz-dust/info: Reconciling bee_class "
+                        f"{stored_class_id}→{computed_class_id} based on total_buzz_dust={buzz_dust}"
                     )
-                    current_user.total_buzz_dust = 0
-                    current_user.bee_class = 'novice'
+                    current_user.bee_class = computed_class_id
+                    # If we are reconciling into a higher rank and there's no timestamp, set one
+                    # so clients/logic don't treat this as an 'unknown' rank-up state.
+                    if computed_class_id != 'novice' and getattr(current_user, 'last_rank_up_at', None) is None:
+                        current_user.last_rank_up_at = datetime.now(timezone.utc)
                     from models import db
                     db.session.commit()
-                    buzz_dust = 0
-            except Exception as rollback_error:
+            except Exception as reconcile_error:
                 # Non-fatal: still return whatever stored value we have
-                print(f" WARN /api/buzz-dust/info: Rollback check failed: {rollback_error}")
+                print(f" WARN /api/buzz-dust/info: Reconcile check failed: {reconcile_error}")
         else:
             # Guest users always start at 0
             buzz_dust = 0
@@ -16359,7 +16367,9 @@ if __name__ == "__main__":
     dict_thread = threading.Thread(target=preload_dictionary, daemon=True)
     dict_thread.start()
     
-    env_port = int(os.environ.get("PORT", 5000))
+    # Default to 5051 for local dev to avoid collisions with other tools using 5000.
+    # You can still override via: $env:PORT=1234 (PowerShell) or PORT=1234.
+    env_port = int(os.environ.get("PORT", 5051))
     port = _pick_port(env_port)
     # Respect FLASK_DEBUG env (0/1, true/false) and disable reloader for stable runs in terminals/CI
     debug_env = os.environ.get("FLASK_DEBUG", "0").strip().lower()

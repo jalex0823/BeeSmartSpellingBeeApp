@@ -6,6 +6,23 @@
 
 class MatrixRain {
     constructor(canvasId) {
+        // Respect global kill-switches used on mobile/PWA pages to avoid scroll/jank.
+        try {
+            const de = document.documentElement;
+            const disabled = !!(window.__beesmartDisableSweepOverlays || window.__beesmartDisableBackgroundAnimations)
+                || (de && de.classList && (de.classList.contains('beesmart-no-sweep-overlays') || de.classList.contains('beesmart-no-bg-anim')))
+                || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+            if (disabled) {
+                this.disabled = true;
+                this.start = function(){ /* disabled */ };
+                this.stop = function(){ /* disabled */ };
+                this.clear = function(){ /* disabled */ };
+                return;
+            }
+        } catch (_e) {
+            // ignore
+        }
+
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) {
             console.error('Matrix canvas not found:', canvasId);

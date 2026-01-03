@@ -1,3 +1,4 @@
+import os
 import requests
 
 # Create a session to maintain cookies
@@ -9,7 +10,8 @@ print("1️⃣ Uploading PlainWordList50.txt...")
 try:
     with open('PlainWordList50.txt', 'rb') as f:
         files = {'file': ('PlainWordList50.txt', f, 'text/plain')}
-        response = session.post('http://127.0.0.1:5000/api/upload', files=files)
+        base_url = os.environ.get('BASE_URL', 'http://127.0.0.1:5051').rstrip('/')
+        response = session.post(f'{base_url}/api/upload', files=files)
     
     if response.status_code == 200:
         result = response.json()
@@ -24,7 +26,8 @@ except Exception as e:
 
 print("\n2️⃣ Checking wordbank...")
 try:
-    response = session.get('http://127.0.0.1:5000/api/wordbank')
+    base_url = os.environ.get('BASE_URL', 'http://127.0.0.1:5051').rstrip('/')
+    response = session.get(f'{base_url}/api/wordbank')
     if response.status_code == 200:
         data = response.json()
         print(f"✅ Wordbank contains {len(data['words'])} words")
@@ -45,7 +48,8 @@ except Exception as e:
 
 print("3️⃣ Testing current word (should work after upload)...")
 try:
-    response = session.post('http://127.0.0.1:5000/api/next', json={})
+    base_url = os.environ.get('BASE_URL', 'http://127.0.0.1:5051').rstrip('/')
+    response = session.post(f'{base_url}/api/next', json={})
     print(f"Status: {response.status_code}")
     print(f"Response: {response.text[:200]}...")
 
@@ -68,4 +72,4 @@ except Exception as e:
 print("\n🎯 The issue was session management!")
 print("   When you upload via browser, make sure to use the same session/tab")
 print("   The Flask app uses sessions to store your word list")
-print("\n🔗 Test in browser: http://127.0.0.1:5000/simple-quiz")
+print(f"\n🔗 Test in browser: {os.environ.get('BASE_URL', 'http://127.0.0.1:5051').rstrip('/')}/simple-quiz")

@@ -26,13 +26,31 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
 
     <script>
-        // Standalone template: apply the same global kill switches as base.html.
-        // Goal: eliminate any translucent sweep/overlay FX and background motion on mobile/PWA.
+        // Standalone template: menu performance defaults.
+        // Keep button animations + sound FX, but disable background/overlay FX by default on iOS/mobile/PWA
+        // and for prefers-reduced-motion.
         (function(){
             try {
-                window.__beesmartDisableSweepOverlays = true;
-                window.__beesmartDisableBackgroundAnimations = true;
-                document.documentElement.classList.add('beesmart-no-sweep-overlays', 'beesmart-no-bg-anim');
+                const params = new URLSearchParams((typeof location !== 'undefined' && location.search) ? location.search : '');
+                const debugFromQuery = (params.get('debug') === '1');
+                const debugFromStorage = (function(){
+                    try { return (localStorage.getItem('beesmart_debug') === '1'); } catch (_e) { return false; }
+                })();
+                window.BEESMART_DEBUG = !!(debugFromQuery || debugFromStorage);
+
+                const ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
+                const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && ('ontouchend' in document));
+                const isMobile = /Android|iPhone|iPad|iPod/.test(ua) || ((navigator && navigator.maxTouchPoints) ? navigator.maxTouchPoints > 1 : false);
+                const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator && navigator.standalone === true);
+                const reduceMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+                const disableBgFx = !!(isIOS || isMobile || isStandalone || reduceMotion);
+                window.__beesmartDisableSweepOverlays = disableBgFx;
+                window.__beesmartDisableBackgroundAnimations = disableBgFx;
+
+                if (disableBgFx) {
+                    document.documentElement.classList.add('beesmart-no-sweep-overlays', 'beesmart-no-bg-anim');
+                }
             } catch (e) { /* no-op */ }
         })();
     </script>
@@ -43,9 +61,9 @@
     <script src="{{ url_for('static', filename='js/logo-fairy-dust.js') }}?v=20260102b"></script>
     <script defer src="{{ url_for('static', filename='js/button-press-sfx.js') }}?v=20260102"></script>
     <!-- Matrix Rain Effect -->
-    <script src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
+    <script defer src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Avatar Intro FX System -->
-    <script src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
+    <script defer src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
     <!-- LOCAL VENDOR FILES - No CDN tracking prevention issues -->
     <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}"></script>
@@ -158,7 +176,7 @@
         // Subscription monthly price (USD) for UI copy only.
         // Keep this driven by backend so the badge stays future-proof.
         window.SUBSCRIPTION_MONTHLY_USD = {{ _subscription_monthly_usd if _subscription_monthly_usd is not none else 'null' }};
-        console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
+        if (window.BEESMART_DEBUG) console.log(' Auth state set:', window.IS_AUTH ? 'Authenticated' : 'Guest');
 
         // IAP SKU hydration disabled on home menu (no IAP diagnostics on this screen).
     </script>
@@ -166,13 +184,17 @@
         // Early version + fetch interceptor (loads before rest of page JS)
         (function(){
             const VERSION = 'unified_menu_v2.3-' + Date.now();
-            console.log('BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
-            // Re-enable fairy dust / glitter effects on the home screen.
-            // Reduced-motion users are still respected via CSS/media-query safeguards.
-            window.DISABLE_FLOATING_DECOR = false;
+            if (window.BEESMART_DEBUG) console.log('BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
+
+            // Keep floating decor OFF when background FX are disabled (iOS/mobile/PWA / reduced motion).
+            // This avoids scroll jank and reduces background work.
+            window.DISABLE_FLOATING_DECOR = !!window.__beesmartDisableBackgroundAnimations;
+
             // Allow avatar loader to render - controls need the instance!
             // window.DISABLE_AUTO_AVATAR_RENDER = true;  // REMOVED - was blocking instance creation
-            if (!window._originalFetch){
+
+            // Debug-only fetch logging (avoid extra overhead in production/mobile).
+            if (window.BEESMART_DEBUG && !window._originalFetch){
                 window._originalFetch = window.fetch.bind(window);
                 window.fetch = function(resource, init){
                     try { console.log('[EARLY FETCH]', resource, init && init.method); } catch(e){}
@@ -709,6 +731,13 @@
             pointer-events: none;
             z-index: 1;
             overflow: hidden;
+        }
+
+        /* Kill-switch: remove background decor layers entirely (avoids iOS scroll/jank issues) */
+        html.beesmart-no-bg-anim .magic-background,
+        html.beesmart-no-bg-anim .fairy-container,
+        html.beesmart-no-bg-anim .bee-swarm-container {
+            display: none !important;
         }
         
         .sparkle {
@@ -5784,7 +5813,20 @@
             constructor() {
                 this.container = document.getElementById('beeSwarmContainer');
                 this.activeBees = [];
-                this.isEnabled = true;
+                this.ambientIntervalId = null;
+                this.isEnabled = !this._shouldDisable();
+            }
+
+            _shouldDisable() {
+                try {
+                    if (window.DISABLE_FLOATING_DECOR) return true;
+                    if (window.__beesmartDisableSweepOverlays) return true;
+                    if (window.__beesmartDisableBackgroundAnimations) return true;
+                    const de = document.documentElement;
+                    if (de && de.classList && de.classList.contains('beesmart-no-bg-anim')) return true;
+                    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+                } catch (_e) {}
+                return false;
             }
 
             createFlyingBee(startX, startY) {
@@ -5842,7 +5884,9 @@
 
                 // Start ambient bees
                 createAmbientBee();
-                setInterval(createAmbientBee, 8000 + Math.random() * 4000);
+                // Keep interval handle so we can stop cleanly (important on iOS)
+                const intervalMs = 8000 + Math.random() * 4000;
+                this.ambientIntervalId = setInterval(createAmbientBee, intervalMs);
             }
 
             addParticleExplosion(element) {
@@ -5888,14 +5932,28 @@
 
             disable() {
                 this.isEnabled = false;
+                try {
+                    if (this.ambientIntervalId) {
+                        clearInterval(this.ambientIntervalId);
+                        this.ambientIntervalId = null;
+                    }
+                } catch (_e) {}
+                try {
+                    this.activeBees.forEach(b => { if (b && b.parentNode) b.parentNode.removeChild(b); });
+                    this.activeBees = [];
+                } catch (_e) {}
             }
 
             enable() {
-                this.isEnabled = true;
+                this.isEnabled = !this._shouldDisable();
             }
         }
 
+        // Only instantiate when enabled; avoid background intervals on iOS.
         const beeEffects = new BeeSwarmEffects();
+        if (!beeEffects.isEnabled) {
+            try { beeEffects.disable(); } catch (_e) {}
+        }
         
         // Initialize sounds when user first interacts
         document.addEventListener('click', async () => {
@@ -6322,16 +6380,8 @@
                     // Don't call immediately - will be called in finishLoading()
 
 
-                    // Light polling disabled - battles not active
-                    // Prevents 404 errors from /api/battles/live polling
-                    let __battleBadgePoll;
-                    const __poll = async () => {
-                        // Battles endpoint not active - skip polling
-                        return;
-                    };
-                    // Start after first check; poll every 60s
-                    __battleBadgePoll = setInterval(__poll, 60000);
-                    document.addEventListener('visibilitychange', () => { if (!document.hidden) __poll(); });
+                    // Battles endpoint not active - no background polling.
+                    // (Avoids keeping a recurring timer alive on mobile/iOS.)
                 }
             } catch (e) { /* no-op */ }
         }
@@ -6345,7 +6395,7 @@
         // Cache buster: 2025-10-14-v3 (force refresh)
         (function(){
             const V='v22-'+Date.now();
-            console.log('BeeSmart App JavaScript loaded -', V);
+            if (window.BEESMART_DEBUG) console.log('BeeSmart App JavaScript loaded -', V);
             // Update version badge below logo instead of top corner
             const versionBadge = document.getElementById('versionBadge');
             if (versionBadge) {
@@ -6358,6 +6408,10 @@
                 window.fetch=function(resource, init){
                     try {
                         let url=typeof resource==='string'?resource:(resource && resource.url)||'';
+                        // Fast path: only do URL parsing work when this looks like the legacy '/upload' endpoint.
+                        if (!url || (typeof url === 'string' && url.indexOf('/upload') === -1)) {
+                            return ofetch(resource, init);
+                        }
                         // Only rewrite EXACT legacy '/upload' (optionally with query), not '/api/upload-*' or other paths
                         const origin = (typeof location!=='undefined' ? location.origin : '');
                         const u = new URL(url, origin);
@@ -16147,14 +16201,23 @@
                 loader.style.visibility = 'visible';
             }
             
-            // Initialize Matrix Rain Effect
-            if (typeof MatrixRain !== 'undefined') {
-                window.matrixRain = new MatrixRain('matrixCanvas');
-                window.matrixRain.start();
-                console.log(' Matrix rain animation started');
-            } else {
-                console.warn(' MatrixRain not loaded, skipping animation');
-            }
+            // Initialize Matrix Rain Effect (skip on mobile/iOS/PWA/reduced-motion).
+            (function(){
+                const disableBgFx = !!(window.__beesmartDisableBackgroundAnimations || document.documentElement.classList.contains('beesmart-no-bg-anim'));
+                const canvas = document.getElementById('matrixCanvas');
+                if (disableBgFx) {
+                    if (canvas) canvas.style.display = 'none';
+                    if (window.BEESMART_DEBUG) console.log(' Matrix rain disabled (perf mode)');
+                    return;
+                }
+                if (typeof MatrixRain !== 'undefined') {
+                    window.matrixRain = new MatrixRain('matrixCanvas');
+                    window.matrixRain.start();
+                    if (window.BEESMART_DEBUG) console.log(' Matrix rain animation started');
+                } else {
+                    if (window.BEESMART_DEBUG) console.warn(' MatrixRain not loaded, skipping animation');
+                }
+            })();
             
             // Initialize loading system
             window.loadingSystem = new LoadingSystem();
