@@ -12676,6 +12676,11 @@
                     canvas.style.left = '50%';
                     canvas.style.transform = 'translate(-50%, -50%)';
                     canvas.style.pointerEvents = 'none';
+                    // Defensive: avoid multiple stacked canvases if the page re-initializes.
+                    try {
+                        const existing = canvasWrap.querySelectorAll('canvas');
+                        existing.forEach((c) => { try { c.remove(); } catch (_) {} });
+                    } catch (_) {}
                     canvasWrap.appendChild(canvas);
 
                     // Keep renderer in sync with CSS sizing
@@ -12801,9 +12806,12 @@
                     return group;
                 }
 
-                // Sequential swap (avoid overlap/"stacked" look): fade old OUT completely, then fade new IN
-                function animateSwapSequential(oldGroup, newGroup){
+                // Sequential swap (avoid overlap/"stacked" look):
+                // fade old OUT completely, wait a tiny beat, then fade new IN.
+                // IMPORTANT: we do NOT add the new group to the scene until the old group is removed.
+                function animateSwapSequential(oldGroup, newGroup, nextNameText){
                     const OUT_MS = 420;
+                    const GAP_MS = 140;
                     const IN_MS = 520;
                     const start = performance.now();
 
@@ -12817,7 +12825,7 @@
                         }
                     } catch(_) {}
 
-                    // Ensure starting states
+                    // Ensure starting states for incoming (not yet added to scene)
                     if (newGroup) {
                         setTransparentRecursive(newGroup, true);
                         setOpacityRecursive(newGroup, 0);
@@ -12867,37 +12875,59 @@
                             }
                         } catch(_) {}
 
-                        const inStart = performance.now();
-                        function fadeInStep(now2){
+                        // Short pause between avatars for a clearer "morph" beat
+                        setTimeout(() => {
                             if (disposed) return;
-                            const t2 = Math.min(1, (now2 - inStart) / IN_MS);
-                            const e2 = easeInOutCubic(t2);
 
-                            if (newGroup) {
-                                setOpacityRecursive(newGroup, e2);
-                                newGroup.position.y = (1 - e2) * -0.04;
-                                const s = 0.97 + 0.03 * e2;
-                                newGroup.scale.setScalar(s);
-                            }
+                            // Update the label at the swap moment (not before)
+                            try {
+                                if (typeof nextNameText === 'string' && nextNameText.trim()) {
+                                    nameEl.textContent = nextNameText;
+                                }
+                            } catch(_){ }
 
-                            if (t2 < 1) {
-                                requestAnimationFrame(fadeInStep);
-                            } else {
+                            // Add incoming to scene only now, guaranteeing single visible avatar.
+                            try { if (newGroup) scene.add(newGroup); } catch(_){ }
+
+                            const inStart = performance.now();
+                            function fadeInStep(now2){
+                                if (disposed) return;
+                                const t2 = Math.min(1, (now2 - inStart) / IN_MS);
+                                const e2 = easeInOutCubic(t2);
+
                                 if (newGroup) {
-                                    newGroup.position.y = 0;
-                                    newGroup.scale.setScalar(1);
-                                    setOpacityRecursive(newGroup, 1);
-                                    setTransparentRecursive(newGroup, false);
-                                    setDepthWriteRecursive(newGroup, true);
-                                    setRenderOrderRecursive(newGroup, 0);
+                                    setOpacityRecursive(newGroup, e2);
+                                    newGroup.position.y = (1 - e2) * -0.04;
+                                    const s = 0.97 + 0.03 * e2;
+                                    newGroup.scale.setScalar(s);
+                                }
+
+                                if (t2 < 1) {
+                                    requestAnimationFrame(fadeInStep);
+                                } else {
+                                    if (newGroup) {
+                                        newGroup.position.y = 0;
+                                        newGroup.scale.setScalar(1);
+                                        setOpacityRecursive(newGroup, 1);
+                                        setTransparentRecursive(newGroup, false);
+                                        setDepthWriteRecursive(newGroup, true);
+                                        setRenderOrderRecursive(newGroup, 0);
+                                    }
                                 }
                             }
-                        }
-                        requestAnimationFrame(fadeInStep);
+                            requestAnimationFrame(fadeInStep);
+                        }, GAP_MS);
                     }
 
                     // If there is no oldGroup (first paint), skip straight to fade-in
                     if (!oldGroup) {
+                        // First paint: apply label and add to scene immediately
+                        try {
+                            if (typeof nextNameText === 'string' && nextNameText.trim()) {
+                                nameEl.textContent = nextNameText;
+                            }
+                        } catch(_){ }
+                        try { if (newGroup) scene.add(newGroup); } catch(_){ }
                         const inStart = performance.now();
                         function firstIn(now2){
                             if (disposed) return;
@@ -12936,7 +12966,7 @@
                         idx++;
                     // Begin micro wrap easing (kept subtle to avoid double-fade feel)
                     try { wrap.style.transform = 'translateY(2px)'; } catch(_) {}
-                        nameEl.textContent = item.name;
+                        const nextNameText = item.name;
                     // Hide PNG fallback and show 3D canvas
                     if (imgEl) imgEl.style.display = 'none';
                     canvasWrap.style.display = 'block';
@@ -13018,11 +13048,11 @@
                             group.position.y = -0.04;
                             group.scale.setScalar(0.97);
 
-                            scene.add(group);
+                            // Track incoming group (not added to scene until swap moment)
                             currentGroup = group;
 
                             // Sequential fade (old fully out before new in) to avoid stacked look
-                            animateSwapSequential(outgoingGroup, currentGroup);
+                            animateSwapSequential(outgoingGroup, currentGroup, nextNameText);
                             // Restore wrap transform after a tick
                             setTimeout(() => { try { wrap.style.transform = 'translateY(0)'; } catch(_) {} }, 80);
                         },
@@ -13051,6 +13081,7 @@
                     tick();
 
                     // Start and rotate every ~6.5s (slower + enough time for full out->in fade)
+                    try { if (window._guest3DTimer) { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } } catch(_){ }
                     loadNext();
                     window._guest3DTimer = setInterval(loadNext, 6500);
 

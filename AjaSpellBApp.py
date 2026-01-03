@@ -4039,15 +4039,21 @@ def api_quiz_resume():
     """Check if a quiz is in progress and can be resumed."""
     try:
         qs = session.get(QUIZ_STATE_KEY)
-        # If we have quiz state at all, allow resume.
-        # Treating idx==0 as resumable fixes the "restart/resume modal" regression
-        # and matches the expectation in scripts/test_quiz_resume.py.
         if qs is not None:
             idx = int(qs.get("idx", 0) or 0)
             order = qs.get("order", []) or []
+            correct = int(qs.get("correct", 0) or 0)
+            incorrect = int(qs.get("incorrect", 0) or 0)
 
             # If the quiz is already completed (idx at/after total), do not offer resume.
             if len(order) > 0 and idx >= len(order):
+                return jsonify({'status': 'success', 'resumed': False, 'in_progress': False})
+
+            # Do not offer "Resume" unless there's meaningful progress.
+            # If idx==0 and no answers were recorded, treat this as not started yet.
+            # (Fixes UX: "You can't resume something you never started".)
+            has_progress = (idx > 0) or (correct > 0) or (incorrect > 0)
+            if not has_progress:
                 return jsonify({'status': 'success', 'resumed': False, 'in_progress': False})
 
             return jsonify({
@@ -4058,8 +4064,8 @@ def api_quiz_resume():
                 'state': {
                     'current_word_index': idx,
                     'total_words': len(order),
-                    'correct': int(qs.get("correct", 0) or 0),
-                    'incorrect': int(qs.get("incorrect", 0) or 0),
+                    'correct': correct,
+                    'incorrect': incorrect,
                     'wordbank_fingerprint': qs.get('wordbank_fingerprint', ''),
                 }
             })
@@ -4083,9 +4089,14 @@ def api_quiz_start():
         qs = session.get(QUIZ_STATE_KEY)
 
         if action == 'resume' and qs is not None:
-            # Resume existing quiz.
-            # IMPORTANT: idx==0 is still a valid in-progress quiz (user may have started but not answered yet).
-            return jsonify({'status': 'success', 'resumed': True, 'state': qs})
+            # Resume existing quiz only if there's meaningful progress.
+            idx = int(qs.get("idx", 0) or 0)
+            correct = int(qs.get("correct", 0) or 0)
+            incorrect = int(qs.get("incorrect", 0) or 0)
+            has_progress = (idx > 0) or (correct > 0) or (incorrect > 0)
+            if has_progress:
+                return jsonify({'status': 'success', 'resumed': True, 'state': qs})
+            # If no progress, fall through to start_new (harmless reset).
         
         # Start a new quiz
         wb = get_wordbank()

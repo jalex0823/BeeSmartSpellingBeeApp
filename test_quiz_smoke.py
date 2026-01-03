@@ -11,7 +11,12 @@ import os
 
 # Fix Windows console encoding for emojis
 if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer,
+        encoding='utf-8',
+        errors='replace',
+        line_buffering=True,
+    )
 
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5051").rstrip("/")
 HTTP_TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "15"))
@@ -20,12 +25,14 @@ class QuizSmokeTest:
     def __init__(self):
         self.session = requests.Session()
         self.test_words = ["apple", "banana", "cherry", "date", "elderberry"]
+        self.current_word = None
+        self.session_total_after_first_answer = 0
         
     def log(self, message, emoji="📝"):
         try:
-            print(f"{emoji} {message}")
+            print(f"{emoji} {message}", flush=True)
         except UnicodeEncodeError:
-            print(f"[{emoji.encode('ascii', 'namereplace').decode()}] {message}")
+            print(f"[{emoji.encode('ascii', 'namereplace').decode()}] {message}", flush=True)
         
     def test_01_upload_words(self):
         """Test 1: Upload word list"""
@@ -74,9 +81,32 @@ class QuizSmokeTest:
         else:
             self.log(f"❌ Failed to get first word: {response.status_code}", "❌")
             return False
+
+    def test_02a_resume_not_offered_before_progress(self):
+        """Test 2a: Resume should NOT be offered before any progress"""
+        self.log("TEST 2a: Checking resume gating (no progress)...", "🧪")
+
+        response = self.session.post(f"{BASE_URL}/api/quiz/resume", timeout=HTTP_TIMEOUT)
+        if response.status_code != 200:
+            self.log(f"❌ Resume check failed: {response.status_code} - {response.text}", "❌")
+            return False
+
+        data = response.json()
+        in_progress = bool(data.get("in_progress"))
+        resumed = bool(data.get("resumed"))
+        if in_progress or resumed:
+            self.log(f"❌ Resume was offered at 0 progress: {data}", "❌")
+            return False
+
+        self.log("✅ Resume correctly blocked at 0 progress", "✅")
+        return True
     
     def test_03_submit_correct_answer(self):
         """Test 3: Submit correct answer"""
+        if not self.current_word:
+            self.log("❌ No current_word set (start quiz failed?)", "❌")
+            return False
+
         self.log(f"TEST 3: Submitting CORRECT answer: '{self.current_word}'", "✍️")
         
         payload = {
@@ -102,10 +132,61 @@ class QuizSmokeTest:
             self.log(f"   Points earned: {points.get('earned', 0)}", "🍯")
             self.log(f"   Progress: {progress.get('correct', 0)} correct, {progress.get('incorrect', 0)} incorrect", "📊")
             self.log(f"   Streak: {progress.get('streak', 0)}", "🔥")
+
+            # Track running total to verify resume doesn't reset points.
+            try:
+                self.session_total_after_first_answer = int(points.get("session_total") or 0)
+            except Exception:
+                self.session_total_after_first_answer = 0
+
             return True
         else:
             self.log(f"❌ Failed to submit answer: {response.status_code}", "❌")
             return False
+
+    def test_03a_resume_offered_after_progress_and_points_persist(self):
+        """Test 3a: Resume should be offered after progress; resume start should not reset points"""
+        self.log("TEST 3a: Checking resume gating (after progress)...", "🧪")
+
+        response = self.session.post(f"{BASE_URL}/api/quiz/resume", timeout=HTTP_TIMEOUT)
+        if response.status_code != 200:
+            self.log(f"❌ Resume check failed: {response.status_code} - {response.text}", "❌")
+            return False
+
+        data = response.json()
+        in_progress = bool(data.get("in_progress"))
+        resumed = bool(data.get("resumed"))
+        if not (in_progress and resumed):
+            self.log(f"❌ Resume not offered after progress: {data}", "❌")
+            return False
+
+        # Explicitly resume via /api/quiz/start and validate points are not reset.
+        start = self.session.post(
+            f"{BASE_URL}/api/quiz/start",
+            json={"action": "resume"},
+            timeout=HTTP_TIMEOUT,
+        )
+        if start.status_code != 200:
+            self.log(f"❌ quiz/start resume failed: {start.status_code} - {start.text}", "❌")
+            return False
+
+        start_data = start.json()
+        state = start_data.get("state") or {}
+        state_points = int(state.get("session_points") or 0)
+
+        if start_data.get("resumed") is not True:
+            self.log(f"❌ quiz/start did not resume: {start_data}", "❌")
+            return False
+
+        if self.session_total_after_first_answer and state_points < self.session_total_after_first_answer:
+            self.log(
+                f"❌ Resume reset points: had {self.session_total_after_first_answer}, resume state has {state_points}",
+                "❌",
+            )
+            return False
+
+        self.log(f"✅ Resume offered and points persisted (state.session_points={state_points})", "✅")
+        return True
     
     def test_04_get_next_word(self):
         """Test 4: Verify quiz advances to next word"""
@@ -249,8 +330,10 @@ class QuizSmokeTest:
         
         tests = [
             self.test_01_upload_words,
+            self.test_02a_resume_not_offered_before_progress,
             self.test_02_start_quiz,
             self.test_03_submit_correct_answer,
+            self.test_03a_resume_offered_after_progress_and_points_persist,
             self.test_04_get_next_word,
             self.test_05_submit_incorrect_answer,
             self.test_06_complete_remaining_words,

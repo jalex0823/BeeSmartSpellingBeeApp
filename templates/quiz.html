@@ -9787,15 +9787,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             return Promise.resolve('start_new');
         }
 
-        if (messageEl) {
-            messageEl.textContent = resumePayload?.message || 'You have an unfinished quiz. What would you like to do?';
-        }
-
         const cur = Number(resumePayload?.state?.current_word_index);
         const tot = Number(resumePayload?.state?.total_words);
-        if (progressEl && Number.isFinite(cur) && Number.isFinite(tot) && tot > 0) {
+        const correct = Number(resumePayload?.state?.correct);
+        const incorrect = Number(resumePayload?.state?.incorrect);
+        const hasProgress = (Number.isFinite(cur) && cur > 0) || (Number.isFinite(correct) && correct > 0) || (Number.isFinite(incorrect) && incorrect > 0);
+
+        if (messageEl) {
+            messageEl.textContent = hasProgress
+                ? (resumePayload?.message || 'You have an unfinished quiz. What would you like to do?')
+                : 'Your quiz is ready, but you haven\'t started yet. Ready to begin?';
+        }
+
+        // If there is no progress, do not offer "Resume".
+        // Instead, present a single primary "Start Quiz" action (mapped to start_new).
+        if (!hasProgress) {
+            try { resumeBtn.style.display = 'none'; } catch (_e) {}
+            try {
+                restartBtn.classList.remove('secondary');
+                restartBtn.classList.add('primary');
+            } catch (_e) {}
+            try {
+                restartBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">▶️</span> Start Quiz';
+            } catch (_e) {}
+        } else {
+            try { resumeBtn.style.display = ''; } catch (_e) {}
+            try {
+                restartBtn.classList.remove('primary');
+                restartBtn.classList.add('secondary');
+            } catch (_e) {}
+            try {
+                resumeBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">▶️</span> Resume';
+                restartBtn.innerHTML = '<span class="bee-icon" aria-hidden="true">🔄</span> Start Over';
+            } catch (_e) {}
+        }
+
+        if (progressEl && Number.isFinite(tot) && tot > 0) {
             progressEl.style.display = 'block';
-            progressEl.textContent = `Progress: ${cur}/${tot} words`;
+            progressEl.textContent = hasProgress && Number.isFinite(cur)
+                ? `Progress: ${cur}/${tot} words`
+                : `Ready: ${tot} words`;
         } else if (progressEl) {
             progressEl.style.display = 'none';
             progressEl.textContent = '';

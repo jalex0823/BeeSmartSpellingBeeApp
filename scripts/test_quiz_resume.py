@@ -20,12 +20,29 @@ def run():
     assert state_payload.get('has_state') is True
     assert state_payload.get('total_words') == 3
 
-    # Resume should detect existing state and not reinitialize
+    # Create meaningful progress: fetch first word, then submit an answer.
+    res = client.post('/api/next')
+    assert res.status_code == 200, res.data
+    next_payload = res.get_json()
+    print('Next:', json.dumps(next_payload, indent=2))
+
+    # Answer with the first word (alpha) to advance state.
+    res = client.post('/api/answer', json={
+        'user_input': 'alpha',
+        'method': 'keyboard',
+        'elapsed_ms': 1000
+    })
+    assert res.status_code == 200, res.data
+    answer_payload = res.get_json()
+    print('Answer:', json.dumps(answer_payload, indent=2))
+
+    # Resume should now detect in-progress state and offer resume.
     res = client.post('/api/quiz/resume')
     assert res.status_code == 200, res.data
     resume_payload = res.get_json()
     print('Resume:', json.dumps(resume_payload, indent=2))
     assert resume_payload.get('resumed') is True
+    assert resume_payload.get('in_progress') is True
 
     print('✅ Quiz resume test passed')
 
