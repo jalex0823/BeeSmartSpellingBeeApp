@@ -4103,28 +4103,58 @@
                 <!-- Load user's avatar with SmartyBee3D into NEW clean container -->
                 <script>
                 window.avatarControlsReady = false;
-                
-                window.addEventListener('load', function() {
-                    if (typeof window.SmartyBee3D === 'function') {
-                        // Create instance in NEW container
-                        window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
-                            width: 400,
-                            height: 400,
-                            fetchFromServer: true,  // Auto-fetch user's registered avatar
-                            brighterLighting: true,  // Brighter lighting for registered users
-                            autoRotate: false,
-                            enableInteraction: true,
-                            zoom: 1.8,
-                            onReady: function() {
-                                console.log('✅ Avatar Controls instance ready');
-                                window.avatarControlsReady = true;
-                                // Trigger ready event for any listeners
-                                window.dispatchEvent(new CustomEvent('avatarControlsReady'));
-                            }
-                        });
-                        console.log('Avatar Controls instance created in new container');
+
+                (function(){
+                    const start = () => {
+                        try {
+                            if (window.avatarControlsInstance) return; // idempotent
+                            if (typeof window.SmartyBee3D !== 'function') return;
+
+                            // Create instance in NEW container
+                            window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
+                                width: 400,
+                                height: 400,
+                                fetchFromServer: true,  // Auto-fetch user's registered avatar
+                                brighterLighting: true,  // Brighter lighting for registered users
+                                autoRotate: false,
+                                enableInteraction: true,
+                                zoom: 1.8,
+                                onReady: function() {
+                                    console.log('✅ Avatar Controls instance ready');
+                                    window.avatarControlsReady = true;
+                                    // Trigger ready event for any listeners
+                                    try { window.dispatchEvent(new CustomEvent('avatarControlsReady')); } catch(_e) {}
+                                }
+                            });
+                            console.log('Avatar Controls instance created in new container');
+                        } catch (e) {
+                            console.warn('Avatar Controls init failed:', e);
+                        }
+                    };
+
+                    // Start ASAP so the honey loader can wait on readiness.
+                    const startWithPoll = (maxWaitMs = 8000) => {
+                        const startedAt = Date.now();
+                        const tick = () => {
+                            start();
+                            if (window.avatarControlsInstance) return;
+                            if (Date.now() - startedAt > maxWaitMs) return;
+                            setTimeout(tick, 120);
+                        };
+                        tick();
+                    };
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', () => startWithPoll(), { once: true });
+                    } else {
+                        startWithPoll();
                     }
-                });
+
+                    // Fallback: try again after full load in case scripts were delayed.
+                    window.addEventListener('load', () => {
+                        if (!window.avatarControlsInstance) startWithPoll(6000);
+                    }, { once: true });
+                })();
                 </script>
                 
                 <!-- Defensive stub: ensure window.setCurrentAvatar exists before any early calls
@@ -4812,8 +4842,11 @@
                     (function(){
                         let __autoRotateRAF = null;
                         const ROTATE_DEGREES_PER_FRAME = 0.05; // ~3 deg/sec at 60fps (slow and consistent)
+                        const ROTATE_RAD_PER_FRAME = ROTATE_DEGREES_PER_FRAME * (Math.PI / 180);
                         const MORPH_THRESHOLD_DEGREES = 180;   // morph to next avatar at half turn
                         let accumulatedDeg = 0;
+                        let _startedAt = 0;
+                        const MAX_WAIT_FOR_CONTROLLER_MS = 10000;
 
                         function getNextAvatarKey(currentKey){
                             try {
@@ -4833,9 +4866,21 @@
                         }
 
                         function loop(){
-                            // Use the safe helper so we never throw if controller isn't ready yet
+                            // Avoid doing any work until the controller exists.
+                            // On Safari/iOS, spinning loops + console spam can choke the main thread.
                             try {
-                                safeAvatarRotate(ROTATE_DEGREES_PER_FRAME, true);
+                                const c = getAvatarController();
+                                if (!c || !c.bee || !c.bee.rotation) {
+                                    // If we can't get a controller within a reasonable window, stop.
+                                    if (_startedAt && (performance.now() - _startedAt) > MAX_WAIT_FOR_CONTROLLER_MS) {
+                                        stopConstantRotate();
+                                        return;
+                                    }
+                                    __autoRotateRAF = requestAnimationFrame(loop);
+                                    return;
+                                }
+
+                                c.bee.rotation.y += ROTATE_RAD_PER_FRAME;
                                 accumulatedDeg += ROTATE_DEGREES_PER_FRAME;
                                 if (accumulatedDeg >= MORPH_THRESHOLD_DEGREES) {
                                     accumulatedDeg = 0;
@@ -4896,6 +4941,16 @@
                             // Prevent duplicate loops
                             stopConstantRotate();
                             accumulatedDeg = 0;
+                            _startedAt = performance.now();
+
+                            // Only run this constant rotation on authenticated pages where avatarControls3D exists.
+                            // Guest pages do not have a controller and should not spin a perpetual RAF loop.
+                            try {
+                                if (window.IS_AUTH !== true) {
+                                    return;
+                                }
+                            } catch(_e) { /* ignore */ }
+
                             // Mark auto-rotate on for UI indicators if present
                             try { if (window.avatarControlState) { window.avatarControlState.autoRotate = true; } } catch(_e){}
                             __autoRotateRAF = requestAnimationFrame(loop);
@@ -15133,6 +15188,132 @@
                 this.tapToEnterShown = false;
                 this.liftOffShown = false;
                 this.loaderDismissed = false;
+                // Avatar gating: for authenticated users, keep the loader up until the
+                // registered-user 3D avatar controller reports it is ready.
+                this.avatarRenderCheckId = null;
+                this._bypassPromise = null;
+            }
+
+            _isAuthenticated() {
+                try {
+                    return (typeof window !== 'undefined' && window.IS_AUTH === true);
+                } catch (_e) {
+                    return false;
+                }
+            }
+
+            _waitForBypassClick() {
+                if (this._bypassPromise) return this._bypassPromise;
+
+                this._bypassPromise = new Promise((resolve) => {
+                    const btn = document.getElementById('emergencyBypassBtn');
+                    if (!btn) return; // If missing, bypass is simply unavailable.
+                    btn.addEventListener('click', () => resolve({ bypass: true }), { once: true });
+                });
+
+                return this._bypassPromise;
+            }
+
+            _waitForAvatarControlsReady() {
+                return new Promise((resolve) => {
+                    try {
+                        if (window.avatarControlsReady === true) {
+                            resolve({ ready: true });
+                            return;
+                        }
+
+                        const onReady = () => {
+                            resolve({ ready: true });
+                        };
+                        window.addEventListener('avatarControlsReady', onReady, { once: true });
+
+                        // Poll as an extra safety net in case the event fires before we attach.
+                        const poll = setInterval(() => {
+                            if (window.avatarControlsReady === true) {
+                                clearInterval(poll);
+                                try { window.removeEventListener('avatarControlsReady', onReady); } catch (_e) {}
+                                resolve({ ready: true });
+                            }
+                        }, 200);
+
+                        // Clear polling on page unload.
+                        window.addEventListener('pagehide', () => {
+                            try { clearInterval(poll); } catch (_e) {}
+                        }, { once: true });
+                    } catch (_e2) {
+                        resolve({ ready: false });
+                    }
+                });
+            }
+
+            async waitForAvatarGate({ initialTimeoutMs = 9000 } = {}) {
+                // Guests: no gating required.
+                if (!this._isAuthenticated()) {
+                    if (this.avatarRenderCheckId) {
+                        this.updateCheck(this.avatarRenderCheckId, 'Ready', 'ℹ', 85);
+                    }
+                    return { ready: true, bypass: false, skipped: true };
+                }
+
+                // Authenticated: wait for 3D avatar readiness OR emergency bypass.
+                if (this.avatarRenderCheckId) {
+                    this.updateCheck(this.avatarRenderCheckId, 'Loading...', '', 85);
+                }
+
+                const bypassP = this._waitForBypassClick();
+                const avatarP = this._waitForAvatarControlsReady();
+
+                // Phase 1: wait up to initialTimeoutMs; if still not ready, keep waiting but
+                // make it obvious to the user what's happening.
+                const phase1 = await Promise.race([
+                    avatarP,
+                    bypassP,
+                    this.delay(initialTimeoutMs).then(() => ({ timeout: true }))
+                ]);
+
+                if (phase1 && phase1.bypass) {
+                    if (this.avatarRenderCheckId) {
+                        this.updateCheck(this.avatarRenderCheckId, 'Bypassed', 'ℹ', 99);
+                    }
+                    return { ready: false, bypass: true };
+                }
+
+                if (phase1 && phase1.ready) {
+                    if (this.avatarRenderCheckId) {
+                        this.updateCheck(this.avatarRenderCheckId, 'Ready', '', 92);
+                    }
+                    return { ready: true, bypass: false };
+                }
+
+                // Phase 2: timed out waiting—hold at 99% and keep waiting until either the
+                // avatar becomes ready or the user bypasses (global emergency timeout still applies).
+                try {
+                    this.updateProgress(99, ' Waiting for your avatar... (use Emergency Bypass to continue)');
+                } catch (_e3) {}
+                if (this.avatarRenderCheckId) {
+                    this.updateCheck(this.avatarRenderCheckId, 'Still loading...', 'ℹ', 99);
+                }
+
+                const phase2 = await Promise.race([
+                    this._waitForAvatarControlsReady(),
+                    this._waitForBypassClick()
+                ]);
+
+                if (phase2 && phase2.bypass) {
+                    if (this.avatarRenderCheckId) {
+                        this.updateCheck(this.avatarRenderCheckId, 'Bypassed', 'ℹ', 99);
+                    }
+                    return { ready: false, bypass: true };
+                }
+
+                if (phase2 && phase2.ready) {
+                    if (this.avatarRenderCheckId) {
+                        this.updateCheck(this.avatarRenderCheckId, 'Ready', '', 92);
+                    }
+                    return { ready: true, bypass: false };
+                }
+
+                return { ready: false, bypass: false };
             }
             
             // Fetch with timeout protection using AbortController
@@ -15402,6 +15583,19 @@
                     this.updateCheck(check2b, 'Skipped', 'ℹ', 34);
                     this.updateProgress(34, ' Avatar preload skipped');
                 }
+
+                // Check 2.75: Avatar Rendering (auth-gated) — do not dismiss loader until ready.
+                // This check turns "Ready" only when the 3D avatar controller reports readiness.
+                // Guests skip this gate.
+                try {
+                    const isAuthenticatedForAvatarGate = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    const check2c = this.addCheck('Avatar Loading', isAuthenticatedForAvatarGate ? 'Pending...' : 'Ready', isAuthenticatedForAvatarGate ? '' : 'ℹ');
+                    this.avatarRenderCheckId = check2c;
+                    // Use a stable percentage marker for the checklist row.
+                    this.updateCheck(check2c, isAuthenticatedForAvatarGate ? 'Pending...' : 'Ready', isAuthenticatedForAvatarGate ? '' : 'ℹ', 34);
+                } catch (_eAvatarCheck) {
+                    // Non-fatal.
+                }
                 
                 // Check 3: User Name Consistency (ensure authenticated users show correct name)
                 console.log(' Check 3/10: User Name - START');
@@ -15516,8 +15710,15 @@
                 const check8 = this.addCheck('Word List', 'Validating...', '');
                 await this.delay(200);
                 try {
-                    // Use WordBankManager as single source of truth for all word counts
-                    const wordCount = await window.WordBankManager.getCount(true);
+                    // Use WordBankManager as single source of truth for all word counts.
+                    // Safari/iOS can occasionally hang on fetch/storage; time-box this check so the loader never stalls.
+                    const wordCountResult = await Promise.race([
+                        window.WordBankManager.getCount(true),
+                        this.delay(2500).then(() => null)
+                    ]);
+                    const wordCount = (typeof wordCountResult === 'number' && Number.isFinite(wordCountResult))
+                        ? wordCountResult
+                        : 0;
                     
                     //  WordBankManager ensures consistency across all displays
                     if (wordCount > 0) {
@@ -15525,9 +15726,15 @@
                         this.updateProgress(60, ` ${wordCount} words ready`);
                         console.log(` Word list validated: ${wordCount} words (from WordBankManager)`);
                     } else {
-                        this.updateCheck(check8, '0 words - empty wordbank', 'ℹ', 60);
-                        this.updateProgress(60, ' Wordbank empty');
-                        console.log('ℹ Wordbank is empty (user must upload)');
+                        if (wordCountResult === null) {
+                            this.updateCheck(check8, 'Skipped (timeout)', 'ℹ', 60);
+                            this.updateProgress(60, ' Word list check skipped');
+                            console.warn('ℹ Word list check timed out (non-fatal)');
+                        } else {
+                            this.updateCheck(check8, '0 words - empty wordbank', 'ℹ', 60);
+                            this.updateProgress(60, ' Wordbank empty');
+                            console.log('ℹ Wordbank is empty (user must upload)');
+                        }
                     }
                 } catch (wordbankError) {
                     console.warn('Wordbank validation failed:', wordbankError);
@@ -15571,17 +15778,30 @@
                 const check10 = this.addCheck('Dictionary System', 'Checking...', '');
                 await this.delay(200);
                 try {
-                    // Use WordBankManager to ensure consistent count across all checks
-                    const wordCount = await window.WordBankManager.getCount(false); // Use cache from Check 8
+                    // Use WordBankManager to ensure consistent count across all checks.
+                    // Time-box to avoid Safari/iOS hangs blocking the loader.
+                    const wordCountResult = await Promise.race([
+                        window.WordBankManager.getCount(false), // Use cache from Check 8
+                        this.delay(2500).then(() => null)
+                    ]);
+                    const wordCount = (typeof wordCountResult === 'number' && Number.isFinite(wordCountResult))
+                        ? wordCountResult
+                        : 0;
                     
                     if (wordCount > 0) {
                         this.updateCheck(check10, `Ready (${wordCount} words to define)`, '', 75);
                         this.updateProgress(75, ` Dictionary ready for ${wordCount} words`);
                         console.log(` Dictionary ready for ${wordCount} words (from WordBankManager)`);
                     } else {
-                        this.updateCheck(check10, 'Ready (0 words)', '', 75);
-                        this.updateProgress(75, ' Dictionary ready (add words to quiz)');
-                        console.log(' Dictionary ready - no words in session yet');
+                        if (wordCountResult === null) {
+                            this.updateCheck(check10, 'Ready (timeout)', 'ℹ', 75);
+                            this.updateProgress(75, ' Dictionary ready (on-demand)');
+                            console.warn('ℹ Dictionary count check timed out (non-fatal)');
+                        } else {
+                            this.updateCheck(check10, 'Ready (0 words)', '', 75);
+                            this.updateProgress(75, ' Dictionary ready (add words to quiz)');
+                            console.log(' Dictionary ready - no words in session yet');
+                        }
                     }
                     window.dictionaryPreloaded = false; // On-demand loading
                 } catch (dictError) {
@@ -15852,6 +16072,20 @@
                         await this.delay(waitMs);
                     }
                 } catch (_e) {}
+
+                // NEW: For authenticated users, keep the loader up until the registered avatar
+                // controller reports readiness (window.avatarControlsReady / avatarControlsReady event).
+                try {
+                    const gate = await this.waitForAvatarGate({ initialTimeoutMs: 9000 });
+                    if (gate && gate.ready) {
+                        // Make it clear we've reached avatar readiness before finishing.
+                        this.updateProgress(99, ' Avatar ready — finalizing...');
+                    } else if (gate && gate.bypass) {
+                        this.updateProgress(99, ' Continuing (avatar loading bypassed)...');
+                    }
+                } catch (gateErr) {
+                    console.warn(' Avatar gate wait failed:', gateErr);
+                }
                 
                 this.updateProgress(100, ' Ready to spell!');
 
@@ -16107,6 +16341,18 @@
                                 if (!window.userAvatarLoader) {
                                     window.userAvatarLoader = new UserAvatarLoader();
                                 }
+
+                                // iOS Safari can run out of WebGL contexts quickly.
+                                // If the registered-user avatar controller container exists, avoid creating
+                                // an additional mascotBee3D instance during the loading screen.
+                                try {
+                                    const isAuthNow = (window.IS_AUTH === true);
+                                    const controlsEl = document.getElementById('avatarControls3D');
+                                    if (isAuthNow && controlsEl) {
+                                        // Let the avatarControls3D instance own 3D rendering.
+                                        return true;
+                                    }
+                                } catch (_e) { /* ignore */ }
 
                                 // Always init to fetch the user's selected avatar.
                                 // Prefer server-fed avatar if present.
@@ -18918,7 +19164,7 @@
         const controller = getAvatarController();
         avatarDebugLog('safeAvatarRotate called. Controller:', controller);
         avatarDebugLog('  controller.bee:', controller?.bee);
-        console.log('  controller.camera:', controller?.camera);
+        avatarDebugLog('  controller.camera:', controller?.camera);
         if (!controller) return;
         
         if (smooth && controller.bee && controller.bee.rotation) {
@@ -18926,24 +19172,28 @@
             const deltaRad = deltaDegrees * (Math.PI / 180);
             if (avatarControlState.animationFrame) cancelAnimationFrame(avatarControlState.animationFrame);
             avatarControlState.targetRotationY = controller.bee.rotation.y + deltaRad;
-            console.log('Starting rotation animation: current=' + controller.bee.rotation.y.toFixed(3) + ', target=' + avatarControlState.targetRotationY.toFixed(3) + ', delta=' + deltaRad.toFixed(3));
+            avatarDebugLog('Starting rotation animation:', {
+                current: controller.bee.rotation.y,
+                target: avatarControlState.targetRotationY,
+                delta: deltaRad
+            });
             
             function animate() {
                 if (!controller.bee || !controller.bee.rotation || avatarControlState.targetRotationY === null) return;
                 const diff = avatarControlState.targetRotationY - controller.bee.rotation.y;
                 if (Math.abs(diff) > 0.001) {
                     controller.bee.rotation.y += diff * 0.2;
-                    console.log('  Animating: rotation.y = ' + controller.bee.rotation.y.toFixed(3));
+                    avatarDebugLog('  Animating rotation.y:', controller.bee.rotation.y);
                     avatarControlState.animationFrame = requestAnimationFrame(animate);
                 } else {
                     controller.bee.rotation.y = avatarControlState.targetRotationY;
                     avatarControlState.targetRotationY = null;
-                    console.log('  Animation complete at ' + controller.bee.rotation.y.toFixed(3));
+                    avatarDebugLog('  Animation complete at', controller.bee.rotation.y);
                 }
             }
             animate();
         } else if (typeof controller.rotate === 'function') {
-            console.log('  Using controller.rotate() fallback');
+            avatarDebugLog('  Using controller.rotate() fallback');
             controller.rotate(0, deltaDegrees * (Math.PI / 180));
         } else {
             console.warn('  No rotation method available!');
@@ -18952,9 +19202,9 @@
 
     function safeAvatarZoom(deltaAmount, smooth = true) {
         const controller = getAvatarController();
-        console.log('safeAvatarZoom called. Controller:', controller);
-        console.log('  controller.camera:', controller?.camera);
-        console.log('  deltaAmount:', deltaAmount);
+        avatarDebugLog('safeAvatarZoom called. Controller:', controller);
+        avatarDebugLog('  controller.camera:', controller?.camera);
+        avatarDebugLog('  deltaAmount:', deltaAmount);
         if (!controller) return;
         
         if (smooth && controller.camera) {
@@ -18976,7 +19226,7 @@
             }
             animate();
         } else if (typeof controller.zoom === 'function') {
-            console.log('  Using controller.zoom() fallback');
+            avatarDebugLog('  Using controller.zoom() fallback');
             controller.zoom(deltaAmount);
         } else {
             console.warn('  No zoom method available!');
