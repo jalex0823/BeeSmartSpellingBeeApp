@@ -17702,8 +17702,18 @@
                 let lastTouchEnd = 0;
                 document.addEventListener('touchend', function(event) {
                     const now = Date.now();
+                    // IMPORTANT (iOS): never block normal scrolling.
+                    // Only suppress double-tap zoom when the user is interacting with actual controls.
+                    const target = event && event.target ? event.target : null;
+                    const isInteractive = !!(target && typeof target.closest === 'function' && target.closest('button, a, input, textarea, select, .menu-option, .action-btn, [role="button"], [tabindex]'));
+
+                    if (!isInteractive) {
+                        lastTouchEnd = now;
+                        return;
+                    }
+
                     if (now - lastTouchEnd <= 300) {
-                        event.preventDefault();
+                        try { event.preventDefault(); } catch (_e) {}
                     }
                     lastTouchEnd = now;
                 }, { passive: false });
