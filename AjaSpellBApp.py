@@ -1078,6 +1078,11 @@ def api_avatars():
     if dev_full_effective:
         role = 'student'
 
+    # Scope filtering:
+    # - registration: only return the DEFAULT_FREE avatars (5) for signup UI
+    scope = (request.args.get('scope') or '').strip().lower()
+    registration_scope = scope in ('registration', 'register', 'signup')
+
     # Build cache key per user+role (prevents admin cache bleed)
     # NOTE: Guests with DB-backed entitlements must not be lumped into the
     # generic guest cache key, otherwise a restored user could see the mascot-only list.
@@ -1097,6 +1102,9 @@ def api_avatars():
             cache_key = 'guest_role_guest'
     else:
         cache_key = f"user_{getattr(user, 'id', 'unknown')}_role_{role}"
+
+    if registration_scope:
+        cache_key = f"{cache_key}_scope_registration"
 
     now_ts = time.time()
     cached = AVATAR_LIST_CACHE.get(cache_key)
@@ -1119,6 +1127,17 @@ def api_avatars():
 
     # Build role-aware list
     result = []
+
+    # Registration scope: never expose the full catalog; only allow the default-free avatars.
+    catalog_iter = AVATAR_CATALOG
+    if registration_scope:
+        try:
+            catalog_iter = [
+                e for e in AVATAR_CATALOG
+                if bool(e.get('is_default_free')) or (str(e.get('tier') or '').strip().lower() == 'default_free')
+            ]
+        except Exception:
+            catalog_iter = []
 
     # Guest rule:
     # - With NO guest entitlements: return the full catalog, but lock everything
@@ -1189,9 +1208,17 @@ def api_avatars():
     avatar_sku_lookup = _build_avatar_sku_lookup()
     locked_count = 0
     unlocked_count = 0
-    for entry in AVATAR_CATALOG:
+    for entry in catalog_iter:
         # Compute lock state
-        if role == 'guest' and not anon_owned:
+        if registration_scope:
+            # Registration UI: the returned list is already limited to default-free avatars.
+            lc = {
+                'unlocked': True,
+                'reason': 'Default free (registration)',
+                'points_needed': 0
+            }
+            is_unlocked = True
+        elif role == 'guest' and not anon_owned:
             # Guests without entitlements: only one avatar is selectable.
             avatar_id_norm = str(entry.get('id') or '').strip().lower()
             is_unlocked = bool(guest_allowed_id and avatar_id_norm == guest_allowed_id)

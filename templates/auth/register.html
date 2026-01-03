@@ -329,14 +329,15 @@
           <label>Choose Your Bee Avatar 🐝 <span class="required">*</span></label>
           <div class="avatar-selection-container">
             <div class="avatar-grid" id="avatarGrid"></div>
-            <input type="hidden" id="selected_avatar" name="avatar_id" value="cool-bee">
+            <input type="hidden" id="selected_avatar" name="avatar_id" value="brother-bee">
             <div class="avatar-help-text">Click on a bee to select your avatar! Your chosen bee will appear on the main menu with animations!</div>
           </div>
           <script>
             // Dynamically load avatars so names match PNG labels
             (async function loadAvatars() {
               try {
-                const res = await fetch('/api/avatars');
+                // Registration should only show DEFAULT_FREE avatars (not the full catalog)
+                const res = await fetch('/api/avatars?scope=registration');
                 const data = await res.json();
                 if (!data || data.status !== 'success') return;
                 const grid = document.getElementById('avatarGrid');
@@ -366,11 +367,13 @@
                   card.classList.add('selected');
                   document.getElementById('selected_avatar').value = card.dataset.avatarId;
                 });
-                // Default select cool-bee
-                const def = grid.querySelector('[data-avatar-id="cool-bee"]');
+                // Default select brother-bee (or first available)
+                const preferredId = 'brother-bee';
+                const preferred = grid.querySelector(`[data-avatar-id="${preferredId}"]`);
+                const def = preferred || grid.querySelector('.avatar-option');
                 if (def) {
                   def.classList.add('selected');
-                  document.getElementById('selected_avatar').value = 'cool-bee';
+                  document.getElementById('selected_avatar').value = def.dataset.avatarId;
                 }
               } catch (err) {
                 console.error('Failed to load avatars', err);

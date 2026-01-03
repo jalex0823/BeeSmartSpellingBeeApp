@@ -1,6 +1,6 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
 // Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.3-v38-2026-01-02-disable-menu-sweep-overlay';
+const CACHE_VERSION = 'beesmart-v1.4.3-v39-2026-01-02-registration-free-avatars-and-avatar-preload-gate';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed

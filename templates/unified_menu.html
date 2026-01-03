@@ -4197,6 +4197,38 @@
                 {% endif %}
 
 
+                {% if not current_user.is_authenticated %}
+                <!-- Guest-only Avatar Carousel (calm, accessible) -->
+                <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
+                    <div class="avatar-slide">
+                        <!-- Progressive 3D canvas (shown when available) -->
+                        <div id="guestAvatar3D" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
+                        <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
+                        <div class="avatar-name" id="guestAvatarName"></div>
+                    </div>
+                    <div class="carousel-cta">
+                        <span class="cta-text">Join the hive — pick your Bee style!</span>
+                        <a class="register-button" href="/auth/register" aria-label="Start your free trial and create your Bee Avatar" data-subscribe="1">
+                            {% if (subscription_trial_days or 0) | int > 0 %}
+                                Start {{ subscription_trial_days | int }}‑day Free Trial
+                            {% else %}
+                                Start now
+                            {% endif %}
+                        </a>
+                        {% if (registration_billing_mode or 'subscription') == 'subscription' %}
+                        <div style="font-size: 0.8rem; color:#5A2C15; margin-top: 0.35rem;">
+                            {% if (subscription_trial_days or 0) | int > 0 %}
+                                Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled during trial.
+                            {% else %}
+                                ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+
                 
                 
                 <!-- Website URL Badge -->
@@ -12281,40 +12313,84 @@
             }
         }
 
-        // Guest-only 3D avatar carousel (progressive enhancement using GLB + Three.js)
+        // Guest-only 3D avatar carousel (GLB + Three.js) — NO 2D/PNG fallback
     function initGuestAvatar3DCarousel() {
             try {
                 const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) return false;
-                // Optional override to FORCE 3D even on constrained devices
-                const params = new URLSearchParams(window.location.search);
-                const force3dParam = params.get('force3d');
-                if (force3dParam === '1') {
-                    try { localStorage.setItem('bee_force3d', '1'); } catch(_) {}
-                } else if (force3dParam === '0') {
-                    try { localStorage.removeItem('bee_force3d'); } catch(_) {}
+
+                // If already running (or a retry loop is pending), treat as active.
+                if (window._guest3DCarouselInitialized) return true;
+                if (window._guest3DCarouselInitPending) return true;
+
+                // Some builds expose GLTFLoader as a global constructor instead of THREE.GLTFLoader.
+                const ensureGLTFLoaderWired = () => {
+                    try {
+                        if (window.THREE && !window.THREE.GLTFLoader && typeof window.GLTFLoader === 'function') {
+                            window.THREE.GLTFLoader = window.GLTFLoader;
+                        }
+                    } catch (_) {}
+                };
+                ensureGLTFLoaderWired();
+
+                // Wait/retry for THREE + GLTFLoader to be ready (scripts are loaded with defer).
+                if (typeof window.THREE === 'undefined' || typeof window.THREE.GLTFLoader === 'undefined') {
+                    window._guest3DCarouselInitPending = true;
+                    const startedAt = Date.now();
+                    const maxWaitMs = 5000;
+                    const t = setInterval(() => {
+                        ensureGLTFLoaderWired();
+                        if (typeof window.THREE !== 'undefined' && typeof window.THREE.GLTFLoader !== 'undefined') {
+                            clearInterval(t);
+                            window._guest3DCarouselInitPending = false;
+                            try { initGuestAvatar3DCarousel(); } catch (e) { console.error('[Avatar] 3D carousel retry failed:', e); }
+                            return;
+                        }
+                        if (Date.now() - startedAt > maxWaitMs) {
+                            clearInterval(t);
+                            window._guest3DCarouselInitPending = false;
+                            console.error('[Avatar] THREE/GLTFLoader not ready after 5s; 3D guest carousel cannot start');
+                        }
+                    }, 100);
+                    return true;
                 }
-                const force3d = (() => {
-                    try { return localStorage.getItem('bee_force3d') === '1'; } catch(_) { return false; }
-                })();
-                // Guest 3D carousel initialization
-                if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return false;
-                if (!window.WebGLRenderingContext) return false;
-                // Respect reduced motion and low-memory devices
-                if (!force3d) {
-                    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-                    if (navigator.deviceMemory && navigator.deviceMemory < 4) return false;
+
+                if (!window.WebGLRenderingContext) {
+                    console.error('[Avatar] WebGL not available; 3D guest carousel cannot start');
+                    return false;
                 }
 
                 // Prevent multiple initialization
-                if (window._guest3DCarouselInitialized) return false;
                 window._guest3DCarouselInitialized = true;
 
                 const wrap = document.getElementById('guestAvatarCarousel');
                 const nameEl = document.getElementById('guestAvatarName');
                 const imgEl = document.getElementById('guestAvatarSlide');
                 const canvasWrap = document.getElementById('guestAvatar3D');
-                if (!wrap || !nameEl || !canvasWrap) return false;
+                if (!wrap || !nameEl || !canvasWrap) {
+                    // DOM might not be ready yet; retry briefly.
+                    window._guest3DCarouselInitialized = false;
+                    window._guest3DCarouselInitPending = true;
+                    const startedAt = Date.now();
+                    const maxWaitMs = 1500;
+                    const t = setInterval(() => {
+                        const w = document.getElementById('guestAvatarCarousel');
+                        const n = document.getElementById('guestAvatarName');
+                        const c = document.getElementById('guestAvatar3D');
+                        if (w && n && c) {
+                            clearInterval(t);
+                            window._guest3DCarouselInitPending = false;
+                            try { initGuestAvatar3DCarousel(); } catch (e) { console.error('[Avatar] 3D carousel DOM retry failed:', e); }
+                            return;
+                        }
+                        if (Date.now() - startedAt > maxWaitMs) {
+                            clearInterval(t);
+                            window._guest3DCarouselInitPending = false;
+                            console.error('[Avatar] Guest carousel DOM not ready; 3D carousel cannot start');
+                        }
+                    }, 100);
+                    return true;
+                }
         // Smooth fade between avatars
         try { wrap.style.transition = 'opacity 360ms ease, transform 360ms ease'; } catch(_) {}
 
@@ -12358,32 +12434,6 @@
                 }
                 const candidates = priority.concat(leftovers.slice(0, Math.max(0, wantTotal - priority.length)));
 
-                // Fallback function for when GLTFLoader is not available
-                function createCarouselFallback(container) {
-                    container.innerHTML = `
-                        <div style="
-                            width: 100%;
-                            height: 180px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            background: linear-gradient(45deg, #FFD700, #FFA500);
-                            border-radius: 12px;
-                            color: #5A2C15;
-                            font-size: 1rem;
-                            text-align: center;
-                            padding: 20px;
-                            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.3);
-                        ">
-                            <div>
-                                <div style="font-size: 3rem; margin-bottom: 10px;"></div>
-                                <div style="font-weight: 600;">Avatar Preview</div>
-                                <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;">Loading avatars...</div>
-                            </div>
-                        </div>
-                    `;
-                }
-
                 // Three.js scene setup
                 const scene = new THREE.Scene();
                 const camera = new THREE.PerspectiveCamera(45, 240/180, 0.1, 1000);
@@ -12422,11 +12472,11 @@
                 fillLight.position.set(-3, 3, -3);
                 scene.add(fillLight);
 
-                // Check if GLTFLoader is available
+                // Check if GLTFLoader is available (no fallback path)
                 if (typeof THREE.GLTFLoader === 'undefined' || window.GLTF_LOADER_FAILED) {
-                    console.warn('GLTFLoader not available - using fallback');
-                    createCarouselFallback(canvasWrap);
-                    return;
+                    console.error('[Avatar] GLTFLoader not available; 3D guest carousel cannot start');
+                    window._guest3DCarouselInitialized = false;
+                    return false;
                 }
 
                 const loader = new THREE.GLTFLoader();
@@ -12748,8 +12798,14 @@
                         },
                         undefined,
                         (err) => {
-                            // On error, just skip to PNG fallback later
-                            console.warn('GLB load failed for guest carousel:', err);
+                            console.warn('[Avatar] Guest 3D carousel GLB load failed:', err);
+                            // Try the next model shortly so the carousel keeps moving.
+                            try { wrap.style.transform = 'translateY(0)'; } catch(_) {}
+                            if (!disposed && mySeq === loadSeq) {
+                                setTimeout(() => {
+                                    try { if (!disposed) loadNext(); } catch (_) {}
+                                }, 650);
+                            }
                         }
                     );
                 }
@@ -12787,138 +12843,14 @@
 
                 return true;
             } catch (e) {
-                console.warn('Guest 3D carousel unavailable, falling back to PNG:', e);
+                console.error('[Avatar] Guest 3D carousel initialization failed:', e);
+                try { window._guest3DCarouselInitialized = false; } catch(_) {}
                 return false;
             }
         }
 
-        // Guest-only avatar carousel (uses available thumbnails; gracefully skips missing ones)
-        function initGuestAvatarCarousel() {
-            const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
-            if (isAuthenticated) return; // show only for guests
-
-            // Prevent multiple initialization
-            if (window._guestCarouselInitialized) return;
-            window._guestCarouselInitialized = true;
-
-            // Clean up any existing timer first
-            if (window._guestCarouselTimer) {
-                clearInterval(window._guestCarouselTimer);
-                window._guestCarouselTimer = null;
-            }
-
-            const wrap = document.getElementById('guestAvatarCarousel');
-            const imgEl = document.getElementById('guestAvatarSlide');
-            const nameEl = document.getElementById('guestAvatarName');
-            if (!wrap || !imgEl || !nameEl) return;
-
-            // Candidate thumbnails (will skip missing files automatically)
-            const base = '/static/assets/avatars/glb_files/AvatarThumbnails';
-            // Priority picks per request
-            const priority = [
-                { name: 'Super Bee', file: 'SuperBee!.png' },
-                { name: 'Queen Bee', file: 'QueenBee!.png' },
-                { name: 'J‑Rock Bee', file: 'JRockBee!.png' },
-                { name: 'Knight Bee', file: 'KnightBee!.png' }
-            ];
-
-            // Full pool available in repo (pngs only)
-            const pool = [
-                { name: 'Al Bee', file: 'AlBee!.png' },
-                { name: 'Brother Bee', file: 'BrotherBee!.png' },
-                { name: 'Buda Bee', file: 'BudaBee!.png' },
-                { name: 'Builder Bee', file: 'BuilderBee!.png' },
-                { name: 'Buzz Bee', file: 'BuzzBee!.png' },
-                { name: 'Cool Bee', file: 'CoolBee!.png' },
-                { name: 'Cutie Bee', file: 'CutieBee!.png' },
-                { name: 'Detective Bee', file: 'DetectiveBee!.png' },
-                { name: 'Diva Bee', file: 'DivaBee!.png' },
-                { name: 'Doctor Bee', file: 'DoctorBee!.png' },
-                { name: 'Explorer Bee', file: 'ExplorerBee!.png' },
-                { name: 'Franken Bee', file: 'FrankenBee!.png' },
-                { name: 'HoneyComb Bee', file: 'HoneyComb!.png' },
-                { name: 'J‑Rock Bee', file: 'JRockBee!.png' },
-                { name: 'Mascot Bee', file: 'MascotBee!.png' },
-                { name: 'Motor Bee', file: 'MotorBee!.png' },
-                { name: 'O‑Bee', file: 'OBee!.png' },
-                { name: 'Professor Bee', file: 'ProfessorBee!.png' },
-                { name: 'Queen Bee', file: 'QueenBee!.png' },
-                { name: 'Robo Bee', file: 'RoboBee!.png' },
-                { name: 'Rocker Bee', file: 'RockerBee!.png' },
-                { name: 'Sea Bee', file: 'SeaBee!.png' },
-                { name: 'Selfie Bee', file: 'SelfieBee!.png' },
-                { name: 'Singer Bee', file: 'SingerBee!.png' },
-                { name: 'Space Bee', file: 'SpaceBee!.png' },
-                { name: 'Super Bee', file: 'SuperBee!.png' },
-                { name: 'Vamp Bee', file: 'VampBee!.png' },
-                { name: 'Ware Bee', file: 'WareBee!.png' },
-                { name: 'Zom Bee', file: 'ZomBee!.png' }
-            ];
-
-            // Build final candidate list: 4 priority + random others up to 8 total
-            const wantTotal = 8;
-            const excludeFiles = new Set(priority.map(p => p.file));
-            const leftovers = pool.filter(p => !excludeFiles.has(p.file));
-            // Shuffle leftovers
-            for (let i = leftovers.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [leftovers[i], leftovers[j]] = [leftovers[j], leftovers[i]];
-            }
-            const needed = Math.max(0, wantTotal - priority.length);
-            const randomRest = leftovers.slice(0, needed);
-            const candidates = priority.concat(randomRest);
-
-            const loaded = [];
-            let remaining = candidates.length;
-            const onDone = () => {
-                if (loaded.length === 0) {
-                    // Fallback to mascot logo if nothing loaded
-                    imgEl.src = '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee.png';
-                    nameEl.textContent = 'Bee Avatar';
-                    imgEl.classList.add('is-visible');
-                    wrap.style.display = 'block';
-                    return;
-                }
-
-                let idx = 0;
-                const FADE_MS = 360;
-                const DISPLAY_MS = 3800;
-                const show = () => {
-                    const item = loaded[idx % loaded.length];
-                    imgEl.classList.remove('is-visible');
-                    // Wait for full fade-out before swapping
-                    setTimeout(() => {
-                        imgEl.src = item.url;
-                        imgEl.alt = item.name + ' thumbnail';
-                        nameEl.textContent = item.name;
-                        imgEl.classList.add('is-visible');
-                    }, FADE_MS);
-                    idx++;
-                };
-
-                wrap.style.display = 'block';
-                show();
-                // Calm rotation
-                window._guestCarouselTimer = setInterval(show, DISPLAY_MS);
-
-                // Click anywhere on the carousel to prompt registration/login
-                try {
-                    wrap.style.cursor = 'pointer';
-                    wrap.addEventListener('click', function(){
-                        const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
-                        if (!isAuthenticated) window.location.href = '/auth/register';
-                    });
-                } catch(_) {}
-            };
-            // Preload candidates and collect ones that resolve
-            candidates.forEach(c => {
-                const testImg = new Image();
-                const url = base + '/' + c.file;
-                testImg.onload = () => { loaded.push({ name: c.name, url }); if (--remaining === 0) onDone(); };
-                testImg.onerror = () => { if (--remaining === 0) onDone(); };
-                testImg.src = url;
-            });
-        }
+        // NOTE: 2D/PNG guest carousel intentionally removed.
+        // Guest avatar previews are 3D-only (rotation + fade/morph via GLB).
 
         // Badge/Logo morphing for authenticated users (global, used by ticker and badge loader)
         function initBadgeLogoMorphing() {
@@ -15150,6 +15082,7 @@
                 this.startTime = Date.now();
                 this.tapToEnterShown = false;
                 this.liftOffShown = false;
+                this.loaderDismissed = false;
             }
             
             // Fetch with timeout protection using AbortController
@@ -15301,7 +15234,7 @@
             }
             
             async runSystemChecks() {
-                console.log('=== STARTING SYSTEM CHECKS (10 checks total) ===');
+                console.log('=== STARTING SYSTEM CHECKS (11 checks total) ===');
                 
                 // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
                 try {
@@ -15403,6 +15336,21 @@
                     console.warn('Avatar detection failed:', error);
                     this.updateCheck(check2, 'Default Mascot', '', 30);
                     this.updateProgress(30, ' Using fallback');
+                }
+
+                // Check 2.5: Avatar Preload + Verification (thumbnail + model existence)
+                const check2b = this.addCheck('Avatar Preload', 'Preloading...', '');
+                this.updateProgress(32, ' Preloading avatar assets...');
+                try {
+                    const summary = await this.preloadAvatarAssetsForChecks();
+                    const ok = (summary && summary.ok === true);
+                    const detail = (summary && typeof summary.detail === 'string') ? summary.detail : '';
+                    this.updateCheck(check2b, ok ? ('Ready' + (detail ? ` (${detail})` : '')) : ('Partial' + (detail ? ` (${detail})` : '')), ok ? '' : 'ℹ', 34);
+                    this.updateProgress(34, ok ? ' Avatar assets cached' : ' Avatar assets partially cached');
+                } catch (preErr) {
+                    console.warn(' Avatar preload verification failed:', preErr);
+                    this.updateCheck(check2b, 'Skipped', 'ℹ', 34);
+                    this.updateProgress(34, ' Avatar preload skipped');
                 }
                 
                 // Check 3: User Name Consistency (ensure authenticated users show correct name)
@@ -15603,6 +15551,98 @@
                 
                 return true;
             }
+
+            async preloadAvatarAssetsForChecks() {
+                // Goal: warm the browser cache + verify key avatar endpoints respond.
+                // Keep it small + fast to avoid delaying the main page.
+                const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                const maxAvatars = isAuthenticated ? 2 : 4;
+                const warm = async (url, timeoutMs) => {
+                    if (!url) return { ok: false };
+                    // Prefer a HEAD check first (cheap). Some servers don't support HEAD well;
+                    // in that case, fall back to a tiny GET.
+                    try {
+                        const head = await this.fetchWithTimeout(url, { method: 'HEAD', credentials: 'same-origin' }, timeoutMs);
+                        if (head && head.ok) return { ok: true, method: 'HEAD' };
+                    } catch (_e) {
+                        // continue to GET fallback
+                    }
+                    try {
+                        const get = await this.fetchWithTimeout(url, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: { 'Range': 'bytes=0-2047' }
+                        }, timeoutMs);
+                        return { ok: !!(get && (get.ok || get.status === 206)), method: 'RANGE' };
+                    } catch (_e2) {
+                        return { ok: false };
+                    }
+                };
+
+                const urlsToWarm = [];
+
+                // Always include mascot thumbnail as a safe baseline.
+                urlsToWarm.push('/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png');
+
+                if (isAuthenticated) {
+                    // Prefer server-fed avatar (fast) else fetch the user avatar.
+                    let avatar = window._serverFedAvatar || null;
+                    if (!avatar) {
+                        try {
+                            const res = await this.fetchWithTimeout('/api/users/me/avatar', {
+                                credentials: 'same-origin',
+                                headers: { 'Accept': 'application/json' }
+                            }, 4500);
+                            if (res && res.ok) {
+                                const data = await res.json();
+                                avatar = (data && data.avatar) ? data.avatar : null;
+                            }
+                        } catch (_e) {
+                            avatar = null;
+                        }
+                    }
+
+                    if (avatar && avatar.urls) {
+                        if (avatar.urls.thumbnail) urlsToWarm.push(avatar.urls.thumbnail);
+                        if (avatar.urls.glb) urlsToWarm.push(avatar.urls.glb);
+                        if (avatar.urls.model_obj) urlsToWarm.push(avatar.urls.model_obj);
+                    }
+                } else {
+                    // Guest: warm a handful of carousel thumbnails so the rotating preview is instant.
+                    try {
+                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        }, 4500);
+                        if (catalogRes && catalogRes.ok) {
+                            const catalog = await catalogRes.json();
+                            const avatars = (catalog && Array.isArray(catalog.avatars)) ? catalog.avatars : [];
+                            for (const a of avatars.slice(0, maxAvatars)) {
+                                if (a && a.urls) {
+                                    if (a.urls.thumbnail) urlsToWarm.push(a.urls.thumbnail);
+                                    if (a.urls.preview) urlsToWarm.push(a.urls.preview);
+                                }
+                            }
+                        }
+                    } catch (_e) {
+                        // ignore
+                    }
+                }
+
+                // De-dupe + limit.
+                const unique = Array.from(new Set(urlsToWarm)).slice(0, 1 + (maxAvatars * 2));
+
+                let okCount = 0;
+                for (const u of unique) {
+                    // Thumbnails should be quick; models get a slightly longer cap.
+                    const timeoutMs = String(u).endsWith('.glb') ? 4500 : 2500;
+                    const r = await warm(u, timeoutMs);
+                    if (r.ok) okCount += 1;
+                }
+
+                const detail = `${okCount}/${unique.length}`;
+                return { ok: okCount >= Math.max(1, Math.floor(unique.length * 0.7)), detail };
+            }
             
             async preload3DMascot() {
                 // Preload 3D mascot assets early so they're ready when menu appears
@@ -15727,6 +15767,9 @@
             dismissLoader() {
                 const loader = document.getElementById('honeyLoader');
                 if (!loader) return;
+
+                if (this.loaderDismissed) return;
+                this.loaderDismissed = true;
                 
                 // Stop Matrix rain animation
                 if (window.matrixRain) {
@@ -15748,12 +15791,25 @@
             async finishLoading() {
                 const elapsed = Date.now() - this.startTime;
                 console.log(` Loading complete in ${elapsed}ms`);
+
+                // Ensure the loader stays visible long enough for avatar prepopulation (registered users)
+                try {
+                    const isAuth = (window.IS_AUTH === true);
+                    const minMs = isAuth ? 2600 : 1200;
+                    const waitMs = Math.max(0, minMs - elapsed);
+                    if (waitMs > 0) {
+                        console.log(` Enforcing minimum loader duration: +${waitMs}ms`);
+                        await this.delay(waitMs);
+                    }
+                } catch (_e) {}
                 
                 this.updateProgress(100, ' Ready to spell!');
-                
-                //  Enable the "Tap to Start" button - REQUIRE user interaction
-                console.log(' All checks complete - waiting for user to tap Start button...');
+
+                //  Auto-enter when checks reach 100% (no button press).
+                // Keep the button as a fallback affordance, but dismiss automatically.
                 this.presentTapToStart();
+                console.log(' All checks complete - auto-entering main page');
+                setTimeout(() => this.dismissLoader(), 200);
                 
                 //  NOW safe to initialize word count (after loading completes)
                 if (typeof initializeWordCount === 'function') {
@@ -15827,7 +15883,7 @@
             window.loadingSystem.updateProgress(5, ' Starting up...');
             
             // EMERGENCY TIMEOUT - Force loading screen to complete after a generous period
-            const LOADING_EMERGENCY_TIMEOUT = 10000; // Increased to 10 seconds
+            const LOADING_EMERGENCY_TIMEOUT = 20000; // Hard cap: never block longer than 20 seconds
             const emergencyTimeout = setTimeout(() => {
                 console.error(' EMERGENCY TIMEOUT FIRED: Loading took too long, forcing completion...');
                 console.error('Current progress:', window.loadingSystem?.progress || 'unknown');
@@ -15836,24 +15892,27 @@
                 console.trace();
                 
                 // ALWAYS dismiss loader on timeout - don't wait for button click
-                const loader = document.getElementById('honeyLoader');
-                if (loader) {
-                    // Stop Matrix rain animation
-                    if (window.matrixRain) window.matrixRain.stop();
-                    
-                    // Show the body content
-                    document.body.style.visibility = 'visible';
-                    document.body.style.opacity = '1';
-                    document.body.style.pointerEvents = 'auto';
-                    document.body.style.overflow = 'auto';
-                    
-                    // Hide loader completely
-                    loader.style.pointerEvents = 'none';
-                    loader.style.opacity = '0';
-                    loader.style.visibility = 'hidden';
-                    loader.style.display = 'none';
-                    
-                    console.error(' EMERGENCY: Loader force-hidden, page enabled');
+                try {
+                    if (window.loadingSystem && typeof window.loadingSystem.dismissLoader === 'function') {
+                        window.loadingSystem.updateProgress(100, ' Loaded (timeout)');
+                        window.loadingSystem.dismissLoader();
+                    } else {
+                        const loader = document.getElementById('honeyLoader');
+                        if (loader) {
+                            if (window.matrixRain) window.matrixRain.stop();
+                            document.body.style.visibility = 'visible';
+                            document.body.style.opacity = '1';
+                            document.body.style.pointerEvents = 'auto';
+                            document.body.style.overflow = 'auto';
+                            loader.style.pointerEvents = 'none';
+                            loader.style.opacity = '0';
+                            loader.style.visibility = 'hidden';
+                            loader.style.display = 'none';
+                        }
+                    }
+                } catch (_e) {
+                    const loader = document.getElementById('honeyLoader');
+                    if (loader) loader.style.display = 'none';
                 }
                 
                 // Try to update progress if LoadingSystem exists
@@ -15935,7 +15994,7 @@
             // This ensures authenticated users always see their correct display_name
             // before the page finishes loading
             
-            // 75% - SKIP avatar preload validation (GLB files load on-demand, no validation needed)
+            // 75% - Avatar preload is validated during system checks (see "Avatar Preload" check)
             window.loadingSystem.updateProgress(75, ' Avatar system ready');
             
             // Initialize avatar loader (no preload, just setup)
@@ -15944,14 +16003,16 @@
                     window.userAvatarLoader = new UserAvatarLoader();
                 }
                 
-                // Set mock results (avatars will lazy-load when needed)
-                window.avatarPreloadResults = {
-                    totalAvatars: 39,
-                    successfulAvatars: 39,
-                    failedAvatars: [],
-                    systemReady: true,
-                    fallbackReady: true
-                };
+                // Preserve preload results computed during system checks when available.
+                if (!window.avatarPreloadResults) {
+                    window.avatarPreloadResults = {
+                        totalAvatars: 39,
+                        successfulAvatars: 0,
+                        failedAvatars: [],
+                        systemReady: true,
+                        fallbackReady: true
+                    };
+                }
                 
                 console.log(' Avatar loader initialized (lazy-load mode)');
                 window.loadingSystem.updateProgress(78, ` Avatar system ready (lazy-load)`);
@@ -15985,70 +16046,87 @@
                 try {
                     // Mark that we'll load the avatar after page becomes interactive
                     window.loadingSystem.updateProgress(85, ' Preparing avatar...');
-                    
-                    // Check if custom avatar is available
-                    const hasCustomAvatar = window.userAvatarLoader && 
-                                          window.userAvatarLoader.userAvatar &&
-                                          window.userAvatarLoader.userAvatar.urls;
-                    
-                    // OPTIMIZATION: Defer actual 3D model loading until after page load
-                    // This prevents Three.js violation and speeds up initial page render
+
+                    // Make deferred 3D load idempotent (safe to call during loader + after interactive)
+                    let _deferredAvatarPromise = null;
                     window.deferredAvatarLoad = async () => {
-                        if (hasCustomAvatar) {
+                        if (_deferredAvatarPromise) return _deferredAvatarPromise;
+
+                        _deferredAvatarPromise = (async () => {
                             try {
-                                await initUserAvatar3D(window.userAvatarLoader.userAvatar);
-                                avatarLoadSuccess = true;
-                                console.log(' Custom avatar loaded successfully:', window.userAvatarLoader.userAvatar.avatar_id);
-                            } catch (avatarError) {
-                                console.error(' Custom avatar failed to load:', avatarError);
-                            
-                            // Show refresh button for manual retry
-                            const refreshBtn = document.getElementById('avatarRefreshBtn');
-                            if (refreshBtn) {
-                                refreshBtn.style.display = 'block';
-                            }
-                            
-                            // CRITICAL FIX: Don't block loading with modal during initialization
-                            // Instead, automatically fall back to default and show a non-blocking notification
-                            console.warn(' Custom avatar failed, using default MascotBee:', avatarError);
-                            
-                            // Log diagnostics but don't block
-                            if (window.avatarPreloadResults) {
-                                const results = window.avatarPreloadResults;
-                                console.warn('Avatar System Status:', {
-                                    total: results.totalAvatars,
-                                    working: results.successfulAvatars,
-                                    failed: results.failedAvatars.length,
-                                    fallbackReady: results.fallbackReady
-                                });
-                            }
-                            
-                            // Automatically use default avatar without blocking
-                            await initDefaultMascot();
-                            avatarLoadSuccess = true;
-                            
-                            // Show a deferred notification after page loads (non-blocking)
-                            setTimeout(() => {
-                                if (typeof showBeeNotification === 'function') {
-                                    showBeeNotification('Your custom avatar couldn\'t load. Using default bee. Check your avatar settings.', 'warning');
+                                if (!window.userAvatarLoader) {
+                                    window.userAvatarLoader = new UserAvatarLoader();
                                 }
-                            }, 2000);
+
+                                // Always init to fetch the user's selected avatar.
+                                // Prefer server-fed avatar if present.
+                                await window.userAvatarLoader.init();
+                                if (window._serverFedAvatar) {
+                                    window.userAvatarLoader.userAvatar = window._serverFedAvatar;
+                                }
+
+                                const avatar = window.userAvatarLoader.userAvatar;
+                                const hasCustomAvatar = !!(avatar && avatar.urls && avatar.urls.glb);
+
+                                if (hasCustomAvatar) {
+                                    await initUserAvatar3D(avatar);
+                                    avatarLoadSuccess = true;
+                                    console.log(' Custom avatar loaded successfully:', avatar.avatar_id || avatar.id);
+                                    return true;
+                                }
+
+                                // No custom avatar selected yet: use MascotBee default
+                                console.log(' Using MascotBee (no custom avatar detected)');
+                                await initDefaultMascot();
+                                avatarLoadSuccess = true;
+                                return true;
+                            } catch (avatarError) {
+                                avatarLoadSuccess = false;
+                                console.error(' Avatar failed to load:', avatarError);
+
+                                // Show refresh button for manual retry
+                                const refreshBtn = document.getElementById('avatarRefreshBtn');
+                                if (refreshBtn) refreshBtn.style.display = 'block';
+
+                                // Do NOT auto-fallback to a different avatar; surface an error UI instead.
+                                try {
+                                    if (window.userAvatarLoader && typeof window.userAvatarLoader.showErrorState === 'function') {
+                                        window.userAvatarLoader.showErrorState('mascotBee3D', avatarError);
+                                    }
+                                } catch (_e) {}
+
+                                throw avatarError;
+                            }
+                        })().catch((err) => {
+                            // Allow retries after failure
+                            _deferredAvatarPromise = null;
+                            throw err;
+                        });
+
+                        return _deferredAvatarPromise;
+                    };
+
+                    // If registered, actually preload the avatar before finishing the loader
+                    try {
+                        const isAuth = (window.IS_AUTH === true);
+                        if (isAuth) {
+                            window.loadingSystem.updateProgress(88, ' Preloading your avatar...');
+                            const preloadTimeoutMs = 6500;
+                            const raced = await Promise.race([
+                                window.deferredAvatarLoad().then(() => ({ ok: true })).catch(() => ({ ok: false })),
+                                window.loadingSystem.delay(preloadTimeoutMs).then(() => ({ ok: false, timeout: true }))
+                            ]);
+                            if (raced && raced.ok) {
+                                window.loadingSystem.updateProgress(90, ' Avatar ready!');
+                            } else {
+                                window.loadingSystem.updateProgress(90, ' Avatar loading...');
+                            }
+                        } else {
+                            window.loadingSystem.updateProgress(90, ' Buzz On!');
                         }
-                    } else {
-                        // No avatar returned by API; use MascotBee as default
-                        console.log(' Using MascotBee (no custom avatar detected)');
-                        await initDefaultMascot();
-                        avatarLoadSuccess = true;
+                    } catch (_preErr) {
+                        window.loadingSystem.updateProgress(90, ' Avatar loading...');
                     }
-                    
-                    if (avatarLoadSuccess) {
-                        window.loadingSystem.updateProgress(90, ' Avatar ready!');
-                    }
-                };
-                
-                // Don't await - let it load in background
-                avatarLoadSuccess = true; // Mark as "will load"
-                window.loadingSystem.updateProgress(90, ' Buzz On!');
                     
                 } catch (error) {
                     console.error(' Avatar system error:', error);
@@ -16124,7 +16202,7 @@
                     // Page was refreshed, reset flags
                     window._avatarCarouselSystemInitialized = false;
                     window._guest3DCarouselInitialized = false;
-                    window._guestCarouselInitialized = false;
+                    window._guest3DCarouselInitPending = false;
                 }
                 
                 // Prevent multiple initialization of the entire carousel system
@@ -16141,18 +16219,16 @@
                     clearInterval(window._guest3DTimer);
                     window._guest3DTimer = null;
                 }
-                if (window._guestCarouselTimer) {
-                    console.log('[Avatar] Clearing existing 2D timer');
-                    clearInterval(window._guestCarouselTimer);
-                    window._guestCarouselTimer = null;
-                }
+                // (No 2D carousel timer)
                 
-                // Enforce 3D-only: attempt 3D and do NOT fall back to PNG/2D
-                if (typeof initGuestAvatar3DCarousel === 'function') {
-                    const ok = !!initGuestAvatar3DCarousel();
-                    console.log('[Avatar] 3D carousel initialized:', ok);
-                } else {
-                    console.warn('[Avatar] 3D carousel function missing; skipping PNG/2D fallback by request');
+                const guestWrap = document.getElementById('guestAvatarCarousel');
+                // Only guests have the carousel element in DOM.
+                if (guestWrap) {
+                    guestWrap.style.display = 'block';
+                    if (typeof initGuestAvatar3DCarousel === 'function') {
+                        const started3D = !!initGuestAvatar3DCarousel();
+                        console.log('[Avatar] 3D carousel start requested:', started3D);
+                    }
                 }
             } catch (e) { 
                 console.error('[Avatar] Carousel initialization error:', e);
