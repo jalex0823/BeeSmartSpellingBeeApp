@@ -4804,6 +4804,16 @@
                     <div class="kid-tip"> Challenge yourself with surprise words!</div>
                 </div>
 
+                {% if enable_word_builder_25 %}
+                <!-- WB25 (Word Wizard 25) (feature-flagged demo) -->
+                <div id="tileWordBuilder25" class="menu-option" style="background: linear-gradient(135deg, #FFF7E6 0%, #FFE0B2 100%); border-color: rgba(255, 167, 38, 0.55);" onclick="kidSounds.playRandomEffect(); selectOption('word_builder_25', this)" onmouseover="kidSounds.playHappyDing()" title=" Build 25 words from one base word — demo mode!">
+                    <span class="option-badge" style="display:inline-flex;">Demo</span>
+                    <div class="option-icon"></div>
+                    <div class="option-title">WB25</div>
+                    <div class="option-description">Word Wizard (25) — make 25 words from one base word</div>
+                    <div class="kid-tip"> Learn patterns, prefixes, and smart word-building!</div>
+                </div>
+                {% else %}
                 <!-- Battle of the Bees (temporarily offline / coming soon) -->
                 <div id="tileBattle" class="menu-option theme-battle locked-tile feature-disabled" data-feature="battle" data-lockmsg="Battle of the Bees" onmouseover="kidSounds.playHappyDing()" title="{% if _is_auth == 'true' %} Battles are coming soon — temporarily locked.{% else %} Sign in to unlock multiplayer battles!{% endif %}">
                     <div class="lock-overlay">
@@ -4815,6 +4825,7 @@
                     <div class="option-description">Compete with friends & classmates!</div>
                     <div class="kid-tip">{% if current_user.is_authenticated %} Battles are offline for now — coming soon!{% else %} Premium Feature!{% endif %}</div>
                 </div>
+                {% endif %}
 
                 <!-- Speed Round Challenge (Premium) -->
                 <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="speed" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock speed challenges!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock speed challenges!{% else %} Race against time in a fast-paced spelling challenge!{% endif %}">
@@ -6247,11 +6258,13 @@
                     });
 
                     const battleTile = document.getElementById('tileBattle');
-                    lockMenuTile(battleTile, {
-                        title: ' Battle of the Bees (Members Only)',
-                        message: 'Register to join spelling battles with classmates and track your wins!',
-                        buttonText: 'Register to battle'
-                    });
+                    if (battleTile) {
+                        lockMenuTile(battleTile, {
+                            title: ' Battle of the Bees (Members Only)',
+                            message: 'Register to join spelling battles with classmates and track your wins!',
+                            buttonText: 'Register to battle'
+                        });
+                    }
 
                     const imageTile = document.getElementById('tileImageUpload');
                     lockMenuTile(imageTile, {
@@ -6292,13 +6305,15 @@
                     // Battles are currently offline/coming soon: lock tile immediately so it stays greyed out.
                     try {
                         const battleTile = document.getElementById('tileBattle');
-                        lockMenuTile(battleTile, {
-                            title: ' Battle of the Bees',
-                            message: 'Coming in a future update. We\'re putting the final honey glaze on live battles!',
-                            buttonText: 'Got it',
-                            appendBenefits: false
-                        });
-                        setBattleStatusBadge({ online: false, count: 0 });
+                        if (battleTile) {
+                            lockMenuTile(battleTile, {
+                                title: ' Battle of the Bees',
+                                message: 'Coming in a future update. We\'re putting the final honey glaze on live battles!',
+                                buttonText: 'Got it',
+                                appendBenefits: false
+                            });
+                            setBattleStatusBadge({ online: false, count: 0 });
+                        }
                     } catch(_) { /* no-op */ }
 
                     // DEFER Battle availability check until after page loads
@@ -6308,13 +6323,15 @@
                             // Silently skip battle check - endpoint not active
                             // Just lock the tile without making a failing API call
                             const battleTile = document.getElementById('tileBattle');
-                            lockMenuTile(battleTile, {
-                                title: ' Battle of the Bees',
-                                message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! ',
-                                buttonText: 'Got it',
-                                appendBenefits: false
-                            });
-                            setBattleStatusBadge({ online: false, count: 0 });
+                            if (battleTile) {
+                                lockMenuTile(battleTile, {
+                                    title: ' Battle of the Bees',
+                                    message: 'Coming in a future update. We\'re putting the final honey glaze on live battles! ',
+                                    buttonText: 'Got it',
+                                    appendBenefits: false
+                                });
+                                setBattleStatusBadge({ online: false, count: 0 });
+                            }
                         } catch (e) {
                             console.warn('Battle check skipped:', e);
                         }
@@ -6720,6 +6737,7 @@
                     dictionary: '.menu-option[onclick*="dictionary"]',
                     saved: '.menu-option[onclick*="saved"]',
                     random: '.menu-option[onclick*="random"]',
+                    word_builder_25: '.menu-option[onclick*="word_builder_25"]',
                     battle: '.menu-option[onclick*="battle"]',
                     speed: '.menu-option[onclick*="speed"]'
                 };
@@ -6756,6 +6774,9 @@
                     break;
                 case 'random':
                     showRandomPlayInterface();
+                    break;
+                case 'word_builder_25':
+                    window.location.href = '/word-builder-25';
                     break;
                 case 'battle':
                     showBattleInterface();

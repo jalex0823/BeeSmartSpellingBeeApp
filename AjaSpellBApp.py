@@ -4,10 +4,26 @@
 import sys
 import io
 
-# Force UTF-8 encoding for Windows console output
+# Force UTF-8 encoding for Windows console output.
+# IMPORTANT: Avoid replacing stdout/stderr when a test runner (e.g. pytest capture)
+# has swapped them out; otherwise the capture temp file can be closed unexpectedly.
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    try:
+        if sys.stdout is sys.__stdout__:
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8")
+            elif getattr(sys.stdout, "buffer", None) is not None:
+                sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", write_through=True)
+    except Exception:
+        pass
+    try:
+        if sys.stderr is sys.__stderr__:
+            if hasattr(sys.stderr, "reconfigure"):
+                sys.stderr.reconfigure(encoding="utf-8")
+            elif getattr(sys.stderr, "buffer", None) is not None:
+                sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", write_through=True)
+    except Exception:
+        pass
 
 import csv
 import os
@@ -790,6 +806,8 @@ def home_root_direct():
         user_avatar=user_avatar_data,
         use_mascot=use_mascot,
         subscription_monthly_usd=3.99,
+        enable_word_builder_25=os.getenv('ENABLE_WORD_BUILDER_25', '0').strip().lower() in ('1', 'true', 'yes', 'on'),
+        wb25_demo_mode=os.getenv('WORD_BUILDER_25_DEMO_MODE', '1').strip().lower() in ('1', 'true', 'yes', 'on'),
     )
 
 # Optional legacy preview alias retained (can be removed later)
@@ -5599,6 +5617,21 @@ def app_home():
     except Exception:
         _monthly_fee_for_template = 3.99
 
+    # WB25 feature flag (optionally overridden per-request).
+    # This is primarily a dev/debug convenience to avoid confusion when a user's
+    # environment variables are being sourced from different places (terminal,
+    # OS-level env vars, dotenv, etc.).
+    enable_word_builder_25 = os.getenv('ENABLE_WORD_BUILDER_25', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+    wb25_demo_mode = os.getenv('WORD_BUILDER_25_DEMO_MODE', '1').strip().lower() in ('1', 'true', 'yes', 'on')
+    try:
+        _wb25_q = (request.args.get('wb25') or '').strip().lower()
+        if _wb25_q in ('1', 'true', 'yes', 'on'):
+            enable_word_builder_25 = True
+        elif _wb25_q in ('0', 'false', 'no', 'off'):
+            enable_word_builder_25 = False
+    except Exception:
+        pass
+
     html = render_template(
         "unified_menu.html",
         timestamp=timestamp,
@@ -5610,10 +5643,16 @@ def app_home():
         subscription_product_id=subscription_product_id,
         subscription_products=subscription_products,
         is_premium=is_premium,
-        avatar_product_ids=avatar_product_ids
+        avatar_product_ids=avatar_product_ids,
+        enable_word_builder_25=enable_word_builder_25,
+        wb25_demo_mode=wb25_demo_mode,
     )
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store, max-age=0"
+    # Helpful for debugging what the server *thinks* the feature flags are.
+    # (Safe: does not expose secrets; just booleans.)
+    resp.headers['X-Feature-WB25'] = 'on' if enable_word_builder_25 else 'off'
+    resp.headers['X-Feature-WB25-Demo'] = 'on' if wb25_demo_mode else 'off'
     return resp
 
 @app.route("/__test_home")
@@ -5695,6 +5734,519 @@ def minimal_main():
     import time
     timestamp = str(int(time.time()))
     return render_template("unified_menu.html", timestamp=timestamp)
+
+
+# -----------------------------------------------------------------------------
+# Word Builder 25 Challenge (Demo / Feature-Flagged)
+# -----------------------------------------------------------------------------
+
+WB25_SESSION_KEY = "word_builder_25_v1"
+WB25_TARGET_WORDS = 25
+WB25_MIN_WORD_LEN = 3
+WB25_MAX_SCORE = 1000
+WB25_DAILY_MIN_SUBWORDS = 40
+WB25_CUSTOM_MIN_SUBWORDS = 25
+
+WB25_BADGE_CATEGORIES = [
+    "vowel_team",
+    "consonant_blend",
+    "double_letter",
+    "prefix_or_suffix",
+    "long_word",
+]
+
+_WB25_SUBWORD_COUNT_CACHE: Dict[str, int] = {}
+
+wb25_logger = logging.getLogger('WordBuilder25')
+if not wb25_logger.handlers:
+    wb25_logger.setLevel(logging.INFO)
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter('%(asctime)s - WordBuilder25 - %(levelname)s - %(message)s'))
+    wb25_logger.addHandler(_h)
+
+
+def _env_bool(name: str, default: str = '0') -> bool:
+    return os.getenv(name, default).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _wb25_enabled() -> bool:
+    return _env_bool('ENABLE_WORD_BUILDER_25', '0')
+
+
+def _wb25_demo_mode() -> bool:
+    # Default ON for safety when experimenting.
+    return _env_bool('WORD_BUILDER_25_DEMO_MODE', '1')
+
+
+def _wb25_norm_word(raw: str) -> str:
+    # Lowercase and keep letters only.
+    try:
+        w = (raw or '').strip().lower()
+    except Exception:
+        return ''
+    w = re.sub(r"[^a-z]", "", w)
+    return w
+
+
+def _wb25_can_form_from_base(candidate: str, base: str) -> bool:
+    from collections import Counter
+    if not candidate or not base:
+        return False
+    if len(candidate) > len(base):
+        return False
+    cc = Counter(candidate)
+    bc = Counter(base)
+    for ch, n in cc.items():
+        if bc.get(ch, 0) < n:
+            return False
+    return True
+
+
+def _wb25_is_valid_dictionary_word(word: str) -> bool:
+    # Source of truth: BeeSmart built-in Simple Wiktionary index.
+    try:
+        ensure_simple_wiktionary_loaded()
+        if SIMPLE_WIKTIONARY_INDEX and word in SIMPLE_WIKTIONARY_INDEX:
+            return True
+    except Exception:
+        pass
+    # Fallback: persistent enrichment cache can still be treated as in-scope.
+    try:
+        global DICTIONARY_CACHE
+        if not DICTIONARY_CACHE:
+            DICTIONARY_CACHE = load_dictionary_cache()
+        return bool(DICTIONARY_CACHE and word in DICTIONARY_CACHE)
+    except Exception:
+        return False
+
+
+def _wb25_count_valid_subwords(base_word: str) -> int:
+    base_word = _wb25_norm_word(base_word)
+    if not base_word:
+        return 0
+    cached = _WB25_SUBWORD_COUNT_CACHE.get(base_word)
+    if isinstance(cached, int):
+        return cached
+
+    try:
+        ensure_simple_wiktionary_loaded()
+    except Exception:
+        # If dictionary isn't available, viability can't be computed.
+        _WB25_SUBWORD_COUNT_CACHE[base_word] = 0
+        return 0
+
+    word_list = list(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else []
+    # Cheap prefilter: only words whose letters are subset of base letters.
+    base_letters = set(base_word)
+    count = 0
+    for w in word_list:
+        if not w:
+            continue
+        if len(w) < WB25_MIN_WORD_LEN or len(w) > len(base_word):
+            continue
+        # quick rejection for letters not in base
+        try:
+            if set(w) - base_letters:
+                continue
+        except Exception:
+            continue
+        if _wb25_can_form_from_base(w, base_word):
+            count += 1
+
+    _WB25_SUBWORD_COUNT_CACHE[base_word] = count
+    return count
+
+
+def _wb25_detect_badge_categories(word: str) -> set:
+    """Return the set of WB25 badge categories triggered by this word."""
+    w = _wb25_norm_word(word)
+    if not w:
+        return set()
+
+    cats = set()
+
+    # Long word
+    if len(w) >= 6:
+        cats.add('long_word')
+
+    # Double letter
+    if re.search(r"([a-z])\1", w):
+        cats.add('double_letter')
+
+    # Vowel team
+    vowel_teams = (
+        'ai','ay','ea','ee','ie','oa','oe','oi','oo','ou','ow','ue','ui','au','ei'
+    )
+    if any(vt in w for vt in vowel_teams):
+        cats.add('vowel_team')
+
+    # Consonant blends
+    blends = (
+        'bl','br','ch','cl','cr','dr','fl','fr','gl','gr','pl','pr','sc','sh','sk','sl','sm','sn','sp','st','sw','th','tr','tw','wh','wr'
+    )
+    if any(b in w for b in blends):
+        cats.add('consonant_blend')
+
+    # Prefix or suffix
+    prefixes = (
+        'un','re','pre','dis','mis','non','over','under','sub','super','inter','trans'
+    )
+    suffixes = (
+        'ing','ed','er','est','ly','tion','sion','ment','ness','ful','less','able','ible','ous','ive','ize','ism'
+    )
+    if any(w.startswith(p) for p in prefixes) or any(w.endswith(s) for s in suffixes):
+        cats.add('prefix_or_suffix')
+
+    return cats
+
+
+def _wb25_points_for_word(word: str) -> int:
+    w = _wb25_norm_word(word)
+    if not w:
+        return 0
+    base = 18
+    bonus = 0
+    if len(w) == 4:
+        bonus += 2
+    elif len(w) == 5:
+        bonus += 4
+    elif len(w) >= 6:
+        bonus += 7
+    return base + bonus
+
+
+def _wb25_get_state() -> Dict:
+    st = session.get(WB25_SESSION_KEY)
+    return st if isinstance(st, dict) else {}
+
+
+def _wb25_set_state(st: Dict) -> None:
+    session[WB25_SESSION_KEY] = st
+    try:
+        session.modified = True
+    except Exception:
+        pass
+
+
+def _wb25_gpa_preview(raw_points: int) -> str:
+    # Demo-only: map raw points (0..1000) to a friendly grade band.
+    try:
+        p = max(0, min(WB25_MAX_SCORE, int(raw_points)))
+    except Exception:
+        p = 0
+    pct = (p / float(WB25_MAX_SCORE)) * 100.0
+    if pct >= 93:
+        return "A (≈4.0)"
+    if pct >= 90:
+        return "A- (≈3.7)"
+    if pct >= 87:
+        return "B+ (≈3.3)"
+    if pct >= 83:
+        return "B (≈3.0)"
+    if pct >= 80:
+        return "B- (≈2.7)"
+    if pct >= 77:
+        return "C+ (≈2.3)"
+    if pct >= 73:
+        return "C (≈2.0)"
+    if pct >= 70:
+        return "C- (≈1.7)"
+    if pct >= 67:
+        return "D+ (≈1.3)"
+    if pct >= 63:
+        return "D (≈1.0)"
+    if pct >= 60:
+        return "D- (≈0.7)"
+    return "F (0.0)"
+
+
+@app.route('/word-builder-25')
+def word_builder_25_page():
+    if not _wb25_enabled():
+        return redirect(url_for('home_root_direct'))
+    import time as _t
+    timestamp = str(int(_t.time()))
+    user_name = None
+    try:
+        if current_user.is_authenticated:
+            # Use display_name as the registered player name (more human than username).
+            user_name = (getattr(current_user, 'display_name', None) or getattr(current_user, 'username', None))
+    except Exception:
+        user_name = None
+    return render_template(
+        'word_builder_25.html',
+        timestamp=timestamp,
+        demo_mode=_wb25_demo_mode(),
+        user_name=user_name,
+    )
+
+
+@app.route('/api/word-builder-25/start', methods=['POST'])
+def api_wb25_start():
+    if not _wb25_enabled():
+        return jsonify({"ok": False, "error": "Word Builder 25 is disabled."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    mode = str(payload.get('mode') or '').strip().lower()
+    base_raw = payload.get('base_word')
+    base_word = _wb25_norm_word(base_raw) if isinstance(base_raw, str) else ''
+
+    # Curated daily candidates for demo (checked for viability at runtime).
+    daily_candidates = [
+        'triangle', 'reaction', 'education', 'station', 'creation', 'notebook',
+        'chocolate', 'playground', 'remember', 'sunflower', 'storybook', 'dangerous',
+        'celebrate', 'transport', 'discover', 'important', 'wonderful', 'different',
+    ]
+
+    if mode not in ('daily', 'custom'):
+        return jsonify({"ok": False, "error": "Invalid mode. Use 'daily' or 'custom'."}), 400
+
+    if mode == 'daily':
+        viable = []
+        for cand in daily_candidates:
+            c = _wb25_norm_word(cand)
+            if not c or len(c) < 7 or len(c) > 10:
+                continue
+            if not _wb25_is_valid_dictionary_word(c):
+                continue
+            try:
+                safe, _reason = is_kid_friendly(c)
+                if not safe:
+                    continue
+            except Exception:
+                pass
+            cnt = _wb25_count_valid_subwords(c)
+            if cnt >= WB25_DAILY_MIN_SUBWORDS:
+                viable.append((c, cnt))
+
+        if not viable:
+            return jsonify({
+                "ok": False,
+                "error": "Daily Challenge is unavailable right now (dictionary still warming up)."
+            }), 503
+
+        # Deterministic selection by date.
+        today = date.today().isoformat()
+        idx = int(hashlib.sha256(today.encode('utf-8')).hexdigest(), 16) % len(viable)
+        base_word, subword_count = viable[idx]
+
+    else:
+        if not base_word:
+            return jsonify({"ok": False, "error": "Please enter a base word."}), 400
+        if len(base_word) < 5:
+            return jsonify({"ok": False, "error": "Try a longer base word (recommended 7–10 letters)."}), 400
+        if not _wb25_is_valid_dictionary_word(base_word):
+            return jsonify({
+                "ok": False,
+                "error": "That base word isn’t in BeeSmart’s educational dictionary yet. Try another one."
+            }), 400
+
+        try:
+            safe, reason = is_kid_friendly(base_word)
+            if not safe:
+                return jsonify({"ok": False, "error": reason or "That base word isn’t allowed."}), 400
+        except Exception:
+            pass
+
+        subword_count = _wb25_count_valid_subwords(base_word)
+        if subword_count < WB25_CUSTOM_MIN_SUBWORDS:
+            return jsonify({
+                "ok": False,
+                "error": f"That base word can only make {subword_count} valid word(s). Try a different base word with more possibilities."
+            }), 400
+
+    # Initialize state
+    st = {
+        "challenge_type": "WORD_BUILDER_25",
+        "base_word": base_word,
+        "mode": mode,
+        "words_found_count": 0,
+        "valid_words": [],
+        "invalid_attempts": 0,
+        "attempt_count": 0,
+        "raw_points": 0,
+        "pattern_badges_earned": [],
+        "all_badges_bonus_awarded": False,
+        "completion_bonus_awarded": False,
+        "longest_word": "",
+        "is_complete": False,
+        "demo_mode_flag": _wb25_demo_mode(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "viable_subwords_count": int(subword_count),
+    }
+    _wb25_set_state(st)
+
+    wb25_logger.info(f"start mode={mode} base={base_word} viable={subword_count} demo={st['demo_mode_flag']}")
+    return jsonify({"ok": True, "state": st})
+
+
+@app.route('/api/word-builder-25/submit', methods=['POST'])
+def api_wb25_submit():
+    if not _wb25_enabled():
+        return jsonify({"ok": False, "error": "Word Builder 25 is disabled."}), 404
+
+    st = _wb25_get_state()
+    base_word = _wb25_norm_word(st.get('base_word') or '')
+    if not base_word:
+        return jsonify({"ok": False, "error": "Round not started."}), 400
+    if st.get('is_complete'):
+        return jsonify({"ok": True, "state": st, "result": {"accepted": False, "reason": "Round already finished."}})
+
+    payload = request.get_json(silent=True) or {}
+    raw_word = payload.get('word')
+    w = _wb25_norm_word(raw_word) if isinstance(raw_word, str) else ''
+
+    st['attempt_count'] = int(st.get('attempt_count') or 0) + 1
+
+    # Kid-friendly mode: default to safety.
+    kid_mode = True
+    try:
+        kid_mode = bool(session.get('kid_friendly_mode', True))
+    except Exception:
+        kid_mode = True
+    invalid_penalty = 0 if kid_mode else -2
+
+    def _apply_invalid(reason: str):
+        st['invalid_attempts'] = int(st.get('invalid_attempts') or 0) + 1
+        try:
+            st['raw_points'] = int(st.get('raw_points') or 0) + int(invalid_penalty)
+        except Exception:
+            pass
+        if st.get('raw_points', 0) < 0:
+            st['raw_points'] = 0
+        _wb25_set_state(st)
+        wb25_logger.info(f"attempt base={base_word} word={w or '<empty>'} accepted=0 reason={reason}")
+        return jsonify({"ok": True, "state": st, "result": {"accepted": False, "reason": reason, "points_awarded": int(invalid_penalty)}})
+
+    if not w:
+        return _apply_invalid("Please enter a word.")
+    if len(w) < WB25_MIN_WORD_LEN:
+        return _apply_invalid("Too short — minimum is 3 letters.")
+
+    if not _wb25_can_form_from_base(w, base_word):
+        return _apply_invalid("That word uses letters you don’t have in the base word.")
+
+    existing = set([_wb25_norm_word(x) for x in (st.get('valid_words') or [])])
+    if w in existing:
+        # Duplicate: no penalty per spec
+        _wb25_set_state(st)
+        return jsonify({"ok": True, "state": st, "result": {"accepted": False, "reason": "Duplicate word — already found.", "points_awarded": 0}})
+
+    # Dictionary validation
+    if not _wb25_is_valid_dictionary_word(w):
+        return _apply_invalid("Not in BeeSmart’s dictionary for this challenge.")
+
+    # Kid-friendly filter
+    try:
+        safe, reason = is_kid_friendly(w)
+        if not safe:
+            return _apply_invalid(reason or "That word isn’t allowed.")
+    except Exception:
+        pass
+
+    # Accepted
+    points = _wb25_points_for_word(w)
+    new_badges = set(st.get('pattern_badges_earned') or [])
+    triggered = _wb25_detect_badge_categories(w)
+    newly_earned = [c for c in triggered if c in WB25_BADGE_CATEGORIES and c not in new_badges]
+    badge_points = 20 * len(newly_earned)
+    new_badges.update(newly_earned)
+
+    # All-five bonus
+    all_five_bonus = 0
+    if not st.get('all_badges_bonus_awarded') and all(c in new_badges for c in WB25_BADGE_CATEGORIES):
+        all_five_bonus = 50
+        st['all_badges_bonus_awarded'] = True
+
+    # Update state
+    st_valid = list(st.get('valid_words') or [])
+    st_valid.append(w)
+    st['valid_words'] = st_valid
+    st['words_found_count'] = len(st_valid)
+    st['pattern_badges_earned'] = sorted(list(new_badges))
+
+    # Longest word
+    try:
+        lw = st.get('longest_word') or ''
+        if len(w) > len(lw):
+            st['longest_word'] = w
+    except Exception:
+        st['longest_word'] = w
+
+    # Completion bonus
+    completion_bonus = 0
+    if st['words_found_count'] >= WB25_TARGET_WORDS and not st.get('completion_bonus_awarded'):
+        completion_bonus = 150
+        st['completion_bonus_awarded'] = True
+        st['is_complete'] = True
+
+    total_awarded = points + badge_points + all_five_bonus + completion_bonus
+    try:
+        st['raw_points'] = int(st.get('raw_points') or 0) + int(total_awarded)
+    except Exception:
+        st['raw_points'] = int(total_awarded)
+
+    # Hard cap
+    if int(st.get('raw_points') or 0) > WB25_MAX_SCORE:
+        st['raw_points'] = WB25_MAX_SCORE
+
+    _wb25_set_state(st)
+    wb25_logger.info(f"attempt base={base_word} word={w} accepted=1 points={total_awarded} total={st['raw_points']} found={st['words_found_count']}")
+
+    return jsonify({
+        "ok": True,
+        "state": st,
+        "result": {
+            "accepted": True,
+            "points_awarded": int(total_awarded),
+            "badges_new": newly_earned,
+            "completion": bool(completion_bonus),
+        }
+    })
+
+
+@app.route('/api/word-builder-25/finish', methods=['POST'])
+def api_wb25_finish():
+    if not _wb25_enabled():
+        return jsonify({"ok": False, "error": "Word Builder 25 is disabled."}), 404
+
+    st = _wb25_get_state()
+    base_word = _wb25_norm_word(st.get('base_word') or '')
+    if not base_word:
+        return jsonify({"ok": False, "error": "Round not started."}), 400
+
+    # Mark complete; award completion bonus if they reached 25 and it wasn't awarded yet.
+    if (int(st.get('words_found_count') or 0) >= WB25_TARGET_WORDS) and not st.get('completion_bonus_awarded'):
+        try:
+            st['raw_points'] = min(WB25_MAX_SCORE, int(st.get('raw_points') or 0) + 150)
+        except Exception:
+            st['raw_points'] = min(WB25_MAX_SCORE, 150)
+        st['completion_bonus_awarded'] = True
+
+    st['is_complete'] = True
+    _wb25_set_state(st)
+
+    valid = int(st.get('words_found_count') or 0)
+    invalid = int(st.get('invalid_attempts') or 0)
+    total_attempts = max(0, valid + invalid)
+    acc = (valid / total_attempts) if total_attempts else 1.0
+    summary = {
+        "challenge_type": "WORD_BUILDER_25",
+        "raw_points": int(st.get('raw_points') or 0),
+        "accuracy_rate": f"{acc * 100:.0f}%" if total_attempts else "100%",
+        "longest_word": st.get('longest_word') or '',
+        "pattern_badges_earned": st.get('pattern_badges_earned') or [],
+        "gpa_preview": _wb25_gpa_preview(int(st.get('raw_points') or 0)),
+        "demo_mode_flag": bool(st.get('demo_mode_flag')),
+        "writes": {
+            "gpa_persisted": False,
+            "leaderboard_written": False,
+            "streak_updated": False,
+        }
+    }
+
+    wb25_logger.info(f"finish base={base_word} points={summary['raw_points']} valid={valid} invalid={invalid} demo={summary['demo_mode_flag']}")
+    return jsonify({"ok": True, "state": st, "summary": summary})
 
 @app.route("/quiz", strict_slashes=False)
 def quiz_page():

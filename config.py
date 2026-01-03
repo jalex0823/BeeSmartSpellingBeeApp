@@ -4,6 +4,7 @@ Environment-based configuration for development and production
 """
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -170,13 +171,28 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    # Prefer real DB in CI/dev when provided (e.g., DigitalOcean Postgres) so
-    # tests exercise the actual schema. Falls back to in-memory SQLite.
-    SQLALCHEMY_DATABASE_URI = (
-        os.environ.get('DATABASE_URL')
-        or os.environ.get('DIGITALOCEAN_DATABASE_URL')
-        or 'sqlite:///:memory:'
-    )
+    # Tests should be hermetic by default (no network calls to a remote DB).
+    # Some developers keep DATABASE_URL set locally for running the *app*, but
+    # that should not break or slow down the test suite.
+    #
+    # If you explicitly want tests to run against a Postgres DB, set:
+    #   USE_TEST_DATABASE_URL=1
+    # and optionally:
+    #   TEST_DATABASE_URL=<postgresql://...>
+    _use_external_db = os.environ.get('USE_TEST_DATABASE_URL', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+    if _use_external_db:
+        SQLALCHEMY_DATABASE_URI = Config._normalize_database_url(
+            os.environ.get('TEST_DATABASE_URL')
+            or os.environ.get('DATABASE_URL')
+            or os.environ.get('DIGITALOCEAN_DATABASE_URL')
+            or 'sqlite:///beesmart_test.db'
+        )
+    else:
+        _repo_root = Path(__file__).resolve().parent
+        _test_db_path = (_repo_root / 'beesmart_test.db').as_posix()
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{_test_db_path}"
+
     WTF_CSRF_ENABLED = False
 
 
@@ -191,5 +207,13 @@ config = {
 
 def get_config():
     """Get configuration based on FLASK_ENV environment variable"""
-    env = os.environ.get('FLASK_ENV', 'development')
+    # If we're running under pytest, always use TestingConfig.
+    # Rationale: a developer's local `.env` may set FLASK_ENV=development and/or
+    # DATABASE_URL to a remote Postgres instance; tests should remain hermetic.
+    # Note: PYTEST_CURRENT_TEST is only set while *executing* a test, and may be
+    # missing during test collection/import time, so also check sys.modules.
+    if os.environ.get('PYTEST_CURRENT_TEST') or ('pytest' in sys.modules):
+        env = 'testing'
+    else:
+        env = os.environ.get('FLASK_ENV', 'development')
     return config.get(env, config['default'])

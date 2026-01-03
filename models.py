@@ -1684,3 +1684,51 @@ class WordBankStorage(db.Model):
             db.session.commit()
             return True
         return False
+
+
+class WordBuilder25Session(db.Model):
+    """Persisted Word Builder 25 rounds.
+
+    Notes:
+    - Intended for production analytics / history.
+    - Demo mode should avoid writing rows (see WORD_BUILDER_25_DEMO_MODE).
+    - Guests may be stored with user_id=NULL.
+    """
+
+    __tablename__ = 'word_builder_25_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+
+    mode = db.Column(db.String(20), default='daily', index=True)  # daily | custom
+    base_word = db.Column(db.String(50), nullable=False, index=True)
+
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    ended_at = db.Column(db.DateTime, index=True)
+    completed = db.Column(db.Boolean, default=False, index=True)
+
+    # Scoring + progress
+    target_words = db.Column(db.Integer, default=25)
+    words_found_count = db.Column(db.Integer, default=0)
+    score_total = db.Column(db.Integer, default=0)
+    completion_bonus_awarded = db.Column(db.Boolean, default=False)
+    score_capped = db.Column(db.Boolean, default=False)
+
+    # Detail payloads (stored as JSON)
+    found_words = db.Column(MutableList.as_mutable(JSONListCoerce), default=list)
+    badge_categories = db.Column(MutableList.as_mutable(JSONListCoerce), default=list)
+
+    # Attempt stats
+    valid_submissions = db.Column(db.Integer, default=0)
+    invalid_submissions = db.Column(db.Integer, default=0)
+    duplicate_submissions = db.Column(db.Integer, default=0)
+
+    # Misc metadata / future expansion
+    client_metadata = db.Column(db.JSON, default=dict)
+
+    user = db.relationship('User', backref='word_builder_25_sessions', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<WordBuilder25Session id={self.id} user={self.user_id} base={self.base_word} score={self.score_total} completed={self.completed}>"

@@ -1,0 +1,738 @@
+{% extends "base.html" %}
+
+{% block title %}WB25 — Word Wizard (25){% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --wb25-bg: linear-gradient(135deg, #F0FFF4 0%, #E6FFFA 45%, #EBF4FF 100%);
+    --wb25-card: rgba(255,255,255,0.92);
+    --wb25-shadow: 0 10px 28px rgba(0,0,0,0.12);
+    --wb25-accent: #8B5CF6;
+    --wb25-accent2: #F59E0B;
+    --wb25-ok: #16A34A;
+    --wb25-bad: #DC2626;
+  }
+
+  body {
+    background: var(--wb25-bg);
+  }
+
+  .wb25-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 22px 14px 36px;
+  }
+
+  .wb25-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .wb25-title h1 {
+    font-size: 1.7rem;
+    margin: 0;
+    color: #1F2937;
+  }
+
+  .wb25-title p {
+    margin: 6px 0 0;
+    color: #4B5563;
+  }
+
+  .wb25-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .wb25-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+    transition: transform 0.08s ease, filter 0.12s ease;
+  }
+
+  .wb25-btn:hover { filter: brightness(1.02); }
+  .wb25-btn:active { transform: translateY(1px); }
+
+  .wb25-btn.primary {
+    background: linear-gradient(135deg, var(--wb25-accent) 0%, #EC4899 100%);
+    color: #fff;
+  }
+
+  .wb25-btn.secondary {
+    background: rgba(255,255,255,0.88);
+    color: #111827;
+    border: 1px solid rgba(17,24,39,0.12);
+  }
+
+  .wb25-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 14px;
+  }
+
+  .wb25-card {
+    grid-column: span 12;
+    background: var(--wb25-card);
+    border-radius: 18px;
+    box-shadow: var(--wb25-shadow);
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 14px;
+  }
+
+  .wb25-card h2 {
+    font-size: 1.1rem;
+    margin: 0 0 10px;
+    color: #111827;
+  }
+
+  .wb25-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .wb25-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(17,24,39,0.06);
+    color: #111827;
+    font-weight: 700;
+  }
+
+  .wb25-pill strong { color: #111827; }
+
+  .wb25-progress {
+    height: 10px;
+    background: rgba(17,24,39,0.10);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .wb25-progress > div {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--wb25-accent2), var(--wb25-accent));
+    transition: width 0.25s ease;
+  }
+
+  .wb25-mode-picker {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .wb25-mode-card {
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 12px;
+    background: rgba(255,255,255,0.75);
+  }
+
+  .wb25-mode-card h3 {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    color: #111827;
+  }
+
+  .wb25-mode-card p {
+    margin: 0 0 10px;
+    color: #4B5563;
+  }
+
+  .wb25-input {
+    width: min(320px, 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(17,24,39,0.18);
+    padding: 10px 12px;
+    font-size: 1rem;
+    background: rgba(255,255,255,0.95);
+  }
+
+  .wb25-msg {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-weight: 700;
+  }
+
+  .wb25-msg.ok {
+    background: rgba(22,163,74,0.12);
+    color: var(--wb25-ok);
+    border: 1px solid rgba(22,163,74,0.18);
+  }
+
+  .wb25-msg.bad {
+    background: rgba(220,38,38,0.10);
+    color: var(--wb25-bad);
+    border: 1px solid rgba(220,38,38,0.16);
+  }
+
+  .wb25-words {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .wb25-word {
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    font-weight: 800;
+    text-transform: lowercase;
+    color: #111827;
+  }
+
+  .wb25-badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .wb25-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.9);
+  }
+
+  .wb25-badge small { color: #6B7280; font-weight: 700; }
+
+  .wb25-badge[data-earned="1"] {
+    border-color: rgba(22,163,74,0.28);
+    background: rgba(22,163,74,0.08);
+  }
+
+  .wb25-kv {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .wb25-summary {
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 12px;
+  }
+
+  .wb25-summary h3 { margin: 0 0 8px; }
+
+  .wb25-summary ul {
+    margin: 0;
+    padding-left: 18px;
+    color: #374151;
+    font-weight: 700;
+  }
+
+  .wb25-coach {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .wb25-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    color: #111827;
+  }
+
+  @media (min-width: 860px) {
+    .wb25-card.col-5 { grid-column: span 5; }
+    .wb25-card.col-7 { grid-column: span 7; }
+    .wb25-mode-picker { grid-template-columns: 1fr 1fr; }
+    .wb25-kv { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wb25-wrap">
+  <div class="wb25-header">
+    <div class="wb25-title">
+      <h1>WB25 — Word Wizard (25)</h1>
+      <p>Make <strong>25</strong> words from one base word. Earn badge bonuses as you go.</p>
+      {% if demo_mode %}
+      <p style="margin-top:8px; color:#6B21A8; font-weight:800;">Demo mode is ON — no GPA/leaderboard writes (safe for App Review).</p>
+      {% endif %}
+    </div>
+    <div class="wb25-actions">
+      <a class="wb25-btn secondary" href="/">Back to Menu</a>
+      <button id="btnSpeakBase" class="wb25-btn secondary" type="button" disabled>Speak Base Word</button>
+      <button id="btnFairyDust" class="wb25-btn primary" type="button">Fairy Dust ✨</button>
+    </div>
+  </div>
+
+  <div class="wb25-grid">
+    <div class="wb25-card col-5" id="startCard">
+      <h2>Start a round</h2>
+      <div class="wb25-mode-picker">
+        <div class="wb25-mode-card">
+          <h3>Daily Challenge</h3>
+          <p>Curated base word. Great for quick practice.</p>
+          <button class="wb25-btn primary" type="button" id="btnStartDaily">Start Daily</button>
+        </div>
+        <div class="wb25-mode-card">
+          <h3>Custom Base Word</h3>
+          <p>Pick your own word (must be in BeeSmart’s educational dictionary).</p>
+          <div class="wb25-row" style="margin-bottom:10px;">
+            <input id="customBase" class="wb25-input" placeholder="e.g., triangle" autocomplete="off" />
+          </div>
+          <button class="wb25-btn primary" type="button" id="btnStartCustom">Start Custom</button>
+        </div>
+      </div>
+      <div id="startMsg" class="wb25-msg" style="display:none;"></div>
+      <div class="wb25-coach" style="margin-top:12px;">
+        <label class="wb25-switch">
+          <input id="toggleCoach" type="checkbox" />
+          Vocal coach
+        </label>
+        <span style="color:#6B7280; font-weight:700;">(Uses your device voice)</span>
+      </div>
+    </div>
+
+    <div class="wb25-card col-7" id="gameCard" style="display:none;">
+      <h2>Round</h2>
+      <div class="wb25-row">
+        <span class="wb25-pill">Player: <strong id="playerName">{{ user_name or 'Guest' }}</strong></span>
+        <span class="wb25-pill">Mode: <strong id="modeLabel">—</strong></span>
+        <span class="wb25-pill">Base word: <strong id="baseWord">—</strong></span>
+      </div>
+
+      <div class="wb25-row" style="margin-top:10px;">
+        <span class="wb25-pill">Found: <strong id="foundCount">0</strong>/25</span>
+        <span class="wb25-pill">Score: <strong id="scoreTotal">0</strong></span>
+        <span class="wb25-pill">Viable: <strong id="viableCount">—</strong></span>
+      </div>
+
+      <div class="wb25-progress" aria-hidden="true"><div id="progressBar"></div></div>
+
+      <div class="wb25-row" style="margin-top:14px;">
+        <input id="wordInput" class="wb25-input" placeholder="Type a word…" autocomplete="off" disabled />
+        <button id="btnSubmit" class="wb25-btn primary" type="button" disabled>Submit</button>
+        <button id="btnFinish" class="wb25-btn secondary" type="button" disabled>Finish</button>
+      </div>
+      <div id="submitMsg" class="wb25-msg" style="display:none;"></div>
+
+      <div style="margin-top:12px;">
+        <h2 style="margin:0 0 10px; font-size:1.05rem;">Badges (pattern bonuses)</h2>
+        <div class="wb25-badges" id="badgeList"></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h2 style="margin:0 0 10px; font-size:1.05rem;">Words found</h2>
+        <div class="wb25-words" id="wordsList"></div>
+      </div>
+    </div>
+
+    <div class="wb25-card" id="summaryCard" style="display:none;">
+      <h2>Summary</h2>
+      <div class="wb25-kv">
+        <div class="wb25-summary">
+          <h3>Results</h3>
+          <ul>
+            <li>Score: <span id="sumScore">0</span> / 1000</li>
+            <li>Accuracy: <span id="sumAccuracy">—</span></li>
+            <li>Longest word: <span id="sumLongest">—</span></li>
+            <li>Badges earned: <span id="sumBadges">—</span></li>
+            <li>GPA preview: <span id="sumGpa">—</span></li>
+          </ul>
+        </div>
+        <div class="wb25-summary">
+          <h3>Notes</h3>
+          <ul>
+            <li>Duplicates don’t hurt your score.</li>
+            <li>“Kid-friendly mode” avoids penalty for mistakes.</li>
+            <li>Use Daily Challenge for curated base words.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const WB25_BADGES = [
+    { key: 'vowel_team', label: 'Vowel Team', hint: 'ai, ea, oo, ou…' },
+    { key: 'consonant_blend', label: 'Consonant Blend', hint: 'st, tr, ch…' },
+    { key: 'double_letter', label: 'Double Letter', hint: 'll, ss, tt…' },
+    { key: 'prefix_or_suffix', label: 'Prefix / Suffix', hint: 'un-, re-, -ing…' },
+    { key: 'long_word', label: 'Long Word', hint: '6+ letters' },
+  ];
+
+  const el = (id) => document.getElementById(id);
+  const startCard = el('startCard');
+  const gameCard = el('gameCard');
+  const summaryCard = el('summaryCard');
+  const startMsg = el('startMsg');
+  const submitMsg = el('submitMsg');
+
+  const btnStartDaily = el('btnStartDaily');
+  const btnStartCustom = el('btnStartCustom');
+  const customBase = el('customBase');
+
+  const btnSubmit = el('btnSubmit');
+  const btnFinish = el('btnFinish');
+  const wordInput = el('wordInput');
+
+  const baseWord = el('baseWord');
+  const modeLabel = el('modeLabel');
+  const foundCount = el('foundCount');
+  const scoreTotal = el('scoreTotal');
+  const viableCount = el('viableCount');
+  const progressBar = el('progressBar');
+  const wordsList = el('wordsList');
+  const badgeList = el('badgeList');
+
+  const btnSpeakBase = el('btnSpeakBase');
+  const toggleCoach = el('toggleCoach');
+
+  const sumScore = el('sumScore');
+  const sumAccuracy = el('sumAccuracy');
+  const sumLongest = el('sumLongest');
+  const sumBadges = el('sumBadges');
+  const sumGpa = el('sumGpa');
+
+  let state = null;
+  let coachEnabled = false;
+  let cachedVoice = null;
+
+  function showMsg(target, kind, text) {
+    target.className = 'wb25-msg ' + (kind === 'ok' ? 'ok' : 'bad');
+    target.textContent = text;
+    target.style.display = 'block';
+  }
+
+  function clearMsg(target) {
+    target.style.display = 'none';
+    target.textContent = '';
+  }
+
+  function pct(n, d) {
+    const v = d ? Math.max(0, Math.min(1, n / d)) : 0;
+    return Math.round(v * 100);
+  }
+
+  function renderBadges(earnedList) {
+    const earned = new Set((earnedList || []).map(String));
+    badgeList.innerHTML = '';
+    for (const b of WB25_BADGES) {
+      const row = document.createElement('div');
+      row.className = 'wb25-badge';
+      row.dataset.earned = earned.has(b.key) ? '1' : '0';
+      row.innerHTML = `
+        <div>
+          <div style="font-weight:900; color:#111827;">${b.label}</div>
+          <small>${b.hint}</small>
+        </div>
+        <div style="font-weight:900; color:${earned.has(b.key) ? '#16A34A' : '#9CA3AF'};">${earned.has(b.key) ? '✓' : '—'}</div>
+      `;
+      badgeList.appendChild(row);
+    }
+  }
+
+  function renderWords(words) {
+    wordsList.innerHTML = '';
+    const safe = (words || []).slice().map(String);
+    safe.sort((a,b) => a.localeCompare(b));
+    for (const w of safe) {
+      const chip = document.createElement('div');
+      chip.className = 'wb25-word';
+      chip.textContent = w;
+      wordsList.appendChild(chip);
+    }
+  }
+
+  function applyState(st) {
+    state = st;
+
+    baseWord.textContent = (st?.base_word || '—');
+    modeLabel.textContent = (st?.mode || '—');
+    foundCount.textContent = String(st?.words_found_count || 0);
+    scoreTotal.textContent = String(st?.raw_points || 0);
+    viableCount.textContent = st?.viable_subwords_count != null ? String(st.viable_subwords_count) : '—';
+
+    const p = pct((st?.words_found_count || 0), 25);
+    progressBar.style.width = p + '%';
+
+    renderBadges(st?.pattern_badges_earned || []);
+    renderWords(st?.valid_words || []);
+
+    const isStarted = !!(st && st.base_word);
+    const isComplete = !!(st && st.is_complete);
+
+    gameCard.style.display = isStarted ? 'block' : 'none';
+
+    wordInput.disabled = !isStarted || isComplete;
+    btnSubmit.disabled = !isStarted || isComplete;
+    btnFinish.disabled = !isStarted;
+    btnSpeakBase.disabled = !isStarted;
+
+    if (isComplete) {
+      wordInput.disabled = true;
+      btnSubmit.disabled = true;
+    }
+  }
+
+  async function postJson(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || data.ok === false) {
+      const msg = data?.error || `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function selectBestVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+
+    const candidates = voices
+      .filter(v => (v.lang || '').toLowerCase().startsWith('en'))
+      .map(v => {
+        const n = (v.name || '').toLowerCase();
+        let score = 0;
+        if ((v.lang || '').toLowerCase().includes('en-us')) score += 30;
+        if (v.localService) score += 15;
+        if (n.includes('samantha') || n.includes('ava') || n.includes('emma') || n.includes('karen') || n.includes('joanna') || n.includes('zira')) score += 40;
+        if (n.includes('female') || n.includes('woman') || n.includes('girl')) score += 10;
+        return { v, score };
+      })
+      .sort((a,b) => b.score - a.score);
+
+    return candidates.length ? candidates[0].v : null;
+  }
+
+  function speak(text) {
+    if (!coachEnabled) return;
+    if (!('speechSynthesis' in window)) return;
+    try {
+      speechSynthesis.cancel();
+    } catch (e) {}
+
+    const u = new SpeechSynthesisUtterance(String(text || ''));
+    u.rate = 0.95;
+    u.pitch = 1.05;
+    u.volume = 1.0;
+
+    if (!cachedVoice) cachedVoice = selectBestVoice();
+    if (cachedVoice) u.voice = cachedVoice;
+
+    try {
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  function sparkleSound() {
+    // Tiny WebAudio "sparkle" (no external asset required).
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    master.connect(ctx.destination);
+
+    // Add a little clustered tone shimmer.
+    const freqs = [880, 990, 1180, 1320, 1760];
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, now + i * 0.01);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.10, now + 0.02 + i * 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20 + i * 0.015);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now + i * 0.01);
+      osc.stop(now + 0.30);
+    });
+
+    setTimeout(() => {
+      try { ctx.close(); } catch (e) {}
+    }, 420);
+  }
+
+  function setBusy(btn, busy) {
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.dataset._label = btn.dataset._label || btn.textContent;
+    btn.textContent = busy ? 'Working…' : btn.dataset._label;
+  }
+
+  btnStartDaily.addEventListener('click', async () => {
+    clearMsg(startMsg);
+    setBusy(btnStartDaily, true);
+    try {
+      speak('Starting the Daily Challenge. Get ready to make twenty five words.');
+      const data = await postJson('/api/word-builder-25/start', { mode: 'daily' });
+      applyState(data.state);
+      showMsg(startMsg, 'ok', 'Daily Challenge started!');
+      speak('Your base word is ' + (data.state?.base_word || '') + '.');
+      wordInput.focus();
+    } catch (e) {
+      showMsg(startMsg, 'bad', e.message || 'Could not start.');
+      speak(e.message || 'Could not start.');
+    } finally {
+      setBusy(btnStartDaily, false);
+    }
+  });
+
+  btnStartCustom.addEventListener('click', async () => {
+    clearMsg(startMsg);
+    setBusy(btnStartCustom, true);
+    try {
+      const bw = (customBase.value || '').trim();
+      if (!bw) {
+        throw new Error('Enter a base word first.');
+      }
+      speak('Starting custom challenge with base word ' + bw + '.');
+      const data = await postJson('/api/word-builder-25/start', { mode: 'custom', base_word: bw });
+      applyState(data.state);
+      showMsg(startMsg, 'ok', 'Custom Challenge started!');
+      speak('Your base word is ' + (data.state?.base_word || '') + '.');
+      wordInput.focus();
+    } catch (e) {
+      showMsg(startMsg, 'bad', e.message || 'Could not start.');
+      speak(e.message || 'Could not start.');
+    } finally {
+      setBusy(btnStartCustom, false);
+    }
+  });
+
+  async function submitWord() {
+    clearMsg(submitMsg);
+    const w = (wordInput.value || '').trim();
+    if (!w) {
+      showMsg(submitMsg, 'bad', 'Type a word first.');
+      speak('Type a word first.');
+      return;
+    }
+
+    setBusy(btnSubmit, true);
+    try {
+      const data = await postJson('/api/word-builder-25/submit', { word: w });
+      applyState(data.state);
+
+      const r = data.result || {};
+      if (r.accepted) {
+        showMsg(submitMsg, 'ok', `Accepted: “${w}” (+${r.points_awarded || 0})`);
+        speak('Nice! Accepted.');
+      } else {
+        showMsg(submitMsg, 'bad', r.reason || 'Not accepted.');
+        speak(r.reason || 'Not accepted.');
+      }
+
+      wordInput.value = '';
+      wordInput.focus();
+    } catch (e) {
+      showMsg(submitMsg, 'bad', e.message || 'Submit failed.');
+      speak(e.message || 'Submit failed.');
+    } finally {
+      setBusy(btnSubmit, false);
+    }
+  }
+
+  btnSubmit.addEventListener('click', submitWord);
+  wordInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      submitWord();
+    }
+  });
+
+  btnFinish.addEventListener('click', async () => {
+    clearMsg(submitMsg);
+    setBusy(btnFinish, true);
+    try {
+      const data = await postJson('/api/word-builder-25/finish', {});
+      applyState(data.state);
+
+      const s = data.summary || {};
+      summaryCard.style.display = 'block';
+      sumScore.textContent = String(s.raw_points ?? 0);
+      sumAccuracy.textContent = String(s.accuracy_rate ?? '—');
+      sumLongest.textContent = String(s.longest_word ?? '—') || '—';
+      sumBadges.textContent = (s.pattern_badges_earned || []).length ? (s.pattern_badges_earned || []).join(', ') : 'none';
+      sumGpa.textContent = String(s.gpa_preview ?? '—');
+
+      showMsg(submitMsg, 'ok', 'Round finished. Great work!');
+      speak('Round finished. Great work!');
+    } catch (e) {
+      showMsg(submitMsg, 'bad', e.message || 'Finish failed.');
+      speak(e.message || 'Finish failed.');
+    } finally {
+      setBusy(btnFinish, false);
+    }
+  });
+
+  btnSpeakBase.addEventListener('click', () => {
+    const bw = state?.base_word;
+    if (bw) speak('Base word: ' + bw);
+  });
+
+  toggleCoach.addEventListener('change', () => {
+    coachEnabled = !!toggleCoach.checked;
+    if (coachEnabled) {
+      cachedVoice = selectBestVoice();
+      speak('Vocal coach enabled.');
+    } else {
+      try { speechSynthesis.cancel(); } catch (e) {}
+    }
+  });
+
+  // Prime voices
+  if ('speechSynthesis' in window) {
+    speechSynthesis.addEventListener('voiceschanged', () => {
+      if (!cachedVoice) cachedVoice = selectBestVoice();
+    });
+    setTimeout(() => { if (!cachedVoice) cachedVoice = selectBestVoice(); }, 120);
+  }
+
+  // Fairy dust
+  el('btnFairyDust').addEventListener('click', () => {
+    sparkleSound();
+    if (coachEnabled) speak('Fairy dust!');
+  });
+
+  // Initial render
+  renderBadges([]);
+})();
+</script>
+{% endblock %}
