@@ -1669,6 +1669,14 @@
             align-items: center;
             gap: 8px;
         }
+        /* Guest carousel 3D canvas host: match registered avatar viewer sizing */
+        #guestAvatar3D {
+            display: none;
+            position: relative;
+            width: min(400px, 92vw);
+            height: min(400px, 92vw);
+            margin: 0 auto;
+        }
         /* Ensure PNG fallback matches 3D canvas size and has a soft card look */
         #guestAvatarSlide {
             width: 240px;
@@ -4202,8 +4210,8 @@
                 <div id="guestAvatarCarousel" class="guest-avatar-carousel" style="display:none;">
                     <div class="avatar-slide">
                         <!-- Progressive 3D canvas (shown when available) -->
-                        <div id="guestAvatar3D" style="display:none; position:relative; width: 320px; height: 240px; margin: 0 auto;"></div>
-                        <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" />
+                        <div id="guestAvatar3D"></div>
+                        <img id="guestAvatarSlide" alt="Bee avatar preview" decoding="async" style="display:none;" />
                         <div class="avatar-name" id="guestAvatarName"></div>
                     </div>
                     <div class="carousel-cta">
@@ -12394,56 +12402,83 @@
         // Smooth fade between avatars
         try { wrap.style.transition = 'opacity 360ms ease, transform 360ms ease'; } catch(_) {}
 
-                // Prioritized + pool of GLB avatars
-                const base = '/static/assets/avatars/glb_files';
-                const priority = [
-                    { name: 'Super Bee', file: 'SuperBee.glb' },
-                    { name: 'Queen Bee', file: 'QueenBee.glb' },
-                    { name: 'J‑Rock Bee', file: 'JRockBee.glb' },
-                    { name: 'Knight Bee', file: 'KnightBee.glb' }
-                ];
-                const pool = [
-                    { name: 'Brother Bee', file: 'BrotherBee.glb' },
-                    { name: 'Buda Bee', file: 'BudaBee.glb' },
-                    { name: 'Builder Bee', file: 'BuilderBee.glb' },
-                    { name: 'Buzz Bee', file: 'BuzzBee.glb' },
-                    { name: 'Cool Bee', file: 'CoolBee.glb' },
-                    { name: 'Cutie Bee', file: 'CutieBee.glb' },
-                    { name: 'Detective Bee', file: 'DetectiveBee.glb' },
-                    { name: 'Diva Bee', file: 'DivaBee.glb' },
-                    { name: 'Doc Bee', file: 'DoctorBee.glb' },
-                    { name: 'Explorer Bee', file: 'ExplorerBee.glb' },
-                    { name: 'Franken Bee', file: 'Frankenbee.glb' },
-                    { name: 'HoneyComb Bee', file: 'HoneyComb.glb' },
-                    { name: 'Motor Bee', file: 'MotorBee.glb' },
-                    { name: 'O‑Bee', file: 'OBee.glb' },
-                    { name: 'Robo Bee', file: 'RoboBee.glb' },
-                    { name: 'Sea Bee', file: 'SeaBee.glb' },
-                    { name: 'Selfie Bee', file: 'SelfieBee.glb' },
-                    { name: 'Singer Bee', file: 'SingerBee.glb' },
-                    { name: 'Space Bee', file: 'SpaceBee.glb' }
-                ];
+                // Build candidate list from the real GLB avatar catalog (advertising rotation)
+                // Prefer server catalog to ensure we cycle through all current avatars (39).
+                const isLikelyGlbUrl = (u) => (typeof u === 'string') && /(\.glb|\.gltf)(\?.*)?$/i.test(u);
+                const normalizeName = (n) => (typeof n === 'string' && n.trim()) ? n.trim() : 'Bee Avatar';
 
-                // Build candidate list: 4 priority + random others up to 8 total
-                const wantTotal = 8;
-                const exclude = new Set(priority.map(p => p.file));
-                const leftovers = pool.filter(p => !exclude.has(p.file));
-                for (let i = leftovers.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [leftovers[i], leftovers[j]] = [leftovers[j], leftovers[i]];
+                async function fetchAvatarCatalogCandidates() {
+                    try {
+                        // If the shared loader exists, make sure it has loaded the catalog.
+                        if (window.userAvatarLoader && typeof window.userAvatarLoader.loadAvatarCatalog === 'function') {
+                            try { await window.userAvatarLoader.loadAvatarCatalog(); } catch(_) {}
+                        }
+
+                        const res = await fetch('/api/avatars', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store'
+                        });
+                        if (!res || !res.ok) throw new Error(`HTTP ${res ? res.status : 'unknown'}`);
+                        const data = await res.json();
+                        const avatars = Array.isArray(data) ? data : (Array.isArray(data?.avatars) ? data.avatars : (Array.isArray(data?.data) ? data.data : []));
+                        const seen = new Set();
+                        const list = [];
+                        for (const a of avatars) {
+                            const glb = a?.urls?.glb || a?.glb || null;
+                            if (!isLikelyGlbUrl(glb)) continue;
+                            if (seen.has(glb)) continue;
+                            seen.add(glb);
+                            list.push({
+                                id: a?.id || a?.avatar_id || '',
+                                name: normalizeName(a?.name || a?.display_name || a?.id),
+                                glb
+                            });
+                        }
+                        // Shuffle so guests see variety immediately, but still cycle through all.
+                        for (let i = list.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [list[i], list[j]] = [list[j], list[i]];
+                        }
+                        return list;
+                    } catch (e) {
+                        console.warn('[Avatar] Failed to fetch avatar catalog for guest carousel; using minimal GLB list:', e);
+                        // Emergency GLB-only list (still 3D, still morphs) — used only if API fails.
+                        const base = '/static/assets/avatars/glb_files';
+                        return [
+                            { name: 'Mascot Bee Avatar', glb: base + '/MascotBee.glb' },
+                            { name: 'Super Bee Avatar', glb: base + '/SuperBee.glb' },
+                            { name: 'Queen Bee Avatar', glb: base + '/QueenBee.glb' },
+                            { name: 'Knight Bee Avatar', glb: base + '/KnightBee.glb' }
+                        ];
+                    }
                 }
-                const candidates = priority.concat(leftovers.slice(0, Math.max(0, wantTotal - priority.length)));
 
-                // Three.js scene setup
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(45, 240/180, 0.1, 1000);
-                camera.position.set(0, 0.5, 3.0);
-                camera.lookAt(new THREE.Vector3(0, 0.1, 0));
+                // Defer scene setup until we know our candidates (async fetch)
+                // Note: initGuestAvatar3DCarousel remains sync to match existing call sites.
+                // We kick off the async portion and return true immediately.
+                (async () => {
+                    const candidates = await fetchAvatarCatalogCandidates();
+                    if (!Array.isArray(candidates) || candidates.length === 0) {
+                        console.error('[Avatar] No GLB avatars available for guest carousel');
+                        return;
+                    }
 
-                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // Premium resolution
-                renderer.setSize(240, 180);
-                renderer.setClearColor(0x000000, 0);
+                    // Three.js scene setup
+                    const scene = new THREE.Scene();
+
+                    const rect = canvasWrap.getBoundingClientRect();
+                    const viewportW = Math.max(240, Math.round(rect.width || canvasWrap.clientWidth || 400));
+                    const viewportH = Math.max(240, Math.round(rect.height || canvasWrap.clientHeight || 400));
+
+                    const camera = new THREE.PerspectiveCamera(45, viewportW / viewportH, 0.1, 1000);
+                    camera.position.set(0, 0.5, 3.0);
+                    camera.lookAt(new THREE.Vector3(0, 0.1, 0));
+
+                    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // Premium resolution
+                    renderer.setSize(viewportW, viewportH);
+                    renderer.setClearColor(0x000000, 0);
                 
                 // Premium rendering for carousel
                 renderer.shadowMap.enabled = true;
@@ -12453,13 +12488,26 @@
                     renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 }
 
-                const canvas = renderer.domElement;
-                canvas.style.position = 'absolute';
-                canvas.style.top = '50%';
-                canvas.style.left = '50%';
-                canvas.style.transform = 'translate(-50%, -50%)';
-                canvas.style.pointerEvents = 'none';
-                canvasWrap.appendChild(canvas);
+                    const canvas = renderer.domElement;
+                    canvas.style.position = 'absolute';
+                    canvas.style.top = '50%';
+                    canvas.style.left = '50%';
+                    canvas.style.transform = 'translate(-50%, -50%)';
+                    canvas.style.pointerEvents = 'none';
+                    canvasWrap.appendChild(canvas);
+
+                    // Keep renderer in sync with CSS sizing
+                    const onResize = () => {
+                        try {
+                            const r = canvasWrap.getBoundingClientRect();
+                            const w = Math.max(240, Math.round(r.width || canvasWrap.clientWidth || 400));
+                            const h = Math.max(240, Math.round(r.height || canvasWrap.clientHeight || 400));
+                            renderer.setSize(w, h);
+                            camera.aspect = w / h;
+                            camera.updateProjectionMatrix();
+                        } catch (_) {}
+                    };
+                    window.addEventListener('resize', onResize);
 
                 // Lights - BRIGHTENED to match registered user avatar quality
                 scene.add(new THREE.AmbientLight(0xffffff, 1.6));
@@ -12479,12 +12527,12 @@
                     return false;
                 }
 
-                const loader = new THREE.GLTFLoader();
-                let currentGroup = null;   // currently visible group (model + podium)
-                let outgoingGroup = null;  // group being faded out
-                let idx = 0;
-                let disposed = false;
-                let loadSeq = 0; // increments per requested carousel item to prevent slow-load stacking
+                    const loader = new THREE.GLTFLoader();
+                    let currentGroup = null;   // currently visible group (model + podium)
+                    let outgoingGroup = null;  // group being faded out
+                    let idx = 0;
+                    let disposed = false;
+                    let loadSeq = 0; // increments per requested carousel item to prevent slow-load stacking
 
                 function disposeObject(obj) {
                     try {
@@ -12699,21 +12747,21 @@
                     requestAnimationFrame(fadeOutStep);
                 }
 
-                function loadNext() {
-                    loadSeq++;
-                    const mySeq = loadSeq;
-                    const item = candidates[idx % candidates.length];
-                    idx++;
+                    function loadNext() {
+                        loadSeq++;
+                        const mySeq = loadSeq;
+                        const item = candidates[idx % candidates.length];
+                        idx++;
                     // Begin micro wrap easing (kept subtle to avoid double-fade feel)
                     try { wrap.style.transform = 'translateY(2px)'; } catch(_) {}
-                    nameEl.textContent = item.name;
+                        nameEl.textContent = item.name;
                     // Hide PNG fallback and show 3D canvas
                     if (imgEl) imgEl.style.display = 'none';
                     canvasWrap.style.display = 'block';
                     wrap.style.display = 'block';
 
-                    loader.load(
-                        base + '/' + item.file,
+                        loader.load(
+                        item.glb,
                         (gltf) => {
                             // If another load finished after this request was issued, ignore this result.
                             // (prevents slow GLB from being added on top of the current avatar)
@@ -12810,19 +12858,19 @@
                     );
                 }
 
-                // Gentle rotation
-                function tick() {
-                    if (disposed) return;
-                    requestAnimationFrame(tick);
-                    if (currentGroup) currentGroup.rotation.y += 0.004;
-                    if (outgoingGroup) outgoingGroup.rotation.y += 0.004;
-                    renderer.render(scene, camera);
-                }
-                tick();
+                    // Gentle rotation
+                    function tick() {
+                        if (disposed) return;
+                        requestAnimationFrame(tick);
+                        if (currentGroup) currentGroup.rotation.y += 0.004;
+                        if (outgoingGroup) outgoingGroup.rotation.y += 0.004;
+                        renderer.render(scene, camera);
+                    }
+                    tick();
 
-                // Start and rotate every ~6.5s (slower + enough time for full out->in fade)
-                loadNext();
-                window._guest3DTimer = setInterval(loadNext, 6500);
+                    // Start and rotate every ~6.5s (slower + enough time for full out->in fade)
+                    loadNext();
+                    window._guest3DTimer = setInterval(loadNext, 6500);
 
                 // Click anywhere on the carousel to prompt registration/login
                 try {
@@ -12833,13 +12881,15 @@
                     });
                 } catch(_) {}
 
-                // Cleanup on unload
-                window.addEventListener('beforeunload', () => {
-                    disposed = true;
-                    try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){}
-                    if (currentGroup) { disposeObject(currentGroup); }
-                    try { renderer.dispose(); } catch(_){}
-                }, { once: true });
+                    // Cleanup on unload
+                    window.addEventListener('beforeunload', () => {
+                        disposed = true;
+                        try { clearInterval(window._guest3DTimer); window._guest3DTimer = null; } catch(_){ }
+                        try { window.removeEventListener('resize', onResize); } catch(_){ }
+                        if (currentGroup) { disposeObject(currentGroup); }
+                        try { renderer.dispose(); } catch(_){ }
+                    }, { once: true });
+                })();
 
                 return true;
             } catch (e) {
