@@ -4841,6 +4841,7 @@
                     // This uses the existing avatar controller API without changing assets or UI.
                     (function(){
                         let __autoRotateRAF = null;
+                        let __autoRotateBackoffTimer = null;
                         // Speed: rotate faster so avatar morphs happen frequently.
                         // 0.35 deg/frame ≈ 21 deg/sec @ 60fps → ~8.5s per 180° morph.
                         const ROTATE_DEGREES_PER_FRAME = 0.35;
@@ -4849,6 +4850,7 @@
                         let accumulatedDeg = 0;
                         let _startedAt = 0;
                         const MAX_WAIT_FOR_CONTROLLER_MS = 10000;
+                        const CONTROLLER_POLL_MS = 250;
 
                         function getNextAvatarKey(currentKey){
                             try {
@@ -4865,6 +4867,10 @@
                                 cancelAnimationFrame(__autoRotateRAF);
                                 __autoRotateRAF = null;
                             }
+                            if (__autoRotateBackoffTimer) {
+                                clearTimeout(__autoRotateBackoffTimer);
+                                __autoRotateBackoffTimer = null;
+                            }
                         }
 
                         function loop(){
@@ -4878,7 +4884,13 @@
                                         stopConstantRotate();
                                         return;
                                     }
-                                    __autoRotateRAF = requestAnimationFrame(loop);
+                                    // Back off (do NOT RAF-spin at 60fps when controller is missing).
+                                    if (!__autoRotateBackoffTimer) {
+                                        __autoRotateBackoffTimer = setTimeout(() => {
+                                            __autoRotateBackoffTimer = null;
+                                            __autoRotateRAF = requestAnimationFrame(loop);
+                                        }, CONTROLLER_POLL_MS);
+                                    }
                                     return;
                                 }
 
@@ -4939,6 +4951,35 @@
                             __autoRotateRAF = requestAnimationFrame(loop);
                         }
 
+                        function _controllerIsReady(){
+                            try {
+                                if (window.avatarControlsReady === true) return true;
+                                const c = getAvatarController();
+                                return !!(c && c.bee && c.bee.rotation);
+                            } catch (_e) {
+                                return false;
+                            }
+                        }
+
+                        function _startWhenControllerReady(){
+                            try {
+                                if (window.IS_AUTH !== true) return;
+                            } catch(_e) { /* ignore */ }
+
+                            const startTs = performance.now();
+                            const poll = () => {
+                                if (_controllerIsReady()) {
+                                    startConstantSlowRotate();
+                                    return;
+                                }
+                                if ((performance.now() - startTs) >= MAX_WAIT_FOR_CONTROLLER_MS) {
+                                    return;
+                                }
+                                setTimeout(poll, CONTROLLER_POLL_MS);
+                            };
+                            poll();
+                        }
+
                         function startConstantSlowRotate(){
                             // Prevent duplicate loops
                             stopConstantRotate();
@@ -4962,8 +5003,12 @@
                         window.startConstantSlowRotate = startConstantSlowRotate;
                         window.stopConstantRotate = stopConstantRotate;
 
-                        // Start rotation immediately on DOM ready
-                        startConstantSlowRotate();
+                        // Start rotation only after the registered avatar controller is actually ready.
+                        // This avoids repeated "No avatar controller" warnings and reduces iOS main-thread churn.
+                        _startWhenControllerReady();
+                        window.addEventListener('avatarControlsReady', () => {
+                            _startWhenControllerReady();
+                        }, { once: true });
                     })();
                     // Wire quiz buttons inside DOM ready to ensure elements exist
                     function gotoQuiz() {
@@ -16182,6 +16227,12 @@
                     if (window.loadingSystem && typeof window.loadingSystem.dismissLoader === 'function') {
                         window.loadingSystem.updateProgress(100, ' Loaded (timeout)');
                         window.loadingSystem.dismissLoader();
+                        try {
+                            if (!window.__honeyLoaderFinishedDispatched) {
+                                window.__honeyLoaderFinishedDispatched = true;
+                                document.dispatchEvent(new Event('honeyLoaderFinished'));
+                            }
+                        } catch (_e2) {}
                     } else {
                         const loader = document.getElementById('honeyLoader');
                         if (loader) {
@@ -16194,11 +16245,23 @@
                             loader.style.opacity = '0';
                             loader.style.visibility = 'hidden';
                             loader.style.display = 'none';
+                            try {
+                                if (!window.__honeyLoaderFinishedDispatched) {
+                                    window.__honeyLoaderFinishedDispatched = true;
+                                    document.dispatchEvent(new Event('honeyLoaderFinished'));
+                                }
+                            } catch (_e2) {}
                         }
                     }
                 } catch (_e) {
                     const loader = document.getElementById('honeyLoader');
                     if (loader) loader.style.display = 'none';
+                    try {
+                        if (!window.__honeyLoaderFinishedDispatched) {
+                            window.__honeyLoaderFinishedDispatched = true;
+                            document.dispatchEvent(new Event('honeyLoaderFinished'));
+                        }
+                    } catch (_e2) {}
                 }
                 
                 // Try to update progress if LoadingSystem exists
@@ -16229,6 +16292,12 @@
                                 loader.style.display = 'none';
                                 loader.style.pointerEvents = 'none';
                                 if (window.matrixRain) window.matrixRain.stop();
+                                try {
+                                    if (!window.__honeyLoaderFinishedDispatched) {
+                                        window.__honeyLoaderFinishedDispatched = true;
+                                        document.dispatchEvent(new Event('honeyLoaderFinished'));
+                                    }
+                                } catch (_e2) {}
                             }
                         }, 2000);
                     }
@@ -19383,6 +19452,7 @@
         canvas.style.touchAction = 'pan-y';
 
         const HORIZONTAL_INTERACT_THRESHOLD_PX = 10;
+        const VERTICAL_SCROLL_THRESHOLD_PX = 8;
 
         let touchStartDistance = 0;
         let lastTouchX = 0;
@@ -19390,6 +19460,7 @@
         let startTouchX = 0;
         let startTouchY = 0;
         let interactingWithAvatar = false;
+        let verticalScrollGesture = false;
         let pinchListenerInstalled = false;
 
         const pauseAutoRotateIfNeeded = () => {
@@ -19433,12 +19504,14 @@
             if (!e || !e.touches) return;
             if (e.touches.length === 1) {
                 interactingWithAvatar = false;
+                verticalScrollGesture = false;
                 startTouchX = e.touches[0].clientX;
                 startTouchY = e.touches[0].clientY;
                 lastTouchX = startTouchX;
                 lastTouchY = startTouchY;
             } else if (e.touches.length === 2) {
                 interactingWithAvatar = true;
+                verticalScrollGesture = false;
                 pauseAutoRotateIfNeeded();
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -19452,6 +19525,10 @@
             if (!e || !e.touches || e.touches.length !== 1) return;
             if (pinchListenerInstalled) return;
 
+            // If the user is clearly scrolling vertically, do not do any per-move avatar work.
+            // This is critical on iOS to avoid “sticky”/janky scrolling when the swipe starts over the avatar.
+            if (verticalScrollGesture) return;
+
             const currentX = e.touches[0].clientX;
             const currentY = e.touches[0].clientY;
 
@@ -19460,6 +19537,14 @@
                 const totalDy = currentY - startTouchY;
                 const absDx = Math.abs(totalDx);
                 const absDy = Math.abs(totalDy);
+
+                // If vertical motion dominates beyond a small threshold, treat this as page scroll and stop processing.
+                if (absDy > VERTICAL_SCROLL_THRESHOLD_PX && absDy > absDx) {
+                    verticalScrollGesture = true;
+                    lastTouchX = currentX;
+                    lastTouchY = currentY;
+                    return;
+                }
                 if (absDx > HORIZONTAL_INTERACT_THRESHOLD_PX && absDx > absDy) {
                     interactingWithAvatar = true;
                     pauseAutoRotateIfNeeded();
@@ -19484,6 +19569,7 @@
         canvas.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
                 interactingWithAvatar = false;
+                verticalScrollGesture = false;
                 uninstallPinchListener();
                 
                 // Resume auto-rotate if it was on
@@ -19498,6 +19584,7 @@
             } else if (e.touches.length === 1) {
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
+                verticalScrollGesture = false;
                 uninstallPinchListener();
             }
         }, { passive: true });
