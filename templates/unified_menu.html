@@ -6578,54 +6578,6 @@
                             el.click();
                         }
                     });
-                    
-                    // FAST TOUCH: Eliminate 300ms delay by handling touchend directly
-                    let touchStartTime = 0;
-                    let touchMoved = false;
-                    
-                    el.addEventListener('touchstart', (e) => {
-                        touchStartTime = Date.now();
-                        touchMoved = false;
-                    }, { passive: true });
-                    
-                    el.addEventListener('touchmove', () => {
-                        touchMoved = true;
-                    }, { passive: true });
-                    
-                    el.addEventListener('touchend', (e) => {
-                        const touchDuration = Date.now() - touchStartTime;
-                        // Only trigger if it was a quick tap (not a long press) and no scroll
-                        if (!touchMoved && touchDuration < 500) {
-                            e.preventDefault(); // Prevent the 300ms delay click
-                            console.log('Fast touch activated tile:', el.className);
-                            try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
-                            el.click();
-                        }
-                    }, { passive: false }); // Need passive: false to call preventDefault
-                }
-                
-                // FAST TOUCH for action buttons too
-                if (el.classList.contains('action-btn')) {
-                    let touchStartTime = 0;
-                    let touchMoved = false;
-                    
-                    el.addEventListener('touchstart', (e) => {
-                        touchStartTime = Date.now();
-                        touchMoved = false;
-                    }, { passive: true });
-                    
-                    el.addEventListener('touchmove', () => {
-                        touchMoved = true;
-                    }, { passive: true });
-                    
-                    el.addEventListener('touchend', (e) => {
-                        const touchDuration = Date.now() - touchStartTime;
-                        if (!touchMoved && touchDuration < 500 && !el.disabled) {
-                            e.preventDefault();
-                            console.log('Fast touch activated button:', el.className);
-                            el.click();
-                        }
-                    }, { passive: false });
                 }
                 
                 el.addEventListener('pointerdown', (ev) => {
@@ -16175,12 +16127,7 @@
         // Initialize magical effects when page loads
         document.addEventListener('DOMContentLoaded', async () => {
             console.log(' DOMContentLoaded FIRED!');
-            
-            
-            // � ENSURE PAGE LOADS AT TOP - Always scroll to top on page load
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
+            // Note: scroll restoration is already handled at the top of the document.
             
             // Show loader immediately
             const loader = document.getElementById('honeyLoader');
@@ -18066,23 +18013,83 @@
                 console.log(' Mobile device detected - enhancing touch events');
                 
                 // Prevent double-tap zoom
-                let lastTouchEnd = 0;
-                document.addEventListener('touchend', function(event) {
-                    const now = Date.now();
-                    // IMPORTANT (iOS): never block normal scrolling.
-                    // Only suppress double-tap zoom when the user is interacting with actual controls.
-                    const target = event && event.target ? event.target : null;
-                    const isInteractive = !!(target && typeof target.closest === 'function' && target.closest('button, a, input, textarea, select, .menu-option, .action-btn, [role="button"], [tabindex]'));
+                // IMPORTANT (iOS): only suppress true double-taps, never scroll gestures.
+                const TAP_MOVE_THRESHOLD_PX = 10;
+                const TAP_MAX_DURATION_MS = 500;
+                const DOUBLE_TAP_WINDOW_MS = 300;
+                const DOUBLE_TAP_DISTANCE_PX = 25;
 
-                    if (!isInteractive) {
-                        lastTouchEnd = now;
+                let lastTapTime = 0;
+                let lastTapX = 0;
+                let lastTapY = 0;
+
+                let tapStartTime = 0;
+                let tapStartX = 0;
+                let tapStartY = 0;
+                let tapStartScrollY = 0;
+                let tapStartedOnInteractive = false;
+                let tapMoved = false;
+
+                function isInteractiveTarget(target) {
+                    return !!(target && typeof target.closest === 'function' && target.closest('button, a, input, textarea, select, .menu-option, .action-btn, [role="button"], [tabindex]'));
+                }
+
+                document.addEventListener('touchstart', function(event) {
+                    const t = event && event.touches && event.touches[0];
+                    const target = event && event.target ? event.target : null;
+                    tapStartedOnInteractive = isInteractiveTarget(target);
+                    if (!tapStartedOnInteractive || !t) {
+                        tapMoved = false;
+                        return;
+                    }
+                    tapStartTime = Date.now();
+                    tapStartX = t.clientX;
+                    tapStartY = t.clientY;
+                    tapStartScrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                    tapMoved = false;
+                }, { passive: true });
+
+                document.addEventListener('touchmove', function(event) {
+                    if (!tapStartedOnInteractive || tapMoved) return;
+                    const t = event && event.touches && event.touches[0];
+                    if (!t) return;
+
+                    const dx = t.clientX - tapStartX;
+                    const dy = t.clientY - tapStartY;
+                    const dist = Math.hypot(dx, dy);
+                    const currentScrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+                    if (dist > TAP_MOVE_THRESHOLD_PX || Math.abs(currentScrollY - tapStartScrollY) > 1) {
+                        tapMoved = true;
+                    }
+                }, { passive: true });
+
+                document.addEventListener('touchend', function(event) {
+                    if (!tapStartedOnInteractive) {
+                        tapStartedOnInteractive = false;
+                        tapMoved = false;
                         return;
                     }
 
-                    if (now - lastTouchEnd <= 300) {
-                        try { event.preventDefault(); } catch (_e) {}
+                    const t = event && event.changedTouches && event.changedTouches[0];
+                    const now = Date.now();
+                    const duration = now - tapStartTime;
+
+                    const isTap = !!t && !tapMoved && duration >= 0 && duration <= TAP_MAX_DURATION_MS;
+                    if (isTap) {
+                        const dx = t.clientX - lastTapX;
+                        const dy = t.clientY - lastTapY;
+                        const dist = Math.hypot(dx, dy);
+                        if (lastTapTime && (now - lastTapTime) <= DOUBLE_TAP_WINDOW_MS && dist <= DOUBLE_TAP_DISTANCE_PX) {
+                            try { event.preventDefault(); } catch (_e) {}
+                        }
+                        lastTapTime = now;
+                        lastTapX = t.clientX;
+                        lastTapY = t.clientY;
                     }
-                    lastTouchEnd = now;
+
+                    tapStartedOnInteractive = false;
+                    tapMoved = false;
                 }, { passive: false });
                 
                 // Add active state for buttons on touch
@@ -18506,16 +18513,6 @@
             
             // Update status periodically
             setInterval(updateAvatarSystemStatus, 10000);
-        });
-
-        //  ADDITIONAL SCROLL-TO-TOP - Handle any edge cases with cached content
-        window.addEventListener('load', () => {
-            // Force scroll to top after everything is loaded
-            setTimeout(() => {
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                document.documentElement.scrollTop = 0;
-                document.body.scrollTop = 0;
-            }, 100);
         });
 
         //  PREVENT BROWSER RESTORE SCROLL - Override any browser scroll restoration
