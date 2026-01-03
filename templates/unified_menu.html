@@ -4841,7 +4841,9 @@
                     // This uses the existing avatar controller API without changing assets or UI.
                     (function(){
                         let __autoRotateRAF = null;
-                        const ROTATE_DEGREES_PER_FRAME = 0.05; // ~3 deg/sec at 60fps (slow and consistent)
+                        // Speed: rotate faster so avatar morphs happen frequently.
+                        // 0.35 deg/frame ≈ 21 deg/sec @ 60fps → ~8.5s per 180° morph.
+                        const ROTATE_DEGREES_PER_FRAME = 0.35;
                         const ROTATE_RAD_PER_FRAME = ROTATE_DEGREES_PER_FRAME * (Math.PI / 180);
                         const MORPH_THRESHOLD_DEGREES = 180;   // morph to next avatar at half turn
                         let accumulatedDeg = 0;
