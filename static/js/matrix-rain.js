@@ -6,7 +6,9 @@
 
 class MatrixRain {
     constructor(canvasId) {
-        // Respect global kill-switches used on mobile/PWA pages to avoid scroll/jank.
+        // Respect explicit global kill-switches used by the app to avoid jank.
+        // IMPORTANT: Do not infer-disable just because we're on iOS/mobile;
+        // this effect is intentionally enabled for iOS Safari and iOS app WebViews.
         try {
             const de = document.documentElement;
             const disabled = !!(window.__beesmartDisableSweepOverlays || window.__beesmartDisableBackgroundAnimations)

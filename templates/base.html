@@ -272,6 +272,47 @@
             min-width: 44px;
             min-height: 44px;
         }
+
+        /* Mobile UX: fixed back button should be reachable on iPhone notch devices */
+        .beesmart-fixed-back {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            z-index: 10001;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        /* Mobile UX: alternative fixed back placement (bottom-left) for easier thumb reach.
+           Default to bottom-left on small screens; keep top-left on larger screens. */
+        .beesmart-fixed-back-bottom-left {
+            position: fixed;
+            left: max(12px, env(safe-area-inset-left));
+            bottom: max(16px, env(safe-area-inset-bottom));
+            z-index: 10001;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        @media (min-width: 769px) {
+            .beesmart-fixed-back-bottom-left {
+                top: max(12px, env(safe-area-inset-top));
+                bottom: auto;
+            }
+        }
+
+        /* Slightly larger padding on narrow screens while keeping the 44x44 minimum */
+        @media (max-width: 768px) {
+            .beesmart-fixed-back {
+                top: max(10px, env(safe-area-inset-top));
+                left: max(10px, env(safe-area-inset-left));
+            }
+
+            .beesmart-fixed-back-bottom-left {
+                left: max(10px, env(safe-area-inset-left));
+                bottom: max(14px, env(safe-area-inset-bottom));
+            }
+        }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

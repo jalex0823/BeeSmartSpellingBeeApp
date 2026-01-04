@@ -434,7 +434,7 @@
 </head>
 <body>
     <!-- Back Button -->
-    <a href="/app" class="back-button">
+    <a href="/app" class="back-button beesmart-fixed-back-bottom-left" aria-label="Back to app">
         <span>←</span>
         <span>Back</span>
     </a>
@@ -812,7 +812,11 @@
                         'Please sign in with your BeeSmart account before restoring purchases.',
                         false
                     );
-                    try { window.location.href = '/auth/login'; } catch (e) {}
+                    // Smooth UX: bounce to login and return straight back here.
+                    try {
+                        const returnTo = window.location.pathname + window.location.search;
+                        window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                    } catch (e) {}
                     return;
                 }
 
@@ -965,9 +969,16 @@
 
                     // Celebration AFTER validation modal.
                     try { runRestoreCelebrationBurst({ durationMs: 1200 }); } catch (e) {}
-                    // Gentle refresh so entitlement-driven UI updates.
-                    // (Give kids a little more time after the restore confirmation.)
-                    setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 3200);
+                    // IMPORTANT: Avoid a forced reload here.
+                    // In some iOS WebView / Capacitor configurations, a full reload can
+                    // momentarily drop cookies and make it *look* like the user got logged out.
+                    // Instead, reconcile entitlements + update the UI in-place.
+                    try { await reconcileAndRefreshSubscriptionUI('restore_success'); } catch (e) {}
+                    try {
+                        window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+                            detail: { ok: true, reason: 'subscription_restore_success', data: reconcilePayload }
+                        }));
+                    } catch (e) {}
                 } else if (ok) {
                     showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same Apple ID, then try again.', false);
                 } else {

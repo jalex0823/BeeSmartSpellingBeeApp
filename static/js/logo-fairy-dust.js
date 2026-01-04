@@ -2,11 +2,12 @@
 (function () {
     'use strict';
 
-    // Global kill switch: some pages (and our base template) intentionally disable
-    // translucent overlay FX/background animations to avoid a “sweeping transparency” look.
+    // Global kill switch: allow pages to disable the logo fairy dust specifically,
+    // without needing to disable all background animations.
     // When disabled, expose no-op APIs so callers (e.g., preload checks) don’t error.
     const __beesmartLogoFxDisabled = (() => {
         try {
+            if (window.__beesmartDisableLogoFairyDust) return true;
             if (window.__beesmartDisableSweepOverlays || window.__beesmartDisableBackgroundAnimations) return true;
             const de = document.documentElement;
             if (de && de.classList) {

@@ -54,9 +54,14 @@ def test_restore_modals_have_extended_timing():
     sub_txt = _read_text(sub)
     menu_txt = _read_text(menu)
 
-    # Subscription page: success flow reload is now longer
-    assert "setTimeout(() => { try { window.location.reload();" in sub_txt
-    assert ", 3200);" in sub_txt, "Expected 3200ms reload delay in subscription.html"
+    # Subscription page: do NOT hard reload after restore success.
+    # We reconcile entitlements in-place to avoid iOS WebView cookie drops that can look like logout.
+    assert "reconcileAndRefreshSubscriptionUI('restore_success')" in sub_txt
+    assert "subscription_restore_success" in sub_txt
+
+    # We still allow the menu experience to do a delayed refresh (only when premium state changes),
+    # but the subscription page should *not* rely on a fixed reload timer.
+    assert ", 3200);" not in sub_txt
 
     # Menu page: restore flow reload and modal auto-reload default increased
     assert "autoReloadMs" in menu_txt

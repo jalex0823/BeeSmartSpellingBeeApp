@@ -18,7 +18,20 @@
     <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/static/android-chrome-512x512.png">
+                            // IMPORTANT: Avoid forcing a full reload on iOS.
+                            // Some WebView configurations can temporarily lose cookies during reload,
+                            // which makes it look like the user got logged out after restoring.
+                            // Instead, notify listeners and only reload if the UI truly needs it.
+                            try {
+                                window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+                                    detail: { ok: true, reason: 'menu_restore_success', data: result }
+                                }));
+                            } catch (e) {}
+                            try {
+                                if (typeof window.__beesmartForceEntitlementReload === 'function') {
+                                    window.__beesmartForceEntitlementReload('menu_restore_success');
+                                }
+                            } catch (e) {}
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
@@ -27,8 +40,11 @@
 
     <script>
         // Standalone template: menu performance defaults.
-        // Keep button animations + sound FX, but disable background/overlay FX by default on iOS/mobile/PWA
-        // and for prefers-reduced-motion.
+        // Keep button animations + sound FX.
+        // IMPORTANT: We keep Matrix Rain enabled for iOS + Safari (user request).
+        // We only disable the two specific FX you called out as problematic:
+        // 1) the transparent left-to-right rotating “sweep overlay”, and
+        // 2) the logo “fairy dust” trail.
         (function(){
             try {
                 const params = new URLSearchParams((typeof location !== 'undefined' && location.search) ? location.search : '');
@@ -44,13 +60,14 @@
                 const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator && navigator.standalone === true);
                 const reduceMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-                const disableBgFx = !!(isIOS || isMobile || isStandalone || reduceMotion);
-                window.__beesmartDisableSweepOverlays = disableBgFx;
-                window.__beesmartDisableBackgroundAnimations = disableBgFx;
-
-                if (disableBgFx) {
-                    document.documentElement.classList.add('beesmart-no-sweep-overlays', 'beesmart-no-bg-anim');
-                }
+                // Main menu policy:
+                // - Keep Matrix Rain (handled separately) and button SFX/press effects.
+                // - Disable ONLY sweep overlays + logo fairy dust.
+                // - Honor reduce-motion (also disables Matrix Rain in matrix-rain.js).
+                window.__beesmartDisableSweepOverlays = true;
+                window.__beesmartDisableLogoFairyDust = true;
+                window.__beesmartDisableAnimations = !!reduceMotion;
+                document.documentElement.classList.add('beesmart-no-sweep-overlays');
             } catch (e) { /* no-op */ }
         })();
     </script>
@@ -210,7 +227,11 @@
                         const ent = (data && (data.entitlements || data.reconcile)) || data || null;
                         if (!ent || typeof ent !== 'object') return;
                         const nextPremium = !!isPremiumish(ent);
-                        if (nextPremium !== currentPremium) {
+                        // Compare against live window state (currentPremium is captured at install-time).
+                        const prevPremium = !!window.IS_PREMIUM;
+                        if (nextPremium !== prevPremium) {
+                            // Update global state so other scripts see the change.
+                            window.IS_PREMIUM = nextPremium;
                             // Reload to pick up server-rendered locks/CTAs.
                             window.location.reload();
                         }
@@ -225,9 +246,8 @@
             const VERSION = 'unified_menu_v2.3-' + Date.now();
             if (window.BEESMART_DEBUG) console.log('BeeSmart unified_menu.html loaded (early) VERSION=', VERSION);
 
-            // Keep floating decor OFF when background FX are disabled (iOS/mobile/PWA / reduced motion).
-            // This avoids scroll jank and reduces background work.
-            window.DISABLE_FLOATING_DECOR = !!window.__beesmartDisableBackgroundAnimations;
+            // Keep floating decor OFF on the main menu to avoid "sticky" UI issues.
+            window.DISABLE_FLOATING_DECOR = true;
 
             // Allow avatar loader to render - controls need the instance!
             // window.DISABLE_AUTO_AVATAR_RENDER = true;  // REMOVED - was blocking instance creation
@@ -450,12 +470,19 @@
                         'Sign in required',
                         'Please sign in with your BeeSmart account before restoring purchases.'
                     );
-                    try { window.location.href = '/auth/login'; } catch (e) {}
+                    // Smooth UX: bounce to login and return straight back here.
+                    try {
+                        const returnTo = window.location.pathname + window.location.search;
+                        window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                    } catch (e) {}
                     return;
                 }
             } catch (e) {
                 // If anything goes sideways, fail closed (require login)
-                try { window.location.href = '/auth/login'; } catch (e2) {}
+                try {
+                    const returnTo = window.location.pathname + window.location.search;
+                    window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                } catch (e2) {}
                 return;
             }
 
@@ -560,7 +587,15 @@
                                 'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
                             );
                             runRestoreGlitterOnly();
-                            setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 3200);
+                            // IMPORTANT: Avoid a forced reload here.
+                            // In some iOS WebView / Capacitor configurations, a full reload can
+                            // momentarily drop cookies and make it *look* like the user got logged out.
+                            // Instead, notify listeners so premium UI can update in-place.
+                            try {
+                                window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
+                                    detail: { ok: true, reason: 'menu_restore_success', data: result }
+                                }));
+                            } catch (e) { /* ignore */ }
                         } else {
                             // No purchases found — keep messaging honest.
                             await showRestoreGreenModal(
@@ -569,7 +604,7 @@
                             );
                         }
                     } catch (e) {
-                        try { window.location.reload(); } catch (e2) {}
+                        // Best-effort fallback: do nothing. (Avoid reload/login confusion.)
                     }
                     return;
                 } else if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
