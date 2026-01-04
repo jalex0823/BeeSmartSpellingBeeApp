@@ -22,7 +22,8 @@ def check_js_balance(filename):
         # Find closing tag
         end = content.find('</script>', tag_end)
         if end == -1:
-            print(f"Error: Unclosed <script> tag starting at line {content[:start].count('\n') + 1}")
+            start_line_no = content[:start].count("\n") + 1
+            print(f"Error: Unclosed <script> tag starting at line {start_line_no}")
             return
             
         script_content = content[tag_end+1:end]
@@ -49,17 +50,18 @@ def check_js_balance(filename):
 
         stack = []
         for char_idx, char in enumerate(script):
+            line_no = start_line + script[:char_idx].count("\n")
             if char in '{[(':
-                stack.append((char, start_line + script[:char_idx].count('\n')))
+                stack.append((char, line_no))
             elif char in '}])':
                 if not stack:
-                    print(f"Error: Unexpected '{char}' at line {start_line + script[:char_idx].count('\n')} in script block {i+1}")
+                    print(f"Error: Unexpected '{char}' at line {line_no} in script block {i+1}")
                     # return # Don't return, keep checking
                 else:
                     last, last_line = stack.pop()
                     expected = {'{': '}', '[': ']', '(': ')'}[last]
                     if char != expected:
-                        print(f"Error: Mismatched '{char}' at line {start_line + script[:char_idx].count('\n')}. Expected '{expected}' (opened at line {last_line})")
+                        print(f"Error: Mismatched '{char}' at line {line_no}. Expected '{expected}' (opened at line {last_line})")
                         # return
 
         if stack:
@@ -69,4 +71,7 @@ def check_js_balance(filename):
 
     print("JS check complete.")
 
-check_js_balance(r'c:\Temp\BeeSmartSpellingBeeApp\templates\unified_menu.html')
+if __name__ == "__main__":
+    # Default local path (edit as needed)
+    check_js_balance(r'/Users/jalex0823/Dropbox/BeeSmartSpellingBeeApp/templates/unified_menu.html')
+

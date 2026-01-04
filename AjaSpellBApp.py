@@ -148,8 +148,8 @@ except Exception as e:
 # Dictionary Cache Functions
 DICTIONARY_CACHE_FILE = "data/dictionary.json"
 SIMPLE_WIKTIONARY_FILE = "data/simple-wiktionary.jsonl"
-# Wordbank storage now in Railway PostgreSQL database (single source of truth)
-# See WordBankStorage model in models.py
+# Wordbank storage lives in Postgres via the WordBankStorage model.
+# Deployment uses DigitalOcean managed Postgres.
 DATA_KEY = "wordbank_v1"
 QUIZ_STATE_KEY = "quiz_state_v1"
 
@@ -1411,30 +1411,12 @@ def ensure_simple_wiktionary_loaded():
 
 print(" Dictionary resources initialized (on-demand loading enabled)")
 
-# Speed Round logging configuration for Railway
-speed_logger = logging.getLogger('SpeedRound_Railway')
+speed_logger = logging.getLogger('SpeedRound')
 if not speed_logger.handlers:
     speed_logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter('%(asctime)s - SpeedRound - %(levelname)s - %(message)s'))
     speed_logger.addHandler(handler)
-
-def get_railway_speed_round_engine_options():
-    """Get Railway-optimized engine options for Speed Round"""
-    if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
-        return {
-            'pool_timeout': 5,          # Shorter timeout for Railway
-            'pool_recycle': 300,        # 5 minutes
-            'pool_pre_ping': True,      # Test connections
-            'pool_size': 3,             # Smaller pool for Speed Round
-            'max_overflow': 2,          # Limited overflow
-            'connect_args': {
-                'connect_timeout': 5,
-                'application_name': 'BeeSmart_SpeedRound',
-                'options': '-c statement_timeout=10000'  # 10 second query timeout
-            }
-        }
-    return {}
 
 # ----------------------------------------------------------------------------
 # In-App Purchases (Apple/Google) – server-side verification stubs and mapping
@@ -2401,33 +2383,19 @@ except Exception:
 # Admin registration key - required to register as admin
 ADMIN_REGISTRATION_KEY = os.environ.get("BEESMART_ADMIN_KEY", "BEE-ADMIN-2025-SECURE-KEY")
 
-# Railway Speed Round optimization
-if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL'):
-    # Configure Flask session for Railway Speed Round
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
-    
-    # Update SQLAlchemy configuration for Railway Speed Round optimization
-    railway_engine_options = get_railway_speed_round_engine_options()
-    if railway_engine_options and hasattr(app.config, 'SQLALCHEMY_ENGINE_OPTIONS'):
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'].update(railway_engine_options)
-        
-    speed_logger.info("Speed Round Railway configuration applied")
-
-
 """Session/cookie config
 
 Key rule: only set Secure cookies when the client is actually using HTTPS.
 
-We previously treated DATABASE_URL as a production signal. That’s fine for many
-deploys, but locally we often point at a remote Postgres (DO/Railway) over *HTTP*
-on localhost. If we mark the session cookie as Secure in that case, the client
-correctly refuses to send it back over HTTP → a brand new session on every
-request → lost wordbank pointer and broken quiz flow.
+Important: only set Secure cookies when the client is actually using HTTPS.
+
+Local dev often uses HTTP on localhost (even if it points at a remote Postgres).
+If we mark the session cookie as Secure in that case, the browser correctly
+refuses to send it back over HTTP → a brand new session on every request → lost
+wordbank pointer and broken quiz flow.
 """
 
-# Detect if we're deployed on Railway/hosted.
-# NOTE: local runs can still have DATABASE_URL set; don't use that alone to decide cookie security.
-is_deployed_env = bool(os.environ.get("RAILWAY_ENVIRONMENT"))
+is_deployed_env = os.environ.get("FLASK_ENV") == "production"
 
 # Explicit override for secure cookies (set this in real HTTPS production if needed).
 force_secure_cookie = os.environ.get("FORCE_SECURE_COOKIE", "0") == "1"
@@ -2443,7 +2411,7 @@ try:
 except Exception:
     pass
 
-print(f" Environment: {'PRODUCTION (Railway)' if is_deployed_env else 'DEVELOPMENT (Local)'}")
+print(f" Environment: {'PRODUCTION' if is_deployed_env else 'DEVELOPMENT (Local)'}")
 
 app.config.update(
     SESSION_COOKIE_SECURE=cookie_secure,  # Only True when we're actually on HTTPS
@@ -5654,6 +5622,22 @@ def __test_home():
 def _debug_root_status(resp):
     """Log status codes for root path to aid 403 diagnostics without altering response."""
     try:
+        # --- CORS / iOS WebView compatibility ---------------------------------
+        # iOS WKWebView can load the app under non-https origins (e.g., app://, file://,
+        # capacitor://). In that case, XHR/fetch to https://beesmartspelling.app/* becomes
+        # cross-origin and Safari will block responses unless the server sends CORS headers.
+        #
+        # We only add these headers to API + static asset paths (not all HTML), and we
+        # still rely on normal auth/session checks inside each endpoint.
+        origin = request.headers.get('Origin')
+        if origin and (request.path.startswith('/api/') or request.path.startswith('/static/')):
+            # When credentials (cookies) are involved, we cannot use '*'.
+            resp.headers['Access-Control-Allow-Origin'] = origin
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            resp.headers.setdefault('Vary', 'Origin')
+            resp.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+
         if request.path == '/':
             print(f"DEBUG AFTER_REQUEST / status={resp.status_code}")
         
@@ -5692,6 +5676,16 @@ def _debug_root_status(resp):
 def test_page():
     """Test page to verify Flask is working"""
     return render_template("test_page.html")
+
+
+@app.route('/api/<path:_path>', methods=['OPTIONS'])
+def _api_cors_preflight(_path):
+    """CORS preflight responder for API routes.
+
+    Some WebView environments send preflight OPTIONS even for credentialed GETs.
+    We respond 204 and let the global after_request hook attach the CORS headers.
+    """
+    return ('', 204)
 
 @app.route("/avatar-diagnostic")
 def avatar_diagnostic():

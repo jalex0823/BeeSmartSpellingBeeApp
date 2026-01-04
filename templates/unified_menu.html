@@ -18,20 +18,6 @@
     <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
-                            // IMPORTANT: Avoid forcing a full reload on iOS.
-                            // Some WebView configurations can temporarily lose cookies during reload,
-                            // which makes it look like the user got logged out after restoring.
-                            // Instead, notify listeners and only reload if the UI truly needs it.
-                            try {
-                                window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
-                                    detail: { ok: true, reason: 'menu_restore_success', data: result }
-                                }));
-                            } catch (e) {}
-                            try {
-                                if (typeof window.__beesmartForceEntitlementReload === 'function') {
-                                    window.__beesmartForceEntitlementReload('menu_restore_success');
-                                }
-                            } catch (e) {}
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">

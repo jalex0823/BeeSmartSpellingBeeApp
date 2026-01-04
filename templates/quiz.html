@@ -5666,7 +5666,8 @@ class QuizManager {
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             
             if (isIOS) {
-                // 🍎 iOS-specific intro with "Tap to Hear Voice" button
+                // 🍎 iOS-specific intro: auto-start the quiz without blocking on a gesture.
+                // Users can optionally tap to unlock voice.
                 feedbackArea.innerHTML = `
                     <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">
                         🐝 Welcome to BeeSmart Spelling! 🐝
@@ -5694,27 +5695,12 @@ class QuizManager {
                         </button>
                     </div>
                     <div id="iosVoiceStatus" style="margin: 1rem 0; font-size: 0.95rem; color: #666;">
-                        Then we'll start spelling!
-                    </div>
-                    <div style="margin-top: 0.5rem;">
-                        <button id="skipVoiceBtn" style="
-                            background: transparent;
-                            border: 2px solid #ccc;
-                            border-radius: 10px;
-                            padding: 10px 20px;
-                            font-size: 0.9rem;
-                            color: #666;
-                            cursor: pointer;
-                            min-height: 44px;
-                            touch-action: manipulation;
-                        ">
-                            Skip Intro (Start Now)
-                        </button>
+                        Starting automatically… (you can still tap to enable voice)
                     </div>
                     ${recoveryButtonHtml}
                 `;
             } else {
-                // Android/other mobile - standard tap to start
+                // Android/other mobile - auto-start without requiring a tap
                 feedbackArea.innerHTML = `
                     <div style="font-size: 1.2rem; font-weight: 700;">
                         �🐝 Welcome to BeeSmart Spelling! 🐝
@@ -5725,25 +5711,9 @@ class QuizManager {
                     <div style="margin-top: 0.5rem;">
                         🌟 Listen carefully to each word, then spell it correctly! 🌟
                     </div>
-                    <div style="margin-top: 1.2rem;">
-                        <button id="startQuizBtn" style="
-                            background: linear-gradient(135deg, #FFD700, #FFA500);
-                            border: 3px solid #FF8C00;
-                            border-radius: 15px;
-                            padding: 15px 30px;
-                            font-size: 1.3rem;
-                            font-weight: 700;
-                            color: #2C1810;
-                            cursor: pointer;
-                            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
-                            min-height: 44px;
-                            min-width: 200px;
-                            touch-action: manipulation;
-                        ">
-                            🚀 Tap to Start! 🚀
-                        </button>
+                    <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
+                        Starting automatically…
                     </div>
-                    <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.9rem; color: #666;"></div>
                     ${recoveryButtonHtml}
                 `;
             }
@@ -5753,7 +5723,6 @@ class QuizManager {
                 // iOS Voice Button Handler
                 const iosVoiceBtn = document.getElementById('iosVoiceBtn');
                 const iosVoiceStatus = document.getElementById('iosVoiceStatus');
-                const skipVoiceBtn = document.getElementById('skipVoiceBtn');
                 const forceNextBtn = document.getElementById('forceNextBtn');
 
                 // Safety: always have a way to advance even if resume stalls.
@@ -5817,80 +5786,32 @@ class QuizManager {
                     speechSynthesis.speak(utterance);
                     
                 }, { once: true });
-                
-                // iOS Skip Button Handler
-                skipVoiceBtn.addEventListener('click', () => {
-                    console.log('🍎 iOS user skipped voice intro');
-                    
-                    // 🍎 CRITICAL: Still need to unlock voice even if skipped
-                    this.voiceUnlocked = true;
-                    console.log('✅ Voice unlocked for iOS (via skip)!');
-                    
-                    feedbackArea.style.display = 'none';
-                    this.quizStarted = true;
-                    this.loadNextWordWithIntro();
-                }, { once: true });
+
+                // Auto-start the quiz shortly after showing the intro (no user action required).
+                setTimeout(() => {
+                    try {
+                        if (this.quizStarted) return;
+                        feedbackArea.style.display = 'none';
+                        this.quizStarted = true;
+                        this.loadNextWordWithIntro();
+                    } catch (e) {
+                        console.warn('Auto-start (iOS) failed:', e);
+                    }
+                }, 900);
                 
             } else {
-                // Android/other mobile - Add click handler for start button
-                document.getElementById('startQuizBtn').addEventListener('click', () => {
-                    console.log('📱 Android/mobile user tapped to start quiz');
-                    const startBtn = document.getElementById('startQuizBtn');
-                    const statusMsg = document.getElementById('voiceStatusMessage');
-                    
-                    // Disable button during voice playback
-                    if (startBtn) {
-                        startBtn.disabled = true;
-                        startBtn.style.opacity = '0.6';
-                        startBtn.style.cursor = 'not-allowed';
+                // Android/other mobile: auto-start after a short delay.
+                // (We don't try to autoplay speech here; mobile autoplay policies often require a gesture.)
+                setTimeout(() => {
+                    try {
+                        if (this.quizStarted) return;
+                        feedbackArea.style.display = 'none';
+                        this.quizStarted = true;
+                        this.loadNextWordWithIntro();
+                    } catch (e) {
+                        console.warn('Auto-start (mobile) failed:', e);
                     }
-                    
-                    // Android voice intro
-                    if ('speechSynthesis' in window) {
-                        const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
-                        const introMessage = `${greeting} I'm Buzzy, your announcer bee! Let's start spelling!`;
-                        
-                        statusMsg.textContent = '🎤 Playing intro...';
-                        
-                        // Start speech and handle completion
-                        this.speakAnnouncement(introMessage)
-                            .then(() => {
-                                console.log('✅ Voice intro completed successfully on Android');
-                                statusMsg.textContent = '✅ Ready!';
-                                
-                                // Start quiz after voice completes
-                                setTimeout(() => {
-                                    feedbackArea.style.display = 'none';
-                                    this.quizStarted = true;
-                                    this.loadNextWordWithIntro();
-                                }, 300);
-                            })
-                            .catch((err) => {
-                                console.error('❌ Voice intro failed on Android:', err);
-                                statusMsg.textContent = '⚠️ Voice unavailable, but quiz will continue';
-                                statusMsg.style.color = '#ff9800';
-                                
-                                // Continue anyway
-                                setTimeout(() => {
-                                    feedbackArea.style.display = 'none';
-                                    this.quizStarted = true;
-                                    this.loadNextWordWithIntro();
-                                }, 1000);
-                            });
-                    } else {
-                        // No speech synthesis support
-                        console.warn('⚠️ Speech synthesis not supported on this Android device');
-                        statusMsg.textContent = '⚠️ Voice not available on this device';
-                        statusMsg.style.color = '#ff9800';
-                        
-                        // Start quiz anyway after brief delay
-                        setTimeout(() => {
-                            feedbackArea.style.display = 'none';
-                            this.quizStarted = true;
-                            this.loadNextWordWithIntro();
-                        }, 1500);
-                    }
-                }, { once: true });
+                }, 650);
 
                 // Resume recovery (Android/mobile)
                 const forceNextBtn = document.getElementById('forceNextBtn');

@@ -89,11 +89,14 @@ class Config:
 
         return raw
 
-    # Database - Auto-detect from environment or default to SQLite
-    # Allow DIGITALOCEAN_DATABASE_URL as a friendly alias during migration.
+    # Database
+    # Production uses DigitalOcean Managed Postgres.
+    # We intentionally prefer DIGITALOCEAN_DATABASE_URL (or DO_DATABASE_URL) over
+    # DATABASE_URL to avoid accidental coupling to Railway's variable naming.
     SQLALCHEMY_DATABASE_URI = _normalize_database_url(
-        os.environ.get('DATABASE_URL')
-        or os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        or os.environ.get('DO_DATABASE_URL')
+        or os.environ.get('DATABASE_URL')
         or 'sqlite:///beesmart.db'
     )
     
@@ -173,8 +176,9 @@ class TestingConfig(Config):
     # Prefer real DB in CI/dev when provided (e.g., DigitalOcean Postgres) so
     # tests exercise the actual schema. Falls back to in-memory SQLite.
     SQLALCHEMY_DATABASE_URI = (
-        os.environ.get('DATABASE_URL')
-        or os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        os.environ.get('DIGITALOCEAN_DATABASE_URL')
+        or os.environ.get('DO_DATABASE_URL')
+        or os.environ.get('DATABASE_URL')
         or 'sqlite:///:memory:'
     )
     WTF_CSRF_ENABLED = False
