@@ -5623,20 +5623,63 @@ def _debug_root_status(resp):
     """Log status codes for root path to aid 403 diagnostics without altering response."""
     try:
         # --- CORS / iOS WebView compatibility ---------------------------------
-        # iOS WKWebView can load the app under non-https origins (e.g., app://, file://,
-        # capacitor://). In that case, XHR/fetch to https://beesmartspelling.app/* becomes
-        # cross-origin and Safari will block responses unless the server sends CORS headers.
-        #
-        # We only add these headers to API + static asset paths (not all HTML), and we
-        # still rely on normal auth/session checks inside each endpoint.
-        origin = request.headers.get('Origin')
-        if origin and (request.path.startswith('/api/') or request.path.startswith('/static/')):
-            # When credentials (cookies) are involved, we cannot use '*'.
-            resp.headers['Access-Control-Allow-Origin'] = origin
-            resp.headers['Access-Control-Allow-Credentials'] = 'true'
-            resp.headers.setdefault('Vary', 'Origin')
+        # WKWebView often treats requests as cross-origin (app://, file://, capacitor://)
+        # and will fail with “access control checks” unless we attach consistent CORS
+        # headers on both API + static asset responses and handle OPTIONS preflight.
+        if request.path.startswith('/api/') or request.path.startswith('/static/'):
+            # --- CORS / iOS WebView compatibility ---------------------------------
+            # Safari/WKWebView can send Origin values like:
+            # - "null" (file:// contexts)
+            # - capacitor://localhost, ionic://localhost, app://*, etc
+            # For credentialed requests, browsers require a *non-wildcard* ACAO.
+            origin = request.headers.get('Origin')
+            origin = (origin or '').strip()
+
+            # Some edge deployments / proxies (or certain WebView stacks) can omit the
+            # Origin header entirely, yet the browser still enforces CORS based on the
+            # request context. In that case, fall back to Referer-based allowlisting
+            # for our own site.
+            referer = (request.headers.get('Referer') or '').strip()
+
+            # Always vary on Origin so caches/CDNs don't mix cross-origin responses.
+            vary = resp.headers.get('Vary')
+            if vary:
+                if 'Origin' not in vary:
+                    resp.headers['Vary'] = f"{vary}, Origin"
+            else:
+                resp.headers['Vary'] = 'Origin'
+
+            allow_origin = None
+            if origin and origin.lower() != 'null':
+                allow_origin = origin
+            elif referer:
+                try:
+                    from urllib.parse import urlparse
+                    ref_host = urlparse(referer).netloc
+                    # Allow same-site referrals even if Origin was stripped.
+                    if ref_host in (request.host, 'beesmartspelling.app', 'www.beesmartspelling.app'):
+                        allow_origin = f"{request.scheme}://{ref_host}" if request.scheme else f"https://{ref_host}"
+                except Exception:
+                    pass
+
+            if allow_origin:
+                resp.headers['Access-Control-Allow-Origin'] = allow_origin
+                resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            else:
+                # If we can't safely echo an Origin (missing or "null"), fall back.
+                # - Static assets: permissive wildcard is fine.
+                # - API: avoid wildcard because we rely on cookies.
+                if request.path.startswith('/static/'):
+                    resp.headers['Access-Control-Allow-Origin'] = '*'
+
             resp.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
-            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+            # Allow the header sets commonly used by fetch/XHR + native wrappers.
+            resp.headers['Access-Control-Allow-Headers'] = (
+                'Content-Type, Authorization, X-Requested-With, Accept, Origin, '
+                'Cache-Control, Pragma, X-CSRFToken, X-CSRF-Token, '
+                'X-Apple-Storekit-Version, X-Client-Version'
+            )
+            resp.headers['Access-Control-Max-Age'] = '86400'  # cache preflight 24h
 
         if request.path == '/':
             print(f"DEBUG AFTER_REQUEST / status={resp.status_code}")
@@ -5685,7 +5728,21 @@ def _api_cors_preflight(_path):
     Some WebView environments send preflight OPTIONS even for credentialed GETs.
     We respond 204 and let the global after_request hook attach the CORS headers.
     """
-    return ('', 204)
+    from flask import make_response
+    resp = make_response('', 204)
+    return resp
+
+
+@app.route('/static/<path:_path>', methods=['OPTIONS'])
+def _static_cors_preflight(_path):
+    """CORS preflight responder for static routes.
+
+    Some WebView environments send OPTIONS preflight even for simple GET asset
+    loads. Return 204 and rely on after_request to attach CORS headers.
+    """
+    from flask import make_response
+    resp = make_response('', 204)
+    return resp
 
 @app.route("/avatar-diagnostic")
 def avatar_diagnostic():
@@ -12868,11 +12925,29 @@ def api_user_session():
     except Exception as e:
         print(f" Error in /api/user/session: {e}")
         import traceback
+
+
+@app.route('/api/auth/status', methods=['GET'])
+def api_auth_status():
+    """Small, cache-free endpoint to confirm current auth state.
+
+    This is intentionally minimal so front-end flows (like Premium Restore Purchases)
+    can avoid using possibly-stale template flags when iOS WebView cookie behavior
+    is in flux.
+    """
+    try:
+        resp = jsonify({
+            'authenticated': bool(getattr(current_user, 'is_authenticated', False) and current_user.is_authenticated)
+        })
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        return resp
+    except Exception as e:
+        print(f" Error in /api/auth/status: {e}")
+        import traceback
         traceback.print_exc()
-        return jsonify({
-            'authenticated': False,
-            'error': str(e)
-        }), 500
+        # Best-effort: never error the client for a status probe.
+        return jsonify({'authenticated': False}), 200
 
 @app.route('/test/avatar-loading')
 def test_avatar_loading():

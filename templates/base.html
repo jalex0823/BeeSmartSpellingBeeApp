@@ -74,19 +74,60 @@
         </script>
 
         <script>
-            // Hard-disable background animations globally.
-            // This targets the subtle moving background layers (e.g., slow panning texture, bees/fairies).
+            // Performance hard-stop (default): disable background FX layers that can create
+            // large translucent paints and hurt scrolling/tap hit-testing on mobile.
+            //
+            // Debug bypass: add ?fx=on to enable for troubleshooting.
             (function () {
-                window.__beesmartDisableBackgroundAnimations = true;
                 try {
+                    const params = new URLSearchParams(window.location.search || '');
+                    const fxOn = (params.get('fx') || '').toLowerCase() === 'on';
+                    if (fxOn) return;
+
+                    window.__beesmartDisableBackgroundAnimations = true;
                     document.documentElement.classList.add('beesmart-no-bg-anim');
                 } catch (e) {
                     // no-op
                 }
             })();
-        </script>
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+            </script>
+
+        <!-- Emergency overlay disable: force-hide known overlay classes that
+             can create large translucent repaints and block hit-testing on mobile.
+             This is intentionally high-specificity and uses !important so it
+             takes effect early during page load. Keep minimal and reversible.
+        -->
+        <style id="beesmart-disable-overlays">
+            /* Known overlay selectors used across templates */
+            .loading-overlay,
+            .bee-modal-overlay,
+            .honey-home-overlay,
+            #avatar-loading-overlay,
+            .background-overlay,
+            .sweep-overlay,
+            .diagonal-overlay,
+            .overlay-fx,
+            .transparent-overlay {
+                display: none !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                will-change: auto !important;
+            }
+
+            /* Ensure mascot/avatar canvas remains interactive and not blocked */
+            #mascotBee3D, #mascotBee3D canvas, .avatar-canvas {
+                pointer-events: auto !important;
+            }
+
+            /* Increase minimum tap target size for mobile touch targets */
+            .touch-target, .btn, button, .menu-item, .tile {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                touch-action: manipulation !important;
+            }
+        </style>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v={{ timestamp }}">
 
@@ -237,6 +278,12 @@
         /* Also hide decorative layers entirely in no-motion mode */
         html.beesmart-no-motion .fairy-container,
         html.beesmart-no-motion .bee-swarm {
+            display: none !important;
+        }
+
+        /* Also hide decorative layers when background animations are disabled */
+        html.beesmart-no-bg-anim .fairy-container,
+        html.beesmart-no-bg-anim .bee-swarm {
             display: none !important;
         }
 

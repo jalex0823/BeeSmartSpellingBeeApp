@@ -9,6 +9,8 @@
 
     <script>
         // Real auth (registered user). Used for login-required actions like Restore Purchases.
+        // NOTE: This value can be stale after iOS WebView/cookie edge cases;
+        // restorePurchases() performs a server check before redirecting.
         window.IS_REAL_AUTH = {{ 'true' if current_user.is_authenticated else 'false' }};
     </script>
     
@@ -19,12 +21,16 @@
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #FFD54F 0%, #FFA726 100%);
             min-height: 100vh;
             padding: 20px;
             overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* Fix iOS scroll-jank when canvas/background FX are present */
+            overscroll-behavior-y: contain;
         }
 
         /* Fairy dust background canvas */
@@ -36,6 +42,15 @@
             pointer-events: none;
             z-index: 0;
             opacity: 0.85;
+        }
+
+        /* Make the back button reliably tappable on mobile (>=44x44) */
+        .back-button {
+            min-width: 44px;
+            min-height: 44px;
+            padding: 12px 16px;
+            z-index: 10010;
+            touch-action: manipulation;
         }
 
         .subscription-container {
@@ -803,10 +818,39 @@
             return (window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
         }
 
+        async function _fetchAuthState() {
+            // Source of truth: ask the server.
+            // We keep this endpoint small and cache-free so it reflects the current session.
+            try {
+                const res = await fetch('/api/auth/status', {
+                    method: 'GET',
+                    // Always include cookies, even in iOS wrappers where origin can vary.
+                    // On same-origin, this behaves like "same-origin"; cross-origin requires CORS.
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                if (!res.ok) return { authenticated: false };
+                const data = await res.json().catch(() => ({}));
+                return {
+                    authenticated: !!(data && (data.authenticated === true || data.is_authenticated === true))
+                };
+            } catch (e) {
+                return { authenticated: false };
+            }
+        }
+
         async function restorePurchases() {
             try {
                 // Policy: Restore Purchases requires a registered/logged-in user.
-                if (!window.IS_REAL_AUTH) {
+                // IMPORTANT: Don't rely on template-time flags alone; confirm with server
+                // so we don't bounce already-signed-in users back to login.
+                const auth = await _fetchAuthState();
+                window.IS_REAL_AUTH = auth.authenticated;
+
+                if (!auth.authenticated) {
                     await showRestoreDialog(
                         'Sign in required',
                         'Please sign in with your BeeSmart account before restoring purchases.',

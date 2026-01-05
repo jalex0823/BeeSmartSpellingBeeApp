@@ -24,32 +24,52 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
 
+    <style>
+        /* Mobile scroll + tap ergonomics */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+        body {
+            /* Keep content out from under iOS home indicator / notch. */
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-top: env(safe-area-inset-top);
+        }
+
+        /* Back buttons: ensure 44x44 hit target and in-front stacking context. */
+        .back-button, .back-btn, .btn-back, button.back {
+            min-width: 44px;
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 10010;
+        }
+    </style>
+
     <script>
-        // Standalone template: menu performance defaults.
-        // Keep button animations + sound FX.
-        // IMPORTANT: We keep Matrix Rain enabled for iOS + Safari (user request).
-        // We only disable the two specific FX you called out as problematic:
-        // 1) the transparent left-to-right rotating “sweep overlay”, and
-        // 2) the logo “fairy dust” trail.
         (function(){
+            // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
+            // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
+            // (If we ever want to re-enable for debugging, we can add an explicit ?fx=on bypass later.)
             try {
-                const params = new URLSearchParams((typeof location !== 'undefined' && location.search) ? location.search : '');
-                const debugFromQuery = (params.get('debug') === '1');
-                const debugFromStorage = (function(){
-                    try { return (localStorage.getItem('beesmart_debug') === '1'); } catch (_e) { return false; }
-                })();
-                window.BEESMART_DEBUG = !!(debugFromQuery || debugFromStorage);
+                window.__beesmartDisableSweepOverlays = true;
+                window.__beesmartDisableBackgroundAnimations = true;
+                window.__beesmartDisableLogoFairyDust = true;
+                document.documentElement.classList.add('beesmart-no-sweep-overlays');
+                document.documentElement.classList.add('beesmart-no-bg-anim');
+            } catch (e) {
+                // Best-effort.
+            }
 
-                const ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
-                const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && ('ontouchend' in document));
-                const isMobile = /Android|iPhone|iPad|iPod/.test(ua) || ((navigator && navigator.maxTouchPoints) ? navigator.maxTouchPoints > 1 : false);
-                const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator && navigator.standalone === true);
-                const reduceMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-
-                // Main menu policy:
-                // - Keep Matrix Rain (handled separately) and button SFX/press effects.
-                // - Disable ONLY sweep overlays + logo fairy dust.
-                // - Honor reduce-motion (also disables Matrix Rain in matrix-rain.js).
+            // Main menu policy:
+            // - Keep Matrix Rain (handled separately) and button SFX/press effects.
+            // - Disable ONLY sweep overlays + logo fairy dust.
+            // - Honor reduce-motion (also disables Matrix Rain in matrix-rain.js).
+            try {
+                const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
                 window.__beesmartDisableSweepOverlays = true;
                 window.__beesmartDisableLogoFairyDust = true;
                 window.__beesmartDisableAnimations = !!reduceMotion;
@@ -450,6 +470,21 @@
             // Policy: Restore Purchases requires a registered/logged-in user.
             // (App Review mode is allowed to browse, but not to restore purchases.)
             try {
+                // Double-check auth state with server (avoid unnecessary login prompts).
+                try {
+                    if (!window.IS_REAL_AUTH) {
+                        const r = await fetch('/api/auth/status', { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }}).catch(() => null);
+                        if (r && r.ok) {
+                            const d = await r.json().catch(() => ({}));
+                            window.IS_REAL_AUTH = !!(d && (d.authenticated === true || d.is_authenticated === true));
+                        } else {
+                            window.IS_REAL_AUTH = false;
+                        }
+                    }
+                } catch (e) {
+                    // network/auth check failed - keep existing window.IS_REAL_AUTH if present
+                }
+
                 if (!window.IS_REAL_AUTH) {
                     setBtn('Restore Purchases', false);
                     await showRestoreGreenModal(

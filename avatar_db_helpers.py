@@ -43,7 +43,8 @@ def get_avatar_info_db(avatar_id, variant='default'):
     # Derive thumbnail from GLB filename
     import os
     glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
-    thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+    # Use URL-encoded '!' (%21) to avoid issues with some CDNs/clients
+    thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}%21.png"
     
     return {
         'id': avatar.slug,  # Keep 'id' key for backward compatibility
@@ -54,7 +55,9 @@ def get_avatar_info_db(avatar_id, variant='default'):
         'thumbnail_url': thumbnail_path,
         'preview_url': thumbnail_path,
         'glb_url': f"{base_path}/{glb_filename}",
-        'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png",
+    # Primary fallback uses the URL-encoded filename; older clients may also
+    # attempt the plain filename without the bang if needed.
+    'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee%21.png",
         # Additional fields from database
         'unlock_level': avatar.unlock_level,
         'points_required': avatar.points_required,
