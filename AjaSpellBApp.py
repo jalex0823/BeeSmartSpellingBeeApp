@@ -11961,7 +11961,9 @@ def register():
     email = data.get('email', '').strip()
     grade_level = data.get('grade_level', '')
     teacher_key = data.get('teacher_key', '').strip()
-    avatar_id = data.get('avatar_id', 'mascot-bee').strip()  # Default to mascot-bee
+    avatar_id = (data.get('avatar_id') or '').strip()
+    if not avatar_id:
+        avatar_id = 'mascot-bee'  # Always default to mascot-bee if not explicitly selected
     role = data.get('role', 'student').strip().lower()  # Get role from form (student, teacher, parent)
 
     try:
@@ -12020,9 +12022,9 @@ def register():
         # This ensures their choice overrides the default mascot
         try:
             prefs = new_user.preferences or {}
-            # Set avatar_selected=True if an avatar_id was provided in the form
-            # This allows ANY avatar choice to override the mascot
-            prefs['avatar_selected'] = bool(avatar_id and 'avatar_id' in data)
+            # IMPORTANT: never let a previous user's cached avatar selection bleed into a new account.
+            # Consider an avatar "selected" ONLY when the client explicitly sends a non-empty avatar_id.
+            prefs['avatar_selected'] = bool((data.get('avatar_id') or '').strip())
             new_user.preferences = prefs
         except Exception:
             pass
@@ -14135,6 +14137,146 @@ def api_admin_get_users():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/admin/users', methods=['POST'])
+@login_required
+def api_admin_create_user():
+    """Create a new user (admin-only).
+
+    Expects JSON:
+      - username (required)
+      - display_name (optional)
+      - email (optional)
+      - role (required): student|teacher|parent|admin|guest
+      - password (optional): if omitted, server generates one
+      - teacher_key (optional): for teacher/parent (otherwise can auto-generate)
+      - link_student_to_teacher_key (optional): student-only; if provided, creates TeacherStudent link
+
+    Returns:
+      - created user (basic fields)
+      - generated_password (only present when server generated)
+    """
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    try:
+        data = request.get_json() or {}
+
+        username = (data.get('username') or '').strip()
+        display_name = (data.get('display_name') or '').strip()
+        email = (data.get('email') or '').strip() or None
+        role = (data.get('role') or '').strip().lower()
+        password = data.get('password')
+
+        teacher_key = (data.get('teacher_key') or '').strip() or None
+        link_student_to_teacher_key = (data.get('link_student_to_teacher_key') or '').strip() or None
+
+        if not username:
+            return jsonify({"status": "error", "message": "username is required"}), 400
+
+        allowed_roles = ['student', 'teacher', 'parent', 'admin', 'guest']
+        if role not in allowed_roles:
+            return jsonify({"status": "error", "message": "Invalid role"}), 400
+
+        existing = User.query.filter_by(username=username).first()
+        if existing:
+            return jsonify({"status": "error", "message": "username already exists"}), 409
+
+        # Generate password if not provided
+        generated_password = None
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits
+            # 12 chars keeps it copy/pasteable while still strong enough for a default
+            password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            generated_password = password
+
+        user = User(
+            username=username,
+            display_name=display_name or username,
+            email=email,
+            role=role,
+        )
+
+        # Avatars: always default to mascot-bee for all account types,
+        # unless an avatar is explicitly set later by the normal avatar-selection flows.
+        if hasattr(user, 'avatar_id'):
+            user.avatar_id = 'mascot-bee'
+        if hasattr(user, 'avatar_variant'):
+            user.avatar_variant = 'default'
+        # Clear any avatar selection preference for fresh accounts
+        try:
+            prefs = user.preferences or {}
+            prefs['avatar_selected'] = False
+            user.preferences = prefs
+        except Exception:
+            pass
+
+        user.set_password(password)
+
+        # Teacher/Parent: ensure teacher_key
+        if role in ['teacher', 'parent']:
+            if teacher_key:
+                user.teacher_key = teacher_key
+            else:
+                # Best-effort unique generation; rare collisions handled below
+                user.generate_teacher_key()
+
+        # Admin: ensure elevated access flag exists and is enabled
+        if role == 'admin':
+            if hasattr(user, 'admin_all_access'):
+                user.admin_all_access = True
+
+        db.session.add(user)
+        db.session.flush()  # assign user.id
+
+        # Student linking: optional link_student_to_teacher_key
+        if role == 'student' and link_student_to_teacher_key:
+            teacher = User.query.filter_by(teacher_key=link_student_to_teacher_key, role='teacher').first()
+            if not teacher:
+                db.session.rollback()
+                return jsonify({
+                    "status": "error",
+                    "message": "Teacher not found for provided teacher_key"
+                }), 400
+
+            # Avoid duplicate link rows
+            existing_link = TeacherStudent.query.filter_by(student_id=user.id).first()
+            if existing_link:
+                existing_link.teacher_user_id = teacher.id
+                existing_link.teacher_key = teacher.teacher_key
+            else:
+                db.session.add(TeacherStudent(
+                    teacher_user_id=teacher.id,
+                    student_id=user.id,
+                    teacher_key=teacher.teacher_key
+                ))
+
+        db.session.commit()
+
+        payload = {
+            "status": "success",
+            "message": "User created successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "display_name": user.display_name,
+                "email": user.email,
+                "role": user.role,
+                "teacher_key": getattr(user, 'teacher_key', None),
+            }
+        }
+        if generated_password:
+            payload["generated_password"] = generated_password
+
+        return jsonify(payload), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f" Error creating user: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 
 
@@ -14219,6 +14361,68 @@ def api_admin_delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         print(f" Error deleting user: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+def api_admin_reset_user_password(user_id):
+    """Admin-only: reset/change another user's password.
+
+    Expects JSON:
+      - password (optional) : if absent, server generates a new one
+
+    Returns:
+      - generated_password (only if server generated)
+    """
+    if current_user.role != 'admin':
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    try:
+        if user_id == current_user.id:
+            # Let admins use normal password flow for themselves.
+            return jsonify({"status": "error", "message": "Use your profile/password page to change your own password"}), 400
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"}), 404
+
+        data = request.get_json(silent=True) or {}
+        password = (data.get('password') or '').strip()
+
+        generated_password = None
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits
+            password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            generated_password = password
+
+        if len(password) < 8:
+            return jsonify({"status": "error", "message": "Password must be at least 8 characters"}), 400
+
+        user.set_password(password)
+
+        # Audit best-effort
+        try:
+            log_session_action('admin_password_reset', user_id=user.id, data={'by_admin_id': current_user.id})
+        except Exception:
+            pass
+
+        db.session.commit()
+
+        payload = {
+            "status": "success",
+            "message": f"Password reset for {user.username}"
+        }
+        if generated_password:
+            payload['generated_password'] = generated_password
+
+        return jsonify(payload)
+
+    except Exception as e:
+        db.session.rollback()
+        print(f" Error resetting password: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

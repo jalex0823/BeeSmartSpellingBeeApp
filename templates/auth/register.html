@@ -329,7 +329,7 @@
           <label>Choose Your Bee Avatar 🐝 <span class="required">*</span></label>
           <div class="avatar-selection-container">
             <div class="avatar-grid" id="avatarGrid"></div>
-            <input type="hidden" id="selected_avatar" name="avatar_id" value="brother-bee">
+            <input type="hidden" id="selected_avatar" name="avatar_id" value="">
             <div class="avatar-help-text">Click on a bee to select your avatar! Your chosen bee will appear on the main menu with animations!</div>
           </div>
           <script>
@@ -367,8 +367,9 @@
                   card.classList.add('selected');
                   document.getElementById('selected_avatar').value = card.dataset.avatarId;
                 });
-                // Default select brother-bee (or first available)
-                const preferredId = 'brother-bee';
+                // Default select mascot-bee (or first available)
+                // If the user doesn't click anything, registration should default to mascot-bee.
+                const preferredId = 'mascot-bee';
                 const preferred = grid.querySelector(`[data-avatar-id="${preferredId}"]`);
                 const def = preferred || grid.querySelector('.avatar-option');
                 if (def) {
@@ -463,26 +464,13 @@ passwordInput.addEventListener('input', function() {
 });
 
 // Avatar selection handler
-const avatarOptions = document.querySelectorAll('.avatar-option');
+// NOTE: avatar tiles are rendered dynamically above, so don't query them here.
+// Also: do NOT default to a cached/previous user's choice.
+// If the user doesn't pick an avatar at registration, always send mascot-bee.
 const selectedAvatarInput = document.getElementById('selected_avatar');
-
-// Set cool-bee as default selected
-document.querySelector('[data-avatar-id="cool-bee"]')?.classList.add('selected');
-
-avatarOptions.forEach(option => {
-    option.addEventListener('click', function() {
-        // Remove selected class from all options
-        avatarOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        // Add selected class to clicked option
-        this.classList.add('selected');
-        
-        // Update hidden input value with avatar ID
-        selectedAvatarInput.value = this.dataset.avatarId;
-        
-        console.log('🐝 Avatar selected:', this.dataset.avatarId);
-    });
-});
+if (selectedAvatarInput && !selectedAvatarInput.value) {
+  selectedAvatarInput.value = 'mascot-bee';
+}
 
 // Role-based field visibility
 const roleSelect = document.getElementById('role');

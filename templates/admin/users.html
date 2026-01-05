@@ -255,6 +255,13 @@
         </div>
     </div>
 
+    <!-- Create User Bar -->
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
+        <button onclick="openCreateModal()" style="padding: 0.75rem 1.25rem; background: linear-gradient(180deg, #86efac, #22c55e); color: white; border: none; border-radius: 10px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35); border-bottom: 4px solid #15803d;">
+            ➕ Create User
+        </button>
+    </div>
+
     <!-- Users Table -->
     <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <div style="overflow-x: auto;">
@@ -284,6 +291,134 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div id="createUserModal" class="kid-modal-overlay">
+    <div class="kid-modal-content">
+        <button onclick="closeCreateModal()" class="kid-modal-close-btn">&times;</button>
+        <h2>➕ Create New User</h2>
+
+        <form id="createUserForm" class="kid-modal-form-grid">
+            <div>
+                <label for="createRole">Role</label>
+                <select id="createRole" required>
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="parent">Parent</option>
+                    <option value="admin">Admin</option>
+                    <option value="guest">Guest</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="createUsername">Username (or login name)</label>
+                <input type="text" id="createUsername" required placeholder="e.g., apple_review_teacher">
+                <div class="kid-modal-info-box tip">
+                    💡 This is the login username (it must be unique).
+                </div>
+            </div>
+
+            <div>
+                <label for="createDisplayName">Display Name</label>
+                <input type="text" id="createDisplayName" placeholder="e.g., Ms. Honey">
+            </div>
+
+            <div>
+                <label for="createEmail">Email (optional)</label>
+                <input type="email" id="createEmail" placeholder="optional">
+            </div>
+
+            <div>
+                <label for="createPassword">Default Password</label>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center;">
+                    <input type="text" id="createPassword" placeholder="Leave blank to auto-generate">
+                    <button type="button" class="kid-modal-button secondary" style="padding: 0.75rem 1rem; font-size: 0.95rem;" onclick="generatePasswordClientSide()">🎲 Generate</button>
+                </div>
+                <div class="kid-modal-info-box info">
+                    ℹ️ The user can always change their password after logging in.
+                </div>
+            </div>
+
+            <div id="createTeacherKeySection" style="display: none;">
+                <label for="createTeacherKey">
+                    Teacher/Parent Key
+                    <span style="font-weight: 400; color: #718096; font-size: 0.875rem;">(Optional)</span>
+                </label>
+                <input type="text" id="createTeacherKey" placeholder="Leave blank to auto-generate">
+                <div class="kid-modal-info-box tip">
+                    💡 Students use this key to link to a teacher.
+                </div>
+            </div>
+
+            <div id="createStudentLinkSection" style="display: none;">
+                <label for="createLinkTeacherKey">Link Student to Teacher Key</label>
+                <input type="text" id="createLinkTeacherKey" placeholder="e.g., BEE-2026-TEACH-AB12">
+                <div class="kid-modal-info-box info">
+                    ℹ️ Optional: if provided, the student will be linked to that teacher.
+                </div>
+            </div>
+
+            <div id="createUserResult" style="display:none; padding: 1rem; border-radius: 12px; border: 3px solid #86efac; background: #f0fdf4; color: #166534;">
+                <div style="font-weight: 800; margin-bottom: 0.25rem;">✅ User created</div>
+                <div id="createUserResultText" style="font-size: 0.9rem; line-height: 1.4;"></div>
+            </div>
+
+            <div id="createUserError" style="display:none; padding: 1rem; border-radius: 12px; border: 3px solid #fca5a5; background: #fef2f2; color: #991b1b;">
+                <div style="font-weight: 800; margin-bottom: 0.25rem;">⚠️ Couldn’t create user</div>
+                <div id="createUserErrorText" style="font-size: 0.9rem; line-height: 1.4;"></div>
+            </div>
+
+            <div class="kid-modal-button-group">
+                <button type="button" onclick="closeCreateModal()" class="kid-modal-button secondary">
+                    Close
+                </button>
+                <button type="submit" class="kid-modal-button">
+                    🐝 Create
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="kid-modal-overlay">
+    <div class="kid-modal-content">
+        <button onclick="closeResetPasswordModal()" class="kid-modal-close-btn">&times;</button>
+        <h2>🔑 Reset Password</h2>
+
+        <div class="kid-modal-info-box info" style="margin-bottom: 1rem;">
+            You’re resetting the password for: <strong id="resetPasswordUsername"></strong>
+        </div>
+
+        <div class="kid-modal-form-grid">
+            <div>
+                <label for="resetPasswordInput">New Password (leave blank to auto-generate)</label>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center;">
+                    <input type="text" id="resetPasswordInput" placeholder="Leave blank to auto-generate">
+                    <button type="button" class="kid-modal-button secondary" style="padding: 0.75rem 1rem; font-size: 0.95rem;" onclick="generateResetPasswordClientSide()">🎲 Generate</button>
+                </div>
+                <div class="kid-modal-info-box tip">
+                    💡 If you leave it blank, the server will generate a new password and show it once.
+                </div>
+            </div>
+
+            <div id="resetPasswordResult" style="display:none; padding: 1rem; border-radius: 12px; border: 3px solid #86efac; background: #f0fdf4; color: #166534;">
+                <div style="font-weight: 800; margin-bottom: 0.25rem;">✅ Password reset</div>
+                <div id="resetPasswordResultText" style="font-size: 0.9rem; line-height: 1.4;"></div>
+            </div>
+
+            <div id="resetPasswordError" style="display:none; padding: 1rem; border-radius: 12px; border: 3px solid #fca5a5; background: #fef2f2; color: #991b1b;">
+                <div style="font-weight: 800; margin-bottom: 0.25rem;">⚠️ Couldn’t reset password</div>
+                <div id="resetPasswordErrorText" style="font-size: 0.9rem; line-height: 1.4;"></div>
+            </div>
+
+            <div class="kid-modal-button-group">
+                <button type="button" onclick="closeResetPasswordModal()" class="kid-modal-button secondary">Close</button>
+                <button type="button" onclick="submitResetPassword()" class="kid-modal-button">🔐 Reset</button>
+            </div>
         </div>
     </div>
 </div>
@@ -373,6 +508,105 @@ function setupEventListeners() {
     document.getElementById('refreshBtn').addEventListener('click', loadUsers);
     document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
     document.getElementById('editUserForm').addEventListener('submit', saveUserChanges);
+    document.getElementById('createUserForm').addEventListener('submit', createUser);
+    document.getElementById('createRole').addEventListener('change', onCreateRoleChange);
+}
+
+function openCreateModal() {
+    resetCreateModal();
+    document.getElementById('createUserModal').style.display = 'flex';
+    onCreateRoleChange();
+}
+
+function closeCreateModal() {
+    document.getElementById('createUserModal').style.display = 'none';
+}
+
+function resetCreateModal() {
+    document.getElementById('createUserForm').reset();
+    document.getElementById('createUserResult').style.display = 'none';
+    document.getElementById('createUserError').style.display = 'none';
+    document.getElementById('createUserResultText').innerHTML = '';
+    document.getElementById('createUserErrorText').innerHTML = '';
+}
+
+function onCreateRoleChange() {
+    const role = document.getElementById('createRole').value;
+    const teacherKeySection = document.getElementById('createTeacherKeySection');
+    const studentLinkSection = document.getElementById('createStudentLinkSection');
+
+    teacherKeySection.style.display = (role === 'teacher' || role === 'parent') ? 'block' : 'none';
+    studentLinkSection.style.display = (role === 'student') ? 'block' : 'none';
+}
+
+function generatePasswordClientSide() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 12; i++) {
+        pwd += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    document.getElementById('createPassword').value = pwd;
+}
+
+async function createUser(e) {
+    e.preventDefault();
+
+    document.getElementById('createUserResult').style.display = 'none';
+    document.getElementById('createUserError').style.display = 'none';
+
+    const role = document.getElementById('createRole').value;
+    const username = document.getElementById('createUsername').value.trim();
+    const display_name = document.getElementById('createDisplayName').value.trim();
+    const email = document.getElementById('createEmail').value.trim();
+    const password = document.getElementById('createPassword').value;
+    const teacher_key = document.getElementById('createTeacherKey').value.trim();
+    const link_student_to_teacher_key = document.getElementById('createLinkTeacherKey').value.trim();
+
+    const payload = {
+        role,
+        username,
+        display_name,
+        email,
+    };
+    if (password && password.trim()) payload.password = password;
+    if (teacher_key) payload.teacher_key = teacher_key;
+    if (link_student_to_teacher_key) payload.link_student_to_teacher_key = link_student_to_teacher_key;
+
+    try {
+        const resp = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok || data.status !== 'success') {
+            throw new Error(data.message || 'Unknown error');
+        }
+
+        const created = data.user;
+        const generatedPassword = data.generated_password;
+
+        let html = `Created <strong>${created.role}</strong> user <strong>${created.username}</strong>.`;
+        if (created.teacher_key) {
+            html += `<br>Teacher Key: <strong>${created.teacher_key}</strong>`;
+        }
+        if (generatedPassword) {
+            html += `<br>Generated Password: <strong>${generatedPassword}</strong>`;
+            html += `<div style="margin-top:0.5rem; font-size:0.85rem; color:#166534;">(Saved in the database now. Copy it somewhere safe.)</div>`;
+        }
+
+        document.getElementById('createUserResultText').innerHTML = html;
+        document.getElementById('createUserResult').style.display = 'block';
+
+        // refresh list
+        await loadUsers();
+
+    } catch (err) {
+        document.getElementById('createUserErrorText').textContent = err.message || String(err);
+        document.getElementById('createUserError').style.display = 'block';
+    }
 }
 
 async function loadUsers() {
@@ -440,6 +674,9 @@ function renderUsers(users) {
                     <button onclick="editUser(${user.id})" style="padding: 0.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="Edit">
                         ✏️
                     </button>
+                    <button onclick="openResetPasswordModal(${user.id}, '${user.username}')" style="padding: 0.5rem; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="Reset Password">
+                        🔑
+                    </button>
                     <button onclick="viewUserDetails(${user.id})" style="padding: 0.5rem; background: #48bb78; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;" title="View Details">
                         👁️
                     </button>
@@ -450,6 +687,73 @@ function renderUsers(users) {
             </td>
         </tr>
     `).join('');
+}
+
+// Reset Password Modal
+let resetPasswordUserId = null;
+
+function openResetPasswordModal(userId, username) {
+    resetPasswordUserId = userId;
+    document.getElementById('resetPasswordUsername').textContent = username;
+    document.getElementById('resetPasswordInput').value = '';
+    document.getElementById('resetPasswordResult').style.display = 'none';
+    document.getElementById('resetPasswordError').style.display = 'none';
+    document.getElementById('resetPasswordModal').style.display = 'flex';
+}
+
+function closeResetPasswordModal() {
+    document.getElementById('resetPasswordModal').style.display = 'none';
+    resetPasswordUserId = null;
+}
+
+function generateResetPasswordClientSide() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 12; i++) {
+        pwd += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    document.getElementById('resetPasswordInput').value = pwd;
+}
+
+async function submitResetPassword() {
+    document.getElementById('resetPasswordResult').style.display = 'none';
+    document.getElementById('resetPasswordError').style.display = 'none';
+
+    if (!resetPasswordUserId) {
+        return;
+    }
+
+    const password = document.getElementById('resetPasswordInput').value;
+    const payload = {};
+    if (password && password.trim()) payload.password = password.trim();
+
+    try {
+        const resp = await fetch(`/api/admin/users/${resetPasswordUserId}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || data.status !== 'success') {
+            throw new Error(data.message || 'Unknown error');
+        }
+
+        const returnedPwd = data.generated_password;
+        let html = `Password updated.`;
+        if (returnedPwd) {
+            html += `<br>Generated Password: <strong>${returnedPwd}</strong>`;
+            html += `<div style="margin-top:0.5rem; font-size:0.85rem;">(Copy this now — it won’t be shown again.)</div>`;
+        } else {
+            html += `<div style="margin-top:0.5rem; font-size:0.85rem;">(You set a custom password.)</div>`;
+        }
+
+        document.getElementById('resetPasswordResultText').innerHTML = html;
+        document.getElementById('resetPasswordResult').style.display = 'block';
+    } catch (err) {
+        document.getElementById('resetPasswordErrorText').textContent = err.message || String(err);
+        document.getElementById('resetPasswordError').style.display = 'block';
+    }
 }
 
 function filterUsers() {
