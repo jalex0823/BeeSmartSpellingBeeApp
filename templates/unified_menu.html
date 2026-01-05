@@ -399,6 +399,90 @@
                 btn.disabled = !!disabled;
             };
 
+            function showRestoreDialog(title, message, isSuccess) {
+                // Styled restore dialog (kept consistent with subscription.html for Apple compliance)
+                return new Promise((resolve) => {
+                    const overlay = document.createElement('div');
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 100003;
+                        animation: fadeIn 0.2s ease-out;
+                        padding: 14px;
+                    `;
+
+                    const dialog = document.createElement('div');
+                    dialog.style.cssText = `
+                        background: white;
+                        border-radius: 16px;
+                        padding: 24px;
+                        max-width: 92%;
+                        width: 360px;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+                        text-align: center;
+                        animation: slideUp 0.3s ease-out;
+                    `;
+
+                    const iconColor = isSuccess ? '#4CAF50' : '#FF9800';
+                    const btnColor = isSuccess ? '#4CAF50' : '#2196F3';
+                    const btnHoverColor = isSuccess ? '#45A049' : '#1976D2';
+
+                    dialog.innerHTML = `
+                        <div style="font-size: 3rem; margin-bottom: 12px;">${isSuccess ? '✅' : '⚠️'}</div>
+                        <h3 style="margin: 0 0 12px; font-size: 1.3rem; color: ${iconColor};">${title || 'Restore Purchases'}</h3>
+                        <p style="margin: 0 0 24px; color: #666; font-size: 0.95rem; line-height: 1.5;">${message || ''}</p>
+                        <button id="restoreDialogOkay" style="
+                            background: ${btnColor};
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            padding: 12px 32px;
+                            font-size: 1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            width: 100%;
+                            transition: background 0.2s;
+                        ">Okay</button>
+                    `;
+
+                    overlay.appendChild(dialog);
+                    document.body.appendChild(overlay);
+
+                    const okBtn = dialog.querySelector('#restoreDialogOkay');
+                    okBtn.addEventListener('mouseenter', () => okBtn.style.background = btnHoverColor);
+                    okBtn.addEventListener('mouseleave', () => okBtn.style.background = btnColor);
+                    okBtn.addEventListener('click', () => {
+                        try { overlay.remove(); } catch (e) {}
+                        resolve(true);
+                    });
+
+                    overlay.addEventListener('click', (ev) => {
+                        if (ev.target === overlay) {
+                            try { overlay.remove(); } catch (e) {}
+                            resolve(true);
+                        }
+                    });
+
+                    // Add animations if not already present
+                    if (!document.getElementById('restoreDialogUnifiedStyles')) {
+                        const style = document.createElement('style');
+                        style.id = 'restoreDialogUnifiedStyles';
+                        style.textContent = `
+                            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                            @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                });
+            }
+
             async function showRestoreGreenModal(title, message) {
                 // Simple green validation modal shown BEFORE the celebration animation.
                 return new Promise((resolve) => {
@@ -489,20 +573,8 @@
                 } catch (e) {
                     // network/auth check failed - keep existing window.IS_REAL_AUTH if present
                 }
-
-                if (!window.IS_REAL_AUTH) {
-                    setBtn('Restore Purchases', false);
-                    await showRestoreGreenModal(
-                        'Sign in required',
-                        'Please sign in with your BeeSmart account before restoring purchases.'
-                    );
-                    // Smooth UX: bounce to login and return straight back here.
-                    try {
-                        const returnTo = window.location.pathname + window.location.search;
-                        window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
-                    } catch (e) {}
-                    return;
-                }
+                // Apple-friendly behavior: allow initiating the restore prompt (Apple ID sheet)
+                // even before BeeSmart login, but only apply membership after login.
             } catch (e) {
                 // If anything goes sideways, fail closed (require login)
                 try {
@@ -561,6 +633,14 @@
                 return _hasIap();
             }
 
+            async function _waitForIapBridgeWithRetry() {
+                // Helps reduce intermittent failures when the Capacitor plugin is still registering.
+                const ok = await _waitForIapBridge(4500);
+                if (ok) return true;
+                await _sleep(300);
+                return await _waitForIapBridge(2500);
+            }
+
             const _extractEnt = (payload) => {
                 if (!payload) return {};
                 // native-iap-bridge.js restore() returns {restore, reconcile, unsupported}
@@ -593,7 +673,7 @@
                 // Wait a bit longer here so we don't fall back to a web-only reconcile,
                 // because that won't trigger the iOS “Sign in” sheet.
                 if (_looksNative()) {
-                    await _waitForIapBridge(4500);
+                    await _waitForIapBridgeWithRetry();
                 }
 
                 // Prefer native bridge reconcile (runs restore + server reconcile)
@@ -603,6 +683,22 @@
                     const premium = _isPremiumish(ent);
                     const owned = _getOwnedList(ent);
                     const ownedCount = Array.isArray(owned) ? owned.length : 0;
+
+                    // If user is not logged into BeeSmart, do not apply premium here.
+                    // We still allow Apple's restore prompt to run, then guide the next step.
+                    if (!window.IS_REAL_AUTH) {
+                        setBtn('Restore Purchases', false);
+                        await showRestoreDialog(
+                            'Restore Purchases',
+                            'Restore completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
+                            true
+                        );
+                        try {
+                            const returnTo = window.location.pathname + window.location.search;
+                            window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                        } catch (e) {}
+                        return;
+                    }
 
                     // Green validation modal first, then celebration animation.
                     try {
@@ -657,8 +753,9 @@
                             message: _looksNative()
                                 ? 'We’re getting things ready. If purchases still look locked, wait a moment and try Restore Purchases again.'
                                 : 'Restore can only pull App Store purchases inside the iOS/Android app wrapper. If you installed from the App Store, open the app there and tap Restore Purchases.',
-                            autoReloadMs: 3200,
-                            allowReload: true
+                            // Avoid auto-reloads here; they can look like a logout on some iOS wrappers.
+                            autoReloadMs: 0,
+                            allowReload: false
                         });
                     } else {
                         try { window.location.reload(); } catch (e) {}
@@ -669,7 +766,17 @@
             } catch (e) {
                 console.warn('[Menu] restorePurchases failed:', e);
                 setBtn('Restore Purchases', false);
-                try { alert('Restore couldn\'t complete right now. Please try again in a moment.'); } catch (e2) {}
+                // Keep the error UI consistent with the premium page, and avoid system alerts.
+                try {
+                    await showRestoreDialog(
+                        'Restore Failed',
+                        'Restore could not be completed. Please check your connection and try again.',
+                        false
+                    );
+                } catch (e2) {
+                    // Absolute last resort
+                    try { alert('Restore could not be completed. Please check your connection and try again.'); } catch (e3) {}
+                }
             }
         }
     </script>
@@ -4823,7 +4930,8 @@
                                     text-align: center;
                                     white-space: nowrap;
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 107, 0.5)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'">
+                                                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'"
+                                                  onclick="try { window.localStorage && window.localStorage.removeItem('beesmart_login_entitlements_v1'); } catch(e) {}">
                                      Sign Out
                                 </a>
                             </div>

@@ -766,6 +766,27 @@
         // This is critical for TestFlight where the native bridge can appear late.
         async function reconcileAndRefreshSubscriptionUI(reason) {
             try {
+                // IMPORTANT: Never show Premium as active for logged-out users.
+                // This page is visible to guests, and we allow browsing in App Review mode,
+                // but "Premium Active" indicators must reflect an authenticated account.
+                const auth = await _fetchAuthState();
+                window.IS_REAL_AUTH = !!(auth && auth.authenticated);
+
+                if (!auth || !auth.authenticated) {
+                    const statusEl = document.getElementById('subscription-status');
+                    if (statusEl) statusEl.textContent = 'Sign in to see your Premium status.';
+
+                    const subBtn = document.getElementById('subscribeMonthlyBtn');
+                    if (subBtn) {
+                        subBtn.disabled = false;
+                        // Restore original label if it had been swapped
+                        if (String(subBtn.textContent || '').toLowerCase().includes('premium active')) {
+                            subBtn.textContent = 'Subscribe Now';
+                        }
+                    }
+                    return null;
+                }
+
                 // Ask server for current entitlements without requiring native product enumeration.
                 const res = await fetch('/api/iap/restore', {
                     method: 'POST',
@@ -840,25 +861,11 @@
 
         async function restorePurchases() {
             try {
-                // Policy: Restore Purchases requires a registered/logged-in user.
-                // IMPORTANT: Don't rely on template-time flags alone; confirm with server
-                // so we don't bounce already-signed-in users back to login.
+                // Apple-friendly behavior:
+                // Allow initiating the platform restore prompt even before BeeSmart login.
+                // However, we only APPLY subscription entitlements after the user signs in.
                 const auth = await _fetchAuthState();
                 window.IS_REAL_AUTH = auth.authenticated;
-
-                if (!auth.authenticated) {
-                    await showRestoreDialog(
-                        'Sign in required',
-                        'Please sign in with your BeeSmart account before restoring purchases.',
-                        false
-                    );
-                    // Smooth UX: bounce to login and return straight back here.
-                    try {
-                        const returnTo = window.location.pathname + window.location.search;
-                        window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
-                    } catch (e) {}
-                    return;
-                }
 
                 // Scroll restore button into view so user knows action is happening
                 const restoreBtn = document.getElementById('restorePurchasesBtn');
@@ -894,7 +901,14 @@
                 };
 
                 // Wait briefly — Capacitor plugins can register after the page scripts run.
-                await _waitForIAPBridge(4500);
+                // Add a tiny retry window to reduce intermittent failures (Flow 3).
+                const _tryWaitBridge = async () => {
+                    const ok = await _waitForIAPBridge(4500);
+                    if (ok) return true;
+                    await _sleep(300);
+                    return await _waitForIAPBridge(2500);
+                };
+                await _tryWaitBridge();
 
                 // If we don't have the native bridge, we cannot trigger Apple's restore/sync.
                 // We still do a server reconcile (guest-friendly), but messaging must be honest.
@@ -916,8 +930,20 @@
 
                         const data = await res.json().catch(() => ({}));
                         const ok = !!(data && (data.ok === true || data.success === true));
+
+                        // Guests may see a successful reconcile-only response. That's fine.
+                        // If not authenticated, explain the next step clearly.
+                        if (!window.IS_REAL_AUTH) {
+                            showRestoreDialog(
+                                'Restore Purchases',
+                                'Restore completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
+                                true
+                            );
+                            return;
+                        }
+
                         const msg = ok
-                            ? 'Restore started. To restore App Store purchases, please use the iOS app (App Store/TestFlight build). If Apple needs it, iOS will prompt you to sign in during restore.'
+                            ? 'Restore started. If Apple needs it, iOS will prompt you to sign in during restore.'
                             : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.';
                         showRestoreDialog('Restore Purchases', msg, ok);
                     } catch (e) {
@@ -999,6 +1025,17 @@
                     restoreBtn.style.background = 'rgba(0,0,0,0.12)';
                     restoreBtn.textContent = 'Restore Purchases';
                     restoreBtn.disabled = false;
+                }
+
+                // If not logged in, do not apply subscription entitlements here.
+                // Be explicit about the next step to satisfy "restore before login" user flows.
+                if (!window.IS_REAL_AUTH) {
+                    await showRestoreDialog(
+                        'Restore Purchases',
+                        'Restore completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
+                        true
+                    );
+                    return;
                 }
 
                 if (ok && (premium || ownedCount > 0 || appliedCount > 0)) {
@@ -1187,6 +1224,19 @@
         }
 
         async function checkExistingSubscription() {
+            // Never report an active subscription for a logged-out user.
+            // This prevents the page from showing green "Active" UI based on
+            // device-only/native signals while no BeeSmart account is signed in.
+            try {
+                const auth = await _fetchAuthState();
+                window.IS_REAL_AUTH = !!(auth && auth.authenticated);
+                if (!auth || !auth.authenticated) {
+                    return { hasSubscription: false, products: [], source: 'not_authenticated' };
+                }
+            } catch (e) {
+                return { hasSubscription: false, products: [], source: 'not_authenticated_error' };
+            }
+
             // Check for existing subscriptions using the IAP bridge.
             // IMPORTANT: In TestFlight, the bridge can be late. An empty list is not
             // definitive — it often means "still loading".
@@ -1456,10 +1506,16 @@
 
         // Auto-select plan from URL parameter and check subscription status
         window.addEventListener('DOMContentLoaded', async () => {
-            // Check for existing subscription on page load
-            const subscriptionStatus = await checkExistingSubscription();
+            // Check for existing subscription on page load.
+            // IMPORTANT: Never show "Active" UI for logged-out users.
+            const auth = await _fetchAuthState();
+            window.IS_REAL_AUTH = !!(auth && auth.authenticated);
+
+            const subscriptionStatus = window.IS_REAL_AUTH
+                ? await checkExistingSubscription()
+                : { hasSubscription: false, products: [], source: 'not_authenticated' };
             
-            if (subscriptionStatus.hasSubscription) {
+            if (window.IS_REAL_AUTH && subscriptionStatus.hasSubscription) {
                 // Update UI to show active subscription
                 updateUIForActiveSubscription();
             }
@@ -1481,6 +1537,11 @@
         });
 
         function updateUIForActiveSubscription() {
+            // Hard guard: never paint "active" state if logged out.
+            try {
+                if (window.IS_REAL_AUTH !== true) return;
+            } catch (e) { return; }
+
             // Update all CTA buttons to show active status
             const ctaButtons = document.querySelectorAll('.cta-button');
             ctaButtons.forEach(btn => {

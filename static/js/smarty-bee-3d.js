@@ -683,7 +683,22 @@ class SmartyBee3D {
     }
 
     showFallbackImage() {
-        // Show 2D bee image if 3D fails to load
+        // Show 2D bee image if 3D fails to load.
+        // IMPORTANT: If we've already successfully rendered once (canvas exists),
+        // do NOT replace it with the generic fallback. That would look like the
+        // avatar "turned into" the default bee after a transient error.
+        try {
+            const hasCanvas = !!(this.container && this.container.querySelector && this.container.querySelector('canvas'));
+            if (hasCanvas) {
+                try {
+                    this.container.dataset.avatarFallbackSuppressed = '1';
+                } catch (_e) { /* ignore */ }
+                return;
+            }
+        } catch (_e) {
+            // ignore and continue to fallback
+        }
+
         this.container.innerHTML = `
             <div style="
                 width: ${this.options.width}px;

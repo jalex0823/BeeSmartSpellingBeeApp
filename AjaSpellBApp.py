@@ -12366,9 +12366,33 @@ def dev_peek_reset_token():
 @login_required
 def logout():
     """Log out current user"""
+    # Clear any client-side IAP state handoffs so premium UI cannot appear
+    # to remain "active" after signing out.
     logout_user()
+    try:
+        session.pop('iap_entitlements', None)
+        session.pop('iap_owned_products', None)
+        session.pop('iap_last_restore_at', None)
+        session.pop('iap_install_id', None)
+        # Legacy/alternate keys (best-effort; safe if absent)
+        session.pop('owned_products', None)
+        session.pop('entitlements', None)
+    except Exception:
+        # Non-fatal: logout should always succeed.
+        pass
+
+    resp = redirect(url_for('home'))
+    try:
+        # Ensure cookies used for anonymous restore / install tracking are cleared.
+        resp.delete_cookie('anon_restore_id')
+        resp.delete_cookie('beesmart_anon_restore_id')
+        resp.delete_cookie('beesmart_install_id')
+        resp.delete_cookie('install_id')
+    except Exception:
+        pass
+
     flash('You have been logged out. See you next time! ', 'success')
-    return redirect(url_for('home'))
+    return resp
 
 
 # Temporary, token-gated admin bootstrap endpoint
