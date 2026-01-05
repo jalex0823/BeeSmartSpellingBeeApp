@@ -56,10 +56,8 @@
             // (If we ever want to re-enable for debugging, we can add an explicit ?fx=on bypass later.)
             try {
                 window.__beesmartDisableSweepOverlays = true;
-                window.__beesmartDisableBackgroundAnimations = true;
                 window.__beesmartDisableLogoFairyDust = true;
                 document.documentElement.classList.add('beesmart-no-sweep-overlays');
-                document.documentElement.classList.add('beesmart-no-bg-anim');
             } catch (e) {
                 // Best-effort.
             }
@@ -238,8 +236,15 @@
                         if (nextPremium !== prevPremium) {
                             // Update global state so other scripts see the change.
                             window.IS_PREMIUM = nextPremium;
-                            // Reload to pick up server-rendered locks/CTAs.
-                            window.location.reload();
+                            // IMPORTANT: Avoid auto-reloading the whole page.
+                            // In iOS WebViews / service-worker update cycles, repeated reconcile events can
+                            // trigger a reload loop that looks like the loading screen constantly restarting.
+                            // Instead, notify any UI code to re-evaluate locks/CTAs in-place.
+                            try {
+                                window.dispatchEvent(new CustomEvent('beesmart:entitlements-changed', {
+                                    detail: { is_premium: nextPremium, source: 'iap_reconciled' }
+                                }));
+                            } catch (e) { /* ignore */ }
                         }
                     } catch (e) { /* ignore */ }
                 });
@@ -3291,6 +3296,105 @@
         <!-- We'll generate music programmatically using Web Audio API -->
     </audio>
 
+    <style>
+        /* Transition pulse: a quick "pop" right before the main menu appears. */
+        @keyframes honeyLoaderExitPulse {
+            0% {
+                transform: scale(1) translateZ(0);
+                filter: brightness(1) saturate(1);
+                box-shadow: 0 0 0 rgba(255, 217, 61, 0);
+            }
+            40% {
+                transform: scale(1.03) translateZ(0);
+                filter: brightness(1.12) saturate(1.15);
+                box-shadow: 0 0 26px rgba(255, 217, 61, 0.30);
+            }
+            100% {
+                transform: scale(1.01) translateZ(0);
+                filter: brightness(1) saturate(1);
+                box-shadow: 0 0 0 rgba(255, 217, 61, 0);
+            }
+        }
+
+        #honeyLoader.honeyLoader--pulse {
+            animation: honeyLoaderExitPulse 170ms ease-out 1;
+        }
+
+        /* Gold ring + shimmer overlay for the pulse (no extra DOM). */
+        #honeyLoader {
+            position: fixed; /* already fixed inline; keep here for pseudo-element positioning */
+        }
+        #honeyLoader.honeyLoader--pulse::after {
+            content: '';
+            position: absolute;
+            inset: 10px;
+            pointer-events: none;
+            border-radius: 28px;
+            border: 2px solid rgba(255, 217, 61, 0.0);
+            box-shadow:
+                0 0 0 rgba(255, 217, 61, 0.0),
+                0 0 0 rgba(255, 255, 255, 0.0);
+            background:
+                radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.0) 55%),
+                radial-gradient(circle at 70% 60%, rgba(255, 217, 61, 0.14) 0%, rgba(255, 217, 61, 0.0) 60%);
+            mix-blend-mode: screen;
+            transform: scale(0.98);
+            opacity: 0;
+            animation: honeyLoaderRingPulse 220ms ease-out 1;
+            will-change: transform, opacity;
+        }
+
+        @keyframes honeyLoaderRingPulse {
+            0% {
+                opacity: 0;
+                transform: scale(0.96);
+                border-color: rgba(255, 217, 61, 0.0);
+                box-shadow:
+                    0 0 0 rgba(255, 217, 61, 0.0),
+                    0 0 0 rgba(255, 255, 255, 0.0);
+            }
+            45% {
+                opacity: 1;
+                transform: scale(1.01);
+                border-color: rgba(255, 217, 61, 0.55);
+                box-shadow:
+                    0 0 26px rgba(255, 217, 61, 0.35),
+                    0 0 16px rgba(255, 255, 255, 0.20);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1.03);
+                border-color: rgba(255, 217, 61, 0.0);
+                box-shadow:
+                    0 0 0 rgba(255, 217, 61, 0.0),
+                    0 0 0 rgba(255, 255, 255, 0.0);
+            }
+        }
+
+        /* Loader exit: fade quickly and keep it from eating taps. */
+        #honeyLoader.honeyLoader--exit {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: scale(1.01) translateZ(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #honeyLoader {
+                transition: opacity 180ms ease, visibility 0s linear 180ms !important;
+            }
+            #honeyLoader.honeyLoader--pulse {
+                animation: none !important;
+            }
+            #honeyLoader.honeyLoader--pulse::after {
+                animation: none !important;
+                display: none !important;
+            }
+            #honeyLoader.honeyLoader--exit {
+                transform: none !important;
+            }
+        }
+    </style>
+
     <!-- Magical background effects -->
     <!-- Matrix Rain Loading Screen -->
     <div id="honeyLoader" style="
@@ -3309,7 +3413,11 @@
         gap: 10px;
         box-sizing: border-box;
         z-index: 10000;
-        transition: opacity 0.5s ease, visibility 0.5s ease;
+        opacity: 1;
+        visibility: visible;
+        will-change: opacity, transform;
+        transform: translateZ(0);
+        transition: opacity 320ms ease, transform 320ms ease, visibility 0s linear 320ms;
     ">
         <!-- Matrix Rain Canvas (behind all content) -->
         <canvas id="matrixCanvas" style="
@@ -3543,7 +3651,7 @@
             if (confirm(' Skip loading checks and enter app now?\n\nThis may cause issues if resources aren\'t ready. Continue anyway?')) {
                 const loader = document.getElementById('honeyLoader');
                 if (loader) {
-                    if (window.matrixRain) window.matrixRain.stop();
+                    // Keep Matrix rain running behind the menu; do not stop on bypass.
                     document.body.style.visibility = 'visible';
                     document.body.style.opacity = '1';
                     loader.style.pointerEvents = 'none';
@@ -15537,6 +15645,9 @@
                 
                 try {
                     const response = await fetch(url, {
+                        // Important: always send cookies for same-origin API calls.
+                        // Some WebViews can behave oddly with the fetch default.
+                        credentials: 'same-origin',
                         ...options,
                         signal: controller.signal
                     });
@@ -15544,11 +15655,28 @@
                     return response;
                 } catch (error) {
                     clearTimeout(timeoutId);
-                    if (error.name === 'AbortError') {
-                        console.error(`Fetch timeout after ${timeout}ms:`, url);
-                        throw new Error(`Request timeout: ${url}`);
+                    if (error && error.name === 'AbortError') {
+                        // Safari/iOS will frequently surface AbortError for time-boxed warmups.
+                        // Treat as a non-fatal timeout and avoid noisy console errors.
+                        try {
+                            console.warn(`Fetch timeout after ${timeout}ms:`, url);
+                        } catch (_e) {}
+                        const err = new Error(`Request timeout: ${url}`);
+                        err.name = 'TimeoutError';
+                        throw err;
                     }
                     throw error;
+                }
+            }
+
+            _isLikelySafari() {
+                // iOS browsers are all WebKit; Safari UA checks are imperfect but good enough
+                // for deciding whether to avoid HEAD warmups and other finicky behaviors.
+                try {
+                    const ua = String(navigator.userAgent || '');
+                    return /iP(hone|ad|od)/i.test(ua) || (/Safari/i.test(ua) && !/Chrome|CriOS|Edg|OPR/i.test(ua));
+                } catch (_e) {
+                    return false;
                 }
             }
             
@@ -15711,76 +15839,56 @@
                 }
                 console.log('DEBUG: Check 1 DONE, moving to Check 2...');
                 
-                // Check 2: User Avatar Detection (determine which avatar to load)
-                const check2 = this.addCheck('User Avatar', 'Detecting...', '');
-                this.updateProgress(20, '� Checking avatar...');
+                // Check 2: GLB Inventory (lightweight validation — count only)
+                // NOTE: This check is intentionally NOT tied to the current user's selected avatar.
+                // The actual user's avatar loads lazily on-demand; startup should never block on
+                // `/api/users/me/avatar` (slow on cold-start in iOS WebViews).
+                const check2 = this.addCheck('GLB Inventory', 'Counting...', '');
+                this.updateProgress(20, ' Counting GLB avatars...');
                 try {
-                    // Check authentication status first
-                    const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
-                    
-                    if (isAuthenticated) {
-                        // Authenticated user - check for server-fed avatar data FIRST
-                        if (window._serverFedAvatar) {
-                            // Use server-fed avatar data (from template - fastest, most reliable)
-                            const avatarData = window._serverFedAvatar;
-                            const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
-                            
-                            console.log(' Using server-fed avatar data:', avatarData);
-                            this.updateCheck(check2, avatarName + ' (GLB)', '', 30);
-                            this.updateProgress(30, ` Will load ${avatarName}`);
-                            console.log(' Avatar detected:', avatarName, '(GLB) from server feed');
-                        } else {
-                            // Fallback to API fetch if server data not available
-                            try {
-                                const avatarResponse = await this.fetchWithTimeout('/api/users/me/avatar', {
-                                    credentials: 'same-origin',
-                                    headers: { 'Accept': 'application/json' }
-                                }, 5000); // 5 second timeout
-                                
-                                if (avatarResponse.ok) {
-                                    const avatarData = await avatarResponse.json();
-                                    console.log(' Avatar API response:', avatarData);
-                                    
-                                    // API returns 'status' not 'success'
-                                    if (avatarData.status === 'success' && avatarData.avatar) {
-                                        // User has selected a custom avatar
-                                        const avatarName = avatarData.avatar.name || avatarData.avatar.avatar_id || 'Unknown Avatar';
-                                        const folderPath = (avatarData.avatar.folder_path || '').toLowerCase();
-                                        const useMascot = avatarData.use_mascot || false;
-                                        
-                                        // Determine format
-                                        let format = '(GLB)'; // GLB-only
-                                        
-                                        this.updateCheck(check2, avatarName + ' ' + format, '', 30);
-                                        this.updateProgress(30, ` Will load ${avatarName}`);
-                                        console.log(' Avatar detected:', avatarName, format, 'useMascot:', useMascot);
-                                    } else {
-                                        // User hasn't selected an avatar yet
-                                        this.updateCheck(check2, 'Default Mascot (GLB)', '', 30);
-                                        this.updateProgress(30, ' Default avatar ready');
-                                        console.log('ℹ Using default avatar - no avatar selected');
-                                    }
-                                } else {
-                                    this.updateCheck(check2, 'Default Mascot', '', 30);
-                                    this.updateProgress(30, ' Using default avatar');
-                                    console.warn(' Avatar API returned non-OK status:', avatarResponse.status);
-                                }
-                            } catch (fetchError) {
-                                console.warn('Avatar fetch failed:', fetchError);
-                                this.updateCheck(check2, 'Default Mascot', '', 30);
-                                this.updateProgress(30, ' Using fallback avatar');
-                            }
-                        }
-                    } else {
-                        // Guest user - always use default MascotBee
-                        this.updateCheck(check2, 'Default Mascot (GLB)', '', 30);
-                        this.updateProgress(30, ' Guest using default');
-                        console.log(' Guest user detected');
+                    // Best effort: prefer server-fed preload results if present
+                    const expectedCount = 39; // single source of truth is avatar_catalog.py (39 total)
+                    let count = null;
+
+                    if (window.avatarPreloadResults && Number.isFinite(window.avatarPreloadResults.totalAvatars)) {
+                        count = Number(window.avatarPreloadResults.totalAvatars);
                     }
-                } catch (error) {
-                    console.warn('Avatar detection failed:', error);
-                    this.updateCheck(check2, 'Default Mascot', '', 30);
-                    this.updateProgress(30, ' Using fallback');
+
+                    // Fallback: count unique GLB URLs from /api/avatars (fast and cacheable)
+                    if (!Number.isFinite(count)) {
+                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
+                            headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+                        }, 9000);
+
+                        if (catalogRes.ok) {
+                            const payload = await catalogRes.json();
+                            const avatars = Array.isArray(payload)
+                                ? payload
+                                : (Array.isArray(payload?.avatars) ? payload.avatars : (Array.isArray(payload?.data) ? payload.data : []));
+
+                            const isLikelyGlbUrl = (u) => (typeof u === 'string') && /(\.glb|\.gltf)(\?.*)?$/i.test(u);
+                            const seen = new Set();
+                            for (const a of avatars) {
+                                const glb = a?.urls?.glb || a?.glb || null;
+                                if (!isLikelyGlbUrl(glb)) continue;
+                                seen.add(glb);
+                            }
+                            count = seen.size;
+                        }
+                    }
+
+                    const safeCount = Number.isFinite(count) ? count : null;
+                    const label = (safeCount === null)
+                        ? 'Unknown'
+                        : `${safeCount}/${expectedCount}`;
+
+                    const ok = (safeCount !== null) && (safeCount >= expectedCount);
+                    this.updateCheck(check2, `GLB Avatars: ${label}`, ok ? '' : 'ℹ', 30);
+                    this.updateProgress(30, ok ? ' GLB inventory present' : ' GLB inventory count incomplete');
+                } catch (e) {
+                    console.warn('GLB inventory check failed:', e);
+                    this.updateCheck(check2, 'GLB Avatars: Unknown', 'ℹ', 30);
+                    this.updateProgress(30, ' GLB inventory check skipped');
                 }
 
                 // Check 2.5: Avatar Preload + Verification (thumbnail + model existence)
@@ -16043,22 +16151,56 @@
                 const maxAvatars = isAuthenticated ? 2 : 4;
                 const warm = async (url, timeoutMs) => {
                     if (!url) return { ok: false };
-                    // Prefer a HEAD check first (cheap). Some servers don't support HEAD well;
-                    // in that case, fall back to a tiny GET.
-                    try {
-                        const head = await this.fetchWithTimeout(url, { method: 'HEAD', credentials: 'same-origin' }, timeoutMs);
-                        if (head && head.ok) return { ok: true, method: 'HEAD' };
-                    } catch (_e) {
-                        // continue to GET fallback
+
+                    const isSafari = this._isLikelySafari();
+                    const u = String(url);
+                    const isModel = /(\.glb|\.gltf)(\?.*)?$/i.test(u);
+                    const isImage = /(\.png|\.jpg|\.jpeg|\.webp|\.gif)(\?.*)?$/i.test(u);
+
+                    // Safari/iOS is particularly flaky with HEAD + some static hosts.
+                    // For images, use an <img> preload (no fetch noise). For models, use a
+                    // bounded Range GET to warm the connection without downloading the whole file.
+                    if (isSafari && isImage) {
+                        return await new Promise((resolve) => {
+                            try {
+                                const img = new Image();
+                                let settled = false;
+                                const done = (ok) => {
+                                    if (settled) return;
+                                    settled = true;
+                                    try { img.onload = null; img.onerror = null; } catch (_e) {}
+                                    resolve({ ok: !!ok, method: 'IMG' });
+                                };
+                                const t = setTimeout(() => { try { clearTimeout(t); } catch (_e) {} done(false); }, timeoutMs);
+                                img.onload = () => { try { clearTimeout(t); } catch (_e) {} done(true); };
+                                img.onerror = () => { try { clearTimeout(t); } catch (_e) {} done(false); };
+                                img.src = u;
+                            } catch (_e2) {
+                                resolve({ ok: false, method: 'IMG' });
+                            }
+                        });
                     }
+
+                    // Prefer a HEAD check first (cheap) unless Safari.
+                    if (!isSafari) {
+                        try {
+                            const head = await this.fetchWithTimeout(u, { method: 'HEAD', credentials: 'same-origin' }, timeoutMs);
+                            if (head && head.ok) return { ok: true, method: 'HEAD' };
+                        } catch (_e3) {
+                            // continue to GET fallback
+                        }
+                    }
+
+                    // GET fallback: Range for models, tiny range for other assets.
                     try {
-                        const get = await this.fetchWithTimeout(url, {
+                        const range = isModel ? 'bytes=0-8191' : 'bytes=0-2047';
+                        const get = await this.fetchWithTimeout(u, {
                             method: 'GET',
                             credentials: 'same-origin',
-                            headers: { 'Range': 'bytes=0-2047' }
+                            headers: { 'Range': range }
                         }, timeoutMs);
                         return { ok: !!(get && (get.ok || get.status === 206)), method: 'RANGE' };
-                    } catch (_e2) {
+                    } catch (_e4) {
                         return { ok: false };
                     }
                 };
@@ -16069,27 +16211,28 @@
                 urlsToWarm.push('/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png');
 
                 if (isAuthenticated) {
-                    // Prefer server-fed avatar (fast) else fetch the user avatar.
-                    let avatar = window._serverFedAvatar || null;
-                    if (!avatar) {
-                        try {
-                            const res = await this.fetchWithTimeout('/api/users/me/avatar', {
-                                credentials: 'same-origin',
-                                headers: { 'Accept': 'application/json' }
-                            }, 4500);
-                            if (res && res.ok) {
-                                const data = await res.json();
-                                avatar = (data && data.avatar) ? data.avatar : null;
+                    // For system checks, do NOT fetch the user's avatar. Cold-start DB/API latency
+                    // in iOS WebViews can cause noisy timeouts here.
+                    // Warm only safe static assets + a couple catalog thumbnails to prime caches.
+                    try {
+                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        }, 4500);
+                        if (catalogRes && catalogRes.ok) {
+                            const catalog = await catalogRes.json();
+                            const avatars = Array.isArray(catalog)
+                                ? catalog
+                                : ((catalog && Array.isArray(catalog.avatars)) ? catalog.avatars : []);
+                            for (const a of avatars.slice(0, maxAvatars)) {
+                                if (a && a.urls) {
+                                    if (a.urls.thumbnail) urlsToWarm.push(a.urls.thumbnail);
+                                    if (a.urls.preview) urlsToWarm.push(a.urls.preview);
+                                }
                             }
-                        } catch (_e) {
-                            avatar = null;
                         }
-                    }
-
-                    if (avatar && avatar.urls) {
-                        if (avatar.urls.thumbnail) urlsToWarm.push(avatar.urls.thumbnail);
-                        if (avatar.urls.glb) urlsToWarm.push(avatar.urls.glb);
-                        if (avatar.urls.model_obj) urlsToWarm.push(avatar.urls.model_obj);
+                    } catch (_e) {
+                        // ignore
                     }
                 } else {
                     // Guest: warm a handful of carousel thumbnails so the rotating preview is instant.
@@ -16248,28 +16391,79 @@
                 btn.addEventListener('click', () => this.dismissLoader());
             }
 
+            _dispatchHoneyLoaderFinishedOnce() {
+                try {
+                    if (window.__honeyLoaderFinishedDispatched) return;
+                    window.__honeyLoaderFinishedDispatched = true;
+                    document.dispatchEvent(new Event('honeyLoaderFinished'));
+                } catch (_e) {}
+            }
+
             dismissLoader() {
                 const loader = document.getElementById('honeyLoader');
                 if (!loader) return;
 
                 if (this.loaderDismissed) return;
+
+                // Guard: do not transition to the main menu until we're at least 90%.
+                // This prevents early fade-outs if some async steps are still catching up.
+                try {
+                    const p = Number(this.progress);
+                    if (Number.isFinite(p) && p < 90) {
+                        if (window.BEESMART_DEBUG) console.log(` Loader dismiss deferred until >=90% (currently ${p}%)`);
+                        // We'll dismiss once progress reaches 90 via a waiter in finishLoading.
+                        return;
+                    }
+                } catch (_e) {}
+
                 this.loaderDismissed = true;
-                
-                // Stop Matrix rain animation
-                if (window.matrixRain) {
-                    window.matrixRain.stop();
-                    console.log(' Matrix rain stopped');
-                }
+                // Mark globally too, so any other code paths (failsafes/timeouts)
+                // don't try to "finish" a second time.
+                try { window.__honeyLoaderDismissed = true; } catch (_e) {}
+                // Requirement: Matrix Rain runs during all system checks/loading,
+                // and stops JUST BEFORE the main menu becomes visible.
+                // We stop it in `finalize()` (end of loader exit) so it doesn't
+                // disappear early while the loader is still on-screen.
                 
                 // Show the body content
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = '1';
                 
-                // Allow immediate click-through to the page beneath
+                // Smooth, Safari-safe exit animation. Use a class so we don't fight inline styles.
+                // Also stop pointer events immediately so interaction feels instant.
                 loader.style.pointerEvents = 'none';
-                loader.style.opacity = '0';
-                loader.style.visibility = 'hidden';
-                setTimeout(() => { loader.style.display = 'none'; }, 350);
+
+                // Stop Matrix Rain right as the transition starts (fade-out begins).
+                // This is the "just before page loads" boundary.
+                try {
+                    window.__matrixRainStoppedForMain = true;
+                    if (window.matrixRain && typeof window.matrixRain.stop === 'function') {
+                        window.matrixRain.stop();
+                    }
+                } catch (_e) {}
+
+                // Small celebratory pulse before the main menu appears.
+                // (Skip when reduced-motion is enabled.)
+                try {
+                    const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+                    if (!reduceMotion) {
+                        loader.classList.add('honeyLoader--pulse');
+                        setTimeout(() => {
+                            try { loader.classList.remove('honeyLoader--pulse'); } catch (_e) {}
+                        }, 220);
+                    }
+                } catch (_e) {}
+                try { loader.classList.add('honeyLoader--exit'); } catch (_e) {}
+
+                const finalize = () => {
+                    try { loader.removeEventListener('transitionend', finalize); } catch (_e) {}
+                    try { loader.style.display = 'none'; } catch (_e2) {}
+                    this._dispatchHoneyLoaderFinishedOnce();
+                };
+
+                // Prefer transitionend, but keep a hard cap so we never get stuck.
+                try { loader.addEventListener('transitionend', finalize, { once: true }); } catch (_e) {}
+                setTimeout(finalize, 520);
             }
 
             async finishLoading() {
@@ -16300,6 +16494,22 @@
                 } catch (gateErr) {
                     console.warn(' Avatar gate wait failed:', gateErr);
                 }
+
+                // Ensure we never transition before 90%.
+                // If some steps are slow, we keep the overlay until progress catches up,
+                // but we also include a soft cap so we don't block forever.
+                try {
+                    const minAutoDismissPct = 90;
+                    const waitStart = Date.now();
+                    const maxWaitMs = 4500;
+                    while (Number(this.progress) < minAutoDismissPct && (Date.now() - waitStart) < maxWaitMs) {
+                        await this.delay(120);
+                    }
+                    if (Number(this.progress) < minAutoDismissPct) {
+                        // If we couldn't reach 90 quickly, push it up so UX isn't stuck.
+                        this.updateProgress(minAutoDismissPct, ' Finalizing...');
+                    }
+                } catch (_e) {}
                 
                 this.updateProgress(100, ' Ready to spell!');
 
@@ -16307,6 +16517,7 @@
                 // Keep the button as a fallback affordance, but dismiss automatically.
                 this.presentTapToStart();
                 console.log(' All checks complete - auto-entering main page');
+                // Only dismiss once we're safely past the 90% minimum threshold.
                 setTimeout(() => this.dismissLoader(), 200);
                 
                 //  NOW safe to initialize word count (after loading completes)
@@ -16332,8 +16543,9 @@
                 }
                 
                 //  Dispatch honeyLoaderFinished event for avatar loader
+                // (Handled by dismissLoader/emergency paths; keep it one-shot.)
                 console.log(' Dispatching honeyLoaderFinished event');
-                document.dispatchEvent(new Event('honeyLoaderFinished'));
+                this._dispatchHoneyLoaderFinishedOnce();
             }
         }
         
@@ -16362,23 +16574,70 @@
                 loader.style.visibility = 'visible';
             }
             
-            // Initialize Matrix Rain Effect (skip on mobile/iOS/PWA/reduced-motion).
-            (function(){
-                const disableBgFx = !!(window.__beesmartDisableBackgroundAnimations || document.documentElement.classList.contains('beesmart-no-bg-anim'));
-                const canvas = document.getElementById('matrixCanvas');
-                if (disableBgFx) {
-                    if (canvas) canvas.style.display = 'none';
-                    if (window.BEESMART_DEBUG) console.log(' Matrix rain disabled (perf mode)');
-                    return;
-                }
-                if (typeof MatrixRain !== 'undefined') {
-                    window.matrixRain = new MatrixRain('matrixCanvas');
-                    window.matrixRain.start();
+            // Initialize Matrix Rain Effect (reliable on load/reload + BFCache restore).
+            // Respect explicit perf/reduced-motion flags, but otherwise always start.
+            window.ensureMatrixRainRunning = function ensureMatrixRainRunning() {
+                try {
+                    // If we've intentionally stopped Matrix Rain for the main menu,
+                    // don't restart it (including BFCache/pageshow restores).
+                    if (window.__matrixRainStoppedForMain) return false;
+
+                    const disableBgFx = !!(
+                        window.__beesmartDisableBackgroundAnimations ||
+                        document.documentElement.classList.contains('beesmart-no-bg-anim')
+                    );
+                    const canvas = document.getElementById('matrixCanvas');
+
+                    if (disableBgFx) {
+                        if (canvas) canvas.style.display = 'none';
+                        if (window.BEESMART_DEBUG) console.log(' Matrix rain disabled (perf mode)');
+                        return false;
+                    }
+
+                    if (!canvas) {
+                        if (window.BEESMART_DEBUG) console.warn(' Matrix rain canvas missing');
+                        return false;
+                    }
+
+                    // Ensure visible in case a prior run hid it.
+                    canvas.style.display = 'block';
+
+                    if (typeof MatrixRain === 'undefined') {
+                        if (window.BEESMART_DEBUG) console.warn(' MatrixRain not loaded, skipping animation');
+                        return false;
+                    }
+
+                    // If an instance exists, try to (re)start it; otherwise create a new one.
+                    if (!window.matrixRain) {
+                        window.matrixRain = new MatrixRain('matrixCanvas');
+                    }
+                    if (typeof window.matrixRain.start === 'function') {
+                        window.matrixRain.start();
+                    }
                     if (window.BEESMART_DEBUG) console.log(' Matrix rain animation started');
-                } else {
-                    if (window.BEESMART_DEBUG) console.warn(' MatrixRain not loaded, skipping animation');
+                    return true;
+                } catch (e) {
+                    console.warn(' ensureMatrixRainRunning error:', e);
+                    return false;
                 }
-            })();
+            };
+
+            // Start immediately on initial load.
+            try { window.ensureMatrixRainRunning(); } catch (_e) {}
+
+            // Also restart on BFCache restore (common on iOS Safari back/forward).
+            window.addEventListener('pageshow', (evt) => {
+                try {
+                    if (window.__matrixRainStoppedForMain || window.__honeyLoaderDismissed) {
+                        // If we've already transitioned to the main menu, keep it stopped.
+                        return;
+                    }
+                    if (evt && evt.persisted) {
+                        if (window.BEESMART_DEBUG) console.log(' pageshow persisted — restarting Matrix rain');
+                    }
+                    window.ensureMatrixRainRunning();
+                } catch (_e) {}
+            });
             
             // Initialize loading system
             window.loadingSystem = new LoadingSystem();
@@ -16407,7 +16666,7 @@
                     } else {
                         const loader = document.getElementById('honeyLoader');
                         if (loader) {
-                            if (window.matrixRain) window.matrixRain.stop();
+                            // Keep Matrix rain running behind the menu; do not stop on timeout.
                             document.body.style.visibility = 'visible';
                             document.body.style.opacity = '1';
                             document.body.style.pointerEvents = 'auto';
@@ -16462,7 +16721,7 @@
                                 console.warn('🚨 FAILSAFE: Force hiding stuck loader');
                                 loader.style.display = 'none';
                                 loader.style.pointerEvents = 'none';
-                                if (window.matrixRain) window.matrixRain.stop();
+                                // Keep Matrix rain running behind the menu; do not stop on failsafe.
                                 try {
                                     if (!window.__honeyLoaderFinishedDispatched) {
                                         window.__honeyLoaderFinishedDispatched = true;

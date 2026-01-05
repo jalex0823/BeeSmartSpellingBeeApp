@@ -178,6 +178,12 @@ if ('speechSynthesis' in window) {
         align-items: flex-start;
         gap: 0.3rem;
     }
+
+    /* We keep the primary exit button at the bottom of the quiz UI.
+       Hide the legacy top-right header exit button for a cleaner summary/exit experience. */
+    .quiz-header .exit-button {
+        display: none !important;
+    }
     
     .progress-percentage {
         font-size: 1.1rem;
@@ -3104,6 +3110,20 @@ if ('speechSynthesis' in window) {
     }
 </style>
 
+{# Load heavy 3D/avatar scripts only on pages that need them (quiz does). #}
+{% block three_js %}
+    <!-- Three.js for 3D GLB Avatars -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTF/GLB loader for GLB avatars -->
+    <script src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
+    <!-- SmartyBee3D class for mascot rendering -->
+    <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v={{ timestamp }}"></script>
+    <!-- 3D Badge Renderer for GLB rank badges -->
+    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
+    <!-- User Avatar System -->
+    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+{% endblock %}
+
 <!-- Session/wordbank status banner and sample loader -->
 <div id="quiz-status-banner" class="hidden" style="
         margin: 0.5rem auto 1rem; max-width: 700px; text-align: center;
@@ -3231,10 +3251,6 @@ async function loadSampleWords() {
             <div class="progress-section">
                 <span id="progressText">Question 1 of 10</span>
             </div>
-            <a href="/" onclick="confirmBackToMenu(event)" class="exit-button" role="button" aria-label="Exit Quiz - Back to Main Menu">
-                <span class="exit-icon">×</span>
-                <span>Exit Quiz</span>
-            </a>
         </div>
 
         <div class="score-display">
@@ -9662,15 +9678,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             enableInteraction: true
         });
         
-        const avatarId = window.userAvatarLoader.getAvatarId();
-        debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
+    // IMPORTANT: grab the avatar id AFTER init() so we don't use a stale default
+    // (MascotBee) for logs/effects when the registered avatar is actually different.
+    const avatarId = window.userAvatarLoader.getAvatarId();
+    debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
         
         // Render into mascot container using userAvatarLoader
         // CRITICAL FIX: Pass null as avatarId (first param) to use user's registered avatar
         // Second param is the containerId
         await window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
         
-        debugLog(`✨ 3D mascot successfully initialized with avatar: ${avatarId}`);
+    // Re-read post-render to keep effects/labels aligned with what actually loaded.
+    const resolvedAvatarId = window.userAvatarLoader.getAvatarId();
+    debugLog(`✨ 3D mascot successfully initialized with avatar: ${resolvedAvatarId}`);
         
         // Add click handler for themed animation
         const mascotContainer = document.getElementById('mascotBee3D');
@@ -9678,7 +9698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mascotContainer.style.cursor = 'pointer';
             mascotContainer.addEventListener('click', () => {
                 debugLog('🐝 Quiz mascot clicked - playing themed animation');
-                playThemedAvatarEffect(avatarId, mascotContainer);
+                playThemedAvatarEffect(resolvedAvatarId, mascotContainer);
             });
         }
     } catch (error) {

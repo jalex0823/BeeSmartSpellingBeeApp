@@ -772,19 +772,14 @@
         };
     </script>
     
-    <!-- Three.js for 3D GLB Avatars -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- GLTF/GLB loader for GLB avatars across all pages (quiz, results, etc.) -->
-    <script src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
-    <!-- SmartyBee3D class for 3D avatar rendering -->
-    <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v={{ timestamp }}"></script>
-    
-    <!-- 3D Badge Renderer for GLB rank badges -->
-    <!-- Static JS with cache-busting timestamp -->
-    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
-    {% block pre_avatar_loader %}{% endblock %}
-    <!-- User Avatar System (single global include) -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+        {#
+            Heavy 3D/avatar scripts:
+            Only load these on pages that actually render 3D content.
+            This cuts down noisy console/network errors and speeds initial load.
+
+            Templates that need 3D should override block `three_js`.
+        #}
+        {% block three_js %}{% endblock %}
     <!-- Bee Swarm Animation for Quiz Page -->
     <script src="{{ url_for('static', filename='js/bee-swarm-animation.js') }}?v={{ timestamp }}"></script>
     <!-- Global celebrations (persona confetti + stinger) -->
