@@ -3,14 +3,24 @@
 # Updated: 2025-12-03 - Fixed word_lists.html div structure
 import sys
 import io
+import os
 
 # Force UTF-8 encoding for Windows console output
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    # Avoid wrapping pytest's capture streams (can break collection with
+    # "I/O operation on closed file" when pytest swaps/tears down streams).
+    _running_pytest = ('PYTEST_CURRENT_TEST' in os.environ) or ('pytest' in sys.modules)
+    if not _running_pytest:
+        try:
+            if getattr(sys.stdout, 'buffer', None) is not None and not getattr(sys.stdout, 'closed', False):
+                sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            if getattr(sys.stderr, 'buffer', None) is not None and not getattr(sys.stderr, 'closed', False):
+                sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except Exception:
+            # Best-effort: never fail app import due to console encoding tweaks.
+            pass
 
 import csv
-import os
 import shutil
 import re
 import json

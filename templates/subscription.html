@@ -861,6 +861,9 @@
 
         async function restorePurchases() {
             try {
+                // Policy: Restore Purchases
+                // Allow the native restore prompt to run pre-login (Apple may show sign-in),
+                // but require BeeSmart login to APPLY membership to an account.
                 // Apple-friendly behavior:
                 // Allow initiating the platform restore prompt even before BeeSmart login.
                 // However, we only APPLY subscription entitlements after the user signs in.
@@ -934,11 +937,15 @@
                         // Guests may see a successful reconcile-only response. That's fine.
                         // If not authenticated, explain the next step clearly.
                         if (!window.IS_REAL_AUTH) {
-                            showRestoreDialog(
+                            await showRestoreDialog(
                                 'Restore Purchases',
                                 'Restore completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
                                 true
                             );
+                            try {
+                                const returnTo = window.location.pathname + window.location.search;
+                                window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                            } catch (e) {}
                             return;
                         }
 
@@ -1035,6 +1042,10 @@
                         'Restore completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
                         true
                     );
+                    try {
+                        const returnTo = window.location.pathname + window.location.search;
+                        window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                    } catch (e) {}
                     return;
                 }
 
