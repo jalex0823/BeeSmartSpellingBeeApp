@@ -147,8 +147,43 @@ On BeeSmart logout, we clear:
 - Server logout clears IAP-related session/cookies:
   - `AjaSpellBApp.py` → `logout()`
 
+## iOS container updates (Xcode / App Store Connect readiness)
+
+In addition to the web+server fixes above, we updated the iOS Capacitor container so Restore is more reliable and continuity is better across reinstalls.
+
+### 1) Stable `installId` provided by native (for reinstall continuity)
+
+The native plugin now exposes `getInstallId()` backed by `UserDefaults` (key: `beesmart_install_id_v1`).
+
+- This lets the web bridge attach a stable per-install identifier when reconciling restores.
+- It reduces cases where a reinstall appears like a “new, unknown” device to the restore flow.
+
+Implemented in:
+
+- `mobile/ios/App/App/BeeSmartIAPPlugin.swift`
+- `mobile/ios/App/App/BeeSmartIAPPlugin.m` (Capacitor export)
+
+### 2) Restore is tolerant of StoreKit errors (no hard failure UX)
+
+`restorePurchases()` now returns a structured result even when StoreKit throws, instead of rejecting the call.
+
+- The web layer can still proceed with server reconcile and show honest guidance (e.g., “restore completed on this device; sign in to apply”) rather than a generic failure.
+- This improves perceived reliability in real-world conditions (and is more Apple-friendly than a hard “Restore failed” for transient StoreKit issues).
+
+Implemented in:
+
+- `mobile/ios/App/App/BeeSmartIAPPlugin.swift`
+
 ## Verification
 
 - `FLASK_ENV=testing python3 test_v15_complete_validation.py` → **PASS (12/12)**
 
+- iOS build validation:
+  - `App.xcworkspace` scheme `App` → **BUILD SUCCEEDED**
+
 > Note: running validation without `FLASK_ENV=testing` may fail if it attempts to connect to the production DigitalOcean Postgres DB from a network that blocks it.
+
+## Repo state
+
+- iOS container changes committed and pushed:
+  - `8ca0c0c` — iOS IAP: add installId + tolerant restore
