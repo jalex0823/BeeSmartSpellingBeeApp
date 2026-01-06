@@ -1,11 +1,12 @@
 /* BeeSmart Spelling App - Simple Service Worker for PWA baseline */
-// Bump this to force clients to refresh cached assets after important fixes
-const CACHE_VERSION = 'beesmart-v1.4.3-v39-2026-01-02-registration-free-avatars-and-avatar-preload-gate';
+// Bump this to force clients to refresh cached assets after important fixes.
+// 2026-01-05: iOS Connect fixes (loader/system checks, registered avatar stability, restore hang).
+// IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
+const CACHE_VERSION = 'beesmart-v1.4.3-v39-2026-01-05-ios-connect-loader-avatar-restore';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
 const CORE_ASSETS = [
-  '/',
   '/static/BeeSmartCrestLogo1.png',
   '/static/css/BeeSmart.css',
   '/static/css/ui-fixes.css',
@@ -122,7 +123,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       // Force a network refresh for HTML navigations; fall back to cached home when offline.
       fetch(new Request(request.url, { credentials: 'same-origin', cache: 'reload' }))
-        .catch(() => caches.match('/'))
+        .catch(() => {
+          // Offline fallback (do not rely on cached '/'; auth pages can differ per user).
+          return new Response(
+            '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title></head><body style="font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding:16px;"><h2>BeeSmart is offline</h2><p>Please check your connection and try again.</p></body></html>',
+            { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
+        })
     );
     return;
   }
