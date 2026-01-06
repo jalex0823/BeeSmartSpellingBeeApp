@@ -4444,6 +4444,13 @@
                 window.avatarControlsReady = false;
 
                 (function(){
+                    // Prefer server-rendered avatar data to avoid post-login fetch hangs in iOS WebViews.
+                    // This page is rendered with an authenticated session, so we can embed the GLB URL.
+                    const SERVER_AVATAR = {{ current_user.get_avatar_data()|tojson }};
+                    const SERVER_GLB = (SERVER_AVATAR && SERVER_AVATAR.urls && SERVER_AVATAR.urls.glb)
+                        ? SERVER_AVATAR.urls.glb
+                        : '/static/assets/avatars/glb_files/MascotBee.glb';
+
                     const start = () => {
                         try {
                             if (window.avatarControlsInstance) return; // idempotent
@@ -4453,7 +4460,9 @@
                             window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
                                 width: 400,
                                 height: 400,
-                                fetchFromServer: true,  // Auto-fetch user's registered avatar
+                                // Use server-provided GLB path (stable) and skip the extra avatar API call.
+                                fetchFromServer: false,
+                                modelPath: SERVER_GLB,
                                 brighterLighting: true,  // Brighter lighting for registered users
                                 autoRotate: false,
                                 enableInteraction: true,

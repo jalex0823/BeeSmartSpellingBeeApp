@@ -11,8 +11,11 @@ class MatrixRain {
         // this effect is intentionally enabled for iOS Safari and iOS app WebViews.
         try {
             const de = document.documentElement;
-            const disabled = !!(window.__beesmartDisableSweepOverlays || window.__beesmartDisableBackgroundAnimations)
-                || (de && de.classList && (de.classList.contains('beesmart-no-sweep-overlays') || de.classList.contains('beesmart-no-bg-anim')))
+            // NOTE: "sweep overlays" are a separate effect family.
+            // Disabling sweep overlays MUST NOT disable Matrix Rain; we want Matrix Rain
+            // to keep running during the loader even when sweep overlays are off.
+            const disabled = !!(window.__beesmartDisableBackgroundAnimations)
+                || (de && de.classList && de.classList.contains('beesmart-no-bg-anim'))
                 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
             if (disabled) {
                 this.disabled = true;

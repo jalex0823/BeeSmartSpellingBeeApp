@@ -88,7 +88,12 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/api/answer' ||
     url.pathname === '/api/pronounce' ||
     url.pathname === '/api/wordbank' ||
-    url.pathname.startsWith('/api/wordbank/')
+    url.pathname.startsWith('/api/wordbank/') ||
+    // ✅ Avatar/session-sensitive APIs (auth-dependent): bypass SW to avoid stale/offline fallbacks.
+    url.pathname === '/api/users/me/avatar' ||
+    url.pathname === '/api/avatars' ||
+    // ✅ IAP flows: allow direct network so restore/reconcile isn't affected by SW caching.
+    url.pathname.startsWith('/api/iap/')
   ) {
     return;
   }
