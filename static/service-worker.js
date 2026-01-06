@@ -2,7 +2,7 @@
 // Bump this to force clients to refresh cached assets after important fixes.
 // 2026-01-05: iOS Connect fixes (loader/system checks, registered avatar stability, restore hang).
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
-const CACHE_VERSION = 'beesmart-v1.4.3-v39-2026-01-05-ios-connect-loader-avatar-restore';
+const CACHE_VERSION = 'beesmart-v1.4.5-v39-2026-01-06-avatar-stage-fx-gated';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed

@@ -4285,21 +4285,101 @@ def systems_diagnostic():
             diagnostic["tests"]["wordlists"] = {"status": "failed", "error": str(e)}
             failed_tests.append("wordlists")
 
-        #  Test 4: Avatar System
+        #  Test 4: Avatar System (rendering-path specific)
         diagnostic["tests"]["avatars"] = {"status": "testing"}
         try:
-            # Test avatar catalog
             from avatar_catalog import AVATAR_CATALOG
-            
-            # Test database avatars
-            db_avatars = Avatar.query.filter_by(is_active=True).limit(10).all()
-            
+
+            # Determine which render path applies.
+            # - Guests: carousel GLB preview
+            # - Registered users: selected avatar GLB + personal FX config
+            is_registered = bool(getattr(current_user, 'is_authenticated', False)) and getattr(current_user, 'role', None) not in (None, 'guest')
+            mode = 'registered' if is_registered else 'guest'
+
+            glb_dir = os.path.join(app.root_path, 'static', 'assets', 'avatars', 'glb_files')
+            glb_dir_exists = os.path.isdir(glb_dir)
+
+            stage_fx_cfg_path = os.path.join(app.root_path, 'static', 'config', 'avatar_fx.json')
+            stage_fx_cfg_exists = os.path.exists(stage_fx_cfg_path)
+
+            # Minimal DB sample for reporting (not a rendering check).
+            db_avatars = Avatar.query.filter_by(is_active=True).limit(3).all()
+
+            avatar_test = {
+                "mode": mode,
+                "catalog_avatars": len(AVATAR_CATALOG),
+                "glb_folder_exists": glb_dir_exists,
+                "sample_avatars": [{"id": av.slug, "name": av.name} for av in db_avatars],
+            }
+
+            if mode == 'guest':
+                # Carousel: verify representative GLBs exist on disk.
+                required = ['MascotBee.glb', 'ExplorerBee.glb']
+                present = []
+                missing = []
+                if glb_dir_exists:
+                    for fn in required:
+                        if os.path.exists(os.path.join(glb_dir, fn)):
+                            present.append(fn)
+                        else:
+                            missing.append(fn)
+                else:
+                    missing = required[:]
+
+                avatar_test.update({
+                    "carousel_glb_required": required,
+                    "carousel_glb_present": present,
+                    "carousel_glb_missing": missing,
+                })
+
+            else:
+                # Registered: verify selected avatar GLB is resolvable + stage FX config contains mapping.
+                avatar_data = None
+                try:
+                    if hasattr(current_user, 'get_avatar_data'):
+                        avatar_data = current_user.get_avatar_data()
+                except Exception:
+                    avatar_data = None
+
+                avatar_name = None
+                avatar_glb_url = None
+                if isinstance(avatar_data, dict):
+                    avatar_name = avatar_data.get('name')
+                    urls = avatar_data.get('urls') or {}
+                    avatar_glb_url = urls.get('glb')
+
+                glb_filename = None
+                glb_exists = None
+                if isinstance(avatar_glb_url, str) and avatar_glb_url:
+                    # Only resolve file existence for local static assets.
+                    marker = '/static/assets/avatars/glb_files/'
+                    if marker in avatar_glb_url:
+                        glb_filename = avatar_glb_url.split(marker, 1)[-1].split('?', 1)[0]
+                        glb_exists = os.path.exists(os.path.join(glb_dir, glb_filename)) if glb_dir_exists else False
+
+                fx_mapped = None
+                if stage_fx_cfg_exists and avatar_name:
+                    try:
+                        with open(stage_fx_cfg_path, 'r', encoding='utf-8') as f:
+                            cfg = json.load(f)
+                        avatar_map = cfg.get('avatars') if isinstance(cfg, dict) else None
+                        if isinstance(avatar_map, dict):
+                            fx_mapped = (avatar_name in avatar_map)
+                    except Exception:
+                        fx_mapped = None
+
+                avatar_test.update({
+                    "selected_avatar_name": avatar_name,
+                    "selected_avatar_glb_url": avatar_glb_url,
+                    "selected_avatar_glb_filename": glb_filename,
+                    "selected_avatar_glb_exists": glb_exists,
+                    "stage_fx_config_exists": stage_fx_cfg_exists,
+                    "stage_fx_mapped": fx_mapped,
+                })
+
             diagnostic["tests"]["avatars"] = {
                 "status": "success",
-                "catalog_avatars": len(AVATAR_CATALOG),
-                "database_avatars": len(db_avatars),
-                "api_endpoint": "/api/avatars accessible",
-                "sample_avatars": [{"id": av.slug, "name": av.name} for av in db_avatars[:3]]
+                **avatar_test,
             }
         except Exception as e:
             diagnostic["tests"]["avatars"] = {"status": "failed", "error": str(e)}

@@ -1,0 +1,126 @@
+/* BeeSmart - Avatar Stage FX (config-driven) */
+
+.avatar-stage {
+  position: relative;
+  /* Layout-neutral wrapper:
+     - shrink-wrap to the GLB container size
+     - avoid flexbox/stretch quirks that can subtly shift the 3D canvas on iOS
+     This ensures ONLY the background changes, not the avatar position. */
+  display: inline-block;
+  line-height: 0;
+}
+
+/* Registered avatar WebGL container sizing (mobile-safe)
+   Keep square aspect and prevent overflow on narrow screens. */
+.avatar-controls-3d {
+  width: min(400px, 82vw);
+  height: min(400px, 82vw);
+  margin: 0 auto;
+  display: block;
+}
+
+.avatar-stage .stage-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 999px;
+  z-index: 0;
+}
+
+.avatar-stage .stage-glb {
+  position: relative;
+  z-index: 1;
+  display: block;
+  /* Mobile ergonomics: reduce tap delay on supporting browsers (harmless elsewhere). */
+  touch-action: manipulation;
+}
+
+.fx-tint {
+  position: absolute;
+  inset: -12px;
+  border-radius: 999px;
+  opacity: 0;
+  animation: fxTint 900ms ease-out;
+  filter: blur(0.5px);
+}
+
+.fx-scan {
+  position: absolute;
+  inset: -12px;
+  border-radius: 999px;
+  opacity: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255,255,255,0.0) 0px,
+    rgba(255,255,255,0.0) 8px,
+    rgba(255,255,255,0.18) 9px
+  );
+  mix-blend-mode: screen;
+  animation: fxScan 900ms ease-out;
+}
+
+.fx-particle {
+  position: absolute;
+  opacity: 0;
+  border-radius: 4px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.35));
+  transform: translate3d(0, 0, 0);
+  animation-duration: 900ms;
+  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation-fill-mode: both;
+}
+
+/* iOS/Safari + accessibility: honor reduced motion.
+   Keep the avatar layout unchanged; only suppress background animation layers. */
+@media (prefers-reduced-motion: reduce) {
+  .avatar-stage .stage-fx {
+    display: none !important;
+  }
+}
+
+@keyframes fxTint {
+  0%   { opacity: 0; transform: scale(0.98); }
+  20%  { opacity: 0.18; transform: scale(1.03); }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+
+@keyframes fxScan {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  25%  { opacity: 0.20; }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+
+@keyframes fxBurst {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.85);
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--fx-dx, 0px), var(--fx-dy, 0px), 0) rotate(var(--fx-rot, 0deg)) scale(0.35);
+  }
+}
+
+@keyframes fxDrift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.9);
+  }
+  25% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--fx-dx, 0px) * 0.65), calc(var(--fx-dy, 0px) * 0.65), 0) rotate(var(--fx-rot, 0deg)) scale(0.55);
+  }
+}

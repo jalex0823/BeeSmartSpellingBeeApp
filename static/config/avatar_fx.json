@@ -1,0 +1,155 @@
+{
+  "defaults": {
+    "cooldownMs": 900,
+    "particleCount": 16,
+    "particleAnim": "fxBurst"
+  },
+  "presets": {
+    "scholar": {
+      "icons": ["bulb", "hex", "sparkle"],
+      "tint": "rgba(255,213,64,1)"
+    },
+    "zen": {
+      "icons": ["circle", "wave", "sparkle"],
+      "tint": "rgba(180,220,200,1)",
+      "particleAnim": "fxDrift"
+    },
+    "builder": {
+      "icons": ["hammer", "wrench", "spark"],
+      "tint": "rgba(255,190,120,1)"
+    },
+    "energy": {
+      "icons": ["bolt", "spark", "burst"],
+      "tint": "rgba(255,220,80,1)"
+    },
+    "style": {
+      "icons": ["flash", "heart", "sparkle"],
+      "tint": "rgba(255,170,210,1)",
+      "particleAnim": "fxDrift"
+    },
+    "detective": {
+      "icons": ["magnify", "hex", "spark"],
+      "tint": "rgba(180,200,255,1)"
+    },
+    "music": {
+      "icons": ["note", "note2", "sparkle"],
+      "tint": "rgba(255,140,200,1)",
+      "particleAnim": "fxDrift"
+    },
+    "royal": {
+      "icons": ["crown", "sparkle", "hex"],
+      "tint": "rgba(255,213,64,1)"
+    },
+    "robot": {
+      "icons": ["chip", "scan", "spark"],
+      "tint": "rgba(120,220,255,1)",
+      "scan": true
+    },
+    "sea": {
+      "icons": ["bubble", "wave", "sparkle"],
+      "tint": "rgba(120,220,255,1)",
+      "particleAnim": "fxDrift"
+    },
+    "spooky": {
+      "icons": ["mist", "spark", "hex"],
+      "tint": "rgba(170,120,255,1)"
+    },
+    "logistics": {
+      "icons": ["box", "tag", "spark"],
+      "tint": "rgba(255,220,150,1)"
+    },
+    "speed": {
+      "icons": ["gear", "bolt", "spark"],
+      "tint": "rgba(255,180,120,1)"
+    },
+    "space": {
+      "icons": ["star", "comet", "sparkle"],
+      "tint": "rgba(190,190,255,1)"
+    },
+    "hero": {
+      "icons": ["shield", "burst", "sparkle"],
+      "tint": "rgba(255,230,120,1)"
+    },
+    "gamer": {
+      "icons": ["pixel", "plus", "spark"],
+      "tint": "rgba(160,255,200,1)"
+    },
+    "care": {
+      "icons": ["plus", "pulse", "sparkle"],
+      "tint": "rgba(160,255,200,1)"
+    },
+    "sports": {
+      "icons": ["whistle", "flag", "spark"],
+      "tint": "rgba(255,255,255,1)"
+    },
+    "frost": {
+      "icons": ["snow", "snow2", "sparkle"],
+      "tint": "rgba(200,240,255,1)",
+      "particleAnim": "fxDrift"
+    },
+    "honeycomb": {
+      "icons": ["hex", "hex2", "drip"],
+      "tint": "rgba(255,213,64,1)"
+    }
+  },
+  "avatars": {
+    "Al Bee Avatar": "scholar",
+    "Professor Bee Avatar": "scholar",
+    "O Bee Avatar": "scholar",
+
+    "Brother Bee Avatar": "scholar",
+    "Buzz Bee Avatar": "energy",
+
+    "Buda Bee Avatar": "zen",
+
+    "Builder Bee Avatar": "builder",
+    "Inventor Bee Avatar": "builder",
+    "Plumber Bee Avatar": "builder",
+    "Lumberjack Bee Avatar": "builder",
+
+    "Cool Bee Avatar": "style",
+    "Cutie Bee Avatar": "style",
+    "Selfie Bee Avatar": "style",
+
+    "Detective Bee Avatar": "detective",
+
+    "Diva Bee Avatar": "music",
+    "J Rock Bee Avatar": "music",
+    "Rocker Bee Avatar": "music",
+    "Singer Bee Avatar": "music",
+
+    "Knight Bee Avatar": "hero",
+    "Super Bee Avatar": "hero",
+
+    "Queen Bee Avatar": "royal",
+    "Mascot Bee Avatar": "royal",
+
+    "Robo Bee Avatar": "robot",
+    "Techno Bee Avatar": "robot",
+    "Xray Bee Avatar": "robot",
+
+    "Sea Bee Avatar": "sea",
+
+    "Vamp Bee Avatar": "spooky",
+    "Zom Bee Avatar": "spooky",
+    "Franken Bee Avatar": "spooky",
+
+    "Ware Bee Avatar": "logistics",
+
+    "Motor Bee Avatar": "speed",
+
+    "Space Bee Avatar": "space",
+    "Explorer Bee Avatar": "space",
+
+    "Gamer Bee Avatar": "gamer",
+
+    "Doc Bee Avatar": "care",
+    "Nurse Bee Avatar": "care",
+
+    "Umpire Bee Avatar": "sports",
+
+    "Honey Comb Avatar": "honeycomb",
+
+    "Yeti Bee Avatar": "frost"
+  }
+}

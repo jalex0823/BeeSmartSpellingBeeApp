@@ -14,6 +14,9 @@ class MatrixRain {
             // NOTE: "sweep overlays" are a separate effect family.
             // Disabling sweep overlays MUST NOT disable Matrix Rain; we want Matrix Rain
             // to keep running during the loader even when sweep overlays are off.
+            // This flag is still read here as an explicit app-level switch, but it is
+            // intentionally NOT treated as a Matrix Rain disable by itself.
+            const _sweepOverlaysDisabled = !!(window.__beesmartDisableSweepOverlays);
             const disabled = !!(window.__beesmartDisableBackgroundAnimations)
                 || (de && de.classList && de.classList.contains('beesmart-no-bg-anim'))
                 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);

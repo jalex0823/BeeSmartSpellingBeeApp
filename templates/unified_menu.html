@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -23,6 +23,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
+    {% if current_user.is_authenticated and (current_user.role|default('') != 'guest') %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-stage-fx.css') }}?v=20260106">
+    {% endif %}
 
     <style>
         /* Mobile scroll + tap ergonomics */
@@ -85,6 +88,10 @@
     <script defer src="{{ url_for('static', filename='js/matrix-rain.js') }}?v=20251129"></script>
     <!-- Avatar Intro FX System -->
     <script defer src="{{ url_for('static', filename='js/avatar-intro-fx.js') }}?v=20251201"></script>
+    {% if current_user.is_authenticated and (current_user.role|default('') != 'guest') %}
+    <!-- Avatar Stage FX (registered avatar click effects) -->
+    <script defer src="{{ url_for('static', filename='js/avatar_stage_fx.js') }}?v=20260106"></script>
+    {% endif %}
     <!-- Three.js core MUST load before loaders; defer maintains order but doesn't block page -->
     <!-- LOCAL VENDOR FILES - No CDN tracking prevention issues -->
     <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}"></script>
@@ -179,6 +186,8 @@
     {% set _is_auth = 'true' if (current_user.is_authenticated or session.get('app_review_mode')) else 'false' %}
     {# Real authenticated user (ignores app_review_mode). Used for login-required flows like restore purchases. #}
     {% set _is_real_auth = 'true' if current_user.is_authenticated else 'false' %}
+    {# Registered user (excludes guest role and ignores app_review_mode). Used for rendering-path checks + stage FX. #}
+    {% set _is_registered = 'true' if (current_user.is_authenticated and (current_user.role|default('') != 'guest')) else 'false' %}
     {# Admin should see the menu fully unlocked (same UI experience as premium). #}
     {% set _is_admin = 'true' if (current_user.is_authenticated and (current_user.role|default('') == 'admin')) else 'false' %}
     {% set _is_premium = 'true' if (_is_admin == 'true' or (is_premium|default(False))) else 'false' %}
@@ -192,6 +201,7 @@
     window.APP_REVIEW_MODE = {{ _review_mode }};
     window.IS_PREMIUM = {{ _is_premium }};
         window.IS_REAL_AUTH = {{ _is_real_auth }};
+        window.IS_REGISTERED = {{ _is_registered }};
         window.BILLING_MODE = '{{ _billing_mode }}';
         window.SUBSCRIPTION_SKU = '{{ _subscription_sku }}';
         // Subscription monthly price (USD) for UI copy only.
@@ -4425,7 +4435,12 @@
                 ">
                 <!-- Avatar Display - NEW clean container for controls -->
                 <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <div id="avatarControls3D" style="width: 400px; height: 400px; margin: 0 auto; display: block;"></div>
+                    <div class="avatar-stage" id="avatarStage" data-avatar-name="{{ current_user.get_avatar_data().name }}">
+                        <div class="stage-fx" id="stageFx" aria-hidden="true"></div>
+                        <div class="stage-glb" id="glbHost">
+                            <div id="avatarControls3D" class="avatar-controls-3d"></div>
+                        </div>
+                    </div>
                     
                     <!-- Interactive Caption -->
                     <div style="
@@ -4451,15 +4466,30 @@
                         ? SERVER_AVATAR.urls.glb
                         : '/static/assets/avatars/glb_files/MascotBee.glb';
 
+                    const computeAvatarCanvasSize = () => {
+                        try {
+                            const el = document.getElementById('avatarControls3D');
+                            const rect = el ? el.getBoundingClientRect() : null;
+                            const w = rect && rect.width ? rect.width : Math.min(400, Math.floor(window.innerWidth * 0.82));
+                            const h = rect && rect.height ? rect.height : w;
+                            const size = Math.floor(Math.max(240, Math.min(400, Math.min(w, h))));
+                            return size;
+                        } catch (e) {
+                            return 360;
+                        }
+                    };
+
                     const start = () => {
                         try {
                             if (window.avatarControlsInstance) return; // idempotent
                             if (typeof window.SmartyBee3D !== 'function') return;
 
+                            const size = computeAvatarCanvasSize();
+
                             // Create instance in NEW container
                             window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
-                                width: 400,
-                                height: 400,
+                                width: size,
+                                height: size,
                                 // Use server-provided GLB path (stable) and skip the extra avatar API call.
                                 fetchFromServer: false,
                                 modelPath: SERVER_GLB,
@@ -4475,6 +4505,31 @@
                                 }
                             });
                             console.log('Avatar Controls instance created in new container');
+
+                            // Keep the WebGL canvas sized correctly on mobile orientation changes.
+                            // SmartyBee3D exposes a safe resize(width, height) helper.
+                            (function installAvatarResize(){
+                                try {
+                                    if (window.__beesmartAvatarResizeInstalled) return;
+                                    window.__beesmartAvatarResizeInstalled = true;
+
+                                    let raf = 0;
+                                    const onResize = () => {
+                                        try {
+                                            if (raf) cancelAnimationFrame(raf);
+                                            raf = requestAnimationFrame(() => {
+                                                const inst = window.avatarControlsInstance;
+                                                if (!inst || typeof inst.resize !== 'function') return;
+                                                const next = computeAvatarCanvasSize();
+                                                inst.resize(next, next);
+                                            });
+                                        } catch (_e) { /* ignore */ }
+                                    };
+
+                                    window.addEventListener('resize', onResize, { passive: true });
+                                    window.addEventListener('orientationchange', onResize, { passive: true });
+                                } catch (_e2) { /* ignore */ }
+                            })();
                         } catch (e) {
                             console.warn('Avatar Controls init failed:', e);
                         }
@@ -15956,61 +16011,50 @@
                 }
                 console.log('DEBUG: Check 1 DONE, moving to Check 2...');
                 
-                // Check 2: GLB Inventory (lightweight validation — count only)
-                // NOTE: This check is intentionally NOT tied to the current user's selected avatar.
-                // The actual user's avatar loads lazily on-demand; startup should never block on
-                // `/api/users/me/avatar` (slow on cold-start in iOS WebViews).
-                const check2 = this.addCheck('GLB Inventory', 'Counting...', '');
-                this.updateProgress(20, ' Counting GLB avatars...');
+                // Check 2: Avatar Rendering (mode-specific)
+                // Requirement: during system checks, focus ONLY on the rendering path that applies:
+                // - Guest users: carousel GLB preview readiness
+                // - Registered users: selected avatar GLB readiness + personal FX readiness
+                const isAuthForRenderCheck = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
+                const check2 = this.addCheck(isAuthForRenderCheck ? 'Avatar Rendering (Registered)' : 'Avatar Rendering (Guest)', 'Checking...', '');
+                this.updateProgress(20, isAuthForRenderCheck ? ' Verifying registered avatar rendering...' : ' Verifying guest carousel rendering...');
                 try {
-                    // Best effort: prefer server-fed preload results if present
-                    const expectedCount = 39; // single source of truth is avatar_catalog.py (39 total)
-                    let count = null;
+                    if (isAuthForRenderCheck) {
+                        const controlsEl = document.getElementById('avatarControls3D');
+                        const stageEl = document.getElementById('avatarStage');
+                        const fxEl = document.getElementById('stageFx');
 
-                    if (window.avatarPreloadResults && Number.isFinite(window.avatarPreloadResults.totalAvatars)) {
-                        count = Number(window.avatarPreloadResults.totalAvatars);
+                        const hasControls = !!controlsEl;
+                        const hasStage = !!stageEl;
+                        const hasFxLayer = !!fxEl;
+                        const hasServerFedGlb = !!(window._serverFedAvatar && window._serverFedAvatar.urls && window._serverFedAvatar.urls.glb);
+                        const hasFxApi = (typeof window.playStageFX === 'function');
+
+                        const ok = hasControls && hasServerFedGlb && hasStage && hasFxLayer && hasFxApi;
+                        const detail = `GLB:${hasServerFedGlb ? 'yes' : 'no'} FX:${(hasStage && hasFxLayer && hasFxApi) ? 'yes' : 'no'}`;
+
+                        this.updateCheck(check2, ok ? `Ready (${detail})` : `Partial (${detail})`, ok ? '' : 'ℹ', 30);
+                        this.updateProgress(30, ok ? ' Registered avatar render path ready' : ' Registered avatar render path partially ready');
+                    } else {
+                        const wrap = document.getElementById('guestAvatarCarousel');
+                        const hasCarousel = !!wrap;
+                        const hasThree = (typeof THREE !== 'undefined');
+                        const hasInit3D = (typeof initGuestAvatar3DCarousel === 'function');
+                        const ok = hasCarousel && hasThree && hasInit3D;
+                        const detail = `Carousel:${hasCarousel ? 'yes' : 'no'} GLB:${(hasThree && hasInit3D) ? 'yes' : 'no'}`;
+
+                        this.updateCheck(check2, ok ? `Ready (${detail})` : `Partial (${detail})`, ok ? '' : 'ℹ', 30);
+                        this.updateProgress(30, ok ? ' Guest carousel render path ready' : ' Guest carousel render path partially ready');
                     }
-
-                    // Fallback: count unique GLB URLs from /api/avatars (fast and cacheable)
-                    if (!Number.isFinite(count)) {
-                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
-                            headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
-                        }, 9000);
-
-                        if (catalogRes.ok) {
-                            const payload = await catalogRes.json();
-                            const avatars = Array.isArray(payload)
-                                ? payload
-                                : (Array.isArray(payload?.avatars) ? payload.avatars : (Array.isArray(payload?.data) ? payload.data : []));
-
-                            const isLikelyGlbUrl = (u) => (typeof u === 'string') && /(\.glb|\.gltf)(\?.*)?$/i.test(u);
-                            const seen = new Set();
-                            for (const a of avatars) {
-                                const glb = a?.urls?.glb || a?.glb || null;
-                                if (!isLikelyGlbUrl(glb)) continue;
-                                seen.add(glb);
-                            }
-                            count = seen.size;
-                        }
-                    }
-
-                    const safeCount = Number.isFinite(count) ? count : null;
-                    const label = (safeCount === null)
-                        ? 'Unknown'
-                        : `${safeCount}/${expectedCount}`;
-
-                    const ok = (safeCount !== null) && (safeCount >= expectedCount);
-                    this.updateCheck(check2, `GLB Avatars: ${label}`, ok ? '' : 'ℹ', 30);
-                    this.updateProgress(30, ok ? ' GLB inventory present' : ' GLB inventory count incomplete');
                 } catch (e) {
-                    console.warn('GLB inventory check failed:', e);
-                    this.updateCheck(check2, 'GLB Avatars: Unknown', 'ℹ', 30);
-                    this.updateProgress(30, ' GLB inventory check skipped');
+                    console.warn('Avatar rendering check failed:', e);
+                    this.updateCheck(check2, 'Skipped', 'ℹ', 30);
+                    this.updateProgress(30, ' Avatar rendering check skipped');
                 }
 
-                // Check 2.5: Avatar Preload + Verification (thumbnail + model existence)
-                const check2b = this.addCheck('Avatar Preload', 'Preloading...', '');
-                this.updateProgress(32, ' Preloading avatar assets...');
+                // Check 2.5: Avatar Preload + Verification (mode-specific warmup)
+                const check2b = this.addCheck('Avatar Asset Warmup', 'Preloading...', '');
+                this.updateProgress(32, ' Warming avatar rendering assets...');
                 try {
                     const summary = await this.preloadAvatarAssetsForChecks();
                     const ok = (summary && summary.ok === true);
@@ -16027,7 +16071,7 @@
                 // This check turns "Ready" only when the 3D avatar controller reports readiness.
                 // Guests skip this gate.
                 try {
-                    const isAuthenticatedForAvatarGate = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
+                    const isAuthenticatedForAvatarGate = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
                     const check2c = this.addCheck('Avatar Loading', isAuthenticatedForAvatarGate ? 'Pending...' : 'Ready', isAuthenticatedForAvatarGate ? '' : 'ℹ');
                     this.avatarRenderCheckId = check2c;
                     // Use a stable percentage marker for the checklist row.
@@ -16264,8 +16308,7 @@
             async preloadAvatarAssetsForChecks() {
                 // Goal: warm the browser cache + verify key avatar endpoints respond.
                 // Keep it small + fast to avoid delaying the main page.
-                const isAuthenticated = {% if current_user.is_authenticated %}true{% else %}false{% endif %};
-                const maxAvatars = isAuthenticated ? 2 : 4;
+                const isRegistered = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
                 const warm = async (url, timeoutMs) => {
                     if (!url) return { ok: false };
 
@@ -16327,54 +16370,31 @@
                 // Always include mascot thumbnail as a safe baseline.
                 urlsToWarm.push('/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png');
 
-                if (isAuthenticated) {
-                    // For system checks, do NOT fetch the user's avatar. Cold-start DB/API latency
-                    // in iOS WebViews can cause noisy timeouts here.
-                    // Warm only safe static assets + a couple catalog thumbnails to prime caches.
+                if (isRegistered) {
+                    // Registered users: warm ONLY the selected avatar GLB (when available) + personal FX assets.
+                    // Avoid heavy API calls during loader; prefer server-fed avatar data.
+                    urlsToWarm.push('/static/css/avatar-stage-fx.css');
+                    urlsToWarm.push('/static/js/avatar_stage_fx.js');
+                    urlsToWarm.push('/static/config/avatar_fx.json');
+                    urlsToWarm.push('/static/fx/icons/star.svg');
+
                     try {
-                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json' }
-                        }, 4500);
-                        if (catalogRes && catalogRes.ok) {
-                            const catalog = await catalogRes.json();
-                            const avatars = Array.isArray(catalog)
-                                ? catalog
-                                : ((catalog && Array.isArray(catalog.avatars)) ? catalog.avatars : []);
-                            for (const a of avatars.slice(0, maxAvatars)) {
-                                if (a && a.urls) {
-                                    if (a.urls.thumbnail) urlsToWarm.push(a.urls.thumbnail);
-                                    if (a.urls.preview) urlsToWarm.push(a.urls.preview);
-                                }
-                            }
-                        }
+                        const glbUrl = window._serverFedAvatar && window._serverFedAvatar.urls ? window._serverFedAvatar.urls.glb : null;
+                        if (glbUrl) urlsToWarm.push(glbUrl);
+                        const thumbUrl = window._serverFedAvatar && window._serverFedAvatar.urls ? (window._serverFedAvatar.urls.thumbnail || window._serverFedAvatar.urls.preview) : null;
+                        if (thumbUrl) urlsToWarm.push(thumbUrl);
                     } catch (_e) {
                         // ignore
                     }
                 } else {
-                    // Guest: warm a handful of carousel thumbnails so the rotating preview is instant.
-                    try {
-                        const catalogRes = await this.fetchWithTimeout('/api/avatars', {
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json' }
-                        }, 4500);
-                        if (catalogRes && catalogRes.ok) {
-                            const catalog = await catalogRes.json();
-                            const avatars = (catalog && Array.isArray(catalog.avatars)) ? catalog.avatars : [];
-                            for (const a of avatars.slice(0, maxAvatars)) {
-                                if (a && a.urls) {
-                                    if (a.urls.thumbnail) urlsToWarm.push(a.urls.thumbnail);
-                                    if (a.urls.preview) urlsToWarm.push(a.urls.preview);
-                                }
-                            }
-                        }
-                    } catch (_e) {
-                        // ignore
-                    }
+                    // Guests: warm ONLY the guest carousel GLB(s) + a safe thumbnail baseline.
+                    urlsToWarm.push('/static/assets/avatars/glb_files/MascotBee.glb');
+                    urlsToWarm.push('/static/assets/avatars/glb_files/ExplorerBee.glb');
                 }
 
                 // De-dupe + limit.
-                const unique = Array.from(new Set(urlsToWarm)).slice(0, 1 + (maxAvatars * 2));
+                // De-dupe + limit to keep startup fast.
+                const unique = Array.from(new Set(urlsToWarm)).slice(0, isRegistered ? 8 : 4);
 
                 let okCount = 0;
                 for (const u of unique) {
@@ -16384,7 +16404,41 @@
                     if (r.ok) okCount += 1;
                 }
 
-                const detail = `${okCount}/${unique.length}`;
+                let fxDetail = '';
+                if (isRegistered) {
+                    // Validate FX mapping for the current avatar name (best effort; non-fatal).
+                    try {
+                        const stageEl = document.getElementById('avatarStage');
+                        const avatarName = (stageEl && stageEl.dataset && stageEl.dataset.avatarName)
+                            ? String(stageEl.dataset.avatarName)
+                            : (window._serverFedAvatar && window._serverFedAvatar.name ? String(window._serverFedAvatar.name) : '');
+
+                        const cfgRes = await this.fetchWithTimeout('/static/config/avatar_fx.json', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        }, 2500);
+
+                        if (cfgRes && cfgRes.ok) {
+                            const cfg = await cfgRes.json();
+                            const map = (cfg && cfg.avatars && typeof cfg.avatars === 'object') ? cfg.avatars : {};
+                            const key = String(avatarName || '').trim();
+                            let mapped = false;
+                            if (key && Object.prototype.hasOwnProperty.call(map, key)) {
+                                mapped = true;
+                            } else if (key) {
+                                const lowerKey = key.toLowerCase();
+                                for (const k of Object.keys(map)) {
+                                    if (String(k).toLowerCase() === lowerKey) { mapped = true; break; }
+                                }
+                            }
+                            fxDetail = ` FX:${mapped ? 'mapped' : 'unmapped'}`;
+                        }
+                    } catch (_e) {
+                        // ignore
+                    }
+                }
+
+                const detail = `${okCount}/${unique.length}${fxDetail}`;
                 return { ok: okCount >= Math.max(1, Math.floor(unique.length * 0.7)), detail };
             }
             
