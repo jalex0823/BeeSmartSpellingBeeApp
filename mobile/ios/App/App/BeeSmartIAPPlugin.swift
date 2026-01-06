@@ -24,9 +24,13 @@ public class BeeSmartIAPPlugin: CAPPlugin {
             Task {
                 do {
                     try await AppStore.sync()
-                    call.resolve(["success": true])
+                    await MainActor.run {
+                        call.resolve(["success": true])
+                    }
                 } catch {
-                    call.reject("restore_error: \(error.localizedDescription)")
+                    await MainActor.run {
+                        call.reject("restore_error: \(error.localizedDescription)")
+                    }
                 }
             }
         } else {
@@ -64,10 +68,12 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                     }
                 }
 
-                call.resolve([
-                    "productIds": deduped,
-                    "owned": owned
-                ])
+                await MainActor.run {
+                    call.resolve([
+                        "productIds": deduped,
+                        "owned": owned
+                    ])
+                }
             }
         } else {
             call.reject("requires_ios_15")
@@ -85,7 +91,9 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                 do {
                     let products = try await Product.products(for: [productId])
                     guard let product = products.first else {
-                        call.reject("product_not_found")
+                        await MainActor.run {
+                            call.reject("product_not_found")
+                        }
                         return
                     }
 
@@ -107,34 +115,46 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                             // Keep the key name stable for the web layer.
                             payload["jws"] = String(data: transaction.jsonRepresentation, encoding: .utf8) ?? ""
 
-                            call.resolve([
-                                "productId": transaction.productID,
-                                "transactionId": String(transaction.id),
-                                "payload": payload
-                            ])
+                            await MainActor.run {
+                                call.resolve([
+                                    "productId": transaction.productID,
+                                    "transactionId": String(transaction.id),
+                                    "payload": payload
+                                ])
+                            }
 
                         case .unverified(_, let error):
-                            call.reject("unverified_transaction: \(error.localizedDescription)")
+                            await MainActor.run {
+                                call.reject("unverified_transaction: \(error.localizedDescription)")
+                            }
                         }
 
                     case .userCancelled:
-                        call.resolve([
-                            "productId": productId,
-                            "cancelled": true
-                        ])
+                        await MainActor.run {
+                            call.resolve([
+                                "productId": productId,
+                                "cancelled": true
+                            ])
+                        }
 
                     case .pending:
-                        call.resolve([
-                            "productId": productId,
-                            "pending": true
-                        ])
+                        await MainActor.run {
+                            call.resolve([
+                                "productId": productId,
+                                "pending": true
+                            ])
+                        }
 
                     @unknown default:
-                        call.reject("purchase_failed")
+                        await MainActor.run {
+                            call.reject("purchase_failed")
+                        }
                     }
 
                 } catch {
-                    call.reject("purchase_error: \(error.localizedDescription)")
+                    await MainActor.run {
+                        call.reject("purchase_error: \(error.localizedDescription)")
+                    }
                 }
             }
         } else {

@@ -172,6 +172,29 @@
   const MAX_ATTEMPTS = 25; // ~2.5s @ 100ms
   const RETRY_MS = 100;
 
+  async function _fetchJsonWithTimeout(url, options, timeoutMs) {
+    // Browser fetch has no default timeout; a stalled connection can hang a UI forever.
+    // Use AbortController where available (iOS WKWebView supports it).
+    const ms = Math.max(0, Number(timeoutMs || 0) || 0);
+    const hasAbort = (typeof AbortController === 'function');
+    const controller = hasAbort ? new AbortController() : null;
+    const timer = (hasAbort && ms > 0)
+      ? setTimeout(() => { try { controller.abort(); } catch (e) { /* ignore */ } }, ms)
+      : null;
+
+    try {
+      const opts = Object.assign({}, options || {});
+      if (controller) opts.signal = controller.signal;
+      const res = await fetch(url, opts);
+      const data = await res.json().catch(function () { return null; });
+      return { res, data };
+    } finally {
+      if (timer) {
+        try { clearTimeout(timer); } catch (e) { /* ignore */ }
+      }
+    }
+  }
+
   function hasBridge() {
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.getOwnedProducts === 'function');
   }
@@ -195,13 +218,23 @@
       }
 
       const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? window.BeeSmartIAP.platform : 'apple';
-      const res = await fetch('/api/iap/restore', {
+      const out = await _fetchJsonWithTimeout('/api/iap/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ platform: platform || 'apple', product_ids: owned || [], install_id })
-      });
-      let data = await res.json().catch(function () { return null; });
+      }, 15000);
+      const res = out && out.res;
+      let data = out ? out.data : null;
+
+      // If the request was aborted / timed out, provide a consistent payload.
+      if (!res && !data) {
+        data = {
+          success: false,
+          error: 'timeout',
+          message: 'Restore is taking too long. Please check your connection and try again.'
+        };
+      }
       if ((res.status === 401 || res.status === 403) && (!data || typeof data !== 'object')) {
         data = {
           success: false,
@@ -234,14 +267,25 @@
     // This keeps TestFlight from getting stuck in a "web-only" branch.
     try {
       const install_id = await _getInstallIdForServer();
-      const r = await fetch('/api/iap/restore', {
+      const out = await _fetchJsonWithTimeout('/api/iap/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ platform: 'apple', product_ids: [], install_id })
-      });
-      let data = await r.json().catch(function () { return null; });
-      if ((r.status === 401 || r.status === 403) && (!data || typeof data !== 'object')) {
+      }, 10000);
+      const r = out && out.res;
+      let data = out ? out.data : null;
+
+      // Timeout/abort fallback
+      if (!r && !data) {
+        data = {
+          success: false,
+          error: 'timeout',
+          message: 'Could not reach the server to refresh purchases. Please try again.'
+        };
+      }
+
+      if ((r && (r.status === 401 || r.status === 403)) && (!data || typeof data !== 'object')) {
         data = {
           success: false,
           error: 'login_required',
@@ -251,7 +295,7 @@
       }
       try {
         window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
-          detail: { ok: !!(data && data.success), status: r.status, reason: reason || 'unknown', data }
+          detail: { ok: !!(data && data.success), status: (r ? r.status : 0), reason: reason || 'unknown', data }
         }));
       } catch (e) { /* ignore */ }
       return data;

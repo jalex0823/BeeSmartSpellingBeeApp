@@ -109,8 +109,13 @@ class SmartyBee3D {
     }
 
     async init() {
-        // Check if Three.js is loaded
-        if (typeof THREE === 'undefined') {
+        // Check if Three.js is loaded.
+        // In some iOS WebView/Safari builds, deferred scripts can settle slightly later than this init.
+        // Wait briefly before giving up so we don't permanently fall back due to a transient load order hiccup.
+        if (typeof window.THREE === 'undefined') {
+            try { await this._waitForThree(5000); } catch (_e) { /* ignore */ }
+        }
+        if (typeof window.THREE === 'undefined') {
             console.error('Three.js not loaded. Please include Three.js library.');
             this.showFallbackImage();
             return;
@@ -151,11 +156,25 @@ class SmartyBee3D {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    async _waitForThree(maxWaitMs = 5000) {
+        const start = Date.now();
+        while (typeof window.THREE === 'undefined' && (Date.now() - start) < maxWaitMs) {
+            await this._sleep(50);
+        }
+        return typeof window.THREE !== 'undefined';
+    }
+
     async _waitForGLTFLoader(maxWaitMs = 5000) {
         // iOS Safari can evaluate scripts out-of-order vs module globals.
         // Wait for GLTFLoader to exist before attempting a GLB load.
         const start = Date.now();
         while ((!window.THREE || !window.THREE.GLTFLoader) && (Date.now() - start) < maxWaitMs) {
+            // Some builds expose GLTFLoader as a global constructor instead of THREE.GLTFLoader.
+            try {
+                if (window.THREE && !window.THREE.GLTFLoader && typeof window.GLTFLoader === 'function') {
+                    window.THREE.GLTFLoader = window.GLTFLoader;
+                }
+            } catch (_e) { /* ignore */ }
             await this._sleep(50);
         }
         if (!window.THREE || !window.THREE.GLTFLoader) {
@@ -760,13 +779,59 @@ class SmartyBee3D {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
         }
-        if (this.renderer) {
-            this.renderer.dispose();
-            if (this.container.contains(this.renderer.domElement)) {
-                this.container.removeChild(this.renderer.domElement);
+        // Dispose WebGL resources aggressively (iOS Safari is sensitive to leaked contexts).
+        try {
+            if (this.scene && typeof this.scene.traverse === 'function') {
+                this.scene.traverse((obj) => {
+                    try {
+                        if (obj && obj.geometry && typeof obj.geometry.dispose === 'function') {
+                            obj.geometry.dispose();
+                        }
+                        if (obj && obj.material) {
+                            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                            for (const m of mats) {
+                                if (!m) continue;
+                                // Dispose textures referenced by material
+                                for (const k in m) {
+                                    try {
+                                        const v = m[k];
+                                        if (v && v.isTexture && typeof v.dispose === 'function') v.dispose();
+                                    } catch (_e) { /* ignore */ }
+                                }
+                                if (typeof m.dispose === 'function') m.dispose();
+                            }
+                        }
+                    } catch (_e) { /* ignore */ }
+                });
             }
-        }
-        SmartyBee3D.instances.delete(this.container.id);
+        } catch (_e) { /* ignore */ }
+
+        try {
+            if (this.renderer) {
+                // Force context loss to release GPU memory promptly on iOS.
+                if (typeof this.renderer.forceContextLoss === 'function') {
+                    try { this.renderer.forceContextLoss(); } catch (_e2) { /* ignore */ }
+                }
+                this.renderer.dispose();
+                if (this.container && this.renderer.domElement && this.container.contains(this.renderer.domElement)) {
+                    this.container.removeChild(this.renderer.domElement);
+                }
+            }
+        } catch (_e) { /* ignore */ }
+
+        try {
+            if (this.container && this.container.id) {
+                SmartyBee3D.instances.delete(this.container.id);
+                if (window.SmartyBee3DInstances) {
+                    try { delete window.SmartyBee3DInstances[this.container.id]; } catch (_e2) { /* ignore */ }
+                }
+            }
+        } catch (_e) { /* ignore */ }
+
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.bee = null;
     }
 
     resize(width, height) {

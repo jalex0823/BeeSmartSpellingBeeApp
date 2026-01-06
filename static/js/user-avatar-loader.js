@@ -48,9 +48,11 @@ class UserAvatarLoader {
             'zombee': 'zom-bee',
             'buzzbee': 'buzz-bee',
             'selfiebee': 'selfie-bee',
-            'coolbee': 'mascot-bee',
-            'cool-bee': 'mascot-bee',
-            'cool_bee': 'mascot-bee'
+            // Normalize Cool Bee variants to the canonical catalog id.
+            // Do not force-collape to mascot, otherwise real users can appear to "lose" their avatar.
+            'coolbee': 'cool-bee',
+            'cool-bee': 'cool-bee',
+            'cool_bee': 'cool-bee'
         };
         
         // Initialize fallback avatar
