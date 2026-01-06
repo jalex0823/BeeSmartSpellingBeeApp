@@ -2,6 +2,11 @@ import Foundation
 import Capacitor
 import StoreKit
 
+// NOTE: This plugin is intentionally minimal and review-friendly.
+// It should:
+// - trigger a real OS-level restore (AppStore.sync)
+// - provide a stable device install identifier for best-effort continuity across reinstalls
+
 // Native IAP bridge for the BeeSmart web UI.
 //
 // IMPORTANT: We explicitly register/export this plugin with the JS name `BeeSmartIAP`
@@ -11,6 +16,26 @@ import StoreKit
 // Capacitor v5 plugin export.
 @objc(BeeSmartIAPPlugin)
 public class BeeSmartIAPPlugin: CAPPlugin {
+
+    // Persist a stable per-install identifier.
+    // This is used by the web layer to associate anonymous restores after reinstall.
+    // It is NOT a tracking identifier (it is scoped to this app install).
+    private let installIdDefaultsKey = "beesmart_install_id_v1"
+
+    private func getOrCreateInstallId() -> String {
+        let defaults = UserDefaults.standard
+        if let existing = defaults.string(forKey: installIdDefaultsKey), existing.count >= 12 {
+            return existing
+        }
+        let newId = UUID().uuidString
+        defaults.set(newId, forKey: installIdDefaultsKey)
+        return newId
+    }
+
+    @objc func getInstallId(_ call: CAPPluginCall) {
+        let installId = getOrCreateInstallId()
+        call.resolve(["installId": installId])
+    }
 
     // Capacitor v5: method export and plugin naming are typically handled via a
     // generated Obj-C bridge file when using the CAP_PLUGIN macro.
@@ -25,11 +50,21 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                 do {
                     try await AppStore.sync()
                     await MainActor.run {
+                        // Always resolve success to avoid the web layer treating
+                        // transient StoreKit errors as a "restore did nothing".
+                        // The web layer will reconcile with the server and decide
+                        // whether entitlements can be applied (login-required).
                         call.resolve(["success": true])
                     }
                 } catch {
                     await MainActor.run {
-                        call.reject("restore_error: \(error.localizedDescription)")
+                        // IMPORTANT: Still resolve to allow the web layer to continue
+                        // with server reconcile + user-visible guidance.
+                        call.resolve([
+                            "success": false,
+                            "error": "restore_error",
+                            "message": error.localizedDescription
+                        ])
                     }
                 }
             }

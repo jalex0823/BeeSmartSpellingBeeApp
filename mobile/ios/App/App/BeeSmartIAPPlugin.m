@@ -10,4 +10,5 @@ CAP_PLUGIN(BeeSmartIAPPlugin, "BeeSmartIAP",
            CAP_PLUGIN_METHOD(purchase, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(restorePurchases, CAPPluginReturnPromise);
            CAP_PLUGIN_METHOD(getOwnedProducts, CAPPluginReturnPromise);
+           CAP_PLUGIN_METHOD(getInstallId, CAPPluginReturnPromise);
 )
