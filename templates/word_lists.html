@@ -863,6 +863,7 @@
     cell.dataset.name = (list.name || "").toLowerCase();
     cell.dataset.words = list.word_count || 0;
     cell.dataset.updated = list.updated_at || list.created_at || "";
+    cell.dataset.listId = String(list.id);
 
     if (localFavs.has(list.id)) {
       cell.classList.add("is-favorite");
@@ -928,6 +929,7 @@
     const titleText = document.createElement("div");
     titleText.className = "jar-title-text";
     const rawName = list.name || "Unnamed List";
+    cell.dataset.listName = rawName;
     titleText.textContent = rawName;
     titleText.title = rawName;
 
@@ -1715,6 +1717,64 @@
       setTimeout(() => toast.remove(), 250);
     }, 2600);
   }
+
+  // Defensive delegation: ensure jar action taps/clicks always trigger the intended
+  // action, even on mobile/PWA setups where other listeners can interfere.
+  (function bindJarActionDelegation(){
+    if (window.__BeeSmartWordListsJarActionsBound) return;
+    window.__BeeSmartWordListsJarActionsBound = true;
+
+    let lastActivationAt = 0;
+
+    function getActionEl(e){
+      try {
+        const t = e && e.target;
+        if (!t || !t.closest) return null;
+        return t.closest('.jar-use-leaf, .jar-view-btn, .jar-edit-btn, .jar-delete-img');
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function handle(e){
+      const actionEl = getActionEl(e);
+      if (!actionEl) return;
+
+      const now = Date.now();
+      if (now - lastActivationAt < 350) return;
+
+      const cell = actionEl.closest && actionEl.closest('.list-cell');
+      if (!cell) return;
+
+      const listId = parseInt((cell.dataset && cell.dataset.listId) || '', 10);
+      if (!listId) return;
+      const listName = (cell.dataset && cell.dataset.listName) || '';
+
+      lastActivationAt = now;
+
+      try { if (e && e.preventDefault) e.preventDefault(); } catch (_) {}
+      try { if (e && e.stopPropagation) e.stopPropagation(); } catch (_) {}
+      try { if (e && e.stopImmediatePropagation) e.stopImmediatePropagation(); } catch (_) {}
+
+      if (actionEl.classList.contains('jar-use-leaf')) {
+        useListInQuiz(listId);
+      } else if (actionEl.classList.contains('jar-view-btn')) {
+        viewWordList(e, listId, listName);
+      } else if (actionEl.classList.contains('jar-edit-btn')) {
+        openEditModal(e, listId, listName);
+      } else if (actionEl.classList.contains('jar-delete-img')) {
+        deleteWordList(e, listId, listName);
+      }
+    }
+
+    document.addEventListener('click', handle, true);
+    document.addEventListener('pointerdown', function(e){
+      try {
+        if (e && e.pointerType && e.pointerType !== 'touch') return;
+      } catch (_) {}
+      handle(e);
+    }, true);
+  })();
 
   window.createNewList   = createNewList;
   window.useListInQuiz   = useListInQuiz;
