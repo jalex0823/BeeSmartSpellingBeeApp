@@ -1664,6 +1664,26 @@
     @keyframes slideIn{from{transform:translateX(300px);opacity:0}to{transform:translateX(0);opacity:1}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(300px);opacity:0}}
     .list-cell-inner-jar{position:relative; min-height:420px; padding-bottom:20px; width:300px;}
+    /*
+      Hit-testing guardrail:
+      The jar cell uses many absolutely-positioned images. On some mobile browsers
+      (and when assets overlap visually), multiple elements can end up receiving
+      pointer events in the same tap.
+
+      Default to *no* pointer events inside the jar, then explicitly opt-in only
+      the intended interactive controls.
+    */
+    .list-cell-inner-jar *{pointer-events:none;}
+    .jar-delete-container,
+    .jar-delete-img,
+    .jar-use-leaf,
+    .jar-view-btn,
+    .jar-edit-btn{
+      pointer-events:auto;
+      display:inline-block;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
     .jar-base-img{width:100%; height:auto; display:block; position:relative; z-index:1;}
     .jar-title-plate{position:absolute; top:140px; left:50%; transform:translateX(-50%); z-index:3; display:flex; align-items:center; justify-content:center;}
     .jar-title-img{width:140px; height:auto;}
