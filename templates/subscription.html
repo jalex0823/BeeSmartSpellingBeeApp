@@ -1330,6 +1330,17 @@
 
             const productId = productIds[plan];
 
+            // Apple requirement: subscription is tied to Apple ID, not BeeSmart email.
+            // We allow purchase initiation even when logged out, but we do not apply
+            // membership to an account until the user signs in.
+            let auth = null;
+            try {
+                auth = await _fetchAuthState();
+                window.IS_REAL_AUTH = !!(auth && auth.authenticated);
+            } catch (e) {
+                window.IS_REAL_AUTH = false;
+            }
+
             // Prefer the unified BeeSmartIAP bridge (Capacitor native plugin).
             // Wait briefly for the bridge if we're in a native context; this reduces
             // TestFlight false "web" fallback.
@@ -1340,11 +1351,43 @@
                     .then(async () => {
                         // Purchase complete — reconcile and refresh UI.
                         try { await reconcileAndRefreshSubscriptionUI('purchase_success'); } catch (e) {}
+
+                        // If not logged in, guide next step instead of claiming Premium is active.
+                        if (!window.IS_REAL_AUTH) {
+                            try {
+                                await showRestoreDialog(
+                                    'Purchase complete',
+                                    'Purchase completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
+                                    true
+                                );
+                            } catch (e) {
+                                alert('Purchase completed on this device. Now please sign in to your BeeSmart account to apply your membership.');
+                            }
+                            try {
+                                const returnTo = window.location.pathname + window.location.search;
+                                window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                            } catch (e) {}
+                            return;
+                        }
+
+                        // Authenticated: allow normal post-purchase routing.
                         alert('Purchase complete!');
                         try { window.location.href = '/app'; } catch (e) {}
                     })
                     .catch((e) => {
-                        alert('Purchase could not be completed. Please try again.');
+                        // If the user already has an active subscription (common in App Review scenarios),
+                        // Apple/StoreKit may prevent repurchase. In that case, guide them to sign in so the
+                        // app can apply the existing Apple ID subscription to their BeeSmart account.
+                        const msg = (!window.IS_REAL_AUTH)
+                            ? 'If you already have an active subscription on this Apple ID, please sign in to your BeeSmart account to apply it. You can also try Restore Purchases.'
+                            : 'Purchase could not be completed. Please try again.';
+                        alert(msg);
+                        if (!window.IS_REAL_AUTH) {
+                            try {
+                                const returnTo = window.location.pathname + window.location.search;
+                                window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
+                            } catch (e) {}
+                        }
                     });
                 return;
             }
