@@ -45,6 +45,20 @@ Even if the device has App Store purchase history, we **never** show green “Ac
 - `templates/subscription.html`
   - Auth checks are performed before painting any “active” subscription UI.
 
+### B2) Apple-ID-first purchase (allow subscription purchase while logged out)
+
+Apple Review expects subscription purchase state to be tied to the **Apple ID** (App Store account), not the BeeSmart email login.
+
+**Behavior:**
+
+- If the user is **logged out** of BeeSmart, they can still initiate the Apple subscription purchase on the device.
+- After a successful purchase, we show a clear message that the purchase is on-device, then route the user to BeeSmart login so we can **apply** the membership to that BeeSmart account.
+- We still do **not** show “Premium Active” while logged out.
+
+**Implemented in:**
+
+- `templates/subscription.html` (`subscribe(plan)`) — allows purchase pre-login, then redirects to `/auth/login?next=...` to apply membership.
+
 ### C) Reduce intermittent restore failures (bridge readiness retry)
 
 In TestFlight / wrapped webviews, the native IAP bridge may initialize late.
