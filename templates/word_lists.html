@@ -750,7 +750,7 @@
             badgeEl.style.display = 'block';
           } else if (badgeEl) {
             badgeEl.innerHTML = "";
-            badgeEl.style.backgroundImage = "url('/static/assets/badges/png/Novice.png')";
+            badgeEl.style.backgroundImage = "url('{{ url_for('static', filename='assets/badges/Novice.png') }}')";
             badgeEl.style.backgroundSize = "contain";
             badgeEl.style.backgroundRepeat = "no-repeat";
             badgeEl.style.backgroundPosition = "center";
@@ -788,7 +788,7 @@
 
     const badgeEl = document.getElementById('badgeIcon');
     if (badgeEl) {
-      badgeEl.style.backgroundImage = "url('/static/assets/badges/png/Novice.png')";
+      badgeEl.style.backgroundImage = "url('{{ url_for('static', filename='assets/badges/Novice.png') }}')";
       badgeEl.style.backgroundSize = "contain";
       badgeEl.style.backgroundRepeat = "no-repeat";
       badgeEl.style.backgroundPosition = "center";
@@ -1768,6 +1768,11 @@
     }
 
     document.addEventListener('click', handle, true);
+    // iOS Safari/PWA sometimes fails to dispatch click/pointer events reliably
+    // for absolutely-positioned/layered images. Capture touchstart explicitly.
+    document.addEventListener('touchstart', function(e){
+      handle(e);
+    }, { capture: true, passive: false });
     document.addEventListener('pointerdown', function(e){
       try {
         if (e && e.pointerType && e.pointerType !== 'touch') return;

@@ -5780,6 +5780,13 @@ def _debug_root_status(resp):
             resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
             resp.headers['Pragma'] = 'no-cache'
             resp.headers['Expires'] = '0'
+
+        # Service worker script must never be cached by the browser/CDN, otherwise
+        # clients can get stuck on an old SW and keep serving stale UI.
+        if request.path == '/service-worker.js':
+            resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
         
         # Set proper Content-Type with UTF-8 charset for HTML responses
         # Fixes accessibility/compatibility validator warnings

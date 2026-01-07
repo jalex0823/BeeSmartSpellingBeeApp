@@ -20,17 +20,55 @@
         <!-- PWA Manifest -->
         <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
         <script>
-            // Register service worker if supported
+            // Register service worker (root scope) and auto-apply updates.
+            // Apple review cannot be blocked by stale cached UI.
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    const swUrl = '/static/service-worker.js?v={{ timestamp }}';
-                    navigator.serviceWorker.register(swUrl).then((reg) => {
+                    const swUrl = '/service-worker.js?v={{ timestamp }}';
+
+                    // Best-effort cleanup: unregister legacy /static/ scoped SWs so they
+                    // don't keep old caches alive. Safe because we immediately register
+                    // the root-scoped worker.
+                    try {
+                        if (!window.__beesmartSwCleanupDone && navigator.serviceWorker.getRegistrations) {
+                            window.__beesmartSwCleanupDone = true;
+                            navigator.serviceWorker.getRegistrations().then((regs) => {
+                                (regs || []).forEach((r) => {
+                                    try {
+                                        const u = (r && r.active && r.active.scriptURL) || (r && r.installing && r.installing.scriptURL) || '';
+                                        if (u && u.includes('/static/service-worker.js')) r.unregister();
+                                    } catch (_) {}
+                                });
+                            }).catch(() => {});
+                        }
+                    } catch (_) {}
+
+                    navigator.serviceWorker.register(swUrl, { scope: '/' }).then((reg) => {
+                        try { if (reg && typeof reg.update === 'function') reg.update(); } catch (_) {}
+
+                        function trySkipWaiting() {
+                            try {
+                                if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            } catch (_) {}
+                        }
+
+                        // If an update is already waiting, activate immediately.
+                        trySkipWaiting();
+
+                        // When an update is found, activate it as soon as installed.
                         try {
-                            if (reg && typeof reg.update === 'function') reg.update();
-                        } catch (e) { /* no-op */ }
-                        try {
-                            if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                        } catch (e) { /* no-op */ }
+                            reg.addEventListener('updatefound', () => {
+                                const installing = reg.installing;
+                                if (!installing) return;
+                                installing.addEventListener('statechange', () => {
+                                    if (installing.state === 'installed') {
+                                        trySkipWaiting();
+                                    }
+                                });
+                            });
+                        } catch (_) {}
+
+                        // Reload once the new SW takes control.
                         try {
                             let reloaded = false;
                             navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -38,7 +76,7 @@
                                 reloaded = true;
                                 window.location.reload();
                             });
-                        } catch (e) { /* no-op */ }
+                        } catch (_) {}
                     }).catch(() => {});
                 });
             }
@@ -100,7 +138,6 @@
         <style id="beesmart-disable-overlays">
             /* Known overlay selectors used across templates */
             .loading-overlay,
-            .bee-modal-overlay,
             .honey-home-overlay,
             #avatar-loading-overlay,
             .background-overlay,
@@ -112,6 +149,21 @@
                 opacity: 0 !important;
                 pointer-events: none !important;
                 will-change: auto !important;
+            }
+
+            /* Allow BeeSmart modals to work when explicitly activated.
+               Many pages include the modal DOM at all times and toggle visibility
+               with an `.active` class; do not permanently disable those. */
+            .bee-modal-overlay:not(.active) {
+                display: none !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                will-change: auto !important;
+            }
+            .bee-modal-overlay.active {
+                display: flex !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
             }
 
             /* Ensure mascot/avatar canvas remains interactive and not blocked */
@@ -1036,21 +1088,6 @@
 
     {% block extra_js %}{% endblock %}
     <script src="{{ url_for('static', filename='js/brand-logo-replacer.js') }}?v={{ timestamp }}"></script>
-
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Serve the SW from /static/ (single source of truth) to avoid 404s
-                // when /service-worker.js is not mapped in certain deployments/CDNs.
-                const swUrl = '/static/service-worker.js?v={{ timestamp }}';
-                navigator.serviceWorker.register(swUrl).then((reg) => {
-                    try { if (reg && typeof reg.update === 'function') reg.update(); } catch (e) { /* no-op */ }
-                    try { if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' }); } catch (e) { /* no-op */ }
-                }).catch(() => {/* no-op */});
-            });
-        }
-    </script>
 
     <!-- If running inside Capacitor, open external links in the native browser -->
     <script>

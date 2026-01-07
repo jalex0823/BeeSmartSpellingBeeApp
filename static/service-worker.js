@@ -2,7 +2,8 @@
 // Bump this to force clients to refresh cached assets after important fixes.
 // 2026-01-05: iOS Connect fixes (loader/system checks, registered avatar stability, restore hang).
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
-const CACHE_VERSION = 'beesmart-v1.4.5-v39-2026-01-06-avatar-stage-fx-gated';
+// 2026-01-07: cache bust + ensure Word Lists UI updates immediately (Apple review).
+const CACHE_VERSION = 'beesmart-v1.4.5-v39-2026-01-07-word-lists-buttons';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -79,6 +80,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // ✅ Word Lists page is being actively iterated and must never be served stale.
+  // Let the browser handle it directly (no SW interception/caching).
+  if (url.pathname === '/word-lists') {
+    return;
+  }
+
   // ✅ Quiz/session-critical endpoints: always bypass the SW.
   // These must reflect the *current* server-side session state, especially after app resume.
   // Letting the SW return cached/offline responses here can cause the resume modal / quiz load to stall.
@@ -95,6 +102,11 @@ self.addEventListener('fetch', (event) => {
     // ✅ IAP flows: allow direct network so restore/reconcile isn't affected by SW caching.
     url.pathname.startsWith('/api/iap/')
   ) {
+    return;
+  }
+
+  // ✅ Word list APIs: always bypass the SW so buttons work immediately after deploy.
+  if (url.pathname.startsWith('/api/saved-lists') || url.pathname.startsWith('/api/buzz-dust/')) {
     return;
   }
 
