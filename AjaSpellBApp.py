@@ -9593,7 +9593,8 @@ def api_answer():
             "total": len(order),
             "correct": state["correct"],
             "incorrect": state["incorrect"],
-            "streak": state["streak"]
+            "streak": state["streak"],
+            "session_points": state.get("session_points", 0)
         },
         "points": {
             "earned": points_earned,

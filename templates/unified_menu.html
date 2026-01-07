@@ -20641,5 +20641,78 @@
         }
     }, { passive: true, once: true });
     </script>
+
+    <!-- Realtime stats refresh (Grade/GPA/Points/Quizzes/Accuracy) -->
+    <script>
+    (function() {
+        function numberWithCommas(x) {
+            const n = Number(x);
+            if (!Number.isFinite(n)) return '0';
+            return n.toLocaleString();
+        }
+
+        function gpaToLetter(gpa) {
+            const g = Number(gpa) || 0;
+            if (g >= 3.7) return 'A';
+            if (g >= 2.7) return 'B';
+            if (g >= 1.7) return 'C';
+            if (g >= 0.7) return 'D';
+            return 'F';
+        }
+
+        function applyStats(stats) {
+            if (!stats) return;
+
+            const gpa = Number(stats.cumulative_gpa) || 0;
+            const acc = Number(stats.average_accuracy) || 0;
+
+            const elGrade = document.getElementById('stats-grade-letter');
+            if (elGrade) elGrade.textContent = gpaToLetter(gpa);
+
+            const elGpa = document.getElementById('stats-gpa-value');
+            if (elGpa) elGpa.textContent = gpa.toFixed(2);
+
+            const elPoints = document.getElementById('stats-points');
+            if (elPoints) elPoints.textContent = numberWithCommas(stats.total_lifetime_points || 0);
+
+            const elQuizzes = document.getElementById('stats-quizzes');
+            if (elQuizzes) elQuizzes.textContent = numberWithCommas(stats.total_quizzes_completed || 0);
+
+            const elAccuracy = document.getElementById('stats-accuracy');
+            if (elAccuracy) elAccuracy.textContent = (Number.isFinite(acc) ? acc : 0).toFixed(1);
+        }
+
+        async function refreshStats() {
+            try {
+                const r = await fetch('/api/users/stats', { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+                if (!r.ok) return;
+                const data = await r.json();
+                if (data && data.status === 'success' && data.stats) {
+                    applyStats(data.stats);
+                }
+            } catch (e) {
+                // Silent: this should never block the UI
+                console.warn('Stats refresh failed:', e);
+            }
+        }
+
+        // Initial refresh
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStats();
+        });
+
+        // Refresh when user returns to the tab (covers “incomplete quiz” exits / backgrounding)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refreshStats();
+        });
+        window.addEventListener('focus', refreshStats);
+
+        // Poll lightly while the menu is open
+        setInterval(refreshStats, 15000);
+
+        // Allow quiz pages to trigger an immediate refresh (optional)
+        window.addEventListener('beesmart:stats-updated', refreshStats);
+    })();
+    </script>
 </body>
 </html>
