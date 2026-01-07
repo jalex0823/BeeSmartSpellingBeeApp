@@ -1088,8 +1088,6 @@
 
         function showRestoreDialog(title, message, isSuccess) {
             return new Promise((resolve) => {
-                // Lock scroll
-                document.body.style.overflow = 'hidden';
                 // Remove any existing modal overlay to ensure only one notification at a time
                 const existing = document.querySelector('.restore-modal-overlay');
                 if (existing) try { existing.remove(); } catch(e) {}
@@ -1178,7 +1176,6 @@
                 // Handle button click
                 btn.addEventListener('click', () => {
                     document.body.removeChild(overlay);
-                    document.body.style.overflow = '';
                     resolve(true);
                     if (isSuccess) {
                         // Prefer an in-place refresh so we don't lose the user's scroll position.

@@ -412,8 +412,6 @@
             function showRestoreDialog(title, message, isSuccess) {
                 // Styled restore dialog (kept consistent with subscription.html for Apple compliance)
                 return new Promise((resolve) => {
-                    // Lock scroll
-                    document.body.style.overflow = 'hidden';
                     // Remove any existing modal overlay to ensure only one notification at a time
                     const existing = document.querySelector('.restore-modal-overlay');
                     if (existing) try { existing.remove(); } catch(e) {}
@@ -488,7 +486,6 @@
                     okBtn.addEventListener('mouseleave', () => okBtn.style.background = btnColor);
                     okBtn.addEventListener('click', () => {
                         try { overlay.remove(); } catch (e) {}
-                        document.body.style.overflow = '';
                         resolve(true);
                     });
 
