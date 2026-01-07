@@ -872,6 +872,14 @@
 
     cell.addEventListener("click", (e) => {
       e.preventDefault();
+      // If the click originated from one of the action controls (which are <img> tags)
+      // let that control's handler run (it stops propagation) and don't also trigger
+      // the default jar action.
+      if (e.target && e.target.closest && e.target.closest(
+        ".jar-delete-container, .jar-delete-img, .jar-use-leaf, .jar-view-btn, .jar-edit-btn"
+      )) {
+        return;
+      }
       useListInQuiz(list.id);
     });
 

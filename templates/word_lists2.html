@@ -961,7 +961,10 @@
     // Click jar = use in quiz (unless a positioned button was clicked)
     cell.onclick=(e)=>{
       e.preventDefault();
-      if(!e.target.closest("button")){
+      // Our action controls are <img> elements, not <button>s.
+      // Treat any click on those controls (or their containers) as an action click,
+      // not a jar click.
+      if(!e.target.closest("button, .jar-delete-container, .jar-delete-img, .jar-use-leaf, .jar-view-btn, .jar-edit-btn")){
         useListInQuiz(list.id);
       }
     };
