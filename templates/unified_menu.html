@@ -412,8 +412,26 @@
             function showRestoreDialog(title, message, isSuccess) {
                 // Styled restore dialog (kept consistent with subscription.html for Apple compliance)
                 return new Promise((resolve) => {
-                    // Lock scroll
-                    document.body.style.overflow = 'hidden';
+                    // Remove any existing modal overlay to ensure only one notification at a time
+                    const existing = document.querySelector('.restore-modal-overlay');
+                    if (existing) try { existing.remove(); } catch(e) {}
+                    const overlay = document.createElement('div');
+                    overlay.className = 'restore-modal-overlay';
+                    overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 100003;
+                        animation: fadeIn 0.2s ease-out;
+                        padding: 14px;
+                        pointer-events: auto;
+                    `;
                     // Remove any existing modal overlay to ensure only one notification at a time
                     const existing = document.querySelector('.restore-modal-overlay');
                     if (existing) try { existing.remove(); } catch(e) {}
@@ -488,7 +506,6 @@
                     okBtn.addEventListener('mouseleave', () => okBtn.style.background = btnColor);
                     okBtn.addEventListener('click', () => {
                         try { overlay.remove(); } catch (e) {}
-                        document.body.style.overflow = '';
                         resolve(true);
                     });
 
