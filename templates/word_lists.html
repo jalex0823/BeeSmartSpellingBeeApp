@@ -812,8 +812,11 @@
         filteredLists = [...allLists];
         updateStats();
         renderLists();
-      }else if(data.auth_required){
+      }else if(res.status === 401 || data.auth_required){
         displayLoginRequired();
+      }else if(res.status === 403 || data.premium_required){
+        // Premium-gated feature — show a friendly upgrade message instead of an empty state.
+        displayPremiumRequired();
       }else{
         displayEmptyList();
       }
@@ -1119,6 +1122,18 @@
         <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Login Required</h2>
         <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Please log in to view your Word Lists.</p>
         <button class="list-btn primary" onclick="window.location.href='/login'">🔑 Log In</button>
+      </div>
+    `;
+  }
+
+  function displayPremiumRequired(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = `
+      <div class="list-empty">
+        <div style="font-size:64px;margin-bottom:10px;">⭐️</div>
+        <h2 style="margin:0 0 8px;font-size:22px;color:var(--bee-brown);font-weight:900;">Premium Feature</h2>
+        <p style="margin:0 0 20px;font-size:14px;opacity:.8;">Word Lists are available for Premium members. Upgrade to save, edit, and reuse spelling lists across devices.</p>
+        <button class="list-btn primary" onclick="window.location.href='/pricing'">✨ Upgrade</button>
       </div>
     `;
   }

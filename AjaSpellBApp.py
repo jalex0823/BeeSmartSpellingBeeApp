@@ -3198,8 +3198,8 @@ def _require_premium_json(feature: str = "premium"):
     """Server-side paywall enforcement for premium-only features.
 
     Contract:
-    - For unauthenticated users: return a 403 JSON response with auth_required.
-    - For authenticated non-premium users: return a 402 JSON response with premium_required.
+    - For unauthenticated users: return a 401 JSON response with auth_required.
+    - For authenticated non-premium users: return a 403 JSON response with premium_required.
     - For premium users: return None.
 
     NOTE: We intentionally use a JSON response (not redirect) since these routes
@@ -3212,14 +3212,14 @@ def _require_premium_json(feature: str = "premium"):
                 "error": "auth_required",
                 "auth_required": True,
                 "feature": feature,
-            }), 403
+            }), 401
         if not bool(getattr(current_user, 'premium_member', False)):
             return jsonify({
                 "ok": False,
                 "error": "premium_required",
                 "premium_required": True,
                 "feature": feature,
-            }), 402
+            }), 403
     except Exception:
         # Fail-safe: never break the API on guard errors.
         return None
