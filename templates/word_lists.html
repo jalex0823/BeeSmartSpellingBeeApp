@@ -993,7 +993,7 @@
 
     deleteImg.tabIndex = 0;
     deleteImg.setAttribute("role", "button");
-  deleteImg.setAttribute("data-no-button-sfx", "1");
+
 
     const handleDelete = (e) => {
       console.log('🗑️ [Word Lists] Delete clicked', { id: list.id, name: rawName });
@@ -1024,7 +1024,7 @@
 
     useLeaf.tabIndex = 0;
     useLeaf.setAttribute("role", "button");
-  useLeaf.setAttribute("data-no-button-sfx", "1");
+
 
     const handleUse = (e) => {
       console.log('🍯 [Word Lists] Use clicked', { id: list.id, name: rawName, isEmpty });
@@ -1056,7 +1056,7 @@
 
     viewBtn.tabIndex = 0;
     viewBtn.setAttribute("role", "button");
-  viewBtn.setAttribute("data-no-button-sfx", "1");
+
 
     const handleView = (e) => {
       console.log('👁️ [Word Lists] View clicked', { id: list.id, name: rawName });
@@ -1084,7 +1084,7 @@
 
     editBtn.tabIndex = 0;
     editBtn.setAttribute("role", "button");
-  editBtn.setAttribute("data-no-button-sfx", "1");
+
 
     const handleEdit = (e) => {
       console.log('✏️ [Word Lists] Edit clicked', { id: list.id, name: rawName });
@@ -1188,8 +1188,19 @@
 
   async function useListInQuiz(id){
     try{
-      const listRes = await fetch(`/api/saved-lists/${id}`);
+      const listRes = await fetch(`/api/saved-lists/${id}`, { credentials: "same-origin" });
       const listData = await listRes.json();
+
+      if(listRes.status === 401 || listData.auth_required){
+        displayLoginRequired();
+        showToast("🔒 Please log in to use your word lists.","error");
+        return;
+      }
+      if(listRes.status === 403 || listData.premium_required){
+        displayPremiumRequired();
+        showToast("⭐️ Upgrade to Premium to use saved word lists.","error");
+        return;
+      }
 
       if(!listData.ok || !listData.list){
         showToast("❌ Could not load this word list","error");
@@ -1230,6 +1241,16 @@
       });
 
       const data = await res.json();
+      if(res.status === 401 || data.auth_required){
+        displayLoginRequired();
+        showToast("🔒 Please log in to use your word lists.","error");
+        return;
+      }
+      if(res.status === 403 || data.premium_required){
+        displayPremiumRequired();
+        showToast("⭐️ Upgrade to Premium to use saved word lists.","error");
+        return;
+      }
       if(data.ok){
         showToast(`✅ ${newWordCount} words loaded! Heading to quiz…`,"success");
         setTimeout(()=>window.location.href="/quiz",700);
@@ -1254,6 +1275,16 @@
         body:JSON.stringify({name:name.trim()})
       });
       const data = await res.json();
+      if(res.status === 401 || data.auth_required){
+        displayLoginRequired();
+        showToast("🔒 Please log in to create word lists.","error");
+        return;
+      }
+      if(res.status === 403 || data.premium_required){
+        displayPremiumRequired();
+        showToast("⭐️ Upgrade to Premium to create word lists.","error");
+        return;
+      }
       if(data.ok){
         showToast("✅ word list created!","success");
         await loadWordLists();
@@ -1271,6 +1302,16 @@
     try{
       const res = await fetch(`/api/saved-lists/${listId}`);
       const data = await res.json();
+      if(res.status === 401 || data.auth_required){
+        displayLoginRequired();
+        showToast("🔒 Please log in to view your word lists.","error");
+        return;
+      }
+      if(res.status === 403 || data.premium_required){
+        displayPremiumRequired();
+        showToast("⭐️ Upgrade to Premium to view saved word lists.","error");
+        return;
+      }
       if(data.ok && data.list){
         const words = data.list.words||[];
         const wordStrings = words.map(w => {
@@ -1310,6 +1351,16 @@
         credentials:"same-origin"
       });
       const data = await res.json();
+      if(res.status === 401 || data.auth_required){
+        displayLoginRequired();
+        showToast("🔒 Please log in to delete word lists.","error");
+        return;
+      }
+      if(res.status === 403 || data.premium_required){
+        displayPremiumRequired();
+        showToast("⭐️ Upgrade to Premium to delete word lists.","error");
+        return;
+      }
       if(data.ok){
         localFavs.delete(listId);
         persistFavs();

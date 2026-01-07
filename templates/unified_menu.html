@@ -15969,12 +15969,14 @@
                 // Use provided percentage or current progress
                 if (pctEl) pctEl.textContent = Math.floor(percentage !== null ? percentage : this.progress) + '%';
                 
+                // Style the check row based on status/icon.
+                // Success: no icon (empty string). Info/Warning/Error: any non-empty icon.
                 if (icon === '') {
                     checkEl.style.background = 'rgba(0, 255, 136, 0.15)';
                     checkEl.style.borderColor = 'rgba(0, 255, 136, 0.35)';
-                } else if (icon === '') {
-                    checkEl.style.background = 'rgba(255, 64, 64, 0.12)';
-                    checkEl.style.borderColor = 'rgba(255, 64, 64, 0.35)';
+                } else {
+                    checkEl.style.background = 'rgba(255, 214, 0, 0.12)';
+                    checkEl.style.borderColor = 'rgba(255, 214, 0, 0.35)';
                 }
             }
             
@@ -16302,6 +16304,13 @@
                     this.updateProgress(75, ' Some checks failed - continuing anyway');
                 }
                 
+                // Guarantee we visibly advance even if later steps change.
+                try {
+                    if (Number(this.progress) < 75) {
+                        this.updateProgress(75, ' Systems checks complete');
+                    }
+                } catch (_e) {}
+
                 return true;
             }
 
@@ -16745,6 +16754,103 @@
                 loader.style.visibility = 'visible';
             }
             
+            // Matrix Rain fallback (DOM-based) for cases where the full MatrixRain class
+            // isn't loaded yet (common on slow networks or script ordering issues).
+            window.__beesmartMatrixRainFallback = window.__beesmartMatrixRainFallback || {
+                intervalId: null,
+                ensureRunning() {
+                    try {
+                        const canvas = document.getElementById('matrixCanvas');
+                        if (!canvas) return false;
+                        const container = canvas.parentElement;
+                        if (!container) return false;
+
+                        let overlay = document.getElementById('matrixRainFallback');
+                        if (!overlay) {
+                            overlay = document.createElement('div');
+                            overlay.id = 'matrixRainFallback';
+                            overlay.setAttribute('aria-hidden', 'true');
+                            overlay.style.cssText = `
+                                position:absolute;
+                                left:0;top:0;right:0;bottom:0;
+                                pointer-events:none;
+                                z-index:1;
+                                overflow:hidden;
+                                opacity:0.65;
+                            `;
+                            container.appendChild(overlay);
+                        }
+
+                        overlay.style.display = 'block';
+
+                        const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+                        if (reduceMotion) {
+                            // Still show something subtle, but don't animate continuously.
+                            overlay.textContent = '0101010101010101';
+                            overlay.style.fontFamily = 'monospace';
+                            overlay.style.color = '#00ff00';
+                            overlay.style.fontSize = '12px';
+                            overlay.style.display = 'flex';
+                            overlay.style.alignItems = 'center';
+                            overlay.style.justifyContent = 'center';
+                            return true;
+                        }
+
+                        // Use existing helper if present; otherwise keep it simple.
+                        const spawn = () => {
+                            try {
+                                if (typeof createMatrixRain === 'function') {
+                                    createMatrixRain(overlay);
+                                } else {
+                                    const el = document.createElement('div');
+                                    el.textContent = Math.random() > 0.5 ? '1' : '0';
+                                    el.style.cssText = `
+                                        position:absolute;
+                                        left:${Math.random() * 100}%;
+                                        top:-20px;
+                                        font-family:monospace;
+                                        color:#00ff00;
+                                        font-size:14px;
+                                        opacity:0.8;
+                                        animation: beesmart-matrix-fall 1.1s linear;
+                                    `;
+                                    overlay.appendChild(el);
+                                    setTimeout(() => { try { el.remove(); } catch(_e) {} }, 1400);
+
+                                    if (!document.getElementById('beesmartMatrixFallStyle')) {
+                                        const style = document.createElement('style');
+                                        style.id = 'beesmartMatrixFallStyle';
+                                        style.textContent = '@keyframes beesmart-matrix-fall { to { transform: translateY(120vh); opacity: 0; } }';
+                                        document.head.appendChild(style);
+                                    }
+                                }
+                            } catch (_e2) {}
+                        };
+
+                        if (!this.intervalId) {
+                            // A light cadence keeps the UX alive (and avoids pegging the CPU).
+                            this.intervalId = setInterval(spawn, 250);
+                            // Prime a few immediately.
+                            for (let i = 0; i < 8; i++) spawn();
+                        }
+
+                        return true;
+                    } catch (_e) {
+                        return false;
+                    }
+                },
+                stop() {
+                    try {
+                        if (this.intervalId) {
+                            clearInterval(this.intervalId);
+                            this.intervalId = null;
+                        }
+                        const overlay = document.getElementById('matrixRainFallback');
+                        if (overlay) overlay.style.display = 'none';
+                    } catch (_e) {}
+                }
+            };
+
             // Initialize Matrix Rain Effect (reliable on load/reload + BFCache restore).
             // Respect explicit perf/reduced-motion flags, but otherwise always start.
             window.ensureMatrixRainRunning = function ensureMatrixRainRunning() {
@@ -16773,9 +16879,10 @@
                     // Ensure visible in case a prior run hid it.
                     canvas.style.display = 'block';
 
+                    // Primary: canvas effect when MatrixRain is available.
                     if (typeof MatrixRain === 'undefined') {
-                        if (window.BEESMART_DEBUG) console.warn(' MatrixRain not loaded, skipping animation');
-                        return false;
+                        if (window.BEESMART_DEBUG) console.warn(' MatrixRain not loaded, using fallback');
+                        return !!(window.__beesmartMatrixRainFallback && window.__beesmartMatrixRainFallback.ensureRunning());
                     }
 
                     // If an instance exists, try to (re)start it; otherwise create a new one.
@@ -16785,6 +16892,9 @@
                     if (typeof window.matrixRain.start === 'function') {
                         window.matrixRain.start();
                     }
+                    // Stop fallback if the real thing is running.
+                    try { window.__beesmartMatrixRainFallback && window.__beesmartMatrixRainFallback.stop(); } catch (_e) {}
+
                     if (window.BEESMART_DEBUG) console.log(' Matrix rain animation started');
                     return true;
                 } catch (e) {
@@ -16823,52 +16933,34 @@
                 console.error('Stack trace of where we are stuck:');
                 console.trace();
                 
-                // ALWAYS dismiss loader on timeout - don't wait for button click
+                // On timeout, don't abruptly dump the user to the main menu.
+                // Instead, show a clear escape hatch they can tap when ready.
                 try {
-                    if (window.loadingSystem && typeof window.loadingSystem.dismissLoader === 'function') {
-                        window.loadingSystem.updateProgress(100, ' Loaded (timeout)');
-                        window.loadingSystem.dismissLoader();
-                        try {
-                            if (!window.__honeyLoaderFinishedDispatched) {
-                                window.__honeyLoaderFinishedDispatched = true;
-                                document.dispatchEvent(new Event('honeyLoaderFinished'));
-                            }
-                        } catch (_e2) {}
-                    } else {
-                        const loader = document.getElementById('honeyLoader');
-                        if (loader) {
-                            // Keep Matrix rain running behind the menu; do not stop on timeout.
-                            document.body.style.visibility = 'visible';
-                            document.body.style.opacity = '1';
-                            document.body.style.pointerEvents = 'auto';
-                            document.body.style.overflow = 'auto';
-                            loader.style.pointerEvents = 'none';
-                            loader.style.opacity = '0';
-                            loader.style.visibility = 'hidden';
-                            loader.style.display = 'none';
-                            try {
-                                if (!window.__honeyLoaderFinishedDispatched) {
-                                    window.__honeyLoaderFinishedDispatched = true;
-                                    document.dispatchEvent(new Event('honeyLoaderFinished'));
-                                }
-                            } catch (_e2) {}
-                        }
+                    if (window.loadingSystem) {
+                        window.loadingSystem.updateProgress(99, ' Taking longer than expected…');
                     }
-                } catch (_e) {
-                    const loader = document.getElementById('honeyLoader');
-                    if (loader) loader.style.display = 'none';
-                    try {
-                        if (!window.__honeyLoaderFinishedDispatched) {
-                            window.__honeyLoaderFinishedDispatched = true;
-                            document.dispatchEvent(new Event('honeyLoaderFinished'));
-                        }
-                    } catch (_e2) {}
-                }
-                
-                // Try to update progress if LoadingSystem exists
-                if (window.loadingSystem) {
-                    window.loadingSystem.updateProgress(100, ' Loaded (timeout)');
-                }
+
+                    const btn = document.getElementById('welcomeStartBtn');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.setAttribute('aria-disabled', 'false');
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'auto';
+                        btn.style.cursor = 'pointer';
+                        btn.textContent = 'Tap to Enter (Safe Mode)';
+                        btn.title = 'Loading is taking longer than expected. Tap to continue.';
+                    }
+
+                    // Keep Matrix rain alive (fallback or real) so the screen isn’t "frozen".
+                    try { window.ensureMatrixRainRunning && window.ensureMatrixRainRunning(); } catch (_e2) {}
+
+                    // Also show the emergency bypass button prominently.
+                    const bypassBtn = document.getElementById('emergencyBypassBtn');
+                    if (bypassBtn) {
+                        bypassBtn.style.display = 'block';
+                        bypassBtn.style.opacity = '1';
+                    }
+                } catch (_e) {}
             }, LOADING_EMERGENCY_TIMEOUT);
             
             console.log(' Emergency timeout set for', LOADING_EMERGENCY_TIMEOUT, 'ms');
