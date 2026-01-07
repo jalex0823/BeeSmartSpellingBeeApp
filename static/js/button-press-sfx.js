@@ -100,6 +100,9 @@
   }
 
   function onPointerDown(e) {
+    // Respect other handlers that intentionally cancel the event (prevents
+    // double-activation issues on some mobile browsers with layered elements).
+    if (e && (e.defaultPrevented || e.cancelBubble)) return;
     const btn = findButtonTarget(e.target);
     if (!btn) return;
     playRandom({ volume: 0.32 });

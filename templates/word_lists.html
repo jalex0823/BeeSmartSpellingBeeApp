@@ -993,6 +993,7 @@
 
     deleteImg.tabIndex = 0;
     deleteImg.setAttribute("role", "button");
+  deleteImg.setAttribute("data-no-button-sfx", "1");
 
     const handleDelete = (e) => {
       console.log('🗑️ [Word Lists] Delete clicked', { id: list.id, name: rawName });
@@ -1023,6 +1024,7 @@
 
     useLeaf.tabIndex = 0;
     useLeaf.setAttribute("role", "button");
+  useLeaf.setAttribute("data-no-button-sfx", "1");
 
     const handleUse = (e) => {
       console.log('🍯 [Word Lists] Use clicked', { id: list.id, name: rawName, isEmpty });
@@ -1054,6 +1056,7 @@
 
     viewBtn.tabIndex = 0;
     viewBtn.setAttribute("role", "button");
+  viewBtn.setAttribute("data-no-button-sfx", "1");
 
     const handleView = (e) => {
       console.log('👁️ [Word Lists] View clicked', { id: list.id, name: rawName });
@@ -1081,6 +1084,7 @@
 
     editBtn.tabIndex = 0;
     editBtn.setAttribute("role", "button");
+  editBtn.setAttribute("data-no-button-sfx", "1");
 
     const handleEdit = (e) => {
       console.log('✏️ [Word Lists] Edit clicked', { id: list.id, name: rawName });
