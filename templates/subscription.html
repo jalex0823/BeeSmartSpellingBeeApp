@@ -1092,8 +1092,9 @@ function showRestoreDialog(title, message, isSuccess) {
     const existing = document.querySelector('.restore-modal-overlay');
     if (existing) try { existing.remove(); } catch (e) {}
 
-    // Save the current overflow setting and scroll the page/form to the top
-    const prevOverflow = document.documentElement.style.overflow || '';
+    // Save the current overflow settings and scroll the page/form to the top
+    const prevRootOverflow = document.documentElement.style.overflow || '';
+    const prevBodyOverflow = document.body.style.overflow || '';
     try {
       // Scroll the subscription container into view if present
       const formEl = document.querySelector('.subscription-container');
@@ -1107,8 +1108,9 @@ function showRestoreDialog(title, message, isSuccess) {
     } catch (e) {
       /* ignore scroll errors */
     }
-    // Disable scrolling on the page while the dialog is open
+    // Disable scrolling on both root and body while the dialog is open
     document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
 
     // Create modal overlay
     const overlay = document.createElement('div');
@@ -1201,12 +1203,14 @@ function showRestoreDialog(title, message, isSuccess) {
 
     // Handle button click
     btn.addEventListener('click', () => {
-      // Restore the original overflow setting so scrolling works again
-      document.documentElement.style.overflow = prevOverflow;
+      // Restore the original overflow settings so scrolling works again
+      document.documentElement.style.overflow = prevRootOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      // Remove overlay and resolve
       document.body.removeChild(overlay);
       resolve(true);
       if (isSuccess) {
-        // Prefer an in-place refresh so we don't lose the user's scroll position.
+        // Prefer an in‑place refresh so we don't lose the user's scroll position
         setTimeout(() => {
           try { reconcileAndRefreshSubscriptionUI('restore_success_dialog'); } catch (e) {}
         }, 250);
@@ -1231,6 +1235,7 @@ function showRestoreDialog(title, message, isSuccess) {
     }
   });
 }
+
 
         function runRestoreCelebrationBurst(opts) {
             // Lightweight celebration animation (no extra modal): a quick glitter burst.
