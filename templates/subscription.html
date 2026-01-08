@@ -1086,132 +1086,151 @@
             }
         }
 
-        function showRestoreDialog(title, message, isSuccess) {
-            return new Promise((resolve) => {
-                // Remove any existing modal overlay to ensure only one notification at a time
-                const existing = document.querySelector('.restore-modal-overlay');
-                if (existing) try { existing.remove(); } catch(e) {}
-                // Create modal overlay
-                const overlay = document.createElement('div');
-                overlay.className = 'restore-modal-overlay';
-                overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: #fff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 99999;
-                    pointer-events: auto;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                `;
+function showRestoreDialog(title, message, isSuccess) {
+  return new Promise((resolve) => {
+    // Remove any existing modal overlay to ensure only one notification at a time
+    const existing = document.querySelector('.restore-modal-overlay');
+    if (existing) try { existing.remove(); } catch (e) {}
 
-                // Create dialog
-                const dialog = document.createElement('div');
-                dialog.style.cssText = `
-                    background: white;
-                    border-radius: 16px;
-                    padding: 24px;
-                    max-width: 90%;
-                    width: 340px;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-                    text-align: center;
-                    animation: slideUp 0.3s ease-out;
-                    pointer-events: auto;
-                    z-index: 10001;
-                    position: relative;
-                `;
+    // Save the current overflow setting and scroll the page/form to the top
+    const prevOverflow = document.documentElement.style.overflow || '';
+    try {
+      // Scroll the subscription container into view if present
+      const formEl = document.querySelector('.subscription-container');
+      if (formEl && typeof formEl.scrollIntoView === 'function') {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // Also scroll the window to the top as a fallback
+      if (typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (e) {
+      /* ignore scroll errors */
+    }
+    // Disable scrolling on the page while the dialog is open
+    document.documentElement.style.overflow = 'hidden';
 
-                const iconColor = isSuccess ? '#4CAF50' : '#FF9800';
-                const btnColor = isSuccess ? '#4CAF50' : '#2196F3';
-                const btnHoverColor = isSuccess ? '#45A049' : '#1976D2';
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'restore-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      pointer-events: auto;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    `;
 
-                dialog.innerHTML = `
-                    <div style="font-size: 3rem; margin-bottom: 12px;">${isSuccess ? '✅' : '⚠️'}</div>
-                    <h3 style="margin: 0 0 12px; font-size: 1.3rem; color: ${iconColor};">${title}</h3>
-                    <p style="margin: 0 0 24px; color: #666; font-size: 0.95rem; line-height: 1.5;">
-                        ${message}
-                    </p>
-                    <button id="restoreDialogOkay" style="
-                        background: ${btnColor};
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        padding: 12px 32px;
-                        font-size: 1rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        width: 100%;
-                        transition: background 0.2s;
-                    ">Okay</button>
-                `;
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 90%;
+      width: 340px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      animation: slideUp 0.3s ease-out;
+      pointer-events: auto;
+      z-index: 10001;
+      position: relative;
+    `;
 
-                overlay.appendChild(dialog);
-                document.body.appendChild(overlay);
+    const iconColor = isSuccess ? '#4CAF50' : '#FF9800';
+    const btnColor = isSuccess ? '#4CAF50' : '#2196F3';
+    const btnHoverColor = isSuccess ? '#45A049' : '#1976D2';
 
-                // Prevent all interaction with elements behind the modal
-                overlay.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    // Don't close - user must click OK button
-                });
-                
-                // Prevent keyboard interactions from reaching elements behind
-                overlay.addEventListener('keydown', (e) => {
-                    e.stopPropagation();
-                });
-                
-                // Block touch events from passing through
-                overlay.addEventListener('touchstart', (e) => {
-                    e.stopPropagation();
-                });
+    dialog.innerHTML = `
+      <div style="font-size: 3rem; margin-bottom: 12px;">${isSuccess ? '✅' : '⚠️'}</div>
+      <h3 style="margin: 0 0 12px; font-size: 1.3rem; color: ${iconColor};">${title}</h3>
+      <p style="margin: 0 0 24px; color: #666; font-size: 0.95rem; line-height: 1.5;">
+        ${message}
+      </p>
+      <button id="restoreDialogOkay" style="
+        background: ${btnColor};
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 32px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s;
+      ">Okay</button>
+    `;
 
-                // Scroll the dialog into view
-                setTimeout(() => {
-                    dialog.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
 
-                // Add hover effect
-                const btn = dialog.querySelector('#restoreDialogOkay');
-                btn.addEventListener('mouseenter', () => btn.style.background = btnHoverColor);
-                btn.addEventListener('mouseleave', () => btn.style.background = btnColor);
+    // Prevent all interaction with elements behind the modal
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
 
+    // Prevent keyboard interactions from reaching elements behind the modal
+    overlay.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
 
-                // Handle button click
-                btn.addEventListener('click', () => {
-                    document.body.removeChild(overlay);
-                    resolve(true);
-                    if (isSuccess) {
-                        // Prefer an in-place refresh so we don't lose the user's scroll position.
-                        setTimeout(() => {
-                            try { reconcileAndRefreshSubscriptionUI('restore_success_dialog'); } catch(e) {}
-                        }, 250);
-                    }
-                });
+    // Block touch events from passing through
+    overlay.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    });
 
-                // Add animations if not already present
-                if (!document.getElementById('restoreDialogStyles')) {
-                    const style = document.createElement('style');
-                    style.id = 'restoreDialogStyles';
-                    style.textContent = `
-                        @keyframes fadeIn {
-                            from { opacity: 0; }
-                            to { opacity: 1; }
-                        }
-                        @keyframes slideUp {
-                            from { transform: translateY(20px); opacity: 0; }
-                            to { transform: translateY(0); opacity: 1; }
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-            });
+    // Scroll the dialog into view
+    setTimeout(() => {
+      dialog.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    // Add hover effect on the OK button
+    const btn = dialog.querySelector('#restoreDialogOkay');
+    btn.addEventListener('mouseenter', () => btn.style.background = btnHoverColor);
+    btn.addEventListener('mouseleave', () => btn.style.background = btnColor);
+
+    // Handle button click
+    btn.addEventListener('click', () => {
+      // Restore the original overflow setting so scrolling works again
+      document.documentElement.style.overflow = prevOverflow;
+      document.body.removeChild(overlay);
+      resolve(true);
+      if (isSuccess) {
+        // Prefer an in-place refresh so we don't lose the user's scroll position.
+        setTimeout(() => {
+          try { reconcileAndRefreshSubscriptionUI('restore_success_dialog'); } catch (e) {}
+        }, 250);
+      }
+    });
+
+    // Add animations if not already present
+    if (!document.getElementById('restoreDialogStyles')) {
+      const style = document.createElement('style');
+      style.id = 'restoreDialogStyles';
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  });
+}
 
         function runRestoreCelebrationBurst(opts) {
             // Lightweight celebration animation (no extra modal): a quick glitter burst.
