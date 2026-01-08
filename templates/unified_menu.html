@@ -416,24 +416,29 @@ function showRestoreDialog(title, message, isSuccess) {
         const existing = document.querySelector('.restore-modal-overlay');
         if (existing) try { existing.remove(); } catch (e) {}
 
-        // ======== START OF SCROLL‑LOCK BLOCK ========
-        // Save current overflow settings and scroll to the top.
-        const prevRootOverflow = document.documentElement.style.overflow || '';
-        const prevBodyOverflow = document.body.style.overflow || '';
+        // Scroll to the top BEFORE saving overflow settings or locking scrolling.
         try {
+            // Scroll a specific form element into view if it exists
             const formEl = document.querySelector('.subscription-container');
             if (formEl?.scrollIntoView) {
                 formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            // Fallback to scrolling the window to the very top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (err) {
             /* ignore scroll errors */
         }
+        // Always scroll the window itself to the very top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // (Optionally, force both document elements to top in case scrollTo doesn’t update them)
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+
+        // Now save current overflow settings
+        const prevRootOverflow = document.documentElement.style.overflow || '';
+        const prevBodyOverflow = document.body.style.overflow || '';
+
         // Disable scrolling on both <html> and <body> while the modal is displayed
         document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
-        // ======== END OF SCROLL‑LOCK BLOCK ========
 
         // Create modal overlay
         const overlay = document.createElement('div');
