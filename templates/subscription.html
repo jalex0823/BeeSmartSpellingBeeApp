@@ -1105,6 +1105,10 @@
                     align-items: center;
                     justify-content: center;
                     z-index: 99999;
+                    pointer-events: auto;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
                 `;
 
                 // Create dialog
@@ -1150,14 +1154,21 @@
                 overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
 
-                // Prevent clicking outside the dialog from closing it
-                // This blocks interaction with elements behind the modal
+                // Prevent all interaction with elements behind the modal
                 overlay.addEventListener('click', (e) => {
-                    // Only close if clicking directly on overlay, not the dialog
-                    if (e.target === overlay) {
-                        e.stopPropagation();
-                        // Don't close - user must click OK button
-                    }
+                    e.stopPropagation();
+                    e.preventDefault();
+                    // Don't close - user must click OK button
+                });
+                
+                // Prevent keyboard interactions from reaching elements behind
+                overlay.addEventListener('keydown', (e) => {
+                    e.stopPropagation();
+                });
+                
+                // Block touch events from passing through
+                overlay.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
                 });
 
                 // Scroll the dialog into view
