@@ -9679,16 +9679,20 @@ def api_save_partial_progress():
         
         # Update user's partial progress (for authenticated users)
         if current_user.is_authenticated:
-            # Add partial points to lifetime total
-            points_to_add = quiz_session.points_earned
-            if points_to_add > 0:
-                current_user.total_lifetime_points = (current_user.total_lifetime_points or 0) + points_to_add
+            # Persist the latest points earned on this session and credit them
+            # via the apply_points_if_needed helper.  This ensures points are
+            # only added once across multiple partial-save calls.
+            quiz_session.points_earned = state.get("session_points", 0)
+            # credit points if not yet applied
+            quiz_session.apply_points_if_needed()
             
-            # Update best streak if current is higher
+            # Update best streak if the current session streak exceeds the user's
+            # recorded best streak
             if quiz_session.best_streak > (current_user.best_streak or 0):
                 current_user.best_streak = quiz_session.best_streak
             
-            # Update average accuracy and GPA (includes incomplete sessions)
+            # Recalculate GPA and accuracy.  Note: this includes provisional
+            # values from incomplete sessions via the update_gpa_and_accuracy method.
             current_user.update_gpa_and_accuracy()
         
         # Commit to database

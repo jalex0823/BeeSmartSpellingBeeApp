@@ -143,60 +143,60 @@ class User(UserMixin, db.Model):
     purchase_records = db.relationship('PurchaseRecord', backref='user', lazy=True, cascade='all, delete-orphan')
     
     class User(UserMixin, db.Model):
-    # … existing fields …
-    total_lifetime_points = db.Column(db.Integer, default=0)
-    total_quizzes_completed = db.Column(db.Integer, default=0)
+        # … existing fields …
+        total_lifetime_points = db.Column(db.Integer, default=0)
+        total_quizzes_completed = db.Column(db.Integer, default=0)
 
-    def add_points(self, points):
-        """Existing method – called on full completion"""
-        self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
+        def add_points(self, points):
+            """Existing method – called on full completion"""
+            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
 
-    def credit_session_points(self, points):
-        """
-        NEW: credit points from an in‑progress session without
-        incrementing quizzes or updating GPA/accuracy.
-        """
-        if points:
-            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
+        def credit_session_points(self, points):
+            """
+            NEW: credit points from an in‑progress session without
+            incrementing quizzes or updating GPA/accuracy.
+            """
+            if points:
+                self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
 
-class QuizSession(db.Model):
-    # … existing fields …
-    points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
+        class QuizSession(db.Model):
+            # … existing fields …
+            points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
-    def apply_points_if_needed(self) -> int:
-        """
-        Apply points from this session if they haven't been applied yet.
-        Returns the number of points credited.
-        """
-        if self.points_applied:
-            return 0
-        total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
-        if self.user:
-            self.user.credit_session_points(total_points)
-        self.points_applied = True
-        db.session.flush()
-        return total_points
+            def apply_points_if_needed(self) -> int:
+                """
+                Apply points from this session if they haven't been applied yet.
+                Returns the number of points credited.
+                """
+                if self.points_applied:
+                    return 0
+                total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
+                if self.user:
+                    self.user.credit_session_points(total_points)
+                self.points_applied = True
+                db.session.flush()
+                return total_points
 
-    def complete_session(self) -> int:
-        """
-        Mark session as completed and award any remaining points.
-        """
-        self.completed = True
-        # calculate accuracy/grade as before
-        points_awarded = self.apply_points_if_needed()
-        if self.user:
-            self.user.increment_quizzes()
-            self.user.update_gpa_and_accuracy()
-        db.session.flush()
-        return points_awarded
+            def complete_session(self) -> int:
+                """
+                Mark session as completed and award any remaining points.
+                """
+                self.completed = True
+                # calculate accuracy/grade as before
+                points_awarded = self.apply_points_if_needed()
+                if self.user:
+                    self.user.increment_quizzes()
+                    self.user.update_gpa_and_accuracy()
+                db.session.flush()
+                return points_awarded
 
-    def set_password(self, password):
-        """Hash and set user password"""
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password):
-        """Verify password against hash"""
-        return check_password_hash(self.password_hash, password)
+            def set_password(self, password):
+                """Hash and set user password"""
+                self.password_hash = generate_password_hash(password)
+            
+            def check_password(self, password):
+                """Verify password against hash"""
+                return check_password_hash(self.password_hash, password)
     
     def generate_teacher_key(self):
         """Generate unique teacher key like BEE-2025-SMITH-7A3B"""
@@ -582,6 +582,20 @@ class QuizSession(db.Model):
         """Add points to lifetime total"""
         # Defensive: legacy rows/migrations may have NULL counters.
         self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
+
+    def credit_session_points(self, points: int) -> None:
+        """
+        Credit points from an in‑progress session without incrementing the
+        ``total_quizzes_completed`` counter or recalculating GPA/accuracy.
+        Called by the partial‑progress API to ensure points are preserved
+        when a quiz is exited before completion.
+
+        Args:
+            points (int): Number of points earned during the session.
+        """
+        if points:
+            # Defensive: treat missing counters as zero
+            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
     
     def increment_quizzes(self):
         """Increment total quizzes completed"""
@@ -763,6 +777,11 @@ class QuizSession(db.Model):
     browser_info = db.Column(db.String(100))
     ip_address = db.Column(db.String(45))
     notes = db.Column(db.Text)
+
+    # Track whether the session's points have been applied to the user.  This
+    # ensures that points credited during partial progress aren't added again
+    # when the session completes.
+    points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
     
     # Relationships
     results = db.relationship('QuizResult', backref='session', lazy=True, cascade='all, delete-orphan')
@@ -808,6 +827,21 @@ class QuizSession(db.Model):
         
         self.grade = grade
         return grade
+
+    def apply_points_if_needed(self) -> int:
+        """
+        Apply any points from this session to the associated user if they
+        have not already been applied.  Returns the number of points credited
+        (0 if points were already applied).
+        """
+        if self.points_applied:
+            return 0
+        total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
+        if self.user is not None:
+            self.user.credit_session_points(total_points)
+        self.points_applied = True
+        db.session.flush()
+        return total_points
     
     def complete_session(self):
         """Mark session as complete, calculate final stats, and update user totals."""
@@ -819,19 +853,18 @@ class QuizSession(db.Model):
         self.calculate_accuracy()
         self.calculate_grade()
 
-        # Compute total points earned in this session
-        total_points = (self.points_earned or 0) \
-                       + (self.badge_bonus_points or 0) \
-                       + (self.extra_points or 0)
+        # Award any outstanding points to the user.  This respects the
+        # points_applied flag so that points added during partial-progress
+        # saves are not double-counted.
+        points_awarded = self.apply_points_if_needed()
 
-        # Update the user’s lifetime points and quiz count
+        # Update the user’s quiz count and recalculate GPA/accuracy
         if self.user is not None:
-            self.user.add_points(total_points)
             self.user.increment_quizzes()
             self.user.update_gpa_and_accuracy()
             db.session.flush()  # persist changes within the current transaction
 
-        return total_points
+        return points_awarded
     
     def __repr__(self):
         return f'<QuizSession {self.id} - User {self.user_id} ({self.grade})>'
