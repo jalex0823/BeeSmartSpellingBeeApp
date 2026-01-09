@@ -16961,3 +16961,19 @@ if __name__ == "__main__":
                 app.run(host="0.0.0.0", port=new_port, debug=debug, use_reloader=False)
             else:
                 raise
+@app.route('/api/save-partial-progress', methods=['POST'])
+@login_required
+def save_partial_progress():
+    data = request.get_json() or {}
+    session_uuid = data.get('session_id')
+    session_points = int(data.get('session_points', 0))
+    # Look up the session by its UUID
+    session = QuizSession.query.filter_by(uuid=session_uuid, user_id=current_user.id).first()
+    if not session:
+        return jsonify({'status': 'error', 'message': 'session not found'}), 404
+    # update the running total (so it can be persisted)
+    session.points_earned = max(session.points_earned or 0, session_points)
+    # credit points if not yet applied
+    points_added = session.apply_points_if_needed()
+    db.session.commit()
+    return jsonify({'status': 'ok', 'points_added': points_added})
