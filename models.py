@@ -762,18 +762,28 @@ class QuizSession(db.Model):
         return grade
     
     def complete_session(self):
-        """Mark session as complete and calculate final stats"""
+        """Mark session as complete, calculate final stats, and update user totals."""
+        # Record session end and mark as completed
         self.session_end = datetime.utcnow()
         self.completed = True
-        
-        # Calculate time spent
-        if self.session_start:
-            delta = self.session_end - self.session_start
-            self.time_spent_seconds = int(delta.total_seconds())
-        
-        # Calculate accuracy and grade
+
+        # Calculate accuracy and grade for this session
         self.calculate_accuracy()
         self.calculate_grade()
+
+        # Compute total points earned in this session
+        total_points = (self.points_earned or 0) \
+                       + (self.badge_bonus_points or 0) \
+                       + (self.extra_points or 0)
+
+        # Update the user’s lifetime points and quiz count
+        if self.user is not None:
+            self.user.add_points(total_points)
+            self.user.increment_quizzes()
+            self.user.update_gpa_and_accuracy()
+            db.session.flush()  # persist changes within the current transaction
+
+        return total_points
     
     def __repr__(self):
         return f'<QuizSession {self.id} - User {self.user_id} ({self.grade})>'
