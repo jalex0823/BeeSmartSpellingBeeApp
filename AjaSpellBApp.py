@@ -9677,22 +9677,14 @@ def api_save_partial_progress():
                     )
                     db.session.add(achievement)
         
-        # Update user's partial progress (for authenticated users)
+        # Apply points to the user if they haven't been applied yet.
+        # This credits any earned points without incrementing quiz count or GPA.
         if current_user.is_authenticated:
-            # Persist the latest points earned on this session and credit them
-            # via the apply_points_if_needed helper.  This ensures points are
-            # only added once across multiple partial-save calls.
-            quiz_session.points_earned = state.get("session_points", 0)
-            # credit points if not yet applied
-            quiz_session.apply_points_if_needed()
-            
-            # Update best streak if the current session streak exceeds the user's
-            # recorded best streak
+            added_points = quiz_session.apply_points_if_needed()
+            # Update the user's best streak if the session's streak exceeds their record
             if quiz_session.best_streak > (current_user.best_streak or 0):
                 current_user.best_streak = quiz_session.best_streak
-            
-            # Recalculate GPA and accuracy.  Note: this includes provisional
-            # values from incomplete sessions via the update_gpa_and_accuracy method.
+            # Recalculate GPA and accuracy to account for any new provisional data
             current_user.update_gpa_and_accuracy()
         
         # Commit to database
@@ -16965,19 +16957,19 @@ if __name__ == "__main__":
                 app.run(host="0.0.0.0", port=new_port, debug=debug, use_reloader=False)
             else:
                 raise
-@app.route('/api/save-partial-progress', methods=['POST'])
-@login_required
-def save_partial_progress():
-    data = request.get_json() or {}
-    session_uuid = data.get('session_id')
-    session_points = int(data.get('session_points', 0))
-    # Look up the session by its UUID
-    session = QuizSession.query.filter_by(uuid=session_uuid, user_id=current_user.id).first()
-    if not session:
-        return jsonify({'status': 'error', 'message': 'session not found'}), 404
-    # update the running total (so it can be persisted)
-    session.points_earned = max(session.points_earned or 0, session_points)
-    # credit points if not yet applied
-    points_added = session.apply_points_if_needed()
-    db.session.commit()
-    return jsonify({'status': 'ok', 'points_added': points_added})
+# NOTE: A unified /api/save-partial-progress handler is defined earlier (api_save_partial_progress).
+# The legacy save_partial_progress endpoint below has been deprecated and is retained only
+# for backward compatibility. It no longer performs any operations.
+#@app.route('/api/save-partial-progress', methods=['POST'])
+#@login_required
+#def save_partial_progress():
+#    data = request.get_json() or {}
+#    session_uuid = data.get('session_id')
+#    session_points = int(data.get('session_points', 0))
+#    session = QuizSession.query.filter_by(uuid=session_uuid, user_id=current_user.id).first()
+#    if not session:
+#        return jsonify({'status': 'error', 'message': 'session not found'}), 404
+#    session.points_earned = max(session.points_earned or 0, session_points)
+#    points_added = session.apply_points_if_needed()
+#    db.session.commit()
+#    return jsonify({'status': 'ok', 'points_added': points_added})

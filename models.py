@@ -143,60 +143,62 @@ class User(UserMixin, db.Model):
     purchase_records = db.relationship('PurchaseRecord', backref='user', lazy=True, cascade='all, delete-orphan')
     
     class User(UserMixin, db.Model):
-        # … existing fields …
-        total_lifetime_points = db.Column(db.Integer, default=0)
-        total_quizzes_completed = db.Column(db.Integer, default=0)
+        __abstract__ = True
+    # … existing fields …
+    total_lifetime_points = db.Column(db.Integer, default=0)
+    total_quizzes_completed = db.Column(db.Integer, default=0)
 
-        def add_points(self, points):
-            """Existing method – called on full completion"""
-            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
+    def add_points(self, points):
+        """Existing method – called on full completion"""
+        self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
 
-        def credit_session_points(self, points):
-            """
-            NEW: credit points from an in‑progress session without
-            incrementing quizzes or updating GPA/accuracy.
-            """
-            if points:
-                self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
+    def credit_session_points(self, points):
+        """
+        NEW: credit points from an in‑progress session without
+        incrementing quizzes or updating GPA/accuracy.
+        """
+        if points:
+            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
 
-        class QuizSession(db.Model):
-            # … existing fields …
-            points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    class QuizSession(db.Model):
+        __abstract__ = True
+    # … existing fields …
+    points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
-            def apply_points_if_needed(self) -> int:
-                """
-                Apply points from this session if they haven't been applied yet.
-                Returns the number of points credited.
-                """
-                if self.points_applied:
-                    return 0
-                total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
-                if self.user:
-                    self.user.credit_session_points(total_points)
-                self.points_applied = True
-                db.session.flush()
-                return total_points
+    def apply_points_if_needed(self) -> int:
+        """
+        Apply points from this session if they haven't been applied yet.
+        Returns the number of points credited.
+        """
+        if self.points_applied:
+            return 0
+        total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
+        if self.user:
+            self.user.credit_session_points(total_points)
+        self.points_applied = True
+        db.session.flush()
+        return total_points
 
-            def complete_session(self) -> int:
-                """
-                Mark session as completed and award any remaining points.
-                """
-                self.completed = True
-                # calculate accuracy/grade as before
-                points_awarded = self.apply_points_if_needed()
-                if self.user:
-                    self.user.increment_quizzes()
-                    self.user.update_gpa_and_accuracy()
-                db.session.flush()
-                return points_awarded
+    def complete_session(self) -> int:
+        """
+        Mark session as completed and award any remaining points.
+        """
+        self.completed = True
+        # calculate accuracy/grade as before
+        points_awarded = self.apply_points_if_needed()
+        if self.user:
+            self.user.increment_quizzes()
+            self.user.update_gpa_and_accuracy()
+        db.session.flush()
+        return points_awarded
 
-            def set_password(self, password):
-                """Hash and set user password"""
-                self.password_hash = generate_password_hash(password)
-            
-            def check_password(self, password):
-                """Verify password against hash"""
-                return check_password_hash(self.password_hash, password)
+    def set_password(self, password):
+        """Hash and set user password"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Verify password against hash"""
+        return check_password_hash(self.password_hash, password)
     
     def generate_teacher_key(self):
         """Generate unique teacher key like BEE-2025-SMITH-7A3B"""
@@ -585,16 +587,10 @@ class User(UserMixin, db.Model):
 
     def credit_session_points(self, points: int) -> None:
         """
-        Credit points from an in‑progress session without incrementing the
-        ``total_quizzes_completed`` counter or recalculating GPA/accuracy.
-        Called by the partial‑progress API to ensure points are preserved
-        when a quiz is exited before completion.
-
-        Args:
-            points (int): Number of points earned during the session.
+        Credit points from an in-progress quiz session to the user without incrementing
+        quiz count or recalculating GPA/accuracy. Used by partial progress saving.
         """
-        if points:
-            # Defensive: treat missing counters as zero
+        if points and int(points) > 0:
             self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
     
     def increment_quizzes(self):
@@ -741,6 +737,197 @@ class User(UserMixin, db.Model):
         all_streaks = session_streaks + speed_streaks
         if all_streaks:
             self.best_streak = max(all_streaks)
+
+    def set_password(self, password: str) -> None:
+        """Hash and set the user's password."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        """Verify a plaintext password against the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+    def generate_teacher_key(self) -> str:
+        """
+        Generate a unique teacher key using the current year, the first five characters
+        of the display name, and a random alphanumeric string.
+        Example: BEE-2025-SMITH-7A3B
+        """
+        year = datetime.now().year
+        name_part = self.display_name.split()[0].upper()[:5] if self.display_name else 'TEACH'
+        random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        self.teacher_key = f"BEE-{year}-{name_part}-{random_part}"
+        return self.teacher_key
+
+    def update_avatar(self, avatar_id: str, variant: str = 'default') -> tuple[bool, str]:
+        """
+        Update the user's avatar selection. Returns (success, message).
+        Avatar changes respect the parental control lock and only succeed if the
+        specified avatar exists.
+        """
+        if self.avatar_locked:
+            return False, "Avatar changes are locked by parental controls"
+        avatar = Avatar.get_by_slug(avatar_id)
+        if not avatar:
+            return False, f"Invalid avatar ID: {avatar_id}"
+        variant = 'default'
+        self.avatar_id = avatar_id
+        self.avatar_variant = variant
+        self.avatar_last_updated = datetime.utcnow()
+        try:
+            prefs = self.preferences or {}
+            prefs['avatar_selected'] = True
+            self.preferences = prefs
+        except Exception:
+            pass
+        return True, "Avatar updated successfully"
+
+    def get_avatar_data(self) -> dict:
+        """
+        Return a dict of avatar metadata for rendering, including URLs to the model
+        and thumbnail files. Falls back to default avatars if needed.
+        """
+        avatar = Avatar.get_by_slug(self.avatar_id)
+        if not avatar:
+            avatar = Avatar.get_by_slug('cool-bee')
+        if not avatar:
+            return {
+                'id': 'mascot-bee',
+                'name': 'Mascot Bee Avatar',
+                'variant': 'default',
+                'urls': {
+                    'glb': '/static/assets/avatars/glb_files/MascotBee.glb',
+                    'thumbnail': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png',
+                    'preview': '/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png',
+                }
+            }
+        base_path = "/static/assets/avatars/glb_files"
+        glb_filename = avatar.obj_file if avatar.obj_file else "MascotBee.glb"
+        if glb_filename.lower().endswith('.obj'):
+            glb_filename = glb_filename[:-4] + '.glb'
+        model_path = f"{base_path}/{glb_filename}"
+        import os
+        glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+        thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+        info = {
+            'id': avatar.slug,
+            'name': avatar.name,
+            'description': avatar.description,
+            'variant': self.avatar_variant,
+            'category': avatar.category,
+            'thumbnail_url': thumbnail_path,
+            'preview_url': thumbnail_path,
+            'model_file_url': model_path,
+            'fallback_url': "/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png",
+        }
+        urls = {
+            'thumbnail': info.get('thumbnail_url'),
+            'preview': info.get('preview_url'),
+            'glb': info.get('model_file_url'),
+            'fallback': info.get('fallback_url'),
+        }
+        return {
+            'avatar_id': self.avatar_id or 'mascot-bee',
+            'variant': (self.avatar_variant or 'default'),
+            'name': info.get('name'),
+            'thumbnail_url': urls['thumbnail'],
+            'model_url': urls['glb'],
+            'last_updated': self.avatar_last_updated.isoformat() if self.avatar_last_updated else None,
+            'locked': self.avatar_locked,
+            'urls': urls,
+        }
+
+    def has_selected_avatar(self) -> bool:
+        """
+        Return True if the user has explicitly selected an avatar (non-default profile state).
+        Checks a preference flag first, then falls back to the presence of avatar_id.
+        """
+        try:
+            prefs = self.preferences or {}
+            explicit = bool(prefs.get('avatar_selected'))
+            if explicit:
+                return True
+            return bool(self.avatar_id)
+        except Exception:
+            return bool(self.avatar_id)
+
+    # 🍯 Monetization Helper Methods
+    def is_admin_or_premium(self) -> bool:
+        """Return True if the user has admin privileges or premium membership."""
+        return bool(self.role == 'admin' or self.admin_all_access or self.premium_member)
+
+    def has_avatar_access(self, avatar_id: str) -> tuple[bool, str]:
+        """
+        Determine whether the user can access a specific avatar.
+        Returns (can_access, reason).
+        """
+        from avatar_catalog import check_avatar_unlocked
+        if self.is_admin_or_premium():
+            return True, "Admin/Premium access"
+        result = check_avatar_unlocked(
+            avatar_id=avatar_id,
+            user_honey_points=self.honey_points or 0,
+            purchased_avatars=self.purchased_avatars or []
+        )
+        return result["unlocked"], result["reason"]
+
+    def award_honey_points(self, points: int, reason: str = "") -> bool:
+        """Award Honey Points to the user. Returns True if points were added."""
+        if points and points > 0:
+            self.honey_points = (self.honey_points or 0) + points
+            return True
+        return False
+
+    def purchase_avatar(self, avatar_id: str) -> tuple[bool, str]:
+        """
+        Mark an avatar as purchased via in-app purchase. Returns (success, message).
+        """
+        if not self.purchased_avatars:
+            self.purchased_avatars = []
+        if avatar_id in self.purchased_avatars:
+            return False, "Avatar already purchased"
+        self.purchased_avatars.append(avatar_id)
+        return True, f"Avatar {avatar_id} purchased successfully"
+
+    # 📱 Subscription Helper Methods
+    def is_premium_active(self) -> bool:
+        """
+        Return True if the user has an active premium subscription. Admins and
+        accounts with admin_all_access bypass the check. Legacy premium_member flag
+        is also honoured for backward compatibility.
+        """
+        if self.role == 'admin' or self.admin_all_access:
+            return True
+        if self.premium_member:
+            return True
+        if not hasattr(self, 'subscription_status'):
+            return False
+        if not self.subscription_status or self.subscription_status == 'none':
+            return False
+        if self.subscription_status in ['active', 'grace_period']:
+            if hasattr(self, 'subscription_expires_at') and self.subscription_expires_at:
+                return datetime.utcnow() < self.subscription_expires_at
+            return True
+        return False
+
+    def get_subscription_status(self) -> dict:
+        """
+        Return a dictionary describing the user's subscription status.
+        """
+        if not hasattr(self, 'subscription_status'):
+            return {
+                'is_premium': bool(self.premium_member),
+                'subscription_type': 'none',
+                'subscription_status': 'none',
+                'subscription_expires_at': None,
+                'subscription_auto_renew': None,
+            }
+        return {
+            'is_premium': self.is_premium_active(),
+            'subscription_type': getattr(self, 'subscription_type', 'none'),
+            'subscription_status': getattr(self, 'subscription_status', 'none'),
+            'subscription_expires_at': getattr(self, 'subscription_expires_at', None),
+            'subscription_auto_renew': getattr(self, 'subscription_auto_renew', None),
+        }
     
     def __repr__(self):
         return f'<User {self.username} ({self.role})>'
@@ -777,10 +964,7 @@ class QuizSession(db.Model):
     browser_info = db.Column(db.String(100))
     ip_address = db.Column(db.String(45))
     notes = db.Column(db.Text)
-
-    # Track whether the session's points have been applied to the user.  This
-    # ensures that points credited during partial progress aren't added again
-    # when the session completes.
+    # Track whether points from this session have already been applied to the user's lifetime points
     points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
     
     # Relationships
@@ -827,43 +1011,39 @@ class QuizSession(db.Model):
         
         self.grade = grade
         return grade
-
+    
     def apply_points_if_needed(self) -> int:
         """
-        Apply any points from this session to the associated user if they
-        have not already been applied.  Returns the number of points credited
-        (0 if points were already applied).
+        Apply session points to the user's lifetime total if they haven't already been applied.
+        Returns the number of points credited to the user.
         """
         if self.points_applied:
             return 0
-        total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
+        total_points = (self.points_earned or 0) \
+                       + (self.badge_bonus_points or 0) \
+                       + (self.extra_points or 0)
         if self.user is not None:
             self.user.credit_session_points(total_points)
         self.points_applied = True
         db.session.flush()
         return total_points
-    
-    def complete_session(self):
-        """Mark session as complete, calculate final stats, and update user totals."""
-        # Record session end and mark as completed
+
+    def complete_session(self) -> int:
+        """
+        Mark the session as completed, apply any remaining points, increment the user's quiz count,
+        and update their GPA and accuracy. Returns the number of points awarded (not previously applied).
+        """
         self.session_end = datetime.utcnow()
         self.completed = True
-
-        # Calculate accuracy and grade for this session
+        # Calculate final accuracy and grade
         self.calculate_accuracy()
         self.calculate_grade()
-
-        # Award any outstanding points to the user.  This respects the
-        # points_applied flag so that points added during partial-progress
-        # saves are not double-counted.
+        # Apply points if not yet applied
         points_awarded = self.apply_points_if_needed()
-
-        # Update the user’s quiz count and recalculate GPA/accuracy
         if self.user is not None:
             self.user.increment_quizzes()
             self.user.update_gpa_and_accuracy()
-            db.session.flush()  # persist changes within the current transaction
-
+            db.session.flush()
         return points_awarded
     
     def __repr__(self):
