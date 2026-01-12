@@ -142,56 +142,6 @@ class User(UserMixin, db.Model):
     achievements = db.relationship('Achievement', backref='user', lazy=True, cascade='all, delete-orphan')
     purchase_records = db.relationship('PurchaseRecord', backref='user', lazy=True, cascade='all, delete-orphan')
     
-    class User(UserMixin, db.Model):
-        __abstract__ = True
-    # … existing fields …
-    total_lifetime_points = db.Column(db.Integer, default=0)
-    total_quizzes_completed = db.Column(db.Integer, default=0)
-
-    def add_points(self, points):
-        """Existing method – called on full completion"""
-        self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points or 0)
-
-    def credit_session_points(self, points):
-        """
-        NEW: credit points from an in‑progress session without
-        incrementing quizzes or updating GPA/accuracy.
-        """
-        if points:
-            self.total_lifetime_points = int(self.total_lifetime_points or 0) + int(points)
-
-    class QuizSession(db.Model):
-        __abstract__ = True
-    # … existing fields …
-    points_applied = db.Column(db.Boolean, default=False, nullable=False, index=True)
-
-    def apply_points_if_needed(self) -> int:
-        """
-        Apply points from this session if they haven't been applied yet.
-        Returns the number of points credited.
-        """
-        if self.points_applied:
-            return 0
-        total_points = (self.points_earned or 0) + (self.badge_bonus_points or 0) + (self.extra_points or 0)
-        if self.user:
-            self.user.credit_session_points(total_points)
-        self.points_applied = True
-        db.session.flush()
-        return total_points
-
-    def complete_session(self) -> int:
-        """
-        Mark session as completed and award any remaining points.
-        """
-        self.completed = True
-        # calculate accuracy/grade as before
-        points_awarded = self.apply_points_if_needed()
-        if self.user:
-            self.user.increment_quizzes()
-            self.user.update_gpa_and_accuracy()
-        db.session.flush()
-        return points_awarded
-
     def set_password(self, password):
         """Hash and set user password"""
         self.password_hash = generate_password_hash(password)
