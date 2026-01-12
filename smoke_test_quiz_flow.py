@@ -23,7 +23,7 @@ if sys.platform == "win32":
 
 # Session to maintain cookies
 session = requests.Session()
-BASE_URL = 'http://127.0.0.1:5000'
+BASE_URL = 'http://127.0.0.1:5051'  # Updated to match server port
 
 print("=" * 80)
 print("🐝 BEESMART SPELLING BEE - COMPREHENSIVE SMOKE TEST")

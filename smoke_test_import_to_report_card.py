@@ -31,7 +31,7 @@ if sys.platform == "win32":
         # Best-effort only; never fail the smoke test due to console encoding tweaks.
         pass
 
-BASE_URL = "http://127.0.0.1:5000"
+BASE_URL = "http://127.0.0.1:5051"  # Updated to match server port
 
 
 def _assert(cond: bool, msg: str) -> None:
