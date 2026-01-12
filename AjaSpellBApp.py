@@ -5592,27 +5592,19 @@ def upload_to_saved_list():
         return jsonify({"ok": False, "error": "Failed to update list"}), 500
 
 # --- Routes: UI --------------------------------------------------------------
-@app.route("/")
+# NOTE: The root route '/' is handled by home_root_direct() at line 767.
+# The duplicate route decorator below has been commented out to fix the 500 error.
+# @app.route("/")  # REMOVED: duplicate route - home_root_direct() at line 767 handles '/'
 def home():
-    """Ultra-light shell for root path that immediately forwards to /app.
-
-    This avoids any unexpected middleware or template interactions tied to the root
-    and guarantees a quick render with a 200, then a client redirect to the app.
+    """Legacy function - route removed to fix duplicate route issue.
+    
+    This function previously redirected to /app, but home_root_direct() at line 767
+    is the correct handler for '/' that renders unified_menu.html with all required
+    template variables. This function is kept for backwards compatibility but the
+    route decorator has been removed.
     """
-    from flask import make_response
-    body = """<!doctype html><html><head><meta charset='utf-8'>
-    <title>BeeSmart</title><meta http-equiv='refresh' content='0;url=/app'>
-    <meta name='robots' content='noindex'>
-    <style>body{font-family:Arial,sans-serif;padding:2rem;text-align:center}
-    img{max-width:260px;margin:1rem auto;display:block}</style></head>
-    <body>
-    <img src='/static/BeeSmartCrestLogo1.png' alt='BeeSmart Logo'>
-      <p>Loading BeeSmart… If not redirected, <a href='/app'>click here</a>.</p>
-      <script>try{window.location.replace('/app')}catch(e){}</script>
-    </body></html>"""
-    resp = make_response(body)
-    resp.headers["Cache-Control"] = "no-store, max-age=0"
-    return resp
+    # Delegate to home_root_direct() which has all the template variables
+    return home_root_direct()
 
 @app.route("/app")
 def app_home():
@@ -13000,9 +12992,11 @@ def avatar_picker_page():
 
 @app.route('/honeycomb-picker')
 def honeycomb_avatar_picker():
-    """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)"""
-    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
-        return redirect(url_for('login', next=request.path))
+    """NEW: Honeycomb-style avatar picker with hexagonal grid layout (responsive version)
+    
+    Allows public browsing to improve IAP discoverability (Apple requirement).
+    Guests can view all avatars but must login/register to purchase or select.
+    """
     timestamp = int(time.time())
     # Optional background override via query param `bg`.
     # Accepts values like '/static/images/my-bg.jpg' or 'images/my-bg.jpg'.
@@ -13018,15 +13012,26 @@ def honeycomb_avatar_picker():
             picker_bg_url = url_for('static', filename=bg.lstrip('/'))
 
     # Pass user context to template/JavaScript
-    # IMPORTANT: This route has @login_required, so guests never reach here
-    # All users accessing this page are authenticated registered users
+    # NOTE: Guests can now browse but will see "Login to purchase" messaging
+    is_authenticated = hasattr(current_user, 'is_authenticated') and current_user.is_authenticated
+    
+    # Safely access user attributes only if authenticated
     user_data = {
-        'is_authenticated': current_user.is_authenticated,
-        'is_guest': False,  # Guests redirected by @login_required
-        'is_admin': current_user.role == 'admin' if current_user.is_authenticated else False,
-        'user_role': current_user.role if current_user.is_authenticated else None,
-        'username': current_user.username if current_user.is_authenticated else None,
+        'is_authenticated': is_authenticated,
+        'is_guest': not is_authenticated,  # Guests can now browse
+        'is_admin': False,
+        'user_role': None,
+        'username': None,
     }
+    
+    if is_authenticated:
+        try:
+            user_data['is_admin'] = getattr(current_user, 'role', None) == 'admin'
+            user_data['user_role'] = getattr(current_user, 'role', None)
+            user_data['username'] = getattr(current_user, 'username', None)
+        except Exception:
+            # Fallback if any attribute access fails
+            pass
 
     return render_template(
         'honeycomb_avatar_picker_responsive.html',
