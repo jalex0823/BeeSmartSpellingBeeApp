@@ -569,6 +569,37 @@ async function loadAvatars() {
     console.log('Loaded avatars:', avatarsData.length);
     updateDynamicMarquee(avatarsData);
     renderAvatarGrid();
+    
+    // Always show mascot bee (honey-comb) by default in the viewer
+    setTimeout(() => {
+        const mascotSlugs = ['honey-comb', 'honeycomb', 'mascot-bee', 'mascotbee'];
+        let defaultAvatar = null;
+        
+        // Try to find mascot bee by slug
+        for (const slug of mascotSlugs) {
+            defaultAvatar = avatarsData.find(a => 
+                (a.slug || '').toLowerCase() === slug.toLowerCase()
+            );
+            if (defaultAvatar) break;
+        }
+        
+        // If no mascot found, use first unlocked avatar, or first avatar if all locked
+        if (!defaultAvatar) {
+            defaultAvatar = avatarsData.find(a => !a.is_locked) || avatarsData[0];
+        }
+        
+        if (defaultAvatar) {
+            console.log('🐝 Loading default avatar in viewer:', defaultAvatar.name);
+            const avatarElement = document.querySelector(`.avatar-hex-position[data-slug="${defaultAvatar.slug}"]`);
+            if (avatarElement) {
+                selectAvatar(defaultAvatar, avatarElement);
+            } else {
+                // If element not found yet, update preview directly
+                updatePreview(defaultAvatar);
+            }
+        }
+    }, 300); // Small delay to ensure grid is rendered
+    
     // Show a celebratory modal if new avatars have become unlocked since last visit
     maybeShowNewlyUnlockedModal(avatarsData);
     } catch (error) {
