@@ -1811,11 +1811,10 @@ async function purchaseLockedAvatar(slug) {
         return;
     }
 
-    if (!isUserAuthenticated()) {
-        const next = encodeURIComponent(window.location.pathname);
-        window.location.href = `/auth/login?next=${next}`;
-        return;
-    }
+    // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration
+    // Registration is optional - users can purchase without an account
+    // If user is not authenticated, they can still purchase (purchase will be tied to device/Apple ID)
+    // We'll suggest registration after purchase for cross-device access
 
     // Capacitor plugins can register after page JS runs; wait a bit longer in TestFlight
     // and prefer the explicit iap-ready event.
@@ -2050,11 +2049,8 @@ async function purchaseBundle(productId, bundleName) {
         alert('This bundle is not available for purchase right now.');
         return;
     }
-    if (!isUserAuthenticated()) {
-        const next = encodeURIComponent(window.location.pathname);
-        window.location.href = `/auth/login?next=${next}`;
-        return;
-    }
+    // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration
+    // Registration is optional - users can purchase without an account
     if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
         alert('Purchases are available in the BeeSmart iOS/Android app.');
         return;

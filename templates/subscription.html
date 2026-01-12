@@ -1404,21 +1404,21 @@ function showRestoreDialog(title, message, isSuccess) {
                         // Purchase complete — reconcile and refresh UI.
                         try { await reconcileAndRefreshSubscriptionUI('purchase_success'); } catch (e) {}
 
-                        // If not logged in, guide next step instead of claiming Premium is active.
+                        // Apple Guideline 5.1.1: Registration is optional after purchase
+                        // Purchase is complete and active on this device via Apple ID
+                        // We suggest (but don't require) registration for cross-device access
                         if (!window.IS_REAL_AUTH) {
                             try {
                                 await showRestoreDialog(
-                                    'Purchase complete',
-                                    'Purchase completed on this device. Now please sign in to your BeeSmart account to apply your membership.',
+                                    'Purchase Complete! 🎉',
+                                    'Your subscription is now active on this device. To access your subscription on all your devices, you can register a free BeeSmart account (optional).',
                                     true
                                 );
                             } catch (e) {
-                                alert('Purchase completed on this device. Now please sign in to your BeeSmart account to apply your membership.');
+                                alert('Purchase complete! Your subscription is active. Register (optional) to access on all devices.');
                             }
-                            try {
-                                const returnTo = window.location.pathname + window.location.search;
-                                window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
-                            } catch (e) {}
+                            // Don't force redirect - let user continue using the app
+                            // They can register later if they want cross-device access
                             return;
                         }
 
@@ -1430,16 +1430,12 @@ function showRestoreDialog(title, message, isSuccess) {
                         // If the user already has an active subscription (common in App Review scenarios),
                         // Apple/StoreKit may prevent repurchase. In that case, guide them to sign in so the
                         // app can apply the existing Apple ID subscription to their BeeSmart account.
+                        // Apple Guideline 5.1.1: Don't require registration
                         const msg = (!window.IS_REAL_AUTH)
-                            ? 'If you already have an active subscription on this Apple ID, please sign in to your BeeSmart account to apply it. You can also try Restore Purchases.'
+                            ? 'If you already have an active subscription on this Apple ID, you can try Restore Purchases. Registration is optional for cross-device access.'
                             : 'Purchase could not be completed. Please try again.';
                         alert(msg);
-                        if (!window.IS_REAL_AUTH) {
-                            try {
-                                const returnTo = window.location.pathname + window.location.search;
-                                window.location.href = '/auth/login?next=' + encodeURIComponent(returnTo);
-                            } catch (e) {}
-                        }
+                        // Don't force redirect to login - allow user to continue
                     });
                 return;
             }
