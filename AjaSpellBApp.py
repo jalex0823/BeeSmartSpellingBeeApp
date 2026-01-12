@@ -795,12 +795,46 @@ def home_root_direct():
     
     # Keep the home menu's Premium CTA price driven by the backend so UI stays future-proof.
     # (This is display copy only; the actual purchase flow still uses StoreKit/Google billing.)
+    # Provide all required template variables to avoid 500 errors
+    import time
+    timestamp = str(int(time.time()))
+    billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
+    try:
+        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID')
+        subscription_product_id = (subscription_product_id or '').strip() or SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    except Exception:
+        subscription_product_id = SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    try:
+        from flask_login import current_user as _cu
+        is_premium = bool(getattr(_cu, 'is_authenticated', False) and getattr(_cu, 'premium_member', False))
+    except Exception:
+        is_premium = False
+    try:
+        avatar_product_ids = AVATAR_SKUS
+    except Exception:
+        avatar_product_ids = {}
+    
     return render_template(
         'unified_menu.html',
         user_avatar=user_avatar_data,
         use_mascot=use_mascot,
         subscription_monthly_usd=3.99,
+        timestamp=timestamp,
+        registration_billing_mode=billing_mode,
+        subscription_product_id=subscription_product_id,
+        is_premium=is_premium,
+        avatar_product_ids=avatar_product_ids,
     )
+
+# Favicon route to prevent 404 errors
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon.ico to prevent 404 errors"""
+    try:
+        return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    except Exception:
+        # If favicon doesn't exist, return 204 No Content (browser will stop requesting)
+        return '', 204
 
 # Optional legacy preview alias retained (can be removed later)
 @app.route('/home_preview')
