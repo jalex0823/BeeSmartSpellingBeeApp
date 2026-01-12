@@ -104,9 +104,10 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIBackgroundModes</key>
+	<!-- UIBackgroundModes removed: app does not play audio in background -->
+	<!-- <key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
-	</array>
+	</array> -->
 </dict>
 </plist>

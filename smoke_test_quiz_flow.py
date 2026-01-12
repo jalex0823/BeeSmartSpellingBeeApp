@@ -7,6 +7,19 @@ Tests: Word Import → Quiz Flow → Audio Announcements → Report Card
 import requests
 import time
 import json
+import sys
+import io
+
+# Ensure Windows console can handle Unicode (emojis, symbols) without crashing.
+if sys.platform == "win32":
+    try:
+        if getattr(sys.stdout, "buffer", None) is not None and not getattr(sys.stdout, "closed", False):
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        if getattr(sys.stderr, "buffer", None) is not None and not getattr(sys.stderr, "closed", False):
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    except Exception:
+        # Best-effort only; never fail the smoke test due to console encoding tweaks.
+        pass
 
 # Session to maintain cookies
 session = requests.Session()

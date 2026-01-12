@@ -2195,6 +2195,14 @@ function showRestoreDialog(title, message, isSuccess) {
             animation: randomPulse 3s ease-in-out infinite;
         }
 
+        .menu-option.theme-gold {
+            --tile-bg: linear-gradient(135deg, #FFD700 0%, #FFA500 45%, #FF8C00 100%);
+            --tile-border: rgba(255, 255, 255, 0.7);
+            --tile-shadow: rgba(255, 165, 0, 0.35);
+            --tile-hover-shadow: rgba(255, 165, 0, 0.55);
+            --tile-text: #5A2C15;
+        }
+
         @keyframes randomPulse {
             0%, 100% {
                 box-shadow: 0 10px 22px rgba(255, 107, 157, 0.38);
@@ -5153,6 +5161,14 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="kid-tip"> Discover new words to learn!</div>
                 </div>
 
+                <!-- Avatars Shop - Clear entry point for IAP purchases -->
+                <div id="tileAvatars" class="menu-option theme-gold" onclick="kidSounds.playRandomEffect(); selectOption('avatars', this)" onmouseover="kidSounds.playHappyDing()" title=" Browse and unlock adorable bee avatars! Purchase new characters to customize your spelling experience.">
+                    <div class="option-icon">🐝</div>
+                    <div class="option-title">Avatars</div>
+                    <div class="option-description">Browse & unlock bee characters</div>
+                    <div class="kid-tip"> Collect all the bees! 🍯</div>
+                </div>
+
                 <!-- Saved Word Lists (Premium) -->
                 <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="saved" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth != 'true' %} Sign in to access saved word lists!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to access saved word lists!{% else %} Access your previously saved spelling lists and continue practicing!{% endif %}">
                     {% if _is_premium != 'true' %}
@@ -7063,6 +7079,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     text: '.menu-option[onclick*="text"]',
                     image: '.menu-option[onclick*="image"]',
                     dictionary: '.menu-option[onclick*="dictionary"]',
+                    avatars: '.menu-option[onclick*="avatars"]',
                     saved: '.menu-option[onclick*="saved"]',
                     random: '.menu-option[onclick*="random"]',
                     battle: '.menu-option[onclick*="battle"]',
@@ -7095,6 +7112,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     break;
                 case 'dictionary':
                     showDictionaryInterface();
+                    break;
+                case 'avatars':
+                    // Navigate to avatar picker/shop - clear entry point for IAP purchases
+                    window.location.href = '/honeycomb-picker';
                     break;
                 case 'saved':
                     window.location.href = '/word-lists';
