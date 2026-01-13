@@ -14911,31 +14911,76 @@ def update_user_stats_railway(user_id, points_to_add, words_correct, words_attem
 def speed_round_setup():
     """Speed round configuration page"""
     try:
-        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
+        # Safe check for authentication and premium status
+        # Use try-except to handle cases where current_user might not be accessible
+        try:
+            is_authenticated = hasattr(current_user, 'is_authenticated') and bool(current_user.is_authenticated)
+            is_premium = bool(getattr(current_user, 'premium_member', False)) if is_authenticated else False
+        except (AttributeError, RuntimeError, Exception) as auth_error:
+            # If current_user access fails, treat as unauthenticated
+            print(f"⚠️ Error accessing current_user in speed_round_setup: {auth_error}")
+            is_authenticated = False
+            is_premium = False
+        
+        if not (is_authenticated and is_premium):
             try:
                 flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
             except Exception:
                 pass
             return redirect(url_for('subscription_page'))
-    except Exception:
-        pass
+    except Exception as e:
+        # Log the error for debugging
+        print(f"❌ Error in speed_round_setup (outer try): {e}")
+        import traceback
+        traceback.print_exc()
+        # Fail gracefully - redirect to subscription page
+        try:
+            flash('Unable to verify premium status. Please try again.', 'warning')
+        except Exception:
+            pass
+        return redirect(url_for('subscription_page'))
 
-    timestamp = int(time.time())
-    return render_template('speed_round_setup.html', timestamp=timestamp)
+    try:
+        timestamp = int(time.time())
+        return render_template('speed_round_setup.html', timestamp=timestamp)
+    except Exception as e:
+        print(f"❌ Error rendering speed_round_setup template: {e}")
+        import traceback
+        traceback.print_exc()
+        return "Error loading speed round setup page. Please try again later.", 500
 
 
 @app.route("/speed-round/quiz")
 def speed_round_quiz():
     """Speed round quiz page with timer"""
     try:
-        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
+        # Safe check for authentication and premium status
+        try:
+            is_authenticated = hasattr(current_user, 'is_authenticated') and bool(current_user.is_authenticated)
+            is_premium = bool(getattr(current_user, 'premium_member', False)) if is_authenticated else False
+        except (AttributeError, RuntimeError, Exception) as auth_error:
+            # If current_user access fails, treat as unauthenticated
+            print(f"⚠️ Error accessing current_user in speed_round_quiz: {auth_error}")
+            is_authenticated = False
+            is_premium = False
+        
+        if not (is_authenticated and is_premium):
             try:
                 flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
             except Exception:
                 pass
             return redirect(url_for('subscription_page'))
-    except Exception:
-        pass
+    except Exception as e:
+        # Log the error for debugging
+        print(f"❌ Error in speed_round_quiz: {e}")
+        import traceback
+        traceback.print_exc()
+        # Fail gracefully - redirect to subscription page
+        try:
+            flash('Unable to verify premium status. Please try again.', 'warning')
+        except Exception:
+            pass
+        return redirect(url_for('subscription_page'))
 
     # Check if round is active
     if 'speed_round' not in session or not session.get('speed_round', {}).get('active'):

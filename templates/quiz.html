@@ -9479,7 +9479,14 @@ function safeParseJSON(txt, label = 'payload') {
 }
 
 // 🛡️ Global error handler for syntax errors
+// Prevent multiple reload attempts
+let __reloadInProgress = false;
 window.addEventListener('error', (event) => {
+    // Only handle syntax errors, and prevent multiple reload attempts
+    if (__reloadInProgress) {
+        return false; // Already handling a reload
+    }
+    
     if (event.error && event.error.message && event.error.message.includes('Unexpected token')) {
         console.error('🚨 JavaScript syntax error detected:', {
             message: event.error.message,
@@ -9488,15 +9495,22 @@ window.addEventListener('error', (event) => {
             colno: event.colno,
             stack: event.error.stack
         });
+        
+        // Mark reload as in progress to prevent loops
+        __reloadInProgress = true;
+        
         // Show user-friendly error message
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
             BeeSmart.showError('Page loading error detected. Refreshing...');
         } else {
             alert('Page loading error. Refreshing...');
         }
-        setTimeout(() => window.location.reload(), 2000);
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
         return true; // Prevent default error handling
     }
+    return false;
 });
 
 // Call immediately on page load
@@ -9577,6 +9591,13 @@ document.addEventListener('visibilitychange', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+    // 🛡️ Prevent multiple initializations (can happen with back/forward navigation or BFCache)
+    if (window.__quizInitialized) {
+        console.log('⚠️ Quiz already initialized, skipping duplicate initialization');
+        return;
+    }
+    window.__quizInitialized = true;
+    
     // DEBUG gated logging helper
     window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
@@ -9990,7 +10011,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const startMode = (action === 'resume') ? 'resume' : 'normal';
-            window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+            
+            // 🛡️ Prevent creating multiple QuizManager instances
+            if (window.quizManager) {
+                console.warn('⚠️ QuizManager already exists, reusing existing instance');
+            } else {
+                window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+            }
 
             // ✅ Resume reliability: when the user chooses Resume, force a programmatic start.
             // This prevents a common dormant-PWA edge case where the intro UI isn't re-triggered
@@ -10140,6 +10167,19 @@ window.addEventListener('beforeunload', (event) => {
         const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
         const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
         console.log(sent ? '💾 Progress save sent via beacon' : '❌ Beacon send failed');
+    }
+});
+
+// 🛡️ Handle pageshow event (BFCache restoration) - prevent restart loops
+window.addEventListener('pageshow', (event) => {
+    // If page was restored from BFCache, don't re-initialize if already initialized
+    if (event.persisted && window.__quizInitialized) {
+        console.log('📄 Page restored from BFCache - quiz already initialized, skipping re-init');
+        // Just restart polling if needed
+        if (!__liveStatusInterval) {
+            startLiveStatusPolling();
+        }
+        return;
     }
 });
 
