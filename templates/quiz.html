@@ -4763,10 +4763,25 @@ class BeeDelightManager {
             exitModal.style.display = 'none';
         }
         
+        // Clear quiz session flag to prevent service worker from interfering
+        window.__disableSwReload = false;
+        
+        // Clear any quiz-related session storage that might cause auto-resume
+        try {
+            sessionStorage.removeItem('quizResumeData');
+            sessionStorage.removeItem('quizInProgress');
+            sessionStorage.removeItem('__quizInitialized');
+        } catch (e) {
+            console.warn('Could not clear session storage:', e);
+        }
+        
         // Use window.location.replace() instead of href to prevent back button issues
+        // Add cache-busting parameter to ensure fresh page load and prevent quiz restart
+        // Force bypass service worker cache by using a unique URL
         // This ensures we go to home page and don't restart the quiz
-        console.log('🏠 Redirecting to main menu...');
-        window.location.replace('/');
+        console.log('🏠 Redirecting to main menu (with cache-busting and SW bypass)...');
+        const exitUrl = '/?exit=1&nocache=' + Date.now() + '&sw=bypass';
+        window.location.replace(exitUrl);
     }
 
     setupButtonEffects() {
@@ -9459,8 +9474,36 @@ function confirmBackToMenu(event) {
             speechSynthesis.cancel();
         }
         
-        // Navigate to home
-        window.location.href = '/';
+        // Stop live status polling
+        if (window.__liveStatusInterval) {
+            clearInterval(window.__liveStatusInterval);
+            window.__liveStatusInterval = null;
+        }
+        
+        // Stop countdown timer if it exists
+        if (window.quizManager && window.quizManager.countdownTimer) {
+            clearInterval(window.quizManager.countdownTimer);
+            window.quizManager.countdownTimer = null;
+        }
+        
+        // Clear quiz session flag to prevent service worker from interfering
+        window.__disableSwReload = false;
+        
+        // Clear any quiz-related session storage that might cause auto-resume
+        try {
+            sessionStorage.removeItem('quizResumeData');
+            sessionStorage.removeItem('quizInProgress');
+            sessionStorage.removeItem('__quizInitialized');
+        } catch (e) {
+            console.warn('Could not clear session storage:', e);
+        }
+        
+        // Use replace() instead of href to prevent back button issues and cache problems
+        // Force bypass service worker cache by using a unique URL
+        // Add cache-busting parameter to ensure fresh page load
+        console.log('🏠 Navigating to main menu (with cache-busting and SW bypass)...');
+        const exitUrl = '/?exit=1&nocache=' + Date.now() + '&sw=bypass';
+        window.location.replace(exitUrl);
     });
     
     cancelBtn.addEventListener('click', () => {
