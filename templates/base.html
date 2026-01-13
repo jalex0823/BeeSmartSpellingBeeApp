@@ -73,6 +73,11 @@
                             let reloaded = false;
                             navigator.serviceWorker.addEventListener('controllerchange', () => {
                                 if (reloaded) return;
+                                // Don't reload on quiz page to prevent reload loops
+                                if (window.__disableSwReload) {
+                                    console.log('🛡️ Service worker reload disabled on this page');
+                                    return;
+                                }
                                 reloaded = true;
                                 window.location.reload();
                             });

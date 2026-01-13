@@ -3362,24 +3362,8 @@ function showRestoreDialog(title, message, isSuccess) {
          <span id="statusBadgeText">Safe Hive</span>
     </div>
 
-    <!-- Background Music Player -->
-    <div id="musicControls" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        background: linear-gradient(135deg, #FFD93D 0%, #FFA500 100%);
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 3px solid rgba(255, 255, 255, 0.8);
-    " onclick="toggleMusic()" title="Toggle Background Music">
+    <!-- Background Music Player - HIDDEN per user request -->
+    <div id="musicControls" style="display: none !important; position: fixed; top: 20px; right: 20px; z-index: 10000; background: linear-gradient(135deg, #FFD93D 0%, #FFA500 100%); border-radius: 50%; width: 60px; height: 60px; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4); cursor: pointer; transition: all 0.3s ease; border: 3px solid rgba(255, 255, 255, 0.8);" onclick="toggleMusic()" title="Toggle Background Music">
         <div id="musicIcon" style="font-size: 1.8rem; display: flex; align-items: center; justify-content: center; color: #5A2C15; font-weight: bold;">
             ♪
         </div>
@@ -4903,6 +4887,36 @@ function showRestoreDialog(title, message, isSuccess) {
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
+                            {% if (current_user.total_quizzes_completed or 0) == 0 %}
+                            <div style="
+                                background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+                                border: 3px solid rgba(255, 165, 0, 0.4);
+                                border-radius: 18px;
+                                padding: 1rem 1.25rem;
+                                margin: 1rem auto 1.25rem auto;
+                                max-width: 95%;
+                                box-shadow: 0 4px 15px rgba(255, 165, 0, 0.12);
+                                text-align: center;
+                            ">
+                                <div style="font-size: 2rem; margin-bottom: 0.4rem;">🐝✨</div>
+                                <div style="
+                                    color: #8B4513;
+                                    font-size: 1.1rem;
+                                    font-weight: 700;
+                                    margin: 0 0 0.5rem 0;
+                                ">Your Stats Will Appear After Your First Quiz!</div>
+                                <div style="
+                                    color: #5A2C15;
+                                    font-size: 0.9rem;
+                                    line-height: 1.5;
+                                    margin: 0;
+                                ">
+                                    🎯 Complete a spelling quiz or challenge to see your points, grades, GPA, and accuracy calculated here!
+                                </div>
+                            </div>
+                            {% endif %}
 
                             <!-- Buttons (all on one line with consistent sizing) -->
                             <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">

@@ -754,6 +754,40 @@
             </div>
         </div>
         
+        <!-- Kid-Friendly Explanation for Apple Reviewers -->
+        {% if (current_user.total_quizzes_completed or 0) == 0 %}
+        <div style="
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+            border: 3px solid rgba(255, 165, 0, 0.4);
+            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem auto 0 auto;
+            max-width: 800px;
+            box-shadow: 0 6px 20px rgba(255, 165, 0, 0.15);
+            text-align: center;
+        ">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐝✨</div>
+            <h3 style="
+                color: #8B4513;
+                font-size: 1.3rem;
+                font-weight: 700;
+                margin: 0 0 0.75rem 0;
+                text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            ">Your Stats Will Appear Here!</h3>
+            <p style="
+                color: #5A2C15;
+                font-size: 1rem;
+                line-height: 1.6;
+                margin: 0;
+                font-weight: 500;
+            ">
+                🎯 <strong>How it works:</strong> When you complete your first spelling quiz or challenge, all your stats (points, grades, GPA, and accuracy) will automatically calculate and appear here! 
+                <br><br>
+                📚 <strong>Start learning:</strong> Click the <strong>"Quiz"</strong> button below to begin your spelling adventure and watch your stats grow! 🚀
+            </p>
+        </div>
+        {% endif %}
+        
         <script>
                 (function(){
                     function $(id){return document.getElementById(id);}    

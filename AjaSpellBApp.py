@@ -764,7 +764,7 @@ BADGE_METADATA = {
 # Flask app already created earlier to support early route decorators
 
 # Reliable, post-app-creation lightweight routes
-@app.route('/')
+@app.route('/', endpoint='home')
 def home_root_direct():
     """Primary application landing page: shows loader then auto-redirects to app."""
     print("="*80)
@@ -2560,8 +2560,44 @@ login_manager.login_message = ' Please log in to save your progress!'
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Load user by ID for Flask-Login"""
-    return User.query.get(int(user_id))
+    """Load user by ID for Flask-Login
+    
+    This function is called by Flask-Login whenever current_user is accessed.
+    It must handle database connection issues gracefully to prevent RuntimeErrors.
+    """
+    try:
+        # Ensure database is initialized before querying
+        _ensure_db_initialized()
+        
+        # Safely convert user_id to int
+        try:
+            user_id_int = int(user_id)
+        except (ValueError, TypeError):
+            print(f"⚠️ Invalid user_id in load_user: {user_id}")
+            return None
+        
+        # Query user from database
+        try:
+            user = User.query.get(user_id_int)
+            if user:
+                return user
+            else:
+                # User not found - this is normal for invalid session IDs
+                return None
+        except Exception as db_error:
+            # Database connection or query error
+            print(f"⚠️ Database error in load_user for user_id {user_id_int}: {db_error}")
+            import traceback
+            traceback.print_exc()
+            # Return None to allow Flask-Login to treat as anonymous user
+            return None
+    except Exception as e:
+        # Catch any other errors (e.g., database not initialized)
+        print(f"⚠️ Error in load_user for user_id {user_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return None to allow Flask-Login to treat as anonymous user
+        return None
 
 SESSION_INIT_SUCCESS = False
 
@@ -15080,33 +15116,92 @@ def update_user_stats_railway(user_id, points_to_add, words_correct, words_attem
 
 @app.route("/speed-round/setup")
 def speed_round_setup():
-    """Speed round configuration page"""
+    """Speed round configuration page
+    
+    NOTE: Page is accessible to all users (including Apple reviewers) for visibility.
+    Premium check happens at API level when user tries to start a round.
+    """
     try:
-        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
-            try:
-                flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
-            except Exception:
-                pass
-            return redirect(url_for('subscription_page'))
-    except Exception:
-        pass
-
-    timestamp = int(time.time())
-    return render_template('speed_round_setup.html', timestamp=timestamp)
+        # Ensure database is initialized (fixes load_user issues)
+        _ensure_db_initialized()
+        
+        # Now current_user should work properly since load_user has error handling
+        # Flask-Login's current_user is a LocalProxy that handles anonymous users gracefully
+        is_authenticated = current_user.is_authenticated
+        is_premium = bool(getattr(current_user, 'premium_member', False)) if is_authenticated else False
+        
+        # Always render the page (for Apple review visibility)
+        # Premium check happens at API level (/api/speed-round/start)
+        timestamp = int(time.time())
+        return render_template('speed_round_setup.html', 
+                             timestamp=timestamp,
+                             is_premium=is_premium,
+                             is_authenticated=is_authenticated)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"❌ Error in speed_round_setup: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return a proper error page instead of crashing
+        try:
+            error_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Loading Speed Round Setup - BeeSmart Spelling</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #d32f2f; }
+        a { color: #1976d2; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Error Loading Speed Round Setup</h1>
+    <p>An error occurred: {error}</p>
+    <p><a href="/">Return to Home</a></p>
+</body>
+</html>""".format(error=str(e))
+            return error_html, 500
+        except Exception:
+            return "Error loading speed round setup page. Please try again later.", 500
 
 
 @app.route("/speed-round/quiz")
 def speed_round_quiz():
     """Speed round quiz page with timer"""
     try:
-        if not bool(getattr(current_user, 'is_authenticated', False) and getattr(current_user, 'premium_member', False)):
+        # Ensure database is initialized (fixes load_user issues)
+        _ensure_db_initialized()
+        
+        # Now current_user should work properly since load_user has error handling
+        is_authenticated = current_user.is_authenticated
+        is_premium = bool(getattr(current_user, 'premium_member', False)) if is_authenticated else False
+        
+        if not (is_authenticated and is_premium):
             try:
                 flash('Speed Round is a Premium feature. Please subscribe to BeeSmart Premium to unlock it.', 'info')
             except Exception:
                 pass
             return redirect(url_for('subscription_page'))
-    except Exception:
-        pass
+    except Exception as e:
+        # Log the error for debugging
+        print(f"❌ Error in speed_round_quiz: {e}")
+        import traceback
+        traceback.print_exc()
+        # Fail gracefully - redirect to subscription page
+        try:
+            flash('Unable to verify premium status. Please try again.', 'warning')
+        except Exception:
+            pass
+        return redirect(url_for('subscription_page'))
 
     # Check if round is active
     if 'speed_round' not in session or not session.get('speed_round', {}).get('active'):
@@ -15227,12 +15322,35 @@ def api_speed_round_start():
             difficulty_level = difficulty_map.get(difficulty, 2)  # Default to grade 3-4
             print(f" Speed Round: Generating {word_count} words at difficulty level {difficulty_level} from internal dictionary")
             
-            word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
-            
-            # Extract just word strings for speed round
-            words = [record['word'] for record in word_records]
-            
-            print(f" Generated {len(words)} kid-friendly words from internal dictionary")
+            try:
+                word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
+                
+                if not word_records or len(word_records) == 0:
+                    print(f"⚠️ No words found at difficulty {difficulty_level}, trying fallback...")
+                    # Fallback: try a wider difficulty range
+                    word_records = get_random_words_by_difficulty(2, count=word_count)  # Default to medium
+                
+                # Extract just word strings for speed round
+                words = [record['word'] for record in word_records] if word_records else []
+                
+                if not words:
+                    raise ValueError("Could not generate words from dictionary - please try again")
+                
+                print(f" Generated {len(words)} kid-friendly words from internal dictionary")
+            except ValueError as ve:
+                print(f"❌ Speed Round word generation error: {ve}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Word dictionary is loading. Please wait a moment and try again.'
+                }), 500
+            except Exception as e:
+                print(f"❌ Speed Round unexpected error: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Failed to generate words. Please try again.'
+                }), 500
             
         elif word_source == 'uploaded':
             # Get user's uploaded word list

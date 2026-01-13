@@ -848,8 +848,10 @@ if (typeof window.UserAvatarLoader !== 'function') {
     }
 })();
 
-// Deferred initialization
-let avatarInitialized = false;
+// Deferred initialization (prevent duplicate declaration)
+if (typeof avatarInitialized === 'undefined') {
+    var avatarInitialized = false;
+}
 
 // Wait for honey loader to finish
 document.addEventListener('honeyLoaderFinished', () => {

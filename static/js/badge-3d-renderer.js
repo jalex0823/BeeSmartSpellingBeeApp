@@ -4,6 +4,8 @@
  * Uses THREE.js and GLTFLoader for 3D model rendering
  */
 
+// Prevent duplicate declaration
+if (typeof Badge3DRenderer === 'undefined') {
 class Badge3DRenderer {
     constructor(container, options = {}) {
         this.container = typeof container === 'string' 
@@ -273,3 +275,5 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 window.Badge3DRenderer = Badge3DRenderer;
+
+} // End of Badge3DRenderer guard
