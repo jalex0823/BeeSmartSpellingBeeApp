@@ -4637,24 +4637,10 @@ class BeeDelightManager {
         const stayButton = document.getElementById('stayButton');
         const confirmExitButton = document.getElementById('confirmExitButton');
 
-        // Show exit confirmation modal
-        if (exitButton) {
-            const self = this; // Capture 'this' context for BeeDelightManager
-            exitButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🚪 Exit button clicked');
-                if (self && self.showExitModal) {
-                    self.showExitModal();
-                } else {
-                    // Fallback: show alert if modal not available
-                    console.warn('⚠️ showExitModal method not available');
-                    if (confirm('Are you sure you want to exit the quiz?')) {
-                        window.location.href = '/';
-                    }
-                }
-            });
-        }
+        // Show exit confirmation modal (matching working version - simpler approach)
+        exitButton?.addEventListener('click', () => {
+            this.showExitModal();
+        });
 
         // Next Word button - manual advance after retry window closes
         nextWordButton?.addEventListener('click', async () => {
@@ -4686,22 +4672,10 @@ class BeeDelightManager {
             });
         }
 
-        // Confirm exit and go to menu
-        if (confirmExitButton) {
-            const self = this; // Capture 'this' context for BeeDelightManager
-            confirmExitButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('✅ Confirm exit clicked');
-                if (self && self.confirmExit) {
-                    self.confirmExit();
-                } else {
-                    // Fallback: direct navigation if confirmExit not available
-                    console.warn('⚠️ confirmExit method not available, using fallback');
-                    window.location.href = '/';
-                }
-            });
-        }
+        // Confirm exit and go to menu (matching working version - simpler approach)
+        confirmExitButton?.addEventListener('click', () => {
+            this.confirmExit();
+        });
 
         // Close modal on backdrop click
         exitModal?.addEventListener('click', (e) => {
@@ -4736,7 +4710,6 @@ class BeeDelightManager {
     }
 
     confirmExit() {
-        console.log('🚪 confirmExit called - preparing to exit quiz');
         this.soundboard.play('success');
         
         // ✅ CRITICAL FIX: Stop live status polling to prevent 504 errors
@@ -4757,31 +4730,31 @@ class BeeDelightManager {
             window.quizManager.countdownTimer = null;
         }
         
-        // Hide the modal immediately
+        // Add a friendly exit message (matching working version)
         const exitModal = document.getElementById('exitModal');
-        if (exitModal) {
-            exitModal.style.display = 'none';
+        const modalContent = exitModal?.querySelector('.exit-modal-content');
+        
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div class="exit-modal-header">
+                    <h3>🌟 Great job spelling today!</h3>
+                </div>
+                <div class="exit-modal-body">
+                    <p>🐝 You're becoming a spelling superstar!</p>
+                    <p>Come back anytime to practice more words!</p>
+                </div>
+            `;
         }
         
         // Clear quiz session flag to prevent service worker from interfering
         window.__disableSwReload = false;
         
-        // Clear any quiz-related session storage that might cause auto-resume
-        try {
-            sessionStorage.removeItem('quizResumeData');
-            sessionStorage.removeItem('quizInProgress');
-            sessionStorage.removeItem('__quizInitialized');
-        } catch (e) {
-            console.warn('Could not clear session storage:', e);
-        }
-        
-        // Use window.location.replace() instead of href to prevent back button issues
-        // Add cache-busting parameter to ensure fresh page load and prevent quiz restart
-        // Force bypass service worker cache by using a unique URL
-        // This ensures we go to home page and don't restart the quiz
-        console.log('🏠 Redirecting to main menu (with cache-busting and SW bypass)...');
-        const exitUrl = '/?exit=1&nocache=' + Date.now() + '&sw=bypass';
-        window.location.replace(exitUrl);
+        // Redirect after a short delay (matching working version approach)
+        // Using href instead of replace to match working version
+        setTimeout(() => {
+            console.log('🏠 Redirecting to main menu...');
+            window.location.href = '/';
+        }, 2000);
     }
 
     setupButtonEffects() {
@@ -9489,21 +9462,9 @@ function confirmBackToMenu(event) {
         // Clear quiz session flag to prevent service worker from interfering
         window.__disableSwReload = false;
         
-        // Clear any quiz-related session storage that might cause auto-resume
-        try {
-            sessionStorage.removeItem('quizResumeData');
-            sessionStorage.removeItem('quizInProgress');
-            sessionStorage.removeItem('__quizInitialized');
-        } catch (e) {
-            console.warn('Could not clear session storage:', e);
-        }
-        
-        // Use replace() instead of href to prevent back button issues and cache problems
-        // Force bypass service worker cache by using a unique URL
-        // Add cache-busting parameter to ensure fresh page load
-        console.log('🏠 Navigating to main menu (with cache-busting and SW bypass)...');
-        const exitUrl = '/?exit=1&nocache=' + Date.now() + '&sw=bypass';
-        window.location.replace(exitUrl);
+        // Navigate to home (matching working version - simple approach)
+        console.log('🏠 Navigating to main menu...');
+        window.location.href = '/';
     });
     
     cancelBtn.addEventListener('click', () => {
