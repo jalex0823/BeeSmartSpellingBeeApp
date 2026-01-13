@@ -4732,6 +4732,7 @@ class BeeDelightManager {
     }
 
     confirmExit() {
+        console.log('🚪 confirmExit called - preparing to exit quiz');
         this.soundboard.play('success');
         
         // ✅ CRITICAL FIX: Stop live status polling to prevent 504 errors
@@ -4741,24 +4742,27 @@ class BeeDelightManager {
             window.__liveStatusInterval = null;
         }
         
-        // Add a friendly exit message
+        // Stop speech synthesis
+        if ('speechSynthesis' in window) {
+            speechSynthesis.cancel();
+        }
+        
+        // Stop countdown timer if it exists
+        if (window.quizManager && window.quizManager.countdownTimer) {
+            clearInterval(window.quizManager.countdownTimer);
+            window.quizManager.countdownTimer = null;
+        }
+        
+        // Hide the modal immediately
         const exitModal = document.getElementById('exitModal');
-        const modalContent = exitModal.querySelector('.exit-modal-content');
+        if (exitModal) {
+            exitModal.style.display = 'none';
+        }
         
-        modalContent.innerHTML = `
-            <div class="exit-modal-header">
-                <h3>🌟 Great job spelling today!</h3>
-            </div>
-            <div class="exit-modal-body">
-                <p>🐝 You're becoming a spelling superstar!</p>
-                <p>Come back anytime to practice more words!</p>
-            </div>
-        `;
-        
-        // Redirect after a short delay
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 2000);
+        // Use window.location.replace() instead of href to prevent back button issues
+        // This ensures we go to home page and don't restart the quiz
+        console.log('🏠 Redirecting to main menu...');
+        window.location.replace('/');
     }
 
     setupButtonEffects() {
@@ -9518,40 +9522,37 @@ function safeParseJSON(txt, label = 'payload') {
     }
 }
 
-// 🛡️ Global error handler for syntax errors
-// Prevent multiple reload attempts
-let __reloadInProgress = false;
-window.addEventListener('error', (event) => {
-    // Only handle syntax errors, and prevent multiple reload attempts
-    if (__reloadInProgress) {
-        return false; // Already handling a reload
-    }
+// 🛡️ Global error handler - LOG ONLY (no auto-reload to prevent infinite loops)
+// Only add error handler if not already added (prevent duplicates)
+if (!window.__quizErrorHandlerAdded) {
+    window.__quizErrorHandlerAdded = true;
     
-    if (event.error && event.error.message && event.error.message.includes('Unexpected token')) {
-        console.error('🚨 JavaScript syntax error detected:', {
-            message: event.error.message,
+    window.addEventListener('error', (event) => {
+        // Log errors for debugging but DO NOT reload automatically
+        // Auto-reload was causing infinite restart loops
+        console.error('🚨 JavaScript error detected (logged only, no auto-reload):', {
+            message: event.error?.message || event.message,
             filename: event.filename,
             lineno: event.lineno,
             colno: event.colno,
-            stack: event.error.stack
+            stack: event.error?.stack,
+            error: event.error
         });
         
-        // Mark reload as in progress to prevent loops
-        __reloadInProgress = true;
-        
-        // Show user-friendly error message
-        if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
-            BeeSmart.showError('Page loading error detected. Refreshing...');
-        } else {
-            alert('Page loading error. Refreshing...');
-        }
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
-        return true; // Prevent default error handling
+        // DO NOT reload - let the page continue
+        // Users can manually refresh if needed
+        return false; // Allow default error handling
+    });
+}
+
+// 🛡️ Set initialization flag IMMEDIATELY to prevent any reload loops
+// This must be set before any async operations or error handlers
+if (typeof window !== 'undefined') {
+    // Only set if not already set (persists across some reload scenarios)
+    if (!window.__quizInitialized) {
+        window.__quizInitialized = false; // Will be set to true in DOMContentLoaded
     }
-    return false;
-});
+}
 
 // Call immediately on page load
 unlockiOSAudio();
@@ -9633,9 +9634,11 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     // 🛡️ Prevent multiple initializations (can happen with back/forward navigation or BFCache)
     if (window.__quizInitialized) {
-        console.log('⚠️ Quiz already initialized, skipping duplicate initialization');
+        console.warn('⚠️ Quiz already initialized, skipping duplicate initialization');
+        console.trace('Stack trace for duplicate initialization:');
         return;
     }
+    console.log('✅ Initializing quiz (first time)');
     window.__quizInitialized = true;
     
     // DEBUG gated logging helper
@@ -9991,6 +9994,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .then(res => {
                         if (res && res.ok) {
                             console.log('✅ Sample words seeded. Reloading quiz...');
+                            // 🛡️ Prevent infinite seed reload loop
+                            try {
+                                const seedReloadCount = sessionStorage.getItem('__seedReloadCount') || '0';
+                                const reloadCount = parseInt(seedReloadCount, 10);
+                                if (reloadCount >= 2) {
+                                    console.error('⚠️ Maximum seed reload attempts reached. Stopping to prevent infinite loop.');
+                                    sessionStorage.removeItem('__seedReloadCount');
+                                    BeeSmart.showError('Failed to seed words after multiple attempts. Please upload a word list manually.');
+                                    setTimeout(() => window.location.href = '/', 3000);
+                                    return;
+                                }
+                                sessionStorage.setItem('__seedReloadCount', (reloadCount + 1).toString());
+                            } catch (e) {
+                                // sessionStorage might not be available, continue anyway
+                                console.warn('⚠️ Could not track seed reload count:', e);
+                            }
                             const next = new URL(window.location.href);
                             // ensure autostart on return; keep seed only for this run
                             next.searchParams.set('autostart', '1');
@@ -10078,35 +10097,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 200);
             });
 
-            // ✅ Resume reliability: when the user chooses Resume, force a programmatic start.
-            // This prevents a common dormant-PWA edge case where the intro UI isn't re-triggered
-            // after returning from background, leaving the screen waiting forever.
-            if (action === 'resume') {
-                try {
-                    // Prefer the centralized helper (handles iOS vs others).
-                    // iOS Safari can race UI readiness after backgrounding, so retry a few times.
-                    const tryStart = () => {
-                        if (typeof window.quickStartQuiz === 'function') {
-                            window.quickStartQuiz();
-                            return true;
-                        }
-                        if (window.quizManager && typeof window.quizManager.loadNextWordWithIntro === 'function') {
-                            window.quizManager.quizStarted = true;
-                            window.quizManager.loadNextWordWithIntro();
-                            return true;
-                        }
-                        return false;
-                    };
-
-                    // Attempt quickly, then back off.
-                    const delays = [250, 650, 1200, 2000];
-                    delays.forEach((d) => setTimeout(() => {
-                        tryStart();
-                    }, d));
-                } catch (e) {
-                    console.warn('Resume autostart failed:', e);
-                }
-            }
+            // 🛡️ REMOVED: Resume autostart logic from DOMContentLoaded
+            // The QuizManager constructor already handles resume mode by calling loadNextWordWithIntro()
+            // Having both caused duplicate calls and restart loops
+            // Resume mode is now handled entirely in the QuizManager constructor (line 5250-5273)
             
             // ✅ START LIVE STATUS POLLING - Updates stats in real-time
             console.log('🔄 Starting live status polling for stats updates...');
