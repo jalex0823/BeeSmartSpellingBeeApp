@@ -764,7 +764,7 @@ BADGE_METADATA = {
 # Flask app already created earlier to support early route decorators
 
 # Reliable, post-app-creation lightweight routes
-@app.route('/')
+@app.route('/', endpoint='home')
 def home_root_direct():
     """Primary application landing page: shows loader then auto-redirects to app."""
     print("="*80)
@@ -14973,7 +14973,32 @@ def speed_round_setup():
         traceback.print_exc()
         # Return a proper error page instead of crashing
         try:
-            return f"<html><body><h1>Error Loading Speed Round Setup</h1><p>An error occurred: {str(e)}</p><p><a href='/'>Return to Home</a></p></body></html>", 500
+            error_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Loading Speed Round Setup - BeeSmart Spelling</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #d32f2f; }
+        a { color: #1976d2; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Error Loading Speed Round Setup</h1>
+    <p>An error occurred: {error}</p>
+    <p><a href="/">Return to Home</a></p>
+</body>
+</html>""".format(error=str(e))
+            return error_html, 500
         except Exception:
             return "Error loading speed round setup page. Please try again later.", 500
 
