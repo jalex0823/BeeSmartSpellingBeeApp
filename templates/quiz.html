@@ -3112,25 +3112,8 @@ if ('speechSynthesis' in window) {
 
 {# Load heavy 3D/avatar scripts only on pages that need them (quiz does). #}
 {% block three_js %}
-    <!-- Three.js for 3D GLB Avatars - Guard against duplicate loading -->
-    <script>
-        // Prevent duplicate Three.js loading
-        (function() {
-            if (typeof THREE !== 'undefined') {
-                return; // Three.js already loaded, skip
-            }
-            // Check if script tag already exists
-            var threeJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-            var existingScript = document.querySelector('script[src="' + threeJsUrl + '"]');
-            if (existingScript) {
-                return; // Script tag already exists, skip
-            }
-            var script = document.createElement('script');
-            script.src = threeJsUrl;
-            script.async = false; // Ensure synchronous loading for dependencies
-            document.head.appendChild(script);
-        })();
-    </script>
+    <!-- Three.js for 3D GLB Avatars -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- GLTF/GLB loader for GLB avatars -->
     <script src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
     <!-- SmartyBee3D class for mascot rendering -->
