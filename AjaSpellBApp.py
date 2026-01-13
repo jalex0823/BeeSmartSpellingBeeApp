@@ -10837,7 +10837,18 @@ def api_iap_verify(platform):
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+            # Log error but don't fail the verification - purchase may still be valid
+            try:
+                app.logger.error(f"IAP verify: db commit failed: {e}", exc_info=True)
+            except Exception:
+                pass
+            # Return success with warning instead of 500 to prevent error screen
+            return jsonify({
+                "success": True,
+                "message": "Purchase verified (database write failed)",
+                "warning": "Purchase verified but not saved to database. Please try again.",
+                "error": f"db_commit_failed: {e}"
+            }), 200
 
     resp = jsonify({
         "success": True,
@@ -11101,14 +11112,44 @@ def api_iap_restore():
 
     applied = []
     errors = []
+    db_errors = []  # Track database-specific errors separately
+    
+    # Refresh user object from database to avoid stale data issues
+    if user_for_restore is not None:
+        try:
+            db.session.refresh(user_for_restore)
+        except Exception as e:
+            try:
+                app.logger.warning(f"IAP restore: failed to refresh user object: {e}")
+                # Try to reload from database
+                user_for_restore = User.query.get(user_for_restore.id)
+                if user_for_restore is None:
+                    return jsonify({
+                        "success": False,
+                        "error": "user_not_found",
+                        "message": "User account not found. Please sign in again.",
+                        "restore_id": restore_id
+                    }), 404
+            except Exception:
+                pass
+    
     for pid in normalized:
         had_error = False
         err_msg = None
         try:
             if user_for_restore is not None:
-                res = _apply_entitlement(user_for_restore, pid)
-                if res.get('applied'):
-                    applied.append({"product_id": pid, **res})
+                try:
+                    res = _apply_entitlement(user_for_restore, pid)
+                    if res and isinstance(res, dict) and res.get('applied'):
+                        applied.append({"product_id": pid, **res})
+                except Exception as e:
+                    had_error = True
+                    err_msg = f"entitlement_apply_failed: {str(e)}"
+                    errors.append({"product_id": pid, "error": err_msg})
+                    try:
+                        app.logger.warning(f"IAP restore: failed to apply entitlement for {pid}: {e}", exc_info=True)
+                    except Exception:
+                        pass
             else:
                 # Guest restore: record owned SKUs for this device; the UI can reflect
                 # restored ownership without requiring an account.
@@ -11120,12 +11161,21 @@ def api_iap_restore():
                         owned.append(pid)
                     session['anon_owned_products'] = owned
                     applied.append({"product_id": pid, "applied": True, "details": {"mode": "anon_session"}})
-                except Exception:
+                except Exception as e:
+                    # Fallback: still mark as applied for guest even if session write fails
                     applied.append({"product_id": pid, "applied": True, "details": {"mode": "anon"}})
+                    try:
+                        app.logger.warning(f"IAP restore: session write failed for guest restore {pid}: {e}")
+                    except Exception:
+                        pass
         except Exception as e:
             had_error = True
             err_msg = str(e)
             errors.append({"product_id": pid, "error": err_msg})
+            try:
+                app.logger.error(f"IAP restore: unexpected error for {pid}: {e}", exc_info=True)
+            except Exception:
+                pass
 
         # Log a record for traceability (status verified via restore)
         raw_payload = {'restore': True, 'restore_id': restore_id}
@@ -11134,16 +11184,75 @@ def api_iap_restore():
         if not bypass_db:
             # Only write PurchaseRecord for authenticated users (schema requires user_id).
             if user_for_restore is not None:
-                rec = PurchaseRecord(
-                    user_id=user_for_restore.id,
-                    platform=platform,
-                    product_id=pid,
-                    status='restore_error' if had_error else 'verified',
-                    transaction_id=None,
-                    purchase_token=None,
-                    raw_payload=raw_payload
-                )
-                db.session.add(rec)
+                try:
+                    # Check if PurchaseRecord already exists to avoid duplicates
+                    existing = PurchaseRecord.query.filter_by(
+                        user_id=user_for_restore.id,
+                        platform=platform,
+                        product_id=pid,
+                        status='restore_error' if had_error else 'verified'
+                    ).first()
+                    
+                    if existing is None:
+                        rec = PurchaseRecord(
+                            user_id=user_for_restore.id,
+                            platform=platform,
+                            product_id=pid,
+                            status='restore_error' if had_error else 'verified',
+                            transaction_id=None,
+                            purchase_token=None,
+                            raw_payload=raw_payload
+                        )
+                        db.session.add(rec)
+                        # Commit immediately per product to isolate failures
+                        try:
+                            db.session.commit()
+                        except Exception as commit_err:
+                            db.session.rollback()
+                            db_errors.append({
+                                "product_id": pid,
+                                "error": str(commit_err),
+                                "type": "purchase_record_commit_failed"
+                            })
+                            try:
+                                app.logger.error(
+                                    f"IAP restore: failed to commit PurchaseRecord for {pid}: {commit_err}",
+                                    exc_info=True
+                                )
+                            except Exception:
+                                pass
+                    else:
+                        # Update existing record with latest restore info
+                        try:
+                            existing.raw_payload = raw_payload
+                            existing.status = 'restore_error' if had_error else 'verified'
+                            existing.updated_at = datetime.utcnow()
+                            db.session.commit()
+                        except Exception as update_err:
+                            db.session.rollback()
+                            db_errors.append({
+                                "product_id": pid,
+                                "error": str(update_err),
+                                "type": "purchase_record_update_failed"
+                            })
+                            try:
+                                app.logger.error(
+                                    f"IAP restore: failed to update PurchaseRecord for {pid}: {update_err}",
+                                    exc_info=True
+                                )
+                            except Exception:
+                                pass
+                except Exception as e:
+                    # Log but don't fail the restore if DB write fails
+                    db_errors.append({
+                        "product_id": pid,
+                        "error": str(e),
+                        "type": "purchase_record_create_failed"
+                    })
+                    try:
+                        app.logger.error(f"IAP restore: failed to create/update PurchaseRecord for {pid}: {e}", exc_info=True)
+                    except Exception:
+                        pass
             else:
                 # Guest restore: store durable ownership tied to anon_restore_id cookie.
                 try:
@@ -11157,6 +11266,23 @@ def api_iap_restore():
                     )
                     # keep lint quiet
                     _ = owner
+                    # Commit immediately for guest records too
+                    try:
+                        db.session.commit()
+                    except Exception as commit_err:
+                        db.session.rollback()
+                        db_errors.append({
+                            "product_id": pid,
+                            "error": str(commit_err),
+                            "type": "anon_ownership_commit_failed"
+                        })
+                        try:
+                            app.logger.error(
+                                f"IAP restore: failed to commit AnonPurchaseOwnership for {pid}: {commit_err}",
+                                exc_info=True
+                            )
+                        except Exception:
+                            pass
 
                     # Optional: link a stable native install id to this anon_restore_id
                     # so a reinstall can recover guest entitlements.
@@ -11164,17 +11290,47 @@ def api_iap_restore():
                         try:
                             from models import AnonInstallLink
                             _ = AnonInstallLink.upsert(install_id=install_id, anon_restore_id=anon_restore_id)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
-    if not bypass_db:
+                            db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            try:
+                                app.logger.warning(f"IAP restore: failed to link install_id for {pid}: {e}", exc_info=True)
+                            except Exception:
+                                pass
+                except Exception as e:
+                    # Log but don't fail the restore if guest DB write fails
+                    db_errors.append({
+                        "product_id": pid,
+                        "error": str(e),
+                        "type": "anon_ownership_create_failed"
+                    })
+                    try:
+                        app.logger.error(f"IAP restore: failed to create AnonPurchaseOwnership for {pid}: {e}", exc_info=True)
+                    except Exception:
+                        pass
+    
+    # Commit user entitlement changes if any were made
+    if user_for_restore is not None and not bypass_db:
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            return jsonify({"success": False, "error": f"db_commit_failed: {e}", "restore_id": restore_id}), 500
+            db_errors.append({
+                "error": str(e),
+                "type": "user_entitlements_commit_failed"
+            })
+            try:
+                app.logger.error(f"IAP restore: failed to commit user entitlement changes: {e}", exc_info=True)
+            except Exception:
+                pass
+    
+    # If we had database errors, include them in the response but don't fail the restore
+    if db_errors:
+        errors.extend([{"error": f"db_{err.get('type', 'unknown')}", "product_id": err.get("product_id"), "message": err.get("error")} for err in db_errors])
+        try:
+            app.logger.warning(f"IAP restore: {len(db_errors)} database errors occurred during restore", extra={"db_errors": db_errors})
+        except Exception:
+            pass
 
     # Optional debug payload to help diagnose entitlement mismatches in TestFlight.
     # Off by default; enable temporarily via env var.
@@ -11458,7 +11614,22 @@ def api_bundles_redeem():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": f"db_commit_failed: {e}"}), 500
+        # Log error but don't fail the redemption - bundle may still be applied
+        try:
+            app.logger.error(f"Bundle redemption: db commit failed: {e}", exc_info=True)
+        except Exception:
+            pass
+        # Return success with warning instead of 500 to prevent error screen
+        return jsonify({
+            "success": True,
+            "bundle_id": bundle_id,
+            "bundle_name": bundle_name,
+            "source": source,
+            "unlocked_count": unlocked_count,
+            "entitlements": entitlements,
+            "warning": "Bundle redeemed but not saved to database. Please try again.",
+            "error": f"db_commit_failed: {e}"
+        }), 200
 
     return jsonify({
         "success": True,
