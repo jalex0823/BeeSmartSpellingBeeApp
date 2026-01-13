@@ -4615,10 +4615,18 @@ class BeeDelightManager {
         this.registerButtonSparkles();
         this.registerCursorTrail();
         this.setupButtonEffects();
-        this.setupExitQuiz();
+        // 🛡️ Delay exit button setup to ensure DOM is ready
+        // Exit button setup moved to QuizManager initialization
     }
 
     setupExitQuiz() {
+        // 🛡️ Prevent duplicate setup
+        if (this._exitQuizSetup) {
+            console.log('⚠️ Exit quiz already set up, skipping duplicate setup');
+            return;
+        }
+        this._exitQuizSetup = true;
+        
         const exitButton = document.getElementById('exitQuizButton');
         const nextWordButton = document.getElementById('nextWordButton');
         const exitModal = document.getElementById('exitModal');
@@ -4626,9 +4634,23 @@ class BeeDelightManager {
         const confirmExitButton = document.getElementById('confirmExitButton');
 
         // Show exit confirmation modal
-        exitButton?.addEventListener('click', () => {
-            this.showExitModal();
-        });
+        if (exitButton) {
+            const self = this; // Capture 'this' context for BeeDelightManager
+            exitButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚪 Exit button clicked');
+                if (self && self.showExitModal) {
+                    self.showExitModal();
+                } else {
+                    // Fallback: show alert if modal not available
+                    console.warn('⚠️ showExitModal method not available');
+                    if (confirm('Are you sure you want to exit the quiz?')) {
+                        window.location.href = '/';
+                    }
+                }
+            });
+        }
 
         // Next Word button - manual advance after retry window closes
         nextWordButton?.addEventListener('click', async () => {
@@ -4649,15 +4671,33 @@ class BeeDelightManager {
         });
 
         // Stay and continue practicing
-        stayButton?.addEventListener('click', () => {
-            this.hideExitModal();
-            this.soundboard.play('button-primary');
-        });
+        if (stayButton) {
+            stayButton.addEventListener('click', () => {
+                if (this.hideExitModal) {
+                    this.hideExitModal();
+                }
+                if (this.soundboard) {
+                    this.soundboard.play('button-primary');
+                }
+            });
+        }
 
         // Confirm exit and go to menu
-        confirmExitButton?.addEventListener('click', () => {
-            this.confirmExit();
-        });
+        if (confirmExitButton) {
+            const self = this; // Capture 'this' context for BeeDelightManager
+            confirmExitButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Confirm exit clicked');
+                if (self && self.confirmExit) {
+                    self.confirmExit();
+                } else {
+                    // Fallback: direct navigation if confirmExit not available
+                    console.warn('⚠️ confirmExit method not available, using fallback');
+                    window.location.href = '/';
+                }
+            });
+        }
 
         // Close modal on backdrop click
         exitModal?.addEventListener('click', (e) => {
@@ -10018,6 +10058,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 window.quizManager = new QuizManager({ delight, smartyBee, startMode });
             }
+            
+            // Ensure exit button is set up after QuizManager is created and DOM is ready
+            // Use requestAnimationFrame to ensure DOM is fully rendered
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const exitButton = document.getElementById('exitQuizButton');
+                    if (exitButton && window.quizManager && window.quizManager.delight) {
+                        // Setup exit quiz if not already done (setupExitQuiz is a method of BeeDelightManager)
+                        if (window.quizManager.delight.setupExitQuiz && !window.quizManager.delight._exitQuizSetup) {
+                            console.log('🔧 Setting up exit button handlers...');
+                            window.quizManager.delight.setupExitQuiz();
+                        }
+                    } else if (exitButton && !window.quizManager) {
+                        console.warn('⚠️ Exit button exists but QuizManager not ready yet');
+                    } else if (!exitButton) {
+                        console.warn('⚠️ Exit button element not found in DOM');
+                    }
+                }, 200);
+            });
 
             // ✅ Resume reliability: when the user chooses Resume, force a programmatic start.
             // This prevents a common dormant-PWA edge case where the intro UI isn't re-triggered
@@ -10120,18 +10179,22 @@ window.quickStartQuiz = function() {
 
 // 🔗 Optional autostart via URL parameter: /quiz?autostart=1
 // Wait briefly to ensure DOM nodes exist before attempting programmatic start
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('autostart') === '1') {
-            setTimeout(() => {
-                window.quickStartQuiz();
-            }, 600);
+// 🛡️ Guard to prevent duplicate execution
+if (!window.__autostartHandlerInitialized) {
+    window.__autostartHandlerInitialized = true;
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('autostart') === '1') {
+                setTimeout(() => {
+                    window.quickStartQuiz();
+                }, 600);
+            }
+        } catch (e) {
+            console.warn('autostart handler error:', e);
         }
-    } catch (e) {
-        console.warn('autostart handler error:', e);
-    }
-});
+    });
+}
 
 // 💾 Save partial progress before user leaves
 // This ensures points, achievements, and progress are saved even if quiz is incomplete
@@ -11218,15 +11281,19 @@ function showWordOfTheDay(wordData) {
 
 <script>
 // Initialize new features on page load
-document.addEventListener('DOMContentLoaded', () => {
-    // Check for daily login reward
-    if (typeof current_user !== 'undefined' && current_user && current_user.id) {
-        checkDailyLoginReward();
-    }
-    
-    // Load word of the day
-    loadWordOfTheDay();
-});
+// 🛡️ Guard to prevent duplicate execution
+if (!window.__dailyFeaturesInitialized) {
+    window.__dailyFeaturesInitialized = true;
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check for daily login reward
+        if (typeof current_user !== 'undefined' && current_user && current_user.id) {
+            checkDailyLoginReward();
+        }
+        
+        // Load word of the day
+        loadWordOfTheDay();
+    });
+}
 </script>
 <!-- Removed duplicate quizAvatarContainer and legacy render script.
      The quiz now relies solely on the primary mascot container #mascotBee3D
