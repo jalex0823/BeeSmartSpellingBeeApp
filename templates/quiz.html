@@ -11,6 +11,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
 
 <script>
+// 🛡️ DISABLE SERVICE WORKER AUTO-RELOAD on quiz page to prevent reload loops
+// Set flag early to prevent service worker from reloading the page
+window.__disableSwReload = true;
+
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
 window.QUIZ_CACHED_VOICE = null;
 window.QUIZ_VOICE_INITIALIZED = false;
