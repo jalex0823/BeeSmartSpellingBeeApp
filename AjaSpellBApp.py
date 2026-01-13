@@ -15056,12 +15056,35 @@ def api_speed_round_start():
             difficulty_level = difficulty_map.get(difficulty, 2)  # Default to grade 3-4
             print(f" Speed Round: Generating {word_count} words at difficulty level {difficulty_level} from internal dictionary")
             
-            word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
-            
-            # Extract just word strings for speed round
-            words = [record['word'] for record in word_records]
-            
-            print(f" Generated {len(words)} kid-friendly words from internal dictionary")
+            try:
+                word_records = get_random_words_by_difficulty(difficulty_level, count=word_count)
+                
+                if not word_records or len(word_records) == 0:
+                    print(f"⚠️ No words found at difficulty {difficulty_level}, trying fallback...")
+                    # Fallback: try a wider difficulty range
+                    word_records = get_random_words_by_difficulty(2, count=word_count)  # Default to medium
+                
+                # Extract just word strings for speed round
+                words = [record['word'] for record in word_records] if word_records else []
+                
+                if not words:
+                    raise ValueError("Could not generate words from dictionary - please try again")
+                
+                print(f" Generated {len(words)} kid-friendly words from internal dictionary")
+            except ValueError as ve:
+                print(f"❌ Speed Round word generation error: {ve}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Word dictionary is loading. Please wait a moment and try again.'
+                }), 500
+            except Exception as e:
+                print(f"❌ Speed Round unexpected error: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Failed to generate words. Please try again.'
+                }), 500
             
         elif word_source == 'uploaded':
             # Get user's uploaded word list

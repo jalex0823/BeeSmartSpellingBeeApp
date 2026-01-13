@@ -3,6 +3,8 @@
  * Renders and animates the 3D bee mascot using Three.js
  */
 
+// Prevent duplicate declaration
+if (typeof SmartyBee3D === 'undefined') {
 class SmartyBee3D {
     static instances = new Map();
 
@@ -851,3 +853,5 @@ class SmartyBee3D {
 
 // Make it globally available
 window.SmartyBee3D = SmartyBee3D;
+
+} // End of SmartyBee3D guard
