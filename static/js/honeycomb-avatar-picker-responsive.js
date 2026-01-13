@@ -264,13 +264,13 @@ function showPreviewLoading(avatarName) {
     if (!previewContainer) return;
     
     previewContainer.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #FFD700;">
+        <div id="preview-loading-overlay" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); z-index: 10; transition: opacity 0.5s ease;">
             <div style="font-size: 3rem; animation: bounce 1s infinite;">🐝</div>
-            <div style="margin-top: 1rem; font-size: 1.2rem;">Loading ${avatarName}...</div>
-            <div style="width: 80%; height: 8px; background: rgba(255,215,0,0.2); border-radius: 4px; margin-top: 1rem; overflow: hidden;">
-                <div id="preview-load-progress" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s;"></div>
+            <div style="margin-top: 1rem; font-size: 1.2rem; color: #5A2C15; font-weight: 600;">Loading ${avatarName}...</div>
+            <div style="width: 80%; height: 8px; background: rgba(90, 44, 21, 0.2); border-radius: 4px; margin-top: 1rem; overflow: hidden;">
+                <div id="preview-load-progress" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FF8C00, #FF6B00); transition: width 0.3s;"></div>
             </div>
-            <div id="preview-load-text" style="margin-top: 0.5rem; font-size: 0.9rem;">0%</div>
+            <div id="preview-load-text" style="margin-top: 0.5rem; font-size: 0.9rem; color: #5A2C15; font-weight: 500;">0%</div>
         </div>
     `;
     
@@ -299,6 +299,19 @@ function updatePreviewProgress(percentage, message = null) {
     
     if (progressText) {
         progressText.textContent = message || `${Math.round(percentage)}%`;
+    }
+    
+    // Fade out loading overlay when reaching 100%
+    if (percentage >= 100) {
+        const overlay = document.getElementById('preview-loading-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                if (overlay && overlay.parentNode) {
+                    overlay.remove();
+                }
+            }, 500);
+        }
     }
 }
 
@@ -962,14 +975,11 @@ function load3DAvatarGLB(avatar, containerId) {
             }
             animate();
             
-            // Final update - completely remove loading indicator
+            // Final update - fade out loading indicator
             setTimeout(() => {
                 updatePreviewProgress(100, 'Complete!');
-                // Ensure ALL loading UI is removed once rendering is ready
-                setTimeout(() => {
-                    clearPreviewLoading(container, renderer.domElement);
-                    console.log('✅ Loading indicator removed from preview');
-                }, 500);
+                // The fade-out is handled in updatePreviewProgress when percentage >= 100
+                console.log('✅ Loading indicator fading out');
             }, 300);
         },
         function(xhr) {

@@ -1537,6 +1537,14 @@
             --tile-text: #ffffff;
         }
 
+        .menu-option.theme-gold {
+            --tile-bg: linear-gradient(135deg, #FFD700 0%, #FFA500 45%, #FF8C00 100%);
+            --tile-border: rgba(255, 255, 255, 0.7);
+            --tile-shadow: rgba(255, 165, 0, 0.35);
+            --tile-hover-shadow: rgba(255, 165, 0, 0.55);
+            --tile-text: #5A2C15;
+        }
+
         .menu-option.theme-random {
             --tile-bg: linear-gradient(135deg, #FF6B9D 0%, #C44569 45%, #FFA07A 100%);
             --tile-border: rgba(255, 255, 255, 0.8);
@@ -2686,32 +2694,7 @@
          <span id="statusBadgeText">Safe Hive</span>
     </div>
 
-    <!-- Background Music Player -->
-    <div id="musicControls" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        background: linear-gradient(135deg, #FFD93D 0%, #FFA500 100%);
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 3px solid rgba(255, 255, 255, 0.8);
-    " onclick="toggleMusic()" title="Toggle Background Music">
-        <div id="musicIcon" style="font-size: 1.8rem; display: flex; align-items: center; justify-content: center; color: #5A2C15; font-weight: bold;">
-            ♪
-        </div>
-    </div>
-    
-    <audio id="backgroundMusic" loop preload="auto" style="display: none;">
-        <!-- We'll generate music programmatically using Web Audio API -->
-    </audio>
+    <!-- Background Music Player - REMOVED per Apple Guideline 2.5.4 (no background audio capabilities) -->
 
     <!-- Magical background effects -->
     <!-- Matrix Rain Loading Screen -->
@@ -3976,6 +3959,36 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
+                            {% if (current_user.total_quizzes_completed or 0) == 0 %}
+                            <div style="
+                                background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
+                                border: 3px solid rgba(255, 165, 0, 0.4);
+                                border-radius: 18px;
+                                padding: 1rem 1.25rem;
+                                margin: 1rem auto 1.25rem auto;
+                                max-width: 95%;
+                                box-shadow: 0 4px 15px rgba(255, 165, 0, 0.12);
+                                text-align: center;
+                            ">
+                                <div style="font-size: 2rem; margin-bottom: 0.4rem;">🐝✨</div>
+                                <div style="
+                                    color: #8B4513;
+                                    font-size: 1.1rem;
+                                    font-weight: 700;
+                                    margin: 0 0 0.5rem 0;
+                                ">Your Stats Will Appear After Your First Quiz!</div>
+                                <div style="
+                                    color: #5A2C15;
+                                    font-size: 0.9rem;
+                                    line-height: 1.5;
+                                    margin: 0;
+                                ">
+                                    🎯 Complete a spelling quiz or challenge to see your points, grades, GPA, and accuracy calculated here!
+                                </div>
+                            </div>
+                            {% endif %}
 
                             <!-- Buttons (all on one line with consistent sizing) -->
                             <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">
@@ -4287,6 +4300,14 @@
                     <div class="option-title">Dictionary Search</div>
                     <div class="option-description">Look up word definitions</div>
                     <div class="kid-tip"> Discover new words to learn!</div>
+                </div>
+
+                <!-- Avatars -->
+                <div id="tileAvatars" class="menu-option theme-gold" onclick="kidSounds.playRandomEffect(); selectOption('avatars', this)" onmouseover="kidSounds.playHappyDing()" title=" Browse and unlock adorable bee avatars! Purchase new characters to customize your spelling experience.">
+                    <div class="option-icon"></div>
+                    <div class="option-title">Avatars</div>
+                    <div class="option-description">Browse & unlock bee characters</div>
+                    <div class="kid-tip"> Collect all the bees! 🍯</div>
                 </div>
 
                 <!-- Saved Word Lists -->
@@ -5840,9 +5861,10 @@
                             el.appendChild(bee);
                             setTimeout(()=> bee.remove(), 520);
                         });
-                        // Briefly disable to prevent accidental double taps on slow devices
-                        el.style.pointerEvents = 'none';
-                        setTimeout(()=> { el.style.pointerEvents = ''; }, 380);
+                        // Use a flag instead of blocking pointer events to maintain responsiveness
+                        if (el.dataset.clickProcessing) return;
+                        el.dataset.clickProcessing = 'true';
+                        setTimeout(()=> { delete el.dataset.clickProcessing; }, 200);
                     } catch(_) {}
                 }, { passive: true });
             });
@@ -5931,6 +5953,9 @@
                     break;
                 case 'dictionary':
                     showDictionaryInterface();
+                    break;
+                case 'avatars':
+                    window.location.href = '/honeycomb-picker';
                     break;
                 case 'saved':
                     window.location.href = '/word-lists';
@@ -11111,134 +11136,7 @@
         })();
         
         // Background Music System
-        let musicAudioContext = null;
-        let musicPlaying = false;
-        let musicGainNode = null;
-        let musicOscillators = [];
-        
-        function initBackgroundMusic() {
-            try {
-                musicAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-                musicGainNode = musicAudioContext.createGain();
-                musicGainNode.connect(musicAudioContext.destination);
-                musicGainNode.gain.value = 0.15; // Soft background volume
-                
-                // iOS Safari fix: Resume AudioContext on user interaction
-                if (musicAudioContext.state === 'suspended') {
-                    const resumeAudio = () => {
-                        musicAudioContext.resume().then(() => {
-                            console.log(' AudioContext resumed for iOS');
-                        });
-                        document.removeEventListener('touchstart', resumeAudio);
-                        document.removeEventListener('click', resumeAudio);
-                    };
-                    document.addEventListener('touchstart', resumeAudio, { once: true });
-                    document.addEventListener('click', resumeAudio, { once: true });
-                }
-                
-                console.log(' Background music system initialized');
-            } catch (e) {
-                console.log('Background music not supported');
-            }
-        }
-        
-        function playBackgroundMusic() {
-            if (!musicAudioContext) initBackgroundMusic();
-            if (!musicAudioContext || musicPlaying) return;
-            
-            musicPlaying = true;
-            
-            // Simple cheerful melody using C major scale
-            const notes = [
-                {freq: 261.63, duration: 0.5}, // C
-                {freq: 293.66, duration: 0.5}, // D
-                {freq: 329.63, duration: 0.5}, // E
-                {freq: 349.23, duration: 0.5}, // F
-                {freq: 392.00, duration: 1.0}, // G (hold)
-                {freq: 349.23, duration: 0.5}, // F
-                {freq: 329.63, duration: 0.5}, // E
-                {freq: 293.66, duration: 1.0}, // D (hold)
-                {freq: 261.63, duration: 0.5}, // C
-                {freq: 329.63, duration: 0.5}, // E
-                {freq: 392.00, duration: 0.5}, // G
-                {freq: 523.25, duration: 1.5}, // High C (hold longer)
-            ];
-            
-            let currentTime = musicAudioContext.currentTime;
-            
-            function playMelody() {
-                if (!musicPlaying) return;
-                
-                notes.forEach((note, i) => {
-                    const osc = musicAudioContext.createOscillator();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(note.freq, currentTime);
-                    
-                    const noteGain = musicAudioContext.createGain();
-                    noteGain.connect(musicGainNode);
-                    noteGain.gain.setValueAtTime(0, currentTime);
-                    noteGain.gain.linearRampToValueAtTime(0.1, currentTime + 0.05);
-                    noteGain.gain.exponentialRampToValueAtTime(0.01, currentTime + note.duration);
-                    
-                    osc.connect(noteGain);
-                    osc.start(currentTime);
-                    osc.stop(currentTime + note.duration);
-                    
-                    currentTime += note.duration;
-                });
-                
-                // Loop the melody with a pause
-                const totalDuration = notes.reduce((sum, n) => sum + n.duration, 0);
-                setTimeout(playMelody, (totalDuration + 2) * 1000); // 2 second pause between loops
-            }
-            
-            playMelody();
-            updateMusicIcon();
-        }
-        
-        function stopBackgroundMusic() {
-            musicPlaying = false;
-            musicOscillators.forEach(osc => {
-                try { osc.stop(); } catch(e) {}
-            });
-            musicOscillators = [];
-            updateMusicIcon();
-        }
-        
-        function toggleMusic() {
-            if (musicPlaying) {
-                stopBackgroundMusic();
-            } else {
-                playBackgroundMusic();
-            }
-            
-            // Animate button
-            const btn = document.getElementById('musicControls');
-            btn.style.transform = 'scale(0.9)';
-            setTimeout(() => btn.style.transform = 'scale(1)', 200);
-        }
-        
-        function updateMusicIcon() {
-            const icon = document.getElementById('musicIcon');
-            const btn = document.getElementById('musicControls');
-            if (musicPlaying) {
-                // Show animated music notes when playing
-                icon.innerHTML = `
-                    <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <span style="position: absolute; animation: floatNote1 1.5s ease-in-out infinite;"></span>
-                        <span style="position: absolute; animation: floatNote2 1.5s ease-in-out infinite 0.3s;"></span>
-                        <span style="position: absolute; animation: floatNote3 1.5s ease-in-out infinite 0.6s;"></span>
-                    </div>
-                `;
-                btn.style.background = 'linear-gradient(135deg, #FFD93D 0%, #FFA500 100%)';
-                btn.style.animation = 'musicPulse 2s ease-in-out infinite';
-            } else {
-                // Show muted icon when not playing
-                icon.innerHTML = '';
-                btn.style.background = 'linear-gradient(135deg, #CCCCCC 0%, #999999 100%)';
-                btn.style.animation = 'none';
-            }
-        }
+        // Background music system removed per Apple Guideline 2.5.4 (no background audio capabilities)
         
         //  MASCOT INTERACTIVE SHOW - Fun animations, sounds, and explosions! 
         let mascotShowPlaying = false;
