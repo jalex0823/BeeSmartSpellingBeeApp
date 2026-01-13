@@ -3362,24 +3362,8 @@ function showRestoreDialog(title, message, isSuccess) {
          <span id="statusBadgeText">Safe Hive</span>
     </div>
 
-    <!-- Background Music Player -->
-    <div id="musicControls" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        background: linear-gradient(135deg, #FFD93D 0%, #FFA500 100%);
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 3px solid rgba(255, 255, 255, 0.8);
-    " onclick="toggleMusic()" title="Toggle Background Music">
+    <!-- Background Music Player - HIDDEN per user request -->
+    <div id="musicControls" style="display: none !important; position: fixed; top: 20px; right: 20px; z-index: 10000; background: linear-gradient(135deg, #FFD93D 0%, #FFA500 100%); border-radius: 50%; width: 60px; height: 60px; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4); cursor: pointer; transition: all 0.3s ease; border: 3px solid rgba(255, 255, 255, 0.8);" onclick="toggleMusic()" title="Toggle Background Music">
         <div id="musicIcon" style="font-size: 1.8rem; display: flex; align-items: center; justify-content: center; color: #5A2C15; font-weight: bold;">
             ♪
         </div>

@@ -355,11 +355,11 @@ p, h1, h2, h3, h4, h5, h6, span {
 .preview-name {
     font-size: 2rem;
     font-weight: 800;
-    color: #5A2C15; /* Dark brown for high contrast and readability */
+    color: #FFFFFF; /* White text for high contrast on dark background */
     text-align: center;
     letter-spacing: 0.5px;
     /* Remove blurry glow effects - use subtle drop shadow only for depth */
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
     /* Ensure crisp rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -367,12 +367,12 @@ p, h1, h2, h3, h4, h5, h6, span {
 
 .preview-description {
     font-size: 1.05rem;
-    color: #5A2C15; /* Dark brown for high contrast and readability */
+    color: #FFFFFF; /* White text for high contrast on dark background */
     text-align: center;
     line-height: 1.6;
     font-weight: 600;
     /* Remove blurry glow effects - use subtle drop shadow only for depth */
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     /* Ensure crisp rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -434,7 +434,7 @@ p, h1, h2, h3, h4, h5, h6, span {
 /* Empty state */
 .preview-empty {
     text-align: center;
-    color: #5A2C15; /* Dark brown for readability */
+    color: #FFFFFF; /* White text for high contrast on dark background */
     font-size: 1.1rem;
     padding: 3rem 1rem;
     /* Ensure crisp rendering */
