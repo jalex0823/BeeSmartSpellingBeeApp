@@ -4918,6 +4918,35 @@ function showRestoreDialog(title, message, isSuccess) {
                             </div>
                             {% endif %}
 
+                            <!-- Manual stats refresh button (centered above Quiz button) -->
+                            <div style="
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                margin-bottom: 0.75rem;
+                                width: 100%;
+                            ">
+                                <button id="statsRefreshButton"
+                                        type="button"
+                                        onclick="if (window.refreshStatsWithRecalc) { window.refreshStatsWithRecalc(); }"
+                                        style="
+                                            font-size: 0.75rem;
+                                            padding: 0.35rem 0.75rem;
+                                            border-radius: 999px;
+                                            border: 1px solid rgba(139, 69, 19, 0.25);
+                                            background: rgba(255, 255, 255, 0.8);
+                                            color: #8B4513;
+                                            cursor: pointer;
+                                            display: inline-flex;
+                                            align-items: center;
+                                            gap: 0.25rem;
+                                        "
+                                        title="Refresh your stats from the server">
+                                    <span style="font-size: 0.9rem;">🔄</span>
+                                    <span>Refresh stats</span>
+                                </button>
+                            </div>
+
                             <!-- Buttons (all on one line with consistent sizing) -->
                             <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">
                                 <a href="/auth/dashboard" style="
@@ -5461,33 +5490,6 @@ function showRestoreDialog(title, message, isSuccess) {
                 </a>
                 
                 <!-- My Word Lists button removed - use tile instead -->
-                
-                <!-- Manual stats refresh button (centered above Quiz button) -->
-                <div style="
-                    display: flex;
-                    justify-content: center;
-                    margin-bottom: 0.75rem;
-                ">
-                    <button id="statsRefreshButton"
-                            type="button"
-                            onclick="if (window.refreshStatsWithRecalc) { window.refreshStatsWithRecalc(); }"
-                            style="
-                                font-size: 0.75rem;
-                                padding: 0.35rem 0.75rem;
-                                border-radius: 999px;
-                                border: 1px solid rgba(139, 69, 19, 0.25);
-                                background: rgba(255, 255, 255, 0.8);
-                                color: #8B4513;
-                                cursor: pointer;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 0.25rem;
-                            "
-                            title="Refresh your stats from the server">
-                        <span style="font-size: 0.9rem;">🔄</span>
-                        <span>Refresh stats</span>
-                    </button>
-                </div>
                 
                 <!-- Start Quiz Button Container with white semi-translucent background -->
                 <div style="
@@ -20809,10 +20811,19 @@ function showRestoreDialog(title, message, isSuccess) {
 
         function gpaToLetter(gpa) {
             const g = Number(gpa) || 0;
-            if (g >= 3.7) return 'A';
-            if (g >= 2.7) return 'B';
-            if (g >= 1.7) return 'C';
-            if (g >= 0.7) return 'D';
+            // Match backend gpa_to_grade_filter logic
+            if (g >= 4.0) return 'A+';
+            if (g >= 3.7) return 'A-';
+            if (g >= 3.3) return 'B+';
+            if (g >= 3.0) return 'B';
+            if (g >= 2.7) return 'B-';
+            if (g >= 2.3) return 'C+';
+            if (g >= 2.0) return 'C';
+            if (g >= 1.7) return 'C-';
+            if (g >= 1.3) return 'D+';
+            if (g >= 1.0) return 'D';
+            if (g >= 0.7) return 'D-';
+            if (g > 0) return 'F';
             return 'F';
         }
 
