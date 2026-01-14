@@ -1,0 +1,197 @@
+*** Update File: smoke_test_quiz_flow.py
+@@
+-# ============================================================================
+-# PHASE 3: START QUIZ & GET FIRST WORD
+-# ============================================================================
+-print("🎯 PHASE 3: START QUIZ - GET FIRST WORD")
+-print("-" * 80)
+-
+-print("🔄 Fetching first word...")
+-try:
+-    response = session.get(f'{BASE_URL}/api/current', timeout=10)
+-    if response.status_code == 200:
+-        data = response.json()
+-        print(f"✅ First word loaded:")
+-        print(f"   • Word: '{data.get('word', 'N/A')}'")
+-        print(f"   • Sentence: {data.get('sentence', 'N/A')}")
+-        print(f"   • Hint: {data.get('hint', 'N/A')}")
+-        print(f"   • Progress: {data.get('question_number', 'N/A')} of {data.get('total', 'N/A')}")
+-        
+-        first_word = data.get('word', '')
+-    else:
+-        print(f"❌ Failed to get current word: {response.status_code}")
+-        first_word = None
+-except Exception as e:
+-    print(f"❌ Current word ERROR: {e}")
+-    first_word = None
++# ============================================================================
++# PHASE 3: START QUIZ & GET FIRST WORD
++# ============================================================================
++print("🎯 PHASE 3: START QUIZ - GET FIRST WORD")
++print("-" * 80)
++
++# Start the quiz using the same endpoint as the UI and other smoke tests
++print("🚀 Starting quiz via /api/quiz/start ...")
++try:
++    start_resp = session.post(
++        f"{BASE_URL}/api/quiz/start",
++        json={"action": "start_new"},
++        timeout=10,
++    )
++    if start_resp.status_code != 200:
++        print(f"❌ quiz/start failed: {start_resp.status_code}")
++        print(f"   Response: {start_resp.text[:200]}")
++    else:
++        start_data = start_resp.json()
++        status = start_data.get("status")
++        if status != "success":
++            print(f"❌ quiz/start error payload: {start_data}")
++        else:
++            print("✅ quiz/start accepted")
++except Exception as e:
++    print(f"❌ quiz/start ERROR: {e}")
++
++print()
++print("🔄 Fetching first word via /api/next ...")
++try:
++    # UI and backend both use POST /api/next to fetch the next/current word
++    response = session.post(f'{BASE_URL}/api/next', timeout=10)
++    if response.status_code == 200:
++        data = response.json()
++        print(f"✅ First word loaded:")
++        print(f"   • Word: '{data.get('word', 'N/A')}'")
++        print(f"   • Sentence: {data.get('sentence', 'N/A')}")
++        print(f"   • Hint: {data.get('hint', 'N/A')}")
++        print(f"   • Progress: {data.get('question_number', 'N/A')} of {data.get('total', 'N/A')}")
++        
++        first_word = data.get('word', '')
++    else:
++        print(f"❌ Failed to get first word from /api/next: {response.status_code}")
++        print(f"   Response: {response.text[:200]}")
++        first_word = None
++except Exception as e:
++    print(f"❌ First word ERROR: {e}")
++    first_word = None
+@@
+-# ============================================================================
+-# PHASE 5: NAVIGATE TO NEXT WORD
+-# ============================================================================
+-print("⏭️ PHASE 5: NAVIGATE TO NEXT WORD")
+-print("-" * 80)
+-
+-print("🔄 Fetching next word...")
+-try:
+-    response = session.get(f'{BASE_URL}/api/next', timeout=10)
+-    if response.status_code == 200:
+-        data = response.json()
+-        print(f"✅ Next word loaded:")
+-        print(f"   • Word: '{data.get('word', 'N/A')}'")
+-        print(f"   • Sentence: {data.get('sentence', 'N/A')}")
+-        print(f"   • Progress: {data.get('question_number', 'N/A')} of {data.get('total', 'N/A')}")
+-        
+-        # Announce the intro variations
+-        print(f"\n   📣 Announcer intro variations (should randomly pick one):")
+-        print(f"      - 'Your first word is: [word]'")
+-        print(f"      - 'Let's start! Your first word is: [word]'")
+-        print(f"      - 'Here we go! First word is: [word]'")
+-        print(f"      - 'Ready? Your first word is: [word]'")
+-        
+-        second_word = data.get('word', '')
+-    else:
+-        print(f"❌ Failed to get next word: {response.status_code}")
+-        second_word = None
+-except Exception as e:
+-    print(f"❌ Next word ERROR: {e}")
+-    second_word = None
++# ============================================================================
++# PHASE 5: NAVIGATE TO NEXT WORD
++# ============================================================================
++print("⏭️ PHASE 5: NAVIGATE TO NEXT WORD")
++print("-" * 80)
++
++print("🔄 Fetching next word via /api/next ...")
++try:
++    response = session.post(f'{BASE_URL}/api/next', timeout=10)
++    if response.status_code == 200:
++        data = response.json()
++        print(f"✅ Next word loaded:")
++        print(f"   • Word: '{data.get('word', 'N/A')}'")
++        print(f"   • Sentence: {data.get('sentence', 'N/A')}")
++        print(f"   • Progress: {data.get('question_number', 'N/A')} of {data.get('total', 'N/A')}")
++        
++        # Announce the intro variations
++        print(f"\n   📣 Announcer intro variations (should randomly pick one):")
++        print(f"      - 'Your first word is: [word]'")
++        print(f"      - 'Let's start! Your first word is: [word]'")
++        print(f"      - 'Here we go! First word is: [word]'")
++        print(f"      - 'Ready? Your first word is: [word]'")
++        
++        second_word = data.get('word', '')
++    else:
++        print(f"❌ Failed to get next word from /api/next: {response.status_code}")
++        print(f"   Response: {response.text[:200]}")
++        second_word = None
++except Exception as e:
++    print(f"❌ Next word ERROR: {e}")
++    second_word = None
+@@
+-        # Answer remaining words (cycling through)
+-        for i in range(correct_count, len(words)):
+-            # Get current word
+-            response = session.get(f'{BASE_URL}/api/current', timeout=10)
+-            if response.status_code == 200:
+-                current = response.json()
+-                word_to_spell = current.get('word', '')
+-                
+-                # Submit correct answer
+-                payload = {
+-                    'user_input': word_to_spell,
+-                    'method': 'typing',
+-                    'elapsed_ms': 3000 + (i * 500)
+-                }
+-                response = session.post(
+-                    f'{BASE_URL}/api/answer',
+-                    json=payload,
+-                    timeout=10
+-                )
+-                
+-                if response.status_code == 200:
+-                    data = response.json()
+-                    if data.get('correct'):
+-                        correct_count += 1
+-                        print(f"   Word {i+1}: ✅ {word_to_spell}")
+-                
+-                # Move to next
+-                if i < len(words) - 1:
+-                    session.get(f'{BASE_URL}/api/next', timeout=10)
++        # Answer remaining words (cycling through)
++        for i in range(correct_count, len(words)):
++            # Get current/next word using POST /api/next (same as UI flow)
++            response = session.post(f'{BASE_URL}/api/next', timeout=10)
++            if response.status_code == 200:
++                current = response.json()
++                if current.get("done"):
++                    # Quiz already complete
++                    break
++
++                word_to_spell = current.get('word', '')
++                
++                # Submit correct answer
++                payload = {
++                    'user_input': word_to_spell,
++                    'method': 'typing',
++                    'elapsed_ms': 3000 + (i * 500)
++                }
++                response = session.post(
++                    f'{BASE_URL}/api/answer',
++                    json=payload,
++                    timeout=10
++                )
++                
++                if response.status_code == 200:
++                    data = response.json()
++                    if data.get('correct'):
++                        correct_count += 1
++                        print(f"   Word {i+1}: ✅ {word_to_spell}")
++                
++                # Move to next (loop iteration will call /api/next again)

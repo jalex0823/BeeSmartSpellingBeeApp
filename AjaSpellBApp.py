@@ -16735,6 +16735,96 @@ def api_get_current_user():
         }), 500
 
 
+@app.route("/api/users/stats/recalculate", methods=["POST"])
+@login_required
+def api_force_recalculate_stats():
+    """Force complete recalculation of cumulative stats from ALL quiz sessions.
+    This ensures stats are always accurate even if previous updates failed."""
+    try:
+        print(f"🔄 FORCED STATS RECALCULATION for user: {current_user.username} (ID: {current_user.id})")
+        
+        # Step 1: Recalculate total_lifetime_points from ALL completed quiz sessions
+        from sqlalchemy import func
+        total_points_from_sessions = db.session.query(
+            func.coalesce(func.sum(QuizSession.total_points), 0)
+        ).filter_by(
+            user_id=current_user.id,
+            completed=True
+        ).scalar() or 0
+        
+        # Also sum points_earned + badge_bonus_points + extra_points for sessions that might not have total_points set
+        sessions_with_points = QuizSession.query.filter_by(
+            user_id=current_user.id,
+            completed=True
+        ).all()
+        
+        calculated_total_points = 0
+        for sess in sessions_with_points:
+            if sess.total_points:
+                calculated_total_points += int(sess.total_points)
+            else:
+                # Fallback: sum individual components
+                calculated_total_points += int(sess.points_earned or 0)
+                calculated_total_points += int(sess.badge_bonus_points or 0)
+                calculated_total_points += int(sess.extra_points or 0)
+        
+        old_points = current_user.total_lifetime_points or 0
+        current_user.total_lifetime_points = calculated_total_points
+        print(f"   Points: {old_points} → {calculated_total_points} (from {len(sessions_with_points)} sessions)")
+        
+        # Step 2: Recalculate total_quizzes_completed
+        old_quizzes = current_user.total_quizzes_completed or 0
+        quiz_count = QuizSession.query.filter_by(
+            user_id=current_user.id,
+            completed=True
+        ).count()
+        current_user.total_quizzes_completed = quiz_count
+        print(f"   Quizzes: {old_quizzes} → {quiz_count}")
+        
+        # Step 3: Force recalculation of GPA and accuracy from ALL sessions
+        current_user.update_gpa_and_accuracy()
+        print(f"   GPA: {current_user.cumulative_gpa}, Accuracy: {current_user.average_accuracy}%")
+        
+        # Step 4: Commit all changes
+        db.session.commit()
+        
+        # Step 5: Refresh user object to ensure we have latest values
+        db.session.refresh(current_user)
+        
+        # Calculate percentage of actions completed (for progress display)
+        total_actions = quiz_count
+        actions_percentage = 100.0 if total_actions > 0 else 0.0
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Stats recalculated successfully',
+            'stats': {
+                'total_lifetime_points': int(current_user.total_lifetime_points or 0),
+                'total_quizzes_completed': int(current_user.total_quizzes_completed or 0),
+                'cumulative_gpa': float(current_user.cumulative_gpa or 0.0),
+                'average_accuracy': float(current_user.average_accuracy or 0.0),
+                'best_grade': getattr(current_user, 'best_grade', None),
+                'best_streak': int(getattr(current_user, 'best_streak', 0) or 0),
+                'actions_percentage': actions_percentage,
+                'total_actions': total_actions
+            },
+            'recalculation': {
+                'points_changed': calculated_total_points != old_points,
+                'quizzes_changed': quiz_count != old_quizzes,
+                'sessions_processed': len(sessions_with_points)
+            }
+        })
+    except Exception as e:
+        print(f"❌ ERROR in forced stats recalculation: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to recalculate stats: {str(e)}'
+        }), 500
+
+
 @app.route("/api/users/stats", methods=["GET"])
 def api_get_user_stats():
     """Lightweight endpoint for polling cumulative stats (GPA, accuracy, points, streaks)."""

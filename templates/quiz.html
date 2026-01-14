@@ -7875,6 +7875,34 @@ class QuizManager {
                         
                         if (summaryData.done && summaryData.summary) {
                             this.showQuizComplete(summaryData.summary);
+                            
+                            // 🔄 Force cumulative stats recalculation after quiz completion
+                            // This ensures stats are always accurate and reflected in dashboard/main menu
+                            try {
+                                console.log('🔄 Forcing cumulative stats recalculation after quiz completion...');
+                                const recalcResponse = await fetch('/api/users/stats/recalculate', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    }
+                                });
+                                
+                                if (recalcResponse.ok) {
+                                    const recalcData = await recalcResponse.json();
+                                    if (recalcData.status === 'success' && recalcData.stats) {
+                                        const stats = recalcData.stats;
+                                        console.log(`✅ Stats recalculated: ${stats.total_quizzes_completed} quizzes, ${stats.total_lifetime_points} points, GPA ${stats.cumulative_gpa}, ${stats.average_accuracy}% accuracy`);
+                                        if (recalcData.recalculation && (recalcData.recalculation.points_changed || recalcData.recalculation.quizzes_changed)) {
+                                            console.log(`🔧 Stats corrected during recalculation`);
+                                        }
+                                    }
+                                } else {
+                                    console.warn('⚠️ Stats recalculation failed (non-critical):', recalcResponse.status);
+                                }
+                            } catch (recalcError) {
+                                console.warn('⚠️ Stats recalculation error (non-critical):', recalcError);
+                            }
                         } else {
                             console.error('Expected quiz summary but got:', summaryData);
                             BeeSmart.showError('Could not load quiz results. Please try refreshing.');

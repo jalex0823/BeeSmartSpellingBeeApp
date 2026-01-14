@@ -105,9 +105,29 @@ print()
 print("🎯 PHASE 3: START QUIZ - GET FIRST WORD")
 print("-" * 80)
 
-print("🔄 Fetching first word...")
+print("🚀 Starting quiz via /api/quiz/start ...")
 try:
-    response = session.get(f'{BASE_URL}/api/current', timeout=10)
+    start_resp = session.post(
+        f"{BASE_URL}/api/quiz/start",
+        json={"action": "start_new"},
+        timeout=10,
+    )
+    if start_resp.status_code != 200:
+        print(f"❌ quiz/start failed: {start_resp.status_code}")
+        print(f"   Response: {start_resp.text[:200]}")
+    else:
+        start_data = start_resp.json()
+        if start_data.get("status") != "success":
+            print(f"❌ quiz/start error payload: {start_data}")
+        else:
+            print("✅ quiz/start accepted")
+except Exception as e:
+    print(f"❌ quiz/start ERROR: {e}")
+
+print()
+print("🔄 Fetching first word via /api/next ...")
+try:
+    response = session.post(f'{BASE_URL}/api/next', timeout=10)
     if response.status_code == 200:
         data = response.json()
         print(f"✅ First word loaded:")
@@ -118,10 +138,11 @@ try:
         
         first_word = data.get('word', '')
     else:
-        print(f"❌ Failed to get current word: {response.status_code}")
+        print(f"❌ Failed to get first word from /api/next: {response.status_code}")
+        print(f"   Response: {response.text[:200]}")
         first_word = None
 except Exception as e:
-    print(f"❌ Current word ERROR: {e}")
+    print(f"❌ First word ERROR: {e}")
     first_word = None
 
 print()
@@ -170,9 +191,9 @@ if first_word:
 print("⏭️ PHASE 5: NAVIGATE TO NEXT WORD")
 print("-" * 80)
 
-print("🔄 Fetching next word...")
+print("🔄 Fetching next word via /api/next ...")
 try:
-    response = session.get(f'{BASE_URL}/api/next', timeout=10)
+    response = session.post(f'{BASE_URL}/api/next', timeout=10)
     if response.status_code == 200:
         data = response.json()
         print(f"✅ Next word loaded:")
@@ -189,7 +210,8 @@ try:
         
         second_word = data.get('word', '')
     else:
-        print(f"❌ Failed to get next word: {response.status_code}")
+        print(f"❌ Failed to get next word from /api/next: {response.status_code}")
+        print(f"   Response: {response.text[:200]}")
         second_word = None
 except Exception as e:
     print(f"❌ Next word ERROR: {e}")
@@ -297,10 +319,14 @@ try:
         
         # Answer remaining words (cycling through)
         for i in range(correct_count, len(words)):
-            # Get current word
-            response = session.get(f'{BASE_URL}/api/current', timeout=10)
+            # Get current/next word using POST /api/next (same as UI flow)
+            response = session.post(f'{BASE_URL}/api/next', timeout=10)
             if response.status_code == 200:
                 current = response.json()
+                if current.get("done"):
+                    # Quiz already complete
+                    break
+
                 word_to_spell = current.get('word', '')
                 
                 # Submit correct answer
@@ -320,10 +346,7 @@ try:
                     if data.get('correct'):
                         correct_count += 1
                         print(f"   Word {i+1}: ✅ {word_to_spell}")
-                
-                # Move to next
-                if i < len(words) - 1:
-                    session.get(f'{BASE_URL}/api/next', timeout=10)
+                # Next loop iteration will call /api/next again
 except Exception as e:
     print(f"   (Accelerated completion partial due to: {e})")
 

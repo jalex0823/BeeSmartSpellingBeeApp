@@ -15972,7 +15972,7 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             
             async runSystemChecks() {
-                console.log('=== STARTING SYSTEM CHECKS (11 checks total) ===');
+                console.log('=== STARTING SYSTEM CHECKS (12 checks total) ===');
                 
                 // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
                 try {
@@ -16289,10 +16289,78 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
                 console.log(' Dictionary check complete');
                 
+                // Check 11: Cumulative Stats Verification & Recalculation (for authenticated users)
+                const check11 = this.addCheck('Cumulative Stats', 'Checking...', '');
+                await this.delay(200);
+                try {
+                    // Only run for authenticated users
+                    const isAuthenticated = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
+                    if (isAuthenticated) {
+                        this.updateCheck(check11, 'Recalculating...', '', 78);
+                        this.updateProgress(78, ' Verifying cumulative stats...');
+                        
+                        // Call the forced recalculation endpoint
+                        const response = await fetch('/api/users/stats/recalculate', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.status === 'success' && data.stats) {
+                                const stats = data.stats;
+                                const actionsPct = stats.actions_percentage || 0;
+                                const totalActions = stats.total_actions || 0;
+                                const points = stats.total_lifetime_points || 0;
+                                const quizzes = stats.total_quizzes_completed || 0;
+                                const gpa = stats.cumulative_gpa || 0.0;
+                                const accuracy = stats.average_accuracy || 0.0;
+                                
+                                // Show percentage of actions completed
+                                const detail = `${actionsPct.toFixed(0)}% (${totalActions} quizzes, ${points} pts, GPA: ${gpa.toFixed(2)}, ${accuracy.toFixed(1)}% acc)`;
+                                this.updateCheck(check11, `Verified (${detail})`, '', 80);
+                                this.updateProgress(80, ` Stats verified: ${actionsPct.toFixed(0)}% complete`);
+                                console.log(`✅ Cumulative stats verified: ${totalActions} quizzes, ${points} points, GPA ${gpa}, ${accuracy}% accuracy`);
+                                
+                                // Log if any values changed during recalculation
+                                if (data.recalculation) {
+                                    const recalc = data.recalculation;
+                                    if (recalc.points_changed || recalc.quizzes_changed) {
+                                        console.log(`🔧 Stats corrected: points_changed=${recalc.points_changed}, quizzes_changed=${recalc.quizzes_changed}, sessions_processed=${recalc.sessions_processed}`);
+                                    }
+                                }
+                            } else {
+                                this.updateCheck(check11, 'Partial', 'ℹ', 80);
+                                this.updateProgress(80, ' Stats check completed');
+                                console.warn('⚠️ Stats recalculation returned unexpected format');
+                            }
+                        } else {
+                            const errorText = await response.text().catch(() => 'Unknown error');
+                            this.updateCheck(check11, 'Skipped', 'ℹ', 80);
+                            this.updateProgress(80, ' Stats check skipped');
+                            console.warn(`⚠️ Stats recalculation failed: ${response.status} - ${errorText}`);
+                        }
+                    } else {
+                        // Guest users skip this check
+                        this.updateCheck(check11, 'Skipped (guest)', 'ℹ', 80);
+                        this.updateProgress(80, ' Stats check skipped (guest)');
+                        console.log('ℹ Cumulative stats check skipped for guest user');
+                    }
+                } catch (statsError) {
+                    // Non-fatal: stats will be calculated on-demand
+                    console.warn('Cumulative stats check failed:', statsError);
+                    this.updateCheck(check11, 'On-demand', 'ℹ', 80);
+                    this.updateProgress(80, ' Stats will calculate on-demand');
+                }
+                console.log(' Cumulative stats check complete');
+                
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
                     console.error(' CRITICAL: System check crashed:', systemCheckError);
-                    this.updateProgress(75, ' Some checks failed - continuing anyway');
+                    this.updateProgress(80, ' Some checks failed - continuing anyway');
                 }
                 
                 // Guarantee we visibly advance even if later steps change.
