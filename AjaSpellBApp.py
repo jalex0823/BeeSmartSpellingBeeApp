@@ -9461,9 +9461,19 @@ def api_answer():
                 newly_unlocked_avatars = []
                 if current_user.is_authenticated:
                     # Get updated lifetime points after complete_session() applied them
+                    # complete_session() should have already updated total_lifetime_points via credit_session_points()
                     new_lifetime_points = current_user.total_lifetime_points or 0
                     # Calculate points earned (for logging/display)
                     points_earned_this_quiz = new_lifetime_points - old_lifetime_points
+                    
+                    # DEBUG: Verify points were actually applied
+                    if points_earned_this_quiz != total_points:
+                        print(f"⚠️ WARNING: Points mismatch! Expected {total_points} but got {points_earned_this_quiz} (old: {old_lifetime_points}, new: {new_lifetime_points})")
+                        # Force correct value if there's a mismatch
+                        if new_lifetime_points != (old_lifetime_points + total_points):
+                            print(f"🔧 FIXING: Setting total_lifetime_points to {old_lifetime_points + total_points}")
+                            current_user.total_lifetime_points = old_lifetime_points + total_points
+                            new_lifetime_points = current_user.total_lifetime_points
                     
                     #  Check for level up using the updated points
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
@@ -9616,7 +9626,12 @@ def api_answer():
                 
                 #  CRITICAL: Commit all changes to database
                 db.session.commit()
-                print(f" DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}")
+                
+                # Refresh user object from database to ensure we have latest values
+                if current_user.is_authenticated:
+                    db.session.refresh(current_user)
+                
+                print(f" DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}, User.points={current_user.total_lifetime_points if current_user.is_authenticated else 'N/A'}")
                 
         except Exception as e:
             print(f"️ Failed to finalize quiz session: {e}")

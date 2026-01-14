@@ -16968,11 +16968,30 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Also check for any lingering overlays
                     const loader = document.getElementById('honeyLoader');
                     if (loader && loader.style.display !== 'none') {
+                        // Check if loader has been marked as dismissed
+                        const isDismissed = window.__honeyLoaderDismissed || window.loadingSystem?.loaderDismissed;
+                        if (isDismissed) {
+                            console.log('✅ FAILSAFE: Loader marked as dismissed, ensuring it\'s hidden');
+                            loader.style.display = 'none';
+                            loader.style.pointerEvents = 'none';
+                            return;
+                        }
+                        
                         console.log('⚠️ FAILSAFE: Loader still visible, checking state...');
-                        // If loader is still showing after 2 seconds of page load, force hide it
+                        // Extended timeout: normal dismissal can take up to 20s (avatar gate + minimum duration)
+                        // Only force-hide if loader is still visible after 20 seconds total
                         setTimeout(() => {
+                            // Double-check dismissal state before force-hiding
+                            const stillDismissed = window.__honeyLoaderDismissed || window.loadingSystem?.loaderDismissed;
+                            if (stillDismissed) {
+                                console.log('✅ FAILSAFE: Loader was dismissed, ensuring it\'s hidden');
+                                loader.style.display = 'none';
+                                loader.style.pointerEvents = 'none';
+                                return;
+                            }
+                            
                             if (loader.style.display !== 'none') {
-                                console.warn('🚨 FAILSAFE: Force hiding stuck loader');
+                                console.warn('🚨 FAILSAFE: Force hiding stuck loader (20s timeout exceeded)');
                                 loader.style.display = 'none';
                                 loader.style.pointerEvents = 'none';
                                 // Keep Matrix rain running behind the menu; do not stop on failsafe.
@@ -16983,7 +17002,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                     }
                                 } catch (_e2) {}
                             }
-                        }, 2000);
+                        }, 19000); // 19 seconds (1s initial + 19s = 20s total)
                     }
                 }, 1000);
             });
