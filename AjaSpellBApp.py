@@ -12980,106 +12980,124 @@ def student_dashboard():
             return redirect(url_for('parent_dashboard'))
         if role == 'admin':
             return redirect(url_for('admin_dashboard'))
-    except Exception:
+    except Exception as e:
         # If anything goes wrong determining role, fall back to student view
-        pass
-    # Get student's quiz history
-    recent_sessions = QuizSession.query.filter_by(
-        user_id=current_user.id,
-        completed=True
-    ).order_by(QuizSession.session_start.desc()).limit(10).all()
+        print(f" WARNING student_dashboard role redirect failed: {e}")
     
-    # Calculate stats
-    total_sessions = QuizSession.query.filter_by(user_id=current_user.id, completed=True).count()
-    avg_accuracy = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter_by(
-        user_id=current_user.id,
-        completed=True
-    ).scalar() or 0.0
-    
-    # Get words needing practice (below 70% success rate)
-    struggling_words = WordMastery.query.filter_by(
-        user_id=current_user.id
-    ).filter(WordMastery.success_rate < 70).order_by(WordMastery.success_rate).limit(12).all()
-    
-    #  NEW: Get badge collection
-    achievements = Achievement.query.filter_by(
-        user_id=current_user.id
-    ).order_by(Achievement.earned_date.desc()).all()
-    
-    # Group badges by type and calculate stats
-    badge_collection = {}
+    # --- Safe defaults so the dashboard never 500s ---
+    recent_sessions = []
+    total_sessions = 0
+    avg_accuracy = 0.0
+    struggling_words = []
+    achievements = []
+    badge_collection_sorted = {}
     total_badge_points = 0
-    
-    for achievement in achievements:
-        badge_type = achievement.achievement_type
-        points = achievement.points_bonus or 0
-        total_badge_points += points
-        
-        if badge_type not in badge_collection:
-            badge_collection[badge_type] = {
-                'count': 0,
-                'total_points': 0,
-                'first_earned': achievement.earned_date,
-                'latest_earned': achievement.earned_date,
-                'rarity': BADGE_METADATA.get(badge_type, {}).get('rarity', 'common'),
-                'icon': BADGE_METADATA.get(badge_type, {}).get('icon', ''),
-                'image': BADGE_METADATA.get(badge_type, {}).get('image'),
-                'name': BADGE_METADATA.get(badge_type, {}).get('name', badge_type.replace('_', ' ').title()),
-                'description': BADGE_METADATA.get(badge_type, {}).get('description', '')
-            }
-        
-        badge_collection[badge_type]['count'] += 1
-        badge_collection[badge_type]['total_points'] += points
-        
-        # Update latest earned date if this is more recent
-        if achievement.earned_date > badge_collection[badge_type]['latest_earned']:
-            badge_collection[badge_type]['latest_earned'] = achievement.earned_date
-    
-    # Get recent badges (last 5)
     recent_badges = []
-    for achievement in achievements[:5]:
-        badge_type = achievement.achievement_type
-        meta = BADGE_METADATA.get(badge_type, {})
-        recent_badges.append({
-            'type': badge_type,
-            'icon': meta.get('icon', ''),
-            'image': meta.get('image'),
-            'name': meta.get('name', badge_type.replace('_', ' ').title()),
-            'points': achievement.points_bonus or 0,
-            'earned_date': achievement.earned_date
-        })
-    
-    # Sort badge collection by rarity (legendary → epic → rare → common)
-    rarity_order = {'legendary': 0, 'epic': 1, 'rare': 2, 'common': 3}
-    badge_collection_sorted = dict(sorted(
-        badge_collection.items(),
-        key=lambda x: (rarity_order.get(x[1]['rarity'], 4), -x[1]['count'])
-    ))
-    
-    # If teacher/parent/admin, also gather linked students for quick actions/cards
     linked_students = []
-    if getattr(current_user, 'role', None) in ['teacher', 'parent', 'admin']:
-        try:
-            # Helper is defined below; safe to call at runtime
-            students = _get_linked_students_for_current()
-        except Exception:
-            students = []
-        # Attach quick stats and avatar thumbnail
-        for s in students:
+
+    # Wrap heavy DB logic in a safety net so we degrade gracefully on prod
+    try:
+        # Get student's quiz history
+        recent_sessions = QuizSession.query.filter_by(
+            user_id=current_user.id,
+            completed=True
+        ).order_by(QuizSession.session_start.desc()).limit(10).all()
+        
+        # Calculate stats
+        total_sessions = QuizSession.query.filter_by(user_id=current_user.id, completed=True).count()
+        avg_accuracy = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter_by(
+            user_id=current_user.id,
+            completed=True
+        ).scalar() or 0.0
+        
+        # Get words needing practice (below 70% success rate)
+        struggling_words = WordMastery.query.filter_by(
+            user_id=current_user.id
+        ).filter(WordMastery.success_rate < 70).order_by(WordMastery.success_rate).limit(12).all()
+        
+        #  NEW: Get badge collection
+        achievements = Achievement.query.filter_by(
+            user_id=current_user.id
+        ).order_by(Achievement.earned_date.desc()).all()
+        
+        # Group badges by type and calculate stats
+        badge_collection = {}
+        total_badge_points = 0
+        
+        for achievement in achievements:
+            badge_type = achievement.achievement_type
+            points = achievement.points_bonus or 0
+            total_badge_points += points
+            
+            if badge_type not in badge_collection:
+                badge_collection[badge_type] = {
+                    'count': 0,
+                    'total_points': 0,
+                    'first_earned': achievement.earned_date,
+                    'latest_earned': achievement.earned_date,
+                    'rarity': BADGE_METADATA.get(badge_type, {}).get('rarity', 'common'),
+                    'icon': BADGE_METADATA.get(badge_type, {}).get('icon', ''),
+                    'image': BADGE_METADATA.get(badge_type, {}).get('image'),
+                    'name': BADGE_METADATA.get(badge_type, {}).get('name', badge_type.replace('_', ' ').title()),
+                    'description': BADGE_METADATA.get(badge_type, {}).get('description', '')
+                }
+            
+            badge_collection[badge_type]['count'] += 1
+            badge_collection[badge_type]['total_points'] += points
+            
+            # Update latest earned date if this is more recent
+            if achievement.earned_date > badge_collection[badge_type]['latest_earned']:
+                badge_collection[badge_type]['latest_earned'] = achievement.earned_date
+        
+        # Get recent badges (last 5)
+        recent_badges = []
+        for achievement in achievements[:5]:
+            badge_type = achievement.achievement_type
+            meta = BADGE_METADATA.get(badge_type, {})
+            recent_badges.append({
+                'type': badge_type,
+                'icon': meta.get('icon', ''),
+                'image': meta.get('image'),
+                'name': meta.get('name', badge_type.replace('_', ' ').title()),
+                'points': achievement.points_bonus or 0,
+                'earned_date': achievement.earned_date
+            })
+        
+        # Sort badge collection by rarity (legendary → epic → rare → common)
+        rarity_order = {'legendary': 0, 'epic': 1, 'rare': 2, 'common': 3}
+        badge_collection_sorted = dict(sorted(
+            badge_collection.items(),
+            key=lambda x: (rarity_order.get(x[1]['rarity'], 4), -x[1]['count'])
+        ))
+        
+        # If teacher/parent/admin, also gather linked students for quick actions/cards
+        if getattr(current_user, 'role', None) in ['teacher', 'parent', 'admin']:
             try:
-                avg_acc = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter(
-                    QuizSession.user_id == s.id,
-                    QuizSession.completed == True
-                ).scalar()
-                s.avg_accuracy = round(float(avg_acc or 0.0), 1)
+                # Helper is defined below; safe to call at runtime
+                students = _get_linked_students_for_current()
             except Exception:
-                s.avg_accuracy = 0.0
-            try:
-                avatar = s.get_avatar_data()
-                s.avatar_thumb_url = (avatar.get('urls') or {}).get('thumbnail') or avatar.get('thumbnail_url')
-            except Exception:
-                s.avatar_thumb_url = None
-        linked_students = students
+                students = []
+            # Attach quick stats and avatar thumbnail
+            for s in students:
+                try:
+                    avg_acc = db.session.query(db.func.avg(QuizSession.accuracy_percentage)).filter(
+                        QuizSession.user_id == s.id,
+                        QuizSession.completed == True
+                    ).scalar()
+                    s.avg_accuracy = round(float(avg_acc or 0.0), 1)
+                except Exception:
+                    s.avg_accuracy = 0.0
+                try:
+                    avatar = s.get_avatar_data()
+                    s.avatar_thumb_url = (avatar.get('urls') or {}).get('thumbnail') or avatar.get('thumbnail_url')
+                except Exception:
+                    s.avatar_thumb_url = None
+            linked_students = students
+    except Exception as e:
+        # Never let a bad row or migration issue take down the dashboard
+        print(f" ERROR student_dashboard: failed to build stats: {e}")
+        import traceback as _tb
+        _tb.print_exc()
 
     # Get current user's avatar data for immediate display (no fetch needed)
     try:
