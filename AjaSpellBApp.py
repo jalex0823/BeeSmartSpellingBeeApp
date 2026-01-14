@@ -9460,20 +9460,23 @@ def api_answer():
                 level_up_data = None
                 newly_unlocked_avatars = []
                 if current_user.is_authenticated:
-                    # Get updated lifetime points after complete_session() applied them
-                    # complete_session() should have already updated total_lifetime_points via credit_session_points()
-                    new_lifetime_points = current_user.total_lifetime_points or 0
+                    # CRITICAL: Set lifetime points directly (like buzz dust) to ensure they're saved
+                    # complete_session() should have applied them, but we'll ensure they're correct
+                    expected_lifetime_points = old_lifetime_points + total_points
+                    current_lifetime_points = current_user.total_lifetime_points or 0
+                    
+                    # If points weren't applied by complete_session(), apply them directly
+                    if current_lifetime_points != expected_lifetime_points:
+                        print(f"⚠️ WARNING: Points not applied correctly by complete_session()!")
+                        print(f"   Old: {old_lifetime_points}, Expected: {expected_lifetime_points}, Current: {current_lifetime_points}")
+                        print(f"🔧 FIXING: Setting total_lifetime_points directly to {expected_lifetime_points}")
+                        current_user.total_lifetime_points = expected_lifetime_points
+                        new_lifetime_points = expected_lifetime_points
+                    else:
+                        new_lifetime_points = current_lifetime_points
+                    
                     # Calculate points earned (for logging/display)
                     points_earned_this_quiz = new_lifetime_points - old_lifetime_points
-                    
-                    # DEBUG: Verify points were actually applied
-                    if points_earned_this_quiz != total_points:
-                        print(f"⚠️ WARNING: Points mismatch! Expected {total_points} but got {points_earned_this_quiz} (old: {old_lifetime_points}, new: {new_lifetime_points})")
-                        # Force correct value if there's a mismatch
-                        if new_lifetime_points != (old_lifetime_points + total_points):
-                            print(f"🔧 FIXING: Setting total_lifetime_points to {old_lifetime_points + total_points}")
-                            current_user.total_lifetime_points = old_lifetime_points + total_points
-                            new_lifetime_points = current_user.total_lifetime_points
                     
                     #  Check for level up using the updated points
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
