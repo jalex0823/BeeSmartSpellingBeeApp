@@ -16757,28 +16757,33 @@ def api_force_recalculate_stats():
             user_id=current_user.id,
             completed=True
         ).all()
-        
-        calculated_total_points = 0
-        for sess in sessions_with_points:
-            if sess.total_points:
-                calculated_total_points += int(sess.total_points)
-            else:
-                # Fallback: sum individual components
-                calculated_total_points += int(sess.points_earned or 0)
-                calculated_total_points += int(sess.badge_bonus_points or 0)
-                calculated_total_points += int(sess.extra_points or 0)
-        
+
         old_points = current_user.total_lifetime_points or 0
-        current_user.total_lifetime_points = calculated_total_points
-        print(f"   Points: {old_points} → {calculated_total_points} (from {len(sessions_with_points)} sessions)")
-        
-        # Step 2: Recalculate total_quizzes_completed
         old_quizzes = current_user.total_quizzes_completed or 0
-        quiz_count = QuizSession.query.filter_by(
-            user_id=current_user.id,
-            completed=True
-        ).count()
+
+        calculated_total_points = old_points
+        quiz_count = old_quizzes
+
+        # Only recalc from sessions if we actually have any completed sessions.
+        # This prevents wiping out existing lifetime points when historical data
+        # is missing or sessions are still marked incomplete.
+        if sessions_with_points:
+            calculated_total_points = 0
+            for sess in sessions_with_points:
+                if sess.total_points:
+                    calculated_total_points += int(sess.total_points)
+                else:
+                    # Fallback: sum individual components
+                    calculated_total_points += int(sess.points_earned or 0)
+                    calculated_total_points += int(sess.badge_bonus_points or 0)
+                    calculated_total_points += int(sess.extra_points or 0)
+
+            quiz_count = len(sessions_with_points)
+
+        current_user.total_lifetime_points = calculated_total_points
         current_user.total_quizzes_completed = quiz_count
+
+        print(f"   Points: {old_points} → {calculated_total_points} (from {len(sessions_with_points)} sessions)")
         print(f"   Quizzes: {old_quizzes} → {quiz_count}")
         
         # Step 3: Force recalculation of GPA and accuracy from ALL sessions
@@ -16855,13 +16860,28 @@ def api_get_user_stats():
         sr = session.get('speed_round') or {}
         current_sr_streak = sr.get('current_streak', 0) if sr.get('active') else 0
 
+        # Include in-progress quiz points for a real-time "cumulative" view
+        base_lifetime_points = int(getattr(current_user, 'total_lifetime_points', 0) or 0)
+        display_lifetime_points = base_lifetime_points
+        try:
+            quiz_state = session.get(QUIZ_STATE_KEY) or {}
+            # If there is an active quiz (not yet marked complete), add its session_points
+            if quiz_state and not quiz_state.get('quiz_complete', False):
+                session_points = int(quiz_state.get('session_points', 0) or 0)
+                if session_points > 0:
+                    display_lifetime_points = base_lifetime_points + session_points
+        except Exception as _e_rt:
+            print(f"WARNING /api/users/stats: failed to include in-progress quiz points: {_e_rt}")
+
         resp = jsonify({
             'status': 'success',
             'authenticated': True,
             'stats': {
                 'cumulative_gpa': float(getattr(current_user, 'cumulative_gpa', 0.0) or 0.0),
                 'average_accuracy': float(getattr(current_user, 'average_accuracy', 0.0) or 0.0),
-                'total_lifetime_points': int(getattr(current_user, 'total_lifetime_points', 0) or 0),
+                # Display lifetime points plus any in-progress quiz points so the
+                # main menu and dashboards reflect real-time cumulative progress.
+                'total_lifetime_points': int(display_lifetime_points),
                 'total_quizzes_completed': int(getattr(current_user, 'total_quizzes_completed', 0) or 0),
                 'best_streak': int(getattr(current_user, 'best_streak', 0) or 0),
                 'best_grade': getattr(current_user, 'best_grade', None),

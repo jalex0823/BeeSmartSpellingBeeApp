@@ -4887,7 +4887,34 @@ function showRestoreDialog(title, message, isSuccess) {
                                     </div>
                                 </div>
                             </div>
-                            
+
+                            <!-- Manual stats refresh (for admins, teachers, and reviewers) -->
+                            <div style="
+                                display: flex;
+                                justify-content: flex-end;
+                                margin-top: 0.5rem;
+                            ">
+                                <button id="statsRefreshButton"
+                                        type="button"
+                                        onclick="if (window.refreshStatsWithRecalc) { window.refreshStatsWithRecalc(); }"
+                                        style="
+                                            font-size: 0.75rem;
+                                            padding: 0.35rem 0.75rem;
+                                            border-radius: 999px;
+                                            border: 1px solid rgba(139, 69, 19, 0.25);
+                                            background: rgba(255, 255, 255, 0.8);
+                                            color: #8B4513;
+                                            cursor: pointer;
+                                            display: inline-flex;
+                                            align-items: center;
+                                            gap: 0.25rem;
+                                        "
+                                        title="Refresh your stats from the server">
+                                    <span style="font-size: 0.9rem;">🔄</span>
+                                    <span>Refresh stats</span>
+                                </button>
+                            </div>
+
                             <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
                             {% if (current_user.total_quizzes_completed or 0) == 0 %}
                             <div style="
@@ -20773,6 +20800,100 @@ function showRestoreDialog(title, message, isSuccess) {
                 console.warn('Stats refresh failed:', e);
             }
         }
+
+        // Enhanced refresh: recalculate from DB first, then fetch fresh stats
+        let refreshInProgress = false;
+        let lastRefreshTime = 0;
+        const REFRESH_DEBOUNCE_MS = 2000; // Prevent spam clicks
+
+        async function refreshStatsWithRecalc() {
+            // Debounce: ignore if called too soon after last refresh
+            const now = Date.now();
+            if (refreshInProgress || (now - lastRefreshTime) < REFRESH_DEBOUNCE_MS) {
+                console.log('Stats refresh skipped (debounced or in progress)');
+                return;
+            }
+
+            refreshInProgress = true;
+            lastRefreshTime = now;
+
+            const btn = document.getElementById('statsRefreshButton');
+            const originalText = btn ? btn.innerHTML : '';
+            
+            try {
+                // Update button to show loading state
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                    btn.style.cursor = 'wait';
+                    btn.innerHTML = '<span style="font-size: 0.9rem;">⏳</span><span>Refreshing...</span>';
+                }
+
+                // Step 1: Force recalculation from all quiz sessions (for authenticated users)
+                const isAuthenticated = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
+                if (isAuthenticated) {
+                    try {
+                        const recalcResponse = await fetch('/api/users/stats/recalculate', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (recalcResponse.ok) {
+                            const recalcData = await recalcResponse.json();
+                            if (recalcData.status === 'success' && recalcData.recalculation) {
+                                const recalc = recalcData.recalculation;
+                                if (recalc.points_changed || recalc.quizzes_changed) {
+                                    console.log(`🔧 Stats recalculated: points_changed=${recalc.points_changed}, quizzes_changed=${recalc.quizzes_changed}`);
+                                }
+                            }
+                        } else {
+                            console.warn('Stats recalculation failed (non-critical):', recalcResponse.status);
+                        }
+                    } catch (recalcError) {
+                        console.warn('Stats recalculation error (non-critical):', recalcError);
+                        // Continue to fetch stats even if recalculation fails
+                    }
+                }
+
+                // Step 2: Fetch fresh stats and update UI
+                await refreshStats();
+
+                // Brief success feedback
+                if (btn) {
+                    btn.innerHTML = '<span style="font-size: 0.9rem;">✅</span><span>Refreshed!</span>';
+                    setTimeout(() => {
+                        if (btn) {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                console.error('Stats refresh with recalculation failed:', e);
+                if (btn) {
+                    btn.innerHTML = '<span style="font-size: 0.9rem;">⚠️</span><span>Error</span>';
+                    setTimeout(() => {
+                        if (btn) {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        }
+                    }, 2000);
+                }
+            } finally {
+                refreshInProgress = false;
+            }
+        }
+
+        // Expose both functions for manual refresh button / other pages
+        window.refreshStats = refreshStats;
+        window.refreshStatsWithRecalc = refreshStatsWithRecalc;
 
         // Initial refresh
         document.addEventListener('DOMContentLoaded', () => {
