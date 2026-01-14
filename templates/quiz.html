@@ -7847,55 +7847,86 @@ class QuizManager {
             if (result.quiz_complete) {
                 console.log(`🏆 Quiz complete!`);
                 
-                // Small delay, then show all achievements and completion
-                setTimeout(async () => {
-                    // Show badges first (if any)
-                    if (result.badges && result.badges.length > 0) {
-                        console.log(`🏆 ${result.badges.length} badge(s) earned!`);
-                        await this.showAllBadges(result.badges);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-                    
-                    // 🎯 Show level up modal (if leveled up)
-                    if (result.level_up && result.level_up.leveled_up) {
-                        console.log(`🎯 Level up detected!`);
-                        playThemedSound('level-up');
-                        await this.showLevelUp(result.level_up);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-                    
-                    // 🏁 Now get the final quiz summary and show completion
-                    console.log('🏁 Fetching final quiz summary for report card...');
+                // Build a safe fallback summary so we ALWAYS show the report card, even if the server summary fetch fails.
+                const p = result.progress || {};
+                const fallbackTotal = Number(p.total ?? this.totalWords) || (Number(p.correct || 0) + Number(p.incorrect || 0)) || 1;
+                const fallbackSummary = {
+                    total: fallbackTotal,
+                    correct: Number(p.correct) || 0,
+                    incorrect: Number(p.incorrect) || 0
+                };
+
+                const showCompletionFallback = (reason, detail) => {
                     try {
-                        const summaryResponse = await fetch('/api/next', { 
-                            method: 'POST',
-                            credentials: 'same-origin'
-                        });
-                        const summaryData = await summaryResponse.json();
-                        
-                        if (summaryData.done && summaryData.summary) {
-                            this.showQuizComplete(summaryData.summary);
-                            
-                            // 🔄 Force cumulative stats recalculation after quiz completion
-                            // This ensures stats are always accurate and reflected in dashboard/main menu
+                        console.warn('⚠️ Showing completion fallback:', reason, detail || '');
+                        this.showQuizComplete(fallbackSummary);
+                        BeeSmart.showSuccess('Quiz complete! Showing your report card.');
+                    } catch (e) {
+                        console.error('❌ Failed to show fallback completion screen:', e);
+                        BeeSmart.showError('Quiz complete, but results could not be displayed. Please refresh.');
+                    }
+                };
+
+                // Small delay, then show all achievements and completion (robust: never let one modal block completion)
+                setTimeout(() => {
+                    (async () => {
+                        try {
+                            // Show badges first (if any)
+                            if (result.badges && result.badges.length > 0) {
+                                console.log(`🏆 ${result.badges.length} badge(s) earned!`);
+                                try { await this.showAllBadges(result.badges); } catch (e) { console.warn('Badges UI failed (non-critical):', e); }
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+
+                            // 🎯 Show level up modal (if leveled up)
+                            if (result.level_up && result.level_up.leveled_up) {
+                                console.log(`🎯 Level up detected!`);
+                                try { playThemedSound('level-up'); } catch (_e) {}
+                                try { await this.showLevelUp(result.level_up); } catch (e) { console.warn('Level-up UI failed (non-critical):', e); }
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+
+                            // 🏁 Now get the final quiz summary and show completion
+                            console.log('🏁 Fetching final quiz summary for report card...');
+                            let summary = null;
+                            try {
+                                const summaryResponse = await fetch('/api/next', {
+                                    method: 'POST',
+                                    credentials: 'same-origin'
+                                });
+                                if (!summaryResponse.ok) {
+                                    throw new Error(`summary fetch failed: HTTP ${summaryResponse.status}`);
+                                }
+                                const summaryData = await summaryResponse.json();
+                                if (summaryData && summaryData.done && summaryData.summary) {
+                                    summary = summaryData.summary;
+                                } else {
+                                    console.warn('Expected quiz summary but got:', summaryData);
+                                }
+                            } catch (error) {
+                                console.error('Failed to fetch quiz summary:', error);
+                            }
+
+                            if (summary) {
+                                this.showQuizComplete(summary);
+                            } else {
+                                // Always show something instead of leaving the kid stuck at the end.
+                                showCompletionFallback('missing/invalid server summary');
+                            }
+
+                            // 🔄 Force cumulative stats recalculation after quiz completion (best-effort)
                             try {
                                 console.log('🔄 Forcing cumulative stats recalculation after quiz completion...');
                                 const recalcResponse = await fetch('/api/users/stats/recalculate', {
                                     method: 'POST',
                                     credentials: 'same-origin',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    }
+                                    headers: { 'Content-Type': 'application/json' }
                                 });
-                                
                                 if (recalcResponse.ok) {
                                     const recalcData = await recalcResponse.json();
                                     if (recalcData.status === 'success' && recalcData.stats) {
                                         const stats = recalcData.stats;
                                         console.log(`✅ Stats recalculated: ${stats.total_quizzes_completed} quizzes, ${stats.total_lifetime_points} points, GPA ${stats.cumulative_gpa}, ${stats.average_accuracy}% accuracy`);
-                                        if (recalcData.recalculation && (recalcData.recalculation.points_changed || recalcData.recalculation.quizzes_changed)) {
-                                            console.log(`🔧 Stats corrected during recalculation`);
-                                        }
                                     }
                                 } else {
                                     console.warn('⚠️ Stats recalculation failed (non-critical):', recalcResponse.status);
@@ -7903,14 +7934,14 @@ class QuizManager {
                             } catch (recalcError) {
                                 console.warn('⚠️ Stats recalculation error (non-critical):', recalcError);
                             }
-                        } else {
-                            console.error('Expected quiz summary but got:', summaryData);
-                            BeeSmart.showError('Could not load quiz results. Please try refreshing.');
+
+                            // Notify other pages (like the main menu) that stats likely changed.
+                            try { window.dispatchEvent(new CustomEvent('beesmart:stats-updated')); } catch (_e) {}
+                        } catch (e) {
+                            console.error('❌ Completion handler crashed:', e);
+                            showCompletionFallback('completion handler crashed', e?.message);
                         }
-                    } catch (error) {
-                        console.error('Failed to fetch quiz summary:', error);
-                        BeeSmart.showError('Could not load quiz results. Please try refreshing.');
-                    }
+                    })();
                 }, 1500);
             } else {
                 // Normal flow (CORRECT answer): Show definition and celebrations

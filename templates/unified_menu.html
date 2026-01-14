@@ -20803,6 +20803,42 @@ function showRestoreDialog(title, message, isSuccess) {
     <!-- Realtime stats refresh (Grade/GPA/Points/Quizzes/Accuracy) -->
     <script>
     (function() {
+        // Flash animation for updated stat values (gives visible feedback that refresh worked)
+        const __STAT_FLASH_CLASS = 'beesmart-stat-flash';
+        (function installStatFlashCssOnce(){
+            try {
+                if (window.__beesmartStatFlashCssInstalled) return;
+                window.__beesmartStatFlashCssInstalled = true;
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes beesmartStatFlash {
+                        0%   { background: rgba(255, 215, 0, 0.55); }
+                        60%  { background: rgba(255, 215, 0, 0.25); }
+                        100% { background: transparent; }
+                    }
+                    .${__STAT_FLASH_CLASS} {
+                        animation: beesmartStatFlash 700ms ease;
+                        border-radius: 10px;
+                        padding: 0 6px;
+                        box-decoration-break: clone;
+                        -webkit-box-decoration-break: clone;
+                    }
+                `;
+                document.head.appendChild(style);
+            } catch (_e) { /* ignore */ }
+        })();
+
+        function flashStatEl(el) {
+            try {
+                if (!el) return;
+                // Restart animation
+                el.classList.remove(__STAT_FLASH_CLASS);
+                void el.offsetWidth; // force reflow
+                el.classList.add(__STAT_FLASH_CLASS);
+                setTimeout(() => el.classList.remove(__STAT_FLASH_CLASS), 750);
+            } catch (_e) { /* ignore */ }
+        }
+
         function numberWithCommas(x) {
             const n = Number(x);
             if (!Number.isFinite(n)) return '0';
@@ -20834,19 +20870,19 @@ function showRestoreDialog(title, message, isSuccess) {
             const acc = Number(stats.average_accuracy) || 0;
 
             const elGrade = document.getElementById('stats-grade-letter');
-            if (elGrade) elGrade.textContent = gpaToLetter(gpa);
+            if (elGrade) { elGrade.textContent = gpaToLetter(gpa); flashStatEl(elGrade); }
 
             const elGpa = document.getElementById('stats-gpa-value');
-            if (elGpa) elGpa.textContent = gpa.toFixed(2);
+            if (elGpa) { elGpa.textContent = gpa.toFixed(2); flashStatEl(elGpa); }
 
             const elPoints = document.getElementById('stats-points');
-            if (elPoints) elPoints.textContent = numberWithCommas(stats.total_lifetime_points || 0);
+            if (elPoints) { elPoints.textContent = numberWithCommas(stats.total_lifetime_points || 0); flashStatEl(elPoints); }
 
             const elQuizzes = document.getElementById('stats-quizzes');
-            if (elQuizzes) elQuizzes.textContent = numberWithCommas(stats.total_quizzes_completed || 0);
+            if (elQuizzes) { elQuizzes.textContent = numberWithCommas(stats.total_quizzes_completed || 0); flashStatEl(elQuizzes); }
 
             const elAccuracy = document.getElementById('stats-accuracy');
-            if (elAccuracy) elAccuracy.textContent = (Number.isFinite(acc) ? acc : 0).toFixed(1);
+            if (elAccuracy) { elAccuracy.textContent = (Number.isFinite(acc) ? acc : 0).toFixed(1); flashStatEl(elAccuracy); }
         }
 
         async function refreshStats() {
@@ -20892,7 +20928,8 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
 
                 // Step 1: Force recalculation from all quiz sessions (for authenticated users)
-                const isAuthenticated = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
+                // Use IS_AUTH (includes app review mode) but gracefully ignore 401/403 errors.
+                const isAuthenticated = (typeof window !== 'undefined' && window.IS_AUTH === true);
                 if (isAuthenticated) {
                     try {
                         const recalcResponse = await fetch('/api/users/stats/recalculate', {
@@ -20959,6 +20996,17 @@ function showRestoreDialog(title, message, isSuccess) {
 
         // Initial refresh
         document.addEventListener('DOMContentLoaded', () => {
+            // Make sure the button always works even if inline onclick is removed/blocked.
+            try {
+                const btn = document.getElementById('statsRefreshButton');
+                if (btn && !btn.__beesmartWired) {
+                    btn.__beesmartWired = true;
+                    btn.addEventListener('click', (e) => {
+                        try { e.preventDefault(); } catch(_e) {}
+                        refreshStatsWithRecalc();
+                    });
+                }
+            } catch (_e) { /* ignore */ }
             refreshStats();
         });
 
