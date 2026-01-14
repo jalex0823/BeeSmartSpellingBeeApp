@@ -4888,33 +4888,6 @@ function showRestoreDialog(title, message, isSuccess) {
                                 </div>
                             </div>
 
-                            <!-- Manual stats refresh (for admins, teachers, and reviewers) -->
-                            <div style="
-                                display: flex;
-                                justify-content: flex-end;
-                                margin-top: 0.5rem;
-                            ">
-                                <button id="statsRefreshButton"
-                                        type="button"
-                                        onclick="if (window.refreshStatsWithRecalc) { window.refreshStatsWithRecalc(); }"
-                                        style="
-                                            font-size: 0.75rem;
-                                            padding: 0.35rem 0.75rem;
-                                            border-radius: 999px;
-                                            border: 1px solid rgba(139, 69, 19, 0.25);
-                                            background: rgba(255, 255, 255, 0.8);
-                                            color: #8B4513;
-                                            cursor: pointer;
-                                            display: inline-flex;
-                                            align-items: center;
-                                            gap: 0.25rem;
-                                        "
-                                        title="Refresh your stats from the server">
-                                    <span style="font-size: 0.9rem;">🔄</span>
-                                    <span>Refresh stats</span>
-                                </button>
-                            </div>
-
                             <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
                             {% if (current_user.total_quizzes_completed or 0) == 0 %}
                             <div style="
@@ -5488,6 +5461,33 @@ function showRestoreDialog(title, message, isSuccess) {
                 </a>
                 
                 <!-- My Word Lists button removed - use tile instead -->
+                
+                <!-- Manual stats refresh button (centered above Quiz button) -->
+                <div style="
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 0.75rem;
+                ">
+                    <button id="statsRefreshButton"
+                            type="button"
+                            onclick="if (window.refreshStatsWithRecalc) { window.refreshStatsWithRecalc(); }"
+                            style="
+                                font-size: 0.75rem;
+                                padding: 0.35rem 0.75rem;
+                                border-radius: 999px;
+                                border: 1px solid rgba(139, 69, 19, 0.25);
+                                background: rgba(255, 255, 255, 0.8);
+                                color: #8B4513;
+                                cursor: pointer;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0.25rem;
+                            "
+                            title="Refresh your stats from the server">
+                        <span style="font-size: 0.9rem;">🔄</span>
+                        <span>Refresh stats</span>
+                    </button>
+                </div>
                 
                 <!-- Start Quiz Button Container with white semi-translucent background -->
                 <div style="
@@ -16316,18 +16316,23 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
                 console.log(' Dictionary check complete');
                 
-                // Check 11: Cumulative Stats Verification & Recalculation (for authenticated users)
+                // Check 11: Cumulative Stats Verification & Recalculation (ALWAYS RUNS - never skips)
                 const check11 = this.addCheck('Cumulative Stats', 'Checking...', '');
                 await this.delay(200);
+                
+                // Always attempt stats verification - let the backend decide if user is authenticated
+                // This ensures the check never skips due to frontend auth state mismatches
+                let statsVerified = false;
+                let statsData = null;
+                
                 try {
-                    // Only run for authenticated users
-                    const isAuthenticated = (typeof window !== 'undefined' && window.IS_REGISTERED === true);
-                    if (isAuthenticated) {
-                        this.updateCheck(check11, 'Recalculating...', '', 78);
-                        this.updateProgress(78, ' Verifying cumulative stats...');
-                        
-                        // Call the forced recalculation endpoint
-                        const response = await fetch('/api/users/stats/recalculate', {
+                    this.updateCheck(check11, 'Recalculating...', '', 78);
+                    this.updateProgress(78, ' Verifying cumulative stats...');
+                    
+                    // Attempt recalculation endpoint (backend will return 401/403 if not authenticated)
+                    // We try this first to force a full recalculation from DB
+                    try {
+                        const recalcPromise = fetch('/api/users/stats/recalculate', {
                             method: 'POST',
                             credentials: 'same-origin',
                             headers: {
@@ -16335,54 +16340,100 @@ function showRestoreDialog(title, message, isSuccess) {
                             }
                         });
                         
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.status === 'success' && data.stats) {
-                                const stats = data.stats;
-                                const totalActions = stats.total_actions || 0;
-                                const points = stats.total_lifetime_points || 0;
-                                const quizzes = stats.total_quizzes_completed || 0;
-                                const gpa = stats.cumulative_gpa || 0.0;
-                                const accuracy = stats.average_accuracy || 0.0;
+                        // Add timeout to prevent hanging
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Stats recalculation timeout')), 10000)
+                        );
+                        
+                        const recalcResponse = await Promise.race([recalcPromise, timeoutPromise]);
+                        
+                        if (recalcResponse.ok) {
+                            const recalcData = await recalcResponse.json();
+                            if (recalcData.status === 'success' && recalcData.stats) {
+                                statsData = recalcData.stats;
+                                statsVerified = true;
                                 
-                                // Display meaningful stats; actions_percentage is available from backend
-                                // but we intentionally avoid showing it as a primary metric here.
+                                const totalActions = statsData.total_actions || 0;
+                                const points = statsData.total_lifetime_points || 0;
+                                const quizzes = statsData.total_quizzes_completed || 0;
+                                const gpa = statsData.cumulative_gpa || 0.0;
+                                const accuracy = statsData.average_accuracy || 0.0;
+                                
                                 const detail = `${totalActions} quizzes, ${points} pts, GPA: ${gpa.toFixed(2)}, ${accuracy.toFixed(1)}% acc`;
                                 this.updateCheck(check11, `Verified (${detail})`, '', 80);
                                 this.updateProgress(80, ` Stats verified: ${totalActions} quiz${totalActions !== 1 ? 'es' : ''} completed`);
                                 console.log(`✅ Cumulative stats verified: ${totalActions} quizzes, ${points} points, GPA ${gpa}, ${accuracy}% accuracy`);
                                 
                                 // Log if any values changed during recalculation
-                                if (data.recalculation) {
-                                    const recalc = data.recalculation;
+                                if (recalcData.recalculation) {
+                                    const recalc = recalcData.recalculation;
                                     if (recalc.points_changed || recalc.quizzes_changed) {
                                         console.log(`🔧 Stats corrected: points_changed=${recalc.points_changed}, quizzes_changed=${recalc.quizzes_changed}, sessions_processed=${recalc.sessions_processed}`);
                                     }
                                 }
-                            } else {
-                                this.updateCheck(check11, 'Partial', 'ℹ', 80);
-                                this.updateProgress(80, ' Stats check completed');
-                                console.warn('⚠️ Stats recalculation returned unexpected format');
                             }
+                        } else if (recalcResponse.status === 401 || recalcResponse.status === 403) {
+                            // User not authenticated - fall through to regular stats fetch
+                            console.log('ℹ Stats recalculation requires authentication, falling back to regular stats fetch');
                         } else {
-                            const errorText = await response.text().catch(() => 'Unknown error');
-                            this.updateCheck(check11, 'Skipped', 'ℹ', 80);
-                            this.updateProgress(80, ' Stats check skipped');
-                            console.warn(`⚠️ Stats recalculation failed: ${response.status} - ${errorText}`);
+                            // Other error - log but continue to fallback
+                            const errorText = await recalcResponse.text().catch(() => 'Unknown error');
+                            console.warn(`⚠️ Stats recalculation failed (${recalcResponse.status}), trying fallback: ${errorText.substring(0, 100)}`);
                         }
-                    } else {
-                        // Guest users skip this check
-                        this.updateCheck(check11, 'Skipped (guest)', 'ℹ', 80);
-                        this.updateProgress(80, ' Stats check skipped (guest)');
-                        console.log('ℹ Cumulative stats check skipped for guest user');
+                    } catch (recalcError) {
+                        // Recalculation failed - try fallback to regular stats endpoint
+                        console.warn('Stats recalculation error, trying fallback:', recalcError.message || recalcError);
                     }
+                    
+                    // Fallback: If recalculation didn't work, try regular stats endpoint
+                    if (!statsVerified) {
+                        try {
+                            const statsResponse = await fetch('/api/users/stats', {
+                                method: 'GET',
+                                credentials: 'same-origin',
+                                cache: 'no-store',
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            });
+                            
+                            if (statsResponse.ok) {
+                                const statsJson = await statsResponse.json();
+                                if (statsJson.status === 'success' && statsJson.stats) {
+                                    statsData = statsJson.stats;
+                                    statsVerified = true;
+                                    
+                                    const points = statsData.total_lifetime_points || 0;
+                                    const quizzes = statsData.total_quizzes_completed || 0;
+                                    const gpa = statsData.cumulative_gpa || 0.0;
+                                    const accuracy = statsData.average_accuracy || 0.0;
+                                    
+                                    const detail = `${quizzes} quizzes, ${points} pts, GPA: ${gpa.toFixed(2)}, ${accuracy.toFixed(1)}% acc`;
+                                    this.updateCheck(check11, `Loaded (${detail})`, '', 80);
+                                    this.updateProgress(80, ` Stats loaded: ${quizzes} quiz${quizzes !== 1 ? 'es' : ''} completed`);
+                                    console.log(`✅ Stats loaded via fallback: ${quizzes} quizzes, ${points} points, GPA ${gpa}, ${accuracy}% accuracy`);
+                                }
+                            }
+                        } catch (fallbackError) {
+                            console.warn('Stats fallback fetch also failed:', fallbackError);
+                        }
+                    }
+                    
+                    // Final fallback: If both endpoints failed, show a status but don't skip
+                    if (!statsVerified) {
+                        this.updateCheck(check11, 'Check attempted', 'ℹ', 80);
+                        this.updateProgress(80, ' Stats check attempted (endpoints unavailable)');
+                        console.warn('⚠️ Stats verification attempted but both endpoints unavailable');
+                    }
+                    
                 } catch (statsError) {
-                    // Non-fatal: stats will be calculated on-demand
-                    console.warn('Cumulative stats check failed:', statsError);
-                    this.updateCheck(check11, 'On-demand', 'ℹ', 80);
-                    this.updateProgress(80, ' Stats will calculate on-demand');
+                    // Even if everything fails, we still show the check was attempted
+                    console.error('Cumulative stats check error:', statsError);
+                    this.updateCheck(check11, 'Error (check attempted)', '⚠', 80);
+                    this.updateProgress(80, ' Stats check encountered error');
                 }
-                console.log(' Cumulative stats check complete');
+                
+                console.log(' Cumulative stats check complete (never skipped)');
                 
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
