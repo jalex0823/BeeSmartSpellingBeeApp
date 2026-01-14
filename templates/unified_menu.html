@@ -16312,17 +16312,17 @@ function showRestoreDialog(title, message, isSuccess) {
                             const data = await response.json();
                             if (data.status === 'success' && data.stats) {
                                 const stats = data.stats;
-                                const actionsPct = stats.actions_percentage || 0;
                                 const totalActions = stats.total_actions || 0;
                                 const points = stats.total_lifetime_points || 0;
                                 const quizzes = stats.total_quizzes_completed || 0;
                                 const gpa = stats.cumulative_gpa || 0.0;
                                 const accuracy = stats.average_accuracy || 0.0;
                                 
-                                // Show percentage of actions completed
-                                const detail = `${actionsPct.toFixed(0)}% (${totalActions} quizzes, ${points} pts, GPA: ${gpa.toFixed(2)}, ${accuracy.toFixed(1)}% acc)`;
+                                // Display meaningful stats; actions_percentage is available from backend
+                                // but we intentionally avoid showing it as a primary metric here.
+                                const detail = `${totalActions} quizzes, ${points} pts, GPA: ${gpa.toFixed(2)}, ${accuracy.toFixed(1)}% acc`;
                                 this.updateCheck(check11, `Verified (${detail})`, '', 80);
-                                this.updateProgress(80, ` Stats verified: ${actionsPct.toFixed(0)}% complete`);
+                                this.updateProgress(80, ` Stats verified: ${totalActions} quiz${totalActions !== 1 ? 'es' : ''} completed`);
                                 console.log(`✅ Cumulative stats verified: ${totalActions} quizzes, ${points} points, GPA ${gpa}, ${accuracy}% accuracy`);
                                 
                                 // Log if any values changed during recalculation
