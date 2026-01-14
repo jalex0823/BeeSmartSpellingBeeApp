@@ -9423,7 +9423,19 @@ def api_answer():
                 
                 print(f" POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
                 
+                # Capture old points BEFORE complete_session() updates them
+                old_lifetime_points = 0
+                old_honey_points = 0
+                if current_user.is_authenticated:
+                    old_lifetime_points = current_user.total_lifetime_points or 0
+                    old_honey_points = current_user.honey_points or 0
+                
+                # Complete the session - this applies points and increments quiz count
                 quiz_session.complete_session()
+                
+                # Refresh user object to get updated values from database
+                if current_user.is_authenticated:
+                    db.session.refresh(current_user)
                 
                 #  Save badges to Achievement table
                 # Persist all badges to Achievement table (full history), but report card later filters display.
@@ -9448,14 +9460,17 @@ def api_answer():
                 level_up_data = None
                 newly_unlocked_avatars = []
                 if current_user.is_authenticated:
-                    #  Check for level up BEFORE updating points
-                    old_lifetime_points = current_user.total_lifetime_points or 0
-                    new_lifetime_points = old_lifetime_points + total_points
+                    # Get updated lifetime points after complete_session() applied them
+                    new_lifetime_points = current_user.total_lifetime_points or 0
+                    # Calculate points earned (for logging/display)
+                    points_earned_this_quiz = new_lifetime_points - old_lifetime_points
+                    
+                    #  Check for level up using the updated points
                     level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
                     
                     #  Check for newly unlocked avatars based on honey points
                     from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
-                    old_honey_points = current_user.honey_points or 0
+                    # Update honey points (separate from lifetime points for avatar unlocks)
                     new_honey_points = old_honey_points + total_points
                     
                     #  DEBUG: Log honey points update
@@ -9570,14 +9585,13 @@ def api_answer():
                     if newly_unlocked_avatars:
                         print(f" User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
                     
-                    # Update stats
-                    current_user.total_quizzes_completed = (current_user.total_quizzes_completed or 0) + 1
-                    current_user.total_lifetime_points = new_lifetime_points
+                    # Update stats (complete_session() already incremented quizzes and applied points)
+                    # Only update best_streak if this session's streak is better
                     if quiz_session.best_streak > (current_user.best_streak or 0):
                         current_user.best_streak = quiz_session.best_streak
                     
-                    #  Update GPA and average accuracy
-                    current_user.update_gpa_and_accuracy()
+                    # GPA and accuracy are already updated by complete_session() via update_gpa_and_accuracy()
+                    # No need to refresh again - we already refreshed after complete_session()
                     
                     print(f" STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
                     
