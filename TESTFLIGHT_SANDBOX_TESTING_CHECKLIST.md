@@ -11,7 +11,7 @@
 #### ✅ **Avatar IAP Testing:**
 - [ ] Navigate to main menu → Click "Avatars" tile
 - [ ] Verify avatar tile is same size as other menu tiles
-- [ ] Browse all 39 avatars without logging in (guest access)
+- [ ] Browse all 41 avatars without logging in (guest access)
 - [ ] Click on a locked avatar (premium avatar)
 - [ ] Verify purchase flow initiates WITHOUT requiring login/registration
 - [ ] Complete a sandbox purchase as guest user
@@ -201,7 +201,7 @@
 ### 11. **Avatar System**
 
 #### ✅ **Avatar Functionality:**
-- [ ] Browse all 39 avatars
+- [ ] Browse all 41 avatars
 - [ ] Preview avatars (3D rendering)
 - [ ] Purchase locked avatars
 - [ ] Select avatar for use

@@ -11933,7 +11933,7 @@ def api_bundles_list():
     # restore/purchase entitlements without requiring login.
     anon_owned = _get_guest_entitlements().get('anon_owned_products', [])
 
-    # Build a small normalization map once (catalog is tiny: 39 avatars)
+    # Build a small normalization map once (catalog is tiny: ~41 avatars)
     try:
         from avatar_catalog import AVATAR_CATALOG  # type: ignore
         _catalog_ids = [str((a.get('id') or '')).strip().lower() for a in (AVATAR_CATALOG or []) if (a.get('id') or '').strip()]

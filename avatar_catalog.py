@@ -8,7 +8,7 @@ Monetization Tiers:
 - PREMIUM: Top-tier avatars with higher unlock requirements (26 avatars)
 - MASCOT: Default for guests/unregistered users (1 avatar)
 
-Total: 39 avatars
+Total: 41 avatars
 
 Dynamic naming: If available, avatar display names are sourced from the
 original render PNG filenames that end with '!' under
@@ -25,7 +25,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
-# Avatar Catalog: All 39 Bee Types (GLB Format Only)
+# Avatar Catalog: All 41 Bee Types (GLB Format Only)
 # Each entry includes folder name, GLB file, and monetization data
 # ALL avatars use GLB format exclusively - the 'obj_file' field name is legacy but contains GLB filenames
 # To avoid disruption, we keep this as the fallback unless USE_EXTERNAL_AVATAR_CATALOG=1.
@@ -90,6 +90,23 @@ AVATAR_CATALOG: List[Dict] = [
         "is_default_free": False,
         "is_purchasable": True,
         "unlock_points": 15000,
+        "price": 0.99
+    },
+    {
+        "id": "bk-bee",
+        "product_id": "beesmart.avatar.bk_bee",
+        "name": "BK Bee Avatar",
+        "folder": "glb_files",
+        "obj_file": "BKBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Big style, big confidence - BK Bee brings swagger to your spelling streaks!",
+        "variants": ["default"],
+        "category": "classic",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 6000,
         "price": 0.99
     },
     {
@@ -204,6 +221,23 @@ AVATAR_CATALOG: List[Dict] = [
         "is_purchasable": False,
         "unlock_points": 0,
         "price": 0.00
+    },
+    {
+        "id": "firefighter-bee",
+        "product_id": "beesmart.avatar.firefighter_bee",
+        "name": "Firefighter Bee Avatar",
+        "folder": "glb_files",
+        "obj_file": "FireFighterBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Brave, helpful, and ready to save the day - Firefighter Bee keeps your spelling skills blazing!",
+        "variants": ["default"],
+        "category": "profession",
+        "tier": "earn_or_buy",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 7000,
+        "price": 0.99
     },
     {
         "id": "franken-bee",
@@ -1014,6 +1048,8 @@ def get_avatar_info(avatar_id, variant='default'):
     if folder == 'glb_files':
         if avatar_id == 'astro-bee':
             thumbnail_file = 'AvatarThumbnails/AstroBee!.png'
+        elif avatar_id == 'bk-bee':
+            thumbnail_file = 'AvatarThumbnails/BKBee!.png'
         elif avatar_id == 'buda-bee':
             thumbnail_file = 'AvatarThumbnails/BudaBee!.png'
         elif avatar_id == 'buzz-bee':
@@ -1032,6 +1068,8 @@ def get_avatar_info(avatar_id, variant='default'):
             thumbnail_file = 'AvatarThumbnails/ExplorerBee!.png'
         elif avatar_id == 'fairy-bee':
             thumbnail_file = 'AvatarThumbnails/FairyBee!.png'
+        elif avatar_id == 'firefighter-bee':
+            thumbnail_file = 'AvatarThumbnails/FireFighterBee!.png'
         elif avatar_id == 'franken-bee':
             thumbnail_file = 'AvatarThumbnails/FrankenBee!.png'
         elif avatar_id == 'gamer-bee':

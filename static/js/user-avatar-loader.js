@@ -2,7 +2,7 @@
  * User Avatar Loader - GLB-Only Edition
  * ========================================
  * Loads 3D avatars from GLB files with optimized wave-based preloading
- * - Supports 39 avatars total
+ * - Supports 41 avatars total
  * - GLB-only format (no OBJ/MTL legacy code)
  * - Wave-based loading (6-8 avatars per wave)
  * - Robust timeout & retry logic
@@ -52,7 +52,15 @@ class UserAvatarLoader {
             // Do not force-collape to mascot, otherwise real users can appear to "lose" their avatar.
             'coolbee': 'cool-bee',
             'cool-bee': 'cool-bee',
-            'cool_bee': 'cool-bee'
+            'cool_bee': 'cool-bee',
+
+            // New avatars (normalize legacy/filename ids -> catalog slugs)
+            'bkbee': 'bk-bee',
+            'bk_bee': 'bk-bee',
+            'bk-bee': 'bk-bee',
+            'firefighterbee': 'firefighter-bee',
+            'fire_fighter_bee': 'firefighter-bee',
+            'firefighter-bee': 'firefighter-bee'
         };
         
         // Initialize fallback avatar

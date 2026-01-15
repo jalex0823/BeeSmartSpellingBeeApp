@@ -1,5 +1,27 @@
 # 9 New Bee Avatars - File Requirements
 
+## Add-on: FireFighterBee + BKBee (2 new avatars)
+
+These two avatars are now supported by the app catalog and avatar picker.
+
+### Required Files
+
+- **GLB models** → `/static/assets/avatars/glb_files/`
+  - `FireFighterBee.glb`
+  - `BKBee.glb`
+- **PNG thumbnails** (must include `!`) → `/static/assets/avatars/glb_files/AvatarThumbnails/`
+  - `FireFighterBee!.png`
+  - `BKBee!.png`
+
+### Catalog IDs / Product IDs
+
+- **Firefighter Bee**
+  - **ID:** `firefighter-bee`
+  - **Product ID:** `beesmart.avatar.firefighter_bee`
+- **BK Bee**
+  - **ID:** `bk-bee`
+  - **Product ID:** `beesmart.avatar.bk_bee`
+
 ## Overview
 These 9 new premium avatars complete the alphabet coverage (A-Z) for BeeSmart Spelling Bee App.
 All avatars are configured at **$1.99 premium tier** with 30,000 unlock points.
@@ -36,7 +58,7 @@ Place in: `/static/assets/avatars/glb_files/AvatarThumbnails/`
 
 ## Alphabet Coverage
 
-After adding these 9 avatars, the app will have **39 total avatars** covering all 26 letters:
+After adding these 9 avatars, the app will have **41 total avatars** (including BK Bee + Firefighter Bee) covering all 26 letters:
 
 - **A** = Al Bee
 - **B** = Brother Bee, Buda Bee, Builder Bee, Buzz Bee
