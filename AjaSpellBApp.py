@@ -342,10 +342,22 @@ def init_quiz_state(total_words: int):
     except Exception:
         wordbank_fingerprint = ''
 
-    # Ensure we have a guest/user *before* calling get_wordbank() so we don't
-    # accidentally create a new guest later with a different session.
+    # Ensure we have a stable user context before touching any DB/session-backed
+    # quiz tracking. IMPORTANT: authenticated users must NOT be routed through
+    # guest user creation, otherwise QuizSession records attach to a guest user
+    # and cumulative GPA/accuracy/quiz count won't update for the real account.
     db_session_id = None
-    user_obj = get_or_create_guest_user()
+    try:
+        is_auth = bool(getattr(current_user, "is_authenticated", False))
+    except Exception:
+        is_auth = False
+
+    if is_auth:
+        user_obj = current_user
+        # Keep a consistent flag for older logic that distinguishes guest UX
+        session["is_guest"] = False
+    else:
+        user_obj = get_or_create_guest_user()
 
     # After guest resolution, restore the active wordbank pointer if it was
     # dropped by any session churn.
@@ -3953,7 +3965,13 @@ def get_wordbank() -> List[Dict[str, str]]:
     # happens mid-flow), try to recover the pointer from the user record.
     if not storage_id:
         try:
-            user_obj = get_or_create_guest_user()
+            # IMPORTANT: don't create/attach a guest user when a real user is logged in.
+            # Guest creation here would fork wordbank ownership and break stats attribution.
+            try:
+                is_auth = bool(getattr(current_user, "is_authenticated", False))
+            except Exception:
+                is_auth = False
+            user_obj = current_user if is_auth else get_or_create_guest_user()
             candidate = getattr(user_obj, "wordbank_storage_id", None) if user_obj else None
             if candidate:
                 storage_id = candidate
@@ -9273,8 +9291,15 @@ def api_answer():
     session[QUIZ_STATE_KEY] = state
     session.modified = True  # CRITICAL: Tell Flask to persist session changes
 
-    # Save to database for ALL users (authenticated + guests)
-    user_obj = get_or_create_guest_user()
+    # Save to database for ALL users (authenticated + guests).
+    # IMPORTANT: authenticated users must attach QuizResult/WordMastery rows to
+    # their real account, otherwise cumulative GPA/accuracy/quiz count won't
+    # reflect quiz completion for the logged-in user.
+    try:
+        is_auth = bool(getattr(current_user, "is_authenticated", False))
+    except Exception:
+        is_auth = False
+    user_obj = current_user if is_auth else get_or_create_guest_user()
     if user_obj and state.get("db_session_id"):
         try:
             # Save individual word result with detailed points breakdown
@@ -16660,10 +16685,50 @@ def api_list_badges():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route("/api/users/me", methods=["GET"])
+@app.route("/api/users/me", methods=["GET", "PUT"])
 def api_get_current_user():
     """Get current user's basic information (name, auth status, etc.)"""
     try:
+        # Allow authenticated users to update their own display_name.
+        if request.method == "PUT":
+            if not current_user.is_authenticated:
+                return jsonify({
+                    "status": "error",
+                    "message": "Authentication required"
+                }), 401
+
+            data = request.get_json(silent=True) or {}
+            new_name = (data.get("display_name") or "").strip()
+            if not new_name:
+                return jsonify({
+                    "status": "error",
+                    "message": "display_name is required"
+                }), 400
+            # Keep it kid-friendly + safe for headers/UI.
+            if len(new_name) > 40:
+                new_name = new_name[:40].strip()
+            current_user.display_name = new_name
+            db.session.commit()
+            try:
+                db.session.refresh(current_user)
+            except Exception:
+                pass
+            resp = jsonify({
+                "status": "success",
+                "message": "Name updated",
+                "user": {
+                    "id": current_user.id,
+                    "username": current_user.username,
+                    "display_name": current_user.display_name,
+                    "role": getattr(current_user, "role", "student")
+                }
+            })
+            try:
+                resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            except Exception:
+                pass
+            return resp
+
         # Check if user is authenticated
         if current_user.is_authenticated:
             # Live stats may have been updated by the latest quiz completion; ensure we have most recent GPA/accuracy

@@ -4787,7 +4787,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                 margin-bottom: 1.5rem;
                                 text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
                             ">
-                                 Welcome back, {{ current_user.display_name or 'Friend' }}!
+                                 Welcome back, <span id="welcomeDisplayName">{{ current_user.display_name or 'Friend' }}</span>!
                             </div>
                             
                             <!-- Stats Row -->
@@ -5161,6 +5161,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div style="margin-top: 0.8rem; font-size: 0.95rem; color: #8B4513;">
                          The announcer will use your name during the quiz!
                     </div>
+                    <div id="studentNameStatus" style="margin-top: 0.4rem; font-size: 0.85rem; color: #8B4513; min-height: 1.2em;"></div>
                 </div>
             </section>
 
@@ -7166,6 +7167,7 @@ function showRestoreDialog(title, message, isSuccess) {
         function saveStudentName() {
             const nameInput = document.getElementById('studentName');
             const name = nameInput.value.trim();
+            const statusEl = document.getElementById('studentNameStatus');
             
             // Save to localStorage
             if (name) {
@@ -7190,6 +7192,44 @@ function showRestoreDialog(title, message, isSuccess) {
                         sessionStorage.setItem('guestName', name);
                     }
                 } catch (e) {}
+
+                // If authenticated, also persist the display name to the DO DB so the welcome header
+                // and all cumulative stats attribution follow the real user.
+                try {
+                    const isAuthenticated = (window.IS_REAL_AUTH === true);
+                    if (isAuthenticated) {
+                        // Debounce server writes while the user types
+                        if (window.__saveDisplayNameTimer) {
+                            clearTimeout(window.__saveDisplayNameTimer);
+                        }
+                        if (statusEl) statusEl.textContent = 'Saving name...';
+                        window.__saveDisplayNameTimer = setTimeout(async () => {
+                            try {
+                                const r = await fetch('/api/users/me', {
+                                    method: 'PUT',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                    body: JSON.stringify({ display_name: name })
+                                });
+                                if (!r.ok) {
+                                    if (statusEl) statusEl.textContent = 'Could not save name (offline?)';
+                                    return;
+                                }
+                                const data = await r.json();
+                                const saved = data && data.user && data.user.display_name ? String(data.user.display_name) : name;
+                                if (statusEl) statusEl.textContent = 'Saved!';
+                                const welcome = document.getElementById('welcomeDisplayName');
+                                if (welcome) welcome.textContent = saved;
+                            } catch (_e) {
+                                if (statusEl) statusEl.textContent = 'Could not save name (offline?)';
+                            }
+                        }, 550);
+                    } else {
+                        if (statusEl) statusEl.textContent = '';
+                    }
+                } catch (_e) {
+                    // ignore
+                }
             } else {
                 safeStorage.local.removeItem('studentName');
                 try { sessionStorage.removeItem('announcerName'); } catch (e) {}
@@ -7206,6 +7246,7 @@ function showRestoreDialog(title, message, isSuccess) {
                         sessionStorage.removeItem('guestName');
                     }
                 } catch (e) {}
+                try { if (statusEl) statusEl.textContent = ''; } catch (_e) {}
             }
         }
         
