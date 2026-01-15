@@ -865,13 +865,16 @@
             try {
                 // iOS Fix: Add timeout for fetch request
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                // 10s can be too aggressive if the server is cold-starting dictionary resources.
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
                 
                 const response = await fetch('/api/speed-round/start', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
                     body: JSON.stringify(formData),
                     signal: controller.signal
                 });
@@ -896,8 +899,31 @@
                 
                 // iOS-specific error messages
                 if (error.name === 'AbortError') {
-                    alert('⏱️ Connection timeout. Please check your internet connection and try again.');
+                    // It's possible the server started the round but our client timed out.
+                    // Best-effort: check if a round is active, and if so proceed.
+                    try {
+                        const nextResp = await fetch('/api/speed-round/next', { credentials: 'same-origin', cache: 'no-store' });
+                        if (nextResp && nextResp.ok) {
+                            const nextJson = await nextResp.json();
+                            if (!nextJson.error) {
+                                window.location.href = '/speed-round/quiz';
+                                return;
+                            }
+                        }
+                    } catch (_) {}
+                    alert('⏱️ Connection timeout. Please try again (or wait a moment and retry).');
                 } else {
+                    // If fetch failed but server started the round (rare SW/network hiccup), proceed.
+                    try {
+                        const nextResp = await fetch('/api/speed-round/next', { credentials: 'same-origin', cache: 'no-store' });
+                        if (nextResp && nextResp.ok) {
+                            const nextJson = await nextResp.json();
+                            if (!nextJson.error) {
+                                window.location.href = '/speed-round/quiz';
+                                return;
+                            }
+                        }
+                    } catch (_) {}
                     alert('❌ Failed to start speed round: ' + error.message + '\n\nPlease try again.');
                 }
                 closeSpeedIntro();

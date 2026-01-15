@@ -849,6 +849,58 @@ BADGE_METADATA = {
     }
 }
 
+
+def maybe_award_elite_buzz_dust(user) -> bool:
+    """
+    Award the 'elite_buzz_dust' achievement once when a user reaches the Elite Buzz Dust threshold.
+
+    NOTE:
+    - This is separate from rank badges (elite_rank) and exists because BADGE_METADATA includes
+      elite_buzz_dust but prior code never actually awarded it.
+    - Returns True only when the award is newly created.
+    """
+    try:
+        if not user or not getattr(user, "id", None):
+            return False
+        total = int(getattr(user, "total_buzz_dust", 0) or 0)
+    except Exception:
+        return False
+
+    try:
+        from buzz_dust_helpers import BEE_CLASSES
+        elite = next((c for c in (BEE_CLASSES or []) if (c.get("id") == "elite")), None)
+        elite_min = int((elite or {}).get("min_buzz_dust", 200000) or 200000)
+    except Exception:
+        elite_min = 200000
+
+    if total < elite_min:
+        return False
+
+    try:
+        existing = Achievement.query.filter_by(user_id=user.id, achievement_type="elite_buzz_dust").first()
+        if existing:
+            return False
+
+        meta = BADGE_METADATA.get("elite_buzz_dust", {})
+        achievement = Achievement(
+            user_id=user.id,
+            achievement_type="elite_buzz_dust",
+            achievement_name=meta.get("name") or "Elite Buzz Dust",
+            achievement_description=meta.get("description") or "Reach elite Buzz Dust threshold",
+            points_bonus=int(meta.get("points") or 0),
+            earned_date=datetime.now(timezone.utc),
+            achievement_metadata={
+                "badge_image": meta.get("image"),
+                "total_buzz_dust_at_award": total,
+                "threshold": elite_min,
+            },
+        )
+        db.session.add(achievement)
+        return True
+    except Exception as e:
+        print(f"⚠️ maybe_award_elite_buzz_dust failed: {e}")
+        return False
+
 # ------------------------------
 # Public policy pages
 # ------------------------------
@@ -9415,6 +9467,12 @@ def api_answer():
                         print(f" RANK BADGE AWARDED: {badge_type}")
                 except Exception as badge_error:
                     print(f"️ Failed to award rank badge: {badge_error}")
+
+            # Also award the Elite Buzz Dust milestone (one-time)
+            try:
+                maybe_award_elite_buzz_dust(current_user)
+            except Exception:
+                pass
             
             # Commit the Buzz Dust update immediately
             try:
@@ -9771,6 +9829,19 @@ def api_answer():
                         )
                         print(f"   Display earned this quiz: {state['buzz_dust_earned']} (incl. base already awarded per answer)")
                         print(f"   Breakdown: {state['buzz_dust_breakdown']}")
+
+                        # One-time elite buzz dust milestone; if newly earned, show it on report card
+                        try:
+                            if maybe_award_elite_buzz_dust(current_user):
+                                badges_unlocked.append({
+                                    "type": "elite_buzz_dust",
+                                    "name": BADGE_METADATA.get("elite_buzz_dust", {}).get("name", "Elite Buzz Dust"),
+                                    "icon": BADGE_METADATA.get("elite_buzz_dust", {}).get("icon", ""),
+                                    "points": int(BADGE_METADATA.get("elite_buzz_dust", {}).get("points", 0) or 0),
+                                    "message": "ELITE BUZZ DUST! You reached the Elite rank threshold!"
+                                })
+                        except Exception:
+                            pass
                         
                         # Check for rank advancement
                         old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
@@ -15462,6 +15533,7 @@ def update_user_stats_railway(user_id, points_to_add, words_correct, words_attem
                     text("""
                         UPDATE users 
                         SET total_lifetime_points = COALESCE(total_lifetime_points, 0) + :points,
+                            honey_points = COALESCE(honey_points, 0) + :points,
                             total_quizzes_completed = COALESCE(total_quizzes_completed, 0) + 1,
                             average_accuracy = :new_avg_accuracy
                         WHERE id = :user_id
@@ -15922,6 +15994,12 @@ def api_speed_round_answer():
                         session['old_class_id_speed'] = old_class_id
                         current_user.bee_class = new_class_id
                         speed_logger.info(f" MID-SPEED-ROUND RANK UP! {old_class_id} → {new_class_id} (Buzz Dust: {old_buzz_dust} → {current_user.total_buzz_dust})")
+
+                    # Award Elite Buzz Dust milestone if threshold is reached
+                    try:
+                        maybe_award_elite_buzz_dust(current_user)
+                    except Exception:
+                        pass
                     
                     # Commit the Buzz Dust update immediately
                     db.session.commit()
@@ -16053,16 +16131,34 @@ def api_speed_round_complete():
         
         # Check badges using same logic as regular quiz
         badges_unlocked = check_badges(speed_state, speed_round.get('word_list', []))
+
+        # If user reached elite buzz dust threshold during this round, include the badge for display.
+        try:
+            if maybe_award_elite_buzz_dust(current_user):
+                badges_unlocked.append({
+                    "type": "elite_buzz_dust",
+                    "name": BADGE_METADATA.get("elite_buzz_dust", {}).get("name", "Elite Buzz Dust"),
+                    "icon": BADGE_METADATA.get("elite_buzz_dust", {}).get("icon", ""),
+                    "points": int(BADGE_METADATA.get("elite_buzz_dust", {}).get("points", 0) or 0),
+                    "message": "ELITE BUZZ DUST! You reached the Elite rank threshold!"
+                })
+        except Exception:
+            pass
         
         # Calculate badge bonus points
         badge_points = sum(b["points"] for b in badges_unlocked)
         
         if score_id:
-            # 🆕 Points already awarded real-time during the round, so pass 0 here
-            # Only update quiz completion count and accuracy stats
+            # Fairness policy: Speed Round points count toward BOTH:
+            # - total_lifetime_points (main menu Points)
+            # - honey_points (avatar unlock currency)
+            #
+            # Historically this code only added badge_points, which made Speed Round feel
+            # "unfair" versus Quiz for avatar unlock progression.
+            points_to_add = int(speed_round.get('total_points', 0) or 0) + int(badge_points or 0)
             stats_updated = update_user_stats_railway(
-                current_user.id, 
-                badge_points,  # Award badge bonus points (word points already saved incrementally)
+                current_user.id,
+                points_to_add,
                 words_correct,
                 words_attempted
             )

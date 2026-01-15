@@ -42,13 +42,20 @@ function selectBestFemaleVoiceGlobal(voices) {
             const name = voice.name.toLowerCase();
             const lang = voice.lang.toLowerCase();
             
-            if (lang.includes('en-us')) score += 50;
-            else if (lang.includes('en-gb')) score += 30;
-            else if (lang.includes('en-au')) score += 25;
+            // Prefer British English (UK) for BeeSmart announcer
+            if (lang.includes('en-gb') || lang.includes('en-uk')) score += 70;
+            else if (lang.includes('en-ie')) score += 60;
+            else if (lang.includes('en-au')) score += 40;
+            else if (lang.includes('en-us')) score += 20;
             
             if (voice.localService) score += 30;
+
+            // Prefer likely female voices
+            if (name.includes('female') || name.includes('woman')) score += 40;
             
             const premiumVoices = {
+                // UK-ish first
+                'serena': 110, 'sonia': 110, 'hazel': 105, 'amy': 105, 'kate': 100,
                 'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
                 'moira': 87, 'salli': 85, 'kendra': 85, 'susan': 75, 'victoria': 82,
                 'nova': 80, 'allison': 78, 'zira': 75
@@ -934,9 +941,12 @@ function selectBestFemaleVoice() {
             const name = voice.name.toLowerCase();
             const uri = (voice.voiceURI || '').toLowerCase();
             
-            // Language preference (US English gets highest priority)
-            if (voice.lang === 'en-US') score += 100;
+            // Language preference (British English gets highest priority)
+            if (voice.lang === 'en-GB') score += 120;
+            else if (voice.lang === 'en-IE') score += 100; // close, still UK-ish cadence
             else if (voice.lang.startsWith('en-')) score += 50;
+            // De-prioritize US English if we can find a UK voice
+            if (voice.lang === 'en-US') score -= 10;
             
             // Quality indicators (higher quality = more natural)
             if (voice.quality === 'high') score += 50;
@@ -965,13 +975,19 @@ function selectBestFemaleVoice() {
 
             // Known high-quality natural-sounding female voices (prioritized for kids in speed round)
             const premiumVoices = {
+                // Prefer British/UK voices when available
+                'serena': 110,      // UK (varies by platform)
+                'sonia': 110,       // UK (varies by platform)
+                'hazel': 105,       // UK
+                'amy': 105,         // UK (often)
+                'kate': 100,        // UK
                 'samantha': 95,     // macOS - very natural, excellent for kids
                 'ava': 92,          // macOS - warm and clear
                 'emma': 90,         // Modern neural - friendly tone
                 'joanna': 88,       // Amazon Polly - professional but warm
                 'karen': 88,        // Clear enunciation for spelling
                 'moira': 87,        // Irish accent - pleasant and clear
-                'aria': 85,         // Modern Windows neural - natural
+                'aria': 70,         // Modern Windows neural - natural (often en-US)
                 'jenny': 85,        // Modern neural voice - friendly
                 'salli': 85,        // Amazon Polly - clear pronunciation
                 'kendra': 85,       // Amazon Polly - warm tone
@@ -1168,6 +1184,27 @@ function initializeSpeechSynthesisForIOS() {
     console.log('🍎 iOS Speech Synthesis initialized');
 }
 
+// Deterministic announcer voice: one British female voice for the entire session.
+// Prevents "voice swapping" (e.g., Zira → Aria) when voices load async.
+function getSessionAnnouncerVoice() {
+    try {
+        if (window.QUIZ_CACHED_VOICE) {
+            cachedVoice = window.QUIZ_CACHED_VOICE;
+            return window.QUIZ_CACHED_VOICE;
+        }
+    } catch (_) {}
+    if (cachedVoice) return cachedVoice;
+    cachedVoice = selectBestFemaleVoice();
+    // Lock it for the rest of the session (even if voiceschanged fires later)
+    try {
+        if (cachedVoice && !window.QUIZ_CACHED_VOICE) {
+            window.QUIZ_CACHED_VOICE = cachedVoice;
+            window.QUIZ_VOICE_INITIALIZED = true;
+        }
+    } catch (_) {}
+    return cachedVoice;
+}
+
 function announceSpeedRoundIntro() {
     const visualizer = document.getElementById('voiceVisualizer');
     const status = document.getElementById('voiceStatus');
@@ -1211,13 +1248,9 @@ function announceSpeedRoundIntro() {
         utterance.rate = 0.92; // Faster pacing for speed round intro
         utterance.volume = 0.9;
 
-        // Use the same best-female voice selector as regular quiz
-        // This avoids defaulting to a male voice on some systems
-        const bestVoice = selectBestFemaleVoice();
-        if (bestVoice) {
-            utterance.voice = bestVoice;
-            cachedVoice = bestVoice; // Cache for subsequent calls
-        }
+        // Deterministic: lock to a single British female voice for the entire session
+        const v = getSessionAnnouncerVoice();
+        if (v) utterance.voice = v;
         
         status.textContent = '🎙️ Welcome to Speed Round!';
         
@@ -1281,7 +1314,7 @@ function announceSpeedRoundIntro() {
         // iOS fallback - reload voices if empty
         if (speechSynthesis.getVoices().length === 0) {
             speechSynthesis.addEventListener('voiceschanged', () => {
-                const fallback = selectBestFemaleVoice() || speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
+                const fallback = getSessionAnnouncerVoice() || speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
                 if (fallback) utterance.voice = fallback;
             }, { once: true });
         }
@@ -1676,18 +1709,8 @@ function announceWord(wordIndex, totalWords) {
         utterance.rate = 0.7; // Slower for clearer announcements
         utterance.volume = 0.9;
         
-        // Use global cached voice for consistency
-        if (window.QUIZ_CACHED_VOICE) {
-            utterance.voice = window.QUIZ_CACHED_VOICE;
-            cachedVoice = window.QUIZ_CACHED_VOICE;
-        } else if (cachedVoice) {
-            utterance.voice = cachedVoice;
-        } else {
-            cachedVoice = selectBestFemaleVoice();
-            if (cachedVoice) {
-                utterance.voice = cachedVoice;
-            }
-        }
+        const v = getSessionAnnouncerVoice();
+        if (v) utterance.voice = v;
         
         status.textContent = '🎙️ Announcing...';
         
@@ -1721,8 +1744,7 @@ function announceWord(wordIndex, totalWords) {
         // iOS fallback - reload voices if empty
         if (speechSynthesis.getVoices().length === 0) {
             speechSynthesis.addEventListener('voiceschanged', () => {
-                const voices = speechSynthesis.getVoices();
-                const voice = voices.find(v => v.lang.startsWith('en'));
+                const voice = getSessionAnnouncerVoice() || speechSynthesis.getVoices().find(v => v.lang.startsWith('en'));
                 if (voice) utterance.voice = voice;
             }, { once: true });
         }
@@ -1765,22 +1787,12 @@ function pronounceWord() {
         utterance.rate = 0.65; // Very slow for maximum clarity
         utterance.volume = 0.9;
 
-        // Use global cached voice for consistency
-        if (window.QUIZ_CACHED_VOICE) {
-            utterance.voice = window.QUIZ_CACHED_VOICE;
-            cachedVoice = window.QUIZ_CACHED_VOICE;
-            status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
-        } else if (!cachedVoice) {
-            cachedVoice = selectBestFemaleVoice();
-            if (cachedVoice) {
-                utterance.voice = cachedVoice;
-                status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
-            } else {
-                status.textContent = '🎙️ Speaking';
-            }
+        const v = getSessionAnnouncerVoice();
+        if (v) {
+            utterance.voice = v;
+            status.textContent = `🎙️ Speaking (${v.lang} • ${v.name})`;
         } else {
-            utterance.voice = cachedVoice;
-            status.textContent = `🎙️ Speaking (${cachedVoice.lang} • ${cachedVoice.name})`;
+            status.textContent = '🎙️ Speaking';
         }
 
         // Visualizer state + robust start/unlock fallback for Safari/macOS
@@ -2001,7 +2013,8 @@ function showFeedback(isCorrect, points, correctSpelling, timeBonus, timePercent
             speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             u.rate = 1.0; u.pitch = 1.1; u.volume = 0.9;
-            if (typeof cachedVoice !== 'undefined' && cachedVoice) u.voice = cachedVoice;
+            const v = getSessionAnnouncerVoice();
+            if (v) u.voice = v;
             const viz = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
             u.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
@@ -2015,7 +2028,8 @@ function showFeedback(isCorrect, points, correctSpelling, timeBonus, timePercent
                     viz?.classList.remove('pausing');
                     const n = new SpeechSynthesisUtterance(studentName);
                     n.rate = 1.0; n.pitch = 1.12; n.volume = 0.95;
-                    if (typeof cachedVoice !== 'undefined' && cachedVoice) n.voice = cachedVoice;
+                    const v = getSessionAnnouncerVoice();
+                    if (v) n.voice = v;
                     n.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
                     n.onend = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
                     n.onerror = ()=>{ viz?.classList.remove('speaking','pausing','word-pulse'); if(status) status.textContent='🐝 Ready'; };
@@ -2106,7 +2120,8 @@ async function completeRound() {
             speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance("That's the end of the quiz. Please wait for your quiz results.");
             msg.rate = 1.0; msg.pitch = 1.1; msg.volume = 0.95;
-            if (typeof cachedVoice !== 'undefined' && cachedVoice) msg.voice = cachedVoice;
+            const v = getSessionAnnouncerVoice();
+            if (v) msg.voice = v;
             const viz = document.getElementById('voiceVisualizer');
             const status = document.getElementById('voiceStatus');
             msg.onstart = ()=>{ viz?.classList.add('speaking'); if(status) status.textContent='🎙️ Speaking'; };
