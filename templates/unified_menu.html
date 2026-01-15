@@ -3903,6 +3903,13 @@ function showRestoreDialog(title, message, isSuccess) {
             margin-right: 0 !important;
             box-sizing: border-box !important;
         }
+
+        /* Hide Export/Import list buttons for ALL users (redundant in current UX).
+           Keep the underlying JS functions and file input so we can re-enable later. */
+        section.action-buttons .action-btn.secondary.js-export-list,
+        section.action-buttons .action-btn.secondary.js-import-list {
+            display: none !important;
+        }
         
         /* Responsive button sizes */
         @media (max-width: 768px) {
@@ -4346,7 +4353,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     box-shadow: 0 6px 16px rgba(138, 43, 226, 0.25);
                     max-width: 650px;
                 ">
-                    <!-- MORPHING LOGO (LEFT) - Slowly morphs between badge and crest -->
+                    <!-- Rank badge (left) - show the user's CURRENT Buzz Dust rank badge (no crest morphing) -->
                     <div class="rank-logo-pulse" style="
                         width: 160px;
                         height: 160px;
@@ -4358,8 +4365,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     ">
                         <div class="rank-logo-pulse-glow"></div>
 
-                        <!-- Single morphing image element (swaps between badge and crest) - starts with badge -->
-                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge / Crest Logo" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
+                        <!-- Single badge image element (always badge; updated via /api/buzz-dust/info) -->
+                        <img id="morph-badge-logo" src="{{ url_for('static', filename='assets/badges/Novice.png') }}" alt="Rank Badge" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;" loading="lazy">
                     </div>
                     
                     <div style="text-align: left; flex: 1;">
@@ -5448,10 +5455,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     if (startBtn) startBtn.addEventListener('click', function(){ if(!this.disabled) gotoQuiz(); });
                 });
                 </script>
-                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); exportWordList();" title=" Save your word list with definitions">
+                <button type="button" class="action-btn secondary js-export-list" onclick="event.stopPropagation(); exportWordList();" title=" Save your word list with definitions">
                      Export List
                 </button>
-                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); importWordList();" title=" Load a previously saved word list (CSV, TXT, JSON, DOCX, PDF)">
+                <button type="button" class="action-btn secondary js-import-list" onclick="event.stopPropagation(); importWordList();" title=" Load a previously saved word list (CSV, TXT, JSON, DOCX, PDF)">
                      Import Word List
                 </button>
                 <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); refreshCurrentWords();" title=" Refresh current word list and update counts">
@@ -6632,35 +6639,8 @@ function showRestoreDialog(title, message, isSuccess) {
             // Install kid-friendly click FX on main actions
             installClickFx();
 
-            // Crest/logo morphing: restore gentle, periodic morph transitions
-            try {
-                const el = document.getElementById('morph-badge-logo');
-                if (el) {
-                    console.log('🔄 Starting badge morphing animation...');
-                    // Avoid a separate class-cycling interval here; it can stack on SPA-like reloads
-                    // and interfere with the slow morph transition. The full morphing system below
-                    // already applies randomized effects each cycle.
-                    try {
-                        el.classList.add('morph-pulse');
-                    } catch(_) {}
-                    
-                    // Also enable full morphing if available
-                    if (typeof initBadgeLogoMorphing === 'function' && !window._morphingInitialized) {
-                        // Set fallback URLs if not already set
-                        if (!window._badgeUrl) {
-                            window._badgeUrl = el.src;
-                        }
-                        if (!window._crestUrl) {
-                            window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
-                        }
-                        initBadgeLogoMorphing();
-                        window._morphingInitialized = true;
-                        console.log('🔄 Full badge/logo morphing initialized');
-                    }
-                }
-            } catch(e) {
-                console.warn('Badge morphing init error:', e);
-            }
+            // Badge morphing (crest↔badge) intentionally disabled — redundant and confusing.
+            // The badge should always reflect the CURRENT Buzz Dust rank and update via /api/buzz-dust/info.
 
             // Initialize guest 3D GLB carousel with rotation
             try {
@@ -13513,132 +13493,15 @@ function showRestoreDialog(title, message, isSuccess) {
         // Guest avatar previews are 3D-only (rotation + fade/morph via GLB).
 
         // Badge/Logo morphing for authenticated users (global, used by ticker and badge loader)
+        // Intentionally disabled: we show ONLY the current rank badge (no crest/logo morph).
         function initBadgeLogoMorphing() {
-            if (typeof window === 'undefined') return;
-
-            const imgEl = document.getElementById('morph-badge-logo');
-            if (!imgEl || !window._badgeUrl || !window._crestUrl) return;
-
-            // NOTE: Do NOT capture URLs permanently here. The badge URL can change
-            // after /api/buzz-dust/info loads (rank updates). We always read from
-            // window._badgeUrl / window._crestUrl at morph-time.
-            const morphEffects = ['morph-spin', 'morph-flip', 'morph-bounce', 'morph-swish', 'morph-sparkle', 'morph-pulse'];
-            let idx = 0;
-
-            // Prevent duplicate timers if re-initialized
-            if (window._badgeLogoMorphTimer) {
-                try { clearInterval(window._badgeLogoMorphTimer); } catch(_) {}
-                window._badgeLogoMorphTimer = null;
-            }
-
-            // Helper: Create a bee swarm (visible bees) during morph
-            const createMorphParticles = () => {
-                const container = imgEl.parentElement;
-                if (!container) return;
-                
-                const rect = imgEl.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                
-                // More obvious swarm (wider + denser) while keeping performance safe on mobile.
-                const particleCount = (window.innerWidth <= 480) ? 34 : 48;
-                
-                for (let i = 0; i < particleCount; i++) {
-                    const particle = document.createElement('div');
-                    particle.className = 'morph-bee';
-                    particle.textContent = '🐝';
-                    // Varied sizes for depth
-                    const size = 14 + Math.random() * 10;
-                    particle.style.fontSize = size + 'px';
-                    
-                    // Start from center of badge with a bit more jitter so it reads as a swarm (not a point)
-                    const centerX = (rect.left - containerRect.left) + (rect.width / 2) + (Math.random() - 0.5) * 32;
-                    const centerY = (rect.top - containerRect.top) + (rect.height / 2) + (Math.random() - 0.5) * 32;
-                    particle.style.left = centerX + 'px';
-                    particle.style.top = centerY + 'px';
-                    
-                    // Bee swarm flight pattern: spiraling outward with natural variation
-                    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.7;
-                    // Push bees farther so the morph reads as a real transition between two images.
-                    const distance = 80 + Math.random() * 110;
-                    
-                    // Add sine wave for natural bee flight wobble
-                    const wobble = Math.sin(angle * 3) * 24;
-                    const tx = Math.cos(angle) * distance + wobble;
-                    const ty = Math.sin(angle) * distance + (Math.random() - 0.5) * 34;
-                    
-                    particle.style.setProperty('--tx', tx + 'px');
-                    particle.style.setProperty('--ty', ty + 'px');
-                    
-                    // Staggered departure for natural swarm effect
-                    particle.style.animationDelay = (i * 14) + 'ms';
-                    
-                    // Random animation duration for varied flight speeds
-                    particle.style.animationDuration = (1.9 + Math.random() * 0.8) + 's';
-                    
-                    container.appendChild(particle);
-                    
-                    // Remove after animation completes
-                    setTimeout(() => particle.remove(), 2800 + (i * 14));
+            try {
+                if (window._badgeLogoMorphTimer) {
+                    clearInterval(window._badgeLogoMorphTimer);
+                    window._badgeLogoMorphTimer = null;
                 }
-            };
-            
-            function morph() {
-                const badgeUrl = window._badgeUrl;
-                const crestUrl = window._crestUrl;
-                if (!badgeUrl || !crestUrl) {
-                    console.warn('🔄 [MORPH] Missing badge/crest URL; skipping morph');
-                    return;
-                }
-
-                const urls = [badgeUrl, crestUrl];
-                const nextUrl = urls[idx % urls.length];
-                const randomEffect = morphEffects[Math.floor(Math.random() * morphEffects.length)];
-                
-                // Create particle burst at start of morph - BEE SWARM!
-                createMorphParticles();
-                console.log('🐝 [SWARM] Bee swarm particles launched!');
-                
-                // Remove all animation classes
-                morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                imgEl.classList.remove('is-morphing-in');
-                imgEl.classList.add('is-morphing-out');
-                
-                // Add random effect class for 2s slow transition
-                imgEl.classList.add(randomEffect);
-                
-                // Swap image after slow transition completes (2000ms = 2s)
-                setTimeout(() => {
-                    imgEl.src = nextUrl;
-                    imgEl.classList.remove('is-morphing-out');
-                    imgEl.classList.add('is-morphing-in');
-                    // Remove animation class after it completes
-                    setTimeout(() => {
-                        morphEffects.forEach(effect => imgEl.classList.remove(effect));
-                    }, 100);
-                }, 2000);
-                
-                idx++;
-                console.log('🔄 [MORPH] Slow transition with particles:', randomEffect, '(8s cycle)');
-            };
-
-            // Keep the morphing alive across tab backgrounding / return.
-            // Some browsers throttle timers aggressively; restarting on visibility improves reliability.
-            if (!window._badgeLogoMorphVisibilityHooked) {
-                window._badgeLogoMorphVisibilityHooked = true;
-                document.addEventListener('visibilitychange', () => {
-                    try {
-                        if (!document.hidden) {
-                            // Re-init will clear and recreate the timer with current URLs.
-                            initBadgeLogoMorphing();
-                        }
-                    } catch (_) {}
-                });
-            }
-
-            // Start morphing: 8s per cycle (2s slow transition + 6s display)
-            morph();
-            window._badgeLogoMorphTimer = setInterval(morph, 8000);
-            console.log('🔄 [MORPH] Badge/Logo slow morphing started - cycle every 8 seconds');
+            } catch (_) {}
+            return;
         }
 
         // Play character-specific audio effects
@@ -19620,36 +19483,19 @@ function showRestoreDialog(title, message, isSuccess) {
                     
                     console.log(' [TICKER] PNG Badge loaded:', pngFile);
                     
-                    // Update morphing badge/logo container with same badge
+                    // Update rank badge image with the CURRENT badge (no crest morphing)
                     const morphImg = document.getElementById('morph-badge-logo');
 
                     if (morphImg) {
-                        // RESTORED: Always show morphing badge for ALL ranks (including Novice)
                         morphImg.style.display = 'block';
-                        
-                        // Store badge and crest URLs for morphing
-                        window._badgeUrl = `/static/assets/badges/${pngFile}`;
-                        window._crestUrl = "{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}";
-                        
-                        // Set initial image to badge (not crest)
-                        morphImg.src = window._badgeUrl;
-                        
-                        // Start morphing animation (guard if function missing)
-                        if (!window._morphingInitialized && typeof initBadgeLogoMorphing === 'function') {
-                            initBadgeLogoMorphing();
-                            window._morphingInitialized = true;
-                            console.log(' [TICKER] Badge/Logo morphing initialized - will alternate between badge and crest');
-                        } else if (window._morphingInitialized) {
-                            // IMPORTANT: Re-init so the running morph loop picks up the latest badge URL.
-                            if (typeof initBadgeLogoMorphing === 'function') {
-                                initBadgeLogoMorphing();
-                                console.log(' [TICKER] Morphing re-initialized with updated badge URL');
-                            } else {
-                                console.log(' [TICKER] Morphing already initialized, badge URL updated (init fn missing)');
+                        morphImg.src = `/static/assets/badges/${pngFile}`;
+                        // Stop any old morphing timer if it existed from a prior version.
+                        try {
+                            if (window._badgeLogoMorphTimer) {
+                                clearInterval(window._badgeLogoMorphTimer);
+                                window._badgeLogoMorphTimer = null;
                             }
-                        } else {
-                            console.warn(' [TICKER] initBadgeLogoMorphing not available');
-                        }
+                        } catch (_) {}
                     }
                 } else if (!badgeEl) {
                     console.warn(' [TICKER] Element #student-rank-badge not found in DOM');
