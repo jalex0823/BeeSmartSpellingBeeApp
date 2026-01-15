@@ -418,6 +418,9 @@ def init_quiz_state(total_words: int):
         "streak": 0,
         "max_streak": 0,
         "session_points": 0,
+        # Explicit completion flag so other endpoints (e.g. /api/users/stats) can
+        # distinguish in-progress points from committed lifetime points.
+        "quiz_complete": False,
         "hints_used_current_word": 0,
         "history": [],
         "db_session_id": db_session_id,
@@ -9378,6 +9381,15 @@ def api_answer():
     #  Check for badge achievements
     badges_unlocked = []
     quiz_complete = state["idx"] >= len(order)
+
+    # Persist completion status in session state so real-time stats endpoints
+    # stop treating this session as "in progress" once it is complete.
+    try:
+        state["quiz_complete"] = bool(quiz_complete)
+        session[QUIZ_STATE_KEY] = state
+        session.modified = True
+    except Exception:
+        pass
     
     #  DEBUG: Log quiz completion status
     print(f"� QUIZ STATUS DEBUG:")
