@@ -432,6 +432,83 @@ def init_quiz_state(total_words: int):
     session.permanent = True
     session.modified = True
 
+
+def ensure_quiz_db_session(state: dict, total_words: int):
+    """
+    Ensure the quiz state has a valid DB-backed QuizSession id.
+
+    Production issue observed (DO logs):
+      - quiz completes in-memory, but state["db_session_id"] is missing
+      - fallback cannot find a recent incomplete QuizSession row
+      - result: QuizSession.completed never set, and cumulative GPA/quizzes/accuracy remain 0
+
+    This helper creates the missing QuizSession row on-demand for authenticated users
+    and writes the new id back into session quiz state.
+    """
+    try:
+        if not getattr(current_user, "is_authenticated", False):
+            return None
+    except Exception:
+        return None
+
+    if not isinstance(state, dict):
+        return None
+
+    existing = state.get("db_session_id")
+    if existing:
+        return existing
+
+    try:
+        # Best-effort parse of started_at into a datetime (keep UTC if present)
+        started_at = state.get("started_at")
+        session_start = None
+        if started_at:
+            try:
+                # Normalize common ISO forms, including trailing 'Z'
+                started_at_norm = str(started_at).replace("Z", "+00:00")
+                session_start = datetime.fromisoformat(started_at_norm)
+            except Exception:
+                session_start = None
+
+        quiz_session = QuizSession(
+            user_id=current_user.id,
+            total_words=int(total_words or 0),
+        )
+        if session_start:
+            try:
+                quiz_session.session_start = session_start
+            except Exception:
+                pass
+
+        # Link to teacher_key if this user is a student linked under a teacher/parent/admin
+        try:
+            link = TeacherStudent.query.filter_by(student_id=current_user.id, is_active=True).first()
+            if link and not quiz_session.teacher_key:
+                quiz_session.teacher_key = link.teacher_key
+        except Exception:
+            pass
+
+        db.session.add(quiz_session)
+        db.session.commit()
+
+        state["db_session_id"] = quiz_session.id
+        try:
+            session[QUIZ_STATE_KEY] = state
+            session.modified = True
+            session.permanent = True
+        except Exception:
+            pass
+
+        print(f"✅ ensure_quiz_db_session: Created QuizSession id={quiz_session.id} for user_id={current_user.id}")
+        return quiz_session.id
+    except Exception as e:
+        print(f"⚠️ ensure_quiz_db_session: Failed to create QuizSession: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
+
 # ------------------------------
 # Wordbank API endpoints
 # ------------------------------
@@ -8530,6 +8607,13 @@ def api_next():
                 "action_required": "reload_page"
             }), 500
 
+    # Ensure DB-backed QuizSession exists so completion can persist cumulative stats
+    # (prevents "Quiz complete but no db_session_id ... stats will not be saved")
+    try:
+        ensure_quiz_db_session(state, len(wb))
+    except Exception:
+        pass
+
     idx = state["idx"]
     original_question_index = idx  # preserve before we advance
     order = state["order"]
@@ -9182,6 +9266,13 @@ def api_answer():
 
     idx = state["idx"]
     order = state["order"]
+
+    # Ensure DB-backed QuizSession exists early so we can persist QuizResult/WordMastery
+    # and later mark the session completed for cumulative stats.
+    try:
+        ensure_quiz_db_session(state, len(order))
+    except Exception:
+        pass
     
     # Check if quiz is already complete
     if idx >= len(order):
@@ -9373,6 +9464,13 @@ def api_answer():
     except Exception:
         is_auth = False
     user_obj = current_user if is_auth else get_or_create_guest_user()
+    # If authenticated but db_session_id is missing (observed in prod), create it now.
+    if is_auth and user_obj and not state.get("db_session_id"):
+        try:
+            ensure_quiz_db_session(state, len(order))
+        except Exception:
+            pass
+
     if user_obj and state.get("db_session_id"):
         try:
             # Save individual word result with detailed points breakdown
@@ -9504,6 +9602,13 @@ def api_answer():
     # Finalize database session for logged-in users OR guest accounts
     if quiz_complete:
         db_session_id = state.get("db_session_id")
+        if not db_session_id and current_user.is_authenticated:
+            # Create the missing QuizSession row instead of relying on recovery heuristics.
+            db_session_id = ensure_quiz_db_session(state, len(order))
+            state["db_session_id"] = db_session_id
+            session[QUIZ_STATE_KEY] = state
+            session.modified = True
+
         if not db_session_id and current_user.is_authenticated:
             # Try to recover db_session_id from the most recent incomplete session
             from datetime import timedelta
@@ -9832,7 +9937,34 @@ def api_answer():
                         db.session.commit()
                         print(f"✅ Successfully saved quiz completion via fallback method")
                     else:
-                        print(f"❌ Could not find QuizSession for user {current_user.id} - stats will not be saved")
+                        # Last resort: create a session now and finalize it so stats persist.
+                        print(f"⚠️ No QuizSession found for user {current_user.id}; creating one to persist stats.")
+                        created_id = ensure_quiz_db_session(state, len(order))
+                        if created_id:
+                            try:
+                                quiz_session = QuizSession.query.get(created_id)
+                                if quiz_session:
+                                    quiz_session.correct_count = state["correct"]
+                                    quiz_session.incorrect_count = state["incorrect"]
+                                    quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
+                                    # Points: state.session_points is the total UI points for the session.
+                                    word_points = state.get("session_points", 0)
+                                    badge_points = sum(b["points"] for b in badges_unlocked) if badges_unlocked else 0
+                                    extra_bonus = state.get("extra_points", 0)
+                                    total_points = word_points + badge_points + extra_bonus
+                                    quiz_session.points_earned = word_points
+                                    quiz_session.badge_bonus_points = badge_points
+                                    quiz_session.extra_points = extra_bonus
+                                    quiz_session.total_points = total_points
+                                    quiz_session.complete_session()
+                                    db.session.refresh(current_user)
+                                    db.session.commit()
+                                    print("✅ Persisted quiz completion after creating missing QuizSession.")
+                            except Exception as _e2:
+                                print(f"❌ Failed to persist after creating QuizSession: {_e2}")
+                                import traceback
+                                traceback.print_exc()
+                                db.session.rollback()
                 else:
                     print(f"⚠️ Guest user - cannot save stats without db_session_id")
             except Exception as fallback_error:
