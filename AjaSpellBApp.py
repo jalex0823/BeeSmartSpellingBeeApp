@@ -2024,40 +2024,65 @@ def _blank_word(text, word):
     
     word_lower = word.lower()
     
-    # Build comprehensive list of variations
-    variations = [
-        word,              # Original case
-        word_lower,        # Lowercase
-        word.capitalize(), # Capitalized
-        word.upper(),      # Uppercase
-    ]
+    # Build comprehensive list of variations.
+    # IMPORTANT: we must handle cases where the quiz "word" is an inflected form
+    # (e.g., "updates") but dictionary text contains the base form ("update").
+    base_forms = {word_lower}
+
+    # Common de-inflections (best-effort)
+    try:
+        if word_lower.endswith("ies") and len(word_lower) > 3:
+            base_forms.add(word_lower[:-3] + "y")
+        if word_lower.endswith("es") and len(word_lower) > 3:
+            base_forms.add(word_lower[:-2])
+        if word_lower.endswith("s") and len(word_lower) > 3 and not word_lower.endswith("ss"):
+            base_forms.add(word_lower[:-1])
+        if word_lower.endswith("ed") and len(word_lower) > 3:
+            base_forms.add(word_lower[:-2])
+        if word_lower.endswith("ing") and len(word_lower) > 4:
+            base_forms.add(word_lower[:-3])
+            # e.g. "making" -> "make" (best effort)
+            base_forms.add(word_lower[:-3] + "e")
+    except Exception:
+        pass
+
+    variations = set()
+    for base in list(base_forms):
+        if not base:
+            continue
+        variations.update([
+            base,
+            base.capitalize(),
+            base.upper(),
+        ])
     
     # Add common suffixes
     suffixes = ["s", "es", "ed", "d", "ing", "er", "est", "ly", "ness", "ment", "tion", "sion"]
     
     for suffix in suffixes:
-        variations.append(word_lower + suffix)
+        for base in list(base_forms):
+            variations.add(base + suffix)
     
     # For words ending in 'e', try without the 'e' + suffix
     if word_lower.endswith('e'):
         base = word_lower[:-1]
         for suffix in ["ing", "ed", "er", "est"]:
-            variations.append(base + suffix)
+            variations.add(base + suffix)
     
     # For words ending in 'y', try 'i' + suffix
     if word_lower.endswith('y') and len(word_lower) > 1:
         base = word_lower[:-1] + 'i'
         for suffix in ["es", "ed", "er", "est", "ness"]:
-            variations.append(base + suffix)
+            variations.add(base + suffix)
     
     # For words ending in consonant, try doubling + suffix
     if len(word_lower) >= 3 and word_lower[-1] not in 'aeiouy':
         double_base = word_lower + word_lower[-1]
         for suffix in ["ing", "ed", "er", "est"]:
-            variations.append(double_base + suffix)
+            variations.add(double_base + suffix)
     
     # Remove duplicates and sort by length (longest first to avoid partial replacements)
-    variations = sorted(set(variations), key=len, reverse=True)
+    variations = sorted(set([v for v in variations if v]), key=len, reverse=True)
     
     # Replace all variations with blanks
     result = text
@@ -2065,6 +2090,26 @@ def _blank_word(text, word):
         result = re.sub(rf"\b{re.escape(variation)}\b", "_____", result, flags=re.IGNORECASE)
     
     return result
+
+
+def build_honey_hint_pattern(word: str) -> str:
+    """Return a honey-hint pattern revealing 1st, 3rd, and last letter."""
+    w = (word or "").strip()
+    if not w:
+        return ""
+    n = len(w)
+    # Indices to reveal: 1st (0), 3rd (2), last (n-1)
+    reveal = {0, n - 1}
+    if n >= 3:
+        reveal.add(2)
+    chars = []
+    for i, ch in enumerate(w):
+        if i in reveal:
+            chars.append(ch)
+        else:
+            chars.append("_")
+    # Space-separate for readability
+    return " ".join(chars)
 
 def _filter_definition(definition, word):
     """Filter definition to remove the target word and provide alternative if needed."""
@@ -9005,9 +9050,13 @@ def api_hint():
 
     word_rec = wb[order[idx]]
     current_word = word_rec.get("word", "")
+    # 🍯 Honey Hint: reveal 1st, 3rd, and last letters (no definition/sentence).
+    pattern = build_honey_hint_pattern(str(current_word or ""))
     return jsonify({
-        "hint": sanitize_kid_friendly_text(_blank_word(word_rec.get("hint", ""), current_word)),
-        "sentence": sanitize_kid_friendly_text(_blank_word(word_rec.get("sentence", ""), current_word))
+        "hint": pattern,
+        "type": "honey_letters",
+        "word_length": len(str(current_word or "")),
+        "sentence": ""  # keep key for frontend compatibility; intentionally blank
     })
 
 # ---  LEVEL PROGRESSION SYSTEM ------------------------------------------
