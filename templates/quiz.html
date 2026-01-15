@@ -6906,7 +6906,41 @@ class QuizManager {
             });
         }
         
-        if (restartButton) restartButton.addEventListener('click', () => this.restartQuiz());
+        if (restartButton) {
+            restartButton.addEventListener('click', async () => {
+                // Refresh stats before restarting
+                await this.refreshAndSyncStats();
+                this.restartQuiz();
+            });
+        }
+        
+        // Intercept "Back to Menu" link to refresh stats before navigating
+        const backToMenuLink = document.querySelector('.quiz-complete a[href="/"]');
+        if (backToMenuLink) {
+            backToMenuLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                console.log('🔄 Refreshing stats before returning to menu...');
+                
+                // Show loading indicator
+                const originalText = backToMenuLink.textContent;
+                backToMenuLink.textContent = 'Syncing...';
+                backToMenuLink.style.pointerEvents = 'none';
+                
+                try {
+                    // Refresh and sync stats
+                    await this.refreshAndSyncStats();
+                    
+                    // Small delay to ensure stats are saved
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Navigate to menu
+                    window.location.href = '/';
+                } catch (error) {
+                    console.warn('Stats refresh failed, navigating anyway:', error);
+                    window.location.href = '/';
+                }
+            });
+        }
 
         // Show + wire "Reset / Refresh" in resume mode as a safety hatch.
         // - If resume is stalled: use forceResumeAdvance (safe + idempotent)
@@ -7914,9 +7948,10 @@ class QuizManager {
                                 showCompletionFallback('missing/invalid server summary');
                             }
 
-                            // 🔄 Force cumulative stats recalculation after quiz completion (best-effort)
+                            // 🔄 SYSTEM CHECK: Force cumulative stats recalculation after quiz completion
+                            // This ensures database and UI are always in sync
                             try {
-                                console.log('🔄 Forcing cumulative stats recalculation after quiz completion...');
+                                console.log('🔄 [SYSTEM CHECK] Forcing cumulative stats recalculation after quiz completion...');
                                 const recalcResponse = await fetch('/api/users/stats/recalculate', {
                                     method: 'POST',
                                     credentials: 'same-origin',
@@ -7926,17 +7961,29 @@ class QuizManager {
                                     const recalcData = await recalcResponse.json();
                                     if (recalcData.status === 'success' && recalcData.stats) {
                                         const stats = recalcData.stats;
-                                        console.log(`✅ Stats recalculated: ${stats.total_quizzes_completed} quizzes, ${stats.total_lifetime_points} points, GPA ${stats.cumulative_gpa}, ${stats.average_accuracy}% accuracy`);
+                                        console.log(`✅ [SYSTEM CHECK] Stats recalculated: ${stats.total_quizzes_completed} quizzes, ${stats.total_lifetime_points} points, GPA ${stats.cumulative_gpa}, ${stats.average_accuracy}% accuracy`);
+                                        
+                                        // Log any corrections made during sync
+                                        if (recalcData.recalculation) {
+                                            const recalc = recalcData.recalculation;
+                                            if (recalc.points_changed || recalc.quizzes_changed) {
+                                                console.log(`🔧 [SYSTEM CHECK] Stats corrected: points_changed=${recalc.points_changed}, quizzes_changed=${recalc.quizzes_changed}, sessions_processed=${recalc.sessions_processed}`);
+                                            }
+                                        }
                                     }
                                 } else {
-                                    console.warn('⚠️ Stats recalculation failed (non-critical):', recalcResponse.status);
+                                    console.warn('⚠️ [SYSTEM CHECK] Stats recalculation failed (non-critical):', recalcResponse.status);
                                 }
                             } catch (recalcError) {
-                                console.warn('⚠️ Stats recalculation error (non-critical):', recalcError);
+                                console.warn('⚠️ [SYSTEM CHECK] Stats recalculation error (non-critical):', recalcError);
                             }
 
                             // Notify other pages (like the main menu) that stats likely changed.
-                            try { window.dispatchEvent(new CustomEvent('beesmart:stats-updated')); } catch (_e) {}
+                            try { 
+                                window.dispatchEvent(new CustomEvent('beesmart:stats-updated', { 
+                                    detail: { source: 'quiz-completion', timestamp: Date.now() }
+                                })); 
+                            } catch (_e) {}
                         } catch (e) {
                             console.error('❌ Completion handler crashed:', e);
                             showCompletionFallback('completion handler crashed', e?.message);
@@ -9255,7 +9302,58 @@ class QuizManager {
         // Fetch and populate buzz dust badge info
         this.loadBuzzDustReportCard();
 
+        // 🔄 Auto-refresh and sync stats with database after quiz completion
+        this.refreshAndSyncStats();
+
         BeeSmart.showSuccess(`Quiz complete! You got ${summary.correct} out of ${summary.total} words correct (${percentage}%). Grade: ${letterGrade}`);
+    }
+
+    /**
+     * Refresh and sync stats with database - runs automatically after quiz completion
+     * This ensures stats are always in sync between the database and UI
+     */
+    async refreshAndSyncStats() {
+        try {
+            console.log('🔄 Auto-refreshing and syncing stats with database...');
+            
+            // Step 1: Force recalculation from database
+            const recalcResponse = await fetch('/api/users/stats/recalculate', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (recalcResponse.ok) {
+                const recalcData = await recalcResponse.json();
+                if (recalcData.status === 'success' && recalcData.stats) {
+                    const stats = recalcData.stats;
+                    console.log(`✅ Stats synced: ${stats.total_quizzes_completed} quizzes, ${stats.total_lifetime_points} points, GPA ${stats.cumulative_gpa}, ${stats.average_accuracy}% accuracy`);
+                    
+                    // Log if any corrections were made
+                    if (recalcData.recalculation) {
+                        const recalc = recalcData.recalculation;
+                        if (recalc.points_changed || recalc.quizzes_changed) {
+                            console.log(`🔧 Stats corrected during sync: points_changed=${recalc.points_changed}, quizzes_changed=${recalc.quizzes_changed}, sessions_processed=${recalc.sessions_processed}`);
+                        }
+                    }
+                    
+                    // Notify other pages that stats have been updated
+                    try {
+                        window.dispatchEvent(new CustomEvent('beesmart:stats-updated', { 
+                            detail: { stats: stats, synced: true } 
+                        }));
+                    } catch (_e) {}
+                    
+                    return true;
+                }
+            } else {
+                console.warn('⚠️ Stats recalculation failed during auto-sync:', recalcResponse.status);
+            }
+        } catch (error) {
+            console.warn('⚠️ Stats auto-sync error (non-critical):', error);
+        }
+        
+        return false;
     }
 
     async restartQuiz() {

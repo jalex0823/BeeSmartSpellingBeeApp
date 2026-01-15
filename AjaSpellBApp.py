@@ -793,11 +793,20 @@ def home_root_direct():
     
     if current_user.is_authenticated:
         try:
+            # Refresh user object from database to ensure stats are current
+            db.session.refresh(current_user)
+            # Update GPA and accuracy to ensure they're calculated from latest data
+            if hasattr(current_user, 'update_gpa_and_accuracy'):
+                current_user.update_gpa_and_accuracy()
+                db.session.commit()
+                db.session.refresh(current_user)
+            
             user_avatar_data = current_user.get_avatar_data()
             use_mascot = current_user.has_selected_avatar() == False
             print(f" [HOME] User avatar data: {user_avatar_data}")
             print(f" [HOME] Use mascot: {use_mascot}")
             print(f" [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
+            print(f" [HOME] User stats - Points: {current_user.total_lifetime_points}, Quizzes: {current_user.total_quizzes_completed}, GPA: {current_user.cumulative_gpa}")
         except Exception as e:
             print(f"️ Could not load user avatar data: {e}")
             import traceback
@@ -9432,14 +9441,35 @@ def api_answer():
     session.modified = True  # CRITICAL: Ensure session persists
     
     # Finalize database session for logged-in users OR guest accounts
-    if quiz_complete and state.get("db_session_id"):
-        print(f" Finalizing quiz session ID: {state.get('db_session_id')}")
-        try:
-            # Finalize the quiz session
-            quiz_session = QuizSession.query.get(state["db_session_id"])
-            if not quiz_session:
-                print(f"️ WARNING: QuizSession ID {state.get('db_session_id')} not found in database!")
-            if quiz_session:
+    if quiz_complete:
+        db_session_id = state.get("db_session_id")
+        if not db_session_id and current_user.is_authenticated:
+            # Try to recover db_session_id from the most recent incomplete session
+            from datetime import timedelta
+            recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
+            recent_session = QuizSession.query.filter_by(
+                user_id=current_user.id,
+                completed=False
+            ).filter(
+                QuizSession.session_start >= recent_time
+            ).order_by(
+                QuizSession.session_start.desc()
+            ).first()
+            if recent_session:
+                db_session_id = recent_session.id
+                state["db_session_id"] = db_session_id
+                session[QUIZ_STATE_KEY] = state
+                session.modified = True
+                print(f"✅ Recovered db_session_id={db_session_id} from recent session")
+        
+        if db_session_id:
+            print(f" Finalizing quiz session ID: {db_session_id}")
+            try:
+                # Finalize the quiz session
+                quiz_session = QuizSession.query.get(db_session_id)
+                if not quiz_session:
+                    print(f"️ WARNING: QuizSession ID {db_session_id} not found in database!")
+                if quiz_session:
                 quiz_session.correct_count = state["correct"]
                 quiz_session.incorrect_count = state["incorrect"]
                 quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
@@ -9678,8 +9708,74 @@ def api_answer():
             import traceback
             traceback.print_exc()
             db.session.rollback()
-    elif quiz_complete and not state.get("db_session_id"):
-        print(f"️ WARNING: Quiz complete but no db_session_id in state! Cannot save to database.")
+        elif not db_session_id:  # If db_session_id is still None after recovery attempt
+            print(f"️ WARNING: Quiz complete but no db_session_id in state! Attempting to find session...")
+        # Fallback: Try to find the QuizSession by user and recent start time
+        try:
+            if current_user.is_authenticated:
+                # Find the most recent incomplete session for this user
+                from datetime import timedelta
+                recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
+                quiz_session = QuizSession.query.filter_by(
+                    user_id=current_user.id,
+                    completed=False
+                ).filter(
+                    QuizSession.session_start >= recent_time
+                ).order_by(
+                    QuizSession.session_start.desc()
+                ).first()
+                
+                if quiz_session:
+                    print(f"✅ Found QuizSession ID {quiz_session.id} via fallback lookup")
+                    # Update session with current state
+                    quiz_session.correct_count = state["correct"]
+                    quiz_session.incorrect_count = state["incorrect"]
+                    quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
+                    
+                    # Calculate total points
+                    word_points = state.get("session_points", 0)
+                    badge_points = sum(b["points"] for b in badges_unlocked) if badges_unlocked else 0
+                    extra_bonus = state.get("extra_points", 0)
+                    total_points = word_points + badge_points + extra_bonus
+                    
+                    quiz_session.points_earned = word_points
+                    quiz_session.badge_bonus_points = badge_points
+                    quiz_session.extra_points = extra_bonus
+                    quiz_session.total_points = total_points
+                    
+                    # Complete the session
+                    quiz_session.complete_session()
+                    
+                    # Save badges if any
+                    if badges_unlocked:
+                        for badge in badges_unlocked:
+                            achievement = Achievement(
+                                user_id=current_user.id,
+                                achievement_type=badge["type"],
+                                achievement_name=badge["name"],
+                                achievement_description=badge["message"],
+                                points_bonus=badge["points"],
+                                achievement_metadata={
+                                    "icon": badge["icon"],
+                                    "earned_in_session": quiz_session.id,
+                                    "quiz_accuracy": quiz_session.accuracy_percentage
+                                }
+                            )
+                            db.session.add(achievement)
+                    
+                    # Update user stats
+                    db.session.refresh(current_user)
+                    db.session.commit()
+                    print(f"✅ Successfully saved quiz completion via fallback method")
+                else:
+                    print(f"❌ Could not find QuizSession for user {current_user.id} - stats will not be saved")
+            else:
+                print(f"⚠️ Guest user - cannot save stats without db_session_id")
+        except Exception as fallback_error:
+            print(f"❌ Fallback quiz session lookup failed: {fallback_error}")
+            import traceback
+            traceback.print_exc()
+            db.session.rollback()
 
     # 📚 Enhanced Educational Features: Get a safe (blanked) definition snippet
     # NOTE: Our canonical enrichment helper is get_word_info() defined in this module.
@@ -16926,11 +17022,19 @@ def api_get_user_stats():
                 }
             })
 
+        # Refresh user object from database to ensure we have latest stats
+        try:
+            db.session.refresh(current_user)
+        except Exception as _e_refresh:
+            print(f"WARNING /api/users/stats: refresh user failed: {_e_refresh}")
+        
         # Refresh GPA & accuracy including speed rounds
         try:
             if hasattr(current_user, 'update_gpa_and_accuracy'):
                 current_user.update_gpa_and_accuracy()
                 db.session.commit()
+                # Refresh again after update to get latest values
+                db.session.refresh(current_user)
         except Exception as _e:
             print(f"WARNING /api/users/stats: refresh failed: {_e}")
 
