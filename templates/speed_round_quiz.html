@@ -7,6 +7,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/speed-round.css') }}">
 
 <script>
+// 🛡️ Prevent service worker controllerchange from auto-reloading this quiz-like page.
+// base.html respects this flag and will skip window.location.reload() when the SW updates.
+window.__disableSwReload = true;
+</script>
+
+<script>
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout speed round
 window.QUIZ_CACHED_VOICE = null;
 window.QUIZ_VOICE_INITIALIZED = false;
@@ -73,10 +79,6 @@ if ('speechSynthesis' in window) {
 
 <style>
     body {
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
-{% endblock %}
-
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
         overflow-x: hidden;
     }
