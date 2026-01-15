@@ -9489,7 +9489,8 @@ def api_answer():
                 quiz_session = QuizSession.query.get(db_session_id)
                 if not quiz_session:
                     print(f"️ WARNING: QuizSession ID {db_session_id} not found in database!")
-                if quiz_session:
+                else:
+                    # quiz_session exists, proceed with finalization
                     quiz_session.correct_count = state["correct"]
                     quiz_session.incorrect_count = state["incorrect"]
                     quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
