@@ -2597,6 +2597,23 @@ def _ensure_db_initialized() -> None:
             except Exception as e:
                 print(f"️ is_favorite migration: {e}")
                 db.session.rollback()
+
+            # Migration: Add points_applied column if missing
+            # (Admin dashboard loads full QuizSession entities; missing columns cause 500s.)
+            try:
+                if inspector.has_table('quiz_sessions'):
+                    columns = [col['name'] for col in inspector.get_columns('quiz_sessions')]
+                    if 'points_applied' not in columns:
+                        print(" Adding points_applied column to quiz_sessions table...")
+                        # Note: keep this permissive across SQLite/Postgres. The ORM treats it as boolean.
+                        db.session.execute(text(
+                            "ALTER TABLE quiz_sessions ADD COLUMN points_applied BOOLEAN DEFAULT FALSE"
+                        ))
+                        db.session.commit()
+                        print(" Added points_applied column")
+            except Exception as e:
+                print(f"️ points_applied migration: {e}")
+                db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
         print(f"️ DB initialization check failed: {e}")
