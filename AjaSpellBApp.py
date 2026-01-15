@@ -9490,284 +9490,43 @@ def api_answer():
                 if not quiz_session:
                     print(f"️ WARNING: QuizSession ID {db_session_id} not found in database!")
                 if quiz_session:
-                quiz_session.correct_count = state["correct"]
-                quiz_session.incorrect_count = state["incorrect"]
-                quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
-                
-                #  Calculate total points from all sources
-                word_points = state.get("session_points", 0)  # Points from answering words correctly
-                badge_points = sum(b["points"] for b in badges_unlocked)  # Badge bonus points
-                extra_bonus = state.get("extra_points", 0)  # Any additional bonus points
-                
-                # Store detailed breakdown
-                quiz_session.points_earned = word_points  # Word answer points (already includes time/streak bonuses)
-                quiz_session.badge_bonus_points = badge_points  # Badge achievement points
-                quiz_session.extra_points = extra_bonus  # Any extra/special bonus points
-                
-                # Calculate cumulative total (all points combined)
-                total_points = word_points + badge_points + extra_bonus
-                quiz_session.total_points = total_points  # Store cumulative total
-                
-                print(f" POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
-                
-                # Capture old points BEFORE complete_session() updates them
-                old_lifetime_points = 0
-                old_honey_points = 0
-                if current_user.is_authenticated:
-                    old_lifetime_points = current_user.total_lifetime_points or 0
-                    old_honey_points = current_user.honey_points or 0
-                
-                # Complete the session - this applies points and increments quiz count
-                quiz_session.complete_session()
-                
-                # Refresh user object to get updated values from database
-                if current_user.is_authenticated:
-                    db.session.refresh(current_user)
-                
-                #  Save badges to Achievement table
-                # Persist all badges to Achievement table (full history), but report card later filters display.
-                if badges_unlocked and current_user.is_authenticated:
-                    for badge in badges_unlocked:
-                        achievement = Achievement(
-                            user_id=current_user.id,
-                            achievement_type=badge["type"],
-                            achievement_name=badge["name"],
-                            achievement_description=badge["message"],
-                            points_bonus=badge["points"],
-                            achievement_metadata={
-                                "icon": badge["icon"],
-                                "earned_in_session": state["db_session_id"],
-                                "quiz_accuracy": quiz_session.accuracy_percentage
-                            }
-                        )
-                        db.session.add(achievement)
-                    print(f" Saved {len(badges_unlocked)} badge(s) to Achievement table")
-                
-                # Update user stats (if authenticated)
-                level_up_data = None
-                newly_unlocked_avatars = []
-                if current_user.is_authenticated:
-                    # CRITICAL: Set lifetime points directly (like buzz dust) to ensure they're saved
-                    # complete_session() should have applied them, but we'll ensure they're correct
-                    expected_lifetime_points = old_lifetime_points + total_points
-                    current_lifetime_points = current_user.total_lifetime_points or 0
-                    
-                    # If points weren't applied by complete_session(), apply them directly
-                    if current_lifetime_points != expected_lifetime_points:
-                        print(f"⚠️ WARNING: Points not applied correctly by complete_session()!")
-                        print(f"   Old: {old_lifetime_points}, Expected: {expected_lifetime_points}, Current: {current_lifetime_points}")
-                        print(f"🔧 FIXING: Setting total_lifetime_points directly to {expected_lifetime_points}")
-                        current_user.total_lifetime_points = expected_lifetime_points
-                        new_lifetime_points = expected_lifetime_points
-                    else:
-                        new_lifetime_points = current_lifetime_points
-                    
-                    # Calculate points earned (for logging/display)
-                    points_earned_this_quiz = new_lifetime_points - old_lifetime_points
-                    
-                    #  Check for level up using the updated points
-                    level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
-                    
-                    #  Check for newly unlocked avatars based on honey points
-                    from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
-                    # Update honey points (separate from lifetime points for avatar unlocks)
-                    new_honey_points = old_honey_points + total_points
-                    
-                    #  DEBUG: Log honey points update
-                    print(f" HONEY POINTS UPDATE:")
-                    print(f"   Old: {old_honey_points}")
-                    print(f"   Earned: {total_points}")
-                    print(f"   New: {new_honey_points}")
-                    
-                    current_user.honey_points = new_honey_points
-                    print(f"    Set current_user.honey_points = {current_user.honey_points}")
-                    
-                    #  BUZZ DUST AWARDING - Award completion bonuses (avoid double-awarding base dust)
-                    # Base dust is already awarded per correct answer above.
-                    from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust, BUZZ_DUST_MULTIPLIER
-                    
-                    old_buzz_dust = current_user.total_buzz_dust or 0
-
-                    # Calculate buzz dust with all bonuses: perfect round, no hints, streak, etc.
-                    is_perfect_round = (state.get("incorrect", 0) == 0 and state.get("correct", 0) > 0)
-                    no_hints_used = (state.get("hints_used_total", 0) == 0)
-                    max_streak = state.get("max_streak", 0)
-                    
-                    full_quiz_dust, buzz_dust_breakdown = calculate_quiz_buzz_dust(
-                        points=word_points,
-                        perfect_round=is_perfect_round,
-                        no_hints=no_hints_used,
-                        streak_length=max_streak,
-                        daily_challenge=False
-                    )
-
-                    # Base dust that should already have been awarded incrementally.
-                    base_quiz_dust = int(word_points * float(BUZZ_DUST_MULTIPLIER))
-                    bonus_quiz_dust = max(0, int(full_quiz_dust) - int(base_quiz_dust))
-
-                    # Convert badge points to dust using the same multiplier.
-                    badge_dust = int(badge_points * float(BUZZ_DUST_MULTIPLIER)) if badge_points else 0
-
-                    completion_dust_awarded = bonus_quiz_dust + badge_dust
-                    current_user.total_buzz_dust = old_buzz_dust + completion_dust_awarded
-
-                    # Store full-quiz earned dust for display (base + bonuses), plus badge dust.
-                    state["buzz_dust_earned"] = int(full_quiz_dust) + int(badge_dust)
-                    state["buzz_dust_breakdown"] = buzz_dust_breakdown
-                    if badge_dust:
-                        state["buzz_dust_breakdown"]["badges"] = badge_dust
-
-                    print(
-                        f" BUZZ DUST AWARDED (completion): +{completion_dust_awarded} "
-                        f"(quiz_bonus={bonus_quiz_dust}, badge_dust={badge_dust}, mult={BUZZ_DUST_MULTIPLIER}) "
-                        f"(was {old_buzz_dust}, now {current_user.total_buzz_dust})"
-                    )
-                    print(f"   Display earned this quiz: {state['buzz_dust_earned']} (incl. base already awarded per answer)")
-                    print(f"   Breakdown: {state['buzz_dust_breakdown']}")
-                    
-                    # Check for rank advancement
-                    old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
-                    new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
-                    
-                    if old_class_id != new_class_id:
-                        # User ranked up!
-                        session['ranked_up'] = True
-                        session['old_class_id'] = old_class_id
-                        session['new_class_id'] = new_class_id
-                        current_user.bee_class = new_class_id
-                        current_user.last_rank_up_at = datetime.now(timezone.utc)
-                        print(f" RANK UP! {old_class_id} → {new_class_id}")
-                        
-                        # Award rank-up badge
-                        badge_type = f"{new_class_id}_rank"
-                        try:
-                            # Check if user already has this rank badge
-                            existing_badge = Achievement.query.filter_by(
-                                user_id=current_user.id,
-                                achievement_type=badge_type
-                            ).first()
-                            
-                            if not existing_badge:
-                                rank_badge = Achievement(
-                                    user_id=current_user.id,
-                                    achievement_type=badge_type,
-                                    points_bonus=0,  # Rank badges don't give extra points
-                                    earned_date=datetime.now(timezone.utc)
-                                )
-                                db.session.add(rank_badge)
-                                print(f" RANK BADGE AWARDED: {badge_type}")
-                        except Exception as badge_error:
-                            print(f"️ Failed to award rank badge: {badge_error}")
-                    
-                    purchased_avatars = current_user.purchased_avatars or []
-                    
-                    # Find avatars that were locked before but are now unlocked
-                    # Iterate the catalog directly; alias may not be available yet
-                    for avatar_data in AVATAR_CATALOG:
-                        avatar_id = avatar_data.get('id')
-                        # Check if avatar was locked with old points but unlocked with new points
-                        old_unlock_result = check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
-                        new_unlock_result = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
-                        
-                        was_locked = not old_unlock_result.get('unlocked', False)
-                        is_now_unlocked = new_unlock_result.get('unlocked', False)
-                        
-                        if was_locked and is_now_unlocked:
-                            newly_unlocked_avatars.append({
-                                'id': avatar_id,
-                                'name': avatar_data.get('name', avatar_id),
-                                'thumbnail': avatar_data.get('thumbnail', ''),
-                                'unlock_points': avatar_data.get('unlock_points', 0),
-                                'backstory': avatar_data.get('backstory', ''),
-                                'message': f"Congratulations! You've unlocked {avatar_data.get('name')}! "
-                            })
-                    
-                    if newly_unlocked_avatars:
-                        print(f" User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
-                    
-                    # Update stats (complete_session() already incremented quizzes and applied points)
-                    # Only update best_streak if this session's streak is better
-                    if quiz_session.best_streak > (current_user.best_streak or 0):
-                        current_user.best_streak = quiz_session.best_streak
-                    
-                    # GPA and accuracy are already updated by complete_session() via update_gpa_and_accuracy()
-                    # No need to refresh again - we already refreshed after complete_session()
-                    
-                    print(f" STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
-                    
-                    if level_up_data:
-                        print(f" LEVEL UP! {level_up_data['old_level']['tier']} → {level_up_data['new_level']['tier']}")
-                    
-                    print(f" Quiz completed! Grade: {quiz_session.grade}, Session Points: {quiz_session.points_earned}, Total Points: {total_points}, User Lifetime: {current_user.total_lifetime_points}")
-                else:
-                    print(f" Guest quiz completed! Grade: {quiz_session.grade}, Points: {total_points}")
-                
-                # Save level up data to session for frontend
-                if level_up_data:
-                    state["level_up"] = level_up_data
-                    session[QUIZ_STATE_KEY] = state
-                    session.modified = True
-                
-                # Save newly unlocked avatars to session
-                if newly_unlocked_avatars:
-                    state["newly_unlocked_avatars"] = newly_unlocked_avatars
-                    session[QUIZ_STATE_KEY] = state
-                    session.modified = True
-                
-                #  CRITICAL: Commit all changes to database
-                db.session.commit()
-                
-                # Refresh user object from database to ensure we have latest values
-                if current_user.is_authenticated:
-                    db.session.refresh(current_user)
-                
-                print(f" DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}, User.points={current_user.total_lifetime_points if current_user.is_authenticated else 'N/A'}")
-                
-        except Exception as e:
-            print(f"️ Failed to finalize quiz session: {e}")
-            import traceback
-            traceback.print_exc()
-            db.session.rollback()
-        elif not db_session_id:  # If db_session_id is still None after recovery attempt
-            print(f"️ WARNING: Quiz complete but no db_session_id in state! Attempting to find session...")
-        # Fallback: Try to find the QuizSession by user and recent start time
-        try:
-            if current_user.is_authenticated:
-                # Find the most recent incomplete session for this user
-                from datetime import timedelta
-                recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
-                quiz_session = QuizSession.query.filter_by(
-                    user_id=current_user.id,
-                    completed=False
-                ).filter(
-                    QuizSession.session_start >= recent_time
-                ).order_by(
-                    QuizSession.session_start.desc()
-                ).first()
-                
-                if quiz_session:
-                    print(f"✅ Found QuizSession ID {quiz_session.id} via fallback lookup")
-                    # Update session with current state
                     quiz_session.correct_count = state["correct"]
                     quiz_session.incorrect_count = state["incorrect"]
                     quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
                     
-                    # Calculate total points
-                    word_points = state.get("session_points", 0)
-                    badge_points = sum(b["points"] for b in badges_unlocked) if badges_unlocked else 0
-                    extra_bonus = state.get("extra_points", 0)
+                    #  Calculate total points from all sources
+                    word_points = state.get("session_points", 0)  # Points from answering words correctly
+                    badge_points = sum(b["points"] for b in badges_unlocked)  # Badge bonus points
+                    extra_bonus = state.get("extra_points", 0)  # Any additional bonus points
+                    
+                    # Store detailed breakdown
+                    quiz_session.points_earned = word_points  # Word answer points (already includes time/streak bonuses)
+                    quiz_session.badge_bonus_points = badge_points  # Badge achievement points
+                    quiz_session.extra_points = extra_bonus  # Any extra/special bonus points
+                    
+                    # Calculate cumulative total (all points combined)
                     total_points = word_points + badge_points + extra_bonus
+                    quiz_session.total_points = total_points  # Store cumulative total
                     
-                    quiz_session.points_earned = word_points
-                    quiz_session.badge_bonus_points = badge_points
-                    quiz_session.extra_points = extra_bonus
-                    quiz_session.total_points = total_points
+                    print(f" POINTS BREAKDOWN: Words={word_points}, Badges={badge_points}, Extra={extra_bonus}, TOTAL={total_points}")
                     
-                    # Complete the session
+                    # Capture old points BEFORE complete_session() updates them
+                    old_lifetime_points = 0
+                    old_honey_points = 0
+                    if current_user.is_authenticated:
+                        old_lifetime_points = current_user.total_lifetime_points or 0
+                        old_honey_points = current_user.honey_points or 0
+                    
+                    # Complete the session - this applies points and increments quiz count
                     quiz_session.complete_session()
                     
-                    # Save badges if any
-                    if badges_unlocked:
+                    # Refresh user object to get updated values from database
+                    if current_user.is_authenticated:
+                        db.session.refresh(current_user)
+                    
+                    #  Save badges to Achievement table
+                    # Persist all badges to Achievement table (full history), but report card later filters display.
+                    if badges_unlocked and current_user.is_authenticated:
                         for badge in badges_unlocked:
                             achievement = Achievement(
                                 user_id=current_user.id,
@@ -9777,25 +9536,268 @@ def api_answer():
                                 points_bonus=badge["points"],
                                 achievement_metadata={
                                     "icon": badge["icon"],
-                                    "earned_in_session": quiz_session.id,
+                                    "earned_in_session": state["db_session_id"],
                                     "quiz_accuracy": quiz_session.accuracy_percentage
                                 }
                             )
                             db.session.add(achievement)
+                        print(f" Saved {len(badges_unlocked)} badge(s) to Achievement table")
                     
-                    # Update user stats
-                    db.session.refresh(current_user)
+                    # Update user stats (if authenticated)
+                    level_up_data = None
+                    newly_unlocked_avatars = []
+                    if current_user.is_authenticated:
+                        # CRITICAL: Set lifetime points directly (like buzz dust) to ensure they're saved
+                        # complete_session() should have applied them, but we'll ensure they're correct
+                        expected_lifetime_points = old_lifetime_points + total_points
+                        current_lifetime_points = current_user.total_lifetime_points or 0
+                        
+                        # If points weren't applied by complete_session(), apply them directly
+                        if current_lifetime_points != expected_lifetime_points:
+                            print(f"⚠️ WARNING: Points not applied correctly by complete_session()!")
+                            print(f"   Old: {old_lifetime_points}, Expected: {expected_lifetime_points}, Current: {current_lifetime_points}")
+                            print(f"🔧 FIXING: Setting total_lifetime_points directly to {expected_lifetime_points}")
+                            current_user.total_lifetime_points = expected_lifetime_points
+                            new_lifetime_points = expected_lifetime_points
+                        else:
+                            new_lifetime_points = current_lifetime_points
+                        
+                        # Calculate points earned (for logging/display)
+                        points_earned_this_quiz = new_lifetime_points - old_lifetime_points
+                        
+                        #  Check for level up using the updated points
+                        level_up_data = check_level_up(old_lifetime_points, new_lifetime_points)
+                        
+                        #  Check for newly unlocked avatars based on honey points
+                        from avatar_catalog import AVATAR_CATALOG, check_avatar_unlocked
+                        # Update honey points (separate from lifetime points for avatar unlocks)
+                        new_honey_points = old_honey_points + total_points
+                        
+                        #  DEBUG: Log honey points update
+                        print(f" HONEY POINTS UPDATE:")
+                        print(f"   Old: {old_honey_points}")
+                        print(f"   Earned: {total_points}")
+                        print(f"   New: {new_honey_points}")
+                        
+                        current_user.honey_points = new_honey_points
+                        print(f"    Set current_user.honey_points = {current_user.honey_points}")
+                        
+                        #  BUZZ DUST AWARDING - Award completion bonuses (avoid double-awarding base dust)
+                        # Base dust is already awarded per correct answer above.
+                        from buzz_dust_helpers import get_bee_class, calculate_quiz_buzz_dust, BUZZ_DUST_MULTIPLIER
+                        
+                        old_buzz_dust = current_user.total_buzz_dust or 0
+
+                        # Calculate buzz dust with all bonuses: perfect round, no hints, streak, etc.
+                        is_perfect_round = (state.get("incorrect", 0) == 0 and state.get("correct", 0) > 0)
+                        no_hints_used = (state.get("hints_used_total", 0) == 0)
+                        max_streak = state.get("max_streak", 0)
+                        
+                        full_quiz_dust, buzz_dust_breakdown = calculate_quiz_buzz_dust(
+                            points=word_points,
+                            perfect_round=is_perfect_round,
+                            no_hints=no_hints_used,
+                            streak_length=max_streak,
+                            daily_challenge=False
+                        )
+
+                        # Base dust that should already have been awarded incrementally.
+                        base_quiz_dust = int(word_points * float(BUZZ_DUST_MULTIPLIER))
+                        bonus_quiz_dust = max(0, int(full_quiz_dust) - int(base_quiz_dust))
+
+                        # Convert badge points to dust using the same multiplier.
+                        badge_dust = int(badge_points * float(BUZZ_DUST_MULTIPLIER)) if badge_points else 0
+
+                        completion_dust_awarded = bonus_quiz_dust + badge_dust
+                        current_user.total_buzz_dust = old_buzz_dust + completion_dust_awarded
+
+                        # Store full-quiz earned dust for display (base + bonuses), plus badge dust.
+                        state["buzz_dust_earned"] = int(full_quiz_dust) + int(badge_dust)
+                        state["buzz_dust_breakdown"] = buzz_dust_breakdown
+                        if badge_dust:
+                            state["buzz_dust_breakdown"]["badges"] = badge_dust
+
+                        print(
+                            f" BUZZ DUST AWARDED (completion): +{completion_dust_awarded} "
+                            f"(quiz_bonus={bonus_quiz_dust}, badge_dust={badge_dust}, mult={BUZZ_DUST_MULTIPLIER}) "
+                            f"(was {old_buzz_dust}, now {current_user.total_buzz_dust})"
+                        )
+                        print(f"   Display earned this quiz: {state['buzz_dust_earned']} (incl. base already awarded per answer)")
+                        print(f"   Breakdown: {state['buzz_dust_breakdown']}")
+                        
+                        # Check for rank advancement
+                        old_class_id = get_bee_class(old_buzz_dust).get('id', 'novice')
+                        new_class_id = get_bee_class(current_user.total_buzz_dust).get('id', 'novice')
+                        
+                        if old_class_id != new_class_id:
+                            # User ranked up!
+                            session['ranked_up'] = True
+                            session['old_class_id'] = old_class_id
+                            session['new_class_id'] = new_class_id
+                            current_user.bee_class = new_class_id
+                            current_user.last_rank_up_at = datetime.now(timezone.utc)
+                            print(f" RANK UP! {old_class_id} → {new_class_id}")
+                            
+                            # Award rank-up badge
+                            badge_type = f"{new_class_id}_rank"
+                            try:
+                                # Check if user already has this rank badge
+                                existing_badge = Achievement.query.filter_by(
+                                    user_id=current_user.id,
+                                    achievement_type=badge_type
+                                ).first()
+                                
+                                if not existing_badge:
+                                    rank_badge = Achievement(
+                                        user_id=current_user.id,
+                                        achievement_type=badge_type,
+                                        points_bonus=0,  # Rank badges don't give extra points
+                                        earned_date=datetime.now(timezone.utc)
+                                    )
+                                    db.session.add(rank_badge)
+                                    print(f" RANK BADGE AWARDED: {badge_type}")
+                            except Exception as badge_error:
+                                print(f"️ Failed to award rank badge: {badge_error}")
+                        
+                        purchased_avatars = current_user.purchased_avatars or []
+                        
+                        # Find avatars that were locked before but are now unlocked
+                        # Iterate the catalog directly; alias may not be available yet
+                        for avatar_data in AVATAR_CATALOG:
+                            avatar_id = avatar_data.get('id')
+                            # Check if avatar was locked with old points but unlocked with new points
+                            old_unlock_result = check_avatar_unlocked(avatar_id, old_honey_points, purchased_avatars)
+                            new_unlock_result = check_avatar_unlocked(avatar_id, new_honey_points, purchased_avatars)
+                            
+                            was_locked = not old_unlock_result.get('unlocked', False)
+                            is_now_unlocked = new_unlock_result.get('unlocked', False)
+                            
+                            if was_locked and is_now_unlocked:
+                                newly_unlocked_avatars.append({
+                                    'id': avatar_id,
+                                    'name': avatar_data.get('name', avatar_id),
+                                    'thumbnail': avatar_data.get('thumbnail', ''),
+                                    'unlock_points': avatar_data.get('unlock_points', 0),
+                                    'backstory': avatar_data.get('backstory', ''),
+                                    'message': f"Congratulations! You've unlocked {avatar_data.get('name')}! "
+                                })
+                        
+                        if newly_unlocked_avatars:
+                            print(f" User unlocked {len(newly_unlocked_avatars)} new avatar(s): {[a['name'] for a in newly_unlocked_avatars]}")
+                        
+                        # Update stats (complete_session() already incremented quizzes and applied points)
+                        # Only update best_streak if this session's streak is better
+                        if quiz_session.best_streak > (current_user.best_streak or 0):
+                            current_user.best_streak = quiz_session.best_streak
+                        
+                        # GPA and accuracy are already updated by complete_session() via update_gpa_and_accuracy()
+                        # No need to refresh again - we already refreshed after complete_session()
+                        
+                        print(f" STATS UPDATE: User={current_user.username}, Quizzes={current_user.total_quizzes_completed}, Points={current_user.total_lifetime_points}, Honey Points={current_user.honey_points}, GPA={current_user.cumulative_gpa}, Avg Accuracy={current_user.average_accuracy}%")
+                        
+                        if level_up_data:
+                            print(f" LEVEL UP! {level_up_data['old_level']['tier']} → {level_up_data['new_level']['tier']}")
+                        
+                        print(f" Quiz completed! Grade: {quiz_session.grade}, Session Points: {quiz_session.points_earned}, Total Points: {total_points}, User Lifetime: {current_user.total_lifetime_points}")
+                    else:
+                        print(f" Guest quiz completed! Grade: {quiz_session.grade}, Points: {total_points}")
+                    
+                    # Save level up data to session for frontend
+                    if level_up_data:
+                        state["level_up"] = level_up_data
+                        session[QUIZ_STATE_KEY] = state
+                        session.modified = True
+                    
+                    # Save newly unlocked avatars to session
+                    if newly_unlocked_avatars:
+                        state["newly_unlocked_avatars"] = newly_unlocked_avatars
+                        session[QUIZ_STATE_KEY] = state
+                        session.modified = True
+                    
+                    #  CRITICAL: Commit all changes to database
                     db.session.commit()
-                    print(f"✅ Successfully saved quiz completion via fallback method")
+                    
+                    # Refresh user object from database to ensure we have latest values
+                    if current_user.is_authenticated:
+                        db.session.refresh(current_user)
+                    
+                    print(f" DATABASE COMMITTED: QuizSession.completed={quiz_session.completed}, User.total_quizzes={current_user.total_quizzes_completed if current_user.is_authenticated else 'N/A'}, User.points={current_user.total_lifetime_points if current_user.is_authenticated else 'N/A'}")
+                    
+            except Exception as e:
+                print(f"️ Failed to finalize quiz session: {e}")
+                import traceback
+                traceback.print_exc()
+                db.session.rollback()
+        
+        # If db_session_id is still None after recovery attempt, try fallback
+        if quiz_complete and not db_session_id:
+            print(f"️ WARNING: Quiz complete but no db_session_id in state! Attempting to find session...")
+            # Fallback: Try to find the QuizSession by user and recent start time
+            try:
+                if current_user.is_authenticated:
+                    # Find the most recent incomplete session for this user
+                    from datetime import timedelta
+                    recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
+                    quiz_session = QuizSession.query.filter_by(
+                        user_id=current_user.id,
+                        completed=False
+                    ).filter(
+                        QuizSession.session_start >= recent_time
+                    ).order_by(
+                        QuizSession.session_start.desc()
+                    ).first()
+                    
+                    if quiz_session:
+                        print(f"✅ Found QuizSession ID {quiz_session.id} via fallback lookup")
+                        # Update session with current state
+                        quiz_session.correct_count = state["correct"]
+                        quiz_session.incorrect_count = state["incorrect"]
+                        quiz_session.best_streak = max(state.get("max_streak", 0), state.get("streak", 0))
+                        
+                        # Calculate total points
+                        word_points = state.get("session_points", 0)
+                        badge_points = sum(b["points"] for b in badges_unlocked) if badges_unlocked else 0
+                        extra_bonus = state.get("extra_points", 0)
+                        total_points = word_points + badge_points + extra_bonus
+                        
+                        quiz_session.points_earned = word_points
+                        quiz_session.badge_bonus_points = badge_points
+                        quiz_session.extra_points = extra_bonus
+                        quiz_session.total_points = total_points
+                        
+                        # Complete the session
+                        quiz_session.complete_session()
+                        
+                        # Save badges if any
+                        if badges_unlocked:
+                            for badge in badges_unlocked:
+                                achievement = Achievement(
+                                    user_id=current_user.id,
+                                    achievement_type=badge["type"],
+                                    achievement_name=badge["name"],
+                                    achievement_description=badge["message"],
+                                    points_bonus=badge["points"],
+                                    achievement_metadata={
+                                        "icon": badge["icon"],
+                                        "earned_in_session": quiz_session.id,
+                                        "quiz_accuracy": quiz_session.accuracy_percentage
+                                    }
+                                )
+                                db.session.add(achievement)
+                        
+                        # Update user stats
+                        db.session.refresh(current_user)
+                        db.session.commit()
+                        print(f"✅ Successfully saved quiz completion via fallback method")
+                    else:
+                        print(f"❌ Could not find QuizSession for user {current_user.id} - stats will not be saved")
                 else:
-                    print(f"❌ Could not find QuizSession for user {current_user.id} - stats will not be saved")
-            else:
-                print(f"⚠️ Guest user - cannot save stats without db_session_id")
-        except Exception as fallback_error:
-            print(f"❌ Fallback quiz session lookup failed: {fallback_error}")
-            import traceback
-            traceback.print_exc()
-            db.session.rollback()
+                    print(f"⚠️ Guest user - cannot save stats without db_session_id")
+            except Exception as fallback_error:
+                print(f"❌ Fallback quiz session lookup failed: {fallback_error}")
+                import traceback
+                traceback.print_exc()
+                db.session.rollback()
 
     # 📚 Enhanced Educational Features: Get a safe (blanked) definition snippet
     # NOTE: Our canonical enrichment helper is get_word_info() defined in this module.
