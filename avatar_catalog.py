@@ -103,11 +103,11 @@ AVATAR_CATALOG: List[Dict] = [
         "description": "Big style, big confidence - BK Bee brings swagger to your spelling streaks!",
         "variants": ["default"],
         "category": "classic",
-        "tier": "earn_or_buy",
+        "tier": "premium",
         "is_default_free": False,
         "is_purchasable": True,
-        "unlock_points": 6000,
-        "price": 0.99
+        "unlock_points": 30000,
+        "price": 1.99
     },
     {
         "id": "buzz-bee",
@@ -233,11 +233,11 @@ AVATAR_CATALOG: List[Dict] = [
         "description": "Brave, helpful, and ready to save the day - Firefighter Bee keeps your spelling skills blazing!",
         "variants": ["default"],
         "category": "profession",
-        "tier": "earn_or_buy",
+        "tier": "premium",
         "is_default_free": False,
         "is_purchasable": True,
-        "unlock_points": 7000,
-        "price": 0.99
+        "unlock_points": 30000,
+        "price": 1.99
     },
     {
         "id": "franken-bee",
