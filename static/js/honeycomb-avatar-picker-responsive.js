@@ -1864,52 +1864,65 @@ async function purchaseLockedAvatar(slug) {
 
     try {
         const platform = getIapPlatform();
-        const result = await Promise.resolve(window.BeeSmartIAP.purchase(avatar.product_id));
+        const productId = avatar.product_id;
+        const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
 
-        const body = {
-            product_id: avatar.product_id,
-            transaction_id: result && (result.transaction_id || result.transactionId || null),
-            purchase_token: result && (result.purchase_token || result.purchaseToken || null),
-            payload: (result && result.payload) ? result.payload : (result || {})
-        };
-
-        const resp = await fetch(`/api/iap/verify/${platform}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(body)
-        });
-        const json = await resp.json().catch(() => ({}));
-        if (!(resp.ok && json && json.success)) {
-            const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Purchase verification failed (HTTP ${resp.status})`;
-            throw new Error(msg);
-        }
-
-        // Nudge the server to refresh device/user entitlements (covers late bridge + restore logic)
+        // Important: On iOS (StoreKit2), the native layer already returns VERIFIED transactions
+        // and `native-iap-bridge.js` immediately reconciles owned products via `/api/iap/restore`.
+        // So `/api/iap/verify` is best-effort only; if it fails we can still succeed by reconciling.
+        let verifyOk = false;
         try {
-            await fetch('/api/iap/restore', {
+            const body = {
+                product_id: productId,
+                transaction_id: result && (result.transaction_id || result.transactionId || null),
+                purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+                payload: (result && result.payload) ? result.payload : (result || {})
+            };
+            const resp = await fetch(`/api/iap/verify/${platform}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify({ platform: 'web', product_ids: [] })
+                body: JSON.stringify(body)
             });
+            const json = await resp.json().catch(() => ({}));
+            verifyOk = !!(resp.ok && json && json.success);
         } catch (e) {
-            // ignore
+            verifyOk = false;
         }
 
-        // Refresh the avatar list to reflect new entitlements
-        alert(`✅ ${avatar.name} unlocked!`);
-        await loadAvatars();
+        // Always reconcile after purchase so locks update immediately.
+        try {
+            if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                await Promise.resolve(window.BeeSmartIAP.reconcile('post_purchase'));
+            } else {
+                await fetch('/api/iap/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ platform: 'web', product_ids: [] })
+                });
+            }
+        } catch (e) { /* ignore */ }
 
-        // Try to auto-select the newly unlocked avatar if it’s now available
+        // Refresh the avatar list to reflect new entitlements
+        await loadAvatars();
         const updated = findAvatarBySlug(slug);
         if (updated && !updated.is_locked) {
+            alert(`✅ ${avatar.name} unlocked!`);
             const escSlug = (window.CSS && typeof CSS.escape === 'function')
                 ? CSS.escape(updated.slug)
                 : String(updated.slug).replace(/"/g, '\\"');
             const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
             if (el) selectAvatar(updated, el);
+            return;
         }
+
+        // If we got here, the purchase likely completed but the entitlement didn't apply yet.
+        // Give a clear next step rather than a hard failure.
+        const note = verifyOk
+            ? 'Purchase completed, but the unlock has not appeared yet. Please tap Restore Purchases and try again.'
+            : 'Purchase completed, but verification/reconcile is still catching up. Please tap Restore Purchases and try again.';
+        alert(note);
     } catch (err) {
         console.error('❌ Avatar purchase failed:', err);
         alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
@@ -2072,29 +2085,47 @@ async function purchaseBundle(productId, bundleName) {
     try {
         const platform = getIapPlatform();
         const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
-        const body = {
-            product_id: productId,
-            transaction_id: result && (result.transaction_id || result.transactionId || null),
-            purchase_token: result && (result.purchase_token || result.purchaseToken || null),
-            payload: (result && result.payload) ? result.payload : (result || {})
-        };
 
-        const resp = await fetch(`/api/iap/verify/${platform}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(body)
-        });
-        const json = await resp.json().catch(() => ({}));
-        if (!(resp.ok && json && json.success)) {
-            const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `Purchase verification failed (HTTP ${resp.status})`;
-            throw new Error(msg);
+        // Best-effort verification (non-blocking).
+        let verifyOk = false;
+        try {
+            const body = {
+                product_id: productId,
+                transaction_id: result && (result.transaction_id || result.transactionId || null),
+                purchase_token: result && (result.purchase_token || result.purchaseToken || null),
+                payload: (result && result.payload) ? result.payload : (result || {})
+            };
+            const resp = await fetch(`/api/iap/verify/${platform}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(body)
+            });
+            const json = await resp.json().catch(() => ({}));
+            verifyOk = !!(resp.ok && json && json.success);
+        } catch (e) {
+            verifyOk = false;
         }
 
-        alert(`✅ Bundle unlocked: ${bundleName}`);
+        // Always reconcile after purchase so locks update immediately.
+        try {
+            if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                await Promise.resolve(window.BeeSmartIAP.reconcile('post_bundle_purchase'));
+            } else {
+                await fetch('/api/iap/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ platform: 'web', product_ids: [] })
+                });
+            }
+        } catch (e) { /* ignore */ }
+
         // Refresh both bundles and avatars so locks update immediately
         await loadBundles();
         await loadAvatars();
+
+        alert(`✅ Bundle unlocked: ${bundleName}${verifyOk ? '' : ' (syncing...)'}`);
     } catch (err) {
         console.error('❌ Bundle purchase failed:', err);
         alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);

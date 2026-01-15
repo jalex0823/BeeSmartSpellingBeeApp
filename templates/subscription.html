@@ -1375,12 +1375,10 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
             }
 
-            // App Store Connect currently only has the monthly subscription product.
-            const productIds = {
-                'monthly': 'beesmart.premium.monthly'
-            };
-
-            const productId = productIds[plan];
+            // Use server-provided App Store Connect product IDs (source of truth).
+            // Fallbacks are intentionally conservative.
+            const PRODUCT_IDS = {{ (subscription_product_ids or {}) | tojson }};
+            const productId = (PRODUCT_IDS && PRODUCT_IDS[plan]) ? PRODUCT_IDS[plan] : 'com.beesmart.premium.monthly';
 
             // Apple requirement: subscription is tied to Apple ID, not BeeSmart email.
             // We allow purchase initiation even when logged out, but we do not apply
