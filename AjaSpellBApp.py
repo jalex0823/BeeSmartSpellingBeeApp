@@ -2543,12 +2543,35 @@ def _ensure_db_initialized() -> None:
     try:
         with app.app_context():
             inspector = inspect(db.engine)
-            # Use one canonical table to check overall schema readiness
-            has_users = inspector.has_table('users')
-            if not has_users:
-                print(" Initializing database schema (create_all)")
+            # Schema readiness: create missing tables even if 'users' already exists.
+            #
+            # On long-lived deployments (e.g., DigitalOcean), we often add new tables
+            # over time. If 'users' exists, the previous logic skipped create_all,
+            # leaving new tables (e.g., teacher_students) missing and causing 500s
+            # on admin/teacher/parent dashboards.
+            required_tables = [
+                'users',
+                'quiz_sessions',
+                'quiz_results',
+                'teacher_students',
+                'speed_round_scores',
+                'battle_sessions',
+                'battle_players',
+                'avatars',
+            ]
+            missing_tables = []
+            for tname in required_tables:
+                try:
+                    if not inspector.has_table(tname):
+                        missing_tables.append(tname)
+                except Exception:
+                    # Be resilient across DB backends/permissions
+                    pass
+
+            if missing_tables:
+                print(f" Initializing/repairing database schema (create_all). Missing: {missing_tables}")
                 db.create_all()
-                print(" Database tables created")
+                print(" Database tables ensured")
 
             # If server-side sessions are enabled, ensure the sessions table exists.
             try:
@@ -2562,14 +2585,15 @@ def _ensure_db_initialized() -> None:
             
             # Migration: Add is_favorite column if missing
             try:
-                columns = [col['name'] for col in inspector.get_columns('word_lists')]
-                if 'is_favorite' not in columns:
-                    print(" Adding is_favorite column to word_lists table...")
-                    db.session.execute(text(
-                        "ALTER TABLE word_lists ADD COLUMN is_favorite BOOLEAN DEFAULT FALSE"
-                    ))
-                    db.session.commit()
-                    print(" Added is_favorite column")
+                if inspector.has_table('word_lists'):
+                    columns = [col['name'] for col in inspector.get_columns('word_lists')]
+                    if 'is_favorite' not in columns:
+                        print(" Adding is_favorite column to word_lists table...")
+                        db.session.execute(text(
+                            "ALTER TABLE word_lists ADD COLUMN is_favorite BOOLEAN DEFAULT FALSE"
+                        ))
+                        db.session.commit()
+                        print(" Added is_favorite column")
             except Exception as e:
                 print(f"️ is_favorite migration: {e}")
                 db.session.rollback()

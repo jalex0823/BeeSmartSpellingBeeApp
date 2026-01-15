@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Error - BeeSmart Spelling{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
+  <div style="background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 1.5rem;">
+    <h1 style="margin: 0 0 0.75rem 0; font-size: 1.75rem; color: #b91c1c;">
+      Something went wrong
+    </h1>
+    <p style="margin: 0 0 1rem 0; color: #374151; line-height: 1.6;">
+      {{ error_message or "We hit an unexpected error while loading this page." }}
+    </p>
+
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+      <a href="/" style="display:inline-block; padding: 0.75rem 1rem; border-radius: 10px; background: #FF6B00; color: #fff; text-decoration:none; font-weight: 700;">
+        Go Home
+      </a>
+      <button type="button" onclick="window.location.reload()" style="padding: 0.75rem 1rem; border-radius: 10px; border: 2px solid #d1d5db; background: #fff; color: #111827; font-weight: 700; cursor: pointer;">
+        Reload
+      </button>
+    </div>
+
+    {% if error_details %}
+      <details style="margin-top: 1.25rem;">
+        <summary style="cursor: pointer; font-weight: 700; color: #111827;">Technical details</summary>
+        <pre style="white-space: pre-wrap; background: #0b1020; color: #e5e7eb; padding: 1rem; border-radius: 12px; margin-top: 0.75rem; overflow:auto;">{{ error_details }}</pre>
+      </details>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
