@@ -793,22 +793,42 @@ def home_root_direct():
     
     if current_user.is_authenticated:
         try:
-            # Refresh user object from database to ensure stats are current
-            db.session.refresh(current_user)
-            # Update GPA and accuracy to ensure they're calculated from latest data
-            if hasattr(current_user, 'update_gpa_and_accuracy'):
-                current_user.update_gpa_and_accuracy()
-                db.session.commit()
-                db.session.refresh(current_user)
+            # Safely refresh user object from database to ensure stats are current
+            # Use try-except to handle cases where user might not be in session yet
+            try:
+                # Check if user is attached to session before refreshing
+                if hasattr(current_user, 'id') and current_user.id:
+                    # Reload user from database to get fresh data
+                    user_from_db = User.query.get(current_user.id)
+                    if user_from_db:
+                        # Update GPA and accuracy if method exists (best-effort, non-blocking)
+                        try:
+                            if hasattr(user_from_db, 'update_gpa_and_accuracy'):
+                                user_from_db.update_gpa_and_accuracy()
+                                db.session.commit()
+                        except Exception as gpa_error:
+                            # Non-critical: log but don't fail
+                            print(f"⚠️ [HOME] GPA update failed (non-critical): {gpa_error}")
+                            db.session.rollback()
+            except Exception as refresh_error:
+                # Non-critical: log but continue
+                print(f"⚠️ [HOME] User refresh failed (non-critical): {refresh_error}")
             
-            user_avatar_data = current_user.get_avatar_data()
-            use_mascot = current_user.has_selected_avatar() == False
-            print(f" [HOME] User avatar data: {user_avatar_data}")
-            print(f" [HOME] Use mascot: {use_mascot}")
-            print(f" [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
-            print(f" [HOME] User stats - Points: {current_user.total_lifetime_points}, Quizzes: {current_user.total_quizzes_completed}, GPA: {current_user.cumulative_gpa}")
+            # Load avatar data (this should always work even if refresh failed)
+            try:
+                user_avatar_data = current_user.get_avatar_data()
+                use_mascot = current_user.has_selected_avatar() == False
+                print(f" [HOME] User avatar data: {user_avatar_data}")
+                print(f" [HOME] Use mascot: {use_mascot}")
+                print(f" [HOME] Avatar ID: {user_avatar_data.get('id') if user_avatar_data else 'None'}")
+                print(f" [HOME] User stats - Points: {current_user.total_lifetime_points}, Quizzes: {current_user.total_quizzes_completed}, GPA: {current_user.cumulative_gpa}")
+            except Exception as avatar_error:
+                print(f"⚠️ [HOME] Avatar data load failed: {avatar_error}")
+                user_avatar_data = None
+                use_mascot = True
         except Exception as e:
-            print(f"️ Could not load user avatar data: {e}")
+            # Catch-all: ensure we never break the home page
+            print(f"⚠️ [HOME] Error loading user data (non-critical): {e}")
             import traceback
             traceback.print_exc()
             user_avatar_data = None
@@ -17022,21 +17042,26 @@ def api_get_user_stats():
                 }
             })
 
-        # Refresh user object from database to ensure we have latest stats
+        # Refresh user object from database to ensure we have latest stats (best-effort, non-blocking)
         try:
-            db.session.refresh(current_user)
+            # Check if user is attached to session before refreshing
+            if hasattr(current_user, 'id') and current_user.id:
+                try:
+                    # Reload user from database
+                    user_from_db = User.query.get(current_user.id)
+                    if user_from_db:
+                        # Update GPA & accuracy including speed rounds (non-blocking)
+                        try:
+                            if hasattr(user_from_db, 'update_gpa_and_accuracy'):
+                                user_from_db.update_gpa_and_accuracy()
+                                db.session.commit()
+                        except Exception as gpa_error:
+                            print(f"WARNING /api/users/stats: GPA update failed (non-critical): {gpa_error}")
+                            db.session.rollback()
+                except Exception as refresh_error:
+                    print(f"WARNING /api/users/stats: user refresh failed (non-critical): {refresh_error}")
         except Exception as _e_refresh:
-            print(f"WARNING /api/users/stats: refresh user failed: {_e_refresh}")
-        
-        # Refresh GPA & accuracy including speed rounds
-        try:
-            if hasattr(current_user, 'update_gpa_and_accuracy'):
-                current_user.update_gpa_and_accuracy()
-                db.session.commit()
-                # Refresh again after update to get latest values
-                db.session.refresh(current_user)
-        except Exception as _e:
-            print(f"WARNING /api/users/stats: refresh failed: {_e}")
+            print(f"WARNING /api/users/stats: refresh user failed (non-critical): {_e_refresh}")
 
         sr = session.get('speed_round') or {}
         current_sr_streak = sr.get('current_streak', 0) if sr.get('active') else 0
