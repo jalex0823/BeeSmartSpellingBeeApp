@@ -1202,17 +1202,21 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     # Premium tier policy:
     # - Admin: always unlocked (handled above)
     # - Guests: locked unless purchased/restored or premium entitlement
-    # - Registered users (student/teacher/parent): follow catalog rules: only the
-    #   5 DEFAULT_FREE avatars are unlocked by default.
+    # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds)
+    #   OR purchase OR premium membership entitlement.
     if tier == 'premium':
-        if role in ('student', 'teacher', 'parent'):
-            return {"unlocked": False, "reason": "Premium - subscribe to unlock", "points_needed": None}
+        # Points unlock path (gameplay). This is what makes "unlock_points" meaningful.
+        if role in ('student', 'teacher', 'parent') and honey_points >= unlock_points:
+            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
 
         # Non-admin, non-registered fall back to entitlement-based unlock.
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
         if premium_member or anon_premium:
             return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
+        # Registered users can still earn toward premium unlock.
+        if role in ('student', 'teacher', 'parent'):
+            return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
         # If guest owns a matching avatar SKU, unlock it.
         if anon_owned:
             try:
@@ -1325,7 +1329,11 @@ def api_avatars():
 
     now_ts = time.time()
     cached = AVATAR_LIST_CACHE.get(cache_key)
-    if cached and (now_ts - cached.get('ts', 0)) <= AVATAR_LIST_CACHE_TTL_SECONDS:
+    # Avoid stale unlock state: if honey_points changed since caching, rebuild immediately.
+    current_hp = int(getattr(user, 'honey_points', 0) or 0) if user is not None else 0
+    cached_hp = int((cached or {}).get('honey_points', -1))
+    cache_fresh = cached and (now_ts - cached.get('ts', 0)) <= AVATAR_LIST_CACHE_TTL_SECONDS
+    if cache_fresh and (user is None or cached_hp == current_hp):
         payload = {
             "status": "success",
             "avatars": cached.get('data', []),
@@ -1532,7 +1540,7 @@ def api_avatars():
         pass
 
     # Store in cache and return
-    AVATAR_LIST_CACHE[cache_key] = { 'ts': now_ts, 'data': result }
+    AVATAR_LIST_CACHE[cache_key] = { 'ts': now_ts, 'data': result, 'honey_points': current_hp }
     return jsonify({
         "status": "success",
         "avatars": result,
