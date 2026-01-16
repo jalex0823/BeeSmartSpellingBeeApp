@@ -16270,6 +16270,18 @@ def api_speed_round_complete():
                 words_attempted
             )
             
+            # CRITICAL: Recalculate GPA and accuracy to include Speed Round in cumulative stats
+            # This ensures Speed Round results are reflected in main page stats
+            try:
+                db.session.refresh(current_user)
+                if hasattr(current_user, 'update_gpa_and_accuracy'):
+                    current_user.update_gpa_and_accuracy()
+                    db.session.commit()
+                    speed_logger.info(f"Updated GPA/accuracy after Speed Round: GPA={current_user.cumulative_gpa}, Accuracy={current_user.average_accuracy}%")
+            except Exception as gpa_error:
+                speed_logger.warning(f"Failed to update GPA after Speed Round (non-critical): {gpa_error}")
+                db.session.rollback()
+            
             #  Save badges to Achievement table
             if badges_unlocked and current_user.is_authenticated:
                 try:

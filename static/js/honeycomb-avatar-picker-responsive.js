@@ -10,6 +10,8 @@ let purchasedAvatarIds = [];
 let selectedAvatar = null;
 let loadedThumbnails = 0;
 let totalThumbnails = 0;
+let failedThumbnails = 0; // Track failed thumbnail loads
+let pendingThumbnails = new Set(); // Track thumbnails that haven't completed loading
 let currentLoadingAvatar = null;
 let previewLoadProgress = 0;
 // Current user's honey points from API
@@ -204,7 +206,9 @@ function applyRoleBasedUI() {
 
 // Update loading progress with detailed status
 function updateLoadingProgress(customMessage = null) {
-    const percentage = Math.round((loadedThumbnails / totalThumbnails) * 100);
+    // Calculate percentage based on completed thumbnails (loaded + failed)
+    const completedThumbnails = loadedThumbnails + failedThumbnails;
+    const percentage = Math.round((completedThumbnails / totalThumbnails) * 100);
     const progressBar = document.getElementById('loading-progress');
     const loadingText = document.getElementById('loading-text');
     const loadingContent = document.getElementById('loading-status');
@@ -232,17 +236,30 @@ function updateLoadingProgress(customMessage = null) {
     // Update detail text
     if (loadingDetail) {
         if (percentage < 100) {
-            loadingDetail.textContent = `${loadedThumbnails} of ${totalThumbnails} avatars loaded`;
+            const completed = loadedThumbnails + failedThumbnails;
+            if (failedThumbnails > 0) {
+                loadingDetail.textContent = `${loadedThumbnails} loaded, ${failedThumbnails} failed (${completed}/${totalThumbnails} processed)`;
+            } else {
+                loadingDetail.textContent = `${loadedThumbnails} of ${totalThumbnails} avatars loaded`;
+            }
         } else {
-            loadingDetail.textContent = 'Ready to choose your bee!';
+            if (failedThumbnails > 0) {
+                loadingDetail.textContent = `Ready! (${failedThumbnails} avatar${failedThumbnails > 1 ? 's' : ''} using fallback)`;
+            } else {
+                loadingDetail.textContent = 'Ready to choose your bee!';
+            }
         }
     }
     
     console.log(`📊 Loading Progress: ${percentage}% (${loadedThumbnails}/${totalThumbnails})`);
     
-    // Hide overlay when complete
-    if (loadedThumbnails >= totalThumbnails && totalThumbnails > 0) {
-        console.log('✅ All thumbnails loaded! Hiding overlay...');
+    // Hide overlay when complete (all thumbnails loaded OR failed)
+    const completedThumbnails = loadedThumbnails + failedThumbnails;
+    if (completedThumbnails >= totalThumbnails && totalThumbnails > 0) {
+        if (failedThumbnails > 0) {
+            console.warn(`⚠️ ${failedThumbnails} thumbnail(s) failed to load, but proceeding...`);
+        }
+        console.log(`✅ All thumbnails processed (${loadedThumbnails} loaded, ${failedThumbnails} failed)! Hiding overlay...`);
         setTimeout(() => {
             const overlay = document.getElementById('avatar-loading-overlay');
             if (overlay) {
@@ -490,7 +507,7 @@ async function loadAvatars() {
                 is_glb: isGlbFormat,
                 // Store full URL from API - GLB-only (all avatars are GLB now)
                 glb_url: glbUrl,
-                thumbnail: avatar.thumbnail || (avatar.urls ? avatar.urls.thumbnail : avatar.thumbnail_url),
+                thumbnail: (avatar.urls && avatar.urls.thumbnail) || avatar.thumbnail || avatar.thumbnail_url || null,
                 // NEW: Lock status from monetization system
                 is_locked: avatar.is_locked || false,
                 unlock_message: avatar.unlock_message || '',
@@ -578,6 +595,8 @@ async function loadAvatars() {
         
         totalThumbnails = avatarsData.length;
         loadedThumbnails = 0;
+        failedThumbnails = 0;
+        pendingThumbnails.clear();
         
     console.log('Loaded avatars:', avatarsData.length);
     updateDynamicMarquee(avatarsData);
@@ -765,6 +784,21 @@ function createAvatarElement(avatar, index) {
         // Intelligent thumbnail loading with fallbacks for filename/casing/punctuation mismatches
         const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
         let candidateIdx = 0;
+        const avatarId = avatar.id || avatar.name;
+        pendingThumbnails.add(avatarId); // Track this thumbnail as pending
+        
+        // Set timeout to handle thumbnails that never load (10 seconds per avatar)
+        const loadTimeout = setTimeout(() => {
+            if (pendingThumbnails.has(avatarId)) {
+                console.warn(`⏱️ Thumbnail load timeout for ${avatar.name} after 10s`);
+                pendingThumbnails.delete(avatarId);
+                thumbDiv.classList.remove('loading');
+                thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
+                failedThumbnails++;
+                updateLoadingProgress();
+            }
+        }, 10000);
+        
         img.src = fallbackCandidates[candidateIdx];
         img.style.width = '100%';
         img.style.height = '100%';
@@ -773,9 +807,13 @@ function createAvatarElement(avatar, index) {
         
         // Track loading progress
         img.onload = () => {
-            thumbDiv.classList.remove('loading');
-            loadedThumbnails++;
-            updateLoadingProgress();
+            clearTimeout(loadTimeout);
+            if (pendingThumbnails.has(avatarId)) {
+                pendingThumbnails.delete(avatarId);
+                thumbDiv.classList.remove('loading');
+                loadedThumbnails++;
+                updateLoadingProgress();
+            }
         };
         
         img.onerror = () => {
@@ -783,24 +821,37 @@ function createAvatarElement(avatar, index) {
             candidateIdx++;
             if (candidateIdx < fallbackCandidates.length) {
                 const next = fallbackCandidates[candidateIdx];
-                console.warn(`Thumbnail failed for ${avatar.name}, retrying with fallback: ${next}`);
+                console.warn(`⚠️ Thumbnail failed for ${avatar.name}, retrying with fallback: ${next}`);
                 img.src = next;
-                return;
+                return; // Don't mark as failed yet, try next fallback
             }
-            console.warn(`Failed to load any thumbnail variant for ${avatar.name}`);
-            thumbDiv.classList.remove('loading');
-            thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
-            loadedThumbnails++;
-            updateLoadingProgress();
+            // All fallbacks exhausted - log detailed error info
+            clearTimeout(loadTimeout);
+            if (pendingThumbnails.has(avatarId)) {
+                pendingThumbnails.delete(avatarId);
+                console.error(`❌ Failed to load thumbnail for "${avatar.name}" (ID: ${avatar.id})`);
+                console.error(`   Attempted URLs:`, fallbackCandidates);
+                console.error(`   Avatar data:`, {
+                    id: avatar.id,
+                    name: avatar.name,
+                    thumbnail: avatar.thumbnail,
+                    urls: avatar.urls,
+                    glb: avatar.glb_url
+                });
+                thumbDiv.classList.remove('loading');
+                thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
+                failedThumbnails++;
+                updateLoadingProgress();
+            }
         };
         
         thumbDiv.appendChild(img);
     } else {
         // Fallback to emoji if no thumbnail
-        console.warn(`No thumbnail for ${avatar.name}`);
+        console.warn(`⚠️ No thumbnail URL provided for ${avatar.name}`);
         thumbDiv.classList.remove('loading');
         thumbDiv.innerHTML = '<div style="color: #FFD700; font-size: 3rem;">🐝</div>';
-        loadedThumbnails++;
+        failedThumbnails++; // Count as failed since no thumbnail was provided
         updateLoadingProgress();
     }
     
@@ -844,8 +895,37 @@ function isAvatarPurchased(avatar) {
 // Build a minimal, stable set of thumbnail candidates (server now provides robust URLs)
 function buildThumbnailFallbacks(avatar, initialUrl) {
     const candidates = [];
-    if (initialUrl) candidates.push(initialUrl);
-    // STRICT mode: do not use generic fallbacks to avoid misrepresentation
+    if (initialUrl) {
+        // Add the original URL
+        candidates.push(initialUrl);
+        
+        // Handle URL encoding: if URL has %21, also try with !
+        if (initialUrl.includes('%21')) {
+            candidates.push(initialUrl.replace(/%21/g, '!'));
+        }
+        // Handle literal !: if URL has !, also try with %21
+        else if (initialUrl.includes('!')) {
+            candidates.push(initialUrl.replace(/!/g, '%21'));
+        }
+        
+        // If we have a GLB URL, derive thumbnail from it as fallback
+        if (avatar.glb_url) {
+            try {
+                // Extract GLB filename and derive thumbnail path
+                const glbMatch = avatar.glb_url.match(/\/([^\/]+\.glb)/);
+                if (glbMatch) {
+                    const glbFilename = glbMatch[1];
+                    const baseName = glbFilename.replace(/\.glb$/i, '');
+                    const derivedThumb = `/static/assets/avatars/glb_files/AvatarThumbnails/${baseName}!.png`;
+                    if (!candidates.includes(derivedThumb)) {
+                        candidates.push(derivedThumb);
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to derive thumbnail from GLB URL:', e);
+            }
+        }
+    }
     return candidates;
 }
 

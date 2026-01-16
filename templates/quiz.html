@@ -5718,9 +5718,27 @@ class QuizManager {
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             
             if (isIOS) {
-                // 🍎 iOS-specific intro: auto-start the quiz without blocking on a gesture.
-                // Users can optionally tap to unlock voice.
-                feedbackArea.innerHTML = `
+                // 🍎 iOS-specific intro: If voice was already enabled via first modal, skip second prompt
+                // Only show voice button if user skipped voice in the first modal
+                const voiceWasEnabled = this.voiceUnlocked && this.announcerEnabled;
+                
+                if (voiceWasEnabled) {
+                    // Voice already enabled via first modal - auto-start without second prompt
+                    feedbackArea.innerHTML = `
+                        <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">
+                            🐝 Welcome to BeeSmart Spelling! 🐝
+                        </div>
+                        <div style="margin-bottom: 1.5rem; color: #666; font-size: 1.1rem;">
+                            I'm Buzzy, your announcer bee! 🍯
+                        </div>
+                        <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
+                            Starting with voice announcements...
+                        </div>
+                        ${recoveryButtonHtml}
+                    `;
+                } else {
+                    // User skipped voice in first modal - show optional voice button (but don't require it)
+                    feedbackArea.innerHTML = `
                     <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">
                         🐝 Welcome to BeeSmart Spelling! 🐝
                     </div>
@@ -5747,10 +5765,11 @@ class QuizManager {
                         </button>
                     </div>
                     <div id="iosVoiceStatus" style="margin: 1rem 0; font-size: 0.95rem; color: #666;">
-                        Starting automatically… (you can still tap to enable voice)
+                        Starting automatically… (voice optional)
                     </div>
                     ${recoveryButtonHtml}
-                `;
+                    `;
+                }
             } else {
                 // Android/other mobile - auto-start without requiring a tap
                 feedbackArea.innerHTML = `
@@ -5772,10 +5791,10 @@ class QuizManager {
             
             // 🍎 iOS-specific handlers
             if (isIOS) {
-                // iOS Voice Button Handler
+                const forceNextBtn = document.getElementById('forceNextBtn');
                 const iosVoiceBtn = document.getElementById('iosVoiceBtn');
                 const iosVoiceStatus = document.getElementById('iosVoiceStatus');
-                const forceNextBtn = document.getElementById('forceNextBtn');
+                const voiceWasEnabled = this.voiceUnlocked && this.announcerEnabled;
 
                 // Safety: always have a way to advance even if resume stalls.
                 if (forceNextBtn) {
@@ -5784,7 +5803,42 @@ class QuizManager {
                     });
                 }
                 
-                iosVoiceBtn.addEventListener('click', () => {
+                // If voice already enabled, auto-start without waiting for button
+                if (voiceWasEnabled) {
+                    // Voice already unlocked - start intro immediately
+                    const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
+                    const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
+                                       "Listen carefully to each word, then spell what you hear. " +
+                                       "Let's start spelling and fill that honey jar!";
+                    
+                    speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(introMessage);
+                    utterance.rate = 0.95;
+                    utterance.pitch = 1.1;
+                    utterance.volume = 0.9;
+                    
+                    utterance.onend = () => {
+                        console.log('✅ iOS intro voice completed successfully');
+                        setTimeout(() => {
+                            feedbackArea.style.display = 'none';
+                            this.quizStarted = true;
+                            this.loadNextWordWithIntro();
+                        }, 800);
+                    };
+                    
+                    utterance.onerror = (err) => {
+                        console.error('❌ iOS voice failed:', err);
+                        setTimeout(() => {
+                            feedbackArea.style.display = 'none';
+                            this.quizStarted = true;
+                            this.loadNextWordWithIntro();
+                        }, 500);
+                    };
+                    
+                    speechSynthesis.speak(utterance);
+                } else if (iosVoiceBtn) {
+                    // Voice not enabled - show optional button (user can skip)
+                    iosVoiceBtn.addEventListener('click', () => {
                     console.log('🍎 iOS user tapped to hear intro voice');
                     
                     // 🍎 CRITICAL: Unlock voice for iOS - this enables all subsequent voice announcements
@@ -5840,16 +5894,19 @@ class QuizManager {
                 }, { once: true });
 
                 // Auto-start the quiz shortly after showing the intro (no user action required).
-                setTimeout(() => {
-                    try {
-                        if (this.quizStarted) return;
-                        feedbackArea.style.display = 'none';
-                        this.quizStarted = true;
-                        this.loadNextWordWithIntro();
-                    } catch (e) {
-                        console.warn('Auto-start (iOS) failed:', e);
-                    }
-                }, 900);
+                // Only auto-start if voice was NOT enabled (user skipped voice in first modal)
+                if (!voiceWasEnabled) {
+                    setTimeout(() => {
+                        try {
+                            if (this.quizStarted) return;
+                            feedbackArea.style.display = 'none';
+                            this.quizStarted = true;
+                            this.loadNextWordWithIntro();
+                        } catch (e) {
+                            console.warn('Auto-start (iOS) failed:', e);
+                        }
+                    }, 900);
+                }
                 
             } else {
                 // Android/other mobile: auto-start after a short delay.
