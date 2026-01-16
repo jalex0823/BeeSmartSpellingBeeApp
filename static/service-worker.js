@@ -3,7 +3,8 @@
 // 2026-01-05: iOS Connect fixes (loader/system checks, registered avatar stability, restore hang).
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
 // 2026-01-07: cache bust + ensure Word Lists UI updates immediately (Apple review).
-const CACHE_VERSION = 'beesmart-v1.4.5-v39-2026-01-07-word-lists-buttons';
+// 2026-01-16: force-refresh SW caches + never intercept /quiz (fix stale quiz HTML / JS syntax errors).
+const CACHE_VERSION = 'beesmart-v1.4.6-v40-2026-01-16-no-quiz-cache';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -83,6 +84,13 @@ self.addEventListener('fetch', (event) => {
   // ✅ Word Lists page is being actively iterated and must never be served stale.
   // Let the browser handle it directly (no SW interception/caching).
   if (url.pathname === '/word-lists') {
+    return;
+  }
+
+  // ✅ Quiz HTML must never be cached/intercepted by the SW.
+  // If an older SW ever cached /quiz HTML, clients can end up running stale inline JS
+  // even after a deploy (manifesting as SyntaxError and QuizManager not defined).
+  if (url.pathname === '/quiz' || url.pathname === '/speed-round/quiz') {
     return;
   }
 
