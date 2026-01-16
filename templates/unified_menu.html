@@ -5214,7 +5214,7 @@ function showRestoreDialog(title, message, isSuccess) {
 
                 <!-- Avatars Shop - Clear entry point for IAP purchases -->
                 <div id="tileAvatars" class="menu-option theme-gold" onclick="kidSounds.playRandomEffect(); selectOption('avatars', this)" onmouseover="kidSounds.playHappyDing()" title=" Browse and unlock adorable bee avatars! Purchase new characters to customize your spelling experience.">
-                    <div class="option-icon">🐝</div>
+                    <div class="option-icon"></div>
                     <div class="option-title">Avatars</div>
                     <div class="option-description">Browse & unlock bee characters</div>
                     <div class="kid-tip"> Collect all the bees! 🍯</div>
@@ -5261,8 +5261,44 @@ function showRestoreDialog(title, message, isSuccess) {
             <!-- Action buttons -->
             <section class="action-buttons">
                 <script>
+                // Check OCR availability and hide tile if not available (Apple Review requirement)
+                async function checkOCRAvailability() {
+                    try {
+                        const response = await fetch('/api/upload/image', {
+                            method: 'GET',
+                            cache: 'no-store'
+                        });
+                        const data = await response.json();
+                        
+                        const imageTile = document.getElementById('tileImageUpload');
+                        if (imageTile) {
+                            if (data.status === 'error' || response.status === 501) {
+                                // OCR not available - hide the tile completely
+                                console.warn('⚠️ OCR not available - hiding image upload tile for Apple compliance');
+                                imageTile.style.display = 'none';
+                                // Also remove from DOM to prevent any interaction
+                                imageTile.remove();
+                            } else {
+                                // OCR is available - ensure tile is visible
+                                imageTile.style.display = '';
+                                console.log('✅ OCR available - image upload tile enabled');
+                            }
+                        }
+                    } catch (error) {
+                        // On error, hide the tile to be safe (Apple won't approve broken features)
+                        console.error('❌ Error checking OCR availability:', error);
+                        const imageTile = document.getElementById('tileImageUpload');
+                        if (imageTile) {
+                            imageTile.style.display = 'none';
+                            imageTile.remove();
+                        }
+                    }
+                }
+                
                 // Ensure Quiz button works reliably
                 document.addEventListener('DOMContentLoaded', function() {
+                    // Check OCR availability first (must work for Apple review)
+                    checkOCRAvailability();
                     const quickBtn = document.getElementById('quickStartQuizBtn');
                     // Ensure a slow, constant auto-rotation with morph-at-180 behavior
                     // This uses the existing avatar controller API without changing assets or UI.
@@ -7030,11 +7066,55 @@ function showRestoreDialog(title, message, isSuccess) {
                             el.appendChild(bee);
                             setTimeout(()=> bee.remove(), 520);
                         });
-                        // Briefly disable to prevent accidental double taps on slow devices
-                        el.style.pointerEvents = 'none';
-                        setTimeout(()=> { el.style.pointerEvents = ''; }, 380);
+                        // Use a flag instead of blocking pointer events to maintain responsiveness
+                        if (el.dataset.clickProcessing) return;
+                        el.dataset.clickProcessing = 'true';
+                        setTimeout(()=> { delete el.dataset.clickProcessing; }, 500);
                     } catch(_) {}
                 }, { passive: true });
+                
+                // FAST TOUCH: Handle touchend immediately for instant response
+                if (el.classList.contains('menu-option')) {
+                    let touchStartTime = 0;
+                    let touchMoved = false;
+                    let touchStartX = 0;
+                    let touchStartY = 0;
+                    
+                    el.addEventListener('touchstart', (e) => {
+                        touchStartTime = Date.now();
+                        touchMoved = false;
+                        const touch = e.touches[0];
+                        touchStartX = touch.clientX;
+                        touchStartY = touch.clientY;
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchmove', (e) => {
+                        if (touchStartTime > 0) {
+                            const touch = e.touches[0];
+                            const deltaX = Math.abs(touch.clientX - touchStartX);
+                            const deltaY = Math.abs(touch.clientY - touchStartY);
+                            // Only mark as moved if significant movement (more than 10px)
+                            if (deltaX > 10 || deltaY > 10) {
+                                touchMoved = true;
+                            }
+                        }
+                    }, { passive: true });
+                    
+                    el.addEventListener('touchend', (e) => {
+                        const touchDuration = Date.now() - touchStartTime;
+                        // Trigger immediately if it was a quick tap (not a long press or scroll)
+                        if (!touchMoved && touchDuration < 300 && !el.dataset.clickProcessing) {
+                            e.preventDefault(); // Prevent the 300ms delay click
+                            e.stopPropagation();
+                            console.log('Fast touch activated tile:', el.className);
+                            try { kidSounds && kidSounds.playRandomEffect && kidSounds.playRandomEffect(); } catch(_) {}
+                            // Trigger click immediately
+                            el.click();
+                        }
+                        touchStartTime = 0;
+                        touchMoved = false;
+                    }, { passive: false }); // Need passive: false to call preventDefault
+                }
             });
         }
         
@@ -7440,17 +7520,48 @@ function showRestoreDialog(title, message, isSuccess) {
             fileInput.accept = '.txt,.csv,.doc,.docx,.pdf,text/*,application/pdf';
             fileInput.multiple = false;
             fileInput.style.display = 'none';
+            fileInput.style.position = 'absolute';
+            fileInput.style.left = '-9999px';
             
+            // Handle file selection
             fileInput.onchange = function(e) {
                 const file = e.target.files[0];
                 if (file) {
                     uploadTextFile(file);
                 }
+                // Remove input after file is processed (or cancelled)
+                setTimeout(() => {
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                }, 100);
             };
             
+            // Handle cancellation - remove input if user cancels
+            fileInput.oncancel = function() {
+                setTimeout(() => {
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                }, 100);
+            };
+            
+            // Add to DOM and trigger click
             document.body.appendChild(fileInput);
-            fileInput.click();
-            document.body.removeChild(fileInput);
+            
+            // Use setTimeout to ensure input is in DOM before clicking
+            setTimeout(() => {
+                try {
+                    fileInput.click();
+                } catch (error) {
+                    console.error('Failed to open file dialog:', error);
+                    // Clean up on error
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                    showErrorMessage('Unable to open file picker. Please try again or use "Type Words Manually" instead.');
+                }
+            }, 10);
         }
         
         function showImageUploadInterface() {
@@ -9906,12 +10017,12 @@ function showRestoreDialog(title, message, isSuccess) {
         }
         
         // Show animated progress for file upload (modal honey jar)
-        function showFileUploadProgress(filename) {
+        function showFileUploadProgress(filename, isImage = false) {
             // Remove any existing progress UI
             const existingProgress = document.querySelector('.upload-progress-container');
             if (existingProgress) existingProgress.remove();
             
-            // Create animated progress UI
+            // Create animated progress UI with picture-to-word theme for images
             const progressContainer = document.createElement('div');
             progressContainer.className = 'upload-progress-container';
             progressContainer.style.cssText = `
@@ -9919,23 +10030,81 @@ function showRestoreDialog(title, message, isSuccess) {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: linear-gradient(135deg, #fff8dc 0%, #fffacd 100%);
-                border: 4px solid #ffd700;
+                background: ${isImage ? 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)' : 'linear-gradient(135deg, #fff8dc 0%, #fffacd 100%)'};
+                border: 4px solid ${isImage ? '#2196F3' : '#ffd700'};
                 border-radius: 25px;
                 padding: 40px;
-                box-shadow: 0 20px 60px rgba(255, 193, 7, 0.4);
+                box-shadow: 0 20px 60px ${isImage ? 'rgba(33, 150, 243, 0.4)' : 'rgba(255, 193, 7, 0.4)'};
                 z-index: 10001;
                 min-width: 400px;
                 max-width: 500px;
                 text-align: center;
+                animation: slideInBounce 0.4s ease-out;
             `;
             
-            progressContainer.innerHTML = `
-                <div style="font-size: 3rem; margin-bottom: 15px;"></div>
-                <div style="font-size: 1.4rem; font-weight: bold; color: #ff8c00; margin-bottom: 10px;">
-                    Processing Your Words
+            // Picture-to-word animation for images
+            const pictureToWordAnimation = isImage ? `
+                <div id="pictureToWordAnim" style="
+                    position: relative;
+                    width: 200px;
+                    height: 120px;
+                    margin: 0 auto 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <!-- Picture icon that transforms to words -->
+                    <div id="pictureIcon" style="
+                        font-size: 4rem;
+                        position: absolute;
+                        animation: picturePulse 1.5s ease-in-out infinite;
+                        transition: transform 0.5s, opacity 0.5s;
+                    ">📷</div>
+                    <!-- Arrow that appears -->
+                    <div id="arrowIcon" style="
+                        font-size: 2rem;
+                        position: absolute;
+                        opacity: 0;
+                        animation: arrowSlide 2s ease-in-out infinite;
+                        transition: opacity 0.5s;
+                    ">→</div>
+                    <!-- Words that appear -->
+                    <div id="wordsIcon" style="
+                        font-size: 3rem;
+                        position: absolute;
+                        opacity: 0;
+                        animation: wordsFadeIn 2.5s ease-in-out infinite;
+                        transition: opacity 0.5s;
+                    ">📝</div>
                 </div>
-                <div style="font-size: 0.95rem; color: #8b6914; margin-bottom: 20px; font-style: italic;">
+                <style>
+                    @keyframes picturePulse {
+                        0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+                        50% { transform: scale(1.1) rotate(5deg); opacity: 0.8; }
+                    }
+                    @keyframes arrowSlide {
+                        0% { opacity: 0; transform: translateX(-20px); }
+                        30%, 70% { opacity: 1; transform: translateX(0); }
+                        100% { opacity: 0; transform: translateX(20px); }
+                    }
+                    @keyframes wordsFadeIn {
+                        0%, 40% { opacity: 0; transform: scale(0.5); }
+                        50%, 100% { opacity: 1; transform: scale(1); }
+                    }
+                    @keyframes slideInBounce {
+                        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+                        60% { transform: translate(-50%, -50%) scale(1.05); }
+                        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                    }
+                </style>
+            ` : '';
+            
+            progressContainer.innerHTML = `
+                ${pictureToWordAnimation}
+                <div style="font-size: 1.4rem; font-weight: bold; color: ${isImage ? '#1976D2' : '#ff8c00'}; margin-bottom: 10px;">
+                    ${isImage ? '📸 Turning Picture into Words!' : 'Processing Your Words'}
+                </div>
+                <div style="font-size: 0.95rem; color: ${isImage ? '#1565C0' : '#8b6914'}; margin-bottom: 20px; font-style: italic;">
                     ${filename}
                 </div>
                 
@@ -10184,8 +10353,8 @@ function showRestoreDialog(title, message, isSuccess) {
             
             console.log(' DEBUG: Starting image upload for file:', file.name);
             
-            // Show animated progress indicator
-            showFileUploadProgress(file.name);
+            // Show animated progress indicator with picture-to-word theme
+            showFileUploadProgress(file.name, true);
             
             // Simulate OCR progress stages (OCR takes longer)
             let progress = 0;
@@ -10245,14 +10414,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     setTimeout(async () => {
                         hideFileUploadProgress();
                         
-                        const magicMessages = [
-                            `Wow! Found ${data.count} words in your picture like magic!`,
-                            `Amazing! Our word detector found ${data.count} words in your image!`,
-                            `Incredible! ${data.count} words were hiding in your picture!`,
-                            `Fantastic! We discovered ${data.count} words from your photo!`
-                        ];
-                        const message = magicMessages[Math.floor(Math.random() * magicMessages.length)];
-                        showSuccessMessage(message);
+                        // Show kid-friendly success modal with picture-to-word animation
+                        showImageUploadSuccessModal(data.count || 0, data.blocked_count || 0);
                         
                         //  Update word count badge AND start quiz button using centralized manager
                         await WordBankManager.updateAllDisplays(true);
@@ -10264,15 +10427,8 @@ function showRestoreDialog(title, message, isSuccess) {
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
                         console.log('Quiz button enabled after image upload, word count:', data.count);
                         
-                        // Auto-navigate to quiz after successful image upload
-                        if (data.count > 0) {
-                            setTimeout(() => {
-                                console.log('Auto-navigating to quiz with', data.count, 'words');
-                                window.location.href = '/quiz';
-                            }, 1200); // Short delay to show success message
-                        }
-                        
-                        console.log('Image upload complete - navigating to quiz with', data.count, 'words');
+                        // Note: Navigation to quiz is now handled by the success modal button
+                        console.log('Image upload complete with', data.count, 'words');
                     }, 500); // Show completion message briefly
                 } else {
                     // Error occurred - hide progress immediately
@@ -10283,34 +10439,16 @@ function showRestoreDialog(title, message, isSuccess) {
                     const isOCRError = errorMsg.includes('tesseract') || errorMsg.includes('Tesseract') || errorMsg.includes('OCR');
                     
                     if (isOCRError) {
-                        // Show user-friendly OCR error with helpful alternatives
-                        showBeeConfirm({
-                            title: ' Image Upload Not Available',
-                            message: 
-                                " Oops! The word finder needs special software that isn't installed yet.\n\n" +
-                                " Here are other fun ways to add your words:\n\n" +
-                                " Type your words manually (quick & easy!)\n" +
-                                " Upload a text file (.txt, .csv, .docx, .pdf)\n\n" +
-                                " Your teacher or parent can install Tesseract OCR if you really need image uploads!",
-                            confirmText: 'Type Words Instead',
-                            cancelText: 'Upload File Instead'
-                        }).then(confirmed => {
-                            if (confirmed) {
-                                // User chose manual entry
-                                selectOption('manual', document.querySelector('.menu-option[onclick*="manual"]'));
-                            } else {
-                                // User chose file upload
-                                selectOption('text', document.querySelector('.menu-option[onclick*="text"]'));
-                            }
-                        });
+                        // Show kid-friendly OCR error modal
+                        showImageUploadErrorModal('ocr_not_installed', errorMsg);
                     } else {
                         // Check if this is a content violation warning from image upload
                         if (data.violation_warning && data.error) {
                             // Show violation in modal popup (like "Attention, spelling bee!")
                             showViolationWarning(data.error);
                         } else {
-                            // Other error - show standard error message
-                            showErrorMessage(errorMsg || "Our word finder couldn't read this image clearly. Try a clearer photo! ");
+                            // Show kid-friendly error modal
+                            showImageUploadErrorModal('general_error', errorMsg);
                         }
                     }
                 }
@@ -10318,8 +10456,332 @@ function showRestoreDialog(title, message, isSuccess) {
             .catch(error => {
                 clearInterval(progressInterval);
                 hideFileUploadProgress();
-                showErrorMessage("Oops! Something went wrong with the image. Let's try another one! ");
+                showImageUploadErrorModal('network_error', error.message || "Network error occurred");
             });
+        }
+        
+        // Kid-friendly success modal for image upload with picture-to-word animation
+        function showImageUploadSuccessModal(wordCount, blockedCount = 0) {
+            // Remove any existing modal
+            const existingModal = document.getElementById('imageUploadSuccessModal');
+            if (existingModal) existingModal.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'imageUploadSuccessModal';
+            modal.style.cssText = `
+                position: fixed;
+                inset: 0;
+                z-index: 10050;
+                background: rgba(33, 150, 243, 0.85);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            const successMessages = [
+                `Wow! Found ${wordCount} words in your picture like magic! 🎉`,
+                `Amazing! Our word detector found ${wordCount} words in your image! ✨`,
+                `Incredible! ${wordCount} words were hiding in your picture! 🎊`,
+                `Fantastic! We discovered ${wordCount} words from your photo! 🌟`
+            ];
+            const message = successMessages[Math.floor(Math.random() * successMessages.length)];
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+                    border: 4px solid #2196F3;
+                    border-radius: 30px;
+                    padding: 40px;
+                    max-width: 500px;
+                    width: 90%;
+                    text-align: center;
+                    box-shadow: 0 25px 70px rgba(33, 150, 243, 0.5);
+                    animation: successBounce 0.5s ease-out;
+                ">
+                    <!-- Picture-to-word success animation -->
+                    <div style="
+                        position: relative;
+                        width: 180px;
+                        height: 100px;
+                        margin: 0 auto 25px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <div style="
+                            font-size: 4rem;
+                            animation: successPictureSpin 1s ease-out;
+                        ">📷</div>
+                        <div style="
+                            font-size: 2.5rem;
+                            position: absolute;
+                            animation: successArrow 1.2s ease-out 0.3s both;
+                        ">→</div>
+                        <div style="
+                            font-size: 3.5rem;
+                            position: absolute;
+                            animation: successWords 1.5s ease-out 0.6s both;
+                        ">📝</div>
+                        <div style="
+                            font-size: 2rem;
+                            position: absolute;
+                            animation: successSparkle 2s ease-out 1s infinite;
+                        ">✨</div>
+                    </div>
+                    
+                    <h2 style="
+                        margin: 0 0 15px 0;
+                        color: #1976D2;
+                        font-size: 1.8rem;
+                        font-weight: 800;
+                    ">🎉 Picture to Words Complete!</h2>
+                    
+                    <p style="
+                        margin: 0 0 20px 0;
+                        color: #1565C0;
+                        font-size: 1.1rem;
+                        line-height: 1.6;
+                    ">${message}</p>
+                    
+                    <div style="
+                        background: rgba(255, 255, 255, 0.8);
+                        border-radius: 15px;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border: 2px solid #2196F3;
+                    ">
+                        <div style="
+                            font-size: 2.5rem;
+                            font-weight: bold;
+                            color: #1976D2;
+                            margin-bottom: 5px;
+                        ">${wordCount}</div>
+                        <div style="
+                            font-size: 1rem;
+                            color: #1565C0;
+                        ">Words Ready to Spell!</div>
+                        ${blockedCount > 0 ? `
+                            <div style="
+                                margin-top: 10px;
+                                padding-top: 10px;
+                                border-top: 1px solid #BBDEFB;
+                                font-size: 0.9rem;
+                                color: #FF9800;
+                            ">
+                                ⚠️ ${blockedCount} word${blockedCount > 1 ? 's' : ''} filtered for kid-friendly content
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <button onclick="
+                        const modal = document.getElementById('imageUploadSuccessModal');
+                        if (modal) {
+                            modal.style.animation = 'fadeOut 0.3s ease';
+                            setTimeout(() => modal.remove(), 300);
+                        }
+                    " style="
+                        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 20px;
+                        padding: 15px 40px;
+                        font-size: 1.2rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        box-shadow: 0 8px 20px rgba(33, 150, 243, 0.4);
+                        transition: transform 0.2s, box-shadow 0.2s;
+                        margin-top: 10px;
+                    " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 12px 25px rgba(33, 150, 243, 0.6)';" 
+                       onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 8px 20px rgba(33, 150, 243, 0.4)';">
+                        🐝 Start Spelling! 🐝
+                    </button>
+                </div>
+                <style>
+                    @keyframes successBounce {
+                        0% { transform: scale(0.3); opacity: 0; }
+                        50% { transform: scale(1.05); }
+                        100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes successPictureSpin {
+                        0% { transform: scale(0) rotate(0deg); opacity: 0; }
+                        50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+                        100% { transform: scale(1) rotate(360deg); opacity: 1; }
+                    }
+                    @keyframes successArrow {
+                        0% { opacity: 0; transform: translateX(-30px); }
+                        100% { opacity: 1; transform: translateX(0); }
+                    }
+                    @keyframes successWords {
+                        0% { opacity: 0; transform: translateX(30px) scale(0.5); }
+                        100% { opacity: 1; transform: translateX(0) scale(1); }
+                    }
+                    @keyframes successSparkle {
+                        0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+                        50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Play success sound
+            if (window.kidSounds && typeof window.kidSounds.playRandomEffect === 'function') {
+                window.kidSounds.playRandomEffect();
+            }
+        }
+        
+        // Kid-friendly error modal for image upload
+        function showImageUploadErrorModal(errorType, errorMessage) {
+            // Remove any existing modal
+            const existingModal = document.getElementById('imageUploadErrorModal');
+            if (existingModal) existingModal.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'imageUploadErrorModal';
+            modal.style.cssText = `
+                position: fixed;
+                inset: 0;
+                z-index: 10050;
+                background: rgba(244, 67, 54, 0.85);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            let title, message, buttons;
+            
+            if (errorType === 'ocr_not_installed') {
+                title = '📸 Word Finder Temporarily Unavailable';
+                message = `The picture-to-word feature is currently unavailable.\n\nHere are other fun ways to add your words:\n\n• Type your words manually (quick & easy!)\n• Upload a text file (.txt, .csv, .docx, .pdf)\n\nThese options work great and are just as fast!`;
+                buttons = `
+                    <button onclick="
+                        const modal = document.getElementById('imageUploadErrorModal');
+                        if (modal) {
+                            modal.style.animation = 'fadeOut 0.3s ease';
+                            setTimeout(() => {
+                                modal.remove();
+                                selectOption('manual', document.querySelector('.menu-option[onclick*=\"manual\"]'));
+                            }, 300);
+                        }
+                    " style="
+                        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 15px;
+                        padding: 12px 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        margin: 5px;
+                        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+                    ">Type Words Instead</button>
+                    <button onclick="
+                        const modal = document.getElementById('imageUploadErrorModal');
+                        if (modal) {
+                            modal.style.animation = 'fadeOut 0.3s ease';
+                            setTimeout(() => {
+                                modal.remove();
+                                selectOption('text', document.querySelector('.menu-option[onclick*=\"text\"]'));
+                            }, 300);
+                        }
+                    " style="
+                        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 15px;
+                        padding: 12px 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        margin: 5px;
+                        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
+                    ">Upload File Instead</button>
+                `;
+            } else {
+                title = '😔 Picture Not Clear Enough';
+                message = `Our word finder couldn't read this image clearly.\n\nTry:\n• A clearer, brighter photo\n• Better lighting\n• Less blurry picture\n• Or use "Type Words Manually" instead!`;
+                buttons = `
+                    <button onclick="
+                        const modal = document.getElementById('imageUploadErrorModal');
+                        if (modal) {
+                            modal.style.animation = 'fadeOut 0.3s ease';
+                            setTimeout(() => modal.remove(), 300);
+                        }
+                    " style="
+                        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 15px;
+                        padding: 12px 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+                    ">Try Another Picture</button>
+                `;
+            }
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+                    border: 4px solid #F44336;
+                    border-radius: 30px;
+                    padding: 40px;
+                    max-width: 500px;
+                    width: 90%;
+                    text-align: center;
+                    box-shadow: 0 25px 70px rgba(244, 67, 54, 0.5);
+                    animation: errorShake 0.5s ease-out;
+                ">
+                    <div style="
+                        font-size: 4rem;
+                        margin-bottom: 20px;
+                        animation: errorBounce 1s ease-in-out infinite;
+                    ">📷❌</div>
+                    
+                    <h2 style="
+                        margin: 0 0 15px 0;
+                        color: #C62828;
+                        font-size: 1.8rem;
+                        font-weight: 800;
+                    ">${title}</h2>
+                    
+                    <p style="
+                        margin: 0 0 25px 0;
+                        color: #B71C1C;
+                        font-size: 1rem;
+                        line-height: 1.8;
+                        white-space: pre-line;
+                    ">${message}</p>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        ${buttons}
+                    </div>
+                </div>
+                <style>
+                    @keyframes errorShake {
+                        0%, 100% { transform: translateX(0); }
+                        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                        20%, 40%, 60%, 80% { transform: translateX(5px); }
+                    }
+                    @keyframes errorBounce {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-10px); }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(modal);
         }
         
         function searchDictionary(term) {
