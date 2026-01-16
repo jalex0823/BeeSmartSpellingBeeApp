@@ -169,11 +169,11 @@ def _ensure_dir(path):
     except Exception:
         pass
 
-# DEPRECATED: Disk-based wordbank functions - replaced by Railway database (WordBankStorage model)
+# DEPRECATED: Disk-based wordbank functions - replaced by PostgreSQL database (WordBankStorage model)
 # These functions are no longer used since all wordbank operations now use PostgreSQL
 
 def _wordbank_path(storage_id: str) -> str:
-    """DEPRECATED: Railway database replaces disk storage."""
+    """DEPRECATED: PostgreSQL database replaces disk storage."""
     return ""
 
 def save_wordbank_atomic(storage_id: str, rows: list) -> bool:
@@ -296,7 +296,7 @@ def _ensure_session_storage_id() -> str:
 def clear_wordbank() -> None:
     """Clear the active wordbank safely and reset quiz state.
     
-    Deletes wordbank from Railway database (single source of truth).
+    Deletes wordbank from PostgreSQL database (single source of truth).
     """
     storage_id = session.get("wordbank_storage_id")
     
@@ -515,7 +515,7 @@ def ensure_quiz_db_session(state: dict, total_words: int):
 @app.route('/api/wordbank', methods=['GET'])
 def api_wordbank_get():
     """
-    Get wordbank from Railway database - returns 'words' key for compatibility
+    Get wordbank from PostgreSQL database - returns 'words' key for compatibility
     """
     try:
         words = get_wordbank()
@@ -3304,7 +3304,7 @@ MAX_RECORDS = 500  # safety cap; your typical lists are ~50
 UPLOAD_PROGRESS = {}
 UPLOAD_PROGRESS_LOCK = threading.Lock()
 
-# Wordbank storage moved to Railway PostgreSQL database (WordBankStorage model)
+# Wordbank storage moved to PostgreSQL database (WordBankStorage model)
 # No more in-memory WORD_STORAGE dictionary - database is single source of truth
 
 # Legacy debug hooks: provide empty in-memory structures so optional debug prints
@@ -4183,7 +4183,7 @@ def _delete_wordbank_from_disk(storage_id: Optional[str]):
     pass
 
 def get_wordbank() -> List[Dict[str, str]]:
-    """Read wordbank from Railway database (ONLY source of truth).
+    """Read wordbank from PostgreSQL database (ONLY source of truth).
     
     All word operations use wordbank_storage table in PostgreSQL.
     Session stores small UUID pointer (~36 bytes) to avoid cookie limits.
@@ -4240,15 +4240,15 @@ def get_wordbank() -> List[Dict[str, str]]:
         session["wordbank_count"] = 0
         return []
     
-    # Query Railway database (ONLY storage location)
+        # Query PostgreSQL database (ONLY storage location)
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
-            print(f" get_wordbank: Loaded {len(words)} words from Railway database (storage_id={storage_id})")
+            print(f" get_wordbank: Loaded {len(words)} words from PostgreSQL database (storage_id={storage_id})")
             session["wordbank_count"] = len(words)
             return list(words)  # Return copy to prevent modification
         else:
-            print(f"️ get_wordbank: storage_id={storage_id} not found in Railway database")
+            print(f"️ get_wordbank: storage_id={storage_id} not found in PostgreSQL database")
             session["wordbank_count"] = 0
             return []
     except Exception as e:
@@ -4257,7 +4257,7 @@ def get_wordbank() -> List[Dict[str, str]]:
         return []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
-    """Save wordbank to Railway database (ONLY storage location).
+    """Save wordbank to PostgreSQL database (ONLY storage location).
     
      CRITICAL: COMPLETE REPLACEMENT - old wordbank is WIPED and replaced with new rows.
     Session stores small UUID pointer (~36 bytes) to avoid cookie size limits.
@@ -4285,11 +4285,11 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"️ set_wordbank: Error deleting old wordbank: {e}")
         db.session.rollback()
     
-    # Save to Railway database (ONLY storage location)
+        # Save to PostgreSQL database (ONLY storage location)
     try:
         user_id = current_user.id if current_user.is_authenticated else None
         WordBankStorage.save_wordbank(storage_id, rows, user_id)
-        print(f" set_wordbank: Saved {len(rows)} words to Railway database (storage_id={storage_id})")
+        print(f" set_wordbank: Saved {len(rows)} words to PostgreSQL database (storage_id={storage_id})")
     except Exception as e:
         print(f" set_wordbank: Database error: {e}")
         db.session.rollback()
@@ -4321,16 +4321,16 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"DEBUG set_wordbank: System loaded {len(rows)} words")
 
 def delete_wordbank(storage_id: str):
-    """Delete wordbank from Railway database (single source of truth).
+    """Delete wordbank from PostgreSQL database (single source of truth).
     
     Used when loading new word lists or clearing wordbank completely.
     """
     try:
         success = WordBankStorage.delete_wordbank(storage_id)
         if success:
-            print(f" delete_wordbank: Removed storage_id={storage_id} from Railway database")
+            print(f" delete_wordbank: Removed storage_id={storage_id} from PostgreSQL database")
         else:
-            print(f"️ delete_wordbank: storage_id={storage_id} not found in Railway database")
+            print(f"️ delete_wordbank: storage_id={storage_id} not found in PostgreSQL database")
         return success
     except Exception as e:
         print(f" delete_wordbank: Database error: {e}")
@@ -7602,13 +7602,13 @@ def api_battle_export_DEPRECATED(battle_code):
 @app.route("/api/wordbank", methods=["GET"])
 def api_get_wordbank():
     """
-    Returns the ACTUAL current wordbank from Railway database.
+    Returns the ACTUAL current wordbank from PostgreSQL database.
     NEVER returns defaults - only what user has uploaded/entered.
     If empty, returns [] (empty list) - user must upload their own words.
     """
     # Enhanced debugging for mobile troubleshooting
     storage_id = session.get("wordbank_storage_id")
-    words = get_wordbank()  # Queries Railway database
+    words = get_wordbank()  # Queries PostgreSQL database
     was_cleared = session.get("wordbank_cleared", False)
     has_uploaded = session.get("has_uploaded_once", False)
     
@@ -7619,7 +7619,7 @@ def api_get_wordbank():
           f"user_agent={request.headers.get('User-Agent', 'UNKNOWN')[:50]}")
     
     if len(words) > 0:
-        print(f"ℹ️ /api/wordbank: Returning {len(words)} words from Railway database (storage_id={storage_id})")
+        print(f"ℹ️ /api/wordbank: Returning {len(words)} words from PostgreSQL database (storage_id={storage_id})")
     else:
         print(f"ℹ️ /api/wordbank: Returning 0 words - wordbank is empty (no words uploaded)")
     
@@ -10845,10 +10845,10 @@ def api_clear():
         storage_id = session.get("wordbank_storage_id")
         print(f"DEBUG /api/clear: Current storage_id={storage_id}")
         
-        # Delete from Railway database (single source of truth)
+        # Delete from PostgreSQL database (single source of truth)
         if storage_id:
             delete_wordbank(storage_id)
-            print(f"DEBUG /api/clear: Deleted wordbank from Railway database")
+            print(f"DEBUG /api/clear: Deleted wordbank from PostgreSQL database")
         
         # Clear all session data thoroughly
         session.pop("wordbank_storage_id", None)
@@ -15486,13 +15486,14 @@ def api_admin_export_users():
 # ============================================================================
 
 # ==============================================================================
-# SPEED ROUND RAILWAY FIXES
+# SPEED ROUND DATABASE-SAFE OPERATIONS
 # ==============================================================================
 
 def railway_db_safe_speed_round(max_retries=3, backoff_factor=0.5):
     """
-    Railway-safe database decorator for Speed Round operations
+    Database-safe decorator for Speed Round operations
     Handles connection timeouts, recycling, and rollbacks
+    Works with DigitalOcean PostgreSQL and other database providers
     """
     def decorator(func):
         @wraps(func)
@@ -15608,51 +15609,35 @@ def update_user_lifetime_points_railway(user_id, points_to_add):
 
 def update_user_stats_railway(user_id, points_to_add, words_correct, words_attempted):
     """
-    Railway-safe comprehensive user stats update for speed rounds
-    Updates: quizzes completed, lifetime points, and average accuracy
+    Database-safe user stats update for speed rounds
+    Updates: quizzes completed, lifetime points, and honey points
+    NOTE: average_accuracy and cumulative_gpa are updated by update_gpa_and_accuracy()
+    which recalculates from ALL records (QuizSession + SpeedRoundScore) to ensure accuracy
     """
     try:
         engine = db.get_engine()
         
-        accuracy = (words_correct / words_attempted * 100) if words_attempted > 0 else 0
-        
         with engine.begin() as conn:
-            # First, get current stats
+            # Update points and quiz count only
+            # average_accuracy and cumulative_gpa will be recalculated by update_gpa_and_accuracy()
             result = conn.execute(
                 text("""
-                    SELECT total_quizzes_completed, average_accuracy 
-                    FROM users 
+                    UPDATE users 
+                    SET total_lifetime_points = COALESCE(total_lifetime_points, 0) + :points,
+                        honey_points = COALESCE(honey_points, 0) + :points,
+                        total_quizzes_completed = COALESCE(total_quizzes_completed, 0) + 1
                     WHERE id = :user_id
+                    RETURNING total_quizzes_completed
                 """),
-                {'user_id': user_id}
+                {
+                    'user_id': user_id, 
+                    'points': points_to_add
+                }
             ).fetchone()
             
             if result:
-                current_quizzes = result[0] or 0
-                current_avg_accuracy = result[1] or 0.0
-                
-                # Calculate new average accuracy (cumulative)
-                total_quizzes_after = current_quizzes + 1
-                new_avg_accuracy = ((current_avg_accuracy * current_quizzes) + accuracy) / total_quizzes_after
-                
-                # Update all stats in one query
-                conn.execute(
-                    text("""
-                        UPDATE users 
-                        SET total_lifetime_points = COALESCE(total_lifetime_points, 0) + :points,
-                            honey_points = COALESCE(honey_points, 0) + :points,
-                            total_quizzes_completed = COALESCE(total_quizzes_completed, 0) + 1,
-                            average_accuracy = :new_avg_accuracy
-                        WHERE id = :user_id
-                    """),
-                    {
-                        'user_id': user_id, 
-                        'points': points_to_add,
-                        'new_avg_accuracy': round(new_avg_accuracy, 2)
-                    }
-                )
-                
-                speed_logger.info(f"Updated user {user_id} stats: Quizzes={total_quizzes_after}, Points=+{points_to_add}, Accuracy={new_avg_accuracy:.1f}%")
+                total_quizzes_after = result[0] or 0
+                speed_logger.info(f"Updated user {user_id} stats: Quizzes={total_quizzes_after}, Points=+{points_to_add}")
                 return True
             else:
                 speed_logger.error(f"User {user_id} not found for stats update")
@@ -16215,7 +16200,7 @@ def api_speed_round_complete():
             'difficulty_level': speed_round['config']['difficulty']
         }
         
-        # Use Railway-safe database operations
+        # Use database-safe operations (handles connection pooling/timeouts)
         score_id = save_speed_round_score_railway(current_user.id, score_data)
         
         #  Check for badge achievements in speed round
@@ -16519,7 +16504,7 @@ def speed_round_health_railway():
     """Speed Round system health check for Railway"""
     health = {
     'timestamp': datetime.now(timezone.utc).isoformat(),
-        'environment': 'Railway' if (os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('DATABASE_URL')) else 'Local',
+        'environment': 'DigitalOcean' if (os.getenv('DIGITALOCEAN_DATABASE_URL') or os.getenv('DO_DATABASE_URL')) else ('Production' if os.getenv('DATABASE_URL') else 'Local'),
         'speed_round_status': 'checking',
         'database_status': 'checking',
         'session_status': 'checking'

@@ -56,7 +56,7 @@ class Config:
     def _normalize_database_url(raw: str) -> str:
         """Normalize DATABASE_URL / DIGITALOCEAN_DATABASE_URL.
 
-        - Accepts Railway-style postgres://
+        - Accepts postgres:// (converts to postgresql://)
         - Keeps SQLite URLs unchanged
         - DigitalOcean Managed Postgres commonly *requires* SSL; if the URL doesn't
           specify sslmode, we default to sslmode=require.
@@ -68,7 +68,7 @@ class Config:
         if raw.startswith('sqlite:'):
             return raw
 
-        # Fix for Railway's postgres:// vs postgresql://
+        # Convert postgres:// to postgresql:// (SQLAlchemy requirement)
         if raw.startswith('postgres://'):
             raw = raw.replace('postgres://', 'postgresql://', 1)
 
@@ -91,12 +91,12 @@ class Config:
 
     # Database
     # Production uses DigitalOcean Managed Postgres.
-    # We intentionally prefer DIGITALOCEAN_DATABASE_URL (or DO_DATABASE_URL) over
-    # DATABASE_URL to avoid accidental coupling to Railway's variable naming.
+    # We prioritize DIGITALOCEAN_DATABASE_URL (or DO_DATABASE_URL) to ensure
+    # Digital Ocean connection. DATABASE_URL is only used as fallback for compatibility.
     SQLALCHEMY_DATABASE_URI = _normalize_database_url(
         os.environ.get('DIGITALOCEAN_DATABASE_URL')
         or os.environ.get('DO_DATABASE_URL')
-        or os.environ.get('DATABASE_URL')
+        or os.environ.get('DATABASE_URL')  # Fallback only - ensure this points to Digital Ocean in production
         or 'sqlite:///beesmart.db'
     )
     

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Tiles Performance Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+            background: #f9f9f9;
+        }
+        .result-item.fail {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .result-item.warning {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+        .metric {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 5px 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .metric.good {
+            background: #c8e6c9;
+        }
+        .metric.warning {
+            background: #ffe0b2;
+        }
+        .metric.bad {
+            background: #ffcdd2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .status-pass {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        #summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🐝 Main Menu Tiles Performance Test</h1>
+        <p>This test measures the functionality and performance of all main menu tiles.</p>
+        
+        <div>
+            <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+            <button class="test-button" onclick="testClickPerformance()">Test Click Performance</button>
+            <button class="test-button" onclick="testFunctionCalls()">Test Function Calls</button>
+            <button class="test-button" onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="results" class="results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Performance Metrics</h2>
+        <table id="metricsTable">
+            <thead>
+                <tr>
+                    <th>Tile</th>
+                    <th>Click Time (ms)</th>
+                    <th>Function Call (ms)</th>
+                    <th>Total (ms)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="metricsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="summary" style="display: none;">
+        <h2>Test Summary</h2>
+        <div id="summaryContent"></div>
+    </div>
+
+    <script>
+        const TILES = {
+            'upload_word_list': {
+                selector: '.menu-option[onclick*="text"]',
+                function: 'showTextUploadInterface',
+                type: 'text'
+            },
+            'type_manually': {
+                selector: '.menu-option[onclick*="manual"]',
+                function: 'showManualWordEntry',
+                type: 'manual'
+            },
+            'extract_from_image': {
+                selector: '#tileImageUpload',
+                function: 'showImageUploadInterface',
+                type: 'image'
+            },
+            'dictionary_search': {
+                selector: '#tileDictionary',
+                function: 'showDictionaryInterface',
+                type: 'dictionary'
+            },
+            'avatars': {
+                selector: '#tileAvatars',
+                function: null,
+                type: 'avatars',
+                navigates: true
+            },
+            'saved_lists': {
+                selector: '#tileSavedLists',
+                function: null,
+                type: 'saved',
+                navigates: true
+            },
+            'random_play': {
+                selector: '#tileRandom',
+                function: 'showRandomPlayInterface',
+                type: 'random'
+            },
+            'speed_round': {
+                selector: '#tileSpeedRound',
+                function: 'showSpeedRoundInterface',
+                type: 'speed',
+                navigates: true
+            }
+        };
+
+        const results = [];
+        const metrics = {};
+
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const item = document.createElement('div');
+            item.className = `result-item ${type}`;
+            item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(item);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const percentage = Math.round((current / total) * 100);
+            progressBar.style.display = 'block';
+            progressFill.style.width = percentage + '%';
+            progressFill.textContent = percentage + '%';
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('metricsBody').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            results.length = 0;
+            Object.keys(metrics).forEach(key => delete metrics[key]);
+        }
+
+        async function testClickPerformance() {
+            addResult('Starting click performance tests...', 'info');
+            updateProgress(0, Object.keys(TILES).length);
+
+            let index = 0;
+            for (const [tileName, tileConfig] of Object.entries(TILES)) {
+                try {
+                    // Check if tile exists
+                    const tile = document.querySelector(tileConfig.selector);
+                    if (!tile) {
+                        addResult(`❌ ${tileName}: Tile not found`, 'fail');
+                        metrics[tileName] = {
+                            clickTime: null,
+                            functionTime: null,
+                            total: null,
+                            status: 'FAIL'
+                        };
+                        index++;
+                        updateProgress(index, Object.keys(TILES).length);
+                        continue;
+                    }
+
+                    // Measure click performance
+                    const clickStart = performance.now();
+                    
+                    // Create a mock click event
+                    const clickEvent = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    });
+
+                    // Intercept navigation for testing
+                    const originalLocation = window.location;
+                    let navigationPrevented = false;
+                    
+                    if (tileConfig.navigates) {
+                        // Prevent actual navigation
+                        tile.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigationPrevented = true;
+                        }, { once: true });
+                    }
+
+                    tile.dispatchEvent(clickEvent);
+                    
+                    const clickEnd = performance.now();
+                    const clickTime = clickEnd - clickStart;
+
+                    // Check if function was called
+                    let functionTime = null;
+                    if (tileConfig.function && typeof window[tileConfig.function] === 'function') {
+                        const funcStart = performance.now();
+                        try {
+                            // Don't actually call it, just measure if it exists
+                            const funcExists = typeof window[tileConfig.function] === 'function';
+                            const funcEnd = performance.now();
+                            functionTime = funcEnd - funcStart;
+                        } catch (e) {
+                            addResult(`⚠️ ${tileName}: Function exists but threw error`, 'warning');
+                        }
+                    }
+
+                    const total = clickTime + (functionTime || 0);
+
+                    metrics[tileName] = {
+                        clickTime: Math.round(clickTime * 100) / 100,
+                        functionTime: functionTime ? Math.round(functionTime * 100) / 100 : null,
+                        total: Math.round(total * 100) / 100,
+                        status: clickTime < 100 ? 'PASS' : clickTime < 300 ? 'WARNING' : 'FAIL'
+                    };
+
+                    const status = metrics[tileName].status;
+                    const statusIcon = status === 'PASS' ? '✅' : status === 'WARNING' ? '⚠️' : '❌';
+                    addResult(`${statusIcon} ${tileName}: Click ${clickTime.toFixed(2)}ms, Total ${total.toFixed(2)}ms`, status.toLowerCase());
+
+                } catch (error) {
+                    addResult(`❌ ${tileName}: Error - ${error.message}`, 'fail');
+                    metrics[tileName] = {
+                        clickTime: null,
+                        functionTime: null,
+                        total: null,
+                        status: 'FAIL'
+                    };
+                }
+
+                index++;
+                updateProgress(index, Object.keys(TILES).length);
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            updateMetricsTable();
+            generateSummary();
+            addResult('✅ Click performance tests completed!', 'info');
+        }
+
+        function testFunctionCalls() {
+            addResult('Testing function availability...', 'info');
+            
+            const requiredFunctions = [
+                'selectOption',
+                'showTextUploadInterface',
+                'showManualWordEntry',
+                'showImageUploadInterface',
+                'showDictionaryInterface',
+                'showRandomPlayInterface',
+                'showSpeedRoundInterface'
+            ];
+
+            let allFound = true;
+            requiredFunctions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    addResult(`✅ ${funcName}(): Available`, 'info');
+                } else {
+                    addResult(`❌ ${funcName}(): NOT FOUND`, 'fail');
+                    allFound = false;
+                }
+            });
+
+            if (allFound) {
+                addResult('✅ All required functions are available!', 'info');
+            } else {
+                addResult('❌ Some functions are missing!', 'fail');
+            }
+        }
+
+        function updateMetricsTable() {
+            const tbody = document.getElementById('metricsBody');
+            tbody.innerHTML = '';
+
+            for (const [tileName, metric] of Object.entries(metrics)) {
+                const row = tbody.insertRow();
+                
+                row.insertCell(0).textContent = tileName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                row.insertCell(1).textContent = metric.clickTime !== null ? metric.clickTime + ' ms' : 'N/A';
+                row.insertCell(2).textContent = metric.functionTime !== null ? metric.functionTime + ' ms' : 'N/A';
+                row.insertCell(3).textContent = metric.total !== null ? metric.total + ' ms' : 'N/A';
+                
+                const statusCell = row.insertCell(4);
+                statusCell.className = `status-${metric.status.toLowerCase()}`;
+                statusCell.textContent = metric.status;
+            }
+        }
+
+        function generateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            const summaryContent = document.getElementById('summaryContent');
+            
+            const total = Object.keys(metrics).length;
+            const passed = Object.values(metrics).filter(m => m.status === 'PASS').length;
+            const warnings = Object.values(metrics).filter(m => m.status === 'WARNING').length;
+            const failed = Object.values(metrics).filter(m => m.status === 'FAIL').length;
+
+            const avgClickTime = Object.values(metrics)
+                .filter(m => m.clickTime !== null)
+                .reduce((sum, m) => sum + m.clickTime, 0) / 
+                Object.values(metrics).filter(m => m.clickTime !== null).length;
+
+            summaryContent.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 10px;">
+                    <div>
+                        <h3>Total Tiles</h3>
+                        <div style="font-size: 2em; font-weight: bold;">${total}</div>
+                    </div>
+                    <div>
+                        <h3>Passed</h3>
+                        <div style="font-size: 2em; font-weight: bold; color: #4CAF50;">${passed}</div>
+                    </div>
+                    <div>
+                        <h3>Warnings</h3>
+                        <div style="font-size: 2em; font-weight: bold; color: #ff9800;">${warnings}</div>
+                    </div>
+                    <div>
+                        <h3>Failed</h3>
+                        <div style="font-size: 2em; font-weight: bold; color: #f44336;">${failed}</div>
+                    </div>
+                    <div>
+                        <h3>Avg Click Time</h3>
+                        <div style="font-size: 2em; font-weight: bold;">${avgClickTime ? avgClickTime.toFixed(2) + ' ms' : 'N/A'}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h3>Success Rate</h3>
+                    <div style="font-size: 1.5em; font-weight: bold;">
+                        ${((passed / total) * 100).toFixed(1)}%
+                    </div>
+                </div>
+            `;
+
+            summaryDiv.style.display = 'block';
+        }
+
+        async function runAllTests() {
+            clearResults();
+            addResult('🚀 Starting comprehensive menu tiles test suite...', 'info');
+            
+            testFunctionCalls();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testClickPerformance();
+            
+            addResult('✅ All tests completed!', 'info');
+        }
+
+        // Auto-run on load if on the main menu page
+        if (window.location.pathname === '/' || window.location.pathname.includes('unified_menu')) {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    addResult('Page loaded. Ready to test. Click "Run All Tests" to begin.', 'info');
+                }, 1000);
+            });
+        }
+    </script>
+</body>
+</html>

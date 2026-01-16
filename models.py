@@ -680,6 +680,12 @@ class User(UserMixin, db.Model):
             self.cumulative_gpa = 0.0
             self.average_accuracy = 0.0
 
+        # CRITICAL: Update total_quizzes_completed to reflect actual count of completed activities
+        # This ensures Speed Round scores are included in the quiz count
+        # Count = completed QuizSession + SpeedRoundScore records
+        total_completed_activities = len(completed_sessions) + len(speed_scores)
+        self.total_quizzes_completed = total_completed_activities
+
         # Update best streak across completed, in-progress, and speed rounds
         session_streaks = [s.max_streak for s in completed_sessions if getattr(s, 'max_streak', None)]
         session_streaks += [s.max_streak for s in incomplete_sessions if getattr(s, 'max_streak', None)]

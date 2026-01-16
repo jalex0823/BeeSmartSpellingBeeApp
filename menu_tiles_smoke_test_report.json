@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-01-16T11:50:54.189314",
+  "summary": {
+    "total_tests": 6,
+    "passed": 6,
+    "failed": 0,
+    "success_rate": "100.0%"
+  },
+  "results": {
+    "Tile Structure": {
+      "passed": true,
+      "details": {
+        "upload_word_list": true,
+        "type_manually": true,
+        "extract_from_image": true,
+        "dictionary_search": true,
+        "avatars": true,
+        "saved_lists": true,
+        "random_play": true,
+        "speed_round": true
+      },
+      "duration_seconds": 0.247
+    },
+    "JavaScript Functions": {
+      "passed": true,
+      "details": {
+        "selectOption": true,
+        "showTextUploadInterface": true,
+        "showManualWordEntry": true,
+        "showImageUploadInterface": true,
+        "showDictionaryInterface": true,
+        "showRandomPlayInterface": true,
+        "showSpeedRoundInterface": true,
+        "uploadTextFile": true,
+        "uploadImageFile": true
+      },
+      "duration_seconds": 0.214
+    },
+    "CSS Selectors": {
+      "passed": true,
+      "details": {
+        "upload_word_list": true,
+        "type_manually": true,
+        "extract_from_image": true,
+        "dictionary_search": true,
+        "avatars": true,
+        "saved_lists": true,
+        "random_play": true,
+        "speed_round": true
+      },
+      "duration_seconds": 0.0
+    },
+    "Navigation Routes": {
+      "passed": true,
+      "details": {
+        "avatars": true,
+        "saved_lists": true,
+        "speed_round": true
+      },
+      "duration_seconds": 0.048
+    },
+    "Performance Indicators": {
+      "passed": true,
+      "details": {
+        "lazy_loading": true,
+        "event_delegation": true,
+        "debounce_throttle": true,
+        "async_operations": true,
+        "error_handling": true
+      },
+      "duration_seconds": 0.006
+    },
+    "Accessibility Features": {
+      "passed": true,
+      "details": {
+        "title_attributes": true,
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "focus_management": true
+      },
+      "duration_seconds": 0.112
+    }
+  },
+  "tiles_tested": [
+    "upload_word_list",
+    "type_manually",
+    "extract_from_image",
+    "dictionary_search",
+    "avatars",
+    "saved_lists",
+    "random_play",
+    "speed_round"
+  ]
+}
